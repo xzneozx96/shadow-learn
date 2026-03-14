@@ -56,8 +56,8 @@ export function Setup() {
         <CardHeader>
           <CardTitle className="text-xl">Welcome to ShadowLearn</CardTitle>
           <CardDescription className="text-slate-400">
-            Enter your OpenAI API key to get started. It will be encrypted with your PIN and stored
-            locally in your browser -- nothing leaves this device.
+            Enter your API keys to get started. They will be encrypted with your PIN and stored
+            locally in your browser — nothing leaves this device.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -80,7 +80,8 @@ export function Setup() {
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="minimax" className="text-sm font-medium text-slate-300">
-                Minimax API Key <span className="text-slate-500">(optional)</span>
+                {'Minimax API Key '}
+                <span className="text-slate-500">(optional)</span>
               </label>
               <Input
                 id="minimax"

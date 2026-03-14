@@ -140,6 +140,7 @@ export function WordTooltip({ text, words, playTTS, loadingText }: WordTooltipPr
                     variant="ghost"
                     size="icon-xs"
                     className="size-7 text-slate-500 hover:bg-slate-800 hover:text-white"
+                    aria-label={copiedWord === span.word.word ? 'Copied!' : `Copy ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleCopy(span.word!.word)

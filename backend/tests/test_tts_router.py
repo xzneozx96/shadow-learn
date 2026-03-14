@@ -35,6 +35,18 @@ async def test_tts_rejects_empty_text():
 
 
 @pytest.mark.asyncio
+async def test_tts_rejects_whitespace_only_text():
+    """POST /api/tts returns 400 when text is whitespace only."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/tts",
+            json={"text": "   ", "minimax_api_key": "test-key"},
+        )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_tts_returns_502_on_minimax_error():
     """POST /api/tts returns 502 when Minimax API call fails."""
     with patch(

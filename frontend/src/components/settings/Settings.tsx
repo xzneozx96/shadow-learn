@@ -64,12 +64,14 @@ export function Settings() {
       setKeysError('OpenAI API key cannot be empty')
       return
     }
-    if (!db) return
+    if (!db)
+      return
     try {
       // Verify PIN is correct before re-encrypting
       const cryptoData = await getCryptoData(db)
-      if (!cryptoData) throw new Error('No stored keys found')
-      await decryptKeys(cryptoData, keysPin)  // throws if PIN is wrong
+      if (!cryptoData)
+        throw new Error('No stored keys found')
+      await decryptKeys(cryptoData, keysPin) // throws if PIN is wrong
 
       const newKeys = {
         openaiApiKey: editOpenaiKey.trim(),
@@ -155,7 +157,9 @@ export function Settings() {
             </div>
             <div className="space-y-2">
               <label className="text-xs text-slate-400">
-                Minimax API Key <span className="text-slate-600">(for pronunciation)</span>
+                Minimax API Key
+                {' '}
+                <span className="text-slate-600">(for pronunciation)</span>
               </label>
               <Input
                 type={showKeys ? 'text' : 'password'}
