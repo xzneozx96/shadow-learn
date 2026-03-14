@@ -23,8 +23,8 @@ WordTooltip / TranscriptPanel
                     backend/app/services/tts.py
                               │ httpx POST to Minimax API
                               ▼
-                        JSON response with base64 audio
-                              │ decode base64 → MP3 bytes
+                        JSON response with hex-encoded audio
+                              │ decode hex → MP3 bytes
                               ▼
                     Response(audio/mpeg) → frontend
                               │
@@ -51,7 +51,7 @@ minimax_tts_url: str = "https://api.minimaxi.com/v1/t2a_v2"
     "model": "speech-2.6-turbo",
     "text": "<text>",
     "voice_setting": {
-      "voice_id": "Chinese_Female_1"
+      "voice_id": "Calm_Woman"
     },
     "audio_setting": {
       "format": "mp3",
@@ -60,8 +60,8 @@ minimax_tts_url: str = "https://api.minimaxi.com/v1/t2a_v2"
   }
   ```
 - Authorization header: `Bearer {api_key}`
-- Response is JSON with a base64-encoded `audio_file` field. The service parses the JSON, decodes the base64 audio, and returns raw MP3 bytes.
-- Voice selection: hardcoded to `Chinese_Female_1` for now. Voice selection UI is a future enhancement.
+- Response is JSON with a hex-encoded `data.audio` field. The service parses the JSON, decodes the hex audio (`bytes.fromhex(...)`), and returns raw MP3 bytes.
+- Voice selection: hardcoded to `Calm_Woman` for now. Voice selection UI is a future enhancement.
 - Text length: validates `len(text) <= 10_000` (Minimax limit), raises `ValueError` otherwise.
 
 ### New router: `backend/app/routers/tts.py`
@@ -91,7 +91,7 @@ The field is optional so existing encrypted blobs (which lack this field) decryp
 
 **`Setup.tsx`** — add a Minimax API key input field alongside the OpenAI one. The field is optional during setup (TTS is not required for core functionality).
 
-**`Settings.tsx`** — show the Minimax key in the API Keys card, same masked/visible toggle pattern as OpenAI. To update a key, the user edits the value inline and clicks a "Save Keys" button which re-encrypts all keys. No PIN re-entry needed since the decrypted keys are already in memory.
+**`Settings.tsx`** — show the Minimax key in the API Keys card, same masked/visible toggle pattern as OpenAI. To update a key, the user edits the value inline, enters their current PIN, and clicks "Save Keys" which re-encrypts all keys with the provided PIN. PIN re-entry is required since the app does not persist the PIN in memory after unlock.
 
 ### IndexedDB changes
 
