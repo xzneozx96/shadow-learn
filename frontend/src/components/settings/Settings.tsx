@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
-import { encryptKeys } from '@/crypto'
-import { getSettings, saveCryptoData, saveSettings } from '@/db'
+import { decryptKeys, encryptKeys } from '@/crypto'
+import { getCryptoData, getSettings, saveCryptoData, saveSettings } from '@/db'
 
 const LANGUAGES = [
   { value: 'en', label: 'English' },
@@ -60,7 +60,17 @@ export function Settings() {
       setKeysError('Enter your PIN to save key changes')
       return
     }
+    if (!editOpenaiKey.trim()) {
+      setKeysError('OpenAI API key cannot be empty')
+      return
+    }
+    if (!db) return
     try {
+      // Verify PIN is correct before re-encrypting
+      const cryptoData = await getCryptoData(db)
+      if (!cryptoData) throw new Error('No stored keys found')
+      await decryptKeys(cryptoData, keysPin)  // throws if PIN is wrong
+
       const newKeys = {
         openaiApiKey: editOpenaiKey.trim(),
         minimaxApiKey: editMinimaxKey.trim() || undefined,
