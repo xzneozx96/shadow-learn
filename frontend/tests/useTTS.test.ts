@@ -21,9 +21,9 @@ const mockKeys = { openaiApiKey: 'sk-test', minimaxApiKey: 'mm-test' }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  global.fetch = vi.fn()
-  global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
-  global.URL.revokeObjectURL = vi.fn()
+  globalThis.fetch = vi.fn()
+  globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
+  globalThis.URL.revokeObjectURL = vi.fn()
 })
 
 describe('useTTS', () => {
@@ -41,7 +41,7 @@ describe('useTTS', () => {
     })
 
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Minimax'))
-    expect(global.fetch).not.toHaveBeenCalled()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
   it('plays from cache without calling fetch', async () => {
@@ -55,14 +55,14 @@ describe('useTTS', () => {
     })
 
     expect(getTTSCache).toHaveBeenCalledWith(mockDb, '你好')
-    expect(global.fetch).not.toHaveBeenCalled()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
     expect(saveTTSCache).not.toHaveBeenCalled()
   })
 
   it('fetches from API on cache miss and stores result', async () => {
     vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
     const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
-    vi.mocked(global.fetch).mockResolvedValueOnce({
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       ok: true,
       blob: () => Promise.resolve(fakeBlob),
     } as any)
@@ -73,7 +73,7 @@ describe('useTTS', () => {
       await result.current.playTTS('你好')
     })
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/tts', expect.objectContaining({
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/tts', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ text: '你好', minimax_api_key: 'mm-test' }),
     }))
@@ -82,7 +82,7 @@ describe('useTTS', () => {
 
   it('shows error toast on API failure', async () => {
     vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
-    vi.mocked(global.fetch).mockResolvedValueOnce({
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       ok: false,
       statusText: 'Bad Gateway',
     } as any)
@@ -93,7 +93,7 @@ describe('useTTS', () => {
       await result.current.playTTS('你好')
     })
 
-    expect(toast.error).toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('TTS failed'))
   })
 
   it('is a no-op for empty text', async () => {
@@ -104,6 +104,6 @@ describe('useTTS', () => {
     })
 
     expect(getTTSCache).not.toHaveBeenCalled()
-    expect(global.fetch).not.toHaveBeenCalled()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 })

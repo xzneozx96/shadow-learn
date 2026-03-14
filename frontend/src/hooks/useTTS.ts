@@ -15,6 +15,7 @@ export function useTTS(
 ): UseTTSReturn {
   const [loadingText, setLoadingText] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const urlRef = useRef<string | null>(null)
 
   const playTTS = useCallback(async (text: string) => {
     if (!text)
@@ -29,6 +30,10 @@ export function useTTS(
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current = null
+    }
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current)
+      urlRef.current = null
     }
 
     setLoadingText(text)
@@ -59,10 +64,14 @@ export function useTTS(
       }
 
       const url = URL.createObjectURL(blob)
+      urlRef.current = url
       const audio = new Audio(url)
       audioRef.current = audio
 
-      audio.addEventListener('ended', () => URL.revokeObjectURL(url))
+      audio.addEventListener('ended', () => {
+        URL.revokeObjectURL(url)
+        urlRef.current = null
+      })
       // Intentionally not awaited: play() returns a Promise but we want loadingText
       // cleared as soon as playback starts (in finally), not when it finishes.
       // The 'ended' listener handles cleanup.
