@@ -1,17 +1,13 @@
 import type { LessonMeta, Segment } from '@/types'
-import { Search } from 'lucide-react'
+import { Loader2, Search, Volume2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useAuth } from '@/contexts/AuthContext'
+import { useTTS } from '@/hooks/useTTS'
 import { cn } from '@/lib/utils'
 import { WordTooltip } from './WordTooltip'
-
-function formatTimestamp(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
 
 interface TranscriptPanelProps {
   segments: Segment[]
@@ -28,6 +24,8 @@ export function TranscriptPanel({
   onSegmentClick,
   onProgressUpdate,
 }: TranscriptPanelProps) {
+  const { db, keys } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys)
   const [search, setSearch] = useState('')
   const [activeLang, setActiveLang] = useState(
     lesson.translationLanguages[0] ?? 'en',
@@ -68,11 +66,11 @@ export function TranscriptPanel({
   const hasMultipleLangs = lesson.translationLanguages.length > 1
 
   return (
-    <div className="flex h-full flex-col border-x border-slate-800 bg-slate-950">
+    <div className="flex h-full flex-col bg-background/20 backdrop-blur-md">
       {/* Search bar */}
-      <div className="space-y-2 border-b border-slate-800 p-3">
+      <div className="space-y-2 border-b border-border p-3">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+          <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search segments..."
             value={search}
@@ -99,8 +97,8 @@ export function TranscriptPanel({
       </div>
 
       {/* Segment list */}
-      <ScrollArea className="flex-1">
-        <div className="divide-y divide-slate-800/50">
+      <ScrollArea className="h-0 flex-1">
+        <div className="divide-y divide-border/50">
           {filteredSegments.map(segment => (
             <div
               key={segment.id}
@@ -113,30 +111,43 @@ export function TranscriptPanel({
                   onSegmentClick(segment)
               }}
               className={cn(
-                'group cursor-pointer px-3 py-2.5 transition-colors hover:bg-slate-800/50',
+                'group cursor-pointer px-3 py-2.5 transition-colors hover:bg-accent/10',
                 activeSegment?.id === segment.id
-                && 'border-l-2 border-l-blue-500 bg-blue-500/5',
+                && 'border-l-2 border-l-primary bg-primary/10',
               )}
             >
               {/* Pinyin */}
-              <p className="mb-0.5 text-xs text-slate-500">
-                {segment.pinyin}
-              </p>
+              <div className="mb-0.5 flex items-center gap-1">
+                <p className="text-xs text-muted-foreground">{segment.pinyin}</p>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    playTTS(segment.chinese)
+                  }}
+                >
+                  {loadingText === segment.chinese
+                    ? <Loader2 className="size-3 animate-spin" />
+                    : <Volume2 className="size-3" />}
+                </Button>
+              </div>
 
               {/* Chinese text with word tooltips */}
-              <p className="text-base text-slate-100">
-                <WordTooltip text={segment.chinese} words={segment.words} />
+              <p className="text-base text-foreground">
+                <WordTooltip
+                  text={segment.chinese}
+                  words={segment.words}
+                  playTTS={playTTS}
+                  loadingText={loadingText}
+                />
               </p>
 
               {/* Translation */}
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {segment.translations[activeLang] ?? Object.values(segment.translations)[0]}
               </p>
-
-              {/* Timestamp on hover */}
-              <span className="mt-1 hidden font-mono text-xs text-slate-600 group-hover:inline-block">
-                {formatTimestamp(segment.start)}
-              </span>
             </div>
           ))}
         </div>
