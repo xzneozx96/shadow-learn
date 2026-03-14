@@ -1,9 +1,10 @@
 import type { ChatMessage, Segment } from '@/types'
 import { Send } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
@@ -20,9 +21,9 @@ interface CompanionPanelProps {
 function StreamingDots() {
   return (
     <span className="inline-flex items-center gap-0.5">
-      <span className="size-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
-      <span className="size-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms]" />
-      <span className="size-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:300ms]" />
+      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
+      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
+      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
     </span>
   )
 }
@@ -32,8 +33,6 @@ export function CompanionPanel({
   isStreaming,
   onSend,
   activeSegment,
-  model,
-  onModelChange,
 }: CompanionPanelProps) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -59,23 +58,15 @@ export function CompanionPanel({
   }
 
   return (
-    <div className="flex h-full flex-col bg-slate-950">
+    <div className="flex h-full flex-col bg-background/10 backdrop-blur-md">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-slate-800 px-3 py-2">
-        <span className="text-sm font-medium text-slate-200">AI Companion</span>
-        <div className="ml-auto">
-          <Input
-            placeholder="Model..."
-            value={model}
-            onChange={e => onModelChange(e.target.value)}
-            className="h-6 w-48 text-xs"
-          />
-        </div>
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <span className="text-sm font-medium text-foreground">AI Companion</span>
       </div>
 
       {/* Context pill */}
       {activeSegment && (
-        <div className="border-b border-slate-800 px-3 py-1.5">
+        <div className="border-b border-border px-3 py-1.5">
           <Badge variant="outline" className="max-w-full truncate text-xs">
             {activeSegment.chinese}
           </Badge>
@@ -83,10 +74,10 @@ export function CompanionPanel({
       )}
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-3 py-2">
+      <ScrollArea className="flex-1 min-h-0 px-3 py-2">
         {messages.length === 0 && !isStreaming && (
           <div className="flex h-full items-center justify-center py-12">
-            <p className="text-center text-sm text-slate-500">
+            <p className="text-center text-sm text-muted-foreground">
               Ask about vocabulary, grammar, or pronunciation for any segment.
             </p>
           </div>
@@ -103,31 +94,41 @@ export function CompanionPanel({
             >
               <div
                 className={cn(
-                  'max-w-[85%] rounded-lg px-3 py-2 text-sm',
+                  'max-w-[90%] rounded-lg px-3 py-2 text-sm',
                   msg.role === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800 text-slate-200',
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-foreground',
                 )}
               >
-                <p className="whitespace-pre-wrap">{msg.content}</p>
+                {msg.role === 'assistant'
+                  ? (
+                      <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
+                    )
+                  : (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    )}
               </div>
             </div>
           ))}
 
           {isStreaming && messages.at(-1)?.role !== 'assistant' && (
             <div className="flex justify-start">
-              <div className="rounded-lg bg-slate-800 px-3 py-2">
+              <div className="rounded-lg bg-muted px-3 py-2">
                 <StreamingDots />
               </div>
             </div>
           )}
         </div>
 
-        <div ref={bottomRef} />
+        <div ref={bottomRef} className="h-px" />
       </ScrollArea>
 
       {/* Input area */}
-      <div className="flex gap-2 border-t border-slate-800 p-3">
+      <div className="flex items-center gap-2 border-t border-border p-3">
         <Textarea
           placeholder="Ask about this segment..."
           value={input}

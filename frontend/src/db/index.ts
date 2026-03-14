@@ -3,30 +3,23 @@ import type { AppSettings, ChatMessage, LessonMeta, Segment } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export type ShadowLearnDB = IDBPDatabase
 
 export async function initDB(): Promise<ShadowLearnDB> {
   return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains('lessons')) {
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
         db.createObjectStore('lessons', { keyPath: 'id' })
-      }
-      if (!db.objectStoreNames.contains('segments')) {
         db.createObjectStore('segments')
-      }
-      if (!db.objectStoreNames.contains('videos')) {
         db.createObjectStore('videos')
-      }
-      if (!db.objectStoreNames.contains('chats')) {
         db.createObjectStore('chats')
-      }
-      if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings')
-      }
-      if (!db.objectStoreNames.contains('crypto')) {
         db.createObjectStore('crypto')
+      }
+      if (oldVersion < 2) {
+        db.createObjectStore('tts-cache')
       }
     },
   })
@@ -126,4 +119,13 @@ export async function deleteFullLesson(db: ShadowLearnDB, lessonId: string): Pro
     deleteVideo(db, lessonId),
     deleteChatMessages(db, lessonId),
   ])
+}
+
+// TTS audio cache (keyed by text, value is MP3 Blob)
+export async function getTTSCache(db: ShadowLearnDB, text: string): Promise<Blob | undefined> {
+  return db.get('tts-cache', text)
+}
+
+export async function saveTTSCache(db: ShadowLearnDB, text: string, blob: Blob): Promise<void> {
+  await db.put('tts-cache', blob, text)
 }

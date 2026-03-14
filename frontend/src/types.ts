@@ -41,6 +41,6 @@ export interface AppSettings {
 }
 
 export interface DecryptedKeys {
-  elevenlabsApiKey: string
-  openrouterApiKey: string
+  openaiApiKey: string
+  minimaxApiKey?: string
 }
