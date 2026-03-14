@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,8 +9,8 @@ import { useAuth } from '@/contexts/AuthContext'
 export function Setup() {
   const { setup } = useAuth()
 
-  const [elevenlabsApiKey, setElevenlabsApiKey] = useState('')
-  const [openrouterApiKey, setOpenrouterApiKey] = useState('')
+  const [openaiApiKey, setOpenaiApiKey] = useState('')
+  const [minimaxApiKey, setMinimaxApiKey] = useState('')
   const [pin, setPin] = useState('')
   const [pinConfirm, setPinConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -19,12 +20,8 @@ export function Setup() {
     e.preventDefault()
     setError(null)
 
-    if (!elevenlabsApiKey.trim()) {
-      setError('ElevenLabs API key is required.')
-      return
-    }
-    if (!openrouterApiKey.trim()) {
-      setError('OpenRouter API key is required.')
+    if (!openaiApiKey.trim()) {
+      setError('OpenAI API key is required.')
       return
     }
     if (pin.length < 4) {
@@ -39,12 +36,14 @@ export function Setup() {
     try {
       setLoading(true)
       await setup(
-        { elevenlabsApiKey: elevenlabsApiKey.trim(), openrouterApiKey: openrouterApiKey.trim() },
+        { openaiApiKey: openaiApiKey.trim(), minimaxApiKey: minimaxApiKey.trim() || undefined },
         pin,
       )
     }
     catch (err) {
-      setError(err instanceof Error ? err.message : 'Setup failed.')
+      const msg = err instanceof Error ? err.message : 'Setup failed.'
+      setError(msg)
+      toast.error(msg)
     }
     finally {
       setLoading(false)
@@ -57,36 +56,42 @@ export function Setup() {
         <CardHeader>
           <CardTitle className="text-xl">Welcome to ShadowLearn</CardTitle>
           <CardDescription className="text-slate-400">
-            Enter your API keys to get started. They will be encrypted with your PIN and stored
+            Enter your OpenAI API key to get started. It will be encrypted with your PIN and stored
             locally in your browser -- nothing leaves this device.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="elevenlabs" className="text-sm font-medium text-slate-300">
-                ElevenLabs API Key
+              <label htmlFor="openai" className="text-sm font-medium text-slate-300">
+                OpenAI API Key
               </label>
               <Input
-                id="elevenlabs"
+                id="openai"
                 type="password"
-                placeholder="sk_..."
-                value={elevenlabsApiKey}
-                onChange={e => setElevenlabsApiKey(e.target.value)}
+                placeholder="sk-..."
+                value={openaiApiKey}
+                onChange={e => setOpenaiApiKey(e.target.value)}
               />
+              <p className="text-xs text-slate-500">
+                Used for transcription (Whisper), translation, and AI chat.
+              </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="openrouter" className="text-sm font-medium text-slate-300">
-                OpenRouter API Key
+              <label htmlFor="minimax" className="text-sm font-medium text-slate-300">
+                Minimax API Key <span className="text-slate-500">(optional)</span>
               </label>
               <Input
-                id="openrouter"
+                id="minimax"
                 type="password"
-                placeholder="sk-or-..."
-                value={openrouterApiKey}
-                onChange={e => setOpenrouterApiKey(e.target.value)}
+                placeholder="eyJ..."
+                value={minimaxApiKey}
+                onChange={e => setMinimaxApiKey(e.target.value)}
               />
+              <p className="text-xs text-slate-500">
+                Used for word and sentence pronunciation (TTS). Can be added later in Settings.
+              </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
