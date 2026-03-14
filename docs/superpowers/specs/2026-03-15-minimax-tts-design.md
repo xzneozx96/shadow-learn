@@ -23,8 +23,8 @@ WordTooltip / TranscriptPanel
                     backend/app/services/tts.py
                               │ httpx POST to Minimax API
                               ▼
-                        MP3 audio bytes
-                              │
+                        JSON response with base64 audio
+                              │ decode base64 → MP3 bytes
                               ▼
                     Response(audio/mpeg) → frontend
                               │
@@ -33,13 +33,36 @@ WordTooltip / TranscriptPanel
 
 ## Backend
 
+### Config: `backend/app/config.py`
+
+Add `minimax_tts_url` to `Settings` class (consistent with existing `openai_chat_url` pattern):
+
+```python
+minimax_tts_url: str = "https://api.minimaxi.com/v1/t2a_v2"
+```
+
 ### New service: `backend/app/services/tts.py`
 
 - `async def synthesize_speech(text: str, api_key: str) -> bytes`
-- Calls `https://api.minimax.chat/v1/t2a_v2` with model `speech-2.6-turbo`
-- JSON body: `{ "model": "speech-2.6-turbo", "text": text }`
+- Calls `settings.minimax_tts_url` with model `speech-2.6-turbo`
+- JSON body:
+  ```json
+  {
+    "model": "speech-2.6-turbo",
+    "text": "<text>",
+    "voice_setting": {
+      "voice_id": "Chinese_Female_1"
+    },
+    "audio_setting": {
+      "format": "mp3",
+      "sample_rate": 32000
+    }
+  }
+  ```
 - Authorization header: `Bearer {api_key}`
-- Returns raw MP3 audio bytes from the response
+- Response is JSON with a base64-encoded `audio_file` field. The service parses the JSON, decodes the base64 audio, and returns raw MP3 bytes.
+- Voice selection: hardcoded to `Chinese_Female_1` for now. Voice selection UI is a future enhancement.
+- Text length: validates `len(text) <= 10_000` (Minimax limit), raises `ValueError` otherwise.
 
 ### New router: `backend/app/routers/tts.py`
 
@@ -66,29 +89,30 @@ export interface DecryptedKeys {
 
 The field is optional so existing encrypted blobs (which lack this field) decrypt without error. The `useTTS` hook checks for its presence before calling.
 
-**`Setup.tsx`** — add a Minimax API key input field alongside the OpenAI one.
+**`Setup.tsx`** — add a Minimax API key input field alongside the OpenAI one. The field is optional during setup (TTS is not required for core functionality).
 
-**`Settings.tsx`** — show the Minimax key in the API Keys card, same masked/visible toggle pattern as OpenAI. Allow updating it (re-encrypt all keys with existing PIN).
+**`Settings.tsx`** — show the Minimax key in the API Keys card, same masked/visible toggle pattern as OpenAI. To update a key, the user edits the value inline and clicks a "Save Keys" button which re-encrypts all keys. No PIN re-entry needed since the decrypted keys are already in memory.
 
 ### IndexedDB changes
 
 **`db/index.ts`**:
 - Bump `DB_VERSION` from 1 → 2
-- Add `tts-cache` object store in the `upgrade` handler
+- Add `tts-cache` object store in the `upgrade` handler using `if (oldVersion < 2)` guard (proper versioned migration)
 - New functions:
   - `getTTSCache(db, text: string): Promise<Blob | undefined>`
   - `saveTTSCache(db, text: string, blob: Blob): Promise<void>`
+- No cache eviction strategy for now. Each audio clip is ~50-200KB, so thousands of words would still be under 100MB. Revisit if this becomes an issue.
 
 ### New hook: `frontend/src/hooks/useTTS.ts`
 
 ```ts
 interface UseTTSReturn {
-  playTTS: (text: string) => void
+  playTTS: (text: string) => Promise<void>
   loadingText: string | null
 }
 ```
 
-- Gets `db` and `keys` from `useAuth()`
+- Receives `db` and `keys` as parameters from the parent component (consistent with `useChat` pattern — hooks receive dependencies rather than calling `useAuth()` internally)
 - `playTTS(text)`:
   1. If `text` is empty, no-op
   2. If `minimaxApiKey` is not set, toast error directing user to Settings
@@ -104,7 +128,7 @@ interface UseTTSReturn {
 ### UI changes
 
 **`TranscriptPanel.tsx`**:
-- Instantiates `useTTS()` hook
+- Instantiates `useTTS()` hook (passing `db` and `keys`)
 - Passes `playTTS` and `loadingText` as props to `WordTooltip`
 - Adds a `Volume2` icon button on each segment row (near pinyin or right edge)
 - While `loadingText === segment.chinese`, shows `Loader2` with `animate-spin`
@@ -122,6 +146,7 @@ interface UseTTSReturn {
 | API call fails | Toast with error message, button returns to idle |
 | Concurrent clicks | Stop current audio, start new playback |
 | Empty text | No-op |
+| Text > 10,000 chars | Backend returns 400 error |
 
 ## Testing
 
