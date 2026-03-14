@@ -167,7 +167,7 @@ export function Settings() {
           <CardContent>
             <div className="space-y-2">
               <label className="text-xs text-slate-400">Translation Language</label>
-              <Select value={language} onValueChange={setLanguage}>
+              <Select value={language} onValueChange={v => v !== null && setLanguage(v)}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>

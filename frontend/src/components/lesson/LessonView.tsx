@@ -90,8 +90,8 @@ export function LessonView() {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-900">
         <p className="text-sm text-red-400">{error ?? 'Lesson not found'}</p>
-        <Button variant="outline" asChild>
-          <Link to="/">Back to Library</Link>
+        <Button variant="outline" render={<Link to="/" />}>
+          Back to Library
         </Button>
       </div>
     )

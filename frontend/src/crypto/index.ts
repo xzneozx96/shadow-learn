@@ -21,7 +21,7 @@ async function deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt,
+      salt: salt as Uint8Array<ArrayBuffer>,
       iterations: PBKDF2_ITERATIONS,
       hash: 'SHA-256',
     },
@@ -64,7 +64,7 @@ export async function decryptKeys(
   const key = await deriveKey(pin, data.salt)
 
   const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: data.iv },
+    { name: 'AES-GCM', iv: data.iv as Uint8Array<ArrayBuffer> },
     key,
     data.encrypted,
   )

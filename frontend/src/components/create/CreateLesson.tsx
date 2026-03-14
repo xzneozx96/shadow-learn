@@ -213,7 +213,7 @@ export function CreateLesson() {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-300">Translation Language</label>
-                      <Select value={language} onValueChange={setLanguage}>
+                      <Select value={language} onValueChange={v => v !== null && setLanguage(v)}>
                         <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
