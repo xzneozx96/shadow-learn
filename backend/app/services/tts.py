@@ -26,7 +26,7 @@ async def synthesize_speech(text: str, api_key: str) -> bytes:
         RuntimeError: If the Minimax API returns an error status.
         httpx.HTTPStatusError: If the HTTP request itself fails.
     """
-    if not text:
+    if not text.strip():
         raise ValueError("text must not be empty")
     if len(text) > 10_000:
         raise ValueError("text exceeds the Minimax limit of 10,000 characters")
@@ -58,5 +58,8 @@ async def synthesize_speech(text: str, api_key: str) -> bytes:
         logger.error("Minimax TTS error: %s", msg)
         raise RuntimeError(msg)
 
-    audio_hex: str = body["data"]["audio"]
+    audio_data = body.get("data", {})
+    audio_hex = audio_data.get("audio")
+    if not audio_hex:
+        raise RuntimeError("Minimax response missing audio data")
     return bytes.fromhex(audio_hex)

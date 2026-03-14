@@ -1,5 +1,3 @@
-import base64
-import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -9,10 +7,6 @@ async def test_synthesize_speech_returns_mp3_bytes():
     """Service decodes hex audio from Minimax response."""
     fake_audio = b"\xff\xfb\x90\x00" * 10  # minimal fake mp3 bytes
     fake_hex = fake_audio.hex()
-    fake_response_body = json.dumps({
-        "data": {"audio": fake_hex},
-        "base_resp": {"status_code": 0, "status_msg": "success"},
-    })
 
     mock_response = MagicMock()
     mock_response.status_code = 200

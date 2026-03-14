@@ -16,9 +16,6 @@ router = APIRouter(prefix="/api")
 @router.post("/tts")
 async def text_to_speech(request: TTSRequest) -> Response:
     """Convert text to speech via Minimax and return MP3 audio bytes."""
-    if not request.text.strip():
-        raise HTTPException(status_code=400, detail="text must not be empty")
-
     try:
         audio_bytes = await synthesize_speech(request.text, request.minimax_api_key)
     except ValueError as exc:
