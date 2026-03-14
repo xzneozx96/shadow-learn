@@ -111,7 +111,7 @@ export function TranscriptPanel({
                   onSegmentClick(segment)
               }}
               className={cn(
-                'group cursor-pointer px-3 py-2.5 transition-colors hover:bg-accent/10',
+                'cursor-pointer px-3 py-2.5 transition-colors hover:bg-accent/10',
                 activeSegment?.id === segment.id
                 && 'border-l-2 border-l-primary bg-primary/10',
               )}
@@ -123,6 +123,7 @@ export function TranscriptPanel({
                   variant="ghost"
                   size="icon-xs"
                   className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
+                  aria-label={loadingText === segment.chinese ? 'Loading pronunciation' : 'Play sentence pronunciation'}
                   onClick={(e) => {
                     e.stopPropagation()
                     playTTS(segment.chinese)

@@ -126,8 +126,8 @@ export function WordTooltip({ text, words, playTTS, loadingText }: WordTooltipPr
                     variant="ghost"
                     size="icon-xs"
                     className="size-7 text-slate-500 hover:bg-slate-800 hover:text-white"
+                    aria-label={loadingText === span.word.word ? 'Loading pronunciation' : `Play pronunciation of ${span.word.word}`}
                     onClick={(e) => {
-                      e.preventDefault()
                       e.stopPropagation()
                       playTTS(span.word!.word)
                     }}
@@ -141,7 +141,6 @@ export function WordTooltip({ text, words, playTTS, loadingText }: WordTooltipPr
                     size="icon-xs"
                     className="size-7 text-slate-500 hover:bg-slate-800 hover:text-white"
                     onClick={(e) => {
-                      e.preventDefault()
                       e.stopPropagation()
                       handleCopy(span.word!.word)
                     }}
