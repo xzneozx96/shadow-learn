@@ -1,25 +1,13 @@
 import { Loader2 } from 'lucide-react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
-import { Layout } from '@/components/Layout'
+import { LessonView } from '@/components/lesson/LessonView'
 import { Library } from '@/components/library/Library'
 import { Setup } from '@/components/onboarding/Setup'
 import { Unlock } from '@/components/onboarding/Unlock'
 import { Settings } from '@/components/settings/Settings'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
-
-function Placeholder({ name }: { name: string }) {
-  return (
-    <Layout>
-      <div className="p-8 text-slate-300">
-        {name}
-        {' '}
-        -- coming soon
-      </div>
-    </Layout>
-  )
-}
 
 function AuthGate() {
   const { isFirstSetup, isUnlocked } = useAuth()
@@ -50,7 +38,7 @@ function AuthGate() {
         <Routes>
           <Route path="/" element={<Library />} />
           <Route path="/create" element={<CreateLesson />} />
-          <Route path="/lesson/:id" element={<Placeholder name="Lesson View" />} />
+          <Route path="/lesson/:id" element={<LessonView />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </PlayerProvider>
