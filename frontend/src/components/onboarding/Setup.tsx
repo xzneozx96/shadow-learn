@@ -79,7 +79,7 @@ export function Setup() {
                 onChange={e => setOpenaiApiKey(e.target.value)}
               />
               <p className="text-xs text-white/30">
-                Used for transcription (Whisper), translation, and AI chat.
+                Used for translation and AI chat (also Whisper transcription when no Deepgram key is set).
               </p>
             </div>
 
@@ -108,7 +108,7 @@ export function Setup() {
               <Input
                 id="deepgram"
                 type="password"
-                placeholder="..."
+                placeholder="dg-..."
                 value={deepgramApiKey}
                 onChange={e => setDeepgramApiKey(e.target.value)}
               />
