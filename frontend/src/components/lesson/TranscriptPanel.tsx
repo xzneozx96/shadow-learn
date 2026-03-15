@@ -5,9 +5,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePlayer } from '@/contexts/PlayerContext'
 import { useTTS } from '@/hooks/useTTS'
 import { cn } from '@/lib/utils'
-import { WordTooltip } from './WordTooltip'
+import { SegmentText } from './SegmentText'
+
+function segmentTime(segment: Segment, currentTime: number): number | undefined {
+  if (!segment.wordTimings?.length)
+    return undefined
+  if ((segment.end ?? 0) <= currentTime)
+    return Infinity    // fully spoken → all bright
+  if ((segment.start ?? 0) > currentTime)
+    return -Infinity   // not yet reached → all dim
+  return currentTime   // active → in progress
+}
 
 interface TranscriptPanelProps {
   segments: Segment[]
@@ -26,6 +37,7 @@ export function TranscriptPanel({
 }: TranscriptPanelProps) {
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys)
+  const { currentTime } = usePlayer()
   const [search, setSearch] = useState('')
   const [activeLang, setActiveLang] = useState(
     lesson.translationLanguages[0] ?? 'en',
@@ -132,9 +144,11 @@ export function TranscriptPanel({
 
                   {/* Chinese text with word tooltips */}
                   <p className="text-lg text-foreground">
-                    <WordTooltip
+                    <SegmentText
                       text={segment.chinese}
                       words={segment.words}
+                      wordTimings={segment.wordTimings}
+                      currentTime={segmentTime(segment, currentTime)}
                       playTTS={playTTS}
                       loadingText={loadingText}
                     />
