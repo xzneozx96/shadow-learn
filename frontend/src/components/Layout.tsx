@@ -30,6 +30,14 @@ export function Layout({ children, onSearch, searchValue }: LayoutProps) {
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            render={<Link to="/vocabulary" />}
+            className={location.pathname.startsWith('/vocabulary') ? 'bg-accent' : undefined}
+          >
+            Workbook
+          </Button>
           <Button variant="ghost" size="icon" render={<Link to="/settings" />}>
             <Settings className="size-4" />
           </Button>

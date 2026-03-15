@@ -12,6 +12,8 @@ export function Setup() {
   const [openaiApiKey, setOpenaiApiKey] = useState('')
   const [minimaxApiKey, setMinimaxApiKey] = useState('')
   const [deepgramApiKey, setDeepgramApiKey] = useState('')
+  const [azureSpeechKey, setAzureSpeechKey] = useState('')
+  const [azureSpeechRegion, setAzureSpeechRegion] = useState('')
   const [pin, setPin] = useState('')
   const [pinConfirm, setPinConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -45,6 +47,8 @@ export function Setup() {
           openaiApiKey: openaiApiKey.trim(),
           minimaxApiKey: minimaxApiKey.trim() || undefined,
           deepgramApiKey: deepgramApiKey.trim() || undefined,
+          azureSpeechKey: azureSpeechKey.trim() || undefined,
+          azureSpeechRegion: azureSpeechRegion.trim() || undefined,
         },
         pin,
       )
@@ -118,6 +122,39 @@ export function Setup() {
               <p className="text-xs text-white/30">
                 Used for transcription. Required to create lessons.
               </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="azure-speech-key" className="text-sm font-medium text-white/65">
+                Azure Speech Key
+                {' '}
+                <span className="text-white/30">(optional)</span>
+              </label>
+              <Input
+                id="azure-speech-key"
+                type="password"
+                placeholder="Paste your Azure Speech key…"
+                value={azureSpeechKey}
+                onChange={e => setAzureSpeechKey(e.target.value)}
+              />
+              <p className="text-xs text-white/30">
+                Used for pronunciation assessment. Can be added later in Settings.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="azure-speech-region" className="text-sm font-medium text-white/65">
+                Azure Speech Region
+                {' '}
+                <span className="text-white/30">(optional)</span>
+              </label>
+              <Input
+                id="azure-speech-region"
+                type="text"
+                placeholder="e.g. eastus"
+                value={azureSpeechRegion}
+                onChange={e => setAzureSpeechRegion(e.target.value)}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">

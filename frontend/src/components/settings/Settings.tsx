@@ -36,6 +36,8 @@ export function Settings() {
   const [editOpenaiKey, setEditOpenaiKey] = useState(keys?.openaiApiKey ?? '')
   const [editMinimaxKey, setEditMinimaxKey] = useState(keys?.minimaxApiKey ?? '')
   const [editDeepgramKey, setEditDeepgramKey] = useState(keys?.deepgramApiKey ?? '')
+  const [editAzureSpeechKey, setEditAzureSpeechKey] = useState(keys?.azureSpeechKey ?? '')
+  const [editAzureSpeechRegion, setEditAzureSpeechRegion] = useState(keys?.azureSpeechRegion ?? '')
   const [keysPin, setKeysPin] = useState('')
   const [keysSaved, setKeysSaved] = useState(false)
   const [keysError, setKeysError] = useState<string | null>(null)
@@ -55,6 +57,8 @@ export function Settings() {
     setEditOpenaiKey(keys?.openaiApiKey ?? '')
     setEditMinimaxKey(keys?.minimaxApiKey ?? '')
     setEditDeepgramKey(keys?.deepgramApiKey ?? '')
+    setEditAzureSpeechKey(keys?.azureSpeechKey ?? '')
+    setEditAzureSpeechRegion(keys?.azureSpeechRegion ?? '')
   }, [keys])
 
   async function handleSaveKeys() {
@@ -80,6 +84,8 @@ export function Settings() {
         openaiApiKey: editOpenaiKey.trim(),
         minimaxApiKey: editMinimaxKey.trim() || undefined,
         deepgramApiKey: editDeepgramKey.trim() || undefined,
+        azureSpeechKey: editAzureSpeechKey.trim() || undefined,
+        azureSpeechRegion: editAzureSpeechRegion.trim() || undefined,
       }
       await setup(newKeys, keysPin)
       setKeysSaved(true)
@@ -185,6 +191,34 @@ export function Settings() {
                 onChange={e => setEditDeepgramKey(e.target.value)}
                 className="font-mono text-xs"
                 placeholder="dg-..."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-white/40">
+                Azure Speech Key
+                {' '}
+                <span className="text-white/20">(for pronunciation assessment)</span>
+              </label>
+              <Input
+                type={showKeys ? 'text' : 'password'}
+                value={editAzureSpeechKey}
+                onChange={e => setEditAzureSpeechKey(e.target.value)}
+                className="font-mono text-xs"
+                placeholder="Leave blank to disable"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-white/40">
+                Azure Speech Region
+                {' '}
+                <span className="text-white/20">(e.g. eastus)</span>
+              </label>
+              <Input
+                type={showKeys ? 'text' : 'password'}
+                value={editAzureSpeechRegion}
+                onChange={e => setEditAzureSpeechRegion(e.target.value)}
+                className="font-mono text-xs"
+                placeholder="e.g. eastus"
               />
             </div>
             <div className="space-y-2">
