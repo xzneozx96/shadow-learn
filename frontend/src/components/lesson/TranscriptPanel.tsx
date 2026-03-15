@@ -1,12 +1,14 @@
 import type { LessonMeta, Segment } from '@/types'
 import { Check, Copy, Loader2, Search, Volume2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { useTTS } from '@/hooks/useTTS'
+import { useVocabulary } from '@/hooks/useVocabulary'
 import { cn } from '@/lib/utils'
 import { SegmentText } from './SegmentText'
 
@@ -38,6 +40,7 @@ export function TranscriptPanel({
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys)
   const { currentTime } = usePlayer()
+  const { save, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
   const [activeLang, setActiveLang] = useState(
     lesson.translationLanguages[0] ?? 'en',
@@ -125,6 +128,7 @@ export function TranscriptPanel({
               ref={activeSegment?.id === segment.id ? activeRef : undefined}
               role="button"
               tabIndex={0}
+              data-segment-id={segment.id}
               onClick={() => onSegmentClick(segment)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ')
@@ -151,6 +155,12 @@ export function TranscriptPanel({
                       currentTime={segmentTime(segment, currentTime)}
                       playTTS={playTTS}
                       loadingText={loadingText}
+                      segment={segment}
+                      onSaveWord={async (word, seg) => {
+                        await save(word, seg, lesson, activeLang)
+                        toast.success('Saved to Workbook')
+                      }}
+                      isSaved={wordText => isSaved(wordText, lesson.id)}
                     />
                   </p>
 
