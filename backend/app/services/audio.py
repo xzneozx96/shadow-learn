@@ -20,24 +20,48 @@ def _ensure_temp_dir() -> Path:
     return _TEMP_DIR
 
 
-def _download_youtube_audio(video_id: str, output_path: Path) -> None:
-    """Blocking: download audio from YouTube using yt-dlp."""
+_VIDEO_EXTS = {".mp4", ".mkv", ".webm"}
+
+
+def _download_youtube_video(video_id: str, file_uuid: str, temp_dir: Path) -> Path:
+    """Blocking: download video+audio from YouTube using yt-dlp.
+
+    Uses %(ext)s in outtmpl so yt-dlp chooses the container; discovers the
+    output file by globbing for the UUID to handle non-mp4 fallbacks.
+    """
     url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
-        "format": "bestaudio/best",
-        "outtmpl": str(output_path.with_suffix("")),
-        "postprocessors": [
-            {
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": "mp3",
-                "preferredquality": "192",
-            }
-        ],
+        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        "outtmpl": str(temp_dir / f"{file_uuid}.%(ext)s"),
+        "merge_output_format": "mp4",
         "quiet": True,
         "no_warnings": True,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
+    # Filter to known video extensions to avoid .part / .ytdl sidecars
+    matches = [p for p in temp_dir.glob(f"{file_uuid}.*") if p.suffix in _VIDEO_EXTS]
+    if not matches:
+        raise FileNotFoundError(f"Video download produced no output for video_id={video_id}")
+    return matches[0]
+
+
+async def download_youtube_video(video_id: str) -> Path:
+    """Download a YouTube video, returning the path to the output file."""
+    logger.info("[pipeline] download_youtube_video: start video_id=%s", video_id)
+    temp_dir = _ensure_temp_dir()
+    file_uuid = str(uuid.uuid4())
+    t0 = time.monotonic()
+    result = await asyncio.to_thread(_download_youtube_video, video_id, file_uuid, temp_dir)
+    try:
+        size_mb = result.stat().st_size / 1024 / 1024
+    except OSError:
+        size_mb = -1.0
+    logger.info(
+        "[pipeline] download_youtube_video: done in %.1fs → %s (%.1f MB)",
+        time.monotonic() - t0, result.name, size_mb,
+    )
+    return result
 
 
 def _extract_audio_ffmpeg(video_path: Path, output_path: Path) -> None:
@@ -71,24 +95,6 @@ def _get_youtube_duration_blocking(video_id: str) -> float:
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)
         return float(info.get("duration", 0))
-
-
-async def extract_audio_from_youtube(video_id: str) -> Path:
-    """Download audio from a YouTube video, returning the path to the mp3 file."""
-    logger.info("[pipeline] extract_audio_from_youtube: start video_id=%s", video_id)
-    temp_dir = _ensure_temp_dir()
-    output_path = temp_dir / f"{uuid.uuid4()}.mp3"
-    t0 = time.monotonic()
-    await asyncio.to_thread(_download_youtube_audio, video_id, output_path)
-    elapsed = time.monotonic() - t0
-    if not output_path.exists():
-        logger.error("[pipeline] extract_audio_from_youtube: no output produced for video_id=%s", video_id)
-        raise FileNotFoundError(f"Audio extraction produced no output for video_id={video_id}")
-    logger.info(
-        "[pipeline] extract_audio_from_youtube: done in %.1fs → %s (%.1f MB)",
-        elapsed, output_path.name, output_path.stat().st_size / 1024 / 1024,
-    )
-    return output_path
 
 
 async def extract_audio_from_upload(video_path: Path) -> Path:
