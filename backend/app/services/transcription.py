@@ -25,11 +25,18 @@ class _Word(TypedDict):
     end: float
 
 
+class _WordTiming(TypedDict):
+    text: str    # punctuated_word, or word key as fallback
+    start: float
+    end: float
+
+
 class _Segment(TypedDict):
     id: int
     start: float
     end: float
     text: str
+    word_timings: list[_WordTiming]
 
 
 # ---------------------------------------------------------------------------
@@ -46,30 +53,21 @@ class _DeepgramWord(TypedDict):
     punctuated_word: str
 
 
-class _DeepgramSentence(TypedDict):
-    text: str
+class _DeepgramUtterance(TypedDict):
     start: float
     end: float
-
-
-class _DeepgramParagraph(TypedDict):
-    sentences: list[_DeepgramSentence]
-    speaker: int
-    num_words: int
-    start: float
-    end: float
-
-
-class _DeepgramParagraphsObject(TypedDict):
     transcript: str
-    paragraphs: list[_DeepgramParagraph]
+    words: list[_DeepgramWord]
+    speaker: int
+    id: str
+    channel: int
+    confidence: float
 
 
 class _DeepgramAlternative(TypedDict):
     transcript: str
     confidence: float
     words: list[_DeepgramWord]
-    paragraphs: _DeepgramParagraphsObject
 
 
 class _DeepgramChannel(TypedDict):
@@ -80,6 +78,7 @@ class _DeepgramChannel(TypedDict):
 
 class _DeepgramResults(TypedDict):
     channels: list[_DeepgramChannel]
+    utterances: list[_DeepgramUtterance]
 
 
 class _DeepgramResponse(TypedDict):
