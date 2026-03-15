@@ -1,4 +1,4 @@
-"""Transcription service using Deepgram nova-3 API."""
+"""Transcription service using Deepgram nova-2 API."""
 
 import asyncio
 import logging
@@ -92,9 +92,13 @@ class _DeepgramResponse(TypedDict):
 def _finalize_segment(words: list[_Word], index: int) -> _Segment:
     """Create a segment dict from a list of word dicts."""
     text = "".join(w["text"] for w in words)
-    start = words[0]["start"]
-    end = words[-1]["end"]
-    return {"id": index, "start": start, "end": end, "text": text}
+    return {
+        "id": index,
+        "start": words[0]["start"],
+        "end": words[-1]["end"],
+        "text": text,
+        "word_timings": list(words),  # _Word has same shape as _WordTiming
+    }
 
 
 def _group_words_into_segments(words: list[_Word]) -> list[_Segment]:
@@ -144,27 +148,34 @@ def _group_words_into_segments(words: list[_Word]) -> list[_Segment]:
     return segments
 
 
-def _segments_from_paragraphs(paragraphs: list[_DeepgramParagraph]) -> list[_Segment]:
-    """Convert Deepgram paragraph/sentence objects to segments.
 
-    Deepgram inserts a space between every CJK token in sentence text
-    (e.g. "你 在 学 什 么?"). Stripping all spaces produces clean Chinese.
-    This is consistent with our word-join approach and safe for this app.
+def _segments_from_utterances(utterances: list[_DeepgramUtterance]) -> list[_Segment]:
+    """Convert Deepgram utterance objects to segments.
+
+    Each utterance becomes one segment. Deepgram inserts spaces between CJK tokens
+    in transcript text (e.g. "你 在 学 什 么"). Stripping all spaces produces clean Chinese.
+    Works for both single-speaker and multi-speaker content.
     """
     segments: list[_Segment] = []
-    segment_index = 0
-    for paragraph in paragraphs:
-        for sentence in paragraph["sentences"]:
-            text = sentence["text"].replace(" ", "")
-            if not text:
-                continue
-            segments.append({
-                "id": segment_index,
-                "start": sentence["start"],
-                "end": sentence["end"],
-                "text": text,
-            })
-            segment_index += 1
+    for i, utt in enumerate(utterances):
+        text = utt["transcript"].replace(" ", "")
+        if not text:
+            continue
+        word_timings: list[_WordTiming] = [
+            {
+                "text": w.get("punctuated_word") or w["word"],
+                "start": w["start"],
+                "end": w["end"],
+            }
+            for w in utt.get("words", [])
+        ]
+        segments.append({
+            "id": i,   # utterance-positional index (skipped empty utterances leave id gaps)
+            "start": utt["start"],
+            "end": utt["end"],
+            "text": text,
+            "word_timings": word_timings,
+        })
     return segments
 
 
@@ -176,7 +187,7 @@ _DEEPGRAM_TRANSCRIPTION_URL = "https://api.deepgram.com/v1/listen"
 _DEEPGRAM_PARAMS = {
     "diarize": "true",
     "punctuate": "true",
-    "paragraphs": "true",
+    "utterances": "true",
     "smart_format": "true",
     "language": "zh-CN",
     "model": "nova-2",
@@ -196,14 +207,14 @@ def _normalize_deepgram_words(words: list[_DeepgramWord]) -> list[_Word]:
 
 
 async def transcribe_audio_deepgram(audio_path: Path, api_key: str) -> list[_Segment]:
-    """Transcribe an audio file using the Deepgram nova-3 API.
+    """Transcribe an audio file using the Deepgram nova-2 API.
 
-    Uses paragraph/sentence segmentation from Deepgram (speaker-aware, punctuated).
-    Falls back to word-level grouping if paragraph data is absent.
-    Returns a list of segment dicts with keys: id, start, end, text.
+    Uses utterance segmentation from Deepgram (speaker-aware, punctuated).
+    Falls back to word-level grouping if utterance data is absent.
+    Returns a list of segment dicts with keys: id, start, end, text, word_timings.
     """
     file_size = audio_path.stat().st_size
-    logger.info("Transcribing %s (%.1f MB) with Deepgram nova-3", audio_path.name, file_size / 1024 / 1024)
+    logger.info("Transcribing %s (%.1f MB) with Deepgram nova-2", audio_path.name, file_size / 1024 / 1024)
 
     if file_size == 0:
         raise ValueError(f"Audio file is empty (0 bytes): {audio_path.name}")
@@ -232,7 +243,17 @@ async def transcribe_audio_deepgram(audio_path: Path, api_key: str) -> list[_Seg
     response.raise_for_status()
 
     data: _DeepgramResponse = response.json()
-    channels = data.get("results", {}).get("channels", [])  # type: ignore[union-attr]
+    results = data.get("results", {})  # type: ignore[union-attr]
+
+    # Primary: use utterances (works for single-speaker and multi-speaker)
+    utterances: list[_DeepgramUtterance] = results.get("utterances", [])  # type: ignore[assignment]
+    if utterances:
+        segments = _segments_from_utterances(utterances)
+        logger.info("Deepgram transcription complete: %d segments from utterances", len(segments))
+        return segments
+
+    # Fallback: word-level grouping from channels
+    channels = results.get("channels", [])  # type: ignore[call-overload]
     if not channels:
         logger.warning("Deepgram returned no channels — empty transcript")
         return []
@@ -246,27 +267,11 @@ async def transcribe_audio_deepgram(audio_path: Path, api_key: str) -> list[_Seg
     alt_confidence = alternative.get("confidence", 0.0)
     alt_transcript = alternative.get("transcript", "")
     logger.info(
-        "Deepgram alternative: confidence=%.4f, transcript=%r",
+        "Deepgram alternative (word fallback): confidence=%.4f, transcript=%r",
         alt_confidence,
         alt_transcript[:100] if alt_transcript else "(empty)",
     )
 
-    # Primary: use Deepgram's paragraph/sentence segmentation
-    paragraphs_obj: _DeepgramParagraphsObject | None = alternative.get("paragraphs")  # type: ignore[assignment]
-    if paragraphs_obj:
-        para_transcript = paragraphs_obj.get("transcript", "")
-        paragraphs = paragraphs_obj.get("paragraphs", [])
-        logger.info(
-            "Deepgram paragraphs object: %d paragraphs, para_transcript=%r",
-            len(paragraphs),
-            para_transcript[:100] if para_transcript else "(empty)",
-        )
-        if paragraphs:
-            segments = _segments_from_paragraphs(paragraphs)
-            logger.info("Deepgram transcription complete: %d segments from %d paragraphs", len(segments), len(paragraphs))
-            return segments
-
-    # Fallback: word-level grouping
     raw_words: list[_DeepgramWord] = alternative.get("words", [])  # type: ignore[assignment]
     if not raw_words:
         logger.warning(
