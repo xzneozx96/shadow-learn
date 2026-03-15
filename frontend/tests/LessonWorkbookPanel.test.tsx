@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { VocabEntry } from '@/types'
 
 const mockNavigate = vi.fn()
 
@@ -19,24 +20,39 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-type MockEntry = {
-  id: string
-  word: string
-  pinyin: string
-  meaning: string
-  sourceLessonId: string
-  sourceSegmentId: string
-}
-
-const mockEntries: MockEntry[] = [
-  { id: 'e1', word: '今天', pinyin: 'jīntiān', meaning: 'today', sourceLessonId: 'lesson_1', sourceSegmentId: 'seg_1' },
-  { id: 'e2', word: '朋友', pinyin: 'péngyou', meaning: 'friend', sourceLessonId: 'lesson_1', sourceSegmentId: 'seg_2' },
+const mockEntries: VocabEntry[] = [
+  {
+    id: 'e1',
+    word: '今天',
+    pinyin: 'jīntiān',
+    meaning: 'today',
+    usage: '今天很好。',
+    sourceLessonId: 'lesson_1',
+    sourceLessonTitle: 'Lesson 1',
+    sourceSegmentId: 'seg_1',
+    sourceSegmentChinese: '今天好',
+    sourceSegmentTranslation: 'Good today',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'e2',
+    word: '朋友',
+    pinyin: 'péngyou',
+    meaning: 'friend',
+    usage: '你是我的朋友。',
+    sourceLessonId: 'lesson_1',
+    sourceLessonTitle: 'Lesson 1',
+    sourceSegmentId: 'seg_2',
+    sourceSegmentChinese: '你是我的朋友。',
+    sourceSegmentTranslation: 'You are my friend',
+    createdAt: '2026-01-01T00:00:01.000Z',
+  },
 ]
 
-let mockVocab: { entriesByLesson: Record<string, MockEntry[]> } = { entriesByLesson: {} }
+let mockVocab: { entriesByLesson: Record<string, VocabEntry[]> } = { entriesByLesson: {} }
 
 vi.mock('@/hooks/useVocabulary', () => ({
   useVocabulary: () => mockVocab,
