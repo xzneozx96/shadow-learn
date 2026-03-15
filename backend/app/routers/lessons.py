@@ -15,8 +15,8 @@ from app.config import settings
 from app.jobs import Job, jobs
 from app.models import LessonRequest
 from app.services.audio import (
+    download_youtube_video,
     extract_audio_from_upload,
-    extract_audio_from_youtube,
     get_youtube_duration,
     probe_upload_duration,
 )
@@ -81,6 +81,7 @@ async def _shared_pipeline(
             "pinyin": seg.get("pinyin", ""),
             "translations": seg.get("translations", {}),
             "words": vocab_map.get(seg["id"]) or vocab_map.get(str(seg["id"])) or [],
+            "wordTimings": seg.get("word_timings") or None,
         })
 
     result: dict = {
@@ -119,7 +120,7 @@ async def _process_youtube_lesson(
             return
 
         jobs[job_id].step = "audio_extraction"
-        audio_path = await extract_audio_from_youtube(video_id)
+        audio_path = await download_youtube_video(video_id)
 
         jobs[job_id].step = "transcription"
         if not request.deepgram_api_key:
