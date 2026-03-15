@@ -115,7 +115,18 @@ Toast shown on save: "Saved to Workbook."
 
 ### Design
 
-Dark `#080810` background + retro grid overlay + ambient purple orbs. Lesson cards: glassmorphism (`rgba(255,255,255,0.02)` fill, `1px solid rgba(255,255,255,0.07)` border, `border-radius: 16px`). Hover: purple border glow + `translateY(-2px)`. Study button: `linear-gradient(135deg, #7c3aed, #6d28d9)` with shiny highlight. Spacing scale: 4/8/12/16/20/24/32/40px.
+Follows the existing app's **achromatic glass system** exactly — no custom colors or purple accents:
+
+- **Background:** `oklch(0.08 0 0)` + soft radial vignette (`oklch(1 0 0 / 0.03)`)
+- **Cards:** `oklch(1 0 0 / 0.04)` fill, `backdrop-filter: blur(20px)`, `1px solid oklch(1 0 0 / 0.08)` border, inset top highlight gradient, `border-radius: calc(0.625rem * 1.6)`
+- **Surface (interactive elements):** `oklch(1 0 0 / 0.06)`
+- **Hover state:** `oklch(1 0 0 / 0.10)`
+- **Primary button (Study, Check, Start):** white bg `oklch(0.97 0 0)` with dark text `oklch(0.08 0 0)` — same as app's `variant="default"`
+- **Ghost button:** `var(--surface)` bg + `var(--border)` outline
+- **Spacing:** 8px base grid, consistent with existing components
+- **Typography:** Inter + Noto Sans SC, `text-sm` / `text-xs` hierarchy, `text-muted-foreground` for secondary text
+- **Score colours:** semantic only — muted oklch green (`oklch(0.75 0.14 142)`), yellow (`oklch(0.85 0.16 90)`), red (`oklch(0.65 0.18 25)`)
+- **Record button:** muted red `oklch(0.65 0.18 25)` — semantic destructive colour, same as app's destructive token
 
 ---
 
