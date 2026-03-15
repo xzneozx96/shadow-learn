@@ -182,15 +182,17 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
         {videoBlob && (
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="ml-auto shrink-0"
-                  onClick={handleDownload}
-                >
-                  <Download className="size-4" />
-                </Button>
+              <TooltipTrigger
+                render={(
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="ml-auto shrink-0"
+                    onClick={handleDownload}
+                  />
+                )}
+              >
+                <Download className="size-4" />
               </TooltipTrigger>
               <TooltipContent>
                 {lesson.source === 'youtube' ? 'Download audio' : 'Download video'}
