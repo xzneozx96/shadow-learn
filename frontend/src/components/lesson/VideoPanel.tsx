@@ -199,6 +199,7 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob, onRenam
   }
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Round to 2 decimal places to prevent floating-point drift from step arithmetic
     setVolume(Math.round(Number(e.target.value) * 100) / 100)
   }
 
