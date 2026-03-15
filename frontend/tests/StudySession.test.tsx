@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 // Import after mocks
@@ -23,7 +23,7 @@ vi.mock('@/hooks/useTTS', () => ({
   useTTS: () => ({ playTTS: vi.fn(), loadingText: null }),
 }))
 
-describe('studySession', () => {
+describe('StudySession', () => {
   it('renders ModePicker on initial mount', () => {
     render(<StudySession lessonId="lesson_1" onClose={vi.fn()} />)
     // ModePicker renders a Start button
@@ -33,7 +33,7 @@ describe('studySession', () => {
   it('calls onClose when the × button is clicked', () => {
     const onClose = vi.fn()
     render(<StudySession lessonId="lesson_1" onClose={onClose} />)
-    screen.getByRole('button', { name: /close/i }).click()
+    fireEvent.click(screen.getByRole('button', { name: /close/i }))
     expect(onClose).toHaveBeenCalledOnce()
   })
 })
