@@ -7,7 +7,7 @@ function makeAudio(): HTMLAudioElement {
   return el
 }
 
-describe('HTML5Player.setVolume', () => {
+describe('html5Player setVolume', () => {
   it('sets volume on the element', () => {
     const el = makeAudio()
     const player = new HTML5Player(el)
