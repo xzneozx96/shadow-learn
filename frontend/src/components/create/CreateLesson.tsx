@@ -1,18 +1,16 @@
-import type { PipelineStep } from './ProcessingStatus'
 import type { LessonMeta } from '@/types'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
-import { getSettings, saveLessonMeta, saveSegments, saveVideo } from '@/db'
-import { ProcessingStatus } from './ProcessingStatus'
+import { useLessons } from '@/contexts/LessonsContext'
+import { getSettings, saveVideo } from '@/db'
 import { UploadTab } from './UploadTab'
 import { YouTubeTab } from './YouTubeTab'
 
@@ -28,57 +26,49 @@ const LANGUAGES = [
   { value: 'vi', label: 'Vietnamese' },
 ]
 
-const DEFAULT_STEPS: PipelineStep[] = [
-  { id: 'duration_check', label: 'Checking duration', status: 'pending' },
-  { id: 'audio_extraction', label: 'Extracting audio', status: 'pending' },
-  { id: 'transcription', label: 'Transcribing audio', status: 'pending' },
-  { id: 'pinyin', label: 'Generating pinyin', status: 'pending' },
-  { id: 'translation', label: 'Translating segments', status: 'pending' },
-  { id: 'vocabulary', label: 'Extracting vocabulary', status: 'pending' },
-  { id: 'assembling', label: 'Assembling lesson', status: 'pending' },
-]
-
 export function CreateLesson() {
   const { db, keys } = useAuth()
   const navigate = useNavigate()
+  const { updateLesson } = useLessons()
 
   const [tab, setTab] = useState('youtube')
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [language, setLanguage] = useState('en')
-  const [model, setModel] = useState('')
-  const [processing, setProcessing] = useState(false)
-  const [steps, setSteps] = useState<PipelineStep[]>(DEFAULT_STEPS)
+  const [submitting, setSubmitting] = useState(false)
+  const [queued, setQueued] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!db)
       return
     getSettings(db).then((s) => {
-      if (s) {
+      if (s)
         setLanguage(s.translationLanguage)
-        setModel(s.defaultModel)
-      }
     })
   }, [db])
 
   const handleGenerate = useCallback(async () => {
     if (!db || !keys)
       return
-
     const isYoutube = tab === 'youtube'
     if (isYoutube && !youtubeUrl.trim())
       return
     if (!isYoutube && !file)
       return
 
-    setProcessing(true)
-    setSteps(DEFAULT_STEPS.map(s => ({ ...s, status: 'pending', error: undefined })))
+    setSubmitting(true)
+    setError(null)
 
     try {
-      let response: Response
+      let jobId: string
+      let lessonSource: 'youtube' | 'upload'
+      let lessonSourceUrl: string | null = null
+      let lessonTitle: string
+      let capturedFile: File | null = null
 
       if (isYoutube) {
-        response = await fetch('/api/lessons/generate', {
+        const res = await fetch('/api/lessons/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -87,154 +77,102 @@ export function CreateLesson() {
             translation_languages: [language],
             openai_api_key: keys.openaiApiKey,
             deepgram_api_key: keys.deepgramApiKey ?? null,
-            model: model || 'gpt-4o-mini',
+            model: 'gpt-4o-mini',
           }),
         })
+        if (!res.ok) {
+          const detail = await res.json().catch(() => null)
+          const msg = detail?.detail || `Server error: ${res.status}`
+          toast.error(msg)
+          throw new Error(msg)
+        }
+        const data = await res.json()
+        jobId = data.job_id
+        lessonSource = 'youtube'
+        const match = youtubeUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+        const videoId = match?.[1] ?? 'unknown'
+        lessonTitle = `YouTube Video (${videoId})`
+        lessonSourceUrl = youtubeUrl
       }
       else {
+        capturedFile = file!
         const formData = new FormData()
         formData.append('file', file!)
         formData.append('translation_languages', language)
         formData.append('openai_api_key', keys.openaiApiKey)
-        formData.append('model', model || 'gpt-4o-mini')
-        if (keys.deepgramApiKey) {
+        formData.append('model', 'gpt-4o-mini')
+        if (keys.deepgramApiKey)
           formData.append('deepgram_api_key', keys.deepgramApiKey)
+
+        const res = await fetch('/api/lessons/generate-upload', { method: 'POST', body: formData })
+        if (!res.ok) {
+          const detail = await res.json().catch(() => null)
+          const msg = detail?.detail || `Server error: ${res.status}`
+          toast.error(msg)
+          throw new Error(msg)
         }
-
-        response = await fetch('/api/lessons/generate-upload', {
-          method: 'POST',
-          body: formData,
-        })
+        const data = await res.json()
+        jobId = data.job_id
+        lessonSource = 'upload'
+        lessonTitle = file!.name.replace(/\.[^/.]+$/, '')
       }
 
-      if (!response.ok) {
-        const detail = await response.json().catch(() => null)
-        const msg = detail?.detail || `Server error: ${response.status}`
-        toast.error(msg)
-        throw new Error(msg)
-      }
-      if (!response.body) {
-        toast.error('No response stream from server')
-        throw new Error('No response stream')
+      const lessonId = crypto.randomUUID()
+      const now = new Date().toISOString()
+
+      // For uploads: persist audio to IndexedDB before navigating (component will unmount)
+      if (lessonSource === 'upload' && capturedFile) {
+        await saveVideo(db, lessonId, capturedFile)
       }
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      let currentEvent = ''
+      await updateLesson({
+        id: lessonId,
+        title: lessonTitle,
+        source: lessonSource,
+        sourceUrl: lessonSourceUrl,
+        translationLanguages: [language],
+        createdAt: now,
+        lastOpenedAt: now,
+        progressSegmentId: null,
+        tags: [],
+        status: 'processing',
+        jobId,
+      } as LessonMeta)
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done)
-          break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-
-        for (const line of lines) {
-          if (line.startsWith('event:')) {
-            currentEvent = line.slice(6).trim()
-            continue
-          }
-
-          if (line.startsWith('data:')) {
-            const raw = line.slice(5).trim()
-            if (!raw)
-              continue
-
-            try {
-              const data = JSON.parse(raw)
-
-              if (currentEvent === 'progress') {
-                // Backend sends { step: "step_id", message: "..." }
-                // Mark current step as active, mark previous steps as done
-                setSteps((prev) => {
-                  const stepIdx = prev.findIndex(s => s.id === data.step)
-                  return prev.map((s, i) => {
-                    if (i < stepIdx && s.status !== 'done')
-                      return { ...s, status: 'done' as const }
-                    if (i === stepIdx)
-                      return { ...s, status: 'active' as const }
-                    return s
-                  })
-                })
-              }
-              else if (currentEvent === 'error') {
-                toast.error(data.message || 'Processing failed')
-                setSteps(prev => prev.map(s =>
-                  s.status === 'active' ? { ...s, status: 'error' as const, error: data.message } : s,
-                ))
-                setProcessing(false)
-                return
-              }
-              else if (currentEvent === 'complete') {
-                // Backend sends { lesson: { title, source, source_url, duration, segments, translation_languages } }
-                const lesson = data.lesson
-                const lessonId = `lesson_${Date.now()}`
-                const meta: LessonMeta = {
-                  id: lessonId,
-                  title: lesson.title,
-                  source: lesson.source,
-                  sourceUrl: lesson.source_url,
-                  duration: lesson.duration,
-                  segmentCount: lesson.segments.length,
-                  translationLanguages: lesson.translation_languages,
-                  createdAt: new Date().toISOString(),
-                  lastOpenedAt: new Date().toISOString(),
-                  progressSegmentId: null,
-                  tags: [],
-                }
-
-                await saveLessonMeta(db, meta)
-                await saveSegments(db, lessonId, lesson.segments)
-
-                // Save media for offline playback
-                if (isYoutube && data.audio_url) {
-                  // Download the extracted audio from the backend
-                  const audioResp = await fetch(data.audio_url)
-                  if (audioResp.ok) {
-                    const audioBlob = await audioResp.blob()
-                    await saveVideo(db, lessonId, audioBlob)
-                  }
-                }
-                else if (!isYoutube && file) {
-                  await saveVideo(db, lessonId, file)
-                }
-
-                // Mark all steps done
-                setSteps(prev => prev.map(s => ({ ...s, status: 'done' as const })))
-
-                navigate(`/lesson/${lessonId}`)
-                return
-              }
-            }
-            catch {
-              // ignore parse errors for non-JSON data lines
-            }
-          }
-        }
-      }
+      setQueued(true)
+      setYoutubeUrl('')
+      setFile(null)
     }
     catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
-      toast.error(errorMsg)
-      setSteps((prev) => {
-        const activeIdx = prev.findIndex(s => s.status === 'active')
-        const targetIdx = activeIdx >= 0 ? activeIdx : 0
-        return prev.map((s, i) => i === targetIdx ? { ...s, status: 'error' as const, error: errorMsg } : s)
-      })
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setError(msg)
     }
     finally {
-      setProcessing(false)
+      setSubmitting(false)
     }
-  }, [db, keys, tab, youtubeUrl, file, language, model, navigate])
+  }, [db, keys, tab, youtubeUrl, file, language, updateLesson])
 
-  const handleRetry = useCallback(() => {
-    handleGenerate()
-  }, [handleGenerate])
+  const canGenerate = (tab === 'youtube' ? !!youtubeUrl.trim() : !!file) && !!keys?.deepgramApiKey
 
-  const canGenerate = tab === 'youtube' ? !!youtubeUrl.trim() : !!file
+  if (queued) {
+    return (
+      <Layout>
+        <div className="mx-auto max-w-2xl p-4">
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+              <p className="text-sm text-white/65">
+                Lesson queued — track progress in the library
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={() => navigate('/')}>Go to Library</Button>
+                <Button variant="ghost" onClick={() => setQueued(false)}>Queue Another</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
@@ -244,63 +182,43 @@ export function CreateLesson() {
             <CardTitle>Create New Lesson</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {!processing
-              ? (
-                  <>
-                    <Tabs value={tab} onValueChange={v => setTab(v as string)}>
-                      <TabsList>
-                        <TabsTrigger value="youtube">YouTube</TabsTrigger>
-                        <TabsTrigger value="upload">Upload</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="youtube">
-                        <YouTubeTab url={youtubeUrl} onUrlChange={setYoutubeUrl} />
-                      </TabsContent>
-                      <TabsContent value="upload">
-                        <UploadTab file={file} onFileChange={setFile} />
-                      </TabsContent>
-                    </Tabs>
+            <Tabs value={tab} onValueChange={v => setTab(v as string)}>
+              <TabsList>
+                <TabsTrigger value="youtube">YouTube</TabsTrigger>
+                <TabsTrigger value="upload">Upload</TabsTrigger>
+              </TabsList>
+              <TabsContent value="youtube">
+                <YouTubeTab url={youtubeUrl} onUrlChange={setYoutubeUrl} />
+              </TabsContent>
+              <TabsContent value="upload">
+                <UploadTab file={file} onFileChange={setFile} />
+              </TabsContent>
+            </Tabs>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/65">Translation Language</label>
-                      <Select value={language} onValueChange={v => v !== null && setLanguage(v)} items={LANGUAGES}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LANGUAGES.map(l => (
-                            <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/65">AI Model (optional)</label>
-                      <Input
-                        placeholder="e.g. gpt-4o-mini"
-                        value={model}
-                        onChange={e => setModel(e.target.value)}
-                      />
-                    </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white/65">Translation Language</label>
+              <Select value={language} onValueChange={v => v !== null && setLanguage(v)} items={LANGUAGES}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map(l => (
+                    <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                    <Button
-                      disabled={!canGenerate}
-                      onClick={handleGenerate}
-                      className="w-full"
-                    >
-                      <Sparkles className="size-4" />
-                      Generate Lesson
-                    </Button>
-                  </>
-                )
-              : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm text-white/65">
-                      <Loader2 className="size-4 animate-spin" />
-                      Processing...
-                    </div>
-                    <ProcessingStatus steps={steps} onRetry={handleRetry} />
-                  </div>
-                )}
+            <Button
+              disabled={!canGenerate || submitting}
+              onClick={handleGenerate}
+              className="w-full"
+            >
+              <Sparkles className="size-4" />
+              {submitting ? 'Starting…' : 'Generate Lesson'}
+            </Button>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
         </Card>
       </div>

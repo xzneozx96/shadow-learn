@@ -1,5 +1,5 @@
 import type { LessonMeta } from '@/types'
-import { Clock, FileVideo, MoreHorizontal, Trash2, Youtube } from 'lucide-react'
+import { Clock, FileVideo, Loader2, MoreHorizontal, Trash2, Youtube } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +20,11 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function LessonCard({ lesson, onDelete, onRename, onRetry: _onRetry }: LessonCardProps) {
+export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardProps) {
+  const status = lesson.status ?? 'complete'
+  const isProcessing = status === 'processing'
+  const isError = status === 'error'
+
   const progress = lesson.progressSegmentId && lesson.segmentCount
     ? Math.min(100, Math.round((Number.parseInt(lesson.progressSegmentId, 10) / lesson.segmentCount) * 100))
     : 0
@@ -30,7 +34,6 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry: _onRetry }: Le
   const isCancelledRef = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-focus + select all text when editing starts
   useEffect(() => {
     if (isEditing)
       inputRef.current?.select()
@@ -69,15 +72,15 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry: _onRetry }: Le
 
   return (
     <Card className="group relative flex flex-col transition-shadow hover:ring-2 hover:ring-white/15">
-      {/* Card-level navigation link — disabled while editing to allow input interaction */}
+      {/* Card-level navigation link — disabled while editing or processing */}
       <Link
         to={`/lesson/${lesson.id}`}
         className="absolute inset-0 z-10"
-        tabIndex={isEditing ? -1 : undefined}
-        style={{ pointerEvents: isEditing ? 'none' : undefined }}
+        tabIndex={isEditing || isProcessing ? -1 : undefined}
+        style={{ pointerEvents: isEditing || isProcessing ? 'none' : undefined }}
       />
 
-      {/* Action menu — always visible on hover, z-index above the link */}
+      {/* Action menu */}
       <div className="absolute right-2 top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100">
         <MenuRoot>
           <MenuTrigger
@@ -116,22 +119,59 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry: _onRetry }: Le
       </div>
 
       <CardHeader>
+        {/* Status badge — only shown for processing or error states */}
+        {isProcessing && (
+          <div className="mb-2 flex items-center gap-1.5 text-xs text-white/50">
+            <Loader2 className="size-3 animate-spin" />
+            <span>{lesson.currentStep ?? 'Processing…'}</span>
+          </div>
+        )}
+        {isError && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-xs font-medium text-destructive">
+              Failed
+            </span>
+            {/* YouTube: retry is possible programmatically */}
+            {lesson.source === 'youtube' && onRetry && (
+              <button
+                onClick={(e) => { e.preventDefault(); onRetry(lesson) }}
+                className="z-20 text-xs text-white/50 underline hover:text-white"
+              >
+                Retry
+              </button>
+            )}
+            {/* Upload: pipeline cannot be retried without re-uploading */}
+            {lesson.source === 'upload' && (
+              <span className="text-xs text-white/50">Re-upload to retry</span>
+            )}
+            {lesson.errorMessage && (
+              <span
+                className="max-w-[120px] truncate text-xs text-white/40"
+                title={lesson.errorMessage}
+              >
+                {lesson.errorMessage}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-2 text-white/40 mb-2">
           {lesson.source === 'youtube'
             ? <Youtube className="size-5 text-red-400" />
             : <FileVideo className="size-5 text-white/50" />}
-          {lesson.duration != null && (
-            <div className="flex items-center gap-1 text-xs">
-              <Clock className="size-4" />
-              {formatDuration(lesson.duration)}
-            </div>
-          )}
-          {lesson.segmentCount != null && (
-            <span className="text-xs">
-              {lesson.segmentCount}
-              {' '}
-              segments
-            </span>
+          {/* Duration and segment count hidden until lesson is complete */}
+          {!isProcessing && lesson.duration != null && lesson.segmentCount != null && (
+            <>
+              <div className="flex items-center gap-1 text-xs">
+                <Clock className="size-4" />
+                {formatDuration(lesson.duration)}
+              </div>
+              <span className="text-xs">
+                {lesson.segmentCount}
+                {' '}
+                segments
+              </span>
+            </>
           )}
         </div>
 
@@ -163,21 +203,24 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry: _onRetry }: Le
           </div>
         )}
 
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs text-white/40">
-            <span>Progress</span>
-            <span>
-              {progress}
-              %
-            </span>
+        {/* Progress bar hidden while processing (no segments yet) */}
+        {!isProcessing && lesson.segmentCount != null && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs text-white/40">
+              <span>Progress</span>
+              <span>
+                {progress}
+                %
+              </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   )

@@ -3,6 +3,7 @@ import type { LessonMeta } from '@/types'
 import type { ShadowLearnDB } from '@/db'
 import { deleteFullLesson, getAllLessonMetas, saveLessonMeta } from '@/db'
 import { useAuth } from '@/contexts/AuthContext'
+import { useJobPoller } from '@/hooks/useJobPoller'
 
 interface LessonsContextValue {
   lessons: LessonMeta[]
@@ -49,6 +50,8 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshLessons()
   }, [refreshLessons])
+
+  useJobPoller({ lessons, db, updateLesson })
 
   return (
     <LessonsContext.Provider value={{ lessons, db, updateLesson, deleteLesson, refreshLessons }}>
