@@ -1,5 +1,5 @@
 import type { LessonMeta, Segment } from '@/types'
-import { ExternalLink, Home, Pause, Play, SkipBack, SkipForward } from 'lucide-react'
+import { ExternalLink, Home, Pause, Pencil, Play, SkipBack, SkipForward } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -60,13 +60,57 @@ interface VideoPanelProps {
   segments: Segment[]
   activeSegment: Segment | null
   videoBlob?: Blob
+  onRename?: (newTitle: string) => void
 }
 
-export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: VideoPanelProps) {
+export function VideoPanel({ lesson, segments, activeSegment, videoBlob, onRename }: VideoPanelProps) {
   const { player, currentTime, playbackRate, setPlayer, setPlaybackRate } = usePlayer()
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState('')
+  const isCancelledRef = useRef(false)
+  const titleSnapshotRef = useRef('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-focus + select all when rename input appears
+  useEffect(() => {
+    if (isEditing)
+      inputRef.current?.select()
+  }, [isEditing])
+
+  function startEditing() {
+    isCancelledRef.current = false
+    titleSnapshotRef.current = lesson.title
+    setEditValue(lesson.title)
+    setIsEditing(true)
+  }
+
+  function confirmEdit() {
+    if (isCancelledRef.current)
+      return
+    const trimmed = editValue.trim()
+    if (trimmed && trimmed !== titleSnapshotRef.current)
+      onRename?.(trimmed)
+    setIsEditing(false)
+  }
+
+  function cancelEdit() {
+    isCancelledRef.current = true
+    setIsEditing(false)
+  }
+
+  function handleRenameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      confirmEdit()
+    }
+    else if (e.key === 'Escape') {
+      e.preventDefault()
+      cancelEdit()
+    }
+  }
 
   const isAudioOnly = lesson.source === 'youtube'
   const youtubeVideoId = lesson.sourceUrl ? extractYouTubeVideoId(lesson.sourceUrl) : null
@@ -160,9 +204,36 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
           <Home className="size-4" />
         </Button>
         <div className="h-4 w-px bg-border" />
-        <span className="truncate text-sm font-medium text-foreground">
-          {lesson.title}
-        </span>
+        <div className="group/title flex min-w-0 flex-1 items-center gap-1">
+          {isEditing
+            ? (
+                <input
+                  ref={inputRef}
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  onBlur={confirmEdit}
+                  onKeyDown={handleRenameKeyDown}
+                  className="min-w-0 flex-1 truncate rounded border border-border bg-transparent px-1 py-0.5 text-sm font-medium text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+                  aria-label="Rename lesson"
+                />
+              )
+            : (
+                <span className="truncate text-sm font-medium text-foreground">
+                  {lesson.title}
+                </span>
+              )}
+          {onRename && !isEditing && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="shrink-0 opacity-0 transition-opacity group-hover/title:opacity-100"
+              onClick={startEditing}
+              aria-label="Rename lesson"
+            >
+              <Pencil className="size-3" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Media area */}
