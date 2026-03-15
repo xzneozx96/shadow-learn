@@ -1,6 +1,6 @@
 import type { ShadowLearnDB } from '../db'
 import type { LessonMeta, Segment } from '../types'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { getLessonMeta, getSegments, saveLessonMeta } from '../db'
 
 interface UseLessonResult {
@@ -8,6 +8,7 @@ interface UseLessonResult {
   segments: Segment[]
   loading: boolean
   error: string | null
+  updateMeta: (updates: Partial<LessonMeta>) => void
 }
 
 export function useLesson(db: ShadowLearnDB | null, lessonId: string | undefined): UseLessonResult {
@@ -48,5 +49,10 @@ export function useLesson(db: ShadowLearnDB | null, lessonId: string | undefined
     load()
   }, [db, lessonId])
 
-  return { meta, segments, loading, error }
+  // Stable reference (empty deps) — safe to list as a dep in LessonView callbacks
+  const updateMeta = useCallback((updates: Partial<LessonMeta>) => {
+    setMeta(prev => prev ? { ...prev, ...updates } : prev)
+  }, [])
+
+  return { meta, segments, loading, error, updateMeta }
 }
