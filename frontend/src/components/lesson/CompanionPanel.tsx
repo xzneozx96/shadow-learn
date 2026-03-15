@@ -40,7 +40,6 @@ export function CompanionPanel({
   lessonId,
 }: CompanionPanelProps) {
   const [input, setInput] = useState('')
-  const [activeTab, setActiveTab] = useState<'ai' | 'workbook'>('ai')
   const bottomRef = useRef<HTMLDivElement>(null)
   const { entriesByLesson } = useVocabulary()
   const count = (entriesByLesson[lessonId] ?? []).length
@@ -67,8 +66,7 @@ export function CompanionPanel({
   return (
     <div className="flex h-full flex-col bg-background/10 backdrop-blur-md">
       <Tabs
-        value={activeTab}
-        onValueChange={v => setActiveTab(v as 'ai' | 'workbook')}
+        defaultValue="ai"
         className="flex h-full flex-col gap-0"
       >
         <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3">

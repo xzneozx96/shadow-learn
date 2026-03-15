@@ -14,6 +14,7 @@ vi.mock('@/components/lesson/LessonWorkbookPanel', () => ({
 }))
 
 // Import after mocks are hoisted
+import type { VocabEntry } from '@/types'
 import { useVocabulary } from '@/hooks/useVocabulary'
 import { CompanionPanel } from '@/components/lesson/CompanionPanel'
 
@@ -52,10 +53,7 @@ describe('CompanionPanel — tab bar', () => {
   it('shows badge with count when words are saved for this lesson', () => {
     vi.mocked(useVocabulary).mockReturnValue({
       entriesByLesson: {
-        lesson_1: [
-          { id: 'e1', word: '今天' } as never,
-          { id: 'e2', word: '朋友' } as never,
-        ],
+        lesson_1: [{} as VocabEntry, {} as VocabEntry],
       },
     } as ReturnType<typeof useVocabulary>)
     render(<CompanionPanel {...defaultProps} />)
