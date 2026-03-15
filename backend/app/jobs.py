@@ -8,8 +8,8 @@ from typing import Any
 @dataclass
 class Job:
     status: str          # "processing" | "complete" | "error"
-    step: str            # current pipeline step name
-    result: Any          # full result dict when complete; None otherwise
+    step: str            # valid: "audio_extraction"|"upload"|"duration_check"|"transcription"|"pinyin"|"translation"|"assembling"|"complete"
+    result: dict[str, Any] | None  # { lesson: {...}, audio_url? } when complete; None otherwise
     error: str | None    # error message if failed; None otherwise
     created_at: float = field(default_factory=time.time)
 
