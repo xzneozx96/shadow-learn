@@ -11,6 +11,7 @@ export function Setup() {
 
   const [openaiApiKey, setOpenaiApiKey] = useState('')
   const [minimaxApiKey, setMinimaxApiKey] = useState('')
+  const [deepgramApiKey, setDeepgramApiKey] = useState('')
   const [pin, setPin] = useState('')
   const [pinConfirm, setPinConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +37,11 @@ export function Setup() {
     try {
       setLoading(true)
       await setup(
-        { openaiApiKey: openaiApiKey.trim(), minimaxApiKey: minimaxApiKey.trim() || undefined },
+        {
+          openaiApiKey: openaiApiKey.trim(),
+          minimaxApiKey: minimaxApiKey.trim() || undefined,
+          deepgramApiKey: deepgramApiKey.trim() || undefined,
+        },
         pin,
       )
     }
@@ -51,11 +56,11 @@ export function Setup() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
-      <Card className="w-full max-w-md bg-slate-800 text-slate-100">
+    <div className="flex h-screen items-center justify-center bg-[oklch(0.08_0_0)] px-4">
+      <Card className="w-full max-w-md bg-white/[0.06] text-white/90">
         <CardHeader>
           <CardTitle className="text-xl">Welcome to ShadowLearn</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-white/40">
             Enter your API keys to get started. They will be encrypted with your PIN and stored
             locally in your browser — nothing leaves this device.
           </CardDescription>
@@ -63,7 +68,7 @@ export function Setup() {
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="openai" className="text-sm font-medium text-slate-300">
+              <label htmlFor="openai" className="text-sm font-medium text-white/65">
                 OpenAI API Key
               </label>
               <Input
@@ -73,15 +78,15 @@ export function Setup() {
                 value={openaiApiKey}
                 onChange={e => setOpenaiApiKey(e.target.value)}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-white/30">
                 Used for transcription (Whisper), translation, and AI chat.
               </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="minimax" className="text-sm font-medium text-slate-300">
+              <label htmlFor="minimax" className="text-sm font-medium text-white/65">
                 {'Minimax API Key '}
-                <span className="text-slate-500">(optional)</span>
+                <span className="text-white/30">(optional)</span>
               </label>
               <Input
                 id="minimax"
@@ -90,13 +95,30 @@ export function Setup() {
                 value={minimaxApiKey}
                 onChange={e => setMinimaxApiKey(e.target.value)}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-white/30">
                 Used for word and sentence pronunciation (TTS). Can be added later in Settings.
               </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="pin" className="text-sm font-medium text-slate-300">
+              <label htmlFor="deepgram" className="text-sm font-medium text-white/65">
+                Deepgram API Key{' '}
+                <span className="text-white/30">(optional)</span>
+              </label>
+              <Input
+                id="deepgram"
+                type="password"
+                placeholder="..."
+                value={deepgramApiKey}
+                onChange={e => setDeepgramApiKey(e.target.value)}
+              />
+              <p className="text-xs text-white/30">
+                Used for transcription (faster, more accurate than Whisper). Can be added later in Settings.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="pin" className="text-sm font-medium text-white/65">
                 PIN (4+ characters)
               </label>
               <Input
@@ -109,7 +131,7 @@ export function Setup() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="pin-confirm" className="text-sm font-medium text-slate-300">
+              <label htmlFor="pin-confirm" className="text-sm font-medium text-white/65">
                 Confirm PIN
               </label>
               <Input

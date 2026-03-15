@@ -19,6 +19,7 @@ const LANGUAGES = [
   { value: 'ko', label: 'Korean' },
   { value: 'pt', label: 'Portuguese' },
   { value: 'ru', label: 'Russian' },
+  { value: 'vi', label: 'Vietnamese' },
 ]
 
 export function Settings() {
@@ -34,6 +35,7 @@ export function Settings() {
   const [saved, setSaved] = useState(false)
   const [editOpenaiKey, setEditOpenaiKey] = useState(keys?.openaiApiKey ?? '')
   const [editMinimaxKey, setEditMinimaxKey] = useState(keys?.minimaxApiKey ?? '')
+  const [editDeepgramKey, setEditDeepgramKey] = useState(keys?.deepgramApiKey ?? '')
   const [keysPin, setKeysPin] = useState('')
   const [keysSaved, setKeysSaved] = useState(false)
   const [keysError, setKeysError] = useState<string | null>(null)
@@ -52,6 +54,7 @@ export function Settings() {
   useEffect(() => {
     setEditOpenaiKey(keys?.openaiApiKey ?? '')
     setEditMinimaxKey(keys?.minimaxApiKey ?? '')
+    setEditDeepgramKey(keys?.deepgramApiKey ?? '')
   }, [keys])
 
   async function handleSaveKeys() {
@@ -76,6 +79,7 @@ export function Settings() {
       const newKeys = {
         openaiApiKey: editOpenaiKey.trim(),
         minimaxApiKey: editMinimaxKey.trim() || undefined,
+        deepgramApiKey: editDeepgramKey.trim() || undefined,
       }
       await setup(newKeys, keysPin)
       setKeysSaved(true)
@@ -141,13 +145,13 @@ export function Settings() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">Visibility</span>
+              <span className="text-sm text-white/40">Visibility</span>
               <Button variant="ghost" size="icon-sm" onClick={() => setShowKeys(!showKeys)}>
                 {showKeys ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </Button>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">OpenAI API Key</label>
+              <label className="text-xs text-white/40">OpenAI API Key</label>
               <Input
                 type={showKeys ? 'text' : 'password'}
                 value={editOpenaiKey}
@@ -156,10 +160,10 @@ export function Settings() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">
+              <label className="text-xs text-white/40">
                 Minimax API Key
                 {' '}
-                <span className="text-slate-600">(for pronunciation)</span>
+                <span className="text-white/20">(for pronunciation)</span>
               </label>
               <Input
                 type={showKeys ? 'text' : 'password'}
@@ -170,7 +174,21 @@ export function Settings() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">Confirm with PIN</label>
+              <label className="text-xs text-white/40">
+                Deepgram API Key
+                {' '}
+                <span className="text-white/20">(for transcription)</span>
+              </label>
+              <Input
+                type={showKeys ? 'text' : 'password'}
+                value={editDeepgramKey}
+                onChange={e => setEditDeepgramKey(e.target.value)}
+                className="font-mono text-xs"
+                placeholder="Leave blank to use Whisper"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-white/40">Confirm with PIN</label>
               <Input
                 type="password"
                 value={keysPin}
@@ -190,7 +208,7 @@ export function Settings() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">New PIN</label>
+              <label className="text-xs text-white/40">New PIN</label>
               <Input
                 type="password"
                 value={newPin}
@@ -199,7 +217,7 @@ export function Settings() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">Confirm PIN</label>
+              <label className="text-xs text-white/40">Confirm PIN</label>
               <Input
                 type="password"
                 value={confirmPin}
@@ -224,8 +242,8 @@ export function Settings() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">Translation Language</label>
-              <Select value={language} onValueChange={v => v !== null && setLanguage(v)}>
+              <label className="text-xs text-white/40">Translation Language</label>
+              <Select value={language} onValueChange={v => v !== null && setLanguage(v)} items={LANGUAGES}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -245,7 +263,7 @@ export function Settings() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <label className="text-xs text-slate-400">Default Model</label>
+              <label className="text-xs text-white/40">Default Model</label>
               <Input
                 placeholder="e.g. gpt-4o-mini"
                 value={model}

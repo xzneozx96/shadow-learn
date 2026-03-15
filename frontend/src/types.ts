@@ -43,4 +43,5 @@ export interface AppSettings {
 export interface DecryptedKeys {
   openaiApiKey: string
   minimaxApiKey?: string
+  deepgramApiKey?: string
 }
