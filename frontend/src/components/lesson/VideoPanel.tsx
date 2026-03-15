@@ -1,12 +1,12 @@
 import type { LessonMeta, Segment } from '@/types'
-import { Pause, Play, SkipBack, SkipForward } from 'lucide-react'
+import { ExternalLink, Home, Pause, Play, SkipBack, SkipForward } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { cn } from '@/lib/utils'
 import { HTML5Player } from '@/player/HTML5Player'
-import { YouTubePlayer } from '@/player/YouTubePlayer'
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5]
 
@@ -19,18 +19,41 @@ function formatTime(seconds: number): string {
 function extractYouTubeVideoId(url: string): string | null {
   try {
     const parsed = new URL(url)
-    if (parsed.hostname === 'youtu.be') {
+    if (parsed.hostname === 'youtu.be')
       return parsed.pathname.slice(1)
-    }
-    if (parsed.hostname.includes('youtube.com')) {
+    if (parsed.hostname.includes('youtube.com'))
       return parsed.searchParams.get('v')
-    }
   }
-  catch {
-    // invalid URL
-  }
+  catch { /* invalid URL */ }
   return null
 }
+
+/* eslint-disable react-refresh/only-export-components */
+const SPACE_PATTERN = /\s+/g
+const INVALID_CHAR_PATTERN = /[^\w.-]/g
+const TRIM_HYPHENS_PATTERN = /^-+|-+$/g
+
+export function sanitizeBaseName(title: string): string {
+  const sanitized = title
+    .replace(SPACE_PATTERN, '-')
+    .replace(INVALID_CHAR_PATTERN, '')
+    .replace(TRIM_HYPHENS_PATTERN, '')
+    .slice(0, 100)
+  return sanitized || 'lesson'
+}
+
+const MIME_TO_EXT: Record<string, string> = {
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+  'video/quicktime': '.mov',
+  'video/x-msvideo': '.avi',
+}
+
+export function getMimeExtension(mimeType: string): string {
+  const base = mimeType.split(';')[0].trim()
+  return MIME_TO_EXT[base] ?? '.mp4'
+}
+/* eslint-enable react-refresh/only-export-components */
 
 interface VideoPanelProps {
   lesson: LessonMeta
@@ -41,45 +64,32 @@ interface VideoPanelProps {
 
 export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: VideoPanelProps) {
   const { player, currentTime, playbackRate, setPlayer, setPlaybackRate } = usePlayer()
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
 
-  // Initialize player
+  const isAudioOnly = lesson.source === 'youtube'
+  const youtubeVideoId = lesson.sourceUrl ? extractYouTubeVideoId(lesson.sourceUrl) : null
+
+  // Initialize HTML5 player for both YouTube (audio) and upload (video)
   useEffect(() => {
+    if (!videoBlob || !mediaRef.current)
+      return
+
     let destroyed = false
+    const objectUrl = URL.createObjectURL(videoBlob)
+    mediaRef.current.src = objectUrl
 
-    if (lesson.source === 'youtube' && lesson.sourceUrl) {
-      const videoId = extractYouTubeVideoId(lesson.sourceUrl)
-      if (!videoId)
-        return
+    const h5Player = new HTML5Player(mediaRef.current as HTMLVideoElement)
+    if (!destroyed)
+      setPlayer(h5Player)
 
-      const ytPlayer = new YouTubePlayer('yt-player', videoId)
-      if (!destroyed) {
-        setPlayer(ytPlayer)
-      }
-
-      return () => {
-        destroyed = true
-        ytPlayer.destroy()
-      }
+    return () => {
+      destroyed = true
+      h5Player.destroy()
+      URL.revokeObjectURL(objectUrl)
     }
-
-    if (lesson.source === 'upload' && videoBlob && videoRef.current) {
-      const objectUrl = URL.createObjectURL(videoBlob)
-      videoRef.current.src = objectUrl
-      const h5Player = new HTML5Player(videoRef.current)
-      if (!destroyed) {
-        setPlayer(h5Player)
-      }
-
-      return () => {
-        destroyed = true
-        h5Player.destroy()
-        URL.revokeObjectURL(objectUrl)
-      }
-    }
-  }, [lesson.source, lesson.sourceUrl, videoBlob, setPlayer])
+  }, [videoBlob, setPlayer])
 
   // Track duration
   useEffect(() => {
@@ -93,25 +103,28 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
     return () => clearInterval(interval)
   }, [player])
 
-  // Track ended
+  // Track play/pause/ended
   useEffect(() => {
     if (!player)
       return
-    const unsub = player.onEnded(() => {
-      setIsPlaying(false)
-    })
-    return unsub
+    const cleanupEnded = player.onEnded(() => setIsPlaying(false))
+    const cleanupPlay = player.onPlay(() => setIsPlaying(true))
+    const cleanupPause = player.onPause(() => setIsPlaying(false))
+
+    return () => {
+      cleanupEnded()
+      cleanupPlay()
+      cleanupPause()
+    }
   }, [player])
 
   const togglePlayPause = () => {
     if (!player)
       return
-    if (isPlaying) {
+    if (isPlaying)
       player.pause()
-    }
-    else {
+    else
       player.play()
-    }
     setIsPlaying(!isPlaying)
   }
 
@@ -124,43 +137,67 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
   const jumpPrev = () => {
     if (!player || activeIndex <= 0)
       return
-    const prev = segments[activeIndex - 1]
-    player.seekTo(prev.start)
-    if (!isPlaying) {
-      player.play()
-      setIsPlaying(true)
-    }
+    player.seekTo(segments[activeIndex - 1].start)
+    player.play()
   }
 
   const jumpNext = () => {
     if (!player || activeIndex < 0 || activeIndex >= segments.length - 1)
       return
-    const next = segments[activeIndex + 1]
-    player.seekTo(next.start)
-    if (!isPlaying) {
-      player.play()
-      setIsPlaying(true)
-    }
+    player.seekTo(segments[activeIndex + 1].start)
+    player.play()
   }
 
   const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!player)
-      return
-    const time = Number(e.target.value)
-    player.seekTo(time)
+    player?.seekTo(Number(e.target.value))
   }
 
   return (
-    <div className="flex h-full flex-col bg-slate-950">
-      {/* Video area */}
-      <div className="relative flex-1 bg-black">
-        {lesson.source === 'youtube'
+    <div className="flex h-full flex-col bg-background/50 backdrop-blur-md">
+      {/* Header */}
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <Button variant="ghost" size="icon-sm" render={<Link to="/" />}>
+          <Home className="size-4" />
+        </Button>
+        <div className="h-4 w-px bg-border" />
+        <span className="truncate text-sm font-medium text-foreground">
+          {lesson.title}
+        </span>
+      </div>
+
+      {/* Media area */}
+      <div className="relative flex-1 overflow-hidden bg-black">
+        {isAudioOnly
           ? (
-              <div id="yt-player" className="size-full" />
+              <>
+                {/* YouTube thumbnail + link */}
+                <div className="flex size-full flex-col items-center justify-center gap-4 p-4">
+                  {youtubeVideoId && (
+                    <img
+                      src={`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`}
+                      alt="Video thumbnail"
+                      className="max-h-[60%] rounded-lg object-contain opacity-80"
+                    />
+                  )}
+                  {lesson.sourceUrl && (
+                    <a
+                      href={lesson.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-sm text-white/50 transition-colors hover:text-white/80"
+                    >
+                      <ExternalLink className="size-4" />
+                      Open on YouTube
+                    </a>
+                  )}
+                </div>
+                {/* Hidden audio element */}
+                <audio ref={mediaRef as React.RefObject<HTMLAudioElement>} className="hidden" />
+              </>
             )
           : (
               <video
-                ref={videoRef}
+                ref={mediaRef as React.RefObject<HTMLVideoElement>}
                 className="size-full object-contain"
                 playsInline
               />
@@ -168,7 +205,7 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
       </div>
 
       {/* Controls */}
-      <div className="space-y-2 border-t border-slate-800 px-3 py-2">
+      <div className="space-y-2 border-t border-border px-3 py-2">
         {/* Scrubber */}
         <input
           type="range"
@@ -177,7 +214,7 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
           step={0.1}
           value={currentTime}
           onChange={handleScrub}
-          className="h-1 w-full cursor-pointer accent-blue-500"
+          className="h-1 w-full cursor-pointer accent-primary"
         />
 
         {/* Transport controls */}
@@ -197,7 +234,7 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
           </div>
 
           {/* Time display */}
-          <span className="font-mono text-xs text-slate-400">
+          <span className="font-mono text-xs text-muted-foreground">
             {formatTime(currentTime)}
             {' / '}
             {formatTime(duration)}
@@ -213,7 +250,7 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
                 onClick={() => setPlaybackRate(rate)}
                 className={cn(
                   'min-w-8 text-xs',
-                  playbackRate === rate && 'text-blue-400',
+                  playbackRate === rate && 'text-primary',
                 )}
               >
                 {rate}
@@ -225,18 +262,20 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
       </div>
 
       {/* Metadata bar */}
-      <div className="flex items-center gap-2 border-t border-slate-800 px-3 py-1.5">
-        <span className="truncate text-sm font-medium text-slate-200">
-          {lesson.title}
-        </span>
-        <Badge variant="secondary" className="shrink-0 text-xs">
+      <div className="flex items-center gap-3 border-t border-border px-3 py-1.5">
+        <Badge variant="secondary" className="shrink-0 text-[10px] uppercase tracking-wider">
           {lesson.segmentCount}
           {' '}
           segments
         </Badge>
-        <Badge variant="outline" className="shrink-0 text-xs">
+        <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wider">
           {formatTime(lesson.duration)}
         </Badge>
+        {isAudioOnly && (
+          <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wider text-primary">
+            Audio
+          </Badge>
+        )}
       </div>
     </div>
   )
