@@ -16,7 +16,7 @@ export function LessonView() {
   const { id } = useParams<{ id: string }>()
   const { db, keys } = useAuth()
   const { player, currentTime } = usePlayer()
-  const { meta, segments, loading, error } = useLesson(db, id)
+  const { meta, segments, loading, error, updateMeta } = useLesson(db, id)
   const activeSegment = useActiveSegment(segments, currentTime)
 
   const [videoBlob, setVideoBlob] = useState<Blob | undefined>()
@@ -76,6 +76,13 @@ export function LessonView() {
     saveLessonMeta(db, { ...meta, progressSegmentId: segmentId })
   }, [db, meta])
 
+  const handleRename = useCallback(async (newTitle: string) => {
+    if (!db || !meta)
+      return
+    await saveLessonMeta(db, { ...meta, title: newTitle })
+    updateMeta({ title: newTitle })
+  }, [db, meta, updateMeta])
+
   // Loading state
   if (loading) {
     return (
@@ -106,6 +113,7 @@ export function LessonView() {
           segments={segments}
           activeSegment={activeSegment}
           videoBlob={videoBlob}
+          onRename={handleRename}
         />
       </div>
 
