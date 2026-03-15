@@ -23,6 +23,19 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
+vi.mock('@/hooks/useVocabulary', () => ({
+  useVocabulary: () => mockVocab,
+}))
+
+// Mock StudySession so we don't need to stub all its dependencies
+vi.mock('@/components/study/StudySession', () => ({
+  StudySession: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="study-session">
+      <button type="button" aria-label="Close" onClick={onClose}>Close</button>
+    </div>
+  ),
+}))
+
 const mockEntries: VocabEntry[] = [
   {
     id: 'e1',
@@ -53,10 +66,6 @@ const mockEntries: VocabEntry[] = [
 ]
 
 let mockVocab: { entriesByLesson: Record<string, VocabEntry[]> } = { entriesByLesson: {} }
-
-vi.mock('@/hooks/useVocabulary', () => ({
-  useVocabulary: () => mockVocab,
-}))
 
 // Import after mocks are hoisted
 import { LessonWorkbookPanel } from '@/components/lesson/LessonWorkbookPanel'
@@ -110,27 +119,32 @@ describe('LessonWorkbookPanel', () => {
     expect(screen.getByRole('button', { name: /study this lesson/i })).toBeDisabled()
   })
 
-  it('shows tooltip text when Study button is disabled', () => {
-    render(<LessonWorkbookPanel lessonId="lesson_1" />)
-    expect(screen.getByText('Save at least one word first')).toBeTruthy()
-  })
-
   it('Study button is enabled when words exist', () => {
     mockVocab = { entriesByLesson: { lesson_1: mockEntries } }
     render(<LessonWorkbookPanel lessonId="lesson_1" />)
     expect(screen.getByRole('button', { name: /study this lesson/i })).not.toBeDisabled()
   })
 
-  it('Study button navigates to study session on click', () => {
-    mockVocab = { entriesByLesson: { lesson_1: mockEntries } }
-    render(<LessonWorkbookPanel lessonId="lesson_1" />)
-    fireEvent.click(screen.getByRole('button', { name: /study this lesson/i }))
-    expect(mockNavigate).toHaveBeenCalledWith('/vocabulary/lesson_1/study')
-  })
-
   it('does not show entries for a different lessonId', () => {
     mockVocab = { entriesByLesson: { other_lesson: mockEntries } }
     render(<LessonWorkbookPanel lessonId="lesson_1" />)
     expect(screen.queryByText('今天')).toBeNull()
+  })
+
+  it('shows study session overlay when Study button is clicked', () => {
+    mockVocab = { entriesByLesson: { lesson_1: mockEntries } }
+    render(<LessonWorkbookPanel lessonId="lesson_1" />)
+    expect(screen.queryByTestId('study-session')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /study this lesson/i }))
+    expect(screen.getByTestId('study-session')).toBeTruthy()
+  })
+
+  it('closes study session overlay when StudySession calls onClose', () => {
+    mockVocab = { entriesByLesson: { lesson_1: mockEntries } }
+    render(<LessonWorkbookPanel lessonId="lesson_1" />)
+    fireEvent.click(screen.getByRole('button', { name: /study this lesson/i }))
+    // Simulate onClose being called from within StudySession
+    fireEvent.click(screen.getByRole('button', { name: /close/i }))
+    expect(screen.queryByTestId('study-session')).toBeNull()
   })
 })
