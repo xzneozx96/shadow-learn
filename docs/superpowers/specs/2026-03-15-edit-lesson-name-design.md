@@ -10,30 +10,37 @@ Add the ability to rename a lesson from the Library. A dropdown action menu on e
 
 ### `frontend/src/components/ui/menu.tsx` (new)
 
-A thin wrapper around `@base-ui/react/menu`, following the same pattern as the existing `button.tsx` and `dialog.tsx` wrappers. Exports: `Menu`, `MenuTrigger`, `MenuPortal`, `MenuBackdrop`, `MenuPositioner`, `MenuPopup`, `MenuItem`.
+A thin wrapper around `@base-ui/react/menu`, following the same pattern as `dialog.tsx` (`import { Menu as MenuPrimitive } from '@base-ui/react/menu'`). Exports wrappers: `MenuRoot`, `MenuTrigger`, `MenuPortal`, `MenuBackdrop`, `MenuPositioner`, `MenuPopup`, `MenuItem`.
 
 ### `frontend/src/components/library/LessonCard.tsx` (modified)
 
 - Replace the hover-only `Trash2` icon button with a `MoreHorizontal` icon button that opens the dropdown menu.
 - Menu items: **Rename** and **Delete**.
 - Local state: `isEditing: boolean`, `editValue: string`.
-- While `isEditing`, the `CardTitle` text is replaced by a controlled `<input>` pre-filled with the current title. The card's `<Link>` overlay is set to `pointer-events-none` so the input receives clicks.
-- Confirm: Enter or `onBlur` — trims value, calls `onRename` if non-empty, exits editing.
-- Cancel: Escape — restores original title, exits editing.
+- While `isEditing`, the `CardTitle` text is replaced by a controlled `<input>` pre-filled with the current title, auto-focused with all text selected (`useEffect(() => ref.current?.select(), [isEditing])`). The card's `<Link>` overlay receives `pointer-events-none` and `tabIndex={-1}` so the input receives both mouse and keyboard interaction.
+- Confirm: Enter or `onBlur` — trims value, calls `onRename` if non-empty, exits editing. `onBlur` fires in all focus-loss scenarios (including clicking outside or re-opening the menu); this is treated as confirm.
+- Cancel: Escape — sets an `isCancelled` ref to `true` before exiting editing, so the subsequent `onBlur` event is a no-op. Restores the original title.
 
 ### `frontend/src/components/library/Library.tsx` (modified)
 
-- Adds `handleRename(id: string, newTitle: string)` which calls `saveLessonMeta(db, { ...lesson, title: newTitle })` and updates local `lessons` state.
+- Adds `handleRename(lesson: LessonMeta, newTitle: string)` as a `useCallback` with only `[db]` as a dep. `LessonCard` passes the full `lesson` prop directly, so `handleRename` never needs to read from `lessons` state — eliminating the `lessons` dependency and preventing unnecessary callback recreations on every list change (`rerender-functional-setstate`):
+  ```ts
+  const handleRename = useCallback(async (lesson: LessonMeta, newTitle: string) => {
+    if (!db) return
+    await saveLessonMeta(db, { ...lesson, title: newTitle })
+    setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, title: newTitle } : l))
+  }, [db])
+  ```
 - Passes `onRename={handleRename}` to `LessonCard`.
 
 ## Data Flow
 
 ```
 LessonCard (user confirms rename)
-  → onRename(id, newTitle)
+  → onRename(lesson, newTitle)       // full LessonMeta object passed
     → Library.handleRename
-      → saveLessonMeta(db, { ...meta, title: newTitle })  // IndexedDB
-      → setLessons(prev => prev.map(...))                 // local state
+      → saveLessonMeta(db, { ...lesson, title: newTitle })  // IndexedDB
+      → setLessons(prev => prev.map(...))                   // local state
 ```
 
 No backend changes required — titles live only in IndexedDB.
@@ -45,8 +52,19 @@ No backend changes required — titles live only in IndexedDB.
 interface LessonCardProps {
   lesson: LessonMeta
   onDelete: (id: string) => void
-  onRename: (id: string, newTitle: string) => void  // new
+  onRename: (lesson: LessonMeta, newTitle: string) => void  // new; full object avoids lessons-state dep in Library
 }
+
+// LessonCard local state
+const [isEditing, setIsEditing] = useState(false)
+const [editValue, setEditValue] = useState('')
+const isCancelledRef = useRef(false)
+const inputRef = useRef<HTMLInputElement>(null)
+
+// Auto-focus + select all when editing starts
+useEffect(() => {
+  if (isEditing) inputRef.current?.select()
+}, [isEditing])
 ```
 
 ## Error Handling
