@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom/vitest'
 
+// jsdom does not implement scrollIntoView — stub it to avoid TypeError in components that call it
+window.HTMLElement.prototype.scrollIntoView = function () {}
+
 // jsdom's structuredClone does not properly handle Blob objects (loses .type and content).
 // Patch it to use Node's native implementation which correctly clones Blobs via structured clone.
 const nativeStructuredClone = globalThis.structuredClone

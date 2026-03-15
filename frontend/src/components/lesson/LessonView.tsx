@@ -156,6 +156,7 @@ export function LessonView() {
           activeSegment={activeSegment}
           model={model}
           onModelChange={setModel}
+          lessonId={id ?? ''}
         />
       </div>
     </div>

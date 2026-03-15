@@ -6,8 +6,11 @@ import remarkGfm from 'remark-gfm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { useVocabulary } from '@/hooks/useVocabulary'
 import { cn } from '@/lib/utils'
+import { LessonWorkbookPanel } from './LessonWorkbookPanel'
 
 interface CompanionPanelProps {
   messages: ChatMessage[]
@@ -16,6 +19,7 @@ interface CompanionPanelProps {
   activeSegment: Segment | null
   model: string
   onModelChange: (model: string) => void
+  lessonId: string
 }
 
 function StreamingDots() {
@@ -33,11 +37,14 @@ export function CompanionPanel({
   isStreaming,
   onSend,
   activeSegment,
+  lessonId,
 }: CompanionPanelProps) {
   const [input, setInput] = useState('')
+  const [activeTab, setActiveTab] = useState<'ai' | 'workbook'>('ai')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const { entriesByLesson } = useVocabulary()
+  const count = (entriesByLesson[lessonId] ?? []).length
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isStreaming])
@@ -59,92 +66,108 @@ export function CompanionPanel({
 
   return (
     <div className="flex h-full flex-col bg-background/10 backdrop-blur-md">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <span className="text-sm font-medium text-foreground">AI Companion</span>
-      </div>
+      <Tabs
+        value={activeTab}
+        onValueChange={v => setActiveTab(v as 'ai' | 'workbook')}
+        className="flex h-full flex-col gap-0"
+      >
+        <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3">
+          <TabsTrigger value="ai">AI Companion</TabsTrigger>
+          <TabsTrigger value="workbook" className="gap-1.5">
+            Workbook
+            {count > 0 && (
+              <Badge className="px-1.5 py-0 text-[10px]">{count}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Context pill */}
-      {activeSegment && (
-        <div className="border-b border-border px-3 py-1.5">
-          <Badge variant="outline" className="max-w-full truncate text-xs">
-            {activeSegment.chinese}
-          </Badge>
-        </div>
-      )}
-
-      {/* Messages */}
-      <ScrollArea className="flex-1 min-h-0 px-3 py-2">
-        {messages.length === 0 && !isStreaming && (
-          <div className="flex h-full items-center justify-center py-12">
-            <p className="text-center text-sm text-muted-foreground">
-              Ask about vocabulary, grammar, or pronunciation for any segment.
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-3">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={cn(
-                'flex',
-                msg.role === 'user' ? 'justify-end' : 'justify-start',
-              )}
-            >
-              <div
-                className={cn(
-                  'max-w-[90%] rounded-lg px-3 py-2 text-sm',
-                  msg.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-foreground',
-                )}
-              >
-                {msg.role === 'assistant'
-                  ? (
-                      <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
-                    )
-                  : (
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                    )}
-              </div>
-            </div>
-          ))}
-
-          {isStreaming && messages.at(-1)?.role !== 'assistant' && (
-            <div className="flex justify-start">
-              <div className="rounded-lg bg-muted px-3 py-2">
-                <StreamingDots />
-              </div>
+        {/* AI Companion tab */}
+        <TabsContent value="ai" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {activeSegment && (
+            <div className="border-b border-border px-3 py-1.5">
+              <Badge variant="outline" className="max-w-full truncate text-sm">
+                {activeSegment.chinese}
+              </Badge>
             </div>
           )}
-        </div>
 
-        <div ref={bottomRef} className="h-px" />
-      </ScrollArea>
+          <ScrollArea className="min-h-0 flex-1 px-3 py-2">
+            {messages.length === 0 && !isStreaming && (
+              <div className="flex h-full items-center justify-center py-12">
+                <p className="text-center text-sm text-muted-foreground">
+                  Ask about vocabulary, grammar, or pronunciation for any segment.
+                </p>
+              </div>
+            )}
 
-      {/* Input area */}
-      <div className="flex items-center gap-2 border-t border-border p-3">
-        <Textarea
-          placeholder="Ask about this segment..."
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          className="min-h-8 resize-none"
-        />
-        <Button
-          size="icon"
-          onClick={handleSend}
-          disabled={!input.trim() || isStreaming}
-        >
-          <Send className="size-4" />
-        </Button>
-      </div>
+            <div className="space-y-3">
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'flex',
+                    msg.role === 'user' ? 'justify-end' : 'justify-start',
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'max-w-[90%] rounded-lg px-3 py-2 text-sm',
+                      msg.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-foreground',
+                    )}
+                  >
+                    {msg.role === 'assistant'
+                      ? (
+                          <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {msg.content}
+                            </ReactMarkdown>
+                          </div>
+                        )
+                      : (
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        )}
+                  </div>
+                </div>
+              ))}
+
+              {isStreaming && messages.at(-1)?.role !== 'assistant' && (
+                <div className="flex justify-start">
+                  <div className="rounded-lg bg-muted px-3 py-2">
+                    <StreamingDots />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div ref={bottomRef} className="h-px" />
+          </ScrollArea>
+
+          <div className="flex items-center gap-2 border-t border-border p-3">
+            <Textarea
+              placeholder="Ask about this segment..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              className="min-h-8 resize-none"
+            />
+            <Button
+              size="icon"
+              onClick={handleSend}
+              disabled={!input.trim() || isStreaming}
+            >
+              <Send className="size-4" />
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Workbook tab */}
+        <TabsContent value="workbook" className="min-h-0 flex-1 overflow-hidden">
+          <LessonWorkbookPanel lessonId={lessonId} />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
