@@ -1,18 +1,42 @@
 // Map of tone-marked vowels to base vowel
 const TONE_MAP: Record<string, string> = {
-  āáǎà: 'a', ēéěè: 'e', īíǐì: 'i',
-  ōóǒò: 'o', ūúǔù: 'u', ǖǘǚǜ: 'u', ńň: 'n',
+  āáǎà: 'a',
+  ēéěè: 'e',
+  īíǐì: 'i',
+  ōóǒò: 'o',
+  ūúǔù: 'u',
+  ǖǘǚǜ: 'u',
+  ńň: 'n',
 }
 
 // Map of tone-marked vowels to their tone number (1-4)
 const TONE_MARK_TO_NUMBER: Record<string, string> = {
-  ā: '1', á: '2', ǎ: '3', à: '4',
-  ē: '1', é: '2', ě: '3', è: '4',
-  ī: '1', í: '2', ǐ: '3', ì: '4',
-  ō: '1', ó: '2', ǒ: '3', ò: '4',
-  ū: '1', ú: '2', ǔ: '3', ù: '4',
-  ǖ: '1', ǘ: '2', ǚ: '3', ǜ: '4',
-  ń: '2', ň: '3',
+  ā: '1',
+  á: '2',
+  ǎ: '3',
+  à: '4',
+  ē: '1',
+  é: '2',
+  ě: '3',
+  è: '4',
+  ī: '1',
+  í: '2',
+  ǐ: '3',
+  ì: '4',
+  ō: '1',
+  ó: '2',
+  ǒ: '3',
+  ò: '4',
+  ū: '1',
+  ú: '2',
+  ǔ: '3',
+  ù: '4',
+  ǖ: '1',
+  ǘ: '2',
+  ǚ: '3',
+  ǜ: '4',
+  ń: '2',
+  ň: '3',
 }
 
 function stripToneMarks(s: string): string {
@@ -27,7 +51,7 @@ function stripToneNumbers(s: string): string {
   return s.replace(/[1-4]/g, '')
 }
 
-function convertToneMarksToNumbers(s: string): string {
+export function convertToneMarksToNumbers(s: string): string {
   let result = ''
   for (const ch of s) {
     if (TONE_MARK_TO_NUMBER[ch]) {
@@ -38,7 +62,8 @@ function convertToneMarksToNumbers(s: string): string {
           break
         }
       }
-    } else {
+    }
+    else {
       result += ch
     }
   }
@@ -60,7 +85,8 @@ function extractTones(s: string): string {
   for (const ch of s) {
     if (TONE_MARK_TO_NUMBER[ch]) {
       result += TONE_MARK_TO_NUMBER[ch]
-    } else if (/[1-4]/.test(ch)) {
+    }
+    else if (/[1-4]/.test(ch)) {
       result += ch
     }
   }
@@ -77,14 +103,16 @@ export function comparePinyin(a: string, b: string): boolean {
   const bBase = normalizePinyin(bLower)
 
   // If base pinyin doesn't match, they're different
-  if (aBase !== bBase) return false
+  if (aBase !== bBase)
+    return false
 
   // Extract tones and compare (removing spaces)
   const aTones = extractTones(aLower).replace(/\s+/g, '')
   const bTones = extractTones(bLower).replace(/\s+/g, '')
 
   // If either has no tones, they match on base alone
-  if (!aTones || !bTones) return true
+  if (!aTones || !bTones)
+    return true
 
   // Both have tones, they must match
   return aTones === bTones

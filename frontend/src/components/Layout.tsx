@@ -1,4 +1,4 @@
-import { Plus, Settings } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
