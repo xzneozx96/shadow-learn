@@ -1,28 +1,22 @@
 import type { LessonMeta } from '@/types'
 import { Plus } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
-import { deleteFullLesson, getAllLessonMetas, saveLessonMeta } from '@/db'
+import { useLessons } from '@/contexts/LessonsContext'
 import { cn } from '@/lib/utils'
 import { LessonCard } from './LessonCard'
 
 type SortMode = 'recent' | 'alpha' | 'progress'
 
 export function Library() {
-  const { db } = useAuth()
-  const [lessons, setLessons] = useState<LessonMeta[]>([])
+  const { keys } = useAuth()
+  const { lessons, updateLesson, deleteLesson } = useLessons()
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortMode>('recent')
-
-  useEffect(() => {
-    if (!db)
-      return
-    getAllLessonMetas(db).then(setLessons)
-  }, [db])
 
   const filtered = useMemo(() => {
     let result = lessons
@@ -32,30 +26,65 @@ export function Library() {
     }
 
     return result.toSorted((a, b) => {
+      // Processing lessons always sort to the top
+      const aProcessing = a.status === 'processing'
+      const bProcessing = b.status === 'processing'
+      if (aProcessing && !bProcessing)
+        return -1
+      if (!aProcessing && bProcessing)
+        return 1
+
       if (sort === 'recent')
         return new Date(b.lastOpenedAt).getTime() - new Date(a.lastOpenedAt).getTime()
       if (sort === 'alpha')
         return a.title.localeCompare(b.title)
-      // progress: sort by segment progress descending
-      const pA = a.progressSegmentId ? Number.parseInt(a.progressSegmentId, 10) / a.segmentCount : 0
-      const pB = b.progressSegmentId ? Number.parseInt(b.progressSegmentId, 10) / b.segmentCount : 0
+      const pA = a.progressSegmentId && a.segmentCount
+        ? Number.parseInt(a.progressSegmentId, 10) / a.segmentCount
+        : 0
+      const pB = b.progressSegmentId && b.segmentCount
+        ? Number.parseInt(b.progressSegmentId, 10) / b.segmentCount
+        : 0
       return pB - pA
     })
   }, [lessons, search, sort])
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!db)
-      return
-    await deleteFullLesson(db, id)
-    setLessons(prev => prev.filter(l => l.id !== id))
-  }, [db])
+    await deleteLesson(id)
+  }, [deleteLesson])
 
   const handleRename = useCallback(async (lesson: LessonMeta, newTitle: string) => {
-    if (!db)
+    await updateLesson({ ...lesson, title: newTitle })
+  }, [updateLesson])
+
+  const handleRetry = useCallback(async (lesson: LessonMeta) => {
+    // Upload retry: audio blob is already in IndexedDB; only the pipeline needs re-running.
+    // The backend does not currently support re-running from a saved blob — the user must
+    // re-upload. LessonCard shows "Re-upload to retry" text for upload-sourced errors.
+    if (!keys || lesson.source !== 'youtube' || !lesson.sourceUrl)
       return
-    await saveLessonMeta(db, { ...lesson, title: newTitle })
-    setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, title: newTitle } : l))
-  }, [db])
+    const res = await fetch('/api/lessons/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'youtube',
+        youtube_url: lesson.sourceUrl,
+        translation_languages: lesson.translationLanguages,
+        openai_api_key: keys.openaiApiKey,
+        deepgram_api_key: keys.deepgramApiKey,
+        model: 'gpt-4o-mini',
+      }),
+    })
+    if (!res.ok)
+      return
+    const { job_id } = await res.json()
+    await updateLesson({
+      ...lesson,
+      status: 'processing',
+      jobId: job_id,
+      errorMessage: undefined,
+      currentStep: undefined,
+    })
+  }, [keys, updateLesson])
 
   const sortButtons: { mode: SortMode, label: string }[] = [
     { mode: 'recent', label: 'Recent' },
@@ -89,7 +118,13 @@ export function Library() {
           </Card>
 
           {filtered.map(lesson => (
-            <LessonCard key={lesson.id} lesson={lesson} onDelete={handleDelete} onRename={handleRename} />
+            <LessonCard
+              key={lesson.id}
+              lesson={lesson}
+              onDelete={handleDelete}
+              onRename={handleRename}
+              onRetry={handleRetry}
+            />
           ))}
         </div>
       </div>

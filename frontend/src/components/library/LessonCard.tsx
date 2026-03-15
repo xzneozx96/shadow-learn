@@ -11,6 +11,7 @@ interface LessonCardProps {
   lesson: LessonMeta
   onDelete: (id: string) => void
   onRename: (lesson: LessonMeta, newTitle: string) => void
+  onRetry?: (lesson: LessonMeta) => void
 }
 
 function formatDuration(seconds: number): string {
@@ -19,8 +20,8 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function LessonCard({ lesson, onDelete, onRename }: LessonCardProps) {
-  const progress = lesson.progressSegmentId
+export function LessonCard({ lesson, onDelete, onRename, onRetry: _onRetry }: LessonCardProps) {
+  const progress = lesson.progressSegmentId && lesson.segmentCount
     ? Math.min(100, Math.round((Number.parseInt(lesson.progressSegmentId, 10) / lesson.segmentCount) * 100))
     : 0
 
@@ -119,15 +120,19 @@ export function LessonCard({ lesson, onDelete, onRename }: LessonCardProps) {
           {lesson.source === 'youtube'
             ? <Youtube className="size-5 text-red-400" />
             : <FileVideo className="size-5 text-white/50" />}
-          <div className="flex items-center gap-1 text-xs">
-            <Clock className="size-3" />
-            {formatDuration(lesson.duration)}
-          </div>
-          <span className="text-xs">
-            {lesson.segmentCount}
-            {' '}
-            segments
-          </span>
+          {lesson.duration != null && (
+            <div className="flex items-center gap-1 text-xs">
+              <Clock className="size-4" />
+              {formatDuration(lesson.duration)}
+            </div>
+          )}
+          {lesson.segmentCount != null && (
+            <span className="text-xs">
+              {lesson.segmentCount}
+              {' '}
+              segments
+            </span>
+          )}
         </div>
 
         {isEditing

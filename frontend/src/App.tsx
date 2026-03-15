@@ -6,7 +6,9 @@ import { Library } from '@/components/library/Library'
 import { Setup } from '@/components/onboarding/Setup'
 import { Unlock } from '@/components/onboarding/Unlock'
 import { Settings } from '@/components/settings/Settings'
+import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
 
 function AuthGate() {
@@ -15,8 +17,8 @@ function AuthGate() {
   // Loading state
   if (isFirstSetup === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-900">
-        <Loader2 className="size-8 animate-spin text-slate-400" />
+      <div className="flex h-screen items-center justify-center glass-bg">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -33,16 +35,18 @@ function AuthGate() {
 
   // Authenticated -- show app
   return (
-    <BrowserRouter>
-      <PlayerProvider>
-        <Routes>
-          <Route path="/" element={<Library />} />
-          <Route path="/create" element={<CreateLesson />} />
-          <Route path="/lesson/:id" element={<LessonView />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </PlayerProvider>
-    </BrowserRouter>
+    <LessonsProvider>
+      <BrowserRouter>
+        <PlayerProvider>
+          <Routes>
+            <Route path="/" element={<Library />} />
+            <Route path="/create" element={<CreateLesson />} />
+            <Route path="/lesson/:id" element={<LessonView />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </PlayerProvider>
+      </BrowserRouter>
+    </LessonsProvider>
   )
 }
 
@@ -50,6 +54,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AuthGate />
+      <Toaster position="top-right" richColors closeButton />
     </AuthProvider>
   )
 }
