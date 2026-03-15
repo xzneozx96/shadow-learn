@@ -10,6 +10,10 @@ describe('sanitizeBaseName', () => {
     expect(sanitizeBaseName('Hello! World#$')).toBe('Hello-World')
   })
 
+  it('retains underscores', () => {
+    expect(sanitizeBaseName('my_lesson')).toBe('my_lesson')
+  })
+
   it('trims leading and trailing hyphens', () => {
     expect(sanitizeBaseName('!My Lesson!')).toBe('My-Lesson')
   })
