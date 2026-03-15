@@ -1,9 +1,9 @@
 import type { IDBPDatabase } from 'idb'
-import type { AppSettings, ChatMessage, LessonMeta, Segment } from '../types'
+import type { AppSettings, ChatMessage, LessonMeta, Segment, VocabEntry } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 export type ShadowLearnDB = IDBPDatabase
 
@@ -20,6 +20,11 @@ export async function initDB(): Promise<ShadowLearnDB> {
       }
       if (oldVersion < 2) {
         db.createObjectStore('tts-cache')
+      }
+      if (oldVersion < 3) {
+        const vocabStore = db.createObjectStore('vocabulary', { keyPath: 'id' })
+        vocabStore.createIndex('by-lesson', 'sourceLessonId', { unique: false })
+        vocabStore.createIndex('by-date', 'createdAt', { unique: false })
       }
     },
   })
@@ -128,4 +133,17 @@ export async function getTTSCache(db: ShadowLearnDB, text: string): Promise<Blob
 
 export async function saveTTSCache(db: ShadowLearnDB, text: string, blob: Blob): Promise<void> {
   await db.put('tts-cache', blob, text)
+}
+
+// Vocabulary store
+export async function saveVocabEntry(db: ShadowLearnDB, entry: VocabEntry): Promise<void> {
+  await db.put('vocabulary', entry)
+}
+
+export async function getVocabEntriesByLesson(db: ShadowLearnDB, lessonId: string): Promise<VocabEntry[]> {
+  return db.getAllFromIndex('vocabulary', 'by-lesson', lessonId)
+}
+
+export async function deleteVocabEntry(db: ShadowLearnDB, id: string): Promise<void> {
+  await db.delete('vocabulary', id)
 }

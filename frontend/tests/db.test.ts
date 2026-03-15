@@ -17,6 +17,7 @@ import {
   saveSegments,
   saveSettings,
 } from '../src/db'
+import type { VocabEntry } from '../src/types'
 
 // We'll use fake-indexeddb for testing
 import 'fake-indexeddb/auto'
@@ -160,5 +161,28 @@ describe('indexedDB storage', () => {
     await deleteFullLesson(db, 'lesson_del')
     expect(await getLessonMeta(db, 'lesson_del')).toBeUndefined()
     expect(await getSegments(db, 'lesson_del')).toBeUndefined()
+  })
+})
+
+describe('vocabulary store', () => {
+  it('saves and retrieves a VocabEntry by lesson', async () => {
+    const db = await initDB()
+    const entry: VocabEntry = {
+      id: 'test-id-1',
+      word: '今天',
+      pinyin: 'jīntiān',
+      meaning: 'today',
+      usage: '今天天气很好。',
+      sourceLessonId: 'lesson_abc',
+      sourceLessonTitle: 'Test Lesson',
+      sourceSegmentId: 'seg_001',
+      sourceSegmentChinese: '今天天气非常好！',
+      sourceSegmentTranslation: 'The weather is nice today!',
+      createdAt: new Date().toISOString(),
+    }
+    await db.put('vocabulary', entry)
+    const results = await db.getAllFromIndex('vocabulary', 'by-lesson', 'lesson_abc')
+    expect(results).toHaveLength(1)
+    expect(results[0].word).toBe('今天')
   })
 })

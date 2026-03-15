@@ -55,4 +55,20 @@ export interface DecryptedKeys {
   openaiApiKey: string
   minimaxApiKey?: string
   deepgramApiKey?: string
+  azureSpeechKey?: string
+  azureSpeechRegion?: string
+}
+
+export interface VocabEntry {
+  id: string
+  word: string
+  pinyin: string
+  meaning: string
+  usage: string
+  sourceLessonId: string
+  sourceLessonTitle: string
+  sourceSegmentId: string
+  sourceSegmentChinese: string
+  sourceSegmentTranslation: string
+  createdAt: string
 }
