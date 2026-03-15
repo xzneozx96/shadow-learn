@@ -48,6 +48,9 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
         continue
       }
 
+      if (res.status < 200 || res.status >= 300)
+        continue // transient server error — retry on next tick
+
       const job = await res.json()
 
       if (job.status === 'processing') {
