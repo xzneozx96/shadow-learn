@@ -330,5 +330,8 @@ async def get_video(filename: str) -> StreamingResponse:
     return StreamingResponse(
         iterfile(),
         media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}"',
+            "Content-Length": str(video_path.stat().st_size),
+        },
     )

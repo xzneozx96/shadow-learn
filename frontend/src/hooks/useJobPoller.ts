@@ -63,8 +63,15 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
         const { lesson: resultLesson, video_url } = job.result
         await saveSegments(db, lesson.id, resultLesson.segments)
         if (lesson.source === 'youtube' && video_url) {
-          const videoBlob = await fetch(video_url).then(r => r.blob())
-          await saveVideo(db, lesson.id, videoBlob)
+          try {
+            const videoBlob = await fetch(video_url).then(r => r.blob())
+            await saveVideo(db, lesson.id, videoBlob)
+          }
+          catch {
+            // Video fetch failed (network error, server restart, etc.).
+            // Continue completing the lesson without a local video — the player will
+            // fall back to the YouTube thumbnail + audio layout.
+          }
         }
         await updateLesson({
           ...lesson,
