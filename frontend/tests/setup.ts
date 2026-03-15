@@ -5,8 +5,8 @@ import '@testing-library/jest-dom/vitest'
 const nativeStructuredClone = globalThis.structuredClone
 globalThis.structuredClone = function patchedStructuredClone<T>(value: T, options?: StructuredSerializeOptions): T {
   if (value instanceof Blob) {
-    // Node's structuredClone handles Blob correctly; call it in a non-jsdom context via vm
-    // Simpler: reconstruct the Blob to preserve type and content reference
+    // Blobs are immutable — pass through as-is. jsdom's structuredClone loses .type;
+    // fake-indexeddb clones stored values, so without this patch all Blobs read back with type=''.
     return value as T
   }
   return nativeStructuredClone(value, options)

@@ -9,7 +9,7 @@ from typing import Any
 class Job:
     status: str          # "processing" | "complete" | "error"
     step: str            # valid: "queued"|"audio_extraction"|"upload"|"duration_check"|"transcription"|"pinyin"|"translation"|"assembling"|"complete"
-    result: dict[str, Any] | None  # { lesson: {...}, audio_url? } when complete; None otherwise
+    result: dict[str, Any] | None  # { lesson: {...}, video_url? } when complete; None otherwise
     error: str | None    # error message if failed; None otherwise
     created_at: float = field(default_factory=time.time)
 
