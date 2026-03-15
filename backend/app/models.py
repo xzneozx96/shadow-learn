@@ -23,6 +23,7 @@ class LessonRequest(BaseModel):
     youtube_url: str | None = None
     translation_languages: list[str] = Field(min_length=1)
     openai_api_key: str
+    deepgram_api_key: str | None = None
     model: str = "gpt-4o-mini"
 
 

@@ -1,11 +1,14 @@
 """Lesson generation router with SSE streaming progress events."""
 
 import json
+import logging
 import uuid
 from pathlib import Path
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+logger = logging.getLogger(__name__)
+
+from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.config import settings
@@ -17,9 +20,10 @@ from app.services.audio import (
     probe_upload_duration,
 )
 from app.services.pinyin import generate_pinyin
-from app.services.transcription import transcribe_audio
+from app.services.transcription import transcribe_audio, transcribe_audio_deepgram
 from app.services.translation import translate_segments
 from app.services.validation import ValidationError, validate_upload_file, validate_youtube_url
+from app.services.vocabulary import extract_vocabulary
 
 router = APIRouter(prefix="/api/lessons")
 
@@ -42,6 +46,7 @@ async def _shared_pipeline(
     source: str,
     source_url: str | None,
     duration: float,
+    audio_filename: str | None = None,
 ) -> AsyncGenerator[str, None]:
     """SSE generator: pinyin → translate → assemble → yield complete."""
     yield _sse_event("progress", {"step": "pinyin", "message": "Generating pinyin..."})
@@ -60,6 +65,10 @@ async def _shared_pipeline(
         model,
     )
 
+    yield _sse_event("progress", {"step": "vocabulary", "message": "Extracting vocabulary..."})
+
+    vocab_map = await extract_vocabulary(translated_segments, api_key, model)
+
     yield _sse_event("progress", {"step": "assembling", "message": "Assembling lesson..."})
 
     lesson_segments = []
@@ -71,7 +80,7 @@ async def _shared_pipeline(
             "chinese": seg["text"],
             "pinyin": seg.get("pinyin", ""),
             "translations": seg.get("translations", {}),
-            "words": [],
+            "words": vocab_map.get(seg["id"]) or vocab_map.get(str(seg["id"])) or [],
         })
 
     lesson = {
@@ -83,7 +92,11 @@ async def _shared_pipeline(
         "translation_languages": translation_languages,
     }
 
-    yield _sse_event("complete", {"lesson": lesson})
+    complete_data: dict = {"lesson": lesson}
+    if audio_filename:
+        complete_data["audio_url"] = f"/api/lessons/audio/{audio_filename}"
+
+    yield _sse_event("complete", complete_data)
 
 
 async def _process_youtube_lesson(
@@ -107,7 +120,10 @@ async def _process_youtube_lesson(
         audio_path = await extract_audio_from_youtube(video_id)
 
         yield _sse_event("progress", {"step": "transcription", "message": "Transcribing audio..."})
-        segments = await transcribe_audio(audio_path, request.elevenlabs_api_key)
+        if request.deepgram_api_key:
+            segments = await transcribe_audio_deepgram(audio_path, request.deepgram_api_key)
+        else:
+            segments = await transcribe_audio(audio_path, request.openai_api_key)
 
         source_url = f"https://www.youtube.com/watch?v={video_id}"
         title = f"YouTube Video ({video_id})"
@@ -115,18 +131,23 @@ async def _process_youtube_lesson(
         async for event in _shared_pipeline(
             segments,
             request.translation_languages,
-            request.openrouter_api_key,
-            request.openrouter_model,
+            request.openai_api_key,
+            request.model,
             title,
             "youtube",
             source_url,
             duration,
+            audio_filename=audio_path.name if audio_path else None,
         ):
             yield event
 
+        # Don't delete audio — frontend will download it via /api/lessons/audio/:filename
+        # Temp files are cleaned up by the audio download endpoint after serving.
+
     except Exception as exc:
+        logger.exception("YouTube lesson pipeline failed: %s", exc)
         yield _sse_event("error", {"message": str(exc)})
-    finally:
+        # Clean up on error
         if audio_path and audio_path.exists():
             audio_path.unlink(missing_ok=True)
 
@@ -134,9 +155,9 @@ async def _process_youtube_lesson(
 async def _process_upload_lesson(
     file: UploadFile,
     translation_languages: list[str],
-    openrouter_api_key: str,
-    openrouter_model: str,
-    elevenlabs_api_key: str,
+    openai_api_key: str,
+    model: str,
+    deepgram_api_key: str | None = None,
 ) -> AsyncGenerator[str, None]:
     """SSE generator for upload lesson: save file → probe duration → extract audio → shared pipeline."""
     _TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -178,13 +199,16 @@ async def _process_upload_lesson(
         audio_path = await extract_audio_from_upload(video_path)
 
         yield _sse_event("progress", {"step": "transcription", "message": "Transcribing audio..."})
-        segments = await transcribe_audio(audio_path, elevenlabs_api_key)
+        if deepgram_api_key:
+            segments = await transcribe_audio_deepgram(audio_path, deepgram_api_key)
+        else:
+            segments = await transcribe_audio(audio_path, openai_api_key)
 
         async for event in _shared_pipeline(
             segments,
             translation_languages,
-            openrouter_api_key,
-            openrouter_model,
+            openai_api_key,
+            model,
             filename,
             "upload",
             None,
@@ -193,6 +217,7 @@ async def _process_upload_lesson(
             yield event
 
     except Exception as exc:
+        logger.exception("Upload lesson pipeline failed: %s", exc)
         yield _sse_event("error", {"message": str(exc)})
     finally:
         if video_path and video_path.exists():
@@ -204,6 +229,12 @@ async def _process_upload_lesson(
 @router.post("/generate")
 async def generate_lesson(request: LessonRequest) -> StreamingResponse:
     """Accept a LessonRequest JSON body and stream SSE progress events."""
+    # Normalize model name
+    api_model = request.model
+    if "api.openai.com" in settings.openai_chat_url and api_model.startswith("openai/"):
+        api_model = api_model.replace("openai/", "", 1)
+    request.model = api_model
+
     if request.source == "youtube":
         if not request.youtube_url:
             raise HTTPException(status_code=400, detail="youtube_url is required for source 'youtube'")
@@ -226,22 +257,49 @@ async def generate_lesson(request: LessonRequest) -> StreamingResponse:
 @router.post("/generate-upload")
 async def generate_lesson_upload(
     file: UploadFile,
-    translation_languages: str,
-    openrouter_api_key: str,
-    openrouter_model: str,
-    elevenlabs_api_key: str,
+    translation_languages: str = Form(...),
+    openai_api_key: str = Form(...),
+    model: str = Form("gpt-4o-mini"),
+    deepgram_api_key: str | None = Form(None),
 ) -> StreamingResponse:
     """Accept a multipart form upload and stream SSE progress events."""
     languages = [lang.strip() for lang in translation_languages.split(",") if lang.strip()]
     if not languages:
         raise HTTPException(status_code=400, detail="translation_languages must not be empty")
 
+    # Normalize model name
+    api_model = model
+    if "api.openai.com" in settings.openai_chat_url and api_model.startswith("openai/"):
+        api_model = api_model.replace("openai/", "", 1)
+
     generator = _process_upload_lesson(
         file,
         languages,
-        openrouter_api_key,
-        openrouter_model,
-        elevenlabs_api_key,
+        openai_api_key,
+        api_model,
+        deepgram_api_key=deepgram_api_key,
     )
 
     return StreamingResponse(generator, media_type="text/event-stream")
+
+
+@router.get("/audio/{filename}")
+async def get_audio(filename: str) -> StreamingResponse:
+    """Serve a temporary audio file and delete it after sending."""
+    safe_name = Path(filename).name
+    audio_path = _TEMP_DIR / safe_name
+
+    if not audio_path.exists() or not audio_path.is_file():
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    def iterfile():
+        with audio_path.open("rb") as f:
+            while chunk := f.read(1024 * 64):
+                yield chunk
+        audio_path.unlink(missing_ok=True)
+
+    return StreamingResponse(
+        iterfile(),
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
+    )
