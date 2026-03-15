@@ -1,5 +1,5 @@
 import type { LessonMeta, Segment } from '@/types'
-import { Download, ExternalLink, Home, Pause, Play, SkipBack, SkipForward } from 'lucide-react'
+import { Download, ExternalLink, Home, Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -64,7 +64,7 @@ interface VideoPanelProps {
 }
 
 export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: VideoPanelProps) {
-  const { player, currentTime, playbackRate, setPlayer, setPlaybackRate } = usePlayer()
+  const { player, currentTime, playbackRate, volume, setPlayer, setPlaybackRate, setVolume } = usePlayer()
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
@@ -81,7 +81,7 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
     const objectUrl = URL.createObjectURL(videoBlob)
     mediaRef.current.src = objectUrl
 
-    const h5Player = new HTML5Player(mediaRef.current as HTMLVideoElement)
+    const h5Player = new HTML5Player(mediaRef.current)
     if (!destroyed)
       setPlayer(h5Player)
 
@@ -153,6 +153,10 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
     player?.seekTo(Number(e.target.value))
   }
 
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setVolume(Math.round(Number(e.target.value) * 100) / 100)
+  }
+
   const handleDownload = useCallback(() => {
     if (!videoBlob)
       return
@@ -182,18 +186,15 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
         {videoBlob && (
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger
-                render={(
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="ml-auto shrink-0"
-                    onClick={handleDownload}
-                  />
-                )}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="ml-auto shrink-0"
+                onClick={handleDownload}
+                render={<TooltipTrigger />}
               >
                 <Download className="size-4" />
-              </TooltipTrigger>
+              </Button>
               <TooltipContent>
                 {lesson.source === 'youtube' ? 'Download audio' : 'Download video'}
               </TooltipContent>
@@ -294,6 +295,20 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: Video
                 x
               </Button>
             ))}
+          </div>
+
+          {/* Volume */}
+          <div className="flex items-center gap-1.5">
+            <Volume2 className="size-4 shrink-0 text-muted-foreground" />
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              onChange={handleVolumeChange}
+              className="h-1 w-20 cursor-pointer accent-primary"
+            />
           </div>
         </div>
       </div>
