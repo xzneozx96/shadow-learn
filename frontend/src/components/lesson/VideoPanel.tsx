@@ -373,7 +373,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
           segments
         </Badge>
         <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wider">
-          {formatTime(lesson.duration)}
+          {formatTime(lesson.duration ?? 0)}
         </Badge>
         {isAudioOnly && (
           <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wider text-primary">
