@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePlayer } from '@/contexts/PlayerContext'
@@ -82,6 +82,23 @@ export function LessonView() {
     await saveLessonMeta(db, { ...meta, title: newTitle })
     updateMeta({ title: newTitle })
   }, [db, meta, updateMeta])
+
+  const [searchParams] = useSearchParams()
+  const deepLinkSegmentId = searchParams.get('segmentId')
+
+  // Seek and scroll to deep-linked segment once segments are loaded
+  useEffect(() => {
+    if (!deepLinkSegmentId || segments.length === 0)
+      return
+    const target = segments.find(s => s.id === deepLinkSegmentId)
+    if (!target)
+      return
+    if (player) {
+      player.seekTo(target.start)
+    }
+    document.querySelector(`[data-segment-id="${deepLinkSegmentId}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [segments, deepLinkSegmentId, player])
 
   // Loading state
   if (loading) {
