@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { StudySession } from '@/components/study/StudySession'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useVocabulary } from '@/hooks/useVocabulary'
 
@@ -19,16 +19,14 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
 
   return (
     <div className="flex h-full flex-col">
-      {studyOpen && createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 overflow-auto bg-background"
+      <Dialog open={studyOpen} onOpenChange={setStudyOpen}>
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-2xl"
+          showCloseButton={false}
         >
           <StudySession lessonId={lessonId} onClose={() => setStudyOpen(false)} />
-        </div>,
-        document.body,
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Sub-header: count + "View all" link */}
       <div className="flex h-14 items-center justify-between border-b border-border px-3 py-2">
