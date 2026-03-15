@@ -1,5 +1,5 @@
 import type { LessonMeta, Segment } from '@/types'
-import { Download, ExternalLink, Home, Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react'
+import { Download, ExternalLink, Home, Pause, Pencil, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
