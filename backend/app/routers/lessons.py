@@ -148,7 +148,8 @@ async def _process_youtube_lesson(
         logger.exception("YouTube lesson pipeline failed: %s", exc)
         jobs[job_id].status = "error"
         jobs[job_id].error = str(exc)
-        if audio_path and audio_path.exists():
+    finally:
+        if audio_path and audio_path.exists() and jobs[job_id].status != "complete":
             audio_path.unlink(missing_ok=True)
 
 
@@ -253,7 +254,7 @@ async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTa
             raise HTTPException(status_code=400, detail=exc.message)
 
         job_id = str(uuid.uuid4())
-        jobs[job_id] = Job(status="processing", step="audio_extraction", result=None, error=None)
+        jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
         background_tasks.add_task(_process_youtube_lesson, request, video_id, job_id)
         return {"job_id": job_id}
     else:
@@ -282,7 +283,7 @@ async def generate_lesson_upload(
         api_model = api_model.replace("openai/", "", 1)
 
     job_id = str(uuid.uuid4())
-    jobs[job_id] = Job(status="processing", step="upload", result=None, error=None)
+    jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
     background_tasks.add_task(
         _process_upload_lesson,
         file,
