@@ -91,6 +91,36 @@ async def test_generate_lesson_youtube_returns_job_id():
 
 
 @pytest.mark.asyncio
+async def test_get_video_serves_and_deletes_file(tmp_path):
+    """GET /api/lessons/video/{filename} streams the file and deletes it."""
+    import app.routers.lessons as lessons_module
+
+    video_file = tmp_path / "test.mp4"
+    video_file.write_bytes(b"fake video content")
+
+    original_temp_dir = lessons_module._TEMP_DIR
+    lessons_module._TEMP_DIR = tmp_path
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/lessons/video/test.mp4")
+        assert response.status_code == 200
+        assert response.content == b"fake video content"
+        assert not video_file.exists()
+    finally:
+        lessons_module._TEMP_DIR = original_temp_dir
+
+
+@pytest.mark.asyncio
+async def test_get_video_returns_404_for_missing_file():
+    """GET /api/lessons/video/{filename} returns 404 when file is not found."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/lessons/video/nonexistent.mp4")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_generate_lesson_upload_returns_job_id():
     """Valid upload request returns a job_id immediately."""
     from unittest.mock import AsyncMock, patch

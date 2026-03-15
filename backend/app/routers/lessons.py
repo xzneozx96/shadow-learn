@@ -42,7 +42,7 @@ async def _shared_pipeline(
     source: str,
     source_url: str | None,
     duration: float,
-    audio_filename: str | None = None,
+    media_filename: str | None = None,
 ) -> None:
     """Background pipeline: pinyin → translate + vocab → assemble → mark job complete."""
     t_pipeline = time.monotonic()
@@ -94,8 +94,8 @@ async def _shared_pipeline(
             "translation_languages": translation_languages,
         }
     }
-    if audio_filename:
-        result["audio_url"] = f"/api/lessons/audio/{audio_filename}"
+    if media_filename:
+        result["video_url"] = f"/api/lessons/video/{media_filename}"
 
     jobs[job_id].status = "complete"
     jobs[job_id].step = "complete"
@@ -108,19 +108,24 @@ async def _process_youtube_lesson(
     video_id: str,
     job_id: str,
 ) -> None:
-    """Background task: validate duration → download audio → transcribe → shared pipeline."""
+    """Background task: validate duration → download video → extract audio →
+    transcribe → shared pipeline."""
+    video_path: Path | None = None
     audio_path: Path | None = None
     try:
         jobs[job_id].step = "duration_check"
         duration = await get_youtube_duration(video_id)
         if duration > settings.max_video_duration_seconds:
-            max_hours = settings.max_video_duration_seconds / 3600
+            max_mins = settings.max_video_duration_seconds / 60
             jobs[job_id].status = "error"
-            jobs[job_id].error = f"Video exceeds the {max_hours:.0f}-hour duration limit."
+            jobs[job_id].error = f"Video exceeds the {max_mins:.0f}-minute duration limit."
             return
 
+        jobs[job_id].step = "video_download"
+        video_path = await download_youtube_video(video_id)
+
         jobs[job_id].step = "audio_extraction"
-        audio_path = await download_youtube_video(video_id)
+        audio_path = await extract_audio_from_upload(video_path)
 
         jobs[job_id].step = "transcription"
         if not request.deepgram_api_key:
@@ -128,6 +133,9 @@ async def _process_youtube_lesson(
             jobs[job_id].error = "Deepgram API key is required for transcription."
             return
         segments = await transcribe_audio_deepgram(audio_path, request.deepgram_api_key)
+        # Audio no longer needed after transcription
+        audio_path.unlink(missing_ok=True)
+        audio_path = None
 
         source_url = f"https://www.youtube.com/watch?v={video_id}"
         title = f"YouTube Video ({video_id})"
@@ -142,7 +150,7 @@ async def _process_youtube_lesson(
             "youtube",
             source_url,
             duration,
-            audio_filename=audio_path.name if audio_path else None,
+            media_filename=video_path.name if video_path else None,
         )
 
     except Exception as exc:
@@ -150,8 +158,11 @@ async def _process_youtube_lesson(
         jobs[job_id].status = "error"
         jobs[job_id].error = str(exc)
     finally:
-        if audio_path and audio_path.exists() and jobs[job_id].status != "complete":
+        if audio_path and audio_path.exists():
             audio_path.unlink(missing_ok=True)
+        # Delete video only on failure; on success the /video endpoint deletes it after streaming
+        if video_path and video_path.exists() and jobs[job_id].status != "complete":
+            video_path.unlink(missing_ok=True)
 
 
 async def _process_upload_lesson(
@@ -196,9 +207,9 @@ async def _process_upload_lesson(
         duration = await probe_upload_duration(video_path)
         logger.info("[pipeline] duration_check: %.1fs", duration)
         if duration > settings.max_video_duration_seconds:
-            max_hours = settings.max_video_duration_seconds / 3600
+            max_mins = settings.max_video_duration_seconds / 60
             jobs[job_id].status = "error"
-            jobs[job_id].error = f"Video exceeds the {max_hours:.0f}-hour duration limit."
+            jobs[job_id].error = f"Video exceeds the {max_mins:.0f}-minute duration limit."
             return
 
         jobs[job_id].step = "audio_extraction"
@@ -297,23 +308,27 @@ async def generate_lesson_upload(
     return {"job_id": job_id}
 
 
-@router.get("/audio/{filename}")
-async def get_audio(filename: str) -> StreamingResponse:
-    """Serve a temporary audio file and delete it after sending."""
+@router.get("/video/{filename}")
+async def get_video(filename: str) -> StreamingResponse:
+    """Serve a temporary video file and delete it after sending."""
     safe_name = Path(filename).name
-    audio_path = _TEMP_DIR / safe_name
+    video_path = _TEMP_DIR / safe_name
 
-    if not audio_path.exists() or not audio_path.is_file():
-        raise HTTPException(status_code=404, detail="Audio file not found")
+    if not video_path.exists() or not video_path.is_file():
+        raise HTTPException(status_code=404, detail="Video file not found")
 
     def iterfile():
-        with audio_path.open("rb") as f:
+        with video_path.open("rb") as f:
             while chunk := f.read(1024 * 64):
                 yield chunk
-        audio_path.unlink(missing_ok=True)
+        video_path.unlink(missing_ok=True)
+
+    _VIDEO_MEDIA_TYPES = {"mp4": "video/mp4", "mkv": "video/x-matroska", "webm": "video/webm"}
+    ext = safe_name.rsplit(".", 1)[-1] if "." in safe_name else ""
+    media_type = _VIDEO_MEDIA_TYPES.get(ext, "video/mp4")
 
     return StreamingResponse(
         iterfile(),
-        media_type="audio/mpeg",
+        media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
     )
