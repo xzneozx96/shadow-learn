@@ -226,7 +226,7 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob, onRenam
             <Button
               variant="ghost"
               size="icon-xs"
-              className="shrink-0 opacity-0 transition-opacity group-hover/title:opacity-100"
+              className="shrink-0 opacity-0 transition-opacity group-hover/title:opacity-100 focus:opacity-100"
               onClick={startEditing}
               aria-label="Rename lesson"
             >
