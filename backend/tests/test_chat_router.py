@@ -14,8 +14,8 @@ async def test_chat_rejects_empty_messages():
                 "video_title": "Test",
                 "active_segment": None,
                 "context_segments": [],
-                "openrouter_api_key": "key",
-                "openrouter_model": "model",
+                "openai_api_key": "key",
+                "model": "gpt-4o-mini",
             },
         )
         assert response.status_code == 400

@@ -1,23 +1,38 @@
-"""Translation service using OpenRouter LLM API with batching and retry."""
+"""Translation service using OpenAI API with batching and retry."""
 
 import json
 import logging
+from typing import Dict, List
 
 import httpx
+from pydantic import BaseModel, ConfigDict
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL = "openai/gpt-4o-mini"
+_DEFAULT_MODEL = "gpt-4o-mini"
+
+
+class LanguageTranslation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    language: str
+    text: str
+
+
+class SegmentTranslation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: int
+    translations: List[LanguageTranslation]
+
+
+class TranslationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    translations: List[SegmentTranslation]
 
 
 def _build_translation_prompt(segments: list[dict], languages: list[str]) -> str:
-    """Build an LLM prompt requesting translations of Chinese segments.
-
-    Returns a prompt string that includes the segment texts and the target
-    languages, instructing the model to return a JSON array.
-    """
+    """Build an LLM prompt requesting translations of Chinese segments."""
     language_list = ", ".join(languages)
     segments_text = "\n".join(
         f'{{"id": {seg["id"]}, "text": "{seg["text"]}"}}'
@@ -27,38 +42,9 @@ def _build_translation_prompt(segments: list[dict], languages: list[str]) -> str
         f"You are a professional translator specializing in Chinese.\n"
         f"Translate each segment below into the following languages: {language_list}.\n\n"
         f"Segments:\n{segments_text}\n\n"
-        f"Return ONLY a valid JSON array where each element has:\n"
-        f'  "id": the segment id (integer)\n'
-        f'  "translations": an object mapping each language name to its translation\n\n'
-        f"Example output:\n"
-        f'[{{"id": 0, "translations": {{"English": "Hello world"}}}}]\n\n'
-        f"Do not include any explanation or markdown. Return raw JSON only."
+        f"Return the translations mapped to each segment ID."
     )
     return prompt
-
-
-def _parse_translations(response_text: str, segments: list[dict], languages: list[str]) -> list[dict]:
-    """Parse LLM JSON response and merge translations onto segment dicts."""
-    try:
-        translation_list = json.loads(response_text)
-    except json.JSONDecodeError:
-        # Extract JSON array if wrapped in markdown
-        start = response_text.find("[")
-        end = response_text.rfind("]") + 1
-        if start == -1 or end == 0:
-            raise ValueError(f"No JSON array found in response: {response_text!r}")
-        translation_list = json.loads(response_text[start:end])
-
-    id_to_translations = {item["id"]: item["translations"] for item in translation_list}
-    result = []
-    for seg in segments:
-        seg_copy = dict(seg)
-        seg_copy["translations"] = id_to_translations.get(
-            seg["id"],
-            {lang: "[translation unavailable]" for lang in languages},
-        )
-        result.append(seg_copy)
-    return result
 
 
 async def _translate_batch(
@@ -67,12 +53,19 @@ async def _translate_batch(
     api_key: str,
     model: str,
 ) -> list[dict]:
-    """Translate a single batch of segments via OpenRouter, with retry on failure.
-
-    On persistent failure, segments are returned with "[translation unavailable]"
-    and _error: True.
-    """
+    """Translate a single batch of segments via OpenAI API using Structured Outputs."""
     prompt = _build_translation_prompt(segments, languages)
+    
+    # Define JSON schema for Structured Outputs
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "translation_response",
+            "strict": True,
+            "schema": TranslationResponse.model_json_schema()
+        }
+    }
+
     max_retries = settings.translation_max_retries
     last_exc: Exception | None = None
 
@@ -80,7 +73,7 @@ async def _translate_batch(
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
-                    settings.openrouter_chat_url,
+                    settings.openai_chat_url,
                     headers={
                         "Authorization": f"Bearer {api_key}",
                         "Content-Type": "application/json",
@@ -88,6 +81,7 @@ async def _translate_batch(
                     json={
                         "model": model,
                         "messages": [{"role": "user", "content": prompt}],
+                        "response_format": response_format,
                         "temperature": 0.1,
                     },
                 )
@@ -95,7 +89,33 @@ async def _translate_batch(
 
             data = response.json()
             content = data["choices"][0]["message"]["content"]
-            return _parse_translations(content, segments, languages)
+            
+            try:
+                parsed = TranslationResponse.model_validate_json(content)
+                id_to_translations = {
+                    item.id: {lt.language: lt.text for lt in item.translations}
+                    for item in parsed.translations
+                }
+            except Exception as e:
+                logger.error("Failed to parse translation response: %s", e)
+                # Fallback to standard JSON parsing if schema validation fails
+                raw_data = json.loads(content)
+                if isinstance(raw_data, dict) and "translations" in raw_data:
+                    id_to_translations = {item["id"]: item["translations"] for item in raw_data["translations"]}
+                elif isinstance(raw_data, list):
+                    id_to_translations = {item["id"]: item["translations"] for item in raw_data if "id" in item}
+                else:
+                    raise e
+
+            result = []
+            for seg in segments:
+                seg_copy = dict(seg)
+                seg_copy["translations"] = id_to_translations.get(
+                    seg["id"],
+                    {lang: "[translation unavailable]" for lang in languages},
+                )
+                result.append(seg_copy)
+            return result
 
         except Exception as exc:
             last_exc = exc

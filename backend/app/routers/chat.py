@@ -1,4 +1,4 @@
-"""Chat router with SSE streaming responses from OpenRouter."""
+"""Chat router with SSE streaming responses from OpenAI."""
 
 import json
 from typing import AsyncGenerator
@@ -56,12 +56,12 @@ async def _stream_chat(
     api_key: str,
     model: str,
 ) -> AsyncGenerator[str, None]:
-    """Stream chat completion tokens from OpenRouter as SSE events."""
+    """Stream chat completion tokens from OpenAI as SSE events."""
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             async with client.stream(
                 "POST",
-                settings.openrouter_chat_url,
+                settings.openai_chat_url,
                 headers={
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
@@ -113,7 +113,12 @@ async def chat(request: ChatRequest) -> StreamingResponse:
     messages: list[dict] = [{"role": "system", "content": system_prompt}]
     messages += [{"role": m.role, "content": m.content} for m in recent_messages]
 
+    # Normalize model name: strip 'openai/' if talking directly to OpenAI
+    api_model = request.model
+    if "api.openai.com" in settings.openai_chat_url and api_model.startswith("openai/"):
+        api_model = api_model.replace("openai/", "", 1)
+
     return StreamingResponse(
-        _stream_chat(messages, request.openrouter_api_key, request.openrouter_model),
+        _stream_chat(messages, request.openai_api_key, api_model),
         media_type="text/event-stream",
     )

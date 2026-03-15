@@ -31,7 +31,7 @@ const updateMeta = useCallback((updates: Partial<LessonMeta>) => {
 ### `frontend/src/components/lesson/VideoPanel.tsx` (modified)
 
 - Add `onRename?: (newTitle: string) => void` to `VideoPanelProps`.
-- In the header, wrap the title area in a `group/title` div. On hover, show a `Pencil` icon button (`size-3`, `ghost`, `icon-xs`) to the right of the title span.
+- In the header, wrap the title area in a `group/title` div. On hover, show a `Pencil` icon button (`size-4`, `ghost`, `icon-xs`) to the right of the title span.
 - Clicking the pencil calls `startEditing()`: resets `isCancelledRef.current = false`, stores `lesson.title` into `titleSnapshotRef.current`, seeds `editValue` with that snapshot, sets `isEditing = true`.
 - Local state: `isEditing: boolean`, `editValue: string`, `isCancelledRef: useRef(false)`, `inputRef: useRef<HTMLInputElement>(null)`, `titleSnapshotRef: useRef('')` — same pattern as `LessonCard` plus the snapshot ref.
 - Auto-focus + select-all via `useEffect(() => { if (isEditing) inputRef.current?.select() }, [isEditing])`.

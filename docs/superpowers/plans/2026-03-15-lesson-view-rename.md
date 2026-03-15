@@ -238,7 +238,7 @@
           onClick={startEditing}
           aria-label="Rename lesson"
         >
-          <Pencil className="size-3" />
+          <Pencil className="size-4" />
         </Button>
       )}
     </div>

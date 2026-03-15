@@ -81,19 +81,19 @@ export function WordTooltip({ text, words, playTTS, loadingText }: WordTooltipPr
           return (
             <Tooltip key={i}>
               <TooltipTrigger
-                className="cursor-help rounded-sm px-0.5 text-blue-200 decoration-blue-400/50 decoration-dotted underline-offset-4 transition-colors hover:bg-blue-500/20 hover:text-blue-100 hover:underline"
+                className="cursor-help rounded-sm px-0.5 text-white/70 decoration-white/30 decoration-dotted underline-offset-4 transition-colors hover:bg-white/10 hover:text-white hover:underline"
               >
                 {span.text}
               </TooltipTrigger>
               <TooltipContent
                 side="top"
                 align="center"
-                className="relative max-w-none rounded-2xl border border-slate-700/50 bg-slate-900/95 p-0 shadow-2xl backdrop-blur-xl"
+                className="relative max-w-none rounded-2xl border border-white/10 bg-[oklch(0.13_0_0)]/95 p-0 shadow-2xl backdrop-blur-xl"
               >
-                <div className="flex min-w-max divide-x divide-slate-700/50">
+                <div className="flex min-w-max divide-x divide-white/10">
                   {/* Section 1: Word & Pinyin */}
                   <div className="flex flex-col justify-center px-5 py-4">
-                    <p className="text-xs font-medium tracking-wide text-blue-400/80">
+                    <p className="text-xs font-medium tracking-wide text-white/45">
                       {span.word.pinyin}
                     </p>
                     <p className="mt-1 text-3xl font-bold tracking-tight text-white">
@@ -102,18 +102,18 @@ export function WordTooltip({ text, words, playTTS, loadingText }: WordTooltipPr
                   </div>
 
                   {/* Section 2: Meaning */}
-                  <div className="flex max-w-[240px] flex-col justify-center px-5 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Meaning</p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-slate-200">
+                  <div className="flex max-w-60 flex-col justify-center px-5 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-white/30">Meaning</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-white/80">
                       {span.word.meaning}
                     </p>
                   </div>
 
                   {/* Section 3: Usage example */}
                   {span.word.usage && (
-                    <div className="flex max-w-[280px] flex-col justify-center px-5 py-4 pr-12">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Example</p>
-                      <p className="mt-1.5 text-sm italic leading-relaxed text-slate-300">
+                    <div className="flex max-w-70 flex-col justify-center px-5 py-4 pr-12">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-white/30">Example</p>
+                      <p className="mt-1.5 text-sm italic leading-relaxed text-white/65">
                         {span.word.usage}
                       </p>
                     </div>
@@ -125,7 +125,7 @@ export function WordTooltip({ text, words, playTTS, loadingText }: WordTooltipPr
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-7 text-slate-500 hover:bg-slate-800 hover:text-white"
+                    className="size-7 text-white/30 hover:bg-white/[0.06] hover:text-white"
                     aria-label={loadingText === span.word.word ? 'Loading pronunciation' : `Play pronunciation of ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -133,20 +133,20 @@ export function WordTooltip({ text, words, playTTS, loadingText }: WordTooltipPr
                     }}
                   >
                     {loadingText === span.word.word
-                      ? <Loader2 className="size-3.5 animate-spin" />
-                      : <Volume2 className="size-3.5" />}
+                      ? <Loader2 className="size-4 animate-spin" />
+                      : <Volume2 className="size-4" />}
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-7 text-slate-500 hover:bg-slate-800 hover:text-white"
+                    className="size-7 text-white/30 hover:bg-white/[0.06] hover:text-white"
                     aria-label={copiedWord === span.word.word ? 'Copied!' : `Copy ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleCopy(span.word!.word)
                     }}
                   >
-                    {copiedWord === span.word.word ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+                    {copiedWord === span.word.word ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
                   </Button>
                 </div>
               </TooltipContent>

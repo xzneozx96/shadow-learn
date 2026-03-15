@@ -8,7 +8,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-_VOICE_ID = "Calm_Woman"  # Chinese female voice; adjust if Minimax changes IDs
+_VOICE_ID = "hunyin_6"  # Chinese male voice; adjust if Minimax changes IDs
 
 
 async def synthesize_speech(text: str, api_key: str) -> bytes:
@@ -36,12 +36,14 @@ async def synthesize_speech(text: str, api_key: str) -> bytes:
         "text": text,
         "voice_setting": {
             "voice_id": _VOICE_ID,
+            "speed": 0.8,
         },
         "audio_setting": {
             "format": "mp3",
             "sample_rate": 32000,
         },
     }
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",

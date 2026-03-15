@@ -1,18 +1,30 @@
 # Minimax TTS Integration Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development
+> (if subagents available) or superpowers:executing-plans to implement this
+> plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add Minimax TTS pronunciation playback (word-level and sentence-level) to the shadowing companion, with persistent IndexedDB audio caching keyed by text.
+**Goal:** Add Minimax TTS pronunciation playback (word-level and sentence-level)
+to the shadowing companion, with persistent IndexedDB audio caching keyed by
+text.
 
-**Architecture:** A new FastAPI service+router proxies calls to the Minimax `speech-2.6-turbo` API and returns raw MP3 bytes. A `useTTS` React hook (receiving `db` and `keys` as params) manages playback and caches audio as Blobs in a new IndexedDB `tts-cache` store. Two play buttons are added: one in `WordTooltip` for word pronunciation and one per segment row in `TranscriptPanel` for sentence pronunciation.
+**Architecture:** A new FastAPI service+router proxies calls to the Minimax
+`speech-2.6-turbo` API and returns raw MP3 bytes. A `useTTS` React hook
+(receiving `db` and `keys` as params) manages playback and caches audio as Blobs
+in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
+`WordTooltip` for word pronunciation and one per segment row in
+`TranscriptPanel` for sentence pronunciation.
 
-**Tech Stack:** Python `httpx` (already in backend), FastAPI, React, `idb` (already in frontend), Lucide icons (`Volume2`, `Loader2`), shadcn `Button`, `sonner` toast.
+**Tech Stack:** Python `httpx` (already in backend), FastAPI, React, `idb`
+(already in frontend), Lucide icons (`Volume2`, `Loader2`), shadcn `Button`,
+`sonner` toast.
 
 ---
 
 ## Chunk 1: Backend — TTS service, router, tests
 
 ### Files
+
 - Create: `backend/app/services/tts.py`
 - Create: `backend/app/routers/tts.py`
 - Create: `backend/tests/test_tts_service.py`
@@ -338,11 +350,15 @@
 
 - [ ] **Step 5: Export from `backend/app/routers/__init__.py`**
 
-  Open `backend/app/routers/__init__.py`. If it's empty or only has imports, add:
+  Open `backend/app/routers/__init__.py`. If it's empty or only has imports,
+  add:
+
   ```python
   from app.routers import tts
   ```
-  If it's a blank `__init__.py`, leave it as-is — the import in `main.py` is sufficient.
+
+  If it's a blank `__init__.py`, leave it as-is — the import in `main.py` is
+  sufficient.
 
 - [ ] **Step 6: Run all router tests**
 
@@ -374,6 +390,7 @@
 ## Chunk 2: Frontend — IndexedDB cache + useTTS hook
 
 ### Files
+
 - Modify: `frontend/src/db/index.ts`
 - Create: `frontend/src/hooks/useTTS.ts`
 
@@ -383,29 +400,30 @@
 
 - [ ] **Step 1: Modify `frontend/src/db/index.ts`**
 
-  Change `DB_VERSION` from `1` to `2` and add the `tts-cache` store in a version-gated block. Also add two cache helper functions at the bottom.
+  Change `DB_VERSION` from `1` to `2` and add the `tts-cache` store in a
+  version-gated block. Also add two cache helper functions at the bottom.
 
   Replace the `DB_VERSION` line and the `upgrade` handler:
 
   ```ts
-  const DB_VERSION = 2
+  const DB_VERSION = 2;
 
   export async function initDB(): Promise<ShadowLearnDB> {
-    return openDB(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
-        if (oldVersion < 1) {
-          db.createObjectStore('lessons', { keyPath: 'id' })
-          db.createObjectStore('segments')
-          db.createObjectStore('videos')
-          db.createObjectStore('chats')
-          db.createObjectStore('settings')
-          db.createObjectStore('crypto')
-        }
-        if (oldVersion < 2) {
-          db.createObjectStore('tts-cache')
-        }
-      },
-    })
+  	return openDB(DB_NAME, DB_VERSION, {
+  		upgrade(db, oldVersion) {
+  			if (oldVersion < 1) {
+  				db.createObjectStore('lessons', { keyPath: 'id' });
+  				db.createObjectStore('segments');
+  				db.createObjectStore('videos');
+  				db.createObjectStore('chats');
+  				db.createObjectStore('settings');
+  				db.createObjectStore('crypto');
+  			}
+  			if (oldVersion < 2) {
+  				db.createObjectStore('tts-cache');
+  			}
+  		},
+  	});
   }
   ```
 
@@ -413,16 +431,25 @@
 
   ```ts
   // TTS audio cache (keyed by text, value is MP3 Blob)
-  export async function getTTSCache(db: ShadowLearnDB, text: string): Promise<Blob | undefined> {
-    return db.get('tts-cache', text)
+  export async function getTTSCache(
+  	db: ShadowLearnDB,
+  	text: string,
+  ): Promise<Blob | undefined> {
+  	return db.get('tts-cache', text);
   }
 
-  export async function saveTTSCache(db: ShadowLearnDB, text: string, blob: Blob): Promise<void> {
-    await db.put('tts-cache', blob, text)
+  export async function saveTTSCache(
+  	db: ShadowLearnDB,
+  	text: string,
+  	blob: Blob,
+  ): Promise<void> {
+  	await db.put('tts-cache', blob, text);
   }
   ```
 
-  **Note:** Existing users upgrading from DB version 1 will have `oldVersion === 1`, so only the `< 2` block runs — their existing stores are untouched.
+  **Note:** Existing users upgrading from DB version 1 will have
+  `oldVersion === 1`, so only the `< 2` block runs — their existing stores are
+  untouched.
 
 - [ ] **Step 2: Verify frontend builds**
 
@@ -438,118 +465,130 @@
 
 - [ ] **Step 1: Write the failing test — `frontend/tests/useTTS.test.ts`**
 
-  This uses Vitest (already the test runner for the frontend based on existing test files).
+  This uses Vitest (already the test runner for the frontend based on existing
+  test files).
 
   ```ts
-  import { describe, it, expect, vi, beforeEach } from 'vitest'
-  import { renderHook, act } from '@testing-library/react'
-  import { useTTS } from '../src/hooks/useTTS'
+  import { describe, it, expect, vi, beforeEach } from 'vitest';
+  import { renderHook, act } from '@testing-library/react';
+  import { useTTS } from '../src/hooks/useTTS';
 
   // Mock the db helpers
   vi.mock('../src/db', () => ({
-    getTTSCache: vi.fn(),
-    saveTTSCache: vi.fn(),
-  }))
+  	getTTSCache: vi.fn(),
+  	saveTTSCache: vi.fn(),
+  }));
 
   // Mock sonner toast
   vi.mock('sonner', () => ({
-    toast: { error: vi.fn(), success: vi.fn() },
-  }))
+  	toast: { error: vi.fn(), success: vi.fn() },
+  }));
 
-  import { getTTSCache, saveTTSCache } from '../src/db'
-  import { toast } from 'sonner'
+  import { getTTSCache, saveTTSCache } from '../src/db';
+  import { toast } from 'sonner';
 
-  const mockDb = {} as any
-  const mockKeys = { openaiApiKey: 'sk-test', minimaxApiKey: 'mm-test' }
+  const mockDb = {} as any;
+  const mockKeys = { openaiApiKey: 'sk-test', minimaxApiKey: 'mm-test' };
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    global.fetch = vi.fn()
-    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
-    global.URL.revokeObjectURL = vi.fn()
-  })
+  	vi.clearAllMocks();
+  	global.fetch = vi.fn();
+  	global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+  	global.URL.revokeObjectURL = vi.fn();
+  });
 
   describe('useTTS', () => {
-    it('returns loadingText null initially', () => {
-      const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-      expect(result.current.loadingText).toBeNull()
-    })
+  	it('returns loadingText null initially', () => {
+  		const { result } = renderHook(() => useTTS(mockDb, mockKeys));
+  		expect(result.current.loadingText).toBeNull();
+  	});
 
-    it('shows error toast when minimaxApiKey is missing', async () => {
-      const keysWithoutMinimax = { openaiApiKey: 'sk-test' }
-      const { result } = renderHook(() => useTTS(mockDb, keysWithoutMinimax as any))
+  	it('shows error toast when minimaxApiKey is missing', async () => {
+  		const keysWithoutMinimax = { openaiApiKey: 'sk-test' };
+  		const { result } = renderHook(() =>
+  			useTTS(mockDb, keysWithoutMinimax as any),
+  		);
 
-      await act(async () => {
-        await result.current.playTTS('你好')
-      })
+  		await act(async () => {
+  			await result.current.playTTS('你好');
+  		});
 
-      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Minimax'))
-      expect(global.fetch).not.toHaveBeenCalled()
-    })
+  		expect(toast.error).toHaveBeenCalledWith(
+  			expect.stringContaining('Minimax'),
+  		);
+  		expect(global.fetch).not.toHaveBeenCalled();
+  	});
 
-    it('plays from cache without calling fetch', async () => {
-      const fakeBlob = new Blob([new Uint8Array([0xff, 0xfb])], { type: 'audio/mpeg' })
-      vi.mocked(getTTSCache).mockResolvedValueOnce(fakeBlob)
+  	it('plays from cache without calling fetch', async () => {
+  		const fakeBlob = new Blob([new Uint8Array([0xff, 0xfb])], {
+  			type: 'audio/mpeg',
+  		});
+  		vi.mocked(getTTSCache).mockResolvedValueOnce(fakeBlob);
 
-      const { result } = renderHook(() => useTTS(mockDb, mockKeys))
+  		const { result } = renderHook(() => useTTS(mockDb, mockKeys));
 
-      await act(async () => {
-        await result.current.playTTS('你好')
-      })
+  		await act(async () => {
+  			await result.current.playTTS('你好');
+  		});
 
-      expect(getTTSCache).toHaveBeenCalledWith(mockDb, '你好')
-      expect(global.fetch).not.toHaveBeenCalled()
-      expect(saveTTSCache).not.toHaveBeenCalled()
-    })
+  		expect(getTTSCache).toHaveBeenCalledWith(mockDb, '你好');
+  		expect(global.fetch).not.toHaveBeenCalled();
+  		expect(saveTTSCache).not.toHaveBeenCalled();
+  	});
 
-    it('fetches from API on cache miss and stores result', async () => {
-      vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
-      const fakeBlob = new Blob([new Uint8Array([0xff, 0xfb])], { type: 'audio/mpeg' })
-      vi.mocked(global.fetch).mockResolvedValueOnce({
-        ok: true,
-        blob: () => Promise.resolve(fakeBlob),
-      } as any)
+  	it('fetches from API on cache miss and stores result', async () => {
+  		vi.mocked(getTTSCache).mockResolvedValueOnce(undefined);
+  		const fakeBlob = new Blob([new Uint8Array([0xff, 0xfb])], {
+  			type: 'audio/mpeg',
+  		});
+  		vi.mocked(global.fetch).mockResolvedValueOnce({
+  			ok: true,
+  			blob: () => Promise.resolve(fakeBlob),
+  		} as any);
 
-      const { result } = renderHook(() => useTTS(mockDb, mockKeys))
+  		const { result } = renderHook(() => useTTS(mockDb, mockKeys));
 
-      await act(async () => {
-        await result.current.playTTS('你好')
-      })
+  		await act(async () => {
+  			await result.current.playTTS('你好');
+  		});
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/tts', expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ text: '你好', minimax_api_key: 'mm-test' }),
-      }))
-      expect(saveTTSCache).toHaveBeenCalledWith(mockDb, '你好', fakeBlob)
-    })
+  		expect(global.fetch).toHaveBeenCalledWith(
+  			'/api/tts',
+  			expect.objectContaining({
+  				method: 'POST',
+  				body: JSON.stringify({ text: '你好', minimax_api_key: 'mm-test' }),
+  			}),
+  		);
+  		expect(saveTTSCache).toHaveBeenCalledWith(mockDb, '你好', fakeBlob);
+  	});
 
-    it('shows error toast on API failure', async () => {
-      vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
-      vi.mocked(global.fetch).mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Bad Gateway',
-      } as any)
+  	it('shows error toast on API failure', async () => {
+  		vi.mocked(getTTSCache).mockResolvedValueOnce(undefined);
+  		vi.mocked(global.fetch).mockResolvedValueOnce({
+  			ok: false,
+  			statusText: 'Bad Gateway',
+  		} as any);
 
-      const { result } = renderHook(() => useTTS(mockDb, mockKeys))
+  		const { result } = renderHook(() => useTTS(mockDb, mockKeys));
 
-      await act(async () => {
-        await result.current.playTTS('你好')
-      })
+  		await act(async () => {
+  			await result.current.playTTS('你好');
+  		});
 
-      expect(toast.error).toHaveBeenCalled()
-    })
+  		expect(toast.error).toHaveBeenCalled();
+  	});
 
-    it('is a no-op for empty text', async () => {
-      const { result } = renderHook(() => useTTS(mockDb, mockKeys))
+  	it('is a no-op for empty text', async () => {
+  		const { result } = renderHook(() => useTTS(mockDb, mockKeys));
 
-      await act(async () => {
-        await result.current.playTTS('')
-      })
+  		await act(async () => {
+  			await result.current.playTTS('');
+  		});
 
-      expect(getTTSCache).not.toHaveBeenCalled()
-      expect(global.fetch).not.toHaveBeenCalled()
-    })
-  })
+  		expect(getTTSCache).not.toHaveBeenCalled();
+  		expect(global.fetch).not.toHaveBeenCalled();
+  	});
+  });
   ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -563,86 +602,92 @@
 - [ ] **Step 3: Implement `frontend/src/hooks/useTTS.ts`**
 
   ```ts
-  import type { ShadowLearnDB } from '@/db'
-  import type { DecryptedKeys } from '@/types'
-  import { useCallback, useRef, useState } from 'react'
-  import { toast } from 'sonner'
-  import { getTTSCache, saveTTSCache } from '@/db'
+  import type { ShadowLearnDB } from '@/db';
+  import type { DecryptedKeys } from '@/types';
+  import { useCallback, useRef, useState } from 'react';
+  import { toast } from 'sonner';
+  import { getTTSCache, saveTTSCache } from '@/db';
 
   interface UseTTSReturn {
-    playTTS: (text: string) => Promise<void>
-    loadingText: string | null
+  	playTTS: (text: string) => Promise<void>;
+  	loadingText: string | null;
   }
 
   export function useTTS(
-    db: ShadowLearnDB | null,
-    keys: DecryptedKeys | null,
+  	db: ShadowLearnDB | null,
+  	keys: DecryptedKeys | null,
   ): UseTTSReturn {
-    const [loadingText, setLoadingText] = useState<string | null>(null)
-    const audioRef = useRef<HTMLAudioElement | null>(null)
+  	const [loadingText, setLoadingText] = useState<string | null>(null);
+  	const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    const playTTS = useCallback(async (text: string) => {
-      if (!text)
-        return
+  	const playTTS = useCallback(
+  		async (text: string) => {
+  			if (!text) return;
 
-      if (!keys?.minimaxApiKey) {
-        toast.error('Add your Minimax API key in Settings to use pronunciation')
-        return
-      }
+  			if (!keys?.minimaxApiKey) {
+  				toast.error(
+  					'Add your Minimax API key in Settings to use pronunciation',
+  				);
+  				return;
+  			}
 
-      // Stop any currently playing audio
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
+  			// Stop any currently playing audio
+  			if (audioRef.current) {
+  				audioRef.current.pause();
+  				audioRef.current = null;
+  			}
 
-      setLoadingText(text)
+  			setLoadingText(text);
 
-      try {
-        let blob: Blob | undefined
+  			try {
+  				let blob: Blob | undefined;
 
-        if (db) {
-          blob = await getTTSCache(db, text)
-        }
+  				if (db) {
+  					blob = await getTTSCache(db, text);
+  				}
 
-        if (!blob) {
-          const response = await fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, minimax_api_key: keys.minimaxApiKey }),
-          })
+  				if (!blob) {
+  					const response = await fetch('/api/tts', {
+  						method: 'POST',
+  						headers: { 'Content-Type': 'application/json' },
+  						body: JSON.stringify({
+  							text,
+  							minimax_api_key: keys.minimaxApiKey,
+  						}),
+  					});
 
-          if (!response.ok) {
-            throw new Error(`TTS failed: ${response.statusText}`)
-          }
+  					if (!response.ok) {
+  						throw new Error(`TTS failed: ${response.statusText}`);
+  					}
 
-          blob = await response.blob()
+  					blob = await response.blob();
 
-          if (db) {
-            await saveTTSCache(db, text, blob)
-          }
-        }
+  					if (db) {
+  						await saveTTSCache(db, text, blob);
+  					}
+  				}
 
-        const url = URL.createObjectURL(blob)
-        const audio = new Audio(url)
-        audioRef.current = audio
+  				const url = URL.createObjectURL(blob);
+  				const audio = new Audio(url);
+  				audioRef.current = audio;
 
-        audio.addEventListener('ended', () => URL.revokeObjectURL(url))
-        // Intentionally not awaited: play() returns a Promise but we want loadingText
-        // cleared as soon as playback starts (in finally), not when it finishes.
-        // The 'ended' listener handles cleanup.
-        audio.play().catch(() => {}) // suppress unhandled rejection if browser blocks autoplay
-      }
-      catch (err) {
-        const msg = err instanceof Error ? err.message : 'Pronunciation failed'
-        toast.error(msg)
-      }
-      finally {
-        setLoadingText(null)
-      }
-    }, [db, keys])
+  				audio.addEventListener('ended', () => URL.revokeObjectURL(url));
+  				// Intentionally not awaited: play() returns a Promise but we want loadingText
+  				// cleared as soon as playback starts (in finally), not when it finishes.
+  				// The 'ended' listener handles cleanup.
+  				audio.play().catch(() => {}); // suppress unhandled rejection if browser blocks autoplay
+  			} catch (err) {
+  				const msg =
+  					err instanceof Error ? err.message : 'Pronunciation failed';
+  				toast.error(msg);
+  			} finally {
+  				setLoadingText(null);
+  			}
+  		},
+  		[db, keys],
+  	);
 
-    return { playTTS, loadingText }
+  	return { playTTS, loadingText };
   }
   ```
 
@@ -675,6 +720,7 @@
 ## Chunk 3: Frontend — Key management (types, Setup, Settings)
 
 ### Files
+
 - Modify: `frontend/src/types.ts`
 - Modify: `frontend/src/components/onboarding/Setup.tsx`
 - Modify: `frontend/src/components/settings/Settings.tsx`
@@ -689,12 +735,13 @@
 
   ```ts
   export interface DecryptedKeys {
-    openaiApiKey: string
-    minimaxApiKey?: string
+  	openaiApiKey: string;
+  	minimaxApiKey?: string;
   }
   ```
 
-  No other changes needed. The field is optional so existing encrypted blobs (which have only `openaiApiKey`) continue to decrypt without error.
+  No other changes needed. The field is optional so existing encrypted blobs
+  (which have only `openaiApiKey`) continue to decrypt without error.
 
 ---
 
@@ -702,39 +749,50 @@
 
 - [ ] **Step 1: Modify `frontend/src/components/onboarding/Setup.tsx`**
 
-  Add `minimaxApiKey` state and a new input field. The field is optional — the user can leave it blank and add it later in Settings.
+  Add `minimaxApiKey` state and a new input field. The field is optional — the
+  user can leave it blank and add it later in Settings.
 
   **State additions** (after the existing `openaiApiKey` state):
+
   ```ts
-  const [minimaxApiKey, setMinimaxApiKey] = useState('')
+  const [minimaxApiKey, setMinimaxApiKey] = useState('');
   ```
 
   **Validation** — no change. Minimax key is optional.
 
   **In `handleSubmit`**, update the `setup` call:
+
   ```ts
   await setup(
-    { openaiApiKey: openaiApiKey.trim(), minimaxApiKey: minimaxApiKey.trim() || undefined },
-    pin,
-  )
+  	{
+  		openaiApiKey: openaiApiKey.trim(),
+  		minimaxApiKey: minimaxApiKey.trim() || undefined,
+  	},
+  	pin,
+  );
   ```
 
   **New input field** (add after the OpenAI input block, before the PIN inputs):
+
   ```tsx
-  <div className="flex flex-col gap-1.5">
-    <label htmlFor="minimax" className="text-sm font-medium text-slate-300">
-      Minimax API Key <span className="text-slate-500">(optional)</span>
-    </label>
-    <Input
-      id="minimax"
-      type="password"
-      placeholder="eyJ..."
-      value={minimaxApiKey}
-      onChange={e => setMinimaxApiKey(e.target.value)}
-    />
-    <p className="text-xs text-slate-500">
-      Used for word and sentence pronunciation (TTS). Can be added later in Settings.
-    </p>
+  <div className='flex flex-col gap-1.5'>
+  	<label
+  		htmlFor='minimax'
+  		className='text-sm font-medium text-slate-300'
+  	>
+  		Minimax API Key <span className='text-slate-500'>(optional)</span>
+  	</label>
+  	<Input
+  		id='minimax'
+  		type='password'
+  		placeholder='eyJ...'
+  		value={minimaxApiKey}
+  		onChange={(e) => setMinimaxApiKey(e.target.value)}
+  	/>
+  	<p className='text-xs text-slate-500'>
+  		Used for word and sentence pronunciation (TTS). Can be added later in
+  		Settings.
+  	</p>
   </div>
   ```
 
@@ -744,110 +802,139 @@
 
 - [ ] **Step 1: Modify `frontend/src/components/settings/Settings.tsx`**
 
-  The Settings page currently shows the OpenAI key as read-only. We need to make both keys editable so the user can add/update the Minimax key. Add state for editable key values and a "Save Keys" button that uses `setup()` from AuthContext (which re-encrypts AND updates in-memory keys).
+  The Settings page currently shows the OpenAI key as read-only. We need to make
+  both keys editable so the user can add/update the Minimax key. Add state for
+  editable key values and a "Save Keys" button that uses `setup()` from
+  AuthContext (which re-encrypts AND updates in-memory keys).
 
   **New state** — add after the existing state declarations:
+
   ```ts
-  const [editOpenaiKey, setEditOpenaiKey] = useState(keys?.openaiApiKey ?? '')
-  const [editMinimaxKey, setEditMinimaxKey] = useState(keys?.minimaxApiKey ?? '')
-  const [keysPin, setKeysPin] = useState('')
-  const [keysSaved, setKeysSaved] = useState(false)
-  const [keysError, setKeysError] = useState<string | null>(null)
+  const [editOpenaiKey, setEditOpenaiKey] = useState(keys?.openaiApiKey ?? '');
+  const [editMinimaxKey, setEditMinimaxKey] = useState(
+  	keys?.minimaxApiKey ?? '',
+  );
+  const [keysPin, setKeysPin] = useState('');
+  const [keysSaved, setKeysSaved] = useState(false);
+  const [keysError, setKeysError] = useState<string | null>(null);
   ```
 
   **Also update `useAuth()` destructure** to include `setup`:
+
   ```ts
-  const { db, keys, lock, resetKeys, setup } = useAuth()
+  const { db, keys, lock, resetKeys, setup } = useAuth();
   ```
 
-  **Sync state when keys change** — add a `useEffect` to keep edit fields in sync when `keys` updates (e.g. after save):
+  **Sync state when keys change** — add a `useEffect` to keep edit fields in
+  sync when `keys` updates (e.g. after save):
+
   ```ts
   useEffect(() => {
-    setEditOpenaiKey(keys?.openaiApiKey ?? '')
-    setEditMinimaxKey(keys?.minimaxApiKey ?? '')
-  }, [keys])
+  	setEditOpenaiKey(keys?.openaiApiKey ?? '');
+  	setEditMinimaxKey(keys?.minimaxApiKey ?? '');
+  }, [keys]);
   ```
 
-  **New handler** `handleSaveKeys` — uses `setup()` which re-encrypts AND updates AuthContext in-memory keys in one call:
+  **New handler** `handleSaveKeys` — uses `setup()` which re-encrypts AND
+  updates AuthContext in-memory keys in one call:
+
   ```ts
   async function handleSaveKeys() {
-    setKeysError(null)
-    if (!keysPin) {
-      setKeysError('Enter your PIN to save key changes')
-      return
-    }
-    try {
-      const newKeys = {
-        openaiApiKey: editOpenaiKey.trim(),
-        minimaxApiKey: editMinimaxKey.trim() || undefined,
-      }
-      await setup(newKeys, keysPin)
-      setKeysSaved(true)
-      setKeysPin('')
-      toast.success('API keys updated')
-      setTimeout(setKeysSaved, 2000, false)
-    }
-    catch {
-      setKeysError('Incorrect PIN or save failed')
-      toast.error('Failed to save API keys')
-    }
+  	setKeysError(null);
+  	if (!keysPin) {
+  		setKeysError('Enter your PIN to save key changes');
+  		return;
+  	}
+  	try {
+  		const newKeys = {
+  			openaiApiKey: editOpenaiKey.trim(),
+  			minimaxApiKey: editMinimaxKey.trim() || undefined,
+  		};
+  		await setup(newKeys, keysPin);
+  		setKeysSaved(true);
+  		setKeysPin('');
+  		toast.success('API keys updated');
+  		setTimeout(setKeysSaved, 2000, false);
+  	} catch {
+  		setKeysError('Incorrect PIN or save failed');
+  		toast.error('Failed to save API keys');
+  	}
   }
   ```
 
-  Note: `setup()` from AuthContext handles encryption, persistence to IndexedDB, and updating `keys` in memory — no need to call `encryptKeys`/`saveCryptoData` directly.
+  Note: `setup()` from AuthContext handles encryption, persistence to IndexedDB,
+  and updating `keys` in memory — no need to call `encryptKeys`/`saveCryptoData`
+  directly.
 
-  **Updated API Keys card UI** — replace the read-only display with editable inputs + PIN + Save button:
+  **Updated API Keys card UI** — replace the read-only display with editable
+  inputs + PIN + Save button:
+
   ```tsx
   <Card>
-    <CardHeader>
-      <CardTitle>API Keys</CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-400">Visibility</span>
-        <Button variant="ghost" size="icon-sm" onClick={() => setShowKeys(!showKeys)}>
-          {showKeys ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-        </Button>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs text-slate-400">OpenAI API Key</label>
-        <Input
-          type={showKeys ? 'text' : 'password'}
-          value={editOpenaiKey}
-          onChange={e => setEditOpenaiKey(e.target.value)}
-          className="font-mono text-xs"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs text-slate-400">
-          Minimax API Key <span className="text-slate-600">(for pronunciation)</span>
-        </label>
-        <Input
-          type={showKeys ? 'text' : 'password'}
-          value={editMinimaxKey}
-          onChange={e => setEditMinimaxKey(e.target.value)}
-          className="font-mono text-xs"
-          placeholder="Leave blank to disable TTS"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs text-slate-400">Confirm with PIN</label>
-        <Input
-          type="password"
-          value={keysPin}
-          onChange={e => setKeysPin(e.target.value)}
-          placeholder="Enter your PIN to save"
-        />
-      </div>
-      {keysError && <p className="text-sm text-destructive">{keysError}</p>}
-      {keysSaved && <p className="text-sm text-emerald-400">Keys saved</p>}
-      <Button size="sm" onClick={handleSaveKeys}>Save Keys</Button>
-    </CardContent>
+  	<CardHeader>
+  		<CardTitle>API Keys</CardTitle>
+  	</CardHeader>
+  	<CardContent className='space-y-3'>
+  		<div className='flex items-center justify-between'>
+  			<span className='text-sm text-slate-400'>Visibility</span>
+  			<Button
+  				variant='ghost'
+  				size='icon-sm'
+  				onClick={() => setShowKeys(!showKeys)}
+  			>
+  				{showKeys ? (
+  					<EyeOff className='size-4' />
+  				) : (
+  					<Eye className='size-4' />
+  				)}
+  			</Button>
+  		</div>
+  		<div className='space-y-2'>
+  			<label className='text-xs text-slate-400'>OpenAI API Key</label>
+  			<Input
+  				type={showKeys ? 'text' : 'password'}
+  				value={editOpenaiKey}
+  				onChange={(e) => setEditOpenaiKey(e.target.value)}
+  				className='font-mono text-xs'
+  			/>
+  		</div>
+  		<div className='space-y-2'>
+  			<label className='text-xs text-slate-400'>
+  				Minimax API Key{' '}
+  				<span className='text-slate-600'>(for pronunciation)</span>
+  			</label>
+  			<Input
+  				type={showKeys ? 'text' : 'password'}
+  				value={editMinimaxKey}
+  				onChange={(e) => setEditMinimaxKey(e.target.value)}
+  				className='font-mono text-xs'
+  				placeholder='Leave blank to disable TTS'
+  			/>
+  		</div>
+  		<div className='space-y-2'>
+  			<label className='text-xs text-slate-400'>Confirm with PIN</label>
+  			<Input
+  				type='password'
+  				value={keysPin}
+  				onChange={(e) => setKeysPin(e.target.value)}
+  				placeholder='Enter your PIN to save'
+  			/>
+  		</div>
+  		{keysError && <p className='text-sm text-destructive'>{keysError}</p>}
+  		{keysSaved && <p className='text-sm text-emerald-400'>Keys saved</p>}
+  		<Button
+  			size='sm'
+  			onClick={handleSaveKeys}
+  		>
+  			Save Keys
+  		</Button>
+  	</CardContent>
   </Card>
   ```
 
-  Remove the old `showKeys` toggle that showed masked keys read-only — the new inputs replace it.
-  Also remove the now-unused `maskKey` helper function (lines 24-28 in the current file) to avoid an ESLint unused-variable error.
+  Remove the old `showKeys` toggle that showed masked keys read-only — the new
+  inputs replace it. Also remove the now-unused `maskKey` helper function (lines
+  24-28 in the current file) to avoid an ESLint unused-variable error.
 
 - [ ] **Step 2: Build to check TypeScript**
 
@@ -871,6 +958,7 @@
 ## Chunk 4: Frontend UI — Play buttons in WordTooltip and TranscriptPanel
 
 ### Files
+
 - Modify: `frontend/src/components/lesson/WordTooltip.tsx`
 - Modify: `frontend/src/components/lesson/TranscriptPanel.tsx`
 
@@ -880,78 +968,98 @@
 
 - [ ] **Step 1: Modify `frontend/src/components/lesson/WordTooltip.tsx`**
 
-  Add `playTTS` and `loadingText` props, and a play button next to the copy button.
+  Add `playTTS` and `loadingText` props, and a play button next to the copy
+  button.
 
   **Update imports:**
+
   ```ts
-  import { Check, Copy, Loader2, Volume2 } from 'lucide-react'
+  import { Check, Copy, Loader2, Volume2 } from 'lucide-react';
   ```
 
   **Update `WordTooltipProps`:**
+
   ```ts
   interface WordTooltipProps {
-    text: string
-    words: Word[]
-    playTTS: (text: string) => Promise<void>
-    loadingText: string | null
+  	text: string;
+  	words: Word[];
+  	playTTS: (text: string) => Promise<void>;
+  	loadingText: string | null;
   }
   ```
 
   **Update function signature:**
+
   ```ts
   export function WordTooltip({ text, words, playTTS, loadingText }: WordTooltipProps) {
   ```
 
-  **Update the button area** — change from one button to two. The existing copy button is positioned `absolute top-1 right-1`. Change it to a flex row so the two buttons sit side by side. Replace:
+  **Update the button area** — change from one button to two. The existing copy
+  button is positioned `absolute top-1 right-1`. Change it to a flex row so the
+  two buttons sit side by side. Replace:
 
   ```tsx
-  {/* Copy Button - Positioned absolutely in the corner */}
+  {
+  	/* Copy Button - Positioned absolutely in the corner */
+  }
   <Button
-    variant="ghost"
-    size="icon-xs"
-    className="absolute top-1 right-1 size-7 text-slate-500 hover:bg-slate-800 hover:text-white"
-    onClick={(e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      handleCopy(span.word!.word)
-    }}
+  	variant='ghost'
+  	size='icon-xs'
+  	className='absolute top-1 right-1 size-7 text-slate-500 hover:bg-slate-800 hover:text-white'
+  	onClick={(e) => {
+  		e.preventDefault();
+  		e.stopPropagation();
+  		handleCopy(span.word!.word);
+  	}}
   >
-    {copiedWord === span.word.word ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
-  </Button>
+  	{copiedWord === span.word.word ? (
+  		<Check className='size-4 text-emerald-400' />
+  	) : (
+  		<Copy className='size-4' />
+  	)}
+  </Button>;
   ```
 
   With:
 
   ```tsx
-  {/* Action buttons - top-right corner */}
-  <div className="absolute top-1 right-1 flex gap-0.5">
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      className="size-7 text-slate-500 hover:bg-slate-800 hover:text-white"
-      onClick={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        playTTS(span.word!.word)
-      }}
-    >
-      {loadingText === span.word.word
-        ? <Loader2 className="size-3.5 animate-spin" />
-        : <Volume2 className="size-3.5" />}
-    </Button>
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      className="size-7 text-slate-500 hover:bg-slate-800 hover:text-white"
-      onClick={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        handleCopy(span.word!.word)
-      }}
-    >
-      {copiedWord === span.word.word ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
-    </Button>
-  </div>
+  {
+  	/* Action buttons - top-right corner */
+  }
+  <div className='absolute top-1 right-1 flex gap-0.5'>
+  	<Button
+  		variant='ghost'
+  		size='icon-xs'
+  		className='size-7 text-slate-500 hover:bg-slate-800 hover:text-white'
+  		onClick={(e) => {
+  			e.preventDefault();
+  			e.stopPropagation();
+  			playTTS(span.word!.word);
+  		}}
+  	>
+  		{loadingText === span.word.word ? (
+  			<Loader2 className='size-4 animate-spin' />
+  		) : (
+  			<Volume2 className='size-4' />
+  		)}
+  	</Button>
+  	<Button
+  		variant='ghost'
+  		size='icon-xs'
+  		className='size-7 text-slate-500 hover:bg-slate-800 hover:text-white'
+  		onClick={(e) => {
+  			e.preventDefault();
+  			e.stopPropagation();
+  			handleCopy(span.word!.word);
+  		}}
+  	>
+  		{copiedWord === span.word.word ? (
+  			<Check className='size-4 text-emerald-400' />
+  		) : (
+  			<Copy className='size-4' />
+  		)}
+  	</Button>
+  </div>;
   ```
 
 ---
@@ -960,58 +1068,70 @@
 
 - [ ] **Step 1: Modify `frontend/src/components/lesson/TranscriptPanel.tsx`**
 
-  **Update imports** — merge new icons into the existing lucide import, add `useTTS` and `useAuth`. The existing `Button` import is already present, do not add a duplicate:
+  **Update imports** — merge new icons into the existing lucide import, add
+  `useTTS` and `useAuth`. The existing `Button` import is already present, do
+  not add a duplicate:
+
   ```ts
   // Merge into existing lucide import:
-  import { Loader2, Search, Volume2 } from 'lucide-react'
+  import { Loader2, Search, Volume2 } from 'lucide-react';
   // Add new imports:
-  import { useTTS } from '@/hooks/useTTS'
-  import { useAuth } from '@/contexts/AuthContext'
+  import { useTTS } from '@/hooks/useTTS';
+  import { useAuth } from '@/contexts/AuthContext';
   // (Button import is already present — do not duplicate)
   ```
 
   **Update `TranscriptPanelProps`** — no changes needed to the props interface.
 
-  **Inside the component**, get `db` and `keys` from auth and instantiate the hook:
+  **Inside the component**, get `db` and `keys` from auth and instantiate the
+  hook:
+
   ```ts
-  const { db, keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys)
+  const { db, keys } = useAuth();
+  const { playTTS, loadingText } = useTTS(db, keys);
   ```
 
   **Pass props to `WordTooltip`:**
+
   ```tsx
   <WordTooltip
-    text={segment.chinese}
-    words={segment.words}
-    playTTS={playTTS}
-    loadingText={loadingText}
+  	text={segment.chinese}
+  	words={segment.words}
+  	playTTS={playTTS}
+  	loadingText={loadingText}
   />
   ```
 
-  **Add sentence-level play button** to each segment row. Add a play button between the pinyin line and the Chinese text:
+  **Add sentence-level play button** to each segment row. Add a play button
+  between the pinyin line and the Chinese text:
+
   ```tsx
-  {/* Pinyin + sentence play button */}
-  <div className="mb-0.5 flex items-center gap-1.5">
-    <p className="text-xs text-muted-foreground">
-      {segment.pinyin}
-    </p>
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
-      onClick={(e) => {
-        e.stopPropagation()
-        playTTS(segment.chinese)
-      }}
-    >
-      {loadingText === segment.chinese
-        ? <Loader2 className="size-3 animate-spin" />
-        : <Volume2 className="size-3" />}
-    </Button>
-  </div>
+  {
+  	/* Pinyin + sentence play button */
+  }
+  <div className='mb-0.5 flex items-center gap-1.5'>
+  	<p className='text-xs text-muted-foreground'>{segment.pinyin}</p>
+  	<Button
+  		variant='ghost'
+  		size='icon-xs'
+  		className='size-5 shrink-0 text-muted-foreground hover:text-foreground'
+  		onClick={(e) => {
+  			e.stopPropagation();
+  			playTTS(segment.chinese);
+  		}}
+  	>
+  		{loadingText === segment.chinese ? (
+  			<Loader2 className='size-4 animate-spin' />
+  		) : (
+  			<Volume2 className='size-4' />
+  		)}
+  	</Button>
+  </div>;
   ```
 
-  Remove the old standalone `<p className="mb-0.5 text-xs text-muted-foreground">` pinyin line since it's now inside the flex div.
+  Remove the old standalone
+  `<p className="mb-0.5 text-xs text-muted-foreground">` pinyin line since it's
+  now inside the flex div.
 
 - [ ] **Step 2: Build to check TypeScript**
 

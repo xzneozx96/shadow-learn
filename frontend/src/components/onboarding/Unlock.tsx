@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -28,6 +29,7 @@ export function Unlock() {
     }
     catch {
       setError('Incorrect PIN. Please try again.')
+      toast.error('Incorrect PIN')
     }
     finally {
       setLoading(false)
@@ -39,13 +41,13 @@ export function Unlock() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
-      <Card className="w-full max-w-sm bg-slate-800 text-slate-100">
+    <div className="flex h-screen items-center justify-center glass-bg text-foreground px-4">
+      <Card className="w-full max-w-sm px-10 py-20">
         <CardHeader>
           <CardTitle className="text-center text-xl">ShadowLearn</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-10">
             <Input
               type="password"
               placeholder="Enter PIN"
@@ -68,7 +70,7 @@ export function Unlock() {
             <button
               type="button"
               onClick={() => setShowReset(!showReset)}
-              className="text-sm text-slate-400 underline-offset-2 hover:text-slate-300 hover:underline"
+              className="text-sm text-white/40 underline-offset-2 hover:text-white/65 hover:underline"
             >
               Forgot PIN?
             </button>

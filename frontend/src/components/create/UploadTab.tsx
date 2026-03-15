@@ -46,7 +46,7 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
     <div className="space-y-2">
       <div
         className={cn(
-          'flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-slate-600 p-6 transition-colors',
+          'flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-white/15 p-6 transition-colors',
           dragOver && 'border-emerald-500 bg-emerald-500/10',
         )}
         onDragOver={(e) => {
@@ -71,10 +71,10 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
 
         {file
           ? (
-              <div className="flex items-center gap-2 text-slate-300">
+              <div className="flex items-center gap-2 text-white/65">
                 <FileVideo className="size-5" />
                 <span className="text-sm font-medium">{file.name}</span>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-white/30">
                   (
                   {formatFileSize(file.size)}
                   )
@@ -83,8 +83,8 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
             )
           : (
               <>
-                <Upload className="size-8 text-slate-500" />
-                <p className="text-sm text-slate-400">
+                <Upload className="size-8 text-white/30" />
+                <p className="text-sm text-white/40">
                   Drag and drop a video or audio file, or click to browse
                 </p>
               </>

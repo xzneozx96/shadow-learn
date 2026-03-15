@@ -1,11 +1,15 @@
 """Audio extraction service for YouTube videos and uploaded files."""
 
 import asyncio
+import logging
+import time
 import uuid
 from pathlib import Path
 
 import ffmpeg
 import yt_dlp
+
+logger = logging.getLogger(__name__)
 
 
 _TEMP_DIR = Path("/tmp/shadowlearn")
@@ -38,13 +42,22 @@ def _download_youtube_audio(video_id: str, output_path: Path) -> None:
 
 def _extract_audio_ffmpeg(video_path: Path, output_path: Path) -> None:
     """Blocking: extract audio from a video file using ffmpeg."""
-    (
+    file_size_mb = video_path.stat().st_size / 1024 / 1024
+    logger.debug("ffmpeg starting: input=%s (%.1f MB) → output=%s", video_path.name, file_size_mb, output_path.name)
+    t0 = time.monotonic()
+
+    stdout, stderr = (
         ffmpeg
         .input(str(video_path))
         .output(str(output_path), acodec="libmp3lame", audio_bitrate="192k")
         .overwrite_output()
-        .run(quiet=True)
+        .run(capture_stdout=True, capture_stderr=True)
     )
+
+    elapsed = time.monotonic() - t0
+    logger.debug("ffmpeg completed in %.1fs", elapsed)
+    if stderr:
+        logger.debug("ffmpeg stderr: %s", stderr.decode(errors="replace")[-500:])
 
 
 def _get_youtube_duration_blocking(video_id: str) -> float:
@@ -62,31 +75,53 @@ def _get_youtube_duration_blocking(video_id: str) -> float:
 
 async def extract_audio_from_youtube(video_id: str) -> Path:
     """Download audio from a YouTube video, returning the path to the mp3 file."""
+    logger.info("[pipeline] extract_audio_from_youtube: start video_id=%s", video_id)
     temp_dir = _ensure_temp_dir()
     output_path = temp_dir / f"{uuid.uuid4()}.mp3"
+    t0 = time.monotonic()
     await asyncio.to_thread(_download_youtube_audio, video_id, output_path)
+    elapsed = time.monotonic() - t0
     if not output_path.exists():
+        logger.error("[pipeline] extract_audio_from_youtube: no output produced for video_id=%s", video_id)
         raise FileNotFoundError(f"Audio extraction produced no output for video_id={video_id}")
+    logger.info(
+        "[pipeline] extract_audio_from_youtube: done in %.1fs → %s (%.1f MB)",
+        elapsed, output_path.name, output_path.stat().st_size / 1024 / 1024,
+    )
     return output_path
 
 
 async def extract_audio_from_upload(video_path: Path) -> Path:
     """Extract audio from an uploaded video file, returning the path to the mp3 file."""
+    file_size_mb = video_path.stat().st_size / 1024 / 1024
+    logger.info("[pipeline] extract_audio_from_upload: start file=%s (%.1f MB)", video_path.name, file_size_mb)
     temp_dir = _ensure_temp_dir()
     output_path = temp_dir / f"{uuid.uuid4()}.mp3"
+    t0 = time.monotonic()
     await asyncio.to_thread(_extract_audio_ffmpeg, video_path, output_path)
+    elapsed = time.monotonic() - t0
     if not output_path.exists():
+        logger.error("[pipeline] extract_audio_from_upload: no output produced for %s", video_path)
         raise FileNotFoundError(f"Audio extraction produced no output for {video_path}")
+    logger.info(
+        "[pipeline] extract_audio_from_upload: done in %.1fs → %s (%.1f MB)",
+        elapsed, output_path.name, output_path.stat().st_size / 1024 / 1024,
+    )
     return output_path
 
 
 async def get_youtube_duration(video_id: str) -> float:
     """Return the duration in seconds of a YouTube video."""
-    return await asyncio.to_thread(_get_youtube_duration_blocking, video_id)
+    logger.info("[pipeline] get_youtube_duration: start video_id=%s", video_id)
+    t0 = time.monotonic()
+    duration = await asyncio.to_thread(_get_youtube_duration_blocking, video_id)
+    logger.info("[pipeline] get_youtube_duration: %.1fs duration, fetched in %.1fs", duration, time.monotonic() - t0)
+    return duration
 
 
 async def probe_upload_duration(video_path: Path) -> float:
     """Return the duration in seconds of an uploaded video file."""
+    logger.info("[pipeline] probe_upload_duration: start file=%s", video_path.name)
     def _probe() -> float:
         probe = ffmpeg.probe(str(video_path))
         format_info = probe.get("format", {})
@@ -99,4 +134,6 @@ async def probe_upload_duration(video_path: Path) -> float:
                 return float(stream["duration"])
         return 0.0
 
-    return await asyncio.to_thread(_probe)
+    duration = await asyncio.to_thread(_probe)
+    logger.info("[pipeline] probe_upload_duration: %.1fs", duration)
+    return duration

@@ -24,7 +24,7 @@ function StepIcon({ status }: { status: StepStatus }) {
     case 'error':
       return <X className="size-4 text-destructive" />
     default:
-      return <div className="size-4 rounded-full border-2 border-slate-600" />
+      return <div className="size-4 rounded-full border-2 border-white/15" />
   }
 }
 
@@ -36,7 +36,7 @@ export function ProcessingStatus({ steps, onRetry }: ProcessingStatusProps) {
       {steps.map(step => (
         <div key={step.id} className="flex items-center gap-3">
           <StepIcon status={step.status} />
-          <span className="text-sm text-slate-300">{step.label}</span>
+          <span className="text-sm text-white/65">{step.label}</span>
           {step.status === 'error' && step.error && (
             <span className="text-xs text-destructive">{step.error}</span>
           )}

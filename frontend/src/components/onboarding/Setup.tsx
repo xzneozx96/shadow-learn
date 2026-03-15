@@ -25,6 +25,10 @@ export function Setup() {
       setError('OpenAI API key is required.')
       return
     }
+    if (!deepgramApiKey.trim()) {
+      setError('Deepgram API key is required.')
+      return
+    }
     if (pin.length < 4) {
       setError('PIN must be at least 4 characters.')
       return
@@ -79,7 +83,7 @@ export function Setup() {
                 onChange={e => setOpenaiApiKey(e.target.value)}
               />
               <p className="text-xs text-white/30">
-                Used for translation and AI chat (also Whisper transcription when no Deepgram key is set).
+                Used for translation and AI chat.
               </p>
             </div>
 
@@ -102,8 +106,7 @@ export function Setup() {
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="deepgram" className="text-sm font-medium text-white/65">
-                Deepgram API Key{' '}
-                <span className="text-white/30">(optional)</span>
+                Deepgram API Key
               </label>
               <Input
                 id="deepgram"
@@ -113,7 +116,7 @@ export function Setup() {
                 onChange={e => setDeepgramApiKey(e.target.value)}
               />
               <p className="text-xs text-white/30">
-                Used for transcription (faster, more accurate than Whisper). Can be added later in Settings.
+                Used for transcription. Required to create lessons.
               </p>
             </div>
 

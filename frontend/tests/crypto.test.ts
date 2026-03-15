@@ -4,8 +4,7 @@ import { decryptKeys, encryptKeys } from '../src/crypto'
 
 describe('crypto module', () => {
   const testKeys: DecryptedKeys = {
-    elevenlabsApiKey: 'el-test-key-12345',
-    openrouterApiKey: 'or-test-key-67890',
+    openaiApiKey: 'sk-test-key-12345',
   }
   const pin = '1234'
 

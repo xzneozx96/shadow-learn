@@ -184,7 +184,7 @@ export function Settings() {
                 value={editDeepgramKey}
                 onChange={e => setEditDeepgramKey(e.target.value)}
                 className="font-mono text-xs"
-                placeholder="Leave blank to use Whisper"
+                placeholder="dg-..."
               />
             </div>
             <div className="space-y-2">

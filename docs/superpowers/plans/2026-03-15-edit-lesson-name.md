@@ -246,7 +246,7 @@
               ? <Youtube className="size-5 text-red-400" />
               : <FileVideo className="size-5 text-white/50" />}
             <div className="flex items-center gap-1 text-xs">
-              <Clock className="size-3" />
+              <Clock className="size-4" />
               {formatDuration(lesson.duration)}
             </div>
             <span className="text-xs">

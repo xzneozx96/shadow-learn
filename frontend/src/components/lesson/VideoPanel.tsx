@@ -1,6 +1,6 @@
 import type { LessonMeta, Segment } from '@/types'
-import { Download, ExternalLink, Home, Pause, Pencil, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Download, ExternalLink, Home, Pause, Pencil, Play, Volume2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -64,7 +64,7 @@ interface VideoPanelProps {
   onRename?: (newTitle: string) => void
 }
 
-export function VideoPanel({ lesson, segments, activeSegment, videoBlob, onRename }: VideoPanelProps) {
+export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
   const { player, currentTime, playbackRate, volume, setPlayer, setPlaybackRate, setVolume } = usePlayer()
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -174,33 +174,20 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob, onRenam
     setIsPlaying(!isPlaying)
   }
 
-  const activeIndex = useMemo(() => {
-    if (!activeSegment)
-      return -1
-    return segments.findIndex(s => s.id === activeSegment.id)
-  }, [activeSegment, segments])
-
-  const jumpPrev = () => {
-    if (!player || activeIndex <= 0)
-      return
-    player.seekTo(segments[activeIndex - 1].start)
-    player.play()
-  }
-
-  const jumpNext = () => {
-    if (!player || activeIndex < 0 || activeIndex >= segments.length - 1)
-      return
-    player.seekTo(segments[activeIndex + 1].start)
-    player.play()
-  }
-
   const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
     player?.seekTo(Number(e.target.value))
   }
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Round to 2 decimal places to prevent floating-point drift from step arithmetic
-    setVolume(Math.round(Number(e.target.value) * 100) / 100)
+    // Call player directly without triggering a React re-render during drag.
+    // Context re-renders from currentTime updates would otherwise fight the slider position.
+    const val = Math.round(Number(e.target.value) * 100) / 100
+    player?.setVolume(val)
+  }
+
+  const handleVolumeCommit = (e: React.PointerEvent<HTMLInputElement>) => {
+    const val = Math.round(Number((e.target as HTMLInputElement).value) * 100) / 100
+    setVolume(val)
   }
 
   const handleDownload = useCallback(() => {
@@ -248,11 +235,11 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob, onRenam
             <Button
               variant="ghost"
               size="icon-xs"
-              className="shrink-0 opacity-0 transition-opacity group-hover/title:opacity-100 focus:opacity-100"
+              className="shrink-0"
               onClick={startEditing}
               aria-label="Rename lesson"
             >
-              <Pencil className="size-3" />
+              <Pencil className="size-4" />
             </Button>
           )}
         </div>
@@ -330,29 +317,13 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob, onRenam
 
         {/* Transport controls */}
         <div className="flex items-center justify-between">
+          {/* Left: play/pause + speed */}
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon-sm" onClick={jumpPrev}>
-              <SkipBack className="size-4" />
-            </Button>
             <Button variant="ghost" size="icon" onClick={togglePlayPause}>
               {isPlaying
                 ? <Pause className="size-5" />
                 : <Play className="size-5" />}
             </Button>
-            <Button variant="ghost" size="icon-sm" onClick={jumpNext}>
-              <SkipForward className="size-4" />
-            </Button>
-          </div>
-
-          {/* Time display */}
-          <span className="font-mono text-xs text-muted-foreground">
-            {formatTime(currentTime)}
-            {' / '}
-            {formatTime(duration)}
-          </span>
-
-          {/* Playback rate */}
-          <div className="flex items-center gap-0.5">
             {PLAYBACK_RATES.map(rate => (
               <Button
                 key={rate}
@@ -370,18 +341,26 @@ export function VideoPanel({ lesson, segments, activeSegment, videoBlob, onRenam
             ))}
           </div>
 
-          {/* Volume */}
-          <div className="flex items-center gap-1.5">
-            <Volume2 className="size-4 shrink-0 text-muted-foreground" />
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={volume}
-              onChange={handleVolumeChange}
-              className="h-1 w-20 cursor-pointer accent-primary"
-            />
+          {/* Right: volume + timestamp */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <Volume2 className="size-4 shrink-0 text-muted-foreground" />
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                defaultValue={volume}
+                onChange={handleVolumeChange}
+                onPointerUp={handleVolumeCommit}
+                className="h-1 w-20 cursor-pointer accent-primary"
+              />
+            </div>
+            <span className="font-mono text-xs text-muted-foreground">
+              {formatTime(currentTime)}
+              {' / '}
+              {formatTime(duration)}
+            </span>
           </div>
         </div>
       </div>
