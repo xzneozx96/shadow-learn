@@ -1,5 +1,5 @@
-import type { Word, WordTiming } from '@/types'
-import { Check, Copy, Loader2, Volume2 } from 'lucide-react'
+import type { Segment, Word, WordTiming } from '@/types'
+import { Bookmark, Check, Copy, Loader2, Volume2 } from 'lucide-react'
 import { memo, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -73,6 +73,9 @@ interface SegmentTextProps {
   currentTime?: number
   playTTS: (text: string) => Promise<void>
   loadingText: string | null
+  onSaveWord?: (word: Word, segment: Segment) => void
+  isSaved?: (word: string) => boolean
+  segment?: Segment
 }
 
 export const SegmentText = memo(function SegmentText({
@@ -82,6 +85,9 @@ export const SegmentText = memo(function SegmentText({
   currentTime,
   playTTS,
   loadingText,
+  onSaveWord,
+  isSaved,
+  segment,
 }: SegmentTextProps) {
   const [copiedWord, setCopiedWord] = useState<string | null>(null)
 
@@ -202,6 +208,22 @@ export const SegmentText = memo(function SegmentText({
                       ? <Check className="size-4 text-emerald-400" />
                       : <Copy className="size-4" />}
                   </Button>
+                  {onSaveWord && segment && (
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="size-7 text-white/30 hover:bg-white/[0.06] hover:text-white"
+                      title={isSaved?.(span.word.word) ? 'Already in Workbook' : 'Save to Workbook'}
+                      aria-label={isSaved?.(span.word.word) ? 'Already in Workbook' : 'Save to Workbook'}
+                      disabled={isSaved?.(span.word.word)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSaveWord(span.word!, segment)
+                      }}
+                    >
+                      <Bookmark className={cn('size-4', isSaved?.(span.word.word) && 'fill-current')} />
+                    </Button>
+                  )}
                 </div>
               </TooltipContent>
             </Tooltip>
