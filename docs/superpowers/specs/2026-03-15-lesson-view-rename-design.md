@@ -21,21 +21,22 @@ interface UseLessonResult {
   updateMeta: (updates: Partial<LessonMeta>) => void  // new
 }
 
-// Implementation inside useLesson:
-function updateMeta(updates: Partial<LessonMeta>) {
+// Implementation inside useLesson — MUST be useCallback with empty deps so its
+// reference is stable and safe to list as a dependency in LessonView callbacks:
+const updateMeta = useCallback((updates: Partial<LessonMeta>) => {
   setMeta(prev => prev ? { ...prev, ...updates } : prev)
-}
+}, [])
 ```
 
 ### `frontend/src/components/lesson/VideoPanel.tsx` (modified)
 
 - Add `onRename?: (newTitle: string) => void` to `VideoPanelProps`.
 - In the header, wrap the title area in a `group/title` div. On hover, show a `Pencil` icon button (`size-3`, `ghost`, `icon-xs`) to the right of the title span.
-- Clicking the pencil sets `isEditing = true` — title span becomes a controlled `<input>`.
-- Local state: `isEditing: boolean`, `editValue: string`, `isCancelledRef`, `inputRef` — same pattern as `LessonCard`.
+- Clicking the pencil calls `startEditing()`: resets `isCancelledRef.current = false`, stores `lesson.title` into `titleSnapshotRef.current`, seeds `editValue` with that snapshot, sets `isEditing = true`.
+- Local state: `isEditing: boolean`, `editValue: string`, `isCancelledRef: useRef(false)`, `inputRef: useRef<HTMLInputElement>(null)`, `titleSnapshotRef: useRef('')` — same pattern as `LessonCard` plus the snapshot ref.
 - Auto-focus + select-all via `useEffect(() => { if (isEditing) inputRef.current?.select() }, [isEditing])`.
-- Confirm: Enter or `onBlur` — trims, calls `onRename` if non-empty and changed, exits editing.
-- Cancel: Escape — sets `isCancelledRef.current = true`, exits editing.
+- Confirm via `confirmEdit()`: checks `if (isCancelledRef.current) return` first; trims `editValue`; calls `onRename` only if non-empty AND trimmed value differs from `titleSnapshotRef.current` (the seeded snapshot, not the live prop); exits editing. Both the Enter handler and `onBlur` handler call the same `confirmEdit` function — there is no separate `onBlur` handler.
+- Cancel: Escape — sets `isCancelledRef.current = true`, then exits editing. The subsequent `onBlur` fires but `confirmEdit` returns early because of the ref guard.
 - If `onRename` is not provided, the pencil button is not rendered (optional prop).
 
 ### `frontend/src/components/lesson/LessonView.tsx` (modified)
@@ -88,15 +89,18 @@ interface VideoPanelProps {
 const [isEditing, setIsEditing] = useState(false)
 const [editValue, setEditValue] = useState('')
 const isCancelledRef = useRef(false)
+const titleSnapshotRef = useRef('')        // captures lesson.title at startEditing time
 const inputRef = useRef<HTMLInputElement>(null)
 ```
 
 ## Error Handling
 
 - Empty/whitespace input → cancel without saving.
-- Unchanged title (trimmed === `lesson.title`) → skip `onRename` call, exit editing silently.
+- Unchanged title (trimmed value equals the snapshot seeded at `startEditing` time) → skip `onRename` call, exit editing silently.
 - `saveLessonMeta` failure → no special handling (consistent with existing `handleProgressUpdate` pattern).
+- Stale `meta` spread in `handleRename`: `{ ...meta, title: newTitle }` uses the `meta` snapshot at callback-creation time. Any concurrent `handleProgressUpdate` writes that change `progressSegmentId` between pencil-click and Enter could be overwritten. This is a known, accepted limitation — the same race exists in `handleProgressUpdate` itself and is considered acceptable given the low frequency of simultaneous title-edit + progress-update.
 
 ## Testing
 
-No new test files required.
+No new test files required — consistent with the existing `handleProgressUpdate` pattern which also performs an async DB write without dedicated unit tests.
+
