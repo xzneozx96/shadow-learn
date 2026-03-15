@@ -15,14 +15,6 @@ vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ db: null }),
 }))
 
-// Render tooltip content inline — no hover / portal required in jsdom
-vi.mock('@/components/ui/tooltip', () => ({
-  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}))
-
 vi.mock('@/hooks/useVocabulary', () => ({
   useVocabulary: () => mockVocab,
 }))
