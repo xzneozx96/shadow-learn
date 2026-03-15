@@ -1,17 +1,18 @@
-"""Lesson generation router with SSE streaming progress events."""
+"""Lesson generation router — background job model."""
 
-import json
+import asyncio
 import logging
+import time
 import uuid
 from pathlib import Path
-from typing import AsyncGenerator
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.config import settings
+from app.jobs import Job, jobs
 from app.models import LessonRequest
 from app.services.audio import (
     extract_audio_from_upload,
@@ -20,7 +21,7 @@ from app.services.audio import (
     probe_upload_duration,
 )
 from app.services.pinyin import generate_pinyin
-from app.services.transcription import transcribe_audio, transcribe_audio_deepgram
+from app.services.transcription import transcribe_audio_deepgram
 from app.services.translation import translate_segments
 from app.services.validation import ValidationError, validate_upload_file, validate_youtube_url
 from app.services.vocabulary import extract_vocabulary
@@ -31,13 +32,8 @@ _TEMP_DIR = Path("/tmp/shadowlearn")
 _CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 
-def _sse_event(event: str, data: dict) -> str:
-    """Format a single SSE event string."""
-    payload = json.dumps(data)
-    return f"event: {event}\ndata: {payload}\n\n"
-
-
 async def _shared_pipeline(
+    job_id: str,
     segments: list[dict],
     translation_languages: list[str],
     api_key: str,
@@ -47,29 +43,33 @@ async def _shared_pipeline(
     source_url: str | None,
     duration: float,
     audio_filename: str | None = None,
-) -> AsyncGenerator[str, None]:
-    """SSE generator: pinyin → translate → assemble → yield complete."""
-    yield _sse_event("progress", {"step": "pinyin", "message": "Generating pinyin..."})
+) -> None:
+    """Background pipeline: pinyin → translate + vocab → assemble → mark job complete."""
+    t_pipeline = time.monotonic()
+    logger.info("[pipeline] shared_pipeline: start segments=%d source=%s", len(segments), source)
 
+    jobs[job_id].step = "pinyin"
+    t0 = time.monotonic()
     enriched_segments = []
     for seg in segments:
         seg_pinyin = generate_pinyin(seg["text"])
         enriched_segments.append({**seg, "pinyin": seg_pinyin})
+    logger.info("[pipeline] pinyin: done in %.1fs", time.monotonic() - t0)
 
-    yield _sse_event("progress", {"step": "translation", "message": "Translating segments..."})
-
-    translated_segments = await translate_segments(
-        enriched_segments,
-        translation_languages,
-        api_key,
-        model,
+    jobs[job_id].step = "translation"
+    t0 = time.monotonic()
+    translated_segments, vocab_map = await asyncio.gather(
+        translate_segments(enriched_segments, translation_languages, api_key, model),
+        extract_vocabulary(enriched_segments, api_key, model),
+    )
+    logger.info(
+        "[pipeline] translation+vocabulary: done in %.1fs, %d segments, %d vocab entries",
+        time.monotonic() - t0,
+        len(translated_segments),
+        len(vocab_map),
     )
 
-    yield _sse_event("progress", {"step": "vocabulary", "message": "Extracting vocabulary..."})
-
-    vocab_map = await extract_vocabulary(translated_segments, api_key, model)
-
-    yield _sse_event("progress", {"step": "assembling", "message": "Assembling lesson..."})
+    jobs[job_id].step = "assembling"
 
     lesson_segments = []
     for seg in translated_segments:
@@ -83,52 +83,56 @@ async def _shared_pipeline(
             "words": vocab_map.get(seg["id"]) or vocab_map.get(str(seg["id"])) or [],
         })
 
-    lesson = {
-        "title": title,
-        "source": source,
-        "source_url": source_url,
-        "duration": duration,
-        "segments": lesson_segments,
-        "translation_languages": translation_languages,
+    result: dict = {
+        "lesson": {
+            "title": title,
+            "source": source,
+            "source_url": source_url,
+            "duration": duration,
+            "segments": lesson_segments,
+            "translation_languages": translation_languages,
+        }
     }
-
-    complete_data: dict = {"lesson": lesson}
     if audio_filename:
-        complete_data["audio_url"] = f"/api/lessons/audio/{audio_filename}"
+        result["audio_url"] = f"/api/lessons/audio/{audio_filename}"
 
-    yield _sse_event("complete", complete_data)
+    jobs[job_id].status = "complete"
+    jobs[job_id].step = "complete"
+    jobs[job_id].result = result
+    logger.info("[pipeline] shared_pipeline: complete in %.1fs total", time.monotonic() - t_pipeline)
 
 
 async def _process_youtube_lesson(
     request: LessonRequest,
     video_id: str,
-) -> AsyncGenerator[str, None]:
-    """SSE generator for YouTube lesson: validate duration → extract audio → shared pipeline."""
+    job_id: str,
+) -> None:
+    """Background task: validate duration → download audio → transcribe → shared pipeline."""
     audio_path: Path | None = None
     try:
-        yield _sse_event("progress", {"step": "duration_check", "message": "Checking video duration..."})
-
+        jobs[job_id].step = "duration_check"
         duration = await get_youtube_duration(video_id)
         if duration > settings.max_video_duration_seconds:
             max_hours = settings.max_video_duration_seconds / 3600
-            yield _sse_event("error", {
-                "message": f"Video exceeds the {max_hours:.0f}-hour duration limit."
-            })
+            jobs[job_id].status = "error"
+            jobs[job_id].error = f"Video exceeds the {max_hours:.0f}-hour duration limit."
             return
 
-        yield _sse_event("progress", {"step": "audio_extraction", "message": "Downloading audio..."})
+        jobs[job_id].step = "audio_extraction"
         audio_path = await extract_audio_from_youtube(video_id)
 
-        yield _sse_event("progress", {"step": "transcription", "message": "Transcribing audio..."})
-        if request.deepgram_api_key:
-            segments = await transcribe_audio_deepgram(audio_path, request.deepgram_api_key)
-        else:
-            segments = await transcribe_audio(audio_path, request.openai_api_key)
+        jobs[job_id].step = "transcription"
+        if not request.deepgram_api_key:
+            jobs[job_id].status = "error"
+            jobs[job_id].error = "Deepgram API key is required for transcription."
+            return
+        segments = await transcribe_audio_deepgram(audio_path, request.deepgram_api_key)
 
         source_url = f"https://www.youtube.com/watch?v={video_id}"
         title = f"YouTube Video ({video_id})"
 
-        async for event in _shared_pipeline(
+        await _shared_pipeline(
+            job_id,
             segments,
             request.translation_languages,
             request.openai_api_key,
@@ -138,16 +142,12 @@ async def _process_youtube_lesson(
             source_url,
             duration,
             audio_filename=audio_path.name if audio_path else None,
-        ):
-            yield event
-
-        # Don't delete audio — frontend will download it via /api/lessons/audio/:filename
-        # Temp files are cleaned up by the audio download endpoint after serving.
+        )
 
     except Exception as exc:
         logger.exception("YouTube lesson pipeline failed: %s", exc)
-        yield _sse_event("error", {"message": str(exc)})
-        # Clean up on error
+        jobs[job_id].status = "error"
+        jobs[job_id].error = str(exc)
         if audio_path and audio_path.exists():
             audio_path.unlink(missing_ok=True)
 
@@ -157,18 +157,21 @@ async def _process_upload_lesson(
     translation_languages: list[str],
     openai_api_key: str,
     model: str,
+    job_id: str,
     deepgram_api_key: str | None = None,
-) -> AsyncGenerator[str, None]:
-    """SSE generator for upload lesson: save file → probe duration → extract audio → shared pipeline."""
+) -> None:
+    """Background task: save file → probe duration → extract audio → transcribe → shared pipeline."""
     _TEMP_DIR.mkdir(parents=True, exist_ok=True)
     video_path: Path | None = None
     audio_path: Path | None = None
     try:
         filename = file.filename or "upload"
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
+        title = Path(filename).stem
+        logger.info("[pipeline] upload_lesson: start file=%s", filename)
 
-        yield _sse_event("progress", {"step": "upload", "message": "Receiving file..."})
-
+        jobs[job_id].step = "upload"
+        t0 = time.monotonic()
         video_path = _TEMP_DIR / f"{uuid.uuid4()}.{ext}"
         total_bytes = 0
         with video_path.open("wb") as f:
@@ -178,47 +181,54 @@ async def _process_upload_lesson(
                     break
                 f.write(chunk)
                 total_bytes += len(chunk)
+        logger.info("[pipeline] upload: received %.1f MB in %.1fs", total_bytes / 1024 / 1024, time.monotonic() - t0)
 
         try:
             validate_upload_file(filename, total_bytes)
         except ValidationError as exc:
-            yield _sse_event("error", {"message": exc.message})
+            jobs[job_id].status = "error"
+            jobs[job_id].error = exc.message
             return
 
-        yield _sse_event("progress", {"step": "duration_check", "message": "Probing duration..."})
-
+        jobs[job_id].step = "duration_check"
         duration = await probe_upload_duration(video_path)
+        logger.info("[pipeline] duration_check: %.1fs", duration)
         if duration > settings.max_video_duration_seconds:
             max_hours = settings.max_video_duration_seconds / 3600
-            yield _sse_event("error", {
-                "message": f"Video exceeds the {max_hours:.0f}-hour duration limit."
-            })
+            jobs[job_id].status = "error"
+            jobs[job_id].error = f"Video exceeds the {max_hours:.0f}-hour duration limit."
             return
 
-        yield _sse_event("progress", {"step": "audio_extraction", "message": "Extracting audio..."})
+        jobs[job_id].step = "audio_extraction"
+        t0 = time.monotonic()
         audio_path = await extract_audio_from_upload(video_path)
+        logger.info("[pipeline] audio_extraction: done in %.1fs", time.monotonic() - t0)
 
-        yield _sse_event("progress", {"step": "transcription", "message": "Transcribing audio..."})
-        if deepgram_api_key:
-            segments = await transcribe_audio_deepgram(audio_path, deepgram_api_key)
-        else:
-            segments = await transcribe_audio(audio_path, openai_api_key)
+        jobs[job_id].step = "transcription"
+        t0 = time.monotonic()
+        if not deepgram_api_key:
+            jobs[job_id].status = "error"
+            jobs[job_id].error = "Deepgram API key is required for transcription."
+            return
+        segments = await transcribe_audio_deepgram(audio_path, deepgram_api_key)
+        logger.info("[pipeline] transcription: done in %.1fs, %d segments", time.monotonic() - t0, len(segments))
 
-        async for event in _shared_pipeline(
+        await _shared_pipeline(
+            job_id,
             segments,
             translation_languages,
             openai_api_key,
             model,
-            filename,
+            title,
             "upload",
             None,
             duration,
-        ):
-            yield event
+        )
 
     except Exception as exc:
         logger.exception("Upload lesson pipeline failed: %s", exc)
-        yield _sse_event("error", {"message": str(exc)})
+        jobs[job_id].status = "error"
+        jobs[job_id].error = str(exc)
     finally:
         if video_path and video_path.exists():
             video_path.unlink(missing_ok=True)
@@ -227,9 +237,8 @@ async def _process_upload_lesson(
 
 
 @router.post("/generate")
-async def generate_lesson(request: LessonRequest) -> StreamingResponse:
-    """Accept a LessonRequest JSON body and stream SSE progress events."""
-    # Normalize model name
+async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTasks) -> dict:
+    """Accept a LessonRequest JSON body, start background pipeline, return job_id immediately."""
     api_model = request.model
     if "api.openai.com" in settings.openai_chat_url and api_model.startswith("openai/"):
         api_model = api_model.replace("openai/", "", 1)
@@ -243,44 +252,47 @@ async def generate_lesson(request: LessonRequest) -> StreamingResponse:
         except ValidationError as exc:
             raise HTTPException(status_code=400, detail=exc.message)
 
-        generator = _process_youtube_lesson(request, video_id)
+        job_id = str(uuid.uuid4())
+        jobs[job_id] = Job(status="processing", step="audio_extraction", result=None, error=None)
+        background_tasks.add_task(_process_youtube_lesson, request, video_id, job_id)
+        return {"job_id": job_id}
     else:
-        # source == "upload" — this endpoint is for JSON body only; uploads use /generate-upload
         raise HTTPException(
             status_code=400,
             detail="Use POST /api/lessons/generate-upload with multipart form for file uploads.",
         )
 
-    return StreamingResponse(generator, media_type="text/event-stream")
-
 
 @router.post("/generate-upload")
 async def generate_lesson_upload(
+    background_tasks: BackgroundTasks,
     file: UploadFile,
     translation_languages: str = Form(...),
     openai_api_key: str = Form(...),
     model: str = Form("gpt-4o-mini"),
     deepgram_api_key: str | None = Form(None),
-) -> StreamingResponse:
-    """Accept a multipart form upload and stream SSE progress events."""
+) -> dict:
+    """Accept a multipart upload, start background pipeline, return job_id immediately."""
     languages = [lang.strip() for lang in translation_languages.split(",") if lang.strip()]
     if not languages:
         raise HTTPException(status_code=400, detail="translation_languages must not be empty")
 
-    # Normalize model name
     api_model = model
     if "api.openai.com" in settings.openai_chat_url and api_model.startswith("openai/"):
         api_model = api_model.replace("openai/", "", 1)
 
-    generator = _process_upload_lesson(
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = Job(status="processing", step="upload", result=None, error=None)
+    background_tasks.add_task(
+        _process_upload_lesson,
         file,
         languages,
         openai_api_key,
         api_model,
-        deepgram_api_key=deepgram_api_key,
+        job_id,
+        deepgram_api_key,
     )
-
-    return StreamingResponse(generator, media_type="text/event-stream")
+    return {"job_id": job_id}
 
 
 @router.get("/audio/{filename}")
