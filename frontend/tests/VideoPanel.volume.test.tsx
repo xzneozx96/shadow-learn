@@ -55,10 +55,10 @@ describe('videoPanel volume slider', () => {
     expect(slider.value).toBe('0.8')
   })
 
-  it('calls setVolume with a rounded value on change', () => {
+  it('calls setVolume with a rounded value on pointer release', () => {
     render(<VideoPanel lesson={lesson} segments={[]} activeSegment={null} />)
     const slider = getVolumeSlider()
-    fireEvent.change(slider, { target: { value: '0.6' } })
+    fireEvent.pointerUp(slider, { target: { value: '0.6' } })
     expect(mockSetVolume).toHaveBeenCalledWith(0.6)
   })
 })
