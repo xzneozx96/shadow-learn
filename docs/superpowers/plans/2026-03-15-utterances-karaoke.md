@@ -900,7 +900,7 @@ export const SegmentText = memo(function SegmentText({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-7 text-white/30 hover:bg-white/[0.06] hover:text-white"
+                    className="size-7 text-white/30 hover:bg-white/6 hover:text-white"
                     aria-label={loadingText === span.word.word ? 'Loading pronunciation' : `Play pronunciation of ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -914,7 +914,7 @@ export const SegmentText = memo(function SegmentText({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-7 text-white/30 hover:bg-white/[0.06] hover:text-white"
+                    className="size-7 text-white/30 hover:bg-white/6 hover:text-white"
                     aria-label={copiedWord === span.word.word ? 'Copied!' : `Copy ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()

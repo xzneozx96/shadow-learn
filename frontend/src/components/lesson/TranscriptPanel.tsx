@@ -16,10 +16,10 @@ function segmentTime(segment: Segment, currentTime: number): number | undefined 
   if (!segment.wordTimings?.length)
     return undefined
   if ((segment.end ?? 0) <= currentTime)
-    return Infinity    // fully spoken → all bright
+    return Infinity // fully spoken → all bright
   if ((segment.start ?? 0) > currentTime)
-    return -Infinity   // not yet reached → all dim
-  return currentTime   // active → in progress
+    return -Infinity // not yet reached → all dim
+  return currentTime // active → in progress
 }
 
 interface TranscriptPanelProps {
@@ -144,7 +144,7 @@ export function TranscriptPanel({
                 {/* Text content */}
                 <div className="min-w-0 flex-1">
                   {/* Pinyin */}
-                  <p className="mb-0.5 text-sm text-muted-foreground">{segment.pinyin}</p>
+                  <p className="mb-1 text-muted-foreground">{segment.pinyin}</p>
 
                   {/* Chinese text with word tooltips */}
                   <p className="text-lg text-foreground">
@@ -165,7 +165,7 @@ export function TranscriptPanel({
                   </p>
 
                   {/* Translation */}
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-muted-foreground">
                     {segment.translations[activeLang] ?? Object.values(segment.translations)[0]}
                   </p>
                 </div>

@@ -26,7 +26,6 @@ export function Settings() {
   const { db, keys, lock, resetKeys, setup } = useAuth()
 
   const [language, setLanguage] = useState('en')
-  const [model, setModel] = useState('')
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [pinError, setPinError] = useState<string | null>(null)
@@ -48,7 +47,6 @@ export function Settings() {
     getSettings(db).then((s) => {
       if (s) {
         setLanguage(s.translationLanguage)
-        setModel(s.defaultModel)
       }
     })
   }, [db])
@@ -133,7 +131,7 @@ export function Settings() {
       return
     await saveSettings(db, {
       translationLanguage: language,
-      defaultModel: model,
+      defaultModel: 'gpt-4o-mini',
     })
     setSaved(true)
     toast.success('Settings saved')
@@ -169,7 +167,7 @@ export function Settings() {
               <label className="text-xs text-white/40">
                 Minimax API Key
                 {' '}
-                <span className="text-white/20">(for pronunciation)</span>
+                <span className="text-white/20">(for listening practice)</span>
               </label>
               <Input
                 type={showKeys ? 'text' : 'password'}
@@ -183,7 +181,7 @@ export function Settings() {
               <label className="text-xs text-white/40">
                 Deepgram API Key
                 {' '}
-                <span className="text-white/20">(for transcription)</span>
+                <span className="text-white/20">(for video subtitles)</span>
               </label>
               <Input
                 type={showKeys ? 'text' : 'password'}
@@ -287,22 +285,6 @@ export function Settings() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>AI Model</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <label className="text-xs text-white/40">Default Model</label>
-              <Input
-                placeholder="e.g. gpt-4o-mini"
-                value={model}
-                onChange={e => setModel(e.target.value)}
-              />
             </div>
           </CardContent>
         </Card>

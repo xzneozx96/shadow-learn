@@ -65,7 +65,7 @@ export function Setup() {
 
   return (
     <div className="flex h-screen items-center justify-center bg-[oklch(0.08_0_0)] px-4">
-      <Card className="w-full max-w-md bg-white/[0.06] text-white/90">
+      <Card className="w-full max-w-md bg-white/6 text-white/90">
         <CardHeader>
           <CardTitle className="text-xl">Welcome to ShadowLearn</CardTitle>
           <CardDescription className="text-white/40">

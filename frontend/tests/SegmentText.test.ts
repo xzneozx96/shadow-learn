@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-// These functions will be exported from SegmentText.tsx
-// Import will fail until the file is created — that's the TDD red phase
-import { buildPositionMap, buildWordSpans } from '@/components/lesson/SegmentText'
+import { buildPositionMap, buildWordSpans } from '@/lib/segment-text'
 import type { Word, WordTiming } from '@/types'
 
 const makeWord = (word: string): Word => ({

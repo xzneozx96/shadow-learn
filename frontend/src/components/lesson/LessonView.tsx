@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLessons } from '@/contexts/LessonsContext'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { getSettings, getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
@@ -16,6 +17,7 @@ export function LessonView() {
   const { id } = useParams<{ id: string }>()
   const { db, keys } = useAuth()
   const { player, currentTime } = usePlayer()
+  const { updateLesson } = useLessons()
   const { meta, segments, loading, error, updateMeta } = useLesson(db, id)
   const activeSegment = useActiveSegment(segments, currentTime)
 
@@ -77,11 +79,11 @@ export function LessonView() {
   }, [db, meta])
 
   const handleRename = useCallback(async (newTitle: string) => {
-    if (!db || !meta)
+    if (!meta)
       return
-    await saveLessonMeta(db, { ...meta, title: newTitle })
+    await updateLesson({ ...meta, title: newTitle })
     updateMeta({ title: newTitle })
-  }, [db, meta, updateMeta])
+  }, [meta, updateLesson, updateMeta])
 
   const [searchParams] = useSearchParams()
   const deepLinkSegmentId = searchParams.get('segmentId')

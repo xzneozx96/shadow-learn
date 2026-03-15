@@ -9,62 +9,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { buildPositionMap, buildWordSpans } from '@/lib/segment-text'
 import { cn } from '@/lib/utils'
-
-interface WordSpan {
-  text: string
-  word: Word | null
-}
-
-export function buildWordSpans(text: string, words: Word[]): WordSpan[] {
-  if (words.length === 0) {
-    return [{ text, word: null }]
-  }
-  const sorted = words.toSorted((a, b) => b.word.length - a.word.length)
-  const spans: WordSpan[] = []
-  let remaining = text
-  while (remaining.length > 0) {
-    let matched = false
-    for (const w of sorted) {
-      if (remaining.startsWith(w.word)) {
-        spans.push({ text: w.word, word: w })
-        remaining = remaining.slice(w.word.length)
-        matched = true
-        break
-      }
-    }
-    if (!matched) {
-      const last = spans.at(-1)
-      if (last && !last.word) {
-        last.text += remaining[0]
-      }
-      else {
-        spans.push({ text: remaining[0], word: null })
-      }
-      remaining = remaining.slice(1)
-    }
-  }
-  return spans
-}
-
-// Build a map from character index in `text` to its WordTiming entry.
-// Sequential non-overlapping scan: once a position is claimed it cannot be re-claimed.
-// Timing entries not found at or after the current scan offset are skipped silently.
-// buildPositionMap is exported for testing only — not part of the component's public API
-export function buildPositionMap(text: string, wordTimings: WordTiming[]): Map<number, WordTiming> {
-  const map = new Map<number, WordTiming>()
-  let pos = 0
-  for (const wt of wordTimings) {
-    const idx = text.indexOf(wt.text, pos)
-    if (idx === -1)
-      continue
-    for (let i = idx; i < idx + wt.text.length; i++) {
-      map.set(i, wt)
-    }
-    pos = idx + wt.text.length
-  }
-  return map
-}
 
 interface SegmentTextProps {
   text: string
@@ -78,7 +24,7 @@ interface SegmentTextProps {
   segment?: Segment
 }
 
-export const SegmentText = memo(function SegmentText({
+export const SegmentText = memo(({
   text,
   words,
   wordTimings,
@@ -88,7 +34,7 @@ export const SegmentText = memo(function SegmentText({
   onSaveWord,
   isSaved,
   segment,
-}: SegmentTextProps) {
+}: SegmentTextProps) => {
   const [copiedWord, setCopiedWord] = useState<string | null>(null)
 
   const spans = buildWordSpans(text, words)
@@ -119,10 +65,12 @@ export const SegmentText = memo(function SegmentText({
           const charSpans = span.text.split('').map((char, j) => {
             const charIdx = spanStart + j
             const wt = posMap?.get(charIdx)
-            // If no timing data: full brightness. If timing found: dim until spoken.
-            const dim = wt !== undefined && currentTime !== undefined && wt.end > currentTime
+            // If timing data present: yellow when spoken, white when not yet spoken.
+            // If no timing data: inherit (no class).
+            const spoken = wt !== undefined && currentTime !== undefined && wt.end <= currentTime
+            const unspoken = wt !== undefined && currentTime !== undefined && wt.end > currentTime
             return (
-              <span key={j} className={cn(dim && 'text-foreground/30')}>
+              <span key={j} className={cn(spoken && 'text-yellow-400', unspoken && 'text-white')}>
                 {char}
               </span>
             )
@@ -183,7 +131,7 @@ export const SegmentText = memo(function SegmentText({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-7 text-white/30 hover:bg-white/[0.06] hover:text-white"
+                    className="size-7 text-white/30 hover:bg-white/6 hover:text-white"
                     aria-label={loadingText === span.word.word ? 'Loading pronunciation' : `Play pronunciation of ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -197,7 +145,7 @@ export const SegmentText = memo(function SegmentText({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-7 text-white/30 hover:bg-white/[0.06] hover:text-white"
+                    className="size-7 text-white/30 hover:bg-white/6 hover:text-white"
                     aria-label={copiedWord === span.word.word ? 'Copied!' : `Copy ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()

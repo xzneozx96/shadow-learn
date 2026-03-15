@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    max_video_duration_seconds: int = 900  # 15 minutes
+    max_video_duration_seconds: int = 1200  # 20 minutes
     max_upload_size_bytes: int = 2_147_483_648  # 2 GB
     allowed_video_formats: list[str] = ["mp4", "mkv", "webm", "mov"]
     translation_batch_size: int = 30

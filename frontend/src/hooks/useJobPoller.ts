@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react'
-import type { LessonMeta } from '@/types'
 import type { ShadowLearnDB } from '@/db'
+import type { LessonMeta } from '@/types'
+import { useCallback, useEffect, useRef } from 'react'
 import { saveSegments, saveVideo } from '@/db'
 
 interface UseJobPollerProps {
@@ -103,7 +103,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
   useEffect(() => {
     if (!processingJobIds)
       return
-    intervalRef.current = setInterval(pollJobs, 3000)
+    intervalRef.current = setInterval(pollJobs, 10000)
     return () => {
       if (intervalRef.current)
         clearInterval(intervalRef.current)
