@@ -6,7 +6,7 @@ import { Layout } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
-import { deleteFullLesson, getAllLessonMetas } from '@/db'
+import { deleteFullLesson, getAllLessonMetas, saveLessonMeta } from '@/db'
 import { cn } from '@/lib/utils'
 import { LessonCard } from './LessonCard'
 
@@ -50,6 +50,13 @@ export function Library() {
     setLessons(prev => prev.filter(l => l.id !== id))
   }, [db])
 
+  const handleRename = useCallback(async (lesson: LessonMeta, newTitle: string) => {
+    if (!db)
+      return
+    await saveLessonMeta(db, { ...lesson, title: newTitle })
+    setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, title: newTitle } : l))
+  }, [db])
+
   const sortButtons: { mode: SortMode, label: string }[] = [
     { mode: 'recent', label: 'Recent' },
     { mode: 'alpha', label: 'A-Z' },
@@ -82,7 +89,7 @@ export function Library() {
           </Card>
 
           {filtered.map(lesson => (
-            <LessonCard key={lesson.id} lesson={lesson} onDelete={handleDelete} />
+            <LessonCard key={lesson.id} lesson={lesson} onDelete={handleDelete} onRename={handleRename} />
           ))}
         </div>
       </div>
