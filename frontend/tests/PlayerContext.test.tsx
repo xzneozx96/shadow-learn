@@ -1,7 +1,7 @@
+import type { VideoPlayer } from '../src/player/types'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { PlayerProvider, usePlayer } from '../src/contexts/PlayerContext'
-import type { VideoPlayer } from '../src/player/types'
 
 function makePlayer(overrides: Partial<VideoPlayer> = {}): VideoPlayer {
   return {
@@ -21,9 +21,9 @@ function makePlayer(overrides: Partial<VideoPlayer> = {}): VideoPlayer {
   }
 }
 
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <PlayerProvider>{children}</PlayerProvider>
-)
+function wrapper({ children }: { children: React.ReactNode }) {
+  return <PlayerProvider>{children}</PlayerProvider>
+}
 
 describe('playerContext volume', () => {
   it('initializes volume to 1', () => {
@@ -35,8 +35,12 @@ describe('playerContext volume', () => {
     const player = makePlayer()
     const { result } = renderHook(() => usePlayer(), { wrapper })
 
-    act(() => { result.current.setPlayer(player) })
-    act(() => { result.current.setVolume(0.4) })
+    act(() => {
+      result.current.setPlayer(player)
+    })
+    act(() => {
+      result.current.setVolume(0.4)
+    })
 
     expect(result.current.volume).toBe(0.4)
     expect(player.setVolume).toHaveBeenCalledWith(0.4)
@@ -46,8 +50,12 @@ describe('playerContext volume', () => {
     const player = makePlayer()
     const { result } = renderHook(() => usePlayer(), { wrapper })
 
-    act(() => { result.current.setPlayer(player) })
-    act(() => { result.current.setVolume(2) })
+    act(() => {
+      result.current.setPlayer(player)
+    })
+    act(() => {
+      result.current.setVolume(2)
+    })
 
     expect(result.current.volume).toBe(1)
     expect(player.setVolume).toHaveBeenCalledWith(1)
@@ -57,8 +65,12 @@ describe('playerContext volume', () => {
     const player = makePlayer()
     const { result } = renderHook(() => usePlayer(), { wrapper })
 
-    act(() => { result.current.setPlayer(player) })
-    act(() => { result.current.setVolume(-0.5) })
+    act(() => {
+      result.current.setPlayer(player)
+    })
+    act(() => {
+      result.current.setVolume(-0.5)
+    })
 
     expect(result.current.volume).toBe(0)
     expect(player.setVolume).toHaveBeenCalledWith(0)
