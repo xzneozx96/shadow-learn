@@ -1,10 +1,10 @@
-import 'fake-indexeddb/auto'
-import { IDBFactory } from 'fake-indexeddb'
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
-import { initDB, getSegments } from '@/db'
-import { useJobPoller } from '@/hooks/useJobPoller'
 import type { LessonMeta } from '@/types'
+import { act, renderHook } from '@testing-library/react'
+import { IDBFactory } from 'fake-indexeddb'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getSegments, initDB } from '@/db'
+import { useJobPoller } from '@/hooks/useJobPoller'
+import 'fake-indexeddb/auto'
 
 function makeProcessingLesson(overrides: Partial<LessonMeta> = {}): LessonMeta {
   return {
@@ -51,7 +51,7 @@ describe('useJobPoller', () => {
     })
 
     expect(updateLesson).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'error', errorMessage: 'Server restarted', jobId: undefined })
+      expect.objectContaining({ status: 'error', errorMessage: 'Server restarted', jobId: undefined }),
     )
   })
 
@@ -73,7 +73,7 @@ describe('useJobPoller', () => {
     })
 
     expect(updateLesson).toHaveBeenCalledWith(
-      expect.objectContaining({ currentStep: 'translation' })
+      expect.objectContaining({ currentStep: 'translation' }),
     )
   })
 
@@ -81,8 +81,13 @@ describe('useJobPoller', () => {
     const db = (globalThis as any).__testDb
     const lesson = makeProcessingLesson()
     const segments = [{
-      id: '1', start: 0, end: 5, chinese: '你好', pinyin: 'nǐ hǎo',
-      translations: { en: 'Hello' }, words: [],
+      id: '1',
+      start: 0,
+      end: 5,
+      chinese: '你好',
+      pinyin: 'nǐ hǎo',
+      translations: { en: 'Hello' },
+      words: [],
     }]
     const updateLesson = vi.fn(async () => {})
 
@@ -112,7 +117,7 @@ describe('useJobPoller', () => {
     // Wait for the async pipeline to fully complete (fetch → json → blob → IDB writes → updateLesson → DELETE)
     await vi.waitFor(async () => {
       expect(updateLesson).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'complete', jobId: undefined, duration: 60, segmentCount: 1 })
+        expect.objectContaining({ status: 'complete', jobId: undefined, duration: 60, segmentCount: 1 }),
       )
     }, { timeout: 3000 })
 
@@ -144,7 +149,7 @@ describe('useJobPoller', () => {
     })
 
     expect(updateLesson).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'error', errorMessage: 'API timeout', jobId: undefined })
+      expect.objectContaining({ status: 'error', errorMessage: 'API timeout', jobId: undefined }),
     )
     expect(mockFetch).toHaveBeenCalledWith('/api/jobs/job_abc', { method: 'DELETE' })
   })
