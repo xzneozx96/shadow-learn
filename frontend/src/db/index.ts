@@ -1,14 +1,29 @@
-import type { IDBPDatabase } from 'idb'
+import type { DBSchema, IDBPDatabase } from 'idb'
 import type { AppSettings, ChatMessage, LessonMeta, Segment, VocabEntry } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
 const DB_VERSION = 3
 
-export type ShadowLearnDB = IDBPDatabase
+interface ShadowLearnSchema extends DBSchema {
+  lessons: { key: string; value: LessonMeta }
+  segments: { key: string; value: Segment[] }
+  videos: { key: string; value: Blob }
+  chats: { key: string; value: ChatMessage[] }
+  settings: { key: string; value: AppSettings }
+  crypto: { key: string; value: { encrypted: ArrayBuffer; salt: Uint8Array; iv: Uint8Array } }
+  'tts-cache': { key: string; value: Blob }
+  vocabulary: {
+    key: string
+    value: VocabEntry
+    indexes: { 'by-lesson': string; 'by-date': string }
+  }
+}
+
+export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
 
 export async function initDB(): Promise<ShadowLearnDB> {
-  return openDB(DB_NAME, DB_VERSION, {
+  return openDB<ShadowLearnSchema>(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion) {
       if (oldVersion < 1) {
         db.createObjectStore('lessons', { keyPath: 'id' })
