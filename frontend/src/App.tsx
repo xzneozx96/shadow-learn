@@ -10,6 +10,8 @@ import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
+import { WorkbookPage } from '@/pages/WorkbookPage'
+import { StudySessionPage } from '@/pages/StudySessionPage'
 
 function AuthGate() {
   const { isFirstSetup, isUnlocked } = useAuth()
@@ -43,6 +45,8 @@ function AuthGate() {
             <Route path="/create" element={<CreateLesson />} />
             <Route path="/lesson/:id" element={<LessonView />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/vocabulary" element={<WorkbookPage />} />
+            <Route path="/vocabulary/:lessonId/study" element={<StudySessionPage />} />
           </Routes>
         </PlayerProvider>
       </BrowserRouter>
