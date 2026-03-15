@@ -61,9 +61,10 @@ interface VideoPanelProps {
   segments: Segment[]
   activeSegment: Segment | null
   videoBlob?: Blob
+  onRename?: (newTitle: string) => void
 }
 
-export function VideoPanel({ lesson, segments, activeSegment, videoBlob }: VideoPanelProps) {
+export function VideoPanel({ lesson, segments, activeSegment, videoBlob, onRename }: VideoPanelProps) {
   const { player, currentTime, playbackRate, volume, setPlayer, setPlaybackRate, setVolume } = usePlayer()
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
