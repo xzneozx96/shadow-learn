@@ -58,13 +58,13 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
       }
       else if (job.status === 'complete') {
         const jobId = lesson.jobId
-        // job.result has the nested shape { lesson: {...}, audio_url? } —
+        // job.result has the nested shape { lesson: {...}, video_url? } —
         // matches the backend _shared_pipeline result dict.
-        const { lesson: resultLesson, audio_url } = job.result
+        const { lesson: resultLesson, video_url } = job.result
         await saveSegments(db, lesson.id, resultLesson.segments)
-        if (lesson.source === 'youtube' && audio_url) {
-          const audioBlob = await fetch(audio_url).then(r => r.blob())
-          await saveVideo(db, lesson.id, audioBlob)
+        if (lesson.source === 'youtube' && video_url) {
+          const videoBlob = await fetch(video_url).then(r => r.blob())
+          await saveVideo(db, lesson.id, videoBlob)
         }
         await updateLesson({
           ...lesson,

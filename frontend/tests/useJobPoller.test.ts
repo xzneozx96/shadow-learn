@@ -2,7 +2,7 @@ import type { LessonMeta } from '@/types'
 import { act, renderHook } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getSegments, initDB } from '@/db'
+import { getSegments, getVideo, initDB } from '@/db'
 import { useJobPoller } from '@/hooks/useJobPoller'
 import 'fake-indexeddb/auto'
 
@@ -77,7 +77,7 @@ describe('useJobPoller', () => {
     )
   })
 
-  it('saves segments, downloads audio, marks complete, calls DELETE on success', async () => {
+  it('saves segments, downloads video, marks complete, calls DELETE on success', async () => {
     const db = (globalThis as any).__testDb
     const lesson = makeProcessingLesson()
     const segments = [{
@@ -99,12 +99,12 @@ describe('useJobPoller', () => {
           step: 'complete',
           result: {
             lesson: { title: 'YouTube Video (abc)', source: 'youtube', source_url: 'https://youtube.com/watch?v=abc', duration: 60, segments, translation_languages: ['en'] },
-            audio_url: '/api/lessons/audio/audio.mp3',
+            video_url: '/api/lessons/video/video.mp4',
           },
           error: null,
         }),
       })
-      .mockResolvedValueOnce({ blob: async () => new Blob(['audio'], { type: 'audio/mpeg' }) })
+      .mockResolvedValueOnce({ blob: async () => new Blob(['video'], { type: 'video/mp4' }) })
       .mockResolvedValue({ status: 204 })
 
     vi.stubGlobal('fetch', mockFetch)
@@ -123,6 +123,9 @@ describe('useJobPoller', () => {
 
     const saved = await getSegments(db, 'lesson_1')
     expect(saved).toHaveLength(1)
+    const storedBlob = await getVideo(db, 'lesson_1')
+    expect(storedBlob).toBeDefined()
+    expect(storedBlob!.type).toBe('video/mp4')
     expect(mockFetch).toHaveBeenCalledWith('/api/jobs/job_abc', { method: 'DELETE' })
   })
 
