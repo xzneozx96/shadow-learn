@@ -2,8 +2,12 @@ import pytest
 import httpx
 from unittest.mock import patch, MagicMock, AsyncMock
 from pathlib import Path
-from app.services.transcription import _group_words_into_segments, _segments_from_paragraphs
-from app.services.transcription import transcribe_audio_deepgram, _normalize_deepgram_words
+from app.services.transcription import (
+    _group_words_into_segments,
+    _segments_from_utterances,
+    transcribe_audio_deepgram,
+    _normalize_deepgram_words,
+)
 
 
 def test_group_words_splits_on_punctuation():
@@ -16,7 +20,12 @@ def test_group_words_splits_on_punctuation():
     segments = _group_words_into_segments(words)
     assert len(segments) == 2
     assert segments[0]["text"] == "你好。"
+    assert segments[0]["word_timings"] == [
+        {"text": "你好", "start": 0.0, "end": 0.5},
+        {"text": "。", "start": 0.5, "end": 0.5},
+    ]
     assert segments[1]["text"] == "世界"
+    assert segments[1]["word_timings"] == [{"text": "世界", "start": 1.0, "end": 1.5}]
 
 
 def test_group_words_splits_on_gap():
@@ -28,7 +37,9 @@ def test_group_words_splits_on_gap():
     segments = _group_words_into_segments(words)
     assert len(segments) == 2
     assert segments[0]["text"] == "你"
+    assert segments[0]["word_timings"] == [{"text": "你", "start": 0.0, "end": 0.5}]
     assert segments[1]["text"] == "好"
+    assert segments[1]["word_timings"] == [{"text": "好", "start": 3.1, "end": 3.6}]
 
 
 def test_normalize_deepgram_words_uses_punctuated_word():
@@ -51,45 +62,104 @@ def test_normalize_deepgram_words_fallback_to_word_key():
     assert result[0]["text"] == "你"
 
 
-def test_segments_from_paragraphs_strips_spaces_and_assigns_ids():
-    """Paragraph sentences become segments; inter-character spaces are stripped."""
-    paragraphs = [
+def test_segments_from_utterances_strips_spaces_and_assigns_ids():
+    """Utterance transcript spaces are stripped; id/start/end match utterance."""
+    utterances = [
         {
-            "sentences": [{"text": "你 好 世 界。", "start": 0.0, "end": 1.0}],
-            "speaker": 0, "num_words": 4, "start": 0.0, "end": 1.0,
-        },
-        {
-            "sentences": [{"text": "谢 谢 你！", "start": 3.0, "end": 4.0}],
-            "speaker": 1, "num_words": 3, "start": 3.0, "end": 4.0,
-        },
-    ]
-    segments = _segments_from_paragraphs(paragraphs)
-    assert len(segments) == 2
-    assert segments[0] == {"id": 0, "start": 0.0, "end": 1.0, "text": "你好世界。"}
-    assert segments[1] == {"id": 1, "start": 3.0, "end": 4.0, "text": "谢谢你！"}
-
-
-def test_segments_from_paragraphs_multiple_sentences_per_paragraph():
-    """Multiple sentences within one paragraph each become separate segments."""
-    paragraphs = [
-        {
-            "sentences": [
-                {"text": "你 好。", "start": 0.0, "end": 0.5},
-                {"text": "世 界！", "start": 0.6, "end": 1.0},
+            "start": 0.24, "end": 1.92, "transcript": "我 的 桌 子",
+            "words": [
+                {"word": "我", "start": 0.24, "end": 0.48, "punctuated_word": "我",
+                 "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+                {"word": "的", "start": 0.72, "end": 0.96, "punctuated_word": "的",
+                 "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+                {"word": "桌", "start": 1.12, "end": 1.28, "punctuated_word": "桌",
+                 "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+                {"word": "子", "start": 1.44, "end": 1.92, "punctuated_word": "子",
+                 "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
             ],
-            "speaker": 0, "num_words": 4, "start": 0.0, "end": 1.0,
-        },
+            "speaker": 0, "id": "abc", "channel": 0, "confidence": 0.96,
+        }
     ]
-    segments = _segments_from_paragraphs(paragraphs)
-    assert len(segments) == 2
+    segments = _segments_from_utterances(utterances)
+    assert len(segments) == 1
+    assert segments[0]["id"] == 0
+    assert segments[0]["text"] == "我的桌子"
+    assert segments[0]["start"] == 0.24
+    assert segments[0]["end"] == 1.92
+    assert len(segments[0]["word_timings"]) == 4
+    assert segments[0]["word_timings"][0] == {"text": "我", "start": 0.24, "end": 0.48}
+    assert segments[0]["word_timings"][3] == {"text": "子", "start": 1.44, "end": 1.92}
+
+
+def test_segments_from_utterances_uses_punctuated_word():
+    """punctuated_word is preferred over word key for word_timing text."""
+    utterances = [
+        {
+            "start": 0.0, "end": 1.0, "transcript": "你 好。",
+            "words": [
+                {"word": "你", "start": 0.0, "end": 0.4, "punctuated_word": "你",
+                 "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+                {"word": "好", "start": 0.5, "end": 1.0, "punctuated_word": "好。",
+                 "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+            ],
+            "speaker": 0, "id": "xyz", "channel": 0, "confidence": 0.99,
+        }
+    ]
+    segments = _segments_from_utterances(utterances)
     assert segments[0]["text"] == "你好。"
-    assert segments[1]["text"] == "世界！"
+    assert segments[0]["word_timings"][1]["text"] == "好。"
+
+
+def test_segments_from_utterances_skips_empty():
+    """Utterances with empty transcript after space-stripping are skipped."""
+    utterances = [
+        {"start": 0.0, "end": 0.1, "transcript": " ", "words": [],
+         "speaker": 0, "id": "a", "channel": 0, "confidence": 0.0},
+        {"start": 1.0, "end": 2.0, "transcript": "你 好",
+         "words": [
+             {"word": "你", "start": 1.0, "end": 1.4, "punctuated_word": "你",
+              "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+             {"word": "好", "start": 1.5, "end": 2.0, "punctuated_word": "好",
+              "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+         ],
+         "speaker": 0, "id": "b", "channel": 0, "confidence": 0.99},
+    ]
+    segments = _segments_from_utterances(utterances)
+    assert len(segments) == 1
+    assert segments[0]["text"] == "你好"
+    assert segments[0]["id"] == 1  # utterance-positional: empty utterance at index 0 was skipped
+
+
+def test_segments_from_utterances_multiple():
+    """Multiple utterances produce multiple segments with sequential ids."""
+    utterances = [
+        {"start": 0.0, "end": 1.0, "transcript": "你 好",
+         "words": [
+             {"word": "你", "start": 0.0, "end": 0.5, "punctuated_word": "你",
+              "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+             {"word": "好", "start": 0.6, "end": 1.0, "punctuated_word": "好",
+              "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+         ],
+         "speaker": 0, "id": "a", "channel": 0, "confidence": 0.99},
+        {"start": 2.0, "end": 3.0, "transcript": "再 见",
+         "words": [
+             {"word": "再", "start": 2.0, "end": 2.4, "punctuated_word": "再",
+              "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+             {"word": "见", "start": 2.5, "end": 3.0, "punctuated_word": "见",
+              "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+         ],
+         "speaker": 0, "id": "b", "channel": 0, "confidence": 0.99},
+    ]
+    segments = _segments_from_utterances(utterances)
+    assert len(segments) == 2
+    assert segments[0]["id"] == 0
     assert segments[1]["id"] == 1
+    assert segments[1]["text"] == "再见"
 
 
 @pytest.mark.asyncio
-async def test_transcribe_audio_deepgram_uses_paragraphs(tmp_path):
-    """When paragraphs are present, they are used as the primary segment source."""
+async def test_transcribe_audio_deepgram_uses_utterances(tmp_path):
+    """When utterances are present, they are used as the primary segment source."""
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"fake audio data")
 
@@ -102,21 +172,36 @@ async def test_transcribe_audio_deepgram_uses_paragraphs(tmp_path):
                     "transcript": "你好世界。谢谢你！",
                     "confidence": 0.99,
                     "words": [],
-                    "paragraphs": {
-                        "transcript": "你好世界。\n谢谢你！",
-                        "paragraphs": [
-                            {
-                                "sentences": [{"text": "你好 世界。", "start": 0.0, "end": 1.0}],
-                                "speaker": 0, "num_words": 2, "start": 0.0, "end": 1.0,
-                            },
-                            {
-                                "sentences": [{"text": "谢谢 你！", "start": 3.0, "end": 4.0}],
-                                "speaker": 1, "num_words": 2, "start": 3.0, "end": 4.0,
-                            },
-                        ],
-                    },
                 }],
             }],
+            "utterances": [
+                {
+                    "start": 0.0, "end": 1.0,
+                    "transcript": "你好 世界。",
+                    "words": [
+                        {"word": "你好", "start": 0.0, "end": 0.5,
+                         "punctuated_word": "你好", "speaker": 0,
+                         "speaker_confidence": 0.9, "confidence": 0.9},
+                        {"word": "世界", "start": 0.5, "end": 1.0,
+                         "punctuated_word": "世界。", "speaker": 0,
+                         "speaker_confidence": 0.9, "confidence": 0.9},
+                    ],
+                    "speaker": 0, "id": "u1", "channel": 0, "confidence": 0.99,
+                },
+                {
+                    "start": 3.0, "end": 4.0,
+                    "transcript": "谢谢 你！",
+                    "words": [
+                        {"word": "谢谢", "start": 3.0, "end": 3.5,
+                         "punctuated_word": "谢谢", "speaker": 1,
+                         "speaker_confidence": 0.9, "confidence": 0.9},
+                        {"word": "你", "start": 3.5, "end": 4.0,
+                         "punctuated_word": "你！", "speaker": 1,
+                         "speaker_confidence": 0.9, "confidence": 0.9},
+                    ],
+                    "speaker": 1, "id": "u2", "channel": 0, "confidence": 0.99,
+                },
+            ],
         },
     }
 
@@ -137,13 +222,14 @@ async def test_transcribe_audio_deepgram_uses_paragraphs(tmp_path):
     assert len(segments) == 2
     assert segments[0]["text"] == "你好世界。"
     assert segments[0]["start"] == 0.0
+    assert segments[0]["word_timings"][1]["text"] == "世界。"
     assert segments[1]["text"] == "谢谢你！"
     assert segments[1]["start"] == 3.0
 
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_deepgram_falls_back_to_words(tmp_path):
-    """Without paragraphs, falls back to word-level grouping."""
+    """Without utterances, falls back to word-level grouping with word_timings."""
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"fake audio data")
 
@@ -156,13 +242,22 @@ async def test_transcribe_audio_deepgram_falls_back_to_words(tmp_path):
                     "transcript": "你好世界。",
                     "confidence": 0.99,
                     "words": [
-                        {"word": "你好", "start": 0.0, "end": 0.5, "punctuated_word": "你好", "speaker": 0},
-                        {"word": "世界", "start": 0.5, "end": 1.0, "punctuated_word": "世界。", "speaker": 0},
-                        {"word": "谢谢", "start": 3.0, "end": 3.5, "punctuated_word": "谢谢", "speaker": 1},
-                        {"word": "你", "start": 3.5, "end": 4.0, "punctuated_word": "你！", "speaker": 1},
+                        {"word": "你好", "start": 0.0, "end": 0.5,
+                         "punctuated_word": "你好", "speaker": 0,
+                         "speaker_confidence": 0.9},
+                        {"word": "世界", "start": 0.5, "end": 1.0,
+                         "punctuated_word": "世界。", "speaker": 0,
+                         "speaker_confidence": 0.9},
+                        {"word": "谢谢", "start": 3.0, "end": 3.5,
+                         "punctuated_word": "谢谢", "speaker": 1,
+                         "speaker_confidence": 0.9},
+                        {"word": "你", "start": 3.5, "end": 4.0,
+                         "punctuated_word": "你！", "speaker": 1,
+                         "speaker_confidence": 0.9},
                     ],
                 }],
             }],
+            # No "utterances" key — triggers fallback
         },
     }
 
@@ -183,6 +278,10 @@ async def test_transcribe_audio_deepgram_falls_back_to_words(tmp_path):
     assert len(segments) == 2
     assert segments[0]["text"] == "你好世界。"
     assert segments[1]["text"] == "谢谢你！"
+    # Fallback segments must include word_timings from constituent words
+    assert len(segments[0]["word_timings"]) == 2
+    assert segments[0]["word_timings"][0]["text"] == "你好"
+    assert segments[0]["word_timings"][1]["text"] == "世界。"
 
 
 @pytest.mark.asyncio
