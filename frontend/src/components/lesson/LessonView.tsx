@@ -16,11 +16,11 @@ export function LessonView() {
   const { id } = useParams<{ id: string }>()
   const { db, keys } = useAuth()
   const { player, currentTime } = usePlayer()
-  const { meta, segments, loading, error } = useLesson(db, id)
+  const { meta, segments, loading, error, updateMeta } = useLesson(db, id)
   const activeSegment = useActiveSegment(segments, currentTime)
 
   const [videoBlob, setVideoBlob] = useState<Blob | undefined>()
-  const [model, setModel] = useState('openai/gpt-4o-mini')
+  const [model, setModel] = useState('gpt-4o-mini')
 
   // Load settings for default model
   useEffect(() => {
@@ -33,9 +33,9 @@ export function LessonView() {
     })
   }, [db])
 
-  // Load video blob for uploaded lessons
+  // Load media blob (video for uploads, audio for YouTube lessons)
   useEffect(() => {
-    if (!db || !id || !meta || meta.source !== 'upload')
+    if (!db || !id || !meta)
       return
     getVideo(db, id).then((blob) => {
       if (blob)
@@ -76,11 +76,18 @@ export function LessonView() {
     saveLessonMeta(db, { ...meta, progressSegmentId: segmentId })
   }, [db, meta])
 
+  const handleRename = useCallback(async (newTitle: string) => {
+    if (!db || !meta)
+      return
+    await saveLessonMeta(db, { ...meta, title: newTitle })
+    updateMeta({ title: newTitle })
+  }, [db, meta, updateMeta])
+
   // Loading state
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-900">
-        <Loader2 className="size-8 animate-spin text-slate-400" />
+      <div className="flex h-screen items-center justify-center glass-bg">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -88,7 +95,7 @@ export function LessonView() {
   // Error state
   if (error || !meta) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-900">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 glass-bg">
         <p className="text-sm text-red-400">{error ?? 'Lesson not found'}</p>
         <Button variant="outline" render={<Link to="/" />}>
           Back to Library
@@ -98,19 +105,20 @@ export function LessonView() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-900">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Video Panel — 36% */}
-      <div className="flex h-full flex-col" style={{ width: '36%' }}>
+      <div className="h-full overflow-hidden border-r border-border" style={{ width: '36%' }}>
         <VideoPanel
           lesson={meta}
           segments={segments}
           activeSegment={activeSegment}
           videoBlob={videoBlob}
+          onRename={handleRename}
         />
       </div>
 
       {/* Transcript Panel — 34% */}
-      <div className="h-full" style={{ width: '34%' }}>
+      <div className="h-full overflow-hidden border-r border-border" style={{ width: '34%' }}>
         <TranscriptPanel
           segments={segments}
           activeSegment={activeSegment}
@@ -121,7 +129,7 @@ export function LessonView() {
       </div>
 
       {/* Companion Panel — flex-1 */}
-      <div className="h-full flex-1">
+      <div className="h-full flex-1 overflow-hidden">
         <CompanionPanel
           messages={messages}
           isStreaming={isStreaming}
