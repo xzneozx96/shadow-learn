@@ -114,7 +114,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
     }
   }
 
-  const isAudioOnly = lesson.source === 'youtube'
+  const isAudioOnly = lesson.source === 'youtube' && (!videoBlob || videoBlob.type.startsWith('audio/'))
   const youtubeVideoId = lesson.sourceUrl ? extractYouTubeVideoId(lesson.sourceUrl) : null
 
   // Initialize HTML5 player for both YouTube (audio) and upload (video)
@@ -193,7 +193,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
   const handleDownload = useCallback(() => {
     if (!videoBlob)
       return
-    const ext = lesson.source === 'youtube' ? '.mp3' : getMimeExtension(videoBlob.type)
+    const ext = videoBlob.type.startsWith('video/') ? getMimeExtension(videoBlob.type) : '.mp3'
     const filename = sanitizeBaseName(lesson.title) + ext
     const objectUrl = URL.createObjectURL(videoBlob)
     const a = document.createElement('a')
@@ -203,7 +203,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
     a.click()
     document.body.removeChild(a)
     setTimeout(() => URL.revokeObjectURL(objectUrl), 100)
-  }, [videoBlob, lesson.title, lesson.source])
+  }, [videoBlob, lesson.title])
 
   return (
     <div className="flex h-full flex-col bg-background/50 backdrop-blur-md">
@@ -256,7 +256,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
                 <Download className="size-4" />
               </Button>
               <TooltipContent>
-                {lesson.source === 'youtube' ? 'Download audio' : 'Download video'}
+                {videoBlob?.type.startsWith('video/') ? 'Download video' : 'Download audio'}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

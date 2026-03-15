@@ -55,3 +55,26 @@ describe('getMimeExtension', () => {
     expect(getMimeExtension('')).toBe('.mp4')
   })
 })
+
+describe('isAudioOnly condition', () => {
+  // Mirror the expression from VideoPanel: source === 'youtube' && (!blob || blob.type.startsWith('audio/'))
+  function isAudioOnly(source: string, blob?: Blob): boolean {
+    return source === 'youtube' && (!blob || blob.type.startsWith('audio/'))
+  }
+
+  it('is true for youtube with no blob', () => {
+    expect(isAudioOnly('youtube')).toBe(true)
+  })
+
+  it('is true for youtube with an audio blob (old lesson)', () => {
+    expect(isAudioOnly('youtube', new Blob([], { type: 'audio/mpeg' }))).toBe(true)
+  })
+
+  it('is false for youtube with a video blob (new lesson)', () => {
+    expect(isAudioOnly('youtube', new Blob([], { type: 'video/mp4' }))).toBe(false)
+  })
+
+  it('is false for upload source regardless of blob', () => {
+    expect(isAudioOnly('upload', new Blob([], { type: 'video/mp4' }))).toBe(false)
+  })
+})
