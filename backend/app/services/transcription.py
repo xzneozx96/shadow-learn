@@ -105,7 +105,7 @@ def _group_words_into_segments(words: list[_Word]) -> list[_Segment]:
     """Group a flat word list into sentence segments.
 
     Splits on sentence-ending punctuation or time gaps.
-    Used as fallback when Deepgram paragraph data is unavailable.
+    Used as fallback when Deepgram utterance data is absent.
     """
     segments: list[_Segment] = []
     current_words: list[_Word] = []
