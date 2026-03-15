@@ -12,6 +12,7 @@ dependencies = [
     "httpx>=0.28.0",
     "pydantic-settings>=2.7.0",
     "sse-starlette>=2.2.0",
+    "azure-cognitiveservices-speech>=1.40.0",
 ]
 
 [project.optional-dependencies]

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import chat, jobs, lessons, tts
+from app.routers import chat, jobs, lessons, pronunciation, quiz, tts
 
 app = FastAPI(title="ShadowLearn API")
 
@@ -17,6 +17,8 @@ app.include_router(lessons.router)
 app.include_router(chat.router)
 app.include_router(tts.router)
 app.include_router(jobs.router)
+app.include_router(quiz.router)
+app.include_router(pronunciation.router)
 
 
 @app.get("/api/health")
