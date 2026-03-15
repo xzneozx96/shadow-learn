@@ -1,3 +1,9 @@
+export interface WordTiming {
+  text: string
+  start: number
+  end: number
+}
+
 export interface Word {
   word: string
   pinyin: string
@@ -13,6 +19,7 @@ export interface Segment {
   pinyin: string
   translations: Record<string, string>
   words: Word[]
+  wordTimings?: WordTiming[]
 }
 
 export interface LessonMeta {
