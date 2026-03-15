@@ -75,6 +75,13 @@ export function WorkbookPage() {
           </div>
         )}
 
+        {/* No search results state */}
+        {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
+          <div className="text-center py-20 text-muted-foreground text-sm">
+            No words match "{search}".
+          </div>
+        )}
+
         {/* Groups */}
         <div className="flex flex-col gap-2.5">
           {sortedLessonIds
