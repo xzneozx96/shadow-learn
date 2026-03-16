@@ -248,7 +248,7 @@ export function Settings() {
             </div>
             {keysError && <p className="text-sm text-destructive">{keysError}</p>}
             {keysSaved && <p className="text-sm text-emerald-400">Keys saved</p>}
-            <Button onClick={handleSaveKeys}>Save Keys</Button>
+            <Button onClick={handleSaveKeys} disabled={provider === null}>Save Keys</Button>
           </CardContent>
         </Card>
 

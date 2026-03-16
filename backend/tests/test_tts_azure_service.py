@@ -186,3 +186,26 @@ async def test_azure_synthesize_raises_on_network_error():
         provider = AzureTTSProvider()
         with pytest.raises(RuntimeError):
             await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})
+
+
+@pytest.mark.asyncio
+async def test_azure_synthesize_raises_on_5xx():
+    """Provider raises RuntimeError on 5xx server error."""
+    import httpx
+
+    mock_response = MagicMock()
+    mock_response.status_code = 503
+    mock_response.raise_for_status = MagicMock(
+        side_effect=httpx.HTTPStatusError("503", request=MagicMock(), response=mock_response)
+    )
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with patch("app.services.tts_azure.httpx.AsyncClient", return_value=mock_client):
+        from app.services.tts_azure import AzureTTSProvider
+        provider = AzureTTSProvider()
+        with pytest.raises(RuntimeError, match="HTTP 503"):
+            await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})
