@@ -9,6 +9,8 @@ import { getSettings, getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
 import { useChat } from '@/hooks/useChat'
 import { useLesson } from '@/hooks/useLesson'
+import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
+import { ShadowingPanel } from '@/components/shadowing/ShadowingPanel'
 import { CompanionPanel } from './CompanionPanel'
 import { TranscriptPanel } from './TranscriptPanel'
 import { VideoPanel } from './VideoPanel'
@@ -23,6 +25,9 @@ export function LessonView() {
 
   const [videoBlob, setVideoBlob] = useState<Blob | undefined>()
   const [model, setModel] = useState('gpt-4o-mini')
+  type ShadowingActiveMode = null | { mode: 'dictation' | 'speaking' }
+  const [shadowingMode, setShadowingMode] = useState<ShadowingActiveMode>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   // Load settings for default model
   useEffect(() => {
@@ -85,6 +90,23 @@ export function LessonView() {
     updateMeta({ title: newTitle })
   }, [meta, updateLesson, updateMeta])
 
+  const handleShadowingClick = useCallback(() => {
+    setPickerOpen(true)
+  }, [])
+
+  const handleShadowingStart = useCallback((mode: 'dictation' | 'speaking') => {
+    setShadowingMode({ mode })
+    setPickerOpen(false)
+  }, [])
+
+  const handleShadowingExit = useCallback(() => {
+    setShadowingMode(null)
+  }, [])
+
+  const speakingAvailable
+    = Boolean(keys?.azureSpeechKey && keys?.azureSpeechRegion)
+      && typeof MediaRecorder !== 'undefined'
+
   const [searchParams] = useSearchParams()
   const deepLinkSegmentId = searchParams.get('segmentId')
 
@@ -133,18 +155,32 @@ export function LessonView() {
           activeSegment={activeSegment}
           videoBlob={videoBlob}
           onRename={handleRename}
+          onShadowingClick={handleShadowingClick}
+          hasSegments={segments.length > 0}
         />
       </div>
 
-      {/* Transcript Panel — 34% */}
+      {/* Transcript / Shadowing Panel — 34% */}
       <div className="h-full overflow-hidden border-r border-border" style={{ width: '34%' }}>
-        <TranscriptPanel
-          segments={segments}
-          activeSegment={activeSegment}
-          lesson={meta}
-          onSegmentClick={handleSegmentClick}
-          onProgressUpdate={handleProgressUpdate}
-        />
+        {shadowingMode
+          ? (
+              <ShadowingPanel
+                segments={segments}
+                mode={shadowingMode.mode}
+                azureKey={keys?.azureSpeechKey ?? ''}
+                azureRegion={keys?.azureSpeechRegion ?? ''}
+                onExit={handleShadowingExit}
+              />
+            )
+          : (
+              <TranscriptPanel
+                segments={segments}
+                activeSegment={activeSegment}
+                lesson={meta}
+                onSegmentClick={handleSegmentClick}
+                onProgressUpdate={handleProgressUpdate}
+              />
+            )}
       </div>
 
       {/* Companion Panel — flex-1 */}
@@ -159,6 +195,13 @@ export function LessonView() {
           lessonId={id ?? ''}
         />
       </div>
+
+      <ShadowingModePicker
+        open={pickerOpen}
+        speakingAvailable={speakingAvailable}
+        onStart={handleShadowingStart}
+        onCancel={() => setPickerOpen(false)}
+      />
     </div>
   )
 }
