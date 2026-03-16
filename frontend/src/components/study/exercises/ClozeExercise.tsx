@@ -1,12 +1,13 @@
 import type { VocabEntry } from '@/types'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
+import { Button } from '@/components/ui/button'
+import { ChineseInput } from '@/components/ui/ChineseInput'
 import { cn } from '@/lib/utils'
 
 interface ClozeQuestion {
-  story: string   // "小明说{{今天}}他要去..."
+  story: string // "小明说{{今天}}他要去..."
   blanks: string[]
 }
 
@@ -17,11 +18,12 @@ interface Props {
   onNext: (correct: boolean) => void
 }
 
+const BLANK_REGEX = /\{\{([^}]+)\}\}/g
+
 function parseStory(story: string): { text: string, blank: string | null }[] {
   const parts: { text: string, blank: string | null }[] = []
-  const regex = /\{\{([^}]+)\}\}/g
   let last = 0
-  const matches = [...story.matchAll(regex)]
+  const matches = [...story.matchAll(BLANK_REGEX)]
   for (const m of matches) {
     if (m.index !== undefined && m.index > last)
       parts.push({ text: story.slice(last, m.index), blank: null })
@@ -38,12 +40,12 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
   const parts = parseStory(question.story)
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [checked, setChecked] = useState(false)
-  const firstInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => { firstInputRef.current?.focus() }, [])
 
   const blankIndices: number[] = []
-  parts.forEach((p, i) => { if (p.blank) blankIndices.push(i) })
+  parts.forEach((p, i) => {
+    if (p.blank)
+      blankIndices.push(i)
+  })
 
   const allCorrect = blankIndices.every(i => answers[i]?.trim() === parts[i].blank)
 
@@ -69,21 +71,22 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
             return <span key={i}>{part.text}</span>
           const correct = answers[i]?.trim() === part.blank
           return (
-            <input
+            <ChineseInput
               key={i}
-              ref={i === blankIndices[0] ? firstInputRef : undefined}
+              wrapperClassName="inline-block w-14 mx-1"
               className={cn(
-                'inline-block w-14 text-center text-sm border-0 border-b bg-transparent mx-1 px-1 outline-none transition-colors',
+                'w-14 text-center text-sm border-0 border-b bg-transparent px-1 rounded-none focus-visible:ring-0',
                 checked
                   ? correct
                     ? 'border-emerald-500/50 text-emerald-400'
                     : 'border-destructive/50 text-destructive'
-                  : 'border-border/60 focus:border-foreground/40',
+                  : 'border-foreground/40',
               )}
               value={answers[i] ?? ''}
               onChange={e => setAnswers(a => ({ ...a, [i]: e.target.value }))}
               disabled={checked}
               placeholder="…"
+              autoFocus={i === blankIndices[0]}
             />
           )
         })}
@@ -112,7 +115,7 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
               {entry && (
                 <Link
                   to={`/lesson/${entry.sourceLessonId}?segmentId=${entry.sourceSegmentId}`}
-                  className="block text-xs mt-0.5 opacity-60 hover:opacity-100"
+                  className="block text-sm mt-0.5 opacity-60 hover:opacity-100"
                 >
                   📍 View in video →
                 </Link>
