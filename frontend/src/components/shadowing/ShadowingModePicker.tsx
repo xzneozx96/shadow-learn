@@ -102,7 +102,6 @@ export function ShadowingModePicker({
           {COUNT_OPTIONS.map(n => (
             <button
               key={n}
-              role="button"
               disabled={totalRemaining < n}
               data-selected={count === n ? 'true' : 'false'}
               className={cn(
@@ -118,7 +117,6 @@ export function ShadowingModePicker({
             </button>
           ))}
           <button
-            role="button"
             data-selected={count === 'all' ? 'true' : 'false'}
             className={cn(
               'rounded-md border px-3 py-1 text-sm transition-colors',
