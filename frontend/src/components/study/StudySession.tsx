@@ -290,6 +290,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
                 apiBaseUrl={API_BASE}
                 azureKey={keys?.azureSpeechKey ?? ''}
                 azureRegion={keys?.azureSpeechRegion ?? 'eastus'}
+                progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
               />
             )}

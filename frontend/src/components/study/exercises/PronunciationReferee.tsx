@@ -1,29 +1,45 @@
+import type { PronunciationAssessResult } from '@/types'
+import { Pause, Play } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { cn } from '@/lib/utils'
 
-interface PronunciationSentence { sentence: string; translation: string }
+interface PronunciationSentence { sentence: string, translation: string }
 
 interface Props {
   sentence: PronunciationSentence
   apiBaseUrl: string
   azureKey: string
   azureRegion: string
+  progress?: string
   onNext: (correct: boolean) => void
 }
 
 type RecordingState = 'idle' | 'recording' | 'stopped'
-
-interface WordScore { word: string; accuracy: number; error_type: string | null; error_detail: string | null }
-interface AssessResult { overall: { accuracy: number; fluency: number; completeness: number; prosody: number }; words: WordScore[] }
+type AssessResult = PronunciationAssessResult
 
 function scoreColor(n: number) {
-  if (n >= 80) return 'text-green-400'
-  if (n >= 60) return 'text-yellow-400'
-  return 'text-red-400'
+  if (n >= 80) return 'text-emerald-400'
+  if (n >= 60) return 'text-amber-400'
+  return 'text-destructive'
 }
 
-export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegion, onNext }: Props) {
+function barColor(n: number) {
+  if (n >= 80) return 'bg-emerald-400'
+  if (n >= 60) return 'bg-amber-400'
+  return 'bg-destructive'
+}
+
+function verdict(n: number) {
+  if (n >= 90) return 'Excellent'
+  if (n >= 75) return 'Good'
+  if (n >= 60) return 'Fair'
+  if (n >= 40) return 'Keep Practicing'
+  return 'Needs Work'
+}
+
+export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegion, progress = '', onNext }: Props) {
   const [state, setState] = useState<RecordingState>('idle')
   const [attempt, setAttempt] = useState(0)
   const [blob, setBlob] = useState<Blob | null>(null)
@@ -31,10 +47,16 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
   const [result, setResult] = useState<AssessResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
   const mediaRef = useRef<MediaRecorder | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const chunksRef = useRef<Blob[]>([])
 
   async function startRecording() {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    }
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
     chunksRef.current = []
@@ -73,134 +95,177 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
       const resp = await fetch(`${apiBaseUrl}/api/pronunciation/assess`, { method: 'POST', body: form })
       if (!resp.ok) throw new Error(await resp.text())
       setResult(await resp.json())
-    } catch (e) {
+    }
+    catch (e) {
       setError(e instanceof Error ? e.message : 'Assessment failed')
-    } finally {
+    }
+    finally {
       setSubmitting(false)
     }
   }
 
-  const waveBarCount = 10
+  function togglePlayback() {
+    if (!playbackUrl) return
+    if (isPlaying) {
+      audioRef.current?.pause()
+      setIsPlaying(false)
+      return
+    }
+    const audio = new Audio(playbackUrl)
+    audioRef.current = audio
+    audio.onplay = () => setIsPlaying(true)
+    audio.onended = () => { setIsPlaying(false); audioRef.current = null }
+    audio.onpause = () => setIsPlaying(false)
+    audio.play().catch(console.error)
+  }
+
+  // Footer hidden once results are shown — result actions replace it
+  const footer = result ? null : (
+    <div className="flex items-center justify-between px-[18px] py-3">
+      <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
+      <Button
+        size="sm"
+        disabled={!blob || submitting}
+        onClick={() => void handleSubmit()}
+      >
+        {submitting
+          ? <><div className="size-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" /> Scoring…</>
+          : 'Submit →'}
+      </Button>
+    </div>
+  )
 
   return (
-    <div className="rounded-[calc(var(--radius)*1.6)] border border-border bg-card backdrop-blur-xl p-6">
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase border border-border rounded-full px-2.5 py-1 mb-5">
-        🎤 Pronunciation Referee · Azure Scored
-      </span>
-
-      <p className="text-xs text-muted-foreground mb-4">
-        Record as many times as you like. Listen back before submitting.
-      </p>
-
+    <ExerciseCard type="Pronunciation Referee" progress={progress} footer={footer}>
       {/* Sentence display */}
-      <div className="bg-secondary/40 border border-border rounded-[var(--radius)] p-4 text-center mb-5">
-        <div className="text-xl font-bold tracking-widest">{sentence.sentence}</div>
+      <div className="rounded-lg border border-border bg-muted/20 p-4 text-center mb-4">
+        <div className="text-xl font-bold tracking-widest text-foreground">
+          {sentence.sentence}
+        </div>
         <div className="text-xs text-muted-foreground mt-1.5">{sentence.translation}</div>
       </div>
 
-      {/* Waveform visualization */}
-      <div className="h-10 bg-secondary/40 border border-border rounded-[var(--radius)] flex items-center justify-center gap-1 px-4 mb-3 overflow-hidden">
-        {Array.from({ length: waveBarCount }, (_, i) => (
-          <div
-            key={i}
-            className={cn(
-              'w-0.5 rounded-full bg-foreground/50',
-              state === 'recording' ? 'animate-[wave_1.3s_ease-in-out_infinite]' : '',
-            )}
-            style={{
-              height: state === 'recording' ? undefined : '6px',
-              animationDelay: `${i * 0.08}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Record controls */}
-      <div className="flex gap-2 mb-2">
-        <button
-          className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 rounded-[var(--radius)] text-sm font-semibold transition-all',
-            state === 'recording'
-              ? 'bg-red-600 text-white shadow-[0_0_0_3px_oklch(0.65_0.18_25_/_0.2)]'
-              : 'bg-red-600/80 hover:bg-red-600 text-white',
+      {/* Recording controls (hidden once scored) */}
+      {!result && (
+        <>
+          <div className="flex gap-2 mb-2">
+            <Button
+              variant="destructive"
+              className={cn(
+                'flex-1',
+                state === 'recording' && 'shadow-[0_0_0_3px_oklch(0.65_0.18_25/0.2)]',
+              )}
+              onClick={state === 'recording' ? stopRecording : () => void startRecording()}
+            >
+              {state === 'recording' ? '⏹ Stop' : '⏺ Record'}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!blob}
+              onClick={togglePlayback}
+            >
+              {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+              {isPlaying ? 'Pause' : 'Playback'}
+            </Button>
+          </div>
+          {attempt > 0 && (
+            <p className="text-xs text-muted-foreground/50 text-center mb-2">
+              Attempt {attempt} · Re-record anytime before submitting
+            </p>
           )}
-          onClick={state === 'recording' ? stopRecording : () => void startRecording()}
-        >
-          {state === 'recording' ? '⏹ Stop' : '⏺ Record'}
-        </button>
-        <button
-          className={cn(
-            'flex items-center justify-center gap-2 px-4 py-3 rounded-[var(--radius)] text-sm font-semibold border transition-all',
-            blob
-              ? 'border-border bg-secondary/60 hover:bg-accent text-foreground'
-              : 'border-border/30 bg-secondary/20 text-muted-foreground/30 pointer-events-none',
-          )}
-          onClick={() => blob && playbackUrl && new Audio(playbackUrl).play()}
-          disabled={!blob}
-        >
-          ▶ Playback
-        </button>
-      </div>
-      {attempt > 0 && (
-        <p className="text-[10px] text-muted-foreground/50 text-center mb-3">
-          Attempt {attempt} · Re-record anytime before submitting
-        </p>
+        </>
       )}
 
+      {/* Error */}
       {error && (
-        <div className="text-xs text-red-400 bg-red-500/8 border border-red-500/20 rounded-[var(--radius)] px-3 py-2 mb-3">
+        <div className="rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive mb-3">
           {error}
         </div>
       )}
 
-      {!result && (
-        <Button
-          className="w-full"
-          disabled={!blob || submitting}
-          onClick={() => void handleSubmit()}
-        >
-          {submitting ? 'Scoring…' : 'Submit for scoring →'}
-        </Button>
-      )}
-
-      {/* Results */}
+      {/* Score results — mirrors ShadowingRevealPhase > SpeakingScores */}
       {result && (
-        <div className="mt-4 pt-4 border-t border-border">
-          <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase mb-3">Azure Assessment</p>
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            {(['accuracy', 'fluency', 'completeness', 'prosody'] as const).map(k => (
-              <div key={k} className="bg-secondary/60 border border-border rounded-[var(--radius)] p-2.5 text-center">
-                <div className={cn('text-xl font-bold', scoreColor(result.overall[k]))}>{Math.round(result.overall[k])}</div>
-                <div className="text-[9px] text-muted-foreground mt-1 capitalize">{k}</div>
+        <div className="space-y-2">
+          {/* Score panel */}
+          <div className="rounded-xl border border-border/50 bg-muted/20 overflow-hidden">
+            {/* Hero row */}
+            <div className="flex items-center justify-between px-4 pt-3 pb-2.5">
+              <div>
+                <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(result.overall.accuracy))}>
+                  {Math.round(result.overall.accuracy)}
+                </div>
+                <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Accuracy
+                </div>
+              </div>
+              <div className={cn('text-sm font-semibold', scoreColor(result.overall.accuracy))}>
+                {verdict(result.overall.accuracy)}
+              </div>
+            </div>
+            {/* Secondary scores */}
+            <div className="grid grid-cols-3 border-t border-border/40">
+              {(['fluency', 'completeness', 'prosody'] as const).map((k, i) => (
+                <div key={k} className={cn('px-3 py-2 text-center', i < 2 && 'border-r border-border/40')}>
+                  <div className={cn('text-base font-bold tabular-nums', scoreColor(result.overall[k]))}>
+                    {Math.round(result.overall[k])}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{k}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Word breakdown */}
+          <div className="space-y-1.5">
+            {result.words.map(w => (
+              <div
+                key={w.word}
+                className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2"
+              >
+                <span className={cn('w-10 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
+                  {w.word}
+                </span>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/60">
+                  <div
+                    className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
+                    style={{ width: `${w.accuracy}%` }}
+                  />
+                </div>
+                <span className={cn('w-7 shrink-0 text-right text-xs font-bold tabular-nums', scoreColor(w.accuracy))}>
+                  {Math.round(w.accuracy)}
+                </span>
+                {w.error_type && (
+                  <span className={cn(
+                    'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
+                    w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+                    w.error_type === 'Omission' && 'border-destructive/30 bg-destructive/10 text-destructive',
+                    w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+                  )}>
+                    {w.error_type === 'Mispronunciation' ? 'Mispron.' : w.error_type}
+                  </span>
+                )}
               </div>
             ))}
           </div>
-          {result.words.map((w, i) => (
-            <div key={i} className="flex items-center gap-2.5 bg-secondary/40 rounded-lg px-3 py-2 mb-1.5">
-              <span className={cn('text-base font-bold min-w-[40px]', scoreColor(w.accuracy))}>{w.word}</span>
-              <div className="flex-1 h-0.5 bg-border rounded-full">
-                <div
-                  className={cn('h-full rounded-full', w.accuracy >= 80 ? 'bg-green-400' : w.accuracy >= 60 ? 'bg-yellow-400' : 'bg-red-400')}
-                  style={{ width: `${w.accuracy}%` }}
-                />
-              </div>
-              <span className={cn('text-xs font-semibold min-w-[28px] text-right', scoreColor(w.accuracy))}>{Math.round(w.accuracy)}</span>
-              {w.error_detail && <span className="text-[10px] text-muted-foreground">{w.error_detail}</span>}
-            </div>
-          ))}
-          <div className="flex gap-2 mt-4">
-            <button
-              className="flex-1 py-2.5 rounded-[var(--radius)] text-sm font-semibold bg-red-500/8 border border-red-500/20 text-red-400 hover:bg-red-500/15 transition-colors"
+
+          {/* Result actions (replaces footer) */}
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1"
               onClick={() => { setResult(null); setBlob(null); setState('idle') }}
             >
               ⏺ Try again
-            </button>
-            <Button className="flex-1" onClick={() => onNext(result.overall.accuracy >= 70)}>
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={() => onNext(result.overall.accuracy >= 70)}
+            >
               Next →
             </Button>
           </div>
         </div>
       )}
-    </div>
+    </ExerciseCard>
   )
 }
