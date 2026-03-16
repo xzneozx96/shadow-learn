@@ -887,12 +887,13 @@ import HanziWriter from 'hanzi-writer'
 
 interface Props {
   character: string
+  writerRef?: React.RefObject<HanziWriter | null>
   onComplete: (usedHint: boolean) => void
 }
 
-export function HanziWriterCanvas({ character, onComplete }: Props) {
+export function HanziWriterCanvas({ character, writerRef, onComplete }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const writerRef = useRef<HanziWriter | null>(null)
+  const internalWriterRef = useRef<HanziWriter | null>(null)
   const hintUsedRef = useRef(false)
 
   useEffect(() => {
@@ -910,7 +911,8 @@ export function HanziWriterCanvas({ character, onComplete }: Props) {
       drawingWidth: 4,
     })
 
-    writerRef.current = writer
+    internalWriterRef.current = writer
+    if (writerRef) writerRef.current = writer
     hintUsedRef.current = false
 
     writer.quiz({
@@ -931,12 +933,10 @@ export function HanziWriterCanvas({ character, onComplete }: Props) {
     return () => {
       writer.cancelAnimation()
       if (container) container.innerHTML = ''
-      writerRef.current = null
+      internalWriterRef.current = null
+      if (writerRef) writerRef.current = null
     }
   }, [character]) // re-mount when character changes
-
-  // Exposed for parent: animate full character (hint button)
-  ;(HanziWriterCanvas as any).__animateRef = writerRef
 
   return (
     <div className="relative">
@@ -1093,30 +1093,35 @@ interface Props {
 export function CharacterWritingExercise({ entry, progress = '', onNext }: Props) {
   const characters = [...entry.word]
   const [charIndex, setCharIndex] = useState(0)
-  const [anyHintUsed, setAnyHintUsed] = useState(false)
   const [hintAnimating, setHintAnimating] = useState(false)
+  // Use a ref (not state) for anyHintUsed to avoid stale closures in advance().
+  // State version is kept only for re-rendering (not for value reads in callbacks).
+  const anyHintUsedRef = useRef(false)
   const writerRef = useRef<HanziWriter | null>(null)
 
   const currentChar = characters[charIndex]
   const charProgress = `${charIndex + 1} / ${characters.length}`
 
   function handleComplete(usedHint: boolean) {
-    if (usedHint) setAnyHintUsed(true)
+    if (usedHint) anyHintUsedRef.current = true
     setHintAnimating(false)
     advance()
   }
 
   function advance() {
-    const next = charIndex + 1
-    if (next >= characters.length) {
-      onNext(!anyHintUsed)
-    } else {
-      setCharIndex(next)
-    }
+    setCharIndex((idx) => {
+      const next = idx + 1
+      if (next >= characters.length) {
+        // Use setTimeout to call onNext outside the setState cycle
+        setTimeout(() => onNext(!anyHintUsedRef.current), 0)
+        return idx // won't matter — component unmounts or re-renders
+      }
+      return next
+    })
   }
 
   function handleHint() {
-    setAnyHintUsed(true)
+    anyHintUsedRef.current = true
     setHintAnimating(true)
     animateCharacter(writerRef, () => setHintAnimating(false))
   }
@@ -1150,6 +1155,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
         <HanziWriterCanvas
           key={`${entry.id}-${charIndex}`}
           character={currentChar}
+          writerRef={writerRef}
           onComplete={handleComplete}
         />
       </div>
@@ -1157,8 +1163,6 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
   )
 }
 ```
-
-**Note on `writerRef`:** The `HanziWriterCanvas` component needs to expose its internal `writerRef` to the parent. The cleanest way is `forwardRef` + `useImperativeHandle`, or just pass a ref prop. Adjust `HanziWriterCanvas` to accept a `writerRef?: React.RefObject<HanziWriter | null>` prop and assign `writerRef.current = writer` inside the `useEffect`. Update the `animateCharacter` helper accordingly.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -1244,9 +1248,10 @@ const hasWriting = entries.some(e => isWritingSupported(e.word))
 const types = distributeExercises(entries, mode, count, hasAzure, hasWriting)
 ```
 
-Add render branch in the JSX (after the `reconstruction` branch):
+Add render branch in the JSX (after the `reconstruction` branch). Guard against entries whose characters are not supported — skip forward automatically if one appears:
+
 ```tsx
-{q.type === 'writing' && (
+{q.type === 'writing' && isWritingSupported(q.entry.word) && (
   <CharacterWritingExercise
     key={current}
     entry={q.entry}
@@ -1254,6 +1259,22 @@ Add render branch in the JSX (after the `reconstruction` branch):
     onNext={handleNext}
   />
 )}
+{q.type === 'writing' && !isWritingSupported(q.entry.word) && (
+  // Unsupported entry slipped through — skip it automatically.
+  // This can happen in mixed mode if the pool had some supported and some unsupported entries.
+  <>{handleNext(false)}</>
+)}
+```
+
+**Note:** The auto-skip `<>{handleNext(false)}</>` pattern calls `handleNext` during render. This is an anti-pattern in React. A cleaner alternative is to add a `useEffect` in `StudySession` that auto-advances if the current question is a writing type with an unsupported word. Either approach works; the implementer can choose. The `useEffect` approach is preferred:
+
+```tsx
+// In StudySession, add:
+useEffect(() => {
+  if (q?.type === 'writing' && !isWritingSupported(q.entry.word)) {
+    handleNext(false)
+  }
+}, [current]) // eslint-disable-line react-hooks/exhaustive-deps
 ```
 
 - [ ] **Step 4: Run all tests**
