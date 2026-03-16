@@ -9,18 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext'
 import { decryptKeys, encryptKeys } from '@/crypto'
 import { getCryptoData, getSettings, saveCryptoData, saveSettings } from '@/db'
-
-const LANGUAGES = [
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Spanish' },
-  { value: 'fr', label: 'French' },
-  { value: 'de', label: 'German' },
-  { value: 'ja', label: 'Japanese' },
-  { value: 'ko', label: 'Korean' },
-  { value: 'pt', label: 'Portuguese' },
-  { value: 'ru', label: 'Russian' },
-  { value: 'vi', label: 'Vietnamese' },
-]
+import { LANGUAGES } from '@/lib/constants'
 
 export function Settings() {
   const { db, keys, lock, resetKeys, setup } = useAuth()
@@ -32,7 +21,7 @@ export function Settings() {
   const [pinSuccess, setPinSuccess] = useState(false)
   const [showKeys, setShowKeys] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [editOpenaiKey, setEditOpenaiKey] = useState(keys?.openaiApiKey ?? '')
+  const [editOpenrouterKey, setEditOpenrouterKey] = useState(keys?.openrouterApiKey ?? '')
   const [editMinimaxKey, setEditMinimaxKey] = useState(keys?.minimaxApiKey ?? '')
   const [editDeepgramKey, setEditDeepgramKey] = useState(keys?.deepgramApiKey ?? '')
   const [editAzureSpeechKey, setEditAzureSpeechKey] = useState(keys?.azureSpeechKey ?? '')
@@ -52,7 +41,7 @@ export function Settings() {
   }, [db])
 
   useEffect(() => {
-    setEditOpenaiKey(keys?.openaiApiKey ?? '')
+    setEditOpenrouterKey(keys?.openrouterApiKey ?? '')
     setEditMinimaxKey(keys?.minimaxApiKey ?? '')
     setEditDeepgramKey(keys?.deepgramApiKey ?? '')
     setEditAzureSpeechKey(keys?.azureSpeechKey ?? '')
@@ -65,8 +54,8 @@ export function Settings() {
       setKeysError('Enter your PIN to save key changes')
       return
     }
-    if (!editOpenaiKey.trim()) {
-      setKeysError('OpenAI API key cannot be empty')
+    if (!editOpenrouterKey.trim()) {
+      setKeysError('OpenRouter API key cannot be empty')
       return
     }
     if (!db)
@@ -79,7 +68,7 @@ export function Settings() {
       await decryptKeys(cryptoData, keysPin) // throws if PIN is wrong
 
       const newKeys = {
-        openaiApiKey: editOpenaiKey.trim(),
+        openrouterApiKey: editOpenrouterKey.trim(),
         minimaxApiKey: editMinimaxKey.trim() || undefined,
         deepgramApiKey: editDeepgramKey.trim() || undefined,
         azureSpeechKey: editAzureSpeechKey.trim() || undefined,
@@ -131,7 +120,6 @@ export function Settings() {
       return
     await saveSettings(db, {
       translationLanguage: language,
-      defaultModel: 'gpt-4o-mini',
     })
     setSaved(true)
     toast.success('Settings saved')
@@ -155,16 +143,16 @@ export function Settings() {
               </Button>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-white/40">OpenAI API Key</label>
+              <label className="text-sm text-white/40">OpenRouter API Key</label>
               <Input
                 type={showKeys ? 'text' : 'password'}
-                value={editOpenaiKey}
-                onChange={e => setEditOpenaiKey(e.target.value)}
-                className="font-mono text-xs"
+                value={editOpenrouterKey}
+                onChange={e => setEditOpenrouterKey(e.target.value)}
+                className="font-mono text-sm"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-white/40">
+              <label className="text-sm text-white/40">
                 Minimax API Key
                 {' '}
                 <span className="text-white/20">(for listening practice)</span>
@@ -173,12 +161,12 @@ export function Settings() {
                 type={showKeys ? 'text' : 'password'}
                 value={editMinimaxKey}
                 onChange={e => setEditMinimaxKey(e.target.value)}
-                className="font-mono text-xs"
+                className="font-mono text-sm"
                 placeholder="Leave blank to disable TTS"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-white/40">
+              <label className="text-sm text-white/40">
                 Deepgram API Key
                 {' '}
                 <span className="text-white/20">(for video subtitles)</span>
@@ -187,12 +175,12 @@ export function Settings() {
                 type={showKeys ? 'text' : 'password'}
                 value={editDeepgramKey}
                 onChange={e => setEditDeepgramKey(e.target.value)}
-                className="font-mono text-xs"
+                className="font-mono text-sm"
                 placeholder="dg-..."
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-white/40">
+              <label className="text-sm text-white/40">
                 Azure Speech Key
                 {' '}
                 <span className="text-white/20">(for pronunciation assessment)</span>
@@ -201,12 +189,12 @@ export function Settings() {
                 type={showKeys ? 'text' : 'password'}
                 value={editAzureSpeechKey}
                 onChange={e => setEditAzureSpeechKey(e.target.value)}
-                className="font-mono text-xs"
+                className="font-mono text-sm"
                 placeholder="Leave blank to disable"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-white/40">
+              <label className="text-sm text-white/40">
                 Azure Speech Region
                 {' '}
                 <span className="text-white/20">(e.g. eastus)</span>
@@ -215,12 +203,12 @@ export function Settings() {
                 type={showKeys ? 'text' : 'password'}
                 value={editAzureSpeechRegion}
                 onChange={e => setEditAzureSpeechRegion(e.target.value)}
-                className="font-mono text-xs"
+                className="font-mono text-sm"
                 placeholder="e.g. eastus"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-white/40">Confirm with PIN</label>
+              <label className="text-sm text-white/40">Confirm with PIN</label>
               <Input
                 type="password"
                 value={keysPin}
@@ -230,7 +218,7 @@ export function Settings() {
             </div>
             {keysError && <p className="text-sm text-destructive">{keysError}</p>}
             {keysSaved && <p className="text-sm text-emerald-400">Keys saved</p>}
-            <Button size="sm" onClick={handleSaveKeys}>Save Keys</Button>
+            <Button onClick={handleSaveKeys}>Save Keys</Button>
           </CardContent>
         </Card>
 
@@ -240,7 +228,7 @@ export function Settings() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
-              <label className="text-xs text-white/40">New PIN</label>
+              <label className="text-sm text-white/40">New PIN</label>
               <Input
                 type="password"
                 value={newPin}
@@ -249,7 +237,7 @@ export function Settings() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-white/40">Confirm PIN</label>
+              <label className="text-sm text-white/40">Confirm PIN</label>
               <Input
                 type="password"
                 value={confirmPin}
@@ -274,7 +262,7 @@ export function Settings() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <label className="text-xs text-white/40">Translation Language</label>
+              <label className="text-sm text-white/40">Translation Language</label>
               <Select value={language} onValueChange={v => v !== null && setLanguage(v)} items={LANGUAGES}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
