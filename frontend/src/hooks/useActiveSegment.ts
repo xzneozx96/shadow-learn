@@ -38,14 +38,21 @@ function findActiveSegment(segments: Segment[], time: number): Segment | null {
 }
 
 export function useActiveSegment(segments: Segment[]): Segment | null {
-  const { subscribeTime } = usePlayer()
-  const [activeSegment, setActiveSegment] = useState<Segment | null>(null)
-  const segmentsRef = useRef(segments)
-  const activeSegmentRef = useRef<Segment | null>(null)
+  const { subscribeTime, getTime } = usePlayer()
 
-  useEffect(() => {
-    segmentsRef.current = segments
-  }, [segments])
+  // Keep segmentsRef current synchronously during render (not in a useEffect) so that
+  // the subscription callback never reads a stale list if segments and a time tick land
+  // in the same render batch.
+  const segmentsRef = useRef(segments)
+  segmentsRef.current = segments
+
+  // Seed initial state from getTime() so the active segment is correct immediately,
+  // even when the player is already mid-video (e.g., after a seek before any tick fires).
+  // Lazy initializer — runs only on mount, not on every re-render.
+  const [activeSegment, setActiveSegment] = useState<Segment | null>(
+    () => findActiveSegment(segments, getTime()),
+  )
+  const activeSegmentRef = useRef<Segment | null>(activeSegment)
 
   useEffect(() => {
     return subscribeTime((time) => {
