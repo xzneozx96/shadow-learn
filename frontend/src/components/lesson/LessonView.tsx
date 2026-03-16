@@ -1,16 +1,18 @@
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
+import { ShadowingPanel } from '@/components/shadowing/ShadowingPanel'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { usePlayer } from '@/contexts/PlayerContext'
-import { getSettings, getVideo, saveLessonMeta } from '@/db'
+import { getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
 import { useChat } from '@/hooks/useChat'
 import { useLesson } from '@/hooks/useLesson'
-import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
-import { ShadowingPanel } from '@/components/shadowing/ShadowingPanel'
+import type { Segment } from '@/types'
 import { CompanionPanel } from './CompanionPanel'
 import { TranscriptPanel } from './TranscriptPanel'
 import { VideoPanel } from './VideoPanel'
@@ -24,21 +26,13 @@ export function LessonView() {
   const activeSegment = useActiveSegment(segments)
 
   const [videoBlob, setVideoBlob] = useState<Blob | undefined>()
-  const [model, setModel] = useState('gpt-4o-mini')
-  type ShadowingActiveMode = null | { mode: 'dictation' | 'speaking' }
+  type ShadowingActiveMode = null | { mode: 'dictation' | 'speaking', segments: Segment[] }
   const [shadowingMode, setShadowingMode] = useState<ShadowingActiveMode>(null)
-  const [pickerOpen, setPickerOpen] = useState(false)
-
-  // Load settings for default model
-  useEffect(() => {
-    if (!db)
-      return
-    getSettings(db).then((settings) => {
-      if (settings?.defaultModel) {
-        setModel(settings.defaultModel)
-      }
-    })
-  }, [db])
+  const [pickerSegment, setPickerSegment] = useState<Segment | null>(null)
+  const pickerStartIdx = pickerSegment
+    ? segments.findIndex(s => s.id === pickerSegment.id)
+    : -1
+  const totalRemaining = pickerStartIdx >= 0 ? segments.length - pickerStartIdx : 0
 
   // Load media blob (video for uploads, audio for YouTube lessons)
   useEffect(() => {
@@ -68,7 +62,6 @@ export function LessonView() {
     activeSegment,
     contextSegments,
     keys,
-    model,
   )
 
   const handleSegmentClick = useCallback((segment: { start: number }) => {
@@ -91,13 +84,22 @@ export function LessonView() {
     updateMeta({ title: newTitle })
   }, [meta, updateLesson, updateMeta])
 
-  const handleShadowingClick = useCallback(() => {
-    setPickerOpen(true)
-  }, [])
+  const handleShadowingStart = useCallback(
+    (mode: 'dictation' | 'speaking', count: number | 'all') => {
+      const startIdx = segments.findIndex(s => s.id === pickerSegment!.id)
+      if (startIdx === -1)
+        return
+      const slice = count === 'all'
+        ? segments.slice(startIdx)
+        : segments.slice(startIdx, startIdx + count)
+      setShadowingMode({ mode, segments: slice })
+      setPickerSegment(null)
+    },
+    [segments, pickerSegment],
+  )
 
-  const handleShadowingStart = useCallback((mode: 'dictation' | 'speaking') => {
-    setShadowingMode({ mode })
-    setPickerOpen(false)
+  const handleShadowClick = useCallback((segment: Segment) => {
+    setPickerSegment(segment)
   }, [])
 
   const handleShadowingExit = useCallback(() => {
@@ -164,7 +166,7 @@ export function LessonView() {
         {shadowingMode
           ? (
               <ShadowingPanel
-                segments={segments}
+                segments={shadowingMode.segments}
                 mode={shadowingMode.mode}
                 azureKey={keys?.azureSpeechKey ?? ''}
                 azureRegion={keys?.azureSpeechRegion ?? ''}
@@ -178,7 +180,7 @@ export function LessonView() {
                 lesson={meta}
                 onSegmentClick={handleSegmentClick}
                 onProgressUpdate={handleProgressUpdate}
-                onShadowingClick={handleShadowingClick}
+                onShadowClick={handleShadowClick}
               />
             )}
       </div>
@@ -190,18 +192,27 @@ export function LessonView() {
           isStreaming={isStreaming}
           onSend={sendMessage}
           activeSegment={activeSegment}
-          model={model}
-          onModelChange={setModel}
           lessonId={id ?? ''}
         />
       </div>
 
-      <ShadowingModePicker
-        open={pickerOpen}
-        speakingAvailable={speakingAvailable}
-        onStart={handleShadowingStart}
-        onCancel={() => setPickerOpen(false)}
-      />
+      <Dialog
+        open={pickerSegment !== null && pickerStartIdx >= 0}
+        onOpenChange={(open) => { if (!open) setPickerSegment(null) }}
+      >
+        <DialogContent className="max-w-sm">
+          {pickerSegment !== null && pickerStartIdx >= 0 && (
+            <ShadowingModePicker
+              startSegment={pickerSegment}
+              startSegmentNumber={pickerStartIdx + 1}
+              totalRemaining={totalRemaining}
+              speakingAvailable={speakingAvailable}
+              onStart={handleShadowingStart}
+              onClose={() => setPickerSegment(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
