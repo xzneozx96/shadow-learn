@@ -1,8 +1,11 @@
 import type { ShadowLearnDB } from '@/db'
 import type { DecryptedKeys } from '@/types'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { getTTSCache, saveTTSCache } from '@/db'
+
+// Sentinel: undefined = not yet fetched, string = resolved provider name
+type ProviderState = string | null
 
 interface UseTTSReturn {
   playTTS: (text: string) => Promise<void>
@@ -14,16 +17,68 @@ export function useTTS(
   keys: DecryptedKeys | null,
 ): UseTTSReturn {
   const [loadingText, setLoadingText] = useState<string | null>(null)
+  // provider state is used to trigger re-render so playTTS is recreated
+  const [provider, setProvider] = useState<ProviderState>(null)
+  // providerRef always holds the latest value — avoids stale closure in playTTS
+  const providerRef = useRef<ProviderState>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const urlRef = useRef<string | null>(null)
+  const dbRef = useRef(db)
+  const keysRef = useRef(keys)
+
+  // Keep refs in sync with props
+  useEffect(() => { dbRef.current = db }, [db])
+  useEffect(() => { keysRef.current = keys }, [keys])
+
+  // Fetch the active provider once on mount
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/tts/provider')
+      .then((res) => {
+        if (!res.ok)
+          throw new Error('provider fetch failed')
+        return res.json()
+      })
+      .then((data: { provider: string }) => {
+        if (!cancelled) {
+          providerRef.current = data.provider
+          setProvider(data.provider)
+        }
+      })
+      .catch(() => {
+        // Silently default to azure on failure
+        console.warn('[useTTS] Failed to fetch TTS provider, defaulting to azure')
+        if (!cancelled) {
+          providerRef.current = 'azure'
+          setProvider('azure')
+        }
+      })
+    return () => { cancelled = true }
+  }, [])
 
   const playTTS = useCallback(async (text: string) => {
     if (!text)
       return
 
-    if (!keys?.minimaxApiKey) {
-      toast.error('Add your Minimax API key in Settings to use pronunciation')
+    // No-op while provider is still loading — use ref for current value
+    const currentProvider = providerRef.current
+    if (currentProvider === null)
       return
+
+    const currentKeys = keysRef.current
+
+    // Key validation per provider
+    if (currentProvider === 'azure') {
+      if (!currentKeys?.azureSpeechKey || !currentKeys?.azureSpeechRegion) {
+        toast.error('Add your Azure Speech key in Settings to use pronunciation')
+        return
+      }
+    }
+    else if (currentProvider === 'minimax') {
+      if (!currentKeys?.minimaxApiKey) {
+        toast.error('Add your MiniMax API key in Settings to use pronunciation')
+        return
+      }
     }
 
     // Stop any currently playing audio
@@ -38,18 +93,30 @@ export function useTTS(
 
     setLoadingText(text)
 
+    const currentDb = dbRef.current
+
     try {
       let blob: Blob | undefined
 
-      if (db) {
-        blob = await getTTSCache(db, text)
+      if (currentDb) {
+        blob = await getTTSCache(currentDb, text)
       }
 
       if (!blob) {
+        // Build request body based on active provider
+        const body: Record<string, string> = { text }
+        if (currentProvider === 'azure') {
+          body.azure_speech_key = currentKeys!.azureSpeechKey!
+          body.azure_speech_region = currentKeys!.azureSpeechRegion!
+        }
+        else if (currentProvider === 'minimax') {
+          body.minimax_api_key = currentKeys!.minimaxApiKey!
+        }
+
         const response = await fetch('/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, minimax_api_key: keys.minimaxApiKey }),
+          body: JSON.stringify(body),
         })
 
         if (!response.ok) {
@@ -58,8 +125,8 @@ export function useTTS(
 
         blob = await response.blob()
 
-        if (db) {
-          await saveTTSCache(db, text, blob)
+        if (currentDb) {
+          await saveTTSCache(currentDb, text, blob)
         }
       }
 
@@ -72,10 +139,7 @@ export function useTTS(
         URL.revokeObjectURL(url)
         urlRef.current = null
       })
-      // Intentionally not awaited: play() returns a Promise but we want loadingText
-      // cleared as soon as playback starts (in finally), not when it finishes.
-      // The 'ended' listener handles cleanup.
-      audio.play().catch(() => {}) // suppress unhandled rejection if browser blocks autoplay
+      audio.play().catch(() => {})
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Pronunciation failed'
@@ -84,7 +148,7 @@ export function useTTS(
     finally {
       setLoadingText(null)
     }
-  }, [db, keys])
+  }, []) // stable callback — reads all state from refs
 
   return { playTTS, loadingText }
 }
