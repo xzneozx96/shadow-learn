@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,7 +9,8 @@ import { useAuth } from '@/contexts/AuthContext'
 export function Setup() {
   const { setup } = useAuth()
 
-  const [openaiApiKey, setOpenaiApiKey] = useState('')
+  const [provider, setProvider] = useState<string | null>(null)
+  const [openrouterApiKey, setOpenrouterApiKey] = useState('')
   const [minimaxApiKey, setMinimaxApiKey] = useState('')
   const [deepgramApiKey, setDeepgramApiKey] = useState('')
   const [azureSpeechKey, setAzureSpeechKey] = useState('')
@@ -19,17 +20,36 @@ export function Setup() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    fetch('/api/tts/provider')
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch provider')))
+      .then((data: { provider: string }) => setProvider(data.provider))
+      .catch(() => setProvider('azure'))
+  }, [])
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
 
-    if (!openaiApiKey.trim()) {
-      setError('OpenAI API key is required.')
+    if (!openrouterApiKey.trim()) {
+      setError('OpenRouter API key is required.')
       return
     }
     if (!deepgramApiKey.trim()) {
       setError('Deepgram API key is required.')
       return
+    }
+    if (provider === 'azure') {
+      if (!azureSpeechKey.trim() || !azureSpeechRegion.trim()) {
+        setError('Azure Speech key and region are required for pronunciation.')
+        return
+      }
+    }
+    if (provider === 'minimax') {
+      if (!minimaxApiKey.trim()) {
+        setError('MiniMax API key is required for pronunciation.')
+        return
+      }
     }
     if (pin.length < 4) {
       setError('PIN must be at least 4 characters.')
@@ -44,7 +64,7 @@ export function Setup() {
       setLoading(true)
       await setup(
         {
-          openaiApiKey: openaiApiKey.trim(),
+          openrouterApiKey: openrouterApiKey.trim(),
           minimaxApiKey: minimaxApiKey.trim() || undefined,
           deepgramApiKey: deepgramApiKey.trim() || undefined,
           azureSpeechKey: azureSpeechKey.trim() || undefined,
@@ -77,34 +97,17 @@ export function Setup() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="openai" className="text-sm font-medium text-white/65">
-                OpenAI API Key
+                OpenRouter API Key
               </label>
               <Input
                 id="openai"
                 type="password"
                 placeholder="sk-..."
-                value={openaiApiKey}
-                onChange={e => setOpenaiApiKey(e.target.value)}
+                value={openrouterApiKey}
+                onChange={e => setOpenrouterApiKey(e.target.value)}
               />
-              <p className="text-xs text-white/30">
+              <p className="text-sm text-white/30">
                 Used for translation and AI chat.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="minimax" className="text-sm font-medium text-white/65">
-                {'Minimax API Key '}
-                <span className="text-white/30">(optional)</span>
-              </label>
-              <Input
-                id="minimax"
-                type="password"
-                placeholder="eyJ..."
-                value={minimaxApiKey}
-                onChange={e => setMinimaxApiKey(e.target.value)}
-              />
-              <p className="text-xs text-white/30">
-                Used for word and sentence pronunciation (TTS). Can be added later in Settings.
               </p>
             </div>
 
@@ -119,43 +122,63 @@ export function Setup() {
                 value={deepgramApiKey}
                 onChange={e => setDeepgramApiKey(e.target.value)}
               />
-              <p className="text-xs text-white/30">
+              <p className="text-sm text-white/30">
                 Used for transcription. Required to create lessons.
               </p>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="azure-speech-key" className="text-sm font-medium text-white/65">
-                Azure Speech Key
-                {' '}
-                <span className="text-white/30">(optional)</span>
-              </label>
-              <Input
-                id="azure-speech-key"
-                type="password"
-                placeholder="Paste your Azure Speech key…"
-                value={azureSpeechKey}
-                onChange={e => setAzureSpeechKey(e.target.value)}
-              />
-              <p className="text-xs text-white/30">
-                Used for pronunciation assessment. Can be added later in Settings.
-              </p>
-            </div>
+            {/* Azure TTS fields — shown when provider is 'azure' (or still loading, as safe default) */}
+            {(provider === null || provider === 'azure') && (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="azure-speech-key" className="text-sm font-medium text-white/65">
+                    Azure Speech Key
+                  </label>
+                  <Input
+                    id="azure-speech-key"
+                    type="password"
+                    placeholder="Paste your Azure Speech key…"
+                    value={azureSpeechKey}
+                    onChange={e => setAzureSpeechKey(e.target.value)}
+                  />
+                  <p className="text-sm text-white/30">
+                    Used for word and sentence pronunciation (TTS) and pronunciation assessment.
+                    Free tier: 500K characters/month.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="azure-speech-region" className="text-sm font-medium text-white/65">
+                    Azure Speech Region
+                  </label>
+                  <Input
+                    id="azure-speech-region"
+                    type="text"
+                    placeholder="e.g. eastus"
+                    value={azureSpeechRegion}
+                    onChange={e => setAzureSpeechRegion(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="azure-speech-region" className="text-sm font-medium text-white/65">
-                Azure Speech Region
-                {' '}
-                <span className="text-white/30">(optional)</span>
-              </label>
-              <Input
-                id="azure-speech-region"
-                type="text"
-                placeholder="e.g. eastus"
-                value={azureSpeechRegion}
-                onChange={e => setAzureSpeechRegion(e.target.value)}
-              />
-            </div>
+            {/* MiniMax TTS field — shown only when provider is 'minimax' */}
+            {provider === 'minimax' && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="minimax" className="text-sm font-medium text-white/65">
+                  Minimax API Key
+                </label>
+                <Input
+                  id="minimax"
+                  type="password"
+                  placeholder="eyJ..."
+                  value={minimaxApiKey}
+                  onChange={e => setMinimaxApiKey(e.target.value)}
+                />
+                <p className="text-sm text-white/30">
+                  Used for word and sentence pronunciation (TTS).
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="pin" className="text-sm font-medium text-white/65">
@@ -187,7 +210,7 @@ export function Setup() {
               <p className="text-sm text-red-400">{error}</p>
             )}
 
-            <Button type="submit" disabled={loading} className="mt-1">
+            <Button type="submit" disabled={loading || provider === null} className="mt-1">
               {loading ? 'Setting up...' : 'Get Started'}
             </Button>
           </form>
