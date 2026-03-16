@@ -298,6 +298,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
                 key={current}
                 entry={q.entry}
                 words={q.reconstructionTokens ?? [q.entry.word]}
+                progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
               />
             )}

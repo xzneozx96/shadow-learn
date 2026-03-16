@@ -1,35 +1,22 @@
-import { useState, useMemo } from 'react'
+import type { VocabEntry } from '@/types'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { VocabEntry } from '@/types'
+import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
+import { charDiff, getActiveChips, shuffleArray } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
-import { Link } from 'react-router-dom'
 
-/** Returns true if chip should remain visible (not yet typed) */
-export function getActiveChips(chips: string[], typed: string): boolean[] {
-  return chips.map(chip => !typed.includes(chip))
-}
-
-function shuffleArray<T>(arr: T[]): T[] {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
-
-function charDiff(typed: string, expected: string): { char: string; ok: boolean }[] {
-  return expected.split('').map((ch, i) => ({ char: ch, ok: typed[i] === ch }))
-}
+export { getActiveChips }
 
 interface Props {
   entry: VocabEntry
   words: string[]
+  progress?: string
   onNext: (correct: boolean) => void
 }
 
-export function ReconstructionExercise({ entry, words, onNext }: Props) {
+export function ReconstructionExercise({ entry, words, progress = '', onNext }: Props) {
   const chips = useMemo(() => shuffleArray(words), [words])
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
@@ -37,29 +24,35 @@ export function ReconstructionExercise({ entry, words, onNext }: Props) {
   const correct = value.trim() === entry.sourceSegmentChinese.trim()
   const diff = checked ? charDiff(value, entry.sourceSegmentChinese) : null
 
-  return (
-    <div className="rounded-[calc(var(--radius)*1.6)] border border-border bg-card backdrop-blur-xl p-6">
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase border border-border rounded-full px-2.5 py-1 mb-4">
-        🔀 Sentence Reconstruction
-      </span>
+  const footer = (
+    <div className="flex items-center justify-between px-[18px] py-3">
+      <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
+      {!checked
+        ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
+        : <Button size="sm" onClick={() => onNext(correct)}>Next →</Button>}
+    </div>
+  )
 
+  return (
+    <ExerciseCard type="Sentence Reconstruction" progress={progress} footer={footer}>
+      {/* Source context link */}
       <Link
         to={`/lesson/${entry.sourceLessonId}?segmentId=${entry.sourceSegmentId}`}
-        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground border border-border/50 rounded-full px-2.5 py-1 mb-4 hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground border border-border/50 rounded-full px-2.5 py-1 mb-3 hover:text-foreground transition-colors"
       >
         📍 {entry.sourceLessonTitle} — where you saved {entry.word}
       </Link>
 
-      <p className="text-xs text-muted-foreground mb-4">Type the words in correct order.</p>
+      <p className="text-xs text-muted-foreground mb-3">Type the words in correct order.</p>
 
-      {/* Chip hints */}
+      {/* Word chips */}
       <div className="flex flex-wrap gap-2 mb-4">
         {chips.map((chip, i) => (
           <span
             key={i}
             className={cn(
-              'px-3 py-1.5 rounded-[var(--radius)] text-base font-semibold border border-border bg-secondary/60 transition-opacity',
-              !active[i] && 'opacity-25 pointer-events-none',
+              'px-3 py-1.5 rounded-md text-sm font-semibold border border-border bg-secondary transition-opacity',
+              !active[i] && 'opacity-25',
             )}
           >
             {chip}
@@ -67,8 +60,9 @@ export function ReconstructionExercise({ entry, words, onNext }: Props) {
         ))}
       </div>
 
+      {/* Input */}
       <Input
-        className="text-base tracking-wide mb-0"
+        className="text-base tracking-wide"
         placeholder="Type the sentence…"
         value={value}
         onChange={e => setValue(e.target.value)}
@@ -76,23 +70,14 @@ export function ReconstructionExercise({ entry, words, onNext }: Props) {
         disabled={checked}
       />
 
+      {/* Char diff (post-check) */}
       {diff && (
-        <div className="mt-3 px-3 py-2 rounded-[var(--radius)] bg-secondary/40 text-lg font-bold tracking-wider">
+        <div className="mt-3 px-3 py-2 rounded-lg bg-muted/30 text-lg font-bold tracking-wider">
           {diff.map((d, i) => (
-            <span key={i} className={d.ok ? 'text-green-400' : 'text-red-400'}>{d.char}</span>
+            <span key={i} className={d.ok ? 'text-emerald-400' : 'text-destructive'}>{d.char}</span>
           ))}
         </div>
       )}
-
-      <div className="flex items-center justify-between mt-4">
-        <button className="text-xs text-muted-foreground hover:text-foreground px-2 py-1" onClick={() => onNext(false)}>
-          Skip
-        </button>
-        {!checked
-          ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
-          : <Button size="sm" onClick={() => onNext(correct)}>Next →</Button>
-        }
-      </div>
-    </div>
+    </ExerciseCard>
   )
 }
