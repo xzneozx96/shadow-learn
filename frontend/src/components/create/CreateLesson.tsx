@@ -11,20 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { getSettings, saveVideo } from '@/db'
+import { LANGUAGES } from '@/lib/constants'
 import { UploadTab } from './UploadTab'
 import { YouTubeTab } from './YouTubeTab'
-
-const LANGUAGES = [
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Spanish' },
-  { value: 'fr', label: 'French' },
-  { value: 'de', label: 'German' },
-  { value: 'ja', label: 'Japanese' },
-  { value: 'ko', label: 'Korean' },
-  { value: 'pt', label: 'Portuguese' },
-  { value: 'ru', label: 'Russian' },
-  { value: 'vi', label: 'Vietnamese' },
-]
 
 export function CreateLesson() {
   const { db, keys } = useAuth()
@@ -35,6 +24,7 @@ export function CreateLesson() {
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [language, setLanguage] = useState('en')
+  const [sourceLanguage, setSourceLanguage] = useState('zh-CN')
   const [submitting, setSubmitting] = useState(false)
   const [queued, setQueued] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,9 +65,9 @@ export function CreateLesson() {
             source: 'youtube',
             youtube_url: youtubeUrl,
             translation_languages: [language],
-            openai_api_key: keys.openaiApiKey,
+            source_language: sourceLanguage,
+            openrouter_api_key: keys.openrouterApiKey,
             deepgram_api_key: keys.deepgramApiKey ?? null,
-            model: 'gpt-4o-mini',
           }),
         })
         if (!res.ok) {
@@ -99,8 +89,8 @@ export function CreateLesson() {
         const formData = new FormData()
         formData.append('file', file!)
         formData.append('translation_languages', language)
-        formData.append('openai_api_key', keys.openaiApiKey)
-        formData.append('model', 'gpt-4o-mini')
+        formData.append('source_language', sourceLanguage)
+        formData.append('openrouter_api_key', keys.openrouterApiKey)
         if (keys.deepgramApiKey)
           formData.append('deepgram_api_key', keys.deepgramApiKey)
 
@@ -131,6 +121,7 @@ export function CreateLesson() {
         source: lessonSource,
         sourceUrl: lessonSourceUrl,
         translationLanguages: [language],
+        sourceLanguage,
         createdAt: now,
         lastOpenedAt: now,
         progressSegmentId: null,
@@ -150,7 +141,7 @@ export function CreateLesson() {
     finally {
       setSubmitting(false)
     }
-  }, [db, keys, tab, youtubeUrl, file, language, updateLesson])
+  }, [db, keys, tab, youtubeUrl, file, language, sourceLanguage, updateLesson])
 
   const canGenerate = (tab === 'youtube' ? !!youtubeUrl.trim() : !!file) && !!keys?.deepgramApiKey
 
@@ -194,6 +185,20 @@ export function CreateLesson() {
                 <UploadTab file={file} onFileChange={setFile} />
               </TabsContent>
             </Tabs>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white/65">Video Language</label>
+              <Select value={sourceLanguage} onValueChange={v => v !== null && setSourceLanguage(v)} items={LANGUAGES}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map(l => (
+                    <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-white/65">Translation Language</label>
