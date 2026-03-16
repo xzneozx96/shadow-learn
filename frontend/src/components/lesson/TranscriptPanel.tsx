@@ -1,26 +1,15 @@
-import type { LessonMeta, Segment } from '@/types'
+import type { LessonMeta, Segment, Word } from '@/types'
 import { Check, Copy, Loader2, Search, Volume2 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/contexts/AuthContext'
-import { usePlayer } from '@/contexts/PlayerContext'
 import { useTTS } from '@/hooks/useTTS'
 import { useVocabulary } from '@/hooks/useVocabulary'
 import { cn } from '@/lib/utils'
 import { SegmentText } from './SegmentText'
-
-function segmentTime(segment: Segment, currentTime: number): number | undefined {
-  if (!segment.wordTimings?.length)
-    return undefined
-  if ((segment.end ?? 0) <= currentTime)
-    return Infinity // fully spoken → all bright
-  if ((segment.start ?? 0) > currentTime)
-    return -Infinity // not yet reached → all dim
-  return currentTime // active → in progress
-}
 
 interface TranscriptPanelProps {
   segments: Segment[]
@@ -28,6 +17,7 @@ interface TranscriptPanelProps {
   lesson: LessonMeta
   onSegmentClick: (segment: Segment) => void
   onProgressUpdate: (segmentId: string) => void
+  onShadowingClick?: () => void
 }
 
 export function TranscriptPanel({
@@ -36,10 +26,10 @@ export function TranscriptPanel({
   lesson,
   onSegmentClick,
   onProgressUpdate,
+  onShadowingClick,
 }: TranscriptPanelProps) {
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys)
-  const { currentTime } = usePlayer()
   const { save, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
   const [activeLang, setActiveLang] = useState(
@@ -79,6 +69,42 @@ export function TranscriptPanel({
     })
   }, [segments, search])
 
+  // Stable callbacks so memo(SegmentText) is not invalidated on every render
+  const handleSaveWord = useCallback(
+    async (word: Word, seg: Segment) => {
+      await save(word, seg, lesson, activeLang)
+      toast.success('Saved to Workbook')
+    },
+    [save, lesson, activeLang],
+  )
+
+  const handleIsSaved = useCallback(
+    (wordText: string) => isSaved(wordText, lesson.id),
+    [isSaved, lesson.id],
+  )
+
+  // Event delegation for keyboard activation — one handler instead of N closures.
+  // Guard: only fire if the focused element IS the segment div itself, not a child widget
+  // (buttons, inputs). Without this guard, pressing Enter on a Copy/TTS button would also
+  // trigger onSegmentClick in addition to the button's own click handler.
+  const handleListKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key !== 'Enter' && e.key !== ' ')
+        return
+      const segmentEl = (e.target as HTMLElement).closest('[data-segment-id]')
+      // Only act when the segment container itself is the focused element
+      if (!segmentEl || segmentEl !== e.target)
+        return
+      const segId = (segmentEl as HTMLElement).dataset.segmentId
+      if (!segId)
+        return
+      const seg = filteredSegments.find(s => s.id === segId)
+      if (seg)
+        onSegmentClick(seg)
+    },
+    [filteredSegments, onSegmentClick],
+  )
+
   const hasMultipleLangs = lesson.translationLanguages.length > 1
 
   function handleCopy(e: React.MouseEvent, segment: Segment) {
@@ -92,14 +118,26 @@ export function TranscriptPanel({
     <div className="flex h-full flex-col bg-background/20 backdrop-blur-md">
       {/* Search bar */}
       <div className="space-y-2 border-b border-border p-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search segments..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-8"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search segments..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          {onShadowingClick && (
+            <Button
+              size="sm"
+              onClick={onShadowingClick}
+              disabled={segments.length === 0}
+              title={segments.length > 0 ? 'Start shadowing mode' : 'No segments yet'}
+            >
+              🎯 Shadow
+            </Button>
+          )}
         </div>
 
         {/* Language toggle */}
@@ -119,9 +157,9 @@ export function TranscriptPanel({
         )}
       </div>
 
-      {/* Segment list */}
+      {/* Segment list — single onKeyDown via event delegation */}
       <ScrollArea className="h-0 flex-1">
-        <div className="divide-y divide-border/50">
+        <div className="divide-y divide-border/50" onKeyDown={handleListKeyDown}>
           {filteredSegments.map(segment => (
             <div
               key={segment.id}
@@ -130,12 +168,8 @@ export function TranscriptPanel({
               tabIndex={0}
               data-segment-id={segment.id}
               onClick={() => onSegmentClick(segment)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ')
-                  onSegmentClick(segment)
-              }}
               className={cn(
-                'cursor-pointer px-3 py-2.5 transition-colors hover:bg-accent/10',
+                'cursor-pointer px-3 py-2.5 transition-colors hover:bg-accent/60',
                 activeSegment?.id === segment.id
                 && 'border-l-2 border-l-primary bg-primary/10',
               )}
@@ -143,28 +177,21 @@ export function TranscriptPanel({
               <div className="flex items-start gap-2">
                 {/* Text content */}
                 <div className="min-w-0 flex-1">
-                  {/* Pinyin */}
                   <p className="mb-1 text-muted-foreground">{segment.pinyin}</p>
-
-                  {/* Chinese text with word tooltips */}
                   <p className="text-lg text-foreground">
+                    {/* key={segment.id} ensures fresh charSpanRefs when segment changes */}
                     <SegmentText
+                      key={segment.id}
                       text={segment.chinese}
                       words={segment.words}
                       wordTimings={segment.wordTimings}
-                      currentTime={segmentTime(segment, currentTime)}
                       playTTS={playTTS}
                       loadingText={loadingText}
                       segment={segment}
-                      onSaveWord={async (word, seg) => {
-                        await save(word, seg, lesson, activeLang)
-                        toast.success('Saved to Workbook')
-                      }}
-                      isSaved={wordText => isSaved(wordText, lesson.id)}
+                      onSaveWord={handleSaveWord}
+                      isSaved={handleIsSaved}
                     />
                   </p>
-
-                  {/* Translation */}
                   <p className="mt-1 text-muted-foreground">
                     {segment.translations[activeLang] ?? Object.values(segment.translations)[0]}
                   </p>
