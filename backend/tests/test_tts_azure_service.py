@@ -184,5 +184,5 @@ async def test_azure_synthesize_raises_on_network_error():
     with patch("app.services.tts_azure.httpx.AsyncClient", return_value=mock_client):
         from app.services.tts_azure import AzureTTSProvider
         provider = AzureTTSProvider()
-        with pytest.raises(Exception):  # ConnectError or wrapped RuntimeError
+        with pytest.raises(RuntimeError):
             await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})

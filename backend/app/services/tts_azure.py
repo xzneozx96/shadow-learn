@@ -61,6 +61,7 @@ class AzureTTSProvider:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(url, content=ssml.encode("utf-8"), headers=headers)
                 response.raise_for_status()
+                return response.content
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             if status == 401:
@@ -70,5 +71,7 @@ class AzureTTSProvider:
             if status == 429:
                 raise RuntimeError("Azure Speech rate limit exceeded") from exc
             raise RuntimeError(f"Azure TTS request error (HTTP {status})") from exc
-
-        return response.content
+        except httpx.ConnectError as exc:
+            raise RuntimeError("Azure TTS service unavailable") from exc
+        except httpx.TimeoutException as exc:
+            raise RuntimeError("Azure TTS request timed out") from exc
