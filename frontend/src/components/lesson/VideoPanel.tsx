@@ -62,9 +62,11 @@ interface VideoPanelProps {
   activeSegment: Segment | null
   videoBlob?: Blob
   onRename?: (newTitle: string) => void
+  onShadowingClick?: () => void
+  hasSegments?: boolean
 }
 
-export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
+export function VideoPanel({ lesson, videoBlob, onRename, onShadowingClick, hasSegments = false }: VideoPanelProps) {
   const { player, currentTime, playbackRate, volume, setPlayer, setPlaybackRate, setVolume } = usePlayer()
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -208,7 +210,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
   return (
     <div className="flex h-full flex-col bg-background/50 backdrop-blur-md">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+      <div className="h-14 flex items-center gap-2 border-b border-border px-3 py-2">
         <Button variant="ghost" size="icon-sm" render={<Link to="/" />}>
           <Home className="size-4" />
         </Button>
@@ -331,7 +333,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
                 size="xs"
                 onClick={() => setPlaybackRate(rate)}
                 className={cn(
-                  'min-w-8 text-xs',
+                  'min-w-8 text-sm',
                   playbackRate === rate && 'text-primary',
                 )}
               >
@@ -356,7 +358,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
                 className="h-1 w-20 cursor-pointer accent-primary"
               />
             </div>
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="font-mono text-sm text-muted-foreground">
               {formatTime(currentTime)}
               {' / '}
               {formatTime(duration)}
@@ -367,18 +369,30 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
 
       {/* Metadata bar */}
       <div className="flex items-center gap-3 border-t border-border px-3 py-1.5">
-        <Badge variant="secondary" className="shrink-0 text-[10px] uppercase tracking-wider">
+        <Badge variant="secondary" className="shrink-0 text-sm uppercase tracking-wider">
           {lesson.segmentCount}
           {' '}
           segments
         </Badge>
-        <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wider">
+        <Badge variant="outline" className="shrink-0 text-sm uppercase tracking-wider">
           {formatTime(lesson.duration ?? 0)}
         </Badge>
         {isAudioOnly && (
-          <Badge variant="outline" className="shrink-0 text-[10px] uppercase tracking-wider text-primary">
+          <Badge variant="outline" className="shrink-0 text-sm uppercase tracking-wider text-primary">
             Audio
           </Badge>
+        )}
+        {onShadowingClick && (
+          <Button
+            variant="ghost"
+            size="xs"
+            className="ml-auto shrink-0 text-xs"
+            onClick={onShadowingClick}
+            disabled={!hasSegments}
+            title={hasSegments ? 'Start shadowing mode' : 'No segments yet'}
+          >
+            🎯 Shadow
+          </Button>
         )}
       </div>
     </div>
