@@ -1,5 +1,5 @@
 import type { LessonMeta, Segment, Word } from '@/types'
-import { Check, Copy, Loader2, Search, Volume2 } from 'lucide-react'
+import { Check, Copy, Loader2, Search, Swords, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ interface TranscriptPanelProps {
   lesson: LessonMeta
   onSegmentClick: (segment: Segment) => void
   onProgressUpdate: (segmentId: string) => void
-  onShadowingClick?: () => void
+  onShadowClick?: (segment: Segment) => void
 }
 
 export function TranscriptPanel({
@@ -26,7 +26,7 @@ export function TranscriptPanel({
   lesson,
   onSegmentClick,
   onProgressUpdate,
-  onShadowingClick,
+  onShadowClick,
 }: TranscriptPanelProps) {
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys)
@@ -131,16 +131,6 @@ export function TranscriptPanel({
               className="pl-8"
             />
           </div>
-          {onShadowingClick && (
-            <Button
-              size="sm"
-              onClick={onShadowingClick}
-              disabled={segments.length === 0}
-              title={segments.length > 0 ? 'Start shadowing mode' : 'No segments yet'}
-            >
-              🎯 Shadow
-            </Button>
-          )}
         </div>
 
         {/* Language toggle */}
@@ -227,6 +217,20 @@ export function TranscriptPanel({
                       ? <Check className="size-4 text-green-500" />
                       : <Copy className="size-4" />}
                   </Button>
+                  {onShadowClick && (
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="size-5 text-muted-foreground hover:text-foreground"
+                      aria-label="Shadow from this segment"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onShadowClick(segment)
+                      }}
+                    >
+                      <Swords className="size-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
