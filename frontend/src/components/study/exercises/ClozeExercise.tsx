@@ -42,7 +42,6 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
 
   useEffect(() => { firstInputRef.current?.focus() }, [])
 
-  let blankIdx = 0
   const blankIndices: number[] = []
   parts.forEach((p, i) => { if (p.blank) blankIndices.push(i) })
 
@@ -68,12 +67,11 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
         {parts.map((part, i) => {
           if (!part.blank)
             return <span key={i}>{part.text}</span>
-          const idx = blankIdx++
           const correct = answers[i]?.trim() === part.blank
           return (
             <input
               key={i}
-              ref={idx === 0 ? firstInputRef : undefined}
+              ref={i === blankIndices[0] ? firstInputRef : undefined}
               className={cn(
                 'inline-block w-14 text-center text-sm border-0 border-b bg-transparent mx-1 px-1 outline-none transition-colors',
                 checked
