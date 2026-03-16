@@ -91,6 +91,9 @@ export function TranscriptPanel({
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.key !== 'Enter' && e.key !== ' ')
         return
+      // Prevent Space from scrolling the panel (default browser behaviour on role="button")
+      if (e.key === ' ')
+        e.preventDefault()
       const segmentEl = (e.target as HTMLElement).closest('[data-segment-id]')
       // Only act when the segment container itself is the focused element
       if (!segmentEl || segmentEl !== e.target)
