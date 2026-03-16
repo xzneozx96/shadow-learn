@@ -1,0 +1,79 @@
+import type { VocabEntry } from '@/types'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { CharacterWritingExercise } from '@/components/study/exercises/CharacterWritingExercise'
+
+// Mock HanziWriterCanvas — simulate the canvas without actual hanzi-writer
+vi.mock('@/components/study/exercises/HanziWriterCanvas', () => ({
+  HanziWriterCanvas: ({ onComplete }: { onComplete: (usedHint: boolean) => void }) => (
+    <div data-testid="canvas">
+      <button onClick={() => onComplete(false)}>complete-no-hint</button>
+      <button onClick={() => onComplete(true)}>complete-with-hint</button>
+    </div>
+  ),
+}))
+
+// Mock hanzi-writer-utils
+vi.mock('@/components/study/exercises/hanzi-writer-utils', () => ({
+  animateCharacter: vi.fn(),
+}))
+
+const entry: VocabEntry = {
+  id: '1',
+  word: '你好',
+  pinyin: 'nǐ hǎo',
+  meaning: 'hello',
+  usage: '',
+  sourceLessonId: 'l1',
+  sourceLessonTitle: 'Lesson',
+  sourceSegmentId: 's1',
+  sourceSegmentChinese: '你好',
+  sourceSegmentTranslation: 'hello',
+  createdAt: '',
+}
+
+describe('characterWritingExercise', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('shows first character and 1/2 progress for a two-char word', () => {
+    render(<CharacterWritingExercise entry={entry} onNext={vi.fn()} />)
+    expect(screen.getByText('1 / 2')).toBeTruthy()
+    expect(screen.getByTestId('canvas')).toBeTruthy()
+  })
+
+  it('advances to second character after first completes without hint', () => {
+    render(<CharacterWritingExercise entry={entry} onNext={vi.fn()} />)
+    fireEvent.click(screen.getByText('complete-no-hint'))
+    expect(screen.getByText('2 / 2')).toBeTruthy()
+  })
+
+  it('calls onNext(true) when all chars complete without hint', () => {
+    const onNext = vi.fn()
+    render(<CharacterWritingExercise entry={entry} onNext={onNext} />)
+    fireEvent.click(screen.getByText('complete-no-hint'))
+    fireEvent.click(screen.getByText('complete-no-hint'))
+    vi.runAllTimers()
+    expect(onNext).toHaveBeenCalledWith(true)
+  })
+
+  it('calls onNext(false) when any char used a hint', () => {
+    const onNext = vi.fn()
+    render(<CharacterWritingExercise entry={entry} onNext={onNext} />)
+    fireEvent.click(screen.getByText('complete-with-hint'))
+    fireEvent.click(screen.getByText('complete-no-hint'))
+    vi.runAllTimers()
+    expect(onNext).toHaveBeenCalledWith(false)
+  })
+
+  it('shows meaning and pinyin as prompt', () => {
+    render(<CharacterWritingExercise entry={entry} onNext={vi.fn()} />)
+    expect(screen.getByText('hello')).toBeTruthy()
+    expect(screen.getByText('nǐ hǎo')).toBeTruthy()
+  })
+})
