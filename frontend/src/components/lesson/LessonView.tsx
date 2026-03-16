@@ -18,10 +18,10 @@ import { VideoPanel } from './VideoPanel'
 export function LessonView() {
   const { id } = useParams<{ id: string }>()
   const { db, keys } = useAuth()
-  const { player, currentTime } = usePlayer()
+  const { player } = usePlayer()
   const { updateLesson } = useLessons()
   const { meta, segments, loading, error, updateMeta } = useLesson(db, id)
-  const activeSegment = useActiveSegment(segments, currentTime)
+  const activeSegment = useActiveSegment(segments)
 
   const [videoBlob, setVideoBlob] = useState<Blob | undefined>()
   const [model, setModel] = useState('gpt-4o-mini')
@@ -48,7 +48,8 @@ export function LessonView() {
       if (blob)
         setVideoBlob(blob)
     })
-  }, [db, id, meta])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, id, meta?.id])
 
   // Context segments: a window around the active segment
   const contextSegments = useMemo(() => {
@@ -155,8 +156,6 @@ export function LessonView() {
           activeSegment={activeSegment}
           videoBlob={videoBlob}
           onRename={handleRename}
-          onShadowingClick={handleShadowingClick}
-          hasSegments={segments.length > 0}
         />
       </div>
 
@@ -179,6 +178,7 @@ export function LessonView() {
                 lesson={meta}
                 onSegmentClick={handleSegmentClick}
                 onProgressUpdate={handleProgressUpdate}
+                onShadowingClick={handleShadowingClick}
               />
             )}
       </div>
