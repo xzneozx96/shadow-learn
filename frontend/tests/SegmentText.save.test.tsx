@@ -11,6 +11,14 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
+// Mock PlayerContext so SegmentText can be rendered without a PlayerProvider in tests.
+vi.mock('@/contexts/PlayerContext', () => ({
+  usePlayer: () => ({
+    subscribeTime: () => () => {},
+    getTime: () => 0,
+  }),
+}))
+
 // Import after mocks are hoisted
 import { SegmentText } from '@/components/lesson/SegmentText'
 

@@ -1,6 +1,6 @@
 import type { Segment, Word, WordTiming } from '@/types'
-import { Bookmark, Check, Copy, Loader2, Volume2 } from 'lucide-react'
-import { memo, useState } from 'react'
+import { Bookmark, Copy, Loader2, Volume2 } from 'lucide-react'
+import { memo, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { usePlayer } from '@/contexts/PlayerContext'
 import { buildPositionMap, buildWordSpans } from '@/lib/segment-text'
 import { cn } from '@/lib/utils'
 
@@ -16,7 +17,6 @@ interface SegmentTextProps {
   text: string
   words: Word[]
   wordTimings?: WordTiming[]
-  currentTime?: number
   playTTS: (text: string) => Promise<void>
   loadingText: string | null
   onSaveWord?: (word: Word, segment: Segment) => void
@@ -28,19 +28,18 @@ export const SegmentText = memo(({
   text,
   words,
   wordTimings,
-  currentTime,
   playTTS,
   loadingText,
   onSaveWord,
   isSaved,
   segment,
 }: SegmentTextProps) => {
-  const [copiedWord, setCopiedWord] = useState<string | null>(null)
+  const { subscribeTime, getTime } = usePlayer()
 
+  // Build spans once per text/words change
   const spans = buildWordSpans(text, words)
-  const posMap = wordTimings?.length ? buildPositionMap(text, wordTimings) : null
 
-  // Precompute span start offsets so we can look up character positions
+  // Precompute absolute char offsets for each span
   const spanStarts: number[] = []
   let offset = 0
   for (const span of spans) {
@@ -48,12 +47,40 @@ export const SegmentText = memo(({
     offset += span.text.length
   }
 
-  const handleCopy = (word: string) => {
-    navigator.clipboard.writeText(word)
-    setCopiedWord(word)
-    toast.success(`Copied "${word}" to clipboard`)
-    setTimeout(setCopiedWord, 2000, null)
+  // Compute posMap synchronously during render so it's available before any useEffect fires.
+  // Store in a ref so the subscription callback always reads the latest without being in deps.
+  const posMap = wordTimings?.length ? buildPositionMap(text, wordTimings) : null
+  const posMapRef = useRef(posMap)
+  posMapRef.current = posMap
+
+  // One ref slot per character across all spans
+  const totalChars = text.length
+  const charSpanRefs = useRef<(HTMLSpanElement | null)[]>([])
+  // Ensure array is sized correctly when text changes
+  if (charSpanRefs.current.length !== totalChars) {
+    charSpanRefs.current = Array.from({ length: totalChars }, () => null)
   }
+
+  // Karaoke: toggle CSS classes on char spans directly — no React re-renders.
+  // Run the coloring immediately on mount (with getTime()) to avoid a flash of uncolored chars,
+  // then subscribe for ongoing updates.
+  useEffect(() => {
+    function applyKaraoke(time: number) {
+      const pm = posMapRef.current
+      if (!pm) return
+      charSpanRefs.current.forEach((el, charIdx) => {
+        if (!el) return
+        const wt = pm.get(charIdx)
+        if (wt === undefined) return
+        const spoken = wt.end <= time
+        el.classList.toggle('text-yellow-400', spoken)
+        el.classList.toggle('text-white', !spoken)
+      })
+    }
+    // Apply current time immediately so chars aren't uncolored on first paint
+    applyKaraoke(getTime())
+    return subscribeTime(applyKaraoke)
+  }, [subscribeTime, getTime])
 
   return (
     <TooltipProvider>
@@ -61,16 +88,13 @@ export const SegmentText = memo(({
         {spans.map((span, spanIdx) => {
           const spanStart = spanStarts[spanIdx]
 
-          // Render each character in the span individually for per-char brightness
           const charSpans = span.text.split('').map((char, j) => {
             const charIdx = spanStart + j
-            const wt = posMap?.get(charIdx)
-            // If timing data present: yellow when spoken, white when not yet spoken.
-            // If no timing data: inherit (no class).
-            const spoken = wt !== undefined && currentTime !== undefined && wt.end <= currentTime
-            const unspoken = wt !== undefined && currentTime !== undefined && wt.end > currentTime
             return (
-              <span key={j} className={cn(spoken && 'text-yellow-400', unspoken && 'text-white')}>
+              <span
+                key={j}
+                ref={el => { charSpanRefs.current[charIdx] = el }}
+              >
                 {char}
               </span>
             )
@@ -82,51 +106,25 @@ export const SegmentText = memo(({
 
           return (
             <Tooltip key={spanIdx}>
-              <TooltipTrigger
-                // NOTE: text-inherit (not text-white/70) and no hover:text-white — intentional.
-                // Per-character <span> children carry dim/bright classes. The trigger must
-                // inherit their color rather than override it; a fixed text-white/70 or
-                // hover:text-white would overwrite the karaoke brightness state.
-                className="cursor-help rounded-sm px-0.5 text-inherit decoration-white/30 decoration-dotted underline-offset-4 transition-colors hover:bg-white/10 hover:underline"
-              >
+              <TooltipTrigger className="cursor-help rounded-sm px-0.5 text-inherit decoration-white/30 decoration-dotted underline-offset-4 transition-colors hover:bg-white/10 hover:underline">
                 {charSpans}
               </TooltipTrigger>
               <TooltipContent
                 side="top"
                 align="center"
-                className="relative max-w-none rounded-2xl border border-white/10 bg-[oklch(0.13_0_0)]/95 p-0 shadow-2xl backdrop-blur-xl"
+                className="relative max-w-none min-w-72 rounded-2xl border border-white/10 bg-[oklch(0.13_0_0)]/95 p-0 shadow-2xl backdrop-blur-xl"
               >
-                <div className="flex min-w-max divide-x divide-white/10">
-                  {/* Section 1: Word & Pinyin */}
-                  <div className="flex flex-col justify-center px-5 py-4">
-                    <p className="text-xs font-medium tracking-wide text-white/45">
-                      {span.word.pinyin}
-                    </p>
-                    <p className="mt-1 text-3xl font-bold tracking-tight text-white">
-                      {span.word.word}
-                    </p>
-                  </div>
-
-                  {/* Section 2: Meaning */}
-                  <div className="flex max-w-60 flex-col justify-center px-5 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-white/30">Meaning</p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-white/80">
-                      {span.word.meaning}
-                    </p>
-                  </div>
-
-                  {/* Section 3: Usage example */}
+                <div className="flex flex-col gap-1 px-4 py-3 pr-10">
+                  <p className="text-base font-bold text-white">
+                    {span.word.word}
+                    <span className="ml-2 text-sm font-normal text-white/45">{span.word.pinyin}</span>
+                  </p>
+                  <p className="text-sm text-white/70">{span.word.meaning}</p>
                   {span.word.usage && (
-                    <div className="flex max-w-70 flex-col justify-center px-5 py-4 pr-12">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-white/30">Example</p>
-                      <p className="mt-1.5 text-sm italic leading-relaxed text-white/65">
-                        {span.word.usage}
-                      </p>
-                    </div>
+                    <p className="text-sm text-white/45">{span.word.usage}</p>
                   )}
                 </div>
 
-                {/* Action buttons — top-right corner */}
                 <div className="absolute top-1 right-1 flex gap-0.5">
                   <Button
                     variant="ghost"
@@ -146,21 +144,25 @@ export const SegmentText = memo(({
                     variant="ghost"
                     size="icon-xs"
                     className="size-7 text-white/30 hover:bg-white/6 hover:text-white"
-                    aria-label={copiedWord === span.word.word ? 'Copied!' : `Copy ${span.word.word}`}
+                    aria-label={`Copy ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleCopy(span.word!.word)
+                      navigator.clipboard.writeText(span.word!.word)
+                      toast.success(`Copied "${span.word!.word}" to clipboard`)
                     }}
                   >
-                    {copiedWord === span.word.word
-                      ? <Check className="size-4 text-emerald-400" />
-                      : <Copy className="size-4" />}
+                    <Copy className="size-4" />
                   </Button>
                   {onSaveWord && segment && (
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      className="size-7 text-white/30 hover:bg-white/[0.06] hover:text-white"
+                      className={cn(
+                        'size-7 hover:bg-white/6',
+                        isSaved?.(span.word.word)
+                          ? 'text-yellow-400 disabled:opacity-100'
+                          : 'text-white/30 hover:text-white',
+                      )}
                       title={isSaved?.(span.word.word) ? 'Already in Workbook' : 'Save to Workbook'}
                       aria-label={isSaved?.(span.word.word) ? 'Already in Workbook' : 'Save to Workbook'}
                       disabled={isSaved?.(span.word.word)}
