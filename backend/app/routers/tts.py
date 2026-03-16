@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
 from app.models import TTSRequest
-from app.services.tts import synthesize_speech
+from app.services.tts_minimax import synthesize_speech
 
 logger = logging.getLogger(__name__)
 
