@@ -183,3 +183,5 @@ export const SegmentText = memo(({
     </TooltipProvider>
   )
 })
+
+SegmentText.displayName = 'SegmentText'
