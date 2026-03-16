@@ -3,6 +3,7 @@ import type { VocabEntry } from '@/types'
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { CharacterWritingExercise } from '@/components/study/exercises/CharacterWritingExercise'
 import { ClozeExercise } from '@/components/study/exercises/ClozeExercise'
 import { DictationExercise } from '@/components/study/exercises/DictationExercise'
 import { PinyinRecallExercise } from '@/components/study/exercises/PinyinRecallExercise'
@@ -14,6 +15,7 @@ import { SessionSummary } from '@/components/study/SessionSummary'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTTS } from '@/hooks/useTTS'
 import { useVocabulary } from '@/hooks/useVocabulary'
+import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 
 type Phase = 'picker' | 'session' | 'summary'
 
@@ -40,10 +42,13 @@ function distributeExercises(
   mode: ExerciseMode,
   count: number,
   hasAzure: boolean,
+  hasWriting: boolean,
 ): Exclude<ExerciseMode, 'mixed'>[] {
   const available: Exclude<ExerciseMode, 'mixed'>[] = ['cloze', 'dictation', 'pinyin', 'reconstruction']
   if (hasAzure)
     available.push('pronunciation')
+  if (hasWriting)
+    available.push('writing')
 
   if (mode !== 'mixed') {
     return Array.from<Exclude<ExerciseMode, 'mixed'>>({ length: count }).fill(mode as Exclude<ExerciseMode, 'mixed'>)
@@ -159,7 +164,8 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     abortRef.current = controller
     setLoading(true)
 
-    const types = distributeExercises(entries, mode, count, hasAzure)
+    const hasWriting = entries.some(e => isWritingSupported(e.word))
+    const types = distributeExercises(entries, mode, count, hasAzure, hasWriting)
     if (mode === 'mixed' && !hasAzure)
       setAzureBanner(true)
 
@@ -221,6 +227,14 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
 
   const q = questions[current]
 
+  // Auto-skip writing questions for entries whose characters aren't in CJK range
+  useEffect(() => {
+    if (q?.type === 'writing' && !isWritingSupported(q.entry.word)) {
+      handleNext(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current])
+
   return (
     <div className="relative min-h-full">
       {/* Close button — always visible */}
@@ -233,7 +247,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
         <X className="size-5" />
       </button>
 
-      <div className="max-w-2xl mx-auto px-6 py-10 pb-20">
+      <div className="max-w-2xl mx-auto px-6 py-20">
         {/* Picker */}
         {phase === 'picker' && (
           <ModePicker
@@ -251,11 +265,11 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
         {phase === 'session' && q && !loading && (
           <>
             {azureBanner && (
-              <div className="text-sm text-amber-400 bg-amber-500/8 border border-amber-500/20 rounded-md px-4 py-2.5 mb-4">
+              <div className="text-sm text-amber-400 bg-amber-500/8 border border-amber-500/20 rounded-md px-4 py-3 mb-4">
                 Pronunciation exercises are unavailable — add an Azure Speech Key in Settings.
               </div>
             )}
-            <ProgressBar current={current} total={questions.length} />
+            {/* <ProgressBar current={current} total={questions.length} /> */}
             {q.type === 'pinyin' && (
               <PinyinRecallExercise
                 key={current}
@@ -299,6 +313,14 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
                 key={current}
                 entry={q.entry}
                 words={q.reconstructionTokens ?? [q.entry.word]}
+                progress={`${current + 1} / ${questions.length}`}
+                onNext={handleNext}
+              />
+            )}
+            {q.type === 'writing' && isWritingSupported(q.entry.word) && (
+              <CharacterWritingExercise
+                key={current}
+                entry={q.entry}
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
               />
