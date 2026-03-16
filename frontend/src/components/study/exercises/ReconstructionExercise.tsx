@@ -34,16 +34,21 @@ export function ReconstructionExercise({ entry, words, progress = '', onNext }: 
   )
 
   return (
-    <ExerciseCard type="Sentence Reconstruction" progress={progress} footer={footer}>
+    <ExerciseCard
+      type="Sentence Reconstruction"
+      progress={progress}
+      footer={footer}
+      info="Rearrange the scrambled word chips into the correct sentence. Tests grammar and word order."
+    >
       {/* Source context link */}
       <Link
         to={`/lesson/${entry.sourceLessonId}?segmentId=${entry.sourceSegmentId}`}
-        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground border border-border/50 rounded-full px-2.5 py-1 mb-3 hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border/50 rounded-full px-2.5 py-1 mb-3 hover:text-foreground transition-colors"
       >
         📍 {entry.sourceLessonTitle} — where you saved {entry.word}
       </Link>
 
-      <p className="text-xs text-muted-foreground mb-3">Type the words in correct order.</p>
+      <p className="text-sm text-muted-foreground mb-3">Type the words in correct order.</p>
 
       {/* Word chips */}
       <div className="flex flex-wrap gap-2 mb-4">

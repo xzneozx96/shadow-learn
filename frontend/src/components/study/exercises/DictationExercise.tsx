@@ -1,5 +1,5 @@
 import type { VocabEntry } from '@/types'
-import { Volume2 } from 'lucide-react'
+import { Loader2, Volume2 } from 'lucide-react'
 import { useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
@@ -11,9 +11,10 @@ interface Props {
   progress?: string
   onNext: (correct: boolean) => void
   playTTS: (text: string) => Promise<void>
+  loadingText: string | null
 }
 
-export function DictationExercise({ entry, progress = '', onNext, playTTS }: Props) {
+export function DictationExercise({ entry, progress = '', onNext, playTTS, loadingText }: Props) {
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
   const expected = entry.sourceSegmentChinese
@@ -29,19 +30,32 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS }: Pro
   )
 
   return (
-    <ExerciseCard type="Dictation" progress={progress} footer={footer}>
+    <ExerciseCard
+      type="Dictation"
+      progress={progress}
+      footer={footer}
+      info="Listen to the audio clip and type the Chinese sentence you hear. Tests listening comprehension and character recall."
+    >
       <p className="text-sm text-muted-foreground mb-4">
         Listen carefully and type what you hear in Chinese.
       </p>
 
-      <button
-        type="button"
-        aria-label="Play audio"
-        className="flex items-center justify-center mx-auto mb-5 size-14 rounded-full border border-border bg-secondary hover:bg-accent transition-colors"
-        onClick={() => void playTTS(entry.sourceSegmentChinese)}
-      >
-        <Volume2 className="size-5 text-muted-foreground" />
-      </button>
+      {(() => {
+        const isLoading = loadingText === entry.sourceSegmentChinese
+        return (
+          <button
+            type="button"
+            aria-label="Play audio"
+            disabled={isLoading}
+            className="flex items-center justify-center mx-auto mb-5 size-14 rounded-full border border-border bg-secondary hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={() => void playTTS(entry.sourceSegmentChinese)}
+          >
+            {isLoading
+              ? <Loader2 className="size-5 text-muted-foreground animate-spin" />
+              : <Volume2 className="size-5 text-muted-foreground" />}
+          </button>
+        )
+      })()}
 
       <ChineseInput
         placeholder="Type what you heard…"
@@ -53,7 +67,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS }: Pro
 
       {checked && (
         <div className={cn(
-          'mt-4 rounded-lg border px-4 py-2.5 text-sm',
+          'mt-4 rounded-lg border px-4 py-3 text-sm',
           correct
             ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
             : 'border-destructive/25 bg-destructive/10 text-destructive',

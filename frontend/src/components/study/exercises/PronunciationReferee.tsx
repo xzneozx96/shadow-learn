@@ -136,13 +136,18 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
   )
 
   return (
-    <ExerciseCard type="Pronunciation Referee" progress={progress} footer={footer}>
+    <ExerciseCard
+      type="Pronunciation Referee"
+      progress={progress}
+      footer={footer}
+      info="Read the sentence aloud and get AI-scored feedback on accuracy, fluency, and prosody."
+    >
       {/* Sentence display */}
       <div className="rounded-lg border border-border bg-muted/20 p-4 text-center mb-4">
         <div className="text-xl font-bold tracking-widest text-foreground">
           {sentence.sentence}
         </div>
-        <div className="text-xs text-muted-foreground mt-1.5">{sentence.translation}</div>
+        <div className="text-sm text-muted-foreground mt-1.5">{sentence.translation}</div>
       </div>
 
       {/* Recording controls (hidden once scored) */}
@@ -169,7 +174,7 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
             </Button>
           </div>
           {attempt > 0 && (
-            <p className="text-xs text-muted-foreground/50 text-center mb-2">
+            <p className="text-sm text-muted-foreground/50 text-center mb-2">
               Attempt {attempt} · Re-record anytime before submitting
             </p>
           )}
@@ -231,7 +236,7 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
                     style={{ width: `${w.accuracy}%` }}
                   />
                 </div>
-                <span className={cn('w-7 shrink-0 text-right text-xs font-bold tabular-nums', scoreColor(w.accuracy))}>
+                <span className={cn('w-7 shrink-0 text-right text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
                   {Math.round(w.accuracy)}
                 </span>
                 {w.error_type && (

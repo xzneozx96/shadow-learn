@@ -63,7 +63,12 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
   )
 
   return (
-    <ExerciseCard type="Scenario Cloze" progress={progress} footer={footer}>
+    <ExerciseCard
+      type="Scenario Cloze"
+      progress={progress}
+      footer={footer}
+      info="Read a short story and fill in the missing vocabulary words from context. Tests contextual understanding."
+    >
       {/* Story with inline inputs */}
       <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-sm leading-[2.4] text-foreground/90 mb-0">
         {parts.map((part, i) => {
@@ -101,7 +106,7 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
           <div
             key={i}
             className={cn(
-              'mt-3 rounded-lg border px-4 py-2.5 text-sm flex items-start gap-2.5',
+              'mt-3 rounded-lg border px-4 py-3 text-sm flex items-start gap-2.5',
               correct
                 ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
                 : 'border-destructive/25 bg-destructive/10 text-destructive',

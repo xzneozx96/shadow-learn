@@ -62,15 +62,20 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
   )
 
   return (
-    <ExerciseCard type="Character Writing" progress={progress} footer={footer}>
+    <ExerciseCard
+      type="Character Writing"
+      progress={progress}
+      footer={footer}
+      info="Trace each stroke of the character in the correct order. Builds handwriting muscle memory."
+    >
       {/* Prompt */}
       <div className="text-center mb-4">
         <p className="text-sm text-muted-foreground">{entry.meaning}</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">{entry.pinyin}</p>
+        <p className="text-sm text-muted-foreground/60 mt-1">{entry.pinyin}</p>
       </div>
 
       {/* Character progress */}
-      <p className="text-xs text-center text-muted-foreground mb-3">{charProgress}</p>
+      <p className="text-sm text-center text-muted-foreground mb-3">{charProgress}</p>
 
       {/* Canvas */}
       <div className="flex justify-center mb-2">

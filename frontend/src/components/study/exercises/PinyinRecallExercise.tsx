@@ -36,13 +36,18 @@ export function PinyinRecallExercise({ entry, progress = '', onNext, playTTS }: 
   )
 
   return (
-    <ExerciseCard type="Pinyin Recall" progress={progress} footer={footer}>
+    <ExerciseCard
+      type="Pinyin Recall"
+      progress={progress}
+      footer={footer}
+      info="See the characters and type their pinyin with tone marks. Tests pronunciation knowledge without speaking aloud."
+    >
       {/* Word display */}
       <div className="text-center py-2 pb-5">
         <div className="text-[52px] font-extrabold tracking-widest leading-none text-foreground">
           {entry.word}
         </div>
-        <p className="text-xs text-muted-foreground mt-3">{entry.meaning}</p>
+        <p className="text-sm text-muted-foreground mt-3">{entry.meaning}</p>
       </div>
 
       {/* Input */}
@@ -61,7 +66,7 @@ export function PinyinRecallExercise({ entry, progress = '', onNext, playTTS }: 
       {/* Feedback */}
       {checked && (
         <div className={cn(
-          'mt-4 rounded-lg border px-4 py-2.5 text-sm',
+          'mt-4 rounded-lg border px-4 py-3 text-sm',
           correct
             ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
             : 'border-destructive/25 bg-destructive/10 text-destructive',
