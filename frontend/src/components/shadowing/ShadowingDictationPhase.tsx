@@ -53,7 +53,7 @@ export function ShadowingDictationPhase({
   function handleSubmit() {
     if (!value.trim()) {
       setShake(true)
-      setTimeout(() => setShake(false), 500)
+      setTimeout(setShake, 500, false)
       return
     }
     onSubmit(value.trim(), inputMode)

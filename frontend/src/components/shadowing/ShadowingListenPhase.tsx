@@ -23,17 +23,18 @@ export function ShadowingListenPhase({
 }: ShadowingListenPhaseProps) {
   const { player, currentTime } = usePlayer()
   const hasAutoTransitioned = useRef(false)
-  const replayBtnRef = useRef<HTMLButtonElement>(null)
+  const replayButtonRef = useRef<HTMLButtonElement>(null)
   // Stable refs to avoid stale closures in effects
   const onAutoTransitionRef = useRef(onAutoTransition)
   onAutoTransitionRef.current = onAutoTransition
 
   // On mount: seek + play + subscribe to ended event
   useEffect(() => {
-    if (!player) return
+    if (!player)
+      return
     player.seekTo(segment.start)
     player.play()
-    replayBtnRef.current?.focus()
+    replayButtonRef.current?.focus()
 
     const cleanup = player.onEnded(() => {
       if (!hasAutoTransitioned.current) {
@@ -120,7 +121,7 @@ export function ShadowingListenPhase({
         <span className="text-xs text-muted-foreground">Playing segment…</span>
 
         <button
-          ref={replayBtnRef}
+          ref={replayButtonRef}
           className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-xs transition-colors hover:bg-accent"
           onClick={handleReplay}
         >

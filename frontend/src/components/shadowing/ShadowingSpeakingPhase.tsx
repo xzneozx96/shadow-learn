@@ -64,8 +64,10 @@ export function ShadowingSpeakingPhase({
     function handleKey(e: KeyboardEvent) {
       if (e.key === ' ') {
         e.preventDefault()
-        if (subState === 'initial') void startRecording()
-        else if (subState === 'recording') stopRecording()
+        if (subState === 'initial')
+          void startRecording()
+        else if (subState === 'recording')
+          stopRecording()
       }
       if (e.key === 'Enter' && subState === 'recorded' && blobRef.current) {
         e.preventDefault()
@@ -95,7 +97,7 @@ export function ShadowingSpeakingPhase({
           setBlob(null)
           setSubState('initial')
           setShortError(true)
-          setTimeout(() => setShortError(false), 3000)
+          setTimeout(setShortError, 3000, false)
           return
         }
         const b = new Blob(chunksRef.current, { type: 'audio/webm' })
@@ -174,7 +176,10 @@ export function ShadowingSpeakingPhase({
         {subState === 'initial' && (
           <button
             className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-xs transition-colors hover:bg-accent"
-            onClick={() => { player?.seekTo(segment.start); player?.play() }}
+            onClick={() => {
+              player?.seekTo(segment.start)
+              player?.play()
+            }}
           >
             ↺ Replay
           </button>

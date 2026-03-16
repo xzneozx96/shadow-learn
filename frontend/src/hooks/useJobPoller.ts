@@ -103,7 +103,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
   useEffect(() => {
     if (!processingJobIds)
       return
-    intervalRef.current = setInterval(pollJobs, 10000)
+    intervalRef.current = setInterval(pollJobs, 3000)
     return () => {
       if (intervalRef.current)
         clearInterval(intervalRef.current)

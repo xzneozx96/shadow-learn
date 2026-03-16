@@ -1,3 +1,4 @@
+import type { DiffToken } from '@/lib/shadowing-utils'
 import type { Segment } from '@/types'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -6,7 +7,6 @@ import {
   computeCharDiff,
   computePinyinDiff,
 } from '@/lib/shadowing-utils'
-import type { DiffToken } from '@/lib/shadowing-utils'
 import { cn } from '@/lib/utils'
 
 interface WordScore {
@@ -16,7 +16,7 @@ interface WordScore {
   error_detail: string | null
 }
 interface AssessResult {
-  overall: { accuracy: number; fluency: number; completeness: number; prosody: number }
+  overall: { accuracy: number, fluency: number, completeness: number, prosody: number }
   words: WordScore[]
 }
 
@@ -58,7 +58,8 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
 
   // Compute dictation diff once and store in a ref so keyboard handler is never stale
   const dictationDiff = useMemo<DiffToken[] | null>(() => {
-    if (props.mode !== 'dictation') return null
+    if (props.mode !== 'dictation')
+      return null
     return props.inputMode === 'hanzi'
       ? computeCharDiff(props.userAnswer, segment.chinese)
       : computePinyinDiff(props.userAnswer, segment.pinyin)
@@ -77,7 +78,8 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       // Scope: ignore if focus is outside the panel region
-      if (!containerRef.current?.contains(document.activeElement)) return
+      if (!containerRef.current?.contains(document.activeElement))
+        return
       if (e.key === 'Enter') {
         e.preventDefault()
         const score = props.mode === 'dictation'
@@ -149,7 +151,10 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           </div>
           {dictationScore !== null && (
             <div className="text-center text-xs text-muted-foreground">
-              Accuracy: {dictationScore}%
+              Accuracy:
+              {' '}
+              {dictationScore}
+              %
             </div>
           )}
         </div>
@@ -237,7 +242,10 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore }: Speak
     }
 
     void assess()
-    return () => { controller.abort(); clearTimeout(timeout) }
+    return () => {
+      controller.abort()
+      clearTimeout(timeout)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // run once on mount
 
@@ -249,7 +257,8 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore }: Speak
     return <div className="py-2 text-center text-xs text-destructive">{error}</div>
   }
 
-  if (!result) return null
+  if (!result)
+    return null
 
   return (
     <div className="space-y-2">

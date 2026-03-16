@@ -21,7 +21,13 @@ export function ShadowingModePicker({ open, speakingAvailable, onStart, onCancel
   const [selected, setSelected] = useState<'dictation' | 'speaking'>('dictation')
 
   return (
-    <Dialog open={open} onOpenChange={open => { if (!open) onCancel() }}>
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (!open)
+          onCancel()
+      }}
+    >
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Shadowing Mode</DialogTitle>

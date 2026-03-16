@@ -1,5 +1,5 @@
-import type { Segment } from '@/types'
 import type { SessionSummary } from '@/lib/shadowing-utils'
+import type { Segment } from '@/types'
 import { Button } from '@/components/ui/button'
 
 interface ShadowingSessionSummaryProps {
@@ -22,7 +22,13 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
           <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
             Session Complete
           </div>
-          <div className="text-2xl font-semibold">{attempted} / {total}</div>
+          <div className="text-2xl font-semibold">
+            {attempted}
+            {' '}
+            /
+            {' '}
+            {total}
+          </div>
           <div className="text-xs text-muted-foreground">segments attempted</div>
         </div>
 

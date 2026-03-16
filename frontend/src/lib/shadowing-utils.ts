@@ -9,10 +9,10 @@ export interface DiffToken {
 
 export interface SegmentResult {
   segmentIndex: number
-  attempted: boolean    // submitted an answer (not skipped)
-  skipped: boolean      // user explicitly skipped
-  autoSkipped: boolean  // duration < 0.5 s, silently bypassed
-  score: number | null  // 0–100 or null (skipped / Azure failed / dictation not tracked)
+  attempted: boolean // submitted an answer (not skipped)
+  skipped: boolean // user explicitly skipped
+  autoSkipped: boolean // duration < 0.5 s, silently bypassed
+  score: number | null // 0–100 or null (skipped / Azure failed / dictation not tracked)
 }
 
 export interface SessionSummary {
@@ -20,14 +20,18 @@ export interface SessionSummary {
   attempted: number
   skipped: number
   averageScore: number | null
-  weakestSegments: Array<{ segmentIndex: number; score: number }>
+  weakestSegments: Array<{ segmentIndex: number, score: number }>
 }
 
 // ── Char diff (hanzi) ─────────────────────────────────────────────────────
 
+const SPLIT_RE = /\s+/
+const FILTER_BOOL = Boolean as unknown as (s: string) => s is string
+const PINYIN_MN_RE = /\p{Mn}/gu
+
 function getGraphemeClusters(text: string): string[] {
   const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
-  return [...segmenter.segment(text)].map(s => s.segment)
+  return Array.from(segmenter.segment(text), s => s.segment)
 }
 
 /**
@@ -54,7 +58,7 @@ export function computeCharDiff(userInput: string, correctText: string): DiffTok
  * Unicode combining marks (category Mn).
  */
 export function stripPinyinTones(pinyin: string): string {
-  return pinyin.normalize('NFD').replace(/\p{Mn}/gu, '')
+  return pinyin.normalize('NFD').replace(PINYIN_MN_RE, '')
 }
 
 /**
@@ -63,8 +67,8 @@ export function stripPinyinTones(pinyin: string): string {
  */
 export function computePinyinDiff(userInput: string, correctPinyin: string): DiffToken[] {
   const normalize = (s: string) => stripPinyinTones(s.trim().toLowerCase())
-  const userSyllables = userInput.trim().split(/\s+/).filter(Boolean)
-  const correctSyllables = correctPinyin.trim().split(/\s+/).filter(Boolean)
+  const userSyllables = userInput.trim().split(SPLIT_RE).filter(FILTER_BOOL)
+  const correctSyllables = correctPinyin.trim().split(SPLIT_RE).filter(FILTER_BOOL)
   const len = Math.max(userSyllables.length, correctSyllables.length)
   const tokens: DiffToken[] = []
   for (let i = 0; i < len; i++) {
@@ -82,7 +86,8 @@ export function computePinyinDiff(userInput: string, correctPinyin: string): Dif
 
 /** Returns integer 0–100. Returns 0 if tokens is empty. */
 export function computeAccuracyScore(tokens: DiffToken[]): number {
-  if (tokens.length === 0) return 0
+  if (tokens.length === 0)
+    return 0
   const correct = tokens.filter(t => t.correct).length
   return Math.round((correct / tokens.length) * 100)
 }
@@ -117,8 +122,8 @@ export function computeSessionSummary(
       ? Math.round(validScores.reduce((sum, r) => sum + r.score, 0) / validScores.length)
       : null
 
-  const weakestSegments = [...validScores]
-    .sort((a, b) => a.score - b.score || a.segmentIndex - b.segmentIndex)
+  const weakestSegments = validScores
+    .toSorted((a, b) => a.score - b.score || a.segmentIndex - b.segmentIndex)
     .slice(0, 3)
     .map(r => ({ segmentIndex: r.segmentIndex, score: r.score }))
 

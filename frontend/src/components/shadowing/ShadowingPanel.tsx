@@ -1,5 +1,6 @@
+import type { SegmentResult } from '@/lib/shadowing-utils'
 import type { Segment } from '@/types'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -9,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import type { SegmentResult } from '@/lib/shadowing-utils'
 import { computeSessionSummary, isAutoSkipSegment } from '@/lib/shadowing-utils'
 import { ShadowingDictationPhase } from './ShadowingDictationPhase'
 import { ShadowingListenPhase } from './ShadowingListenPhase'
@@ -142,7 +142,8 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit }
     )
   }
 
-  if (!segment) return null
+  if (!segment)
+    return null
 
   return (
     <div className="flex h-full flex-col glass-card">
@@ -210,7 +211,13 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit }
       )}
 
       {/* Exit confirmation */}
-      <Dialog open={showExitConfirm} onOpenChange={open => { if (!open) setShowExitConfirm(false) }}>
+      <Dialog
+        open={showExitConfirm}
+        onOpenChange={(open) => {
+          if (!open)
+            setShowExitConfirm(false)
+        }}
+      >
         <DialogContent className="max-w-xs">
           <DialogHeader>
             <DialogTitle>Exit shadowing mode?</DialogTitle>
@@ -218,7 +225,15 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit }
           </DialogHeader>
           <DialogFooter className="flex gap-2 sm:justify-end">
             <Button variant="outline" onClick={() => setShowExitConfirm(false)}>Keep going</Button>
-            <Button variant="destructive" onClick={() => { setShowExitConfirm(false); onExit() }}>Exit</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowExitConfirm(false)
+                onExit()
+              }}
+            >
+              Exit
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

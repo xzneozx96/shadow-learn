@@ -101,7 +101,7 @@ describe('LessonWorkbookPanel', () => {
     mockVocab = { entriesByLesson: { lesson_1: mockEntries } }
     render(<LessonWorkbookPanel lessonId="lesson_1" />)
     // The character text is inside the button — click the button element
-    const btn = screen.getByText('今天').closest('button')!
+    const btn = screen.getByText('今天').closest('[role="button"]')!
     fireEvent.click(btn)
     expect(mockNavigate).toHaveBeenCalledWith('/lesson/lesson_1?segmentId=seg_1')
   })
