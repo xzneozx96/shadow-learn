@@ -1,9 +1,27 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import settings
 from app.routers import chat, jobs, lessons, pronunciation, quiz, tts
+from app.services.tts_factory import get_tts_provider
 
-app = FastAPI(title="ShadowLearn API")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.tts_provider = get_tts_provider(settings)
+    app.state.tts_provider_name = settings.tts_provider
+    yield
+
+
+app = FastAPI(title="ShadowLearn API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -11,7 +29,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 app.include_router(lessons.router)
 app.include_router(chat.router)
