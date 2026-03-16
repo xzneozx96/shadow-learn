@@ -81,7 +81,7 @@ def test_segments_from_utterances_strips_spaces_and_assigns_ids():
             "speaker": 0, "id": "abc", "channel": 0, "confidence": 0.96,
         }
     ]
-    segments = _segments_from_utterances(utterances)
+    segments = _segments_from_utterances(utterances, language="zh-CN")
     assert len(segments) == 1
     assert segments[0]["id"] == 0
     assert segments[0]["text"] == "我的桌子"
@@ -106,7 +106,7 @@ def test_segments_from_utterances_uses_punctuated_word():
             "speaker": 0, "id": "xyz", "channel": 0, "confidence": 0.99,
         }
     ]
-    segments = _segments_from_utterances(utterances)
+    segments = _segments_from_utterances(utterances, language="zh-CN")
     assert segments[0]["text"] == "你好。"
     assert segments[0]["word_timings"][1]["text"] == "好。"
 
@@ -125,7 +125,7 @@ def test_segments_from_utterances_skips_empty():
          ],
          "speaker": 0, "id": "b", "channel": 0, "confidence": 0.99},
     ]
-    segments = _segments_from_utterances(utterances)
+    segments = _segments_from_utterances(utterances, language="zh-CN")
     assert len(segments) == 1
     assert segments[0]["text"] == "你好"
     assert segments[0]["id"] == 1  # utterance-positional: empty utterance at index 0 was skipped
@@ -151,7 +151,7 @@ def test_segments_from_utterances_multiple():
          ],
          "speaker": 0, "id": "b", "channel": 0, "confidence": 0.99},
     ]
-    segments = _segments_from_utterances(utterances)
+    segments = _segments_from_utterances(utterances, language="zh-CN")
     assert len(segments) == 2
     assert segments[0]["id"] == 0
     assert segments[1]["id"] == 1
@@ -350,4 +350,37 @@ def test_group_words_chinese_strips_spaces():
     ]
     segments = _group_words_into_segments(words, language="zh-CN")
     assert len(segments) == 1
+    assert segments[0]["text"] == "你好世界。"
+
+
+def test_segments_from_utterances_english_preserves_spaces():
+    """Utterance transcripts for non-CJK must keep word spaces."""
+    utterances = [
+        {
+            "start": 0.0, "end": 1.0,
+            "transcript": "Hello world.",
+            "words": [
+                {"word": "Hello", "punctuated_word": "Hello", "start": 0.0, "end": 0.5,
+                 "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+                {"word": "world", "punctuated_word": "world.", "start": 0.5, "end": 1.0,
+                 "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+            ],
+            "speaker": 0, "id": "u1", "channel": 0, "confidence": 0.99,
+        }
+    ]
+    segments = _segments_from_utterances(utterances, language="en")
+    assert segments[0]["text"] == "Hello world."
+
+
+def test_segments_from_utterances_chinese_strips_spaces():
+    """Utterance transcripts for CJK must have spaces stripped."""
+    utterances = [
+        {
+            "start": 0.0, "end": 1.0,
+            "transcript": "你好 世界。",
+            "words": [],
+            "speaker": 0, "id": "u1", "channel": 0, "confidence": 0.99,
+        }
+    ]
+    segments = _segments_from_utterances(utterances, language="zh-CN")
     assert segments[0]["text"] == "你好世界。"

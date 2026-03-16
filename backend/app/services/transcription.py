@@ -153,16 +153,18 @@ def _group_words_into_segments(words: list[_Word], language: str) -> list[_Segme
 
 
 
-def _segments_from_utterances(utterances: list[_DeepgramUtterance]) -> list[_Segment]:
+def _segments_from_utterances(utterances: list[_DeepgramUtterance], language: str) -> list[_Segment]:
     """Convert Deepgram utterance objects to segments.
 
     Each utterance becomes one segment. Deepgram inserts spaces between CJK tokens
-    in transcript text (e.g. "你 在 学 什 么"). Stripping all spaces produces clean Chinese.
-    Works for both single-speaker and multi-speaker content.
+    in transcript text (e.g. "你 在 学 什 么"). Strip spaces only for Chinese to
+    produce clean output without corrupting space-separated languages.
     """
     segments: list[_Segment] = []
     for i, utt in enumerate(utterances):
-        text = utt["transcript"].replace(" ", "")
+        text = utt["transcript"]
+        if language.startswith("zh"):
+            text = text.replace(" ", "")
         if not text:
             continue
         word_timings: list[_WordTiming] = [
