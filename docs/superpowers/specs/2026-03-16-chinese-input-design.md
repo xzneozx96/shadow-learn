@@ -64,7 +64,30 @@ This is a zero-network-request import — bundled into the JS at build time. It 
 
 ### `ShadowingDictationPhase` — `onSubmit` signature change
 
-The current signature is `onSubmit(answer: string, inputMode: 'hanzi' | 'pinyin')`. Since `ChineseInput` always produces hanzi, `inputMode` is no longer meaningful. The new signature is `onSubmit(answer: string)`. The caller (shadowing session logic upstream) must be updated to remove the `inputMode` parameter and any branching on it.
+The current signature is `onSubmit(answer: string, inputMode: 'hanzi' | 'pinyin')`. Since `ChineseInput` always produces hanzi, `inputMode` is no longer meaningful. The new signature is `onSubmit(answer: string)`.
+
+This cascades through `ShadowingPanel` and `ShadowingRevealPhase`:
+
+**`ShadowingPanel`:**
+- `handleDictationSubmit(answer, inputMode)` → `handleDictationSubmit(answer: string)`
+- Remove `dictationInputMode` state (`useState<'hanzi' | 'pinyin'>`)
+- Remove `inputMode={dictationInputMode}` from the `ShadowingRevealPhase` render
+
+**`ShadowingRevealPhase`:**
+- Remove `inputMode: 'hanzi' | 'pinyin'` from `DictationRevealProps`
+- Hardcode `computeCharDiff` — remove the `inputMode === 'hanzi' ? computeCharDiff : computePinyinDiff` branch
+
+### `ChineseInput` — `onKeyDown` forwarding
+
+`ChineseInput` accepts an `onKeyDown` prop (same signature as the native `onKeyDown` on `<input>`). It is forwarded to the underlying `<input>` element **only when the candidate bar is not active** (buffer is empty). When the buffer is active, `Enter` commits the first candidate and the host's `onKeyDown` is not called. This means existing exercises can pass their submit-on-Enter handlers unchanged:
+
+```tsx
+// DictationExercise — no change needed:
+<ChineseInput
+  onKeyDown={e => e.key === 'Enter' && !checked && setChecked(true)}
+  ...
+/>
+```
 
 ### `ClozeExercise` — candidate bar layout
 
@@ -170,12 +193,31 @@ Add a tile:
 
 ### 3. `distributeExercises` — `StudySession.tsx`
 
-Add `'writing'` to the `available` array (gated on whether the current pool has any entries with supported characters):
+Add a new `hasWriting: boolean` parameter (same pattern as `hasAzure`) and add `'writing'` to the `available` array when true:
+
 ```ts
-const available = ['cloze', 'dictation', 'pinyin', 'reconstruction']
-if (hasAzure) available.push('pronunciation')
-if (poolHasWritingEntries) available.push('writing')
+function distributeExercises(
+  entries: VocabEntry[],
+  mode: ExerciseMode,
+  count: number,
+  hasAzure: boolean,
+  hasWriting: boolean,        // ← new
+): Exclude<ExerciseMode, 'mixed'>[] {
+  const available = ['cloze', 'dictation', 'pinyin', 'reconstruction']
+  if (hasAzure) available.push('pronunciation')
+  if (hasWriting) available.push('writing')
+  ...
+}
 ```
+
+`hasWriting` is computed at the call site in `handleStart`, before calling `distributeExercises`:
+
+```ts
+const hasWriting = pool.some(e => isWritingSupported(e.word))
+const types = distributeExercises(entries, mode, count, hasAzure, hasWriting)
+```
+
+where `isWritingSupported(word)` checks every character in the word against the bundled codepoint set (see Part 2).
 
 ### 4. `Question` type — `StudySession.tsx`
 
@@ -234,6 +276,8 @@ hanzi-writer (npm, stroke data bundled)
 |---|---|
 | `frontend/src/components/study/exercises/DictationExercise.tsx` | Use `ChineseInput`, remove pinyin toggle |
 | `frontend/src/components/shadowing/ShadowingDictationPhase.tsx` | Use `ChineseInput`, remove hanzi/pinyin toggle, drop `inputMode` from `onSubmit` |
+| `frontend/src/components/shadowing/ShadowingPanel.tsx` | Drop `dictationInputMode` state; update `handleDictationSubmit` signature; remove `inputMode` prop from `ShadowingRevealPhase` render |
+| `frontend/src/components/shadowing/ShadowingRevealPhase.tsx` | Remove `inputMode` from `DictationRevealProps`; hardcode `computeCharDiff` |
 | `frontend/src/components/study/exercises/ClozeExercise.tsx` | Use `ChineseInput` with portal-based candidate bar |
 | `frontend/src/components/study/ModePicker.tsx` | Add `'writing'` to `ExerciseMode`, add tile to `MODES` |
 | `frontend/src/components/study/StudySession.tsx` | Add `'writing'` to `distributeExercises`, add render branch, gate on `poolHasWritingEntries` |
