@@ -52,21 +52,6 @@ describe('useTimeEffect', () => {
   })
 
   it('re-subscribes when key changes', () => {
-    const subscribeCallCount = { value: 0 }
-    const originalSubscribe = vi.fn((cb: (t: number) => void) => {
-      subscribeCallCount.value++
-      timeSubscribers.add(cb)
-      return () => { timeSubscribers.delete(cb) }
-    })
-
-    // Override mock for this test
-    const { subscribeTime } = { subscribeTime: originalSubscribe }
-    let currentSubscribeTime = subscribeTime
-
-    vi.doMock('../src/contexts/PlayerContext', () => ({
-      usePlayer: () => ({ subscribeTime: currentSubscribeTime }),
-    }))
-
     const cb = vi.fn()
     const { rerender } = renderHook(
       ({ key }: { key: string }) => useTimeEffect(cb, key),
