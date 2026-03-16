@@ -1,3 +1,4 @@
+import type { Segment } from '@/types'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -12,7 +13,6 @@ import { getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
 import { useChat } from '@/hooks/useChat'
 import { useLesson } from '@/hooks/useLesson'
-import type { Segment } from '@/types'
 import { CompanionPanel } from './CompanionPanel'
 import { TranscriptPanel } from './TranscriptPanel'
 import { VideoPanel } from './VideoPanel'
@@ -86,16 +86,15 @@ export function LessonView() {
 
   const handleShadowingStart = useCallback(
     (mode: 'dictation' | 'speaking', count: number | 'all') => {
-      const startIdx = segments.findIndex(s => s.id === pickerSegment!.id)
-      if (startIdx === -1)
+      if (pickerStartIdx === -1)
         return
       const slice = count === 'all'
-        ? segments.slice(startIdx)
-        : segments.slice(startIdx, startIdx + count)
+        ? segments.slice(pickerStartIdx)
+        : segments.slice(pickerStartIdx, pickerStartIdx + count)
       setShadowingMode({ mode, segments: slice })
       setPickerSegment(null)
     },
-    [segments, pickerSegment],
+    [segments, pickerStartIdx],
   )
 
   const handleShadowClick = useCallback((segment: Segment) => {
@@ -198,9 +197,12 @@ export function LessonView() {
 
       <Dialog
         open={pickerSegment !== null && pickerStartIdx >= 0}
-        onOpenChange={(open) => { if (!open) setPickerSegment(null) }}
+        onOpenChange={(open) => {
+          if (!open)
+            setPickerSegment(null)
+        }}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm p-5">
           {pickerSegment !== null && pickerStartIdx >= 0 && (
             <ShadowingModePicker
               startSegment={pickerSegment}
