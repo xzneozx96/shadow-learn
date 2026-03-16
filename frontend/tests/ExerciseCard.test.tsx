@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 
-describe('ExerciseCard', () => {
+describe('exerciseCard', () => {
   it('renders type label and progress in header', () => {
     render(
       <ExerciseCard type="Pinyin Recall" progress="3 / 10" footer={<span>footer</span>}>

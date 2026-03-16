@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 interface ExerciseCardProps {
   type: string
   progress: string
-  footer: ReactNode
+  footer: ReactNode | null
   children: ReactNode
   className?: string
 }
