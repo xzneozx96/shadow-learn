@@ -37,23 +37,31 @@ The top-level `🎯 Shadow` button in the transcript header is **removed**. The 
   - Size/style: identical to existing `size-5` ghost icon buttons
   - Always visible (not hover-only)
   - `aria-label="Shadow from this segment"`
-  - `onClick`: calls `onShadowClick(segment)`, stops propagation
+  - `onClick`: calls `e.stopPropagation()` then `onShadowClick(segment)` — required to prevent the row's own `onClick={() => onSegmentClick(segment)}` from also firing
+  - **Contract:** passes the original `Segment` object reference from the `segments`/`filteredSegments` array — never a spread copy, so that `findIndex` by `s.id` in `LessonView` resolves correctly.
 
 ### `ShadowingModePicker`
+
+This component is **substantially rewritten**. The existing `DialogDescription` ("Shadow all segments from the beginning…") and the `onStart(mode)` single-argument signature are both replaced.
 
 Updated props:
 
 ```ts
 interface ShadowingModePickerProps {
   startSegment: Segment        // always required
-  totalRemaining: number       // segments.length - startIndex
+  startSegmentNumber: number   // 1-based global index (pickerStartIdx + 1 from LessonView)
+  totalRemaining: number       // segments.length - pickerStartIdx (always >= 1)
   speakingAvailable: boolean
   onStart: (mode: 'dictation' | 'speaking', count: number | 'all') => void
   onClose: () => void
 }
 ```
 
-**Internal state added:** `count: number | 'all'`, default `10` (or `'all'` if `totalRemaining <= 10`).
+**Internal state added:** `count: number | 'all'`, default:
+- `10` if `totalRemaining > 10`
+- `'all'` if `totalRemaining <= 10`
+
+(At exactly 10 remaining the `'all'` default is preferred — functionally identical but simpler mental model.)
 
 **Dialog layout:**
 
@@ -70,11 +78,13 @@ Segments to practice:
                   [ Cancel ]  [ Start → ]
 ```
 
-- The description line shows: `Starting from segment {N} — "{chinese}" ({timestamp})`
-- Timestamp formatted as `HH:MM:SS` from `startSegment.start` (seconds).
+- The description line shows: `Starting from segment {startSegmentNumber} — "{chinese}" ({timestamp})`
+  - `{startSegmentNumber}` = the 1-based global index prop — always reflects position in the full segments array, never the filtered/search position
+  - `{chinese}` = `startSegment.chinese`
+  - `{timestamp}` = `formatTimestamp(startSegment.start)` — `startSegment.start` is in **seconds** (float); format `HH:MM:SS`, truncated (no sub-second component)
 - Count chips: `5`, `10`, `20`, `All (N)` where N = `totalRemaining`.
 - Chips for 5/10/20 are **disabled** when `totalRemaining < chip value`.
-- `All` always enabled.
+- `All` chip is **never disabled** (`totalRemaining` is always ≥ 1).
 - `Start →` calls `onStart(selectedMode, count)`.
 
 ### `LessonView`
@@ -82,14 +92,26 @@ Segments to practice:
 **State:**
 
 ```ts
-// Before
-const [pickerOpen, setPickerOpen] = useState(false)
+// Remove entirely:
+const [pickerOpen, setPickerOpen] = useState(false)   // ← delete
+// And remove: handleShadowingClick, setPickerOpen calls
 
-// After
+// Add:
 const [pickerSegment, setPickerSegment] = useState<Segment | null>(null)
 ```
 
-`pickerOpen` becomes derived: `pickerSegment !== null`.
+`pickerOpen` and `handleShadowingClick` are removed. The dialog open condition is the sole replacement (see below).
+
+**`totalRemaining` computation** (evaluated when rendering the picker):
+
+```ts
+const pickerStartIdx = pickerSegment
+  ? segments.findIndex(s => s.id === pickerSegment.id)
+  : -1
+const totalRemaining = pickerStartIdx >= 0 ? segments.length - pickerStartIdx : 0
+```
+
+If `pickerStartIdx === -1` (segment no longer in array — stale reference after a reload), the dialog should not render (`pickerSegment !== null` check already guards `handleShadowingStart`; additionally guard the dialog `open` condition: `pickerSegment !== null && pickerStartIdx >= 0`).
 
 **Handlers:**
 
@@ -103,6 +125,7 @@ const handleShadowClick = useCallback((segment: Segment) => {
 const handleShadowingStart = useCallback(
   (mode: 'dictation' | 'speaking', count: number | 'all') => {
     const startIdx = segments.findIndex(s => s.id === pickerSegment!.id)
+    if (startIdx === -1) return   // stale segment guard
     const slice =
       count === 'all'
         ? segments.slice(startIdx)
@@ -124,26 +147,37 @@ const handleShadowingExit = useCallback(() => {
 type ShadowingActiveMode = null | { mode: 'dictation' | 'speaking', segments: Segment[] }
 ```
 
-**`ShadowingPanel`** receives `shadowingMode.segments` instead of the full `segments` prop.
+**`ShadowingPanel`** call site in `LessonView` JSX changes from `segments={segments}` to `segments={shadowingMode.segments}` (the pre-sliced array). All other props (`mode`, `azureKey`, `azureRegion`, `onExit`) are unchanged.
 
 **`ShadowingModePicker`** receives:
 - `startSegment={pickerSegment!}`
-- `totalRemaining={segments.length - segments.findIndex(s => s.id === pickerSegment!.id)}`
+- `startSegmentNumber={pickerStartIdx + 1}` — 1-based global index for display
+- `totalRemaining={totalRemaining}`
 - `speakingAvailable={speakingAvailable}`
 - `onStart={handleShadowingStart}`
 - `onClose={() => setPickerSegment(null)}`
 
-**Dialog `open` condition:** `pickerSegment !== null`.
+**Dialog `open` condition:** `pickerSegment !== null && pickerStartIdx >= 0`. Replaces the old `open={pickerOpen}` — `pickerOpen` state is removed entirely.
+
+**Dialog `onOpenChange`:** must call `setPickerSegment(null)` so Escape key and outside-click dismiss the dialog correctly:
+```tsx
+<Dialog
+  open={pickerSegment !== null && pickerStartIdx >= 0}
+  onOpenChange={(open) => { if (!open) setPickerSegment(null) }}
+>
+```
+
+**Mount/unmount:** `ShadowingModePicker` is only rendered when `pickerSegment !== null` (not merely hidden), so it is fully unmounted on close. This guarantees the `count` `useState` default recalculates fresh each time the picker is opened.
 
 ### `ShadowingPanel`
 
-No changes to props or logic. Receives a pre-sliced `segments` array; session runs exactly as before over that window.
+No changes to props or logic. Receives a pre-sliced `segments` array; `segmentIndex` is always 0-based relative to the slice. The session summary receives `segments.length` (the slice length) as `total` — this is correct; the summary reflects only the practiced window.
 
 ---
 
 ## Timestamp Formatting
 
-Utility (inline or extracted):
+Utility defined **inline in `ShadowingModePicker`** (sole consumer — no need for a shared util):
 
 ```ts
 function formatTimestamp(seconds: number): string {
@@ -154,13 +188,16 @@ function formatTimestamp(seconds: number): string {
 }
 ```
 
+Format: `HH:MM:SS` (e.g. `01:03:00`). Always zero-padded to 2 digits per component.
+
 ---
 
 ## What Is NOT Changed
 
 - `ShadowingPanel` internals — all phase components untouched.
 - Session summary, results, scoring logic — unchanged.
-- `segmentLabel` inside `ShadowingPanel` shows `1 / N` relative to the slice (correct behaviour by default since the panel receives only the slice).
+- `segmentLabel` inside `ShadowingPanel` shows `1 / N` relative to the slice (correct by default since the panel receives only the slice).
+- `segmentIndex` in `ShadowingPanel` is always 0-based into whatever `segments` array is passed; no absolute index tracking needed.
 
 ---
 
@@ -170,5 +207,5 @@ function formatTimestamp(seconds: number): string {
 |---|---|
 | Start segment is the last segment | `totalRemaining = 1`; chips 5/10/20 disabled, only `All (1)` available |
 | `count` exceeds remaining | `slice` naturally caps at end of array — no special handling needed |
-| `pickerSegment` not found in `segments` | Guarded by `findIndex` returning `-1`; treat as no-op (don't open) |
-
+| `pickerSegment` stale (not found in `segments`) | `pickerStartIdx === -1`; dialog does not open; `handleShadowingStart` returns early |
+| User has active search filter when clicking shadow icon | `onShadowClick` receives the original `Segment` reference from `filteredSegments` (same objects as `segments`); `findIndex` by `s.id` resolves correctly in the full array |
