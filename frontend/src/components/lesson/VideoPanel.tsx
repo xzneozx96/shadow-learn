@@ -62,12 +62,10 @@ interface VideoPanelProps {
   activeSegment: Segment | null
   videoBlob?: Blob
   onRename?: (newTitle: string) => void
-  onShadowingClick?: () => void
-  hasSegments?: boolean
 }
 
-export function VideoPanel({ lesson, videoBlob, onRename, onShadowingClick, hasSegments = false }: VideoPanelProps) {
-  const { player, currentTime, playbackRate, volume, setPlayer, setPlaybackRate, setVolume } = usePlayer()
+export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
+  const { player, subscribeTime, getTime, playbackRate, volume, setPlayer, setPlaybackRate, setVolume } = usePlayer()
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
@@ -77,6 +75,11 @@ export function VideoPanel({ lesson, videoBlob, onRename, onShadowingClick, hasS
   const isCancelledRef = useRef(false)
   const titleSnapshotRef = useRef('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const scrubberRef = useRef<HTMLInputElement>(null)
+  const timestampRef = useRef<HTMLSpanElement>(null)
+  // durationRef avoids putting `duration` in the subscribeTime effect deps, preventing
+  // an unnecessary unsubscribe/resubscribe whenever duration state updates.
+  const durationRef = useRef(0)
 
   // Auto-focus + select all when rename input appears
   useEffect(() => {
@@ -145,8 +148,10 @@ export function VideoPanel({ lesson, videoBlob, onRename, onShadowingClick, hasS
       return
     const interval = setInterval(() => {
       const d = player.getDuration()
-      if (d > 0)
+      if (d > 0) {
+        durationRef.current = d
         setDuration(d)
+      }
     }, 500)
     return () => clearInterval(interval)
   }, [player])
@@ -165,6 +170,20 @@ export function VideoPanel({ lesson, videoBlob, onRename, onShadowingClick, hasS
       cleanupPause()
     }
   }, [player])
+
+  // Drive scrubber and timestamp display directly — no React state for currentTime.
+  // `max` on the scrubber is a JSX prop — React updates it normally as `duration` state changes.
+  // The timestamp span has no JSX children so React never overwrites our imperatively-set textContent.
+  useEffect(() => {
+    function applyTime(time: number) {
+      if (scrubberRef.current)
+        scrubberRef.current.value = String(time)
+      if (timestampRef.current)
+        timestampRef.current.textContent = `${formatTime(time)} / ${formatTime(durationRef.current)}`
+    }
+    applyTime(getTime()) // populate immediately on mount — no blank-flash
+    return subscribeTime(applyTime)
+  }, [subscribeTime, getTime])
 
   const togglePlayPause = () => {
     if (!player)
@@ -308,11 +327,12 @@ export function VideoPanel({ lesson, videoBlob, onRename, onShadowingClick, hasS
       <div className="space-y-2 border-t border-border px-3 py-2">
         {/* Scrubber */}
         <input
+          ref={scrubberRef}
           type="range"
           min={0}
           max={duration || 0}
           step={0.1}
-          value={currentTime}
+          defaultValue={0}
           onChange={handleScrub}
           className="h-1 w-full cursor-pointer accent-primary"
         />
@@ -358,11 +378,7 @@ export function VideoPanel({ lesson, videoBlob, onRename, onShadowingClick, hasS
                 className="h-1 w-20 cursor-pointer accent-primary"
               />
             </div>
-            <span className="font-mono text-sm text-muted-foreground">
-              {formatTime(currentTime)}
-              {' / '}
-              {formatTime(duration)}
-            </span>
+            <span ref={timestampRef} className="font-mono text-sm text-muted-foreground" />
           </div>
         </div>
       </div>
@@ -381,18 +397,6 @@ export function VideoPanel({ lesson, videoBlob, onRename, onShadowingClick, hasS
           <Badge variant="outline" className="shrink-0 text-sm uppercase tracking-wider text-primary">
             Audio
           </Badge>
-        )}
-        {onShadowingClick && (
-          <Button
-            variant="ghost"
-            size="xs"
-            className="ml-auto shrink-0 text-xs"
-            onClick={onShadowingClick}
-            disabled={!hasSegments}
-            title={hasSegments ? 'Start shadowing mode' : 'No segments yet'}
-          >
-            🎯 Shadow
-          </Button>
         )}
       </div>
     </div>

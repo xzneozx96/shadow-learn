@@ -8,7 +8,8 @@ const mockSetVolume = vi.fn()
 vi.mock('../src/contexts/PlayerContext', () => ({
   usePlayer: () => ({
     player: null,
-    currentTime: 0,
+    subscribeTime: vi.fn(() => () => {}),
+    getTime: vi.fn(() => 0),
     playbackRate: 1,
     volume: 0.8,
     setPlayer: vi.fn(),
