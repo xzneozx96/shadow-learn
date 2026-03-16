@@ -14,6 +14,7 @@ import { LANGUAGES } from '@/lib/constants'
 export function Settings() {
   const { db, keys, lock, resetKeys, setup } = useAuth()
 
+  const [provider, setProvider] = useState<string | null>(null)
   const [language, setLanguage] = useState('en')
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
@@ -29,6 +30,13 @@ export function Settings() {
   const [keysPin, setKeysPin] = useState('')
   const [keysSaved, setKeysSaved] = useState(false)
   const [keysError, setKeysError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/tts/provider')
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch provider')))
+      .then((data: { provider: string }) => setProvider(data.provider))
+      .catch(() => setProvider('azure'))
+  }, [])
 
   useEffect(() => {
     if (!db)
@@ -58,14 +66,25 @@ export function Settings() {
       setKeysError('OpenRouter API key cannot be empty')
       return
     }
+    if (provider === 'azure') {
+      if (!editAzureSpeechKey.trim() || !editAzureSpeechRegion.trim()) {
+        setKeysError('Azure Speech key and region are required')
+        return
+      }
+    }
+    if (provider === 'minimax') {
+      if (!editMinimaxKey.trim()) {
+        setKeysError('MiniMax API key is required')
+        return
+      }
+    }
     if (!db)
       return
     try {
-      // Verify PIN is correct before re-encrypting
       const cryptoData = await getCryptoData(db)
       if (!cryptoData)
         throw new Error('No stored keys found')
-      await decryptKeys(cryptoData, keysPin) // throws if PIN is wrong
+      await decryptKeys(cryptoData, keysPin)
 
       const newKeys = {
         openrouterApiKey: editOpenrouterKey.trim(),
@@ -151,20 +170,59 @@ export function Settings() {
                 className="font-mono text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm text-white/40">
-                Minimax API Key
-                {' '}
-                <span className="text-white/20">(for listening practice)</span>
-              </label>
-              <Input
-                type={showKeys ? 'text' : 'password'}
-                value={editMinimaxKey}
-                onChange={e => setEditMinimaxKey(e.target.value)}
-                className="font-mono text-sm"
-                placeholder="Leave blank to disable TTS"
-              />
-            </div>
+
+            {/* Azure TTS + pronunciation keys — shown when provider is azure (or loading) */}
+            {(provider === null || provider === 'azure') && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm text-white/40">
+                    Azure Speech Key
+                    {' '}
+                    <span className="text-white/20">(for TTS and pronunciation assessment)</span>
+                  </label>
+                  <Input
+                    type={showKeys ? 'text' : 'password'}
+                    value={editAzureSpeechKey}
+                    onChange={e => setEditAzureSpeechKey(e.target.value)}
+                    className="font-mono text-sm"
+                    placeholder="Paste your Azure Speech key"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-white/40">
+                    Azure Speech Region
+                    {' '}
+                    <span className="text-white/20">(e.g. eastus)</span>
+                  </label>
+                  <Input
+                    type={showKeys ? 'text' : 'password'}
+                    value={editAzureSpeechRegion}
+                    onChange={e => setEditAzureSpeechRegion(e.target.value)}
+                    className="font-mono text-sm"
+                    placeholder="e.g. eastus"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* MiniMax key — shown only when provider is minimax */}
+            {provider === 'minimax' && (
+              <div className="space-y-2">
+                <label className="text-sm text-white/40">
+                  Minimax API Key
+                  {' '}
+                  <span className="text-white/20">(for listening practice)</span>
+                </label>
+                <Input
+                  type={showKeys ? 'text' : 'password'}
+                  value={editMinimaxKey}
+                  onChange={e => setEditMinimaxKey(e.target.value)}
+                  className="font-mono text-sm"
+                  placeholder="Leave blank to disable TTS"
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <label className="text-sm text-white/40">
                 Deepgram API Key
@@ -177,34 +235,6 @@ export function Settings() {
                 onChange={e => setEditDeepgramKey(e.target.value)}
                 className="font-mono text-sm"
                 placeholder="dg-..."
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-white/40">
-                Azure Speech Key
-                {' '}
-                <span className="text-white/20">(for pronunciation assessment)</span>
-              </label>
-              <Input
-                type={showKeys ? 'text' : 'password'}
-                value={editAzureSpeechKey}
-                onChange={e => setEditAzureSpeechKey(e.target.value)}
-                className="font-mono text-sm"
-                placeholder="Leave blank to disable"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-white/40">
-                Azure Speech Region
-                {' '}
-                <span className="text-white/20">(e.g. eastus)</span>
-              </label>
-              <Input
-                type={showKeys ? 'text' : 'password'}
-                value={editAzureSpeechRegion}
-                onChange={e => setEditAzureSpeechRegion(e.target.value)}
-                className="font-mono text-sm"
-                placeholder="e.g. eastus"
               />
             </div>
             <div className="space-y-2">
