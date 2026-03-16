@@ -3,6 +3,7 @@ import httpx
 from unittest.mock import patch, MagicMock, AsyncMock
 from pathlib import Path
 from app.services.transcription import (
+    _finalize_segment,
     _group_words_into_segments,
     _segments_from_utterances,
     transcribe_audio_deepgram,
@@ -308,3 +309,23 @@ async def test_transcribe_audio_deepgram_raises_on_api_error(tmp_path):
 
         with pytest.raises(httpx.HTTPStatusError):
             await transcribe_audio_deepgram(audio_file, api_key="bad_key")
+
+
+def test_finalize_segment_english_preserves_spaces():
+    """Non-CJK words must be joined with spaces, not concatenated."""
+    words = [
+        {"text": "Hello", "start": 0.0, "end": 0.5},
+        {"text": "world.", "start": 0.5, "end": 1.0},
+    ]
+    seg = _finalize_segment(words, 0, language="en")
+    assert seg["text"] == "Hello world."
+
+
+def test_finalize_segment_chinese_strips_spaces():
+    """CJK tokens must be joined without spaces."""
+    words = [
+        {"text": "你好", "start": 0.0, "end": 0.5},
+        {"text": "世界。", "start": 0.5, "end": 1.0},
+    ]
+    seg = _finalize_segment(words, 0, language="zh-CN")
+    assert seg["text"] == "你好世界。"

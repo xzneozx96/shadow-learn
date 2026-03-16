@@ -89,9 +89,11 @@ class _DeepgramResponse(TypedDict):
 # Segmentation helpers
 # ---------------------------------------------------------------------------
 
-def _finalize_segment(words: list[_Word], index: int) -> _Segment:
+def _finalize_segment(words: list[_Word], index: int, language: str) -> _Segment:
     """Create a segment dict from a list of word dicts."""
-    text = "".join(w["text"] for w in words)
+    text = " ".join(w["text"] for w in words)
+    if language.startswith("zh"):
+        text = text.replace(" ", "")
     return {
         "id": index,
         "start": words[0]["start"],
