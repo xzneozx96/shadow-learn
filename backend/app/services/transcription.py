@@ -195,7 +195,6 @@ _DEEPGRAM_PARAMS = {
     "punctuate": "true",
     "utterances": "true",
     "smart_format": "true",
-    "language": "zh-CN",
     "model": "nova-2",
 }
 
@@ -212,7 +211,7 @@ def _normalize_deepgram_words(words: list[_DeepgramWord]) -> list[_Word]:
     ]
 
 
-async def transcribe_audio_deepgram(audio_path: Path, api_key: str) -> list[_Segment]:
+async def transcribe_audio_deepgram(audio_path: Path, api_key: str, language: str) -> list[_Segment]:
     """Transcribe an audio file using the Deepgram nova-2 API.
 
     Uses utterance segmentation from Deepgram (speaker-aware, punctuated).
@@ -226,16 +225,16 @@ async def transcribe_audio_deepgram(audio_path: Path, api_key: str) -> list[_Seg
         raise ValueError(f"Audio file is empty (0 bytes): {audio_path.name}")
 
     suffix = audio_path.suffix.lower().lstrip(".")
-    # audio/mp3 is non-standard; audio/mpeg is the correct MIME type for MP3
     _MIME_MAP = {"mp3": "audio/mpeg", "mp4": "audio/mp4", "m4a": "audio/mp4", "wav": "audio/wav", "ogg": "audio/ogg"}
     content_type = _MIME_MAP.get(suffix, f"audio/{suffix}") if suffix else "audio/mpeg"
 
     audio_bytes = await asyncio.to_thread(audio_path.read_bytes)
+    params = {**_DEEPGRAM_PARAMS, "language": language}
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         response = await client.post(
             _DEEPGRAM_TRANSCRIPTION_URL,
-            params=_DEEPGRAM_PARAMS,
+            params=params,
             headers={
                 "Authorization": f"Token {api_key}",
                 "Content-Type": content_type,
@@ -251,14 +250,12 @@ async def transcribe_audio_deepgram(audio_path: Path, api_key: str) -> list[_Seg
     data: _DeepgramResponse = response.json()
     results = data.get("results", {})  # type: ignore[union-attr]
 
-    # Primary: use utterances (works for single-speaker and multi-speaker)
     utterances: list[_DeepgramUtterance] = results.get("utterances", [])  # type: ignore[assignment]
     if utterances:
-        segments = _segments_from_utterances(utterances)
+        segments = _segments_from_utterances(utterances, language)
         logger.info("Deepgram transcription complete: %d segments from utterances", len(segments))
         return segments
 
-    # Fallback: word-level grouping from channels
     channels = results.get("channels", [])  # type: ignore[call-overload]
     if not channels:
         logger.warning("Deepgram returned no channels — empty transcript")
@@ -290,4 +287,4 @@ async def transcribe_audio_deepgram(audio_path: Path, api_key: str) -> list[_Seg
 
     logger.info("Deepgram transcription complete (word fallback): %d words", len(raw_words))
     words = _normalize_deepgram_words(raw_words)
-    return _group_words_into_segments(words, language=detected_language)
+    return _group_words_into_segments(words, language)

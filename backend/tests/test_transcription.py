@@ -218,7 +218,7 @@ async def test_transcribe_audio_deepgram_uses_utterances(tmp_path):
         mock_client.post = AsyncMock(return_value=mock_response)
         mock_client_cls.return_value = mock_client
 
-        segments = await transcribe_audio_deepgram(audio_file, api_key="test_key")
+        segments = await transcribe_audio_deepgram(audio_file, api_key="test_key", language="zh-CN")
 
     assert len(segments) == 2
     assert segments[0]["text"] == "你好世界。"
@@ -274,7 +274,7 @@ async def test_transcribe_audio_deepgram_falls_back_to_words(tmp_path):
         mock_client.post = AsyncMock(return_value=mock_response)
         mock_client_cls.return_value = mock_client
 
-        segments = await transcribe_audio_deepgram(audio_file, api_key="test_key")
+        segments = await transcribe_audio_deepgram(audio_file, api_key="test_key", language="zh-CN")
 
     assert len(segments) == 2
     assert segments[0]["text"] == "你好世界。"
@@ -308,7 +308,7 @@ async def test_transcribe_audio_deepgram_raises_on_api_error(tmp_path):
         mock_client_cls.return_value = mock_client
 
         with pytest.raises(httpx.HTTPStatusError):
-            await transcribe_audio_deepgram(audio_file, api_key="bad_key")
+            await transcribe_audio_deepgram(audio_file, api_key="bad_key", language="zh-CN")
 
 
 def test_finalize_segment_english_preserves_spaces():
