@@ -4,41 +4,57 @@ import {
   createContext,
   use,
   useCallback,
+  useEffect,
   useRef,
   useState,
-
 } from 'react'
 
 interface PlayerState {
   player: VideoPlayer | null
-  currentTime: number
   playbackRate: number
   volume: number
   setPlayer: (player: VideoPlayer) => void
   setPlaybackRate: (rate: number) => void
   setVolume: (v: number) => void
+  subscribeTime: (cb: (t: number) => void) => () => void
+  getTime: () => number
 }
 
 const PlayerContext = createContext<PlayerState | null>(null)
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [player, setPlayer_] = useState<VideoPlayer | null>(null)
-  const [currentTime, setCurrentTime] = useState(0)
   const [playbackRate, setPlaybackRate_] = useState(1)
   const [volume, setVolume_] = useState(1)
+
+  const timeRef = useRef(0)
+  const subscribersRef = useRef<Set<(t: number) => void>>(new Set())
   const unsubRef = useRef<(() => void) | null>(null)
 
-  const setPlayer = useCallback((newPlayer: VideoPlayer) => {
-    if (unsubRef.current) {
-      unsubRef.current()
-    }
-
-    const unsub = newPlayer.onTimeUpdate((time) => {
-      setCurrentTime(time)
+  // Fan-out: wire current player's onTimeUpdate to all subscribers
+  useEffect(() => {
+    if (!player) return
+    if (unsubRef.current) unsubRef.current()
+    unsubRef.current = player.onTimeUpdate((time) => {
+      timeRef.current = time
+      for (const cb of subscribersRef.current) cb(time)
     })
-    unsubRef.current = unsub
+    return () => {
+      unsubRef.current?.()
+      unsubRef.current = null
+    }
+  }, [player])
+
+  const setPlayer = useCallback((newPlayer: VideoPlayer) => {
     setPlayer_(newPlayer)
   }, [])
+
+  const subscribeTime = useCallback((cb: (t: number) => void) => {
+    subscribersRef.current.add(cb)
+    return () => { subscribersRef.current.delete(cb) }
+  }, [])
+
+  const getTime = useCallback(() => timeRef.current, [])
 
   const setPlaybackRate = useCallback(
     (rate: number) => {
@@ -59,7 +75,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   return (
     <PlayerContext
-      value={{ player, currentTime, playbackRate, volume, setPlayer, setPlaybackRate, setVolume }}
+      value={{ player, playbackRate, volume, setPlayer, setPlaybackRate, setVolume, subscribeTime, getTime }}
     >
       {children}
     </PlayerContext>
