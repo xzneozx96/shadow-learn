@@ -275,7 +275,13 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
               />
             )}
             {q.type === 'cloze' && q.clozeData && (
-              <ClozeExercise key={current} question={q.clozeData} entries={entries} onNext={handleNext} />
+              <ClozeExercise
+                key={current}
+                question={q.clozeData}
+                entries={entries}
+                progress={`${current + 1} / ${questions.length}`}
+                onNext={handleNext}
+              />
             )}
             {q.type === 'pronunciation' && q.pronunciationData && (
               <PronunciationReferee
