@@ -17,8 +17,6 @@ export function useTTS(
   keys: DecryptedKeys | null,
 ): UseTTSReturn {
   const [loadingText, setLoadingText] = useState<string | null>(null)
-  // provider state is used to trigger re-render so playTTS is recreated
-  const [provider, setProvider] = useState<ProviderState>(null)
   // providerRef always holds the latest value — avoids stale closure in playTTS
   const providerRef = useRef<ProviderState>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -27,8 +25,12 @@ export function useTTS(
   const keysRef = useRef(keys)
 
   // Keep refs in sync with props
-  useEffect(() => { dbRef.current = db }, [db])
-  useEffect(() => { keysRef.current = keys }, [keys])
+  useEffect(() => {
+    dbRef.current = db
+  }, [db])
+  useEffect(() => {
+    keysRef.current = keys
+  }, [keys])
 
   // Fetch the active provider once on mount
   useEffect(() => {
@@ -42,7 +44,6 @@ export function useTTS(
       .then((data: { provider: string }) => {
         if (!cancelled) {
           providerRef.current = data.provider
-          setProvider(data.provider)
         }
       })
       .catch(() => {
@@ -50,10 +51,11 @@ export function useTTS(
         console.warn('[useTTS] Failed to fetch TTS provider, defaulting to azure')
         if (!cancelled) {
           providerRef.current = 'azure'
-          setProvider('azure')
         }
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const playTTS = useCallback(async (text: string) => {
