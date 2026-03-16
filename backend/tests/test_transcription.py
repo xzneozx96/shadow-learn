@@ -18,7 +18,7 @@ def test_group_words_splits_on_punctuation():
         {"text": "。", "start": 0.5, "end": 0.5},
         {"text": "世界", "start": 1.0, "end": 1.5},
     ]
-    segments = _group_words_into_segments(words)
+    segments = _group_words_into_segments(words, language="zh-CN")
     assert len(segments) == 2
     assert segments[0]["text"] == "你好。"
     assert segments[0]["word_timings"] == [
@@ -35,7 +35,7 @@ def test_group_words_splits_on_gap():
         {"text": "你", "start": 0.0, "end": 0.5},
         {"text": "好", "start": 3.1, "end": 3.6},
     ]
-    segments = _group_words_into_segments(words)
+    segments = _group_words_into_segments(words, language="zh-CN")
     assert len(segments) == 2
     assert segments[0]["text"] == "你"
     assert segments[0]["word_timings"] == [{"text": "你", "start": 0.0, "end": 0.5}]
@@ -329,3 +329,25 @@ def test_finalize_segment_chinese_strips_spaces():
     ]
     seg = _finalize_segment(words, 0, language="zh-CN")
     assert seg["text"] == "你好世界。"
+
+
+def test_group_words_english_preserves_spaces():
+    """Word fallback path must join English words with spaces."""
+    words = [
+        {"text": "Hello", "start": 0.0, "end": 0.5},
+        {"text": "world.", "start": 0.5, "end": 1.0},
+    ]
+    segments = _group_words_into_segments(words, language="en")
+    assert len(segments) == 1
+    assert segments[0]["text"] == "Hello world."
+
+
+def test_group_words_chinese_strips_spaces():
+    """Word fallback path must strip spaces for CJK."""
+    words = [
+        {"text": "你好", "start": 0.0, "end": 0.5},
+        {"text": "世界。", "start": 0.5, "end": 1.0},
+    ]
+    segments = _group_words_into_segments(words, language="zh-CN")
+    assert len(segments) == 1
+    assert segments[0]["text"] == "你好世界。"

@@ -103,7 +103,7 @@ def _finalize_segment(words: list[_Word], index: int, language: str) -> _Segment
     }
 
 
-def _group_words_into_segments(words: list[_Word]) -> list[_Segment]:
+def _group_words_into_segments(words: list[_Word], language: str) -> list[_Segment]:
     """Group a flat word list into sentence segments.
 
     Splits on sentence-ending punctuation or time gaps.
@@ -123,29 +123,31 @@ def _group_words_into_segments(words: list[_Word]) -> list[_Segment]:
             gap = word["start"] - prev_end
 
             if gap > _GAP_THRESHOLD_SECONDS:
-                segments.append(_finalize_segment(current_words, segment_index))
+                segments.append(_finalize_segment(current_words, segment_index, language))
                 segment_index += 1
                 current_words = [word]
             else:
                 current_words.append(word)
 
-        current_text = "".join(w["text"] for w in current_words)
+        current_text = " ".join(w["text"] for w in current_words)
+        if language.startswith("zh"):
+            current_text = current_text.replace(" ", "")
 
         if text.rstrip() and text[-1] in _SENTENCE_ENDINGS:
-            segments.append(_finalize_segment(current_words, segment_index))
+            segments.append(_finalize_segment(current_words, segment_index, language))
             segment_index += 1
             current_words = []
         elif text.rstrip() and text[-1] in _CLAUSE_BREAKS and len(current_text) >= _MAX_SEGMENT_CHARS:
-            segments.append(_finalize_segment(current_words, segment_index))
+            segments.append(_finalize_segment(current_words, segment_index, language))
             segment_index += 1
             current_words = []
         elif len(current_text) >= int(_MAX_SEGMENT_CHARS * 1.5):
-            segments.append(_finalize_segment(current_words, segment_index))
+            segments.append(_finalize_segment(current_words, segment_index, language))
             segment_index += 1
             current_words = []
 
     if current_words:
-        segments.append(_finalize_segment(current_words, segment_index))
+        segments.append(_finalize_segment(current_words, segment_index, language))
 
     return segments
 
@@ -286,4 +288,4 @@ async def transcribe_audio_deepgram(audio_path: Path, api_key: str) -> list[_Seg
 
     logger.info("Deepgram transcription complete (word fallback): %d words", len(raw_words))
     words = _normalize_deepgram_words(raw_words)
-    return _group_words_into_segments(words)
+    return _group_words_into_segments(words, language=detected_language)
