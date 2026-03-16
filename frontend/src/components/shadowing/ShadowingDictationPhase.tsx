@@ -1,8 +1,11 @@
 import type { Segment } from '@/types'
+import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { usePlayer } from '@/contexts/PlayerContext'
+import { useTimeEffect } from '@/hooks/useTimeEffect'
 import { cn } from '@/lib/utils'
+import { Input } from '../ui/input'
 
 interface ShadowingDictationPhaseProps {
   segment: Segment
@@ -25,7 +28,16 @@ export function ShadowingDictationPhase({
   const [value, setValue] = useState('')
   const [inputMode, setInputMode] = useState<'hanzi' | 'pinyin'>('hanzi')
   const [shake, setShake] = useState(false)
+  const isReplayingRef = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-pause at segment end after replay.
+  useTimeEffect((t) => {
+    if (isReplayingRef.current && t >= segment.end) {
+      isReplayingRef.current = false
+      player?.pause()
+    }
+  }, segment.id)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -37,6 +49,7 @@ export function ShadowingDictationPhase({
       const inInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement
       if (e.key === ' ' && !inInput) {
         e.preventDefault()
+        isReplayingRef.current = true
         player?.seekTo(segment.start)
         player?.play()
       }
@@ -46,6 +59,7 @@ export function ShadowingDictationPhase({
   }, [player, segment.start])
 
   function handleReplay() {
+    isReplayingRef.current = true
     player?.seekTo(segment.start)
     player?.play()
   }
@@ -75,14 +89,14 @@ export function ShadowingDictationPhase({
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
-        <button
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
+        <Button
+          variant="ghost"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >
-          ✕ exit
-        </button>
+          <X />
+        </Button>
       </div>
 
       {/* Progress bar */}
@@ -95,37 +109,38 @@ export function ShadowingDictationPhase({
 
       {/* Body */}
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground">
+        <span className="text-sm uppercase tracking-widest text-muted-foreground">
           Type what you heard
         </span>
 
         <button
-          className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+          className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-sm transition-colors hover:bg-accent"
           onClick={handleReplay}
         >
           ↺ Replay
         </button>
 
-        <input
+        <Input
           ref={inputRef}
           value={value}
           onChange={e => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={inputMode === 'hanzi' ? '输入汉字…' : 'Type pinyin…'}
           className={cn(
-            'w-4/5 rounded-md border border-border bg-background/50 px-3 py-2 text-center text-base outline-none transition-colors focus:border-foreground/30',
+            'h-10 text-center',
             shake && 'animate-[shake_0.4s_ease-in-out]',
           )}
           aria-label="Your answer"
         />
 
         {/* Toggle */}
-        <div className="flex gap-1">
+        <div className="flex gap-2">
           {(['hanzi', 'pinyin'] as const).map(m => (
-            <button
+            <Button
+              variant="ghost"
               key={m}
               className={cn(
-                'rounded border px-2.5 py-0.5 text-xs transition-colors',
+                'min-w-14',
                 inputMode === m
                   ? 'border-foreground/25 bg-foreground/10 text-foreground'
                   : 'border-border text-muted-foreground hover:text-foreground',
@@ -133,7 +148,7 @@ export function ShadowingDictationPhase({
               onClick={() => setInputMode(m)}
             >
               {m === 'hanzi' ? '汉字' : 'pinyin'}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -141,7 +156,7 @@ export function ShadowingDictationPhase({
       </div>
 
       <button
-        className="self-end text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground"
         onClick={onSkip}
         aria-label="Skip this segment"
       >

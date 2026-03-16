@@ -28,7 +28,8 @@ const mockPlayer = {
 vi.mock('@/contexts/PlayerContext', () => ({
   usePlayer: () => ({
     player: mockPlayer,
-    currentTime: 0,
+    subscribeTime: vi.fn(() => () => {}),
+    getTime: vi.fn(() => 0),
     playbackRate: 1,
     volume: 1,
     setPlayer: vi.fn(),

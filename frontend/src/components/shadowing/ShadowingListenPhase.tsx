@@ -1,6 +1,9 @@
 import type { Segment } from '@/types'
+import { X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { usePlayer } from '@/contexts/PlayerContext'
+import { useTimeEffect } from '@/hooks/useTimeEffect'
+import { Button } from '../ui/button'
 
 const WAVE_HEIGHTS = [20, 65, 45, 90, 50, 75, 35, 80, 55, 40, 70, 30]
 
@@ -21,8 +24,12 @@ export function ShadowingListenPhase({
   onSkip,
   onExit,
 }: ShadowingListenPhaseProps) {
-  const { player, currentTime } = usePlayer()
-  const hasAutoTransitioned = useRef(false)
+  const { player } = usePlayer()
+  const hasAutoTransitionedRef = useRef(false)
+  // Guards against stale currentTime (pre-session or pre-retry position) triggering
+  // an immediate false auto-transition on mount. Only start watching for segment.end
+  // once currentTime has been confirmed to be inside the segment (seek took effect).
+  const hasSeekConfirmedRef = useRef(false)
   const replayButtonRef = useRef<HTMLButtonElement>(null)
   // Stable refs to avoid stale closures in effects
   const onAutoTransitionRef = useRef(onAutoTransition)
@@ -37,8 +44,9 @@ export function ShadowingListenPhase({
     replayButtonRef.current?.focus()
 
     const cleanup = player.onEnded(() => {
-      if (!hasAutoTransitioned.current) {
-        hasAutoTransitioned.current = true
+      if (!hasAutoTransitionedRef.current) {
+        hasAutoTransitionedRef.current = true
+        player.pause()
         onAutoTransitionRef.current()
       }
     })
@@ -46,13 +54,20 @@ export function ShadowingListenPhase({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // intentionally run once on mount only
 
-  // currentTime-based auto-transition
-  useEffect(() => {
-    if (!hasAutoTransitioned.current && currentTime >= segment.end) {
-      hasAutoTransitioned.current = true
+  // currentTime-based auto-transition: pause + advance when segment boundary reached.
+  // Wait for seek confirmation first to avoid firing on stale pre-session currentTime.
+  useTimeEffect((t) => {
+    if (!hasSeekConfirmedRef.current) {
+      if (t >= segment.start && t < segment.end)
+        hasSeekConfirmedRef.current = true
+      return
+    }
+    if (!hasAutoTransitionedRef.current && t >= segment.end) {
+      hasAutoTransitionedRef.current = true
+      player?.pause()
       onAutoTransitionRef.current()
     }
-  }, [currentTime, segment.end])
+  }, segment.id)
 
   // Keyboard: Space = replay
   useEffect(() => {
@@ -85,14 +100,14 @@ export function ShadowingListenPhase({
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
-        <button
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
+        <Button
+          variant="ghost"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >
-          ✕ exit
-        </button>
+          <X />
+        </Button>
       </div>
 
       {/* Progress bar */}
@@ -105,7 +120,7 @@ export function ShadowingListenPhase({
 
       {/* Body */}
       <div className="flex flex-1 flex-col items-center justify-center gap-5">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground">Listen</span>
+        <span className="text-sm uppercase tracking-widest text-muted-foreground">Listen</span>
 
         {/* Decorative waveform — heights applied from WAVE_HEIGHTS for visual variety */}
         <div className="flex items-center gap-0.5" style={{ height: 48 }} aria-hidden>
@@ -118,11 +133,11 @@ export function ShadowingListenPhase({
           ))}
         </div>
 
-        <span className="text-xs text-muted-foreground">Playing segment…</span>
+        <span className="text-sm text-muted-foreground">Playing segment…</span>
 
         <button
           ref={replayButtonRef}
-          className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+          className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-sm transition-colors hover:bg-accent"
           onClick={handleReplay}
         >
           ↺ Replay
@@ -130,7 +145,7 @@ export function ShadowingListenPhase({
       </div>
 
       <button
-        className="self-end text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground"
         onClick={onSkip}
         aria-label="Skip this segment"
       >

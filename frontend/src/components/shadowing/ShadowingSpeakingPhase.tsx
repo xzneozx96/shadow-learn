@@ -1,7 +1,9 @@
 import type { Segment } from '@/types'
+import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { usePlayer } from '@/contexts/PlayerContext'
+import { useTimeEffect } from '@/hooks/useTimeEffect'
 import { cn } from '@/lib/utils'
 
 type SpeakingSubState = 'initial' | 'recording' | 'processing' | 'recorded'
@@ -25,6 +27,7 @@ export function ShadowingSpeakingPhase({
 }: ShadowingSpeakingPhaseProps) {
   const { player } = usePlayer()
   const [subState, setSubState] = useState<SpeakingSubState>('initial')
+  const isReplayingRef = useRef(false)
   const [blob, setBlob] = useState<Blob | null>(null)
   const [shortError, setShortError] = useState(false)
   const [interruptedError, setInterruptedError] = useState(false)
@@ -41,6 +44,14 @@ export function ShadowingSpeakingPhase({
   useEffect(() => {
     micBtnRef.current?.focus()
   }, [])
+
+  // Auto-pause at segment end after replay.
+  useTimeEffect((t) => {
+    if (isReplayingRef.current && t >= segment.end) {
+      isReplayingRef.current = false
+      player?.pause()
+    }
+  }, segment.id)
 
   // Tab-hidden guard
   useEffect(() => {
@@ -148,14 +159,14 @@ export function ShadowingSpeakingPhase({
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
-        <button
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
+        <Button
+          variant="ghost"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >
-          ✕ exit
-        </button>
+          <X />
+        </Button>
       </div>
 
       {/* Progress bar */}
@@ -168,15 +179,16 @@ export function ShadowingSpeakingPhase({
 
       {/* Body */}
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground">
+        <span className="text-sm uppercase tracking-widest text-muted-foreground">
           Speak what you heard
         </span>
 
         {/* Replay — initial only */}
         {subState === 'initial' && (
           <button
-            className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+            className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-sm transition-colors hover:bg-accent"
             onClick={() => {
+              isReplayingRef.current = true
               player?.seekTo(segment.start)
               player?.play()
             }}
@@ -205,7 +217,7 @@ export function ShadowingSpeakingPhase({
         {/* Recording waveform */}
         {subState === 'recording' && (
           <>
-            <span className="text-xs text-destructive">Recording…</span>
+            <span className="text-sm text-destructive">Recording…</span>
             <div className="flex items-center gap-0.5" style={{ height: 20 }} aria-hidden>
               {Array.from({ length: WAVE_COUNT }, (_, i) => (
                 <div
@@ -216,7 +228,7 @@ export function ShadowingSpeakingPhase({
               ))}
             </div>
             <button
-              className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               onClick={stopRecording}
             >
               Stop & Submit
@@ -225,13 +237,13 @@ export function ShadowingSpeakingPhase({
         )}
 
         {subState === 'processing' && (
-          <span className="text-xs text-muted-foreground">Processing…</span>
+          <span className="text-sm text-muted-foreground">Processing…</span>
         )}
 
         {subState === 'recorded' && blob && (
           <div className="flex gap-2">
             <button
-              className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               onClick={handleRerecord}
             >
               ↺ Re-record
@@ -241,15 +253,15 @@ export function ShadowingSpeakingPhase({
         )}
 
         {shortError && (
-          <p className="text-xs text-destructive">Recording too short — try again.</p>
+          <p className="text-sm text-destructive">Recording too short — try again.</p>
         )}
         {interruptedError && (
-          <p className="text-xs text-destructive">Recording interrupted.</p>
+          <p className="text-sm text-destructive">Recording interrupted.</p>
         )}
       </div>
 
       <button
-        className="self-end text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground"
         onClick={handleSkip}
         aria-label="Skip this segment"
       >
