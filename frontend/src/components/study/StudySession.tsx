@@ -1,25 +1,27 @@
-import { useState } from 'react'
+import type { ExerciseMode } from '@/components/study/ModePicker'
+import type { VocabEntry } from '@/types'
 import { X } from 'lucide-react'
-import { useVocabulary } from '@/hooks/useVocabulary'
-import { useAuth } from '@/contexts/AuthContext'
-import { useTTS } from '@/hooks/useTTS'
-import { ModePicker, type ExerciseMode } from '@/components/study/ModePicker'
-import { ProgressBar } from '@/components/study/ProgressBar'
-import { SessionSummary } from '@/components/study/SessionSummary'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { ClozeExercise } from '@/components/study/exercises/ClozeExercise'
 import { DictationExercise } from '@/components/study/exercises/DictationExercise'
 import { PinyinRecallExercise } from '@/components/study/exercises/PinyinRecallExercise'
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { ReconstructionExercise } from '@/components/study/exercises/ReconstructionExercise'
-import type { VocabEntry } from '@/types'
+import { ModePicker } from '@/components/study/ModePicker'
+import { ProgressBar } from '@/components/study/ProgressBar'
+import { SessionSummary } from '@/components/study/SessionSummary'
+import { useAuth } from '@/contexts/AuthContext'
+import { useTTS } from '@/hooks/useTTS'
+import { useVocabulary } from '@/hooks/useVocabulary'
 
 type Phase = 'picker' | 'session' | 'summary'
 
 interface Question {
   type: Exclude<ExerciseMode, 'mixed'>
   entry: VocabEntry
-  clozeData?: { story: string; blanks: string[] }
-  pronunciationData?: { sentence: string; translation: string }
+  clozeData?: { story: string, blanks: string[] }
+  pronunciationData?: { sentence: string, translation: string }
   reconstructionTokens?: string[]
 }
 
@@ -40,10 +42,11 @@ function distributeExercises(
   hasAzure: boolean,
 ): Exclude<ExerciseMode, 'mixed'>[] {
   const available: Exclude<ExerciseMode, 'mixed'>[] = ['cloze', 'dictation', 'pinyin', 'reconstruction']
-  if (hasAzure) available.push('pronunciation')
+  if (hasAzure)
+    available.push('pronunciation')
 
   if (mode !== 'mixed') {
-    return Array.from({ length: count }, () => mode as Exclude<ExerciseMode, 'mixed'>)
+    return Array.from<Exclude<ExerciseMode, 'mixed'>>({ length: count }).fill(mode as Exclude<ExerciseMode, 'mixed'>)
   }
 
   const result: Exclude<ExerciseMode, 'mixed'>[] = []
@@ -78,18 +81,33 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
   const [count, setCount] = useState(10)
   const [questions, setQuestions] = useState<Question[]>([])
   const [current, setCurrent] = useState(0)
-  const [results, setResults] = useState<{ entry: VocabEntry; correct: boolean }[]>([])
+  const [results, setResults] = useState<{ entry: VocabEntry, correct: boolean }[]>([])
   const [loading, setLoading] = useState(false)
   const [azureBanner, setAzureBanner] = useState(false)
+  // Guard against double-click and track the in-flight controller for cleanup
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    const ctrl = abortRef
+    return () => {
+      ctrl.current?.abort()
+    }
+  }, [])
 
   const hasAzure = Boolean(keys?.azureSpeechKey)
 
-  async function fetchAIContent(types: Exclude<ExerciseMode, 'mixed'>[], pool: VocabEntry[]) {
+  async function fetchAIContent(types: Exclude<ExerciseMode, 'mixed'>[], pool: VocabEntry[], signal: AbortSignal) {
     const clozeWords = pool.slice(0, 5).map(e => ({
-      word: e.word, pinyin: e.pinyin, meaning: e.meaning, usage: e.usage,
+      word: e.word,
+      pinyin: e.pinyin,
+      meaning: e.meaning,
+      usage: e.usage,
     }))
     const pronWords = pool.map(e => ({
-      word: e.word, pinyin: e.pinyin, meaning: e.meaning, usage: e.usage,
+      word: e.word,
+      pinyin: e.pinyin,
+      meaning: e.meaning,
+      usage: e.usage,
     }))
     const pronCount = types.filter(t => t === 'pronunciation').length
     const clozeCount = types.filter(t => t === 'cloze').length
@@ -100,24 +118,34 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              openai_api_key: keys?.openaiApiKey,
+              openrouter_api_key: keys?.openrouterApiKey,
               words: clozeWords,
               exercise_type: 'cloze',
               story_count: clozeCount,
             }),
-          }).then(r => r.json())
+            signal,
+          }).then(async (r) => {
+            if (!r.ok)
+              throw new Error(`Quiz generation failed (${r.status})`)
+            return r.json()
+          })
         : Promise.resolve({ exercises: [] }),
       pronCount > 0
         ? fetch(`${API_BASE}/api/quiz/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              openai_api_key: keys?.openaiApiKey,
+              openrouter_api_key: keys?.openrouterApiKey,
               words: pronWords,
               exercise_type: 'pronunciation_sentence',
               count: pronCount,
             }),
-          }).then(r => r.json())
+            signal,
+          }).then(async (r) => {
+            if (!r.ok)
+              throw new Error(`Quiz generation failed (${r.status})`)
+            return r.json()
+          })
         : Promise.resolve({ exercises: [] }),
     ])
 
@@ -125,25 +153,32 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
   }
 
   async function handleStart() {
-    if (entries.length === 0) return
+    if (entries.length === 0 || abortRef.current)
+      return
+    const controller = new AbortController()
+    abortRef.current = controller
     setLoading(true)
 
     const types = distributeExercises(entries, mode, count, hasAzure)
-    if (mode === 'mixed' && !hasAzure) setAzureBanner(true)
+    if (mode === 'mixed' && !hasAzure)
+      setAzureBanner(true)
 
-    const pool = [...entries].sort(() => Math.random() - 0.5)
+    const pool = entries.toSorted(() => Math.random() - 0.5)
 
     try {
-      const { clozeExercises, pronExercises } = await fetchAIContent(types, pool)
+      const { clozeExercises, pronExercises } = await fetchAIContent(types, pool, controller.signal)
       let clozeIdx = 0
       let pronIdx = 0
 
       const qs: Question[] = types.map((type, i) => {
         const entry = pool[i % pool.length]
         const q: Question = { type, entry }
-        if (type === 'cloze') q.clozeData = clozeExercises[clozeIdx++]
-        if (type === 'pronunciation') q.pronunciationData = pronExercises[pronIdx++]
-        if (type === 'reconstruction') q.reconstructionTokens = getReconstructionTokens(entry, entries)
+        if (type === 'cloze')
+          q.clozeData = clozeExercises[clozeIdx++]
+        if (type === 'pronunciation')
+          q.pronunciationData = pronExercises[pronIdx++]
+        if (type === 'reconstruction')
+          q.reconstructionTokens = getReconstructionTokens(entry, entries)
         return q
       })
 
@@ -153,11 +188,13 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
       setPhase('session')
     }
     catch {
+      toast.error('AI exercise generation failed — falling back to basic exercises')
       const fallbackTypes = types.map(t => (t === 'cloze' ? 'pinyin' : t)) as Exclude<ExerciseMode, 'mixed'>[]
       const qs: Question[] = fallbackTypes.map((type, i) => {
         const entry = pool[i % pool.length]
         const q: Question = { type, entry }
-        if (type === 'reconstruction') q.reconstructionTokens = getReconstructionTokens(entry, entries)
+        if (type === 'reconstruction')
+          q.reconstructionTokens = getReconstructionTokens(entry, entries)
         return q
       })
       setQuestions(qs)
@@ -166,6 +203,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
       setPhase('session')
     }
     finally {
+      abortRef.current = null
       setLoading(false)
     }
   }
@@ -202,14 +240,11 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
             selected={mode}
             onSelect={setMode}
             count={count}
+            loading={loading}
             onCountChange={setCount}
             onStart={() => void handleStart()}
             lessonTitle={lessonTitle}
           />
-        )}
-
-        {loading && (
-          <div className="text-center py-20 text-muted-foreground text-sm">Generating exercises…</div>
         )}
 
         {/* Session */}
@@ -222,7 +257,13 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
             )}
             <ProgressBar current={current} total={questions.length} />
             {q.type === 'pinyin' && (
-              <PinyinRecallExercise key={current} entry={q.entry} onNext={handleNext} playTTS={playTTS} />
+              <PinyinRecallExercise
+                key={current}
+                entry={q.entry}
+                progress={`${current + 1} / ${questions.length}`}
+                onNext={handleNext}
+                playTTS={playTTS}
+              />
             )}
             {q.type === 'dictation' && (
               <DictationExercise key={current} entry={q.entry} onNext={handleNext} playTTS={playTTS} />
