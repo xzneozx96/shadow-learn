@@ -14,25 +14,31 @@ interface ChineseInputProps
   wrapperClassName?: string
 }
 
+const PAGE_SIZE = 9
+
 export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClassName, ...rest }: ChineseInputProps) {
   const [buffer, setBuffer] = useState('')
+  const [page, setPage] = useState(0)
   const [barPos, setBarPos] = useState<{ top: number, left: number } | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const isComposingRef = useRef(false)
 
-  const candidates = getCandidates(buffer)
-  const showCandidates = candidates.length > 0
+  const allCandidates = getCandidates(buffer)
+  const totalPages = Math.ceil(allCandidates.length / PAGE_SIZE)
+  const candidates = allCandidates.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const showCandidates = allCandidates.length > 0
 
-  // Reposition candidate bar when buffer changes.
+  // Reposition candidate bar when buffer changes. Reset page too.
   // Uses `position: fixed` so coordinates are viewport-relative — do NOT add scrollY/scrollX.
   useEffect(() => {
+    setPage(0)
     if (!showCandidates || !wrapperRef.current) {
       setBarPos(null)
       return
     }
     const rect = wrapperRef.current.getBoundingClientRect()
     setBarPos({ top: rect.bottom + 4, left: rect.left })
-  }, [buffer])
+  }, [buffer]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function fireChange(newValue: string) {
     const event = {
@@ -64,6 +70,16 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
           selectCandidate(candidates[idx])
           return
         }
+      }
+      if (e.key === '=' && page < totalPages - 1) {
+        e.preventDefault()
+        setPage(p => p + 1)
+        return
+      }
+      if (e.key === '-' && page > 0) {
+        e.preventDefault()
+        setPage(p => p - 1)
+        return
       }
     }
 
@@ -122,19 +138,29 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
 
       {showCandidates && barPos && createPortal(
         <div
-          className="fixed z-50 flex gap-1 rounded-md border border-border bg-popover shadow-md p-1"
+          className="fixed z-50 flex items-center gap-1 rounded-md border border-border bg-popover shadow-md p-1"
           style={{ top: barPos.top, left: barPos.left }}
         >
-          {candidates.slice(0, 9).map((char, i) => (
+          {totalPages > 1 && (
+            <button
+              type="button"
+              tabIndex={-1}
+              disabled={page === 0}
+              className="px-1.5 py-1 rounded text-sm text-muted-foreground hover:bg-accent disabled:opacity-30 disabled:cursor-default"
+              onMouseDown={(e) => { e.preventDefault(); setPage(p => p - 1) }}
+            >
+              ‹
+            </button>
+          )}
+
+          {candidates.map((char, i) => (
             <button
               key={char}
               type="button"
               tabIndex={-1}
-              className={cn(
-                'flex items-center gap-0.5 px-2 py-1 rounded text-sm hover:bg-accent cursor-pointer',
-              )}
+              className="flex items-center gap-0.5 px-2 py-1 rounded text-sm hover:bg-accent cursor-pointer"
               onMouseDown={(e) => {
-                e.preventDefault() // prevent input blur
+                e.preventDefault()
                 selectCandidate(char)
               }}
             >
@@ -142,6 +168,25 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
               <span>{char}</span>
             </button>
           ))}
+
+          {totalPages > 1 && (
+            <>
+              <span className="text-[10px] text-muted-foreground px-1 tabular-nums">
+                {page + 1}
+                /
+                {totalPages}
+              </span>
+              <button
+                type="button"
+                tabIndex={-1}
+                disabled={page === totalPages - 1}
+                className="px-1.5 py-1 rounded text-sm text-muted-foreground hover:bg-accent disabled:opacity-30 disabled:cursor-default"
+                onMouseDown={(e) => { e.preventDefault(); setPage(p => p + 1) }}
+              >
+                ›
+              </button>
+            </>
+          )}
         </div>,
         document.body,
       )}
