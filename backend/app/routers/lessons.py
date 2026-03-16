@@ -37,7 +37,6 @@ async def _shared_pipeline(
     segments: list[dict],
     translation_languages: list[str],
     api_key: str,
-    model: str,
     title: str,
     source: str,
     source_url: str | None,
@@ -59,8 +58,8 @@ async def _shared_pipeline(
     jobs[job_id].step = "translation"
     t0 = time.monotonic()
     translated_segments, vocab_map = await asyncio.gather(
-        translate_segments(enriched_segments, translation_languages, api_key, model),
-        extract_vocabulary(enriched_segments, api_key, model),
+        translate_segments(enriched_segments, translation_languages, api_key),
+        extract_vocabulary(enriched_segments, api_key),
     )
     logger.info(
         "[pipeline] translation+vocabulary: done in %.1fs, %d segments, %d vocab entries",
@@ -132,7 +131,7 @@ async def _process_youtube_lesson(
             jobs[job_id].status = "error"
             jobs[job_id].error = "Deepgram API key is required for transcription."
             return
-        segments = await transcribe_audio_deepgram(audio_path, request.deepgram_api_key)
+        segments = await transcribe_audio_deepgram(audio_path, request.deepgram_api_key, request.source_language)
         # Audio no longer needed after transcription
         audio_path.unlink(missing_ok=True)
         audio_path = None
@@ -144,8 +143,7 @@ async def _process_youtube_lesson(
             job_id,
             segments,
             request.translation_languages,
-            request.openai_api_key,
-            request.model,
+            request.openrouter_api_key,
             title,
             "youtube",
             source_url,
@@ -168,10 +166,10 @@ async def _process_youtube_lesson(
 async def _process_upload_lesson(
     file: UploadFile,
     translation_languages: list[str],
-    openai_api_key: str,
-    model: str,
+    openrouter_api_key: str,
     job_id: str,
     deepgram_api_key: str | None = None,
+    source_language: str = "zh-CN",
 ) -> None:
     """Background task: save file → probe duration → extract audio → transcribe → shared pipeline."""
     _TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -223,15 +221,14 @@ async def _process_upload_lesson(
             jobs[job_id].status = "error"
             jobs[job_id].error = "Deepgram API key is required for transcription."
             return
-        segments = await transcribe_audio_deepgram(audio_path, deepgram_api_key)
+        segments = await transcribe_audio_deepgram(audio_path, deepgram_api_key, source_language)
         logger.info("[pipeline] transcription: done in %.1fs, %d segments", time.monotonic() - t0, len(segments))
 
         await _shared_pipeline(
             job_id,
             segments,
             translation_languages,
-            openai_api_key,
-            model,
+            openrouter_api_key,
             title,
             "upload",
             None,
@@ -252,11 +249,6 @@ async def _process_upload_lesson(
 @router.post("/generate")
 async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTasks) -> dict:
     """Accept a LessonRequest JSON body, start background pipeline, return job_id immediately."""
-    api_model = request.model
-    if "api.openai.com" in settings.openai_chat_url and api_model.startswith("openai/"):
-        api_model = api_model.replace("openai/", "", 1)
-    request.model = api_model
-
     if request.source == "youtube":
         if not request.youtube_url:
             raise HTTPException(status_code=400, detail="youtube_url is required for source 'youtube'")
@@ -281,18 +273,14 @@ async def generate_lesson_upload(
     background_tasks: BackgroundTasks,
     file: UploadFile,
     translation_languages: str = Form(...),
-    openai_api_key: str = Form(...),
-    model: str = Form("gpt-4o-mini"),
+    openrouter_api_key: str = Form(...),
     deepgram_api_key: str | None = Form(None),
+    source_language: str = Form("zh-CN"),
 ) -> dict:
     """Accept a multipart upload, start background pipeline, return job_id immediately."""
     languages = [lang.strip() for lang in translation_languages.split(",") if lang.strip()]
     if not languages:
         raise HTTPException(status_code=400, detail="translation_languages must not be empty")
-
-    api_model = model
-    if "api.openai.com" in settings.openai_chat_url and api_model.startswith("openai/"):
-        api_model = api_model.replace("openai/", "", 1)
 
     job_id = str(uuid.uuid4())
     jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
@@ -300,10 +288,10 @@ async def generate_lesson_upload(
         _process_upload_lesson,
         file,
         languages,
-        openai_api_key,
-        api_model,
+        openrouter_api_key,
         job_id,
         deepgram_api_key,
+        source_language,
     )
     return {"job_id": job_id}
 
