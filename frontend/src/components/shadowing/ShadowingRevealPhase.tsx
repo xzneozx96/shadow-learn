@@ -1,24 +1,15 @@
 import type { DiffToken } from '@/lib/shadowing-utils'
-import type { Segment } from '@/types'
+import type { PronunciationAssessResult, Segment } from '@/types'
+import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   computeAccuracyScore,
   computeCharDiff,
-  computePinyinDiff,
 } from '@/lib/shadowing-utils'
 import { cn } from '@/lib/utils'
 
-interface WordScore {
-  word: string
-  accuracy: number
-  error_type: string | null
-  error_detail: string | null
-}
-interface AssessResult {
-  overall: { accuracy: number, fluency: number, completeness: number, prosody: number }
-  words: WordScore[]
-}
+type AssessResult = PronunciationAssessResult
 
 // ── Dictation props ───────────────────────────────────────────────────────
 
@@ -26,7 +17,6 @@ interface DictationRevealProps {
   mode: 'dictation'
   segment: Segment
   userAnswer: string
-  inputMode: 'hanzi' | 'pinyin'
 }
 
 // ── Speaking props ────────────────────────────────────────────────────────
@@ -51,6 +41,7 @@ type ShadowingRevealPhaseProps = (DictationRevealProps | SpeakingRevealProps) & 
 
 export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
   const { segment, segmentLabel, progress, onRetry, onNext, onExit } = props
+  const [loadingScore, setLoadingScore] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   // For speaking: store score from async Azure call
@@ -60,11 +51,8 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
   const dictationDiff = useMemo<DiffToken[] | null>(() => {
     if (props.mode !== 'dictation')
       return null
-    return props.inputMode === 'hanzi'
-      ? computeCharDiff(props.userAnswer, segment.chinese)
-      : computePinyinDiff(props.userAnswer, segment.pinyin)
-  // Props are fixed after mount (segment, userAnswer, inputMode never change for a given reveal)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return computeCharDiff(props.userAnswer, segment.chinese)
+  // Props are fixed after mount (segment, userAnswer never change for a given reveal)
   }, [])
   const dictationDiffRef = useRef(dictationDiff)
   dictationDiffRef.current = dictationDiff
@@ -109,14 +97,14 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
-        <button
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
+        <Button
+          variant="ghost"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >
-          ✕ exit
-        </button>
+          <X />
+        </Button>
       </div>
 
       {/* Progress bar */}
@@ -127,38 +115,66 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
         />
       </div>
 
-      {/* Correct text reveal */}
-      <div className="rounded-lg border border-border glass-surface p-3 text-center">
-        <div className="text-xl tracking-widest">{segment.chinese}</div>
-        <div className="mt-1 text-xs text-muted-foreground">{segment.pinyin}</div>
-        <div className="mt-0.5 text-xs text-muted-foreground/60">
-          {segment.translations?.en ?? ''}
-        </div>
-      </div>
-
-      {/* Dictation diff */}
-      {props.mode === 'dictation' && dictationDiff && (
-        <div className="space-y-1">
-          <div className="flex flex-wrap justify-center gap-0.5">
-            {dictationDiff.map((tok, i) => (
-              <span
-                key={i}
-                className={cn('text-base', tok.correct ? 'text-foreground' : 'text-destructive')}
-              >
-                {tok.text || '□'}
-              </span>
-            ))}
-          </div>
-          {dictationScore !== null && (
-            <div className="text-center text-xs text-muted-foreground">
-              Accuracy:
-              {' '}
-              {dictationScore}
-              %
+      {/* Main Content / Results Canvas */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-8 py-4">
+        {/* Correct Text Panel */}
+        <div className="bg-accent/60 p-6 rounded-2xl w-full max-w-md flex flex-col items-center gap-4 border border-border/40 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="text-2xl font-bold tracking-wider text-foreground">
+              {segment.chinese}
             </div>
-          )}
+            <div className="text-sm text-muted-foreground/80 tracking-wide font-medium">
+              {segment.pinyin}
+            </div>
+            {segment.translations?.en && (
+              <div className="mt-1 text-sm text-muted-foreground/50 text-center max-w-xs px-2">
+                “
+                {segment.translations.en}
+                ”
+              </div>
+            )}
+          </div>
         </div>
-      )}
+
+        {/* Dictation Diff / Attempt Panel */}
+        {props.mode === 'dictation' && dictationDiff && (
+          <div className="flex flex-col items-center gap-4 w-full animate-in fade-in animate-delay-200">
+            <span className="text-sm uppercase tracking-[0.2em] text-muted-foreground font-medium">
+              Your Attempt
+            </span>
+            <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 px-4">
+              {dictationDiff.map((tok, i) => (
+                <div key={i} className="flex flex-col items-center gap-0.5">
+                  <span
+                    className={cn(
+                      'text-xl font-semibold px-2 rounded-md transition-colors duration-200',
+                      tok.correct
+                        ? 'text-emerald-500 bg-emerald-500/10 border-b-2 border-emerald-500/20'
+                        : 'text-destructive bg-destructive/10 border-b-2 border-destructive/20',
+                    )}
+                  >
+                    {tok.text || '□'}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {dictationScore !== null && (
+              <div className="mt-2 flex items-center gap-2 bg-muted/40 px-3 py-1 rounded-full border border-border/30 text-sm font-semibold backdrop-blur-sm text-muted-foreground">
+                <span className={cn(
+                  'h-2 w-2 rounded-full shadow-sm',
+                  dictationScore >= 80 ? 'bg-emerald-400' : dictationScore >= 50 ? 'bg-amber-400' : 'bg-red-400',
+                )}
+                />
+                Accuracy:
+                {' '}
+                {dictationScore}
+                %
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Speaking scores */}
       {props.mode === 'speaking' && (
@@ -167,24 +183,29 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           segment={segment}
           azureKey={props.azureKey}
           azureRegion={props.azureRegion}
+          onLoading={setLoadingScore}
           onScore={(score) => { speakingScoreRef.current = score }}
         />
       )}
 
       {/* Actions */}
       <div className="mt-auto flex gap-2">
-        <button
-          className="flex-1 rounded-md border border-border py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        <Button
+          variant="outline"
+          className="flex-1 py-1.5 text-sm"
           onClick={onRetry}
+          disabled={loadingScore}
         >
           ↺ Retry
-        </button>
+        </Button>
         <Button
           ref={nextBtnRef}
-          className="flex-1 py-1.5 text-xs"
+          className="flex-1 py-1.5 text-sm flex items-center justify-center gap-1.5"
           onClick={() => onNext(props.mode === 'dictation' ? dictationScore : speakingScoreRef.current)}
+          disabled={loadingScore}
         >
-          Next →
+          {loadingScore && <div className="size-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />}
+          {loadingScore ? 'Analyzing…' : 'Next →'}
         </Button>
       </div>
     </div>
@@ -199,9 +220,10 @@ interface SpeakingScoresProps {
   azureKey: string
   azureRegion: string
   onScore: (score: number | null) => void
+  onLoading?: (isLoading: boolean) => void
 }
 
-function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore }: SpeakingScoresProps) {
+function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore, onLoading }: SpeakingScoresProps) {
   const [result, setResult] = useState<AssessResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -209,10 +231,17 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore }: Speak
   onScoreRef.current = onScore
 
   useEffect(() => {
+    let cancelled = false
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10_000)
+    const timeout = setTimeout(() => controller.abort(), 30_000)
 
     async function assess() {
+      // Yield to the event loop so StrictMode cleanup can set `cancelled`
+      // before we send anything to the network.
+      await Promise.resolve()
+      if (cancelled)
+        return
+      onLoading?.(true)
       try {
         const form = new FormData()
         form.append('audio', blob, 'recording.webm')
@@ -225,6 +254,8 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore }: Speak
           body: form,
           signal: controller.signal,
         })
+        if (cancelled)
+          return
         if (!resp.ok)
           throw new Error(await resp.text())
         const data: AssessResult = await resp.json()
@@ -232,60 +263,108 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore }: Speak
         onScoreRef.current(Math.round(data.overall.accuracy))
       }
       catch (e) {
-        setError((e as Error).name === 'AbortError' ? 'Scoring timed out' : 'Scoring unavailable')
+        if (cancelled)
+          return
+        const err = e as Error
+        setError(err.name === 'AbortError' ? 'Scoring timed out' : 'Scoring unavailable')
         onScoreRef.current(null)
       }
       finally {
-        clearTimeout(timeout)
-        setLoading(false)
+        if (!cancelled) {
+          clearTimeout(timeout)
+          setLoading(false)
+          onLoading?.(false)
+        }
       }
     }
 
     void assess()
     return () => {
+      cancelled = true
       controller.abort()
       clearTimeout(timeout)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // run once on mount
 
-  if (loading) {
-    return <div className="py-2 text-center text-xs text-muted-foreground">Scoring…</div>
-  }
+  if (loading)
+    return null
 
   if (error) {
-    return <div className="py-2 text-center text-xs text-destructive">{error}</div>
+    return (
+      <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-center text-sm text-destructive">
+        {error}
+      </div>
+    )
   }
 
   if (!result)
     return null
 
+  const accuracy = result.overall.accuracy
+  const scoreColor = (n: number) => n >= 80 ? 'text-emerald-400' : n >= 60 ? 'text-amber-400' : 'text-red-400'
+  const barColor = (n: number) => n >= 80 ? 'bg-emerald-400' : n >= 60 ? 'bg-amber-400' : 'bg-red-400'
+  const label = accuracy >= 90 ? 'Excellent' : accuracy >= 75 ? 'Good' : accuracy >= 60 ? 'Fair' : accuracy >= 40 ? 'Keep Practicing' : 'Needs Work'
+
   return (
-    <div className="space-y-2">
-      <div className="flex gap-1.5">
-        {(['accuracy', 'fluency', 'prosody'] as const).map(k => (
-          <div key={k} className="flex-1 rounded-md border border-border glass-surface p-2 text-center">
-            <div className="text-sm font-semibold">{Math.round(result.overall[k])}</div>
-            <div className="text-xs capitalize text-muted-foreground">{k}</div>
+    <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* Score panel */}
+      <div className="rounded-xl border border-border/50 bg-muted/20 backdrop-blur-sm overflow-hidden">
+        {/* Hero: accuracy */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2.5">
+          <div>
+            <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(accuracy))}>
+              {Math.round(accuracy)}
+            </div>
+            <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">Accuracy</div>
           </div>
-        ))}
+          <div className={cn('text-sm font-semibold', scoreColor(accuracy))}>
+            {label}
+          </div>
+        </div>
+        {/* Secondary scores */}
+        <div className="grid grid-cols-3 border-t border-border/40">
+          {(['fluency', 'completeness', 'prosody'] as const).map((k, i) => (
+            <div key={k} className={cn('px-3 py-2 text-center', i < 2 && 'border-r border-border/40')}>
+              <div className={cn('text-base font-bold tabular-nums', scoreColor(result.overall[k]))}>
+                {Math.round(result.overall[k])}
+              </div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{k}</div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="flex items-end justify-center gap-1" style={{ height: 44 }}>
-        {result.words.map((w, i) => (
-          <div key={i} className="flex flex-col items-center gap-0.5">
-            <div
-              className="w-5 overflow-hidden rounded-sm bg-border"
-              style={{ height: 28, position: 'relative' }}
-            >
+
+      {/* Word breakdown */}
+      <div className="space-y-1.5">
+        {result.words.map(w => (
+          <div
+            key={w.word}
+            className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2 transition-colors hover:bg-muted/40"
+          >
+            <span className={cn('w-10 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
+              {w.word}
+            </span>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/60">
               <div
-                className={cn(
-                  'absolute bottom-0 left-0 right-0 rounded-sm',
-                  w.accuracy >= 80 ? 'bg-foreground/60' : 'bg-destructive/70',
-                )}
-                style={{ height: `${w.accuracy}%` }}
+                className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
+                style={{ width: `${w.accuracy}%` }}
               />
             </div>
-            <span className="text-[9px] text-muted-foreground">{w.word}</span>
+            <span className={cn('w-7 shrink-0 text-right text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
+              {Math.round(w.accuracy)}
+            </span>
+            {w.error_type && (
+              <span className={cn(
+                'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
+                w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+                w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
+                w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+              )}
+              >
+                {w.error_type === 'Mispronunciation' ? 'Mispron.' : w.error_type}
+              </span>
+            )}
           </div>
         ))}
       </div>

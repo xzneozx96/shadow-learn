@@ -36,7 +36,6 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit }
 
   // State carried from Attempt phase → Reveal phase
   const [dictationAnswer, setDictationAnswer] = useState<string | null>(null)
-  const [dictationInputMode, setDictationInputMode] = useState<'hanzi' | 'pinyin'>('hanzi')
   const [speakingBlob, setSpeakingBlob] = useState<Blob | null>(null)
 
   const segment = segments[segmentIndex] ?? null
@@ -80,9 +79,8 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit }
     setPhase('attempt')
   }
 
-  function handleDictationSubmit(answer: string, inputMode: 'hanzi' | 'pinyin') {
+  function handleDictationSubmit(answer: string) {
     setDictationAnswer(answer)
-    setDictationInputMode(inputMode)
     setPhase('reveal')
   }
 
@@ -186,7 +184,6 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit }
           mode="dictation"
           segment={segment}
           userAnswer={dictationAnswer}
-          inputMode={dictationInputMode}
           segmentLabel={segmentLabel}
           progress={progress}
           onRetry={handleRetry}

@@ -101,7 +101,13 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
       <Input
         {...rest}
         value={displayValue}
-        onChange={() => {}} // controlled via keyDown interception
+        onChange={(e) => {
+          // Forward direct value changes (e.g., programmatic/test fireEvent.change)
+          // when buffer is empty. When buffer is active the display includes buffer chars
+          // and direct changes would corrupt the committed value.
+          if (!buffer)
+            fireChange(e.target.value)
+        }}
         onKeyDown={handleKeyDown}
         onCompositionStart={() => { isComposingRef.current = true }}
         onCompositionEnd={(e) => {
