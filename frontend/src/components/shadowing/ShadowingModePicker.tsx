@@ -16,7 +16,7 @@ function formatTimestamp(seconds: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
-const COUNT_OPTIONS = [5, 10, 20] as const
+const COUNT_OPTIONS = [5, 10, 15, 20] as const
 
 interface ShadowingModePickerProps {
   startSegment: Segment
@@ -100,34 +100,29 @@ export function ShadowingModePicker({
         <span className="text-sm text-muted-foreground">Segments to practice:</span>
         <div className="flex gap-2">
           {COUNT_OPTIONS.map(n => (
-            <button
+            <Button
               key={n}
+              variant={count === n ? 'secondary' : 'outline'}
+              size="sm"
+              className="min-w-12 h-8"
               disabled={totalRemaining < n}
               data-selected={count === n ? 'true' : 'false'}
-              className={cn(
-                'rounded-md border px-3 py-1 text-sm transition-colors',
-                count === n
-                  ? 'border-foreground/25 bg-foreground/8 font-semibold'
-                  : 'border-border hover:bg-accent',
-                totalRemaining < n && 'cursor-not-allowed opacity-40',
-              )}
-              onClick={() => !(totalRemaining < n) && setCount(n)}
+              onClick={() => setCount(n)}
             >
               {n}
-            </button>
+            </Button>
           ))}
-          <button
+          <Button
+            variant={count === 'all' ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-8"
             data-selected={count === 'all' ? 'true' : 'false'}
-            className={cn(
-              'rounded-md border px-3 py-1 text-sm transition-colors',
-              count === 'all'
-                ? 'border-foreground/25 bg-foreground/8 font-semibold'
-                : 'border-border hover:bg-accent',
-            )}
             onClick={() => setCount('all')}
           >
-            {`All (${totalRemaining})`}
-          </button>
+            All (
+            {totalRemaining}
+            )
+          </Button>
         </div>
       </div>
 
