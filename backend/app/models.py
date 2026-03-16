@@ -22,9 +22,9 @@ class LessonRequest(BaseModel):
     source: str = Field(pattern=r"^(youtube|upload)$")
     youtube_url: str | None = None
     translation_languages: list[str] = Field(min_length=1)
-    openai_api_key: str
+    openrouter_api_key: str
     deepgram_api_key: str | None = None
-    model: str = "gpt-4o-mini"
+    source_language: str = "zh-CN"
 
 
 class LessonResponse(BaseModel):
@@ -46,8 +46,7 @@ class ChatRequest(BaseModel):
     video_title: str
     active_segment: Segment | None
     context_segments: list[Segment]
-    openai_api_key: str
-    model: str = "gpt-4o-mini"
+    openrouter_api_key: str
 
 
 class TTSRequest(BaseModel):
