@@ -53,12 +53,25 @@ export const SegmentText = memo(({
   const posMapRef = useRef(posMap)
   posMapRef.current = posMap
 
+  // Keep spans/spanStarts in refs so the applyKaraoke closure always reads fresh values.
+  // (applyKaraoke's useEffect only re-runs when subscribeTime/getTime change.)
+  const spansRef = useRef(spans)
+  spansRef.current = spans
+  const spanStartsRef = useRef(spanStarts)
+  spanStartsRef.current = spanStarts
+
   // One ref slot per character across all spans
   const totalChars = text.length
   const charSpanRef = useRef<(HTMLSpanElement | null)[]>([])
   // Ensure array is sized correctly when text changes
   if (charSpanRef.current.length !== totalChars) {
     charSpanRef.current = Array.from({ length: totalChars }).fill(null) as (HTMLSpanElement | null)[]
+  }
+
+  // One ref slot per span (including non-word spans — those slots stay null)
+  const wordPinyinRef = useRef<(HTMLSpanElement | null)[]>([])
+  if (wordPinyinRef.current.length !== spans.length) {
+    wordPinyinRef.current = Array.from({ length: spans.length }).fill(null) as (HTMLSpanElement | null)[]
   }
 
   // Karaoke: toggle CSS classes on char spans directly — no React re-renders.
@@ -79,6 +92,21 @@ export const SegmentText = memo(({
         el.classList.toggle('text-yellow-400', spoken)
         el.classList.toggle('text-white', !spoken)
       })
+
+      // Word-level pinyin highlight — checked against first character's WordTiming
+      const currentSpans = spansRef.current
+      const currentSpanStarts = spanStartsRef.current
+      currentSpans.forEach((span, i) => {
+        const el = wordPinyinRef.current[i]
+        if (!el || !span.word)
+          return
+        const firstCharWt = pm.get(currentSpanStarts[i])
+        if (firstCharWt === undefined)
+          return
+        const spoken = firstCharWt.end <= time
+        el.classList.toggle('text-yellow-400', spoken)
+        el.classList.toggle('text-muted-foreground', !spoken)
+      })
     }
     // Apply current time immediately so chars aren't uncolored on first paint
     applyKaraoke(getTime())
@@ -87,7 +115,7 @@ export const SegmentText = memo(({
 
   return (
     <TooltipProvider>
-      <span>
+      <span className="text-lg">
         {spans.map((span, spanIdx) => {
           const spanStart = spanStarts[spanIdx]
 
@@ -109,8 +137,20 @@ export const SegmentText = memo(({
 
           return (
             <Tooltip key={spanStart}>
-              <TooltipTrigger className="cursor-help rounded-sm px-0.5 text-inherit decoration-white/30 decoration-dotted underline-offset-4 transition-colors hover:bg-white/10 hover:underline">
-                {charSpans}
+              <TooltipTrigger asChild>
+                <span
+                  className="inline-flex flex-col items-center cursor-help rounded-sm px-0.5 transition-colors hover:bg-white/10 hover:underline decoration-white/30 decoration-dotted underline-offset-4"
+                >
+                  {span.word.romanization && (
+                    <span
+                      className="text-sm text-muted-foreground"
+                      ref={(el) => { wordPinyinRef.current[spanIdx] = el }}
+                    >
+                      {span.word.romanization}
+                    </span>
+                  )}
+                  {charSpans}
+                </span>
               </TooltipTrigger>
               <TooltipContent
                 side="top"
