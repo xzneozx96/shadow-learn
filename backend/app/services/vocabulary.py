@@ -1,7 +1,9 @@
 """Vocabulary extraction service using OpenRouter API."""
 
+import asyncio
 import json
 import logging
+import random
 from typing import List
 
 import httpx
@@ -56,6 +58,78 @@ def _build_vocab_prompt(segments: list[dict]) -> str:
 
 
 _VOCAB_BATCH_SIZE = 5
+_MAX_ATTEMPTS = 5
+
+
+async def _extract_batch_with_retry(
+    segments: list[dict],
+    api_key: str,
+    semaphore: asyncio.Semaphore,
+) -> dict[int, list[dict]]:
+    """Extract vocabulary for a batch of segments with semaphore gating and retry on 429."""
+    seg_ids = [s["id"] for s in segments]
+    prompt = _build_vocab_prompt(segments)
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "vocabulary_extraction",
+            "strict": True,
+            "schema": VocabularyResponse.model_json_schema(),
+        },
+    }
+
+    async with semaphore:
+        for attempt in range(_MAX_ATTEMPTS):
+            try:
+                async with httpx.AsyncClient(timeout=180.0) as client:
+                    response = await client.post(
+                        settings.openrouter_chat_url,
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": settings.openrouter_model,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "response_format": response_format,
+                            "temperature": 0.1,
+                            "reasoning": {"effort": "none"},
+                        },
+                    )
+                    if response.status_code == 429:
+                        if attempt < _MAX_ATTEMPTS - 1:
+                            wait = 2 ** attempt + random.uniform(0, 1)
+                            logger.warning(
+                                "Vocab batch %s: rate limited (429), retry %d/%d in %.1fs",
+                                seg_ids, attempt + 1, _MAX_ATTEMPTS - 1, wait,
+                            )
+                            await asyncio.sleep(wait)
+                            continue
+                        raise VocabularyExtractionError(
+                            f"Vocab batch {seg_ids}: exhausted {_MAX_ATTEMPTS} attempts on rate limit"
+                        )
+                    response.raise_for_status()
+
+                content = response.json()["choices"][0]["message"]["content"]
+                try:
+                    parsed = VocabularyResponse.model_validate_json(content)
+                    return {seg.id: [w.model_dump() for w in seg.words] for seg in parsed.segments}
+                except Exception as e:
+                    raise VocabularyExtractionError(
+                        f"Vocab batch {seg_ids}: failed to parse response — {e}"
+                    )
+
+            except VocabularyExtractionError:
+                raise
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                raise VocabularyExtractionError(
+                    f"Vocab batch {seg_ids}: unexpected error — {e}"
+                ) from e
+
+    # Unreachable, but satisfies type checker
+    raise VocabularyExtractionError(f"Vocab batch {seg_ids}: exhausted all attempts")
 
 
 async def _extract_batch(

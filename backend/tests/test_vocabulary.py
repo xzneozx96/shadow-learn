@@ -1,4 +1,10 @@
+import asyncio
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
 import pytest
+
 from app.services.vocabulary import VocabularyExtractionError, _VOCAB_BATCH_SIZE
 
 
@@ -10,3 +16,140 @@ def test_vocabulary_extraction_error_is_exception():
 
 def test_vocab_batch_size_is_five():
     assert _VOCAB_BATCH_SIZE == 5
+
+
+def _make_mock_response(status_code: int, content: str = "") -> MagicMock:
+    mock = MagicMock()
+    mock.status_code = status_code
+    mock.text = content
+    mock.json.return_value = {
+        "choices": [{"message": {"content": content}}]
+    }
+    if status_code >= 400:
+        mock.raise_for_status.side_effect = httpx.HTTPStatusError(
+            message=f"HTTP {status_code}",
+            request=MagicMock(),
+            response=MagicMock(status_code=status_code),
+        )
+    else:
+        mock.raise_for_status = MagicMock()
+    return mock
+
+
+def _valid_vocab_content(seg_ids: list[int]) -> str:
+    return json.dumps({
+        "segments": [
+            {"id": i, "words": [{"word": "你好", "pinyin": "nǐ hǎo", "meaning": "hello", "usage": "你好世界"}]}
+            for i in seg_ids
+        ]
+    })
+
+
+@pytest.mark.asyncio
+async def test_extract_batch_with_retry_success():
+    """Happy path: single successful request returns parsed vocab."""
+    from app.services.vocabulary import _extract_batch_with_retry
+
+    segments = [{"id": 0, "text": "你好"}, {"id": 1, "text": "世界"}]
+    semaphore = asyncio.Semaphore(1)
+    content = _valid_vocab_content([0, 1])
+    mock_response = _make_mock_response(200, content)
+
+    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_cls.return_value = mock_client
+
+        result = await _extract_batch_with_retry(segments, "test_key", semaphore)
+
+    assert result[0][0]["word"] == "你好"
+    assert result[1][0]["word"] == "你好"
+
+
+@pytest.mark.asyncio
+async def test_extract_batch_with_retry_retries_on_429():
+    """Should retry on 429, succeed on second attempt."""
+    from app.services.vocabulary import _extract_batch_with_retry
+
+    segments = [{"id": 0, "text": "你好"}]
+    semaphore = asyncio.Semaphore(1)
+    content = _valid_vocab_content([0])
+
+    rate_limit_response = _make_mock_response(429)
+    ok_response = _make_mock_response(200, content)
+
+    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(side_effect=[rate_limit_response, ok_response])
+        mock_cls.return_value = mock_client
+
+        with patch("app.services.vocabulary.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await _extract_batch_with_retry(segments, "test_key", semaphore)
+
+    mock_sleep.assert_called_once()
+    assert result[0][0]["word"] == "你好"
+
+
+@pytest.mark.asyncio
+async def test_extract_batch_with_retry_raises_on_non_429():
+    """Non-429 HTTP errors raise VocabularyExtractionError immediately (no retry)."""
+    from app.services.vocabulary import _extract_batch_with_retry, VocabularyExtractionError
+
+    segments = [{"id": 0, "text": "你好"}]
+    semaphore = asyncio.Semaphore(1)
+
+    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(return_value=_make_mock_response(500))
+        mock_cls.return_value = mock_client
+
+        with pytest.raises(VocabularyExtractionError):
+            await _extract_batch_with_retry(segments, "test_key", semaphore)
+
+
+@pytest.mark.asyncio
+async def test_extract_batch_with_retry_raises_after_exhausted_retries():
+    """Should raise VocabularyExtractionError after 5 total 429 failures."""
+    from app.services.vocabulary import _extract_batch_with_retry, VocabularyExtractionError
+
+    segments = [{"id": 0, "text": "你好"}]
+    semaphore = asyncio.Semaphore(1)
+
+    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(return_value=_make_mock_response(429))
+        mock_cls.return_value = mock_client
+
+        with patch("app.services.vocabulary.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            with pytest.raises(VocabularyExtractionError):
+                await _extract_batch_with_retry(segments, "test_key", semaphore)
+
+    # 5 attempts = 4 sleeps (no sleep after final attempt)
+    assert mock_sleep.call_count == 4
+
+
+@pytest.mark.asyncio
+async def test_extract_batch_with_retry_cancelled_error_propagates():
+    """CancelledError must not be swallowed by the retry loop."""
+    from app.services.vocabulary import _extract_batch_with_retry
+
+    segments = [{"id": 0, "text": "你好"}]
+    semaphore = asyncio.Semaphore(1)
+
+    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(side_effect=asyncio.CancelledError())
+        mock_cls.return_value = mock_client
+
+        with pytest.raises(asyncio.CancelledError):
+            await _extract_batch_with_retry(segments, "test_key", semaphore)
