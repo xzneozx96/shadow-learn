@@ -15,6 +15,9 @@ import { LANGUAGES } from '@/lib/constants'
 import { UploadTab } from './UploadTab'
 import { YouTubeTab } from './YouTubeTab'
 
+const YOUTUBE_REGEX = /(?:v=|youtu\.be\/)([\w-]{11})/
+const FILE_EXTENSION_REGEX = /\.[^/.]+$/
+
 export function CreateLesson() {
   const { db, keys } = useAuth()
   const navigate = useNavigate()
@@ -28,6 +31,7 @@ export function CreateLesson() {
   const [submitting, setSubmitting] = useState(false)
   const [queued, setQueued] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sttProvider, setSttProvider] = useState<string>('deepgram')
 
   useEffect(() => {
     if (!db)
@@ -37,6 +41,13 @@ export function CreateLesson() {
         setLanguage(s.translationLanguage)
     })
   }, [db])
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then((data: { stt_provider: string; tts_provider: string }) => setSttProvider(data.stt_provider))
+      .catch(() => setSttProvider('deepgram'))
+  }, [])
 
   const handleGenerate = useCallback(async () => {
     if (!db || !keys)
@@ -67,7 +78,9 @@ export function CreateLesson() {
             translation_languages: [language],
             source_language: sourceLanguage,
             openrouter_api_key: keys.openrouterApiKey,
-            deepgram_api_key: keys.deepgramApiKey ?? null,
+            ...(sttProvider === 'azure'
+              ? { azure_speech_key: keys.azureSpeechKey, azure_speech_region: keys.azureSpeechRegion }
+              : { deepgram_api_key: keys.deepgramApiKey ?? null }),
           }),
         })
         if (!res.ok) {
@@ -79,7 +92,7 @@ export function CreateLesson() {
         const data = await res.json()
         jobId = data.job_id
         lessonSource = 'youtube'
-        const match = youtubeUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+        const match = youtubeUrl.match(YOUTUBE_REGEX)
         const videoId = match?.[1] ?? 'unknown'
         lessonTitle = `YouTube Video (${videoId})`
         lessonSourceUrl = youtubeUrl
@@ -91,8 +104,13 @@ export function CreateLesson() {
         formData.append('translation_languages', language)
         formData.append('source_language', sourceLanguage)
         formData.append('openrouter_api_key', keys.openrouterApiKey)
-        if (keys.deepgramApiKey)
-          formData.append('deepgram_api_key', keys.deepgramApiKey)
+        if (sttProvider === 'azure') {
+          if (keys.azureSpeechKey) formData.append('azure_speech_key', keys.azureSpeechKey)
+          if (keys.azureSpeechRegion) formData.append('azure_speech_region', keys.azureSpeechRegion)
+        }
+        else {
+          if (keys.deepgramApiKey) formData.append('deepgram_api_key', keys.deepgramApiKey)
+        }
 
         const res = await fetch('/api/lessons/generate-upload', { method: 'POST', body: formData })
         if (!res.ok) {
@@ -104,7 +122,7 @@ export function CreateLesson() {
         const data = await res.json()
         jobId = data.job_id
         lessonSource = 'upload'
-        lessonTitle = file!.name.replace(/\.[^/.]+$/, '')
+        lessonTitle = file!.name.replace(FILE_EXTENSION_REGEX, '')
       }
 
       const lessonId = crypto.randomUUID()
@@ -141,9 +159,10 @@ export function CreateLesson() {
     finally {
       setSubmitting(false)
     }
-  }, [db, keys, tab, youtubeUrl, file, language, sourceLanguage, updateLesson])
+  }, [db, keys, tab, youtubeUrl, file, language, sourceLanguage, updateLesson, sttProvider])
 
-  const canGenerate = (tab === 'youtube' ? !!youtubeUrl.trim() : !!file) && !!keys?.deepgramApiKey
+  const canGenerate = (tab === 'youtube' ? !!youtubeUrl.trim() : !!file)
+    && (sttProvider === 'azure' ? !!keys?.azureSpeechKey : !!keys?.deepgramApiKey)
 
   if (queued) {
     return (
@@ -156,7 +175,7 @@ export function CreateLesson() {
               </p>
               <div className="flex gap-2">
                 <Button onClick={() => navigate('/')}>Go to Library</Button>
-                <Button variant="ghost" onClick={() => setQueued(false)}>Queue Another</Button>
+                <Button variant="outline" onClick={() => setQueued(false)}>Queue Another</Button>
               </div>
             </CardContent>
           </Card>
