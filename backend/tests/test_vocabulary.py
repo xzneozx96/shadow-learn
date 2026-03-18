@@ -112,6 +112,8 @@ async def test_extract_batch_with_retry_raises_on_non_429():
         with pytest.raises(VocabularyExtractionError):
             await _extract_batch_with_retry(segments, "test_key", semaphore)
 
+        assert mock_client.post.call_count == 1
+
 
 @pytest.mark.asyncio
 async def test_extract_batch_with_retry_raises_after_exhausted_retries():
