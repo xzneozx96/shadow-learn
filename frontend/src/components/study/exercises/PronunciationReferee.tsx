@@ -1,23 +1,17 @@
-import type { PronunciationAssessResult } from '@/types'
 import { Pause, Play } from 'lucide-react'
-import { useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
+import { Button } from '@/components/ui/button'
+import { useAudioRecorder } from '@/hooks/useAudioRecorder'
+import { usePronunciationAssessment } from '@/hooks/usePronunciationAssessment'
 import { cn } from '@/lib/utils'
 
 interface PronunciationSentence { sentence: string, translation: string }
 
 interface Props {
   sentence: PronunciationSentence
-  apiBaseUrl: string
-  azureKey: string
-  azureRegion: string
   progress?: string
   onNext: (correct: boolean) => void
 }
-
-type RecordingState = 'idle' | 'recording' | 'stopped'
-type AssessResult = PronunciationAssessResult
 
 function scoreColor(n: number) {
   if (n >= 80) return 'text-emerald-400'
@@ -39,101 +33,38 @@ function verdict(n: number) {
   return 'Needs Work'
 }
 
-export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegion, progress = '', onNext }: Props) {
-  const [state, setState] = useState<RecordingState>('idle')
-  const [attempt, setAttempt] = useState(0)
-  const [blob, setBlob] = useState<Blob | null>(null)
-  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null)
-  const [result, setResult] = useState<AssessResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const mediaRef = useRef<MediaRecorder | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const chunksRef = useRef<Blob[]>([])
+export function PronunciationReferee({ sentence, progress = '', onNext }: Props) {
+  const {
+    recordingState, blob, isPlaying, attempt,
+    startRecording, stopRecording, togglePlayback, reset: audioReset,
+  } = useAudioRecorder()
+  const { submit, result, submitting, error, reset: assessmentReset } = usePronunciationAssessment()
 
-  async function startRecording() {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      setIsPlaying(false)
-    }
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
-    chunksRef.current = []
-    recorder.ondataavailable = e => chunksRef.current.push(e.data)
-    recorder.onstop = () => {
-      const b = new Blob(chunksRef.current, { type: 'audio/webm' })
-      setBlob(b)
-      if (playbackUrl) URL.revokeObjectURL(playbackUrl)
-      setPlaybackUrl(URL.createObjectURL(b))
-      stream.getTracks().forEach(t => t.stop())
-    }
-    recorder.start()
-    mediaRef.current = recorder
-    setState('recording')
-    setAttempt(a => a + 1)
-    setResult(null)
-    setError(null)
-  }
+  const isProcessing = recordingState === 'processing' || submitting
+  const canSubmit = blob !== null && recordingState === 'stopped' && !submitting
 
-  function stopRecording() {
-    mediaRef.current?.stop()
-    setState('stopped')
-  }
-
-  async function handleSubmit() {
-    if (!blob) return
-    setSubmitting(true)
-    setError(null)
-    try {
-      const form = new FormData()
-      form.append('audio', blob, 'recording.webm')
-      form.append('reference_text', sentence.sentence)
-      form.append('language', 'zh-CN')
-      form.append('azure_key', azureKey)
-      form.append('azure_region', azureRegion)
-      const resp = await fetch(`${apiBaseUrl}/api/pronunciation/assess`, { method: 'POST', body: form })
-      if (!resp.ok) throw new Error(await resp.text())
-      setResult(await resp.json())
-    }
-    catch (e) {
-      setError(e instanceof Error ? e.message : 'Assessment failed')
-    }
-    finally {
-      setSubmitting(false)
-    }
-  }
-
-  function togglePlayback() {
-    if (!playbackUrl) return
-    if (isPlaying) {
-      audioRef.current?.pause()
-      setIsPlaying(false)
-      return
-    }
-    const audio = new Audio(playbackUrl)
-    audioRef.current = audio
-    audio.onplay = () => setIsPlaying(true)
-    audio.onended = () => { setIsPlaying(false); audioRef.current = null }
-    audio.onpause = () => setIsPlaying(false)
-    audio.play().catch(console.error)
-  }
-
-  // Footer hidden once results are shown — result actions replace it
-  const footer = result ? null : (
-    <div className="flex items-center justify-between px-[18px] py-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
-      <Button
-        size="sm"
-        disabled={!blob || submitting}
-        onClick={() => void handleSubmit()}
-      >
-        {submitting
-          ? <><div className="size-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" /> Scoring…</>
-          : 'Submit →'}
-      </Button>
-    </div>
-  )
+  const footer = result
+    ? null
+    : (
+        <div className="flex items-center justify-between px-[18px] py-3">
+          <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
+          <Button
+            size="sm"
+            disabled={!canSubmit}
+            onClick={() => blob && void submit(blob, sentence.sentence)}
+          >
+            {isProcessing
+              ? (
+                  <>
+                    <div className="size-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    {' '}
+                    Scoring…
+                  </>
+                )
+              : 'Submit →'}
+          </Button>
+        </div>
+      )
 
   return (
     <ExerciseCard
@@ -158,11 +89,11 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
               variant="destructive"
               className={cn(
                 'flex-1',
-                state === 'recording' && 'shadow-[0_0_0_3px_oklch(0.65_0.18_25/0.2)]',
+                recordingState === 'recording' && 'shadow-[0_0_0_3px_oklch(0.65_0.18_25/0.2)]',
               )}
-              onClick={state === 'recording' ? stopRecording : () => void startRecording()}
+              onClick={recordingState === 'recording' ? stopRecording : () => void startRecording()}
             >
-              {state === 'recording' ? '⏹ Stop' : '⏺ Record'}
+              {recordingState === 'recording' ? '⏹ Stop' : '⏺ Record'}
             </Button>
             <Button
               variant="outline"
@@ -175,7 +106,11 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
           </div>
           {attempt > 0 && (
             <p className="text-sm text-muted-foreground/50 text-center mb-2">
-              Attempt {attempt} · Re-record anytime before submitting
+              Attempt
+              {' '}
+              {attempt}
+              {' '}
+              · Re-record anytime before submitting
             </p>
           )}
         </>
@@ -188,12 +123,10 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
         </div>
       )}
 
-      {/* Score results — mirrors ShadowingRevealPhase > SpeakingScores */}
+      {/* Score results */}
       {result && (
         <div className="space-y-2">
-          {/* Score panel */}
           <div className="rounded-xl border border-border/50 bg-muted/20 overflow-hidden">
-            {/* Hero row */}
             <div className="flex items-center justify-between px-4 pt-3 pb-2.5">
               <div>
                 <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(result.overall.accuracy))}>
@@ -207,7 +140,6 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
                 {verdict(result.overall.accuracy)}
               </div>
             </div>
-            {/* Secondary scores */}
             <div className="grid grid-cols-3 border-t border-border/40">
               {(['fluency', 'completeness', 'prosody'] as const).map((k, i) => (
                 <div key={k} className={cn('px-3 py-2 text-center', i < 2 && 'border-r border-border/40')}>
@@ -220,7 +152,6 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
             </div>
           </div>
 
-          {/* Word breakdown */}
           <div className="space-y-1.5">
             {result.words.map(w => (
               <div
@@ -245,7 +176,8 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
                     w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
                     w.error_type === 'Omission' && 'border-destructive/30 bg-destructive/10 text-destructive',
                     w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
-                  )}>
+                  )}
+                  >
                     {w.error_type === 'Mispronunciation' ? 'Mispron.' : w.error_type}
                   </span>
                 )}
@@ -253,12 +185,11 @@ export function PronunciationReferee({ sentence, apiBaseUrl, azureKey, azureRegi
             ))}
           </div>
 
-          {/* Result actions (replaces footer) */}
           <div className="flex gap-2 pt-2">
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => { setResult(null); setBlob(null); setState('idle') }}
+              onClick={() => { assessmentReset(); audioReset() }}
             >
               ⏺ Try again
             </Button>

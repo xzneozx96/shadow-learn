@@ -353,9 +353,6 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
               <PronunciationReferee
                 key={current}
                 sentence={q.pronunciationData}
-                apiBaseUrl={API_BASE}
-                azureKey={keys?.azureSpeechKey ?? ''}
-                azureRegion={keys?.azureSpeechRegion ?? 'eastus'}
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
               />
