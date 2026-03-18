@@ -117,7 +117,7 @@ export const SegmentText = memo(({
                 <div className="flex flex-col gap-1 px-4 py-3 pr-10">
                   <p className="text-base font-bold text-white">
                     {span.word.word}
-                    <span className="ml-2 text-sm font-normal text-white/45">{span.word.pinyin}</span>
+                    {span.word.romanization && <span className="ml-2 text-sm font-normal text-white/45">{span.word.romanization}</span>}
                   </p>
                   <p className="text-sm text-white/70">{span.word.meaning}</p>
                   {span.word.usage && (

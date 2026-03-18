@@ -59,7 +59,7 @@ export function TranscriptPanel({
       return segments
     const q = search.trim().toLowerCase()
     return segments.filter((seg) => {
-      if (seg.chinese.toLowerCase().includes(q))
+      if (seg.text.toLowerCase().includes(q))
         return true
       for (const val of Object.values(seg.translations)) {
         if (val.toLowerCase().includes(q))
@@ -112,7 +112,7 @@ export function TranscriptPanel({
 
   function handleCopy(e: React.MouseEvent, segment: Segment) {
     e.stopPropagation()
-    navigator.clipboard.writeText(segment.chinese)
+    navigator.clipboard.writeText(segment.text)
     setCopiedId(segment.id)
     setTimeout(setCopiedId, 1500, null)
   }
@@ -170,12 +170,12 @@ export function TranscriptPanel({
               <div className="flex items-start gap-2">
                 {/* Text content */}
                 <div className="min-w-0 flex-1">
-                  <p className="mb-1 text-muted-foreground">{segment.pinyin}</p>
+                  {segment.romanization && <p className="mb-1 text-muted-foreground">{segment.romanization}</p>}
                   <p className="text-lg text-foreground">
                     {/* key={segment.id} ensures fresh charSpanRefs when segment changes */}
                     <SegmentText
                       key={segment.id}
-                      text={segment.chinese}
+                      text={segment.text}
                       words={segment.words}
                       wordTimings={segment.wordTimings}
                       playTTS={playTTS}
@@ -196,13 +196,13 @@ export function TranscriptPanel({
                     variant="ghost"
                     size="icon-xs"
                     className="size-5 text-muted-foreground hover:text-foreground"
-                    aria-label={loadingText === segment.chinese ? 'Loading pronunciation' : 'Play sentence pronunciation'}
+                    aria-label={loadingText === segment.text ? 'Loading pronunciation' : 'Play sentence pronunciation'}
                     onClick={(e) => {
                       e.stopPropagation()
-                      playTTS(segment.chinese)
+                      playTTS(segment.text)
                     }}
                   >
-                    {loadingText === segment.chinese
+                    {loadingText === segment.text
                       ? <Loader2 className="size-4 animate-spin" />
                       : <Volume2 className="size-4" />}
                   </Button>

@@ -59,7 +59,7 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
                     className="flex items-center justify-between rounded-md border border-border glass-surface px-3 py-2"
                   >
                     <span className="max-w-[70%] truncate text-sm">
-                      {seg?.chinese ?? `Segment ${segmentIndex + 1}`}
+                      {seg?.text ?? `Segment ${segmentIndex + 1}`}
                     </span>
                     <span className="shrink-0 text-sm text-muted-foreground">{score}</span>
                   </div>

@@ -43,7 +43,7 @@ export function ShadowingModePicker({
       <DialogHeader>
         <DialogTitle>Shadowing Mode</DialogTitle>
         <DialogDescription>
-          {`Starting from segment ${startSegmentNumber} — "${startSegment.chinese}" (${formatTimestamp(startSegment.start)})`}
+          {`Starting from segment ${startSegmentNumber} — "${startSegment.text}" (${formatTimestamp(startSegment.start)})`}
         </DialogDescription>
       </DialogHeader>
 

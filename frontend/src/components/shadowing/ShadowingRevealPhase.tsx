@@ -51,7 +51,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
   const dictationDiff = useMemo<DiffToken[] | null>(() => {
     if (props.mode !== 'dictation')
       return null
-    return computeCharDiff(props.userAnswer, segment.chinese)
+    return computeCharDiff(props.userAnswer, segment.text)
   // Props are fixed after mount (segment, userAnswer never change for a given reveal)
   }, [])
   const dictationDiffRef = useRef(dictationDiff)
@@ -121,11 +121,13 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
         <div className="bg-accent/60 p-6 rounded-2xl w-full max-w-md flex flex-col items-center gap-4 border border-border/40 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col items-center gap-1.5">
             <div className="text-2xl font-bold tracking-wider text-foreground">
-              {segment.chinese}
+              {segment.text}
             </div>
-            <div className="text-sm text-muted-foreground/80 tracking-wide font-medium">
-              {segment.pinyin}
-            </div>
+            {segment.romanization && (
+              <div className="text-sm text-muted-foreground/80 tracking-wide font-medium">
+                {segment.romanization}
+              </div>
+            )}
             {segment.translations?.en && (
               <div className="mt-1 text-sm text-muted-foreground/50 text-center max-w-xs px-2">
                 “
@@ -245,7 +247,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore, onLoadi
       try {
         const form = new FormData()
         form.append('audio', blob, 'recording.webm')
-        form.append('reference_text', segment.chinese)
+        form.append('reference_text', segment.text)
         form.append('language', 'zh-CN')
         form.append('azure_key', azureKey)
         form.append('azure_region', azureRegion)

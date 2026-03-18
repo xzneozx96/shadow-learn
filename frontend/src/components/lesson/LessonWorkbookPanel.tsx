@@ -66,7 +66,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                     className="cursor-pointer rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-white/10 hover:border-white/15"
                   >
                     <p className="text-2xl font-bold text-foreground">{entry.word}</p>
-                    <p className="text-sm text-muted-foreground">{entry.pinyin}</p>
+                    {entry.romanization && <p className="text-sm text-muted-foreground">{entry.romanization}</p>}
                     <p className="line-clamp-2 text-sm text-muted-foreground/70">{entry.meaning}</p>
                   </button>
                 ))}

@@ -84,7 +84,7 @@ export function CompanionPanel({
           {activeSegment && (
             <div className="border-b border-border px-3 py-1.5">
               <Badge variant="outline" className="max-w-full truncate text-sm">
-                {activeSegment.chinese}
+                {activeSegment.text}
               </Badge>
             </div>
           )}

@@ -10,7 +10,7 @@ export function WordCard({ entry, className }: WordCardProps) {
   return (
     <div className={cn('bg-background p-3 hover:bg-accent/40 transition-colors cursor-default', className)}>
       <div className="text-lg font-bold text-foreground">{entry.word}</div>
-      <div className="text-xs text-muted-foreground italic mt-0.5">{entry.pinyin}</div>
+      {entry.romanization && <div className="text-xs text-muted-foreground italic mt-0.5">{entry.romanization}</div>}
       <div className="text-xs text-muted-foreground mt-1 truncate">{entry.meaning}</div>
       <div className="text-[10px] text-muted-foreground/40 mt-1.5">{entry.sourceSegmentId}</div>
     </div>
