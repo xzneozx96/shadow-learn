@@ -98,7 +98,7 @@ export const SegmentText = memo(({
       const currentSpanStarts = spanStartsRef.current
       currentSpans.forEach((span, i) => {
         const el = wordPinyinRef.current[i]
-        if (!el || !span.word)
+        if (!el || !span.word || !span.word.romanization)
           return
         const firstCharWt = pm.get(currentSpanStarts[i])
         if (firstCharWt === undefined)
@@ -139,7 +139,7 @@ export const SegmentText = memo(({
             <Tooltip key={spanStart}>
               <TooltipTrigger asChild>
                 <span
-                  className="inline-flex flex-col items-center cursor-help rounded-sm px-0.5 transition-colors hover:bg-white/10 hover:underline decoration-white/30 decoration-dotted underline-offset-4"
+                  className="inline-flex flex-col items-center cursor-help rounded-sm px-0.5 transition-colors hover:bg-white/10"
                 >
                   {span.word.romanization && (
                     <span
@@ -149,7 +149,9 @@ export const SegmentText = memo(({
                       {span.word.romanization}
                     </span>
                   )}
-                  {charSpans}
+                  <span className="hover:underline decoration-white/30 decoration-dotted underline-offset-4">
+                    {charSpans}
+                  </span>
                 </span>
               </TooltipTrigger>
               <TooltipContent

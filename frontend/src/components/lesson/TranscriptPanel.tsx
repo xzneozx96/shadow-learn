@@ -170,8 +170,7 @@ export function TranscriptPanel({
               <div className="flex items-start gap-2">
                 {/* Text content */}
                 <div className="min-w-0 flex-1">
-                  {segment.romanization && <p className="mb-1 text-muted-foreground">{segment.romanization}</p>}
-                  <p className="text-lg text-foreground">
+                  <div className="text-foreground">
                     {/* key={segment.id} ensures fresh charSpanRefs when segment changes */}
                     <SegmentText
                       key={segment.id}
@@ -184,7 +183,7 @@ export function TranscriptPanel({
                       onSaveWord={handleSaveWord}
                       isSaved={handleIsSaved}
                     />
-                  </p>
+                  </div>
                   <p className="mt-1 text-muted-foreground">
                     {segment.translations[activeLang] ?? Object.values(segment.translations)[0]}
                   </p>
