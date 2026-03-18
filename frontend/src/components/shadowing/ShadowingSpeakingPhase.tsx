@@ -1,12 +1,11 @@
 import type { Segment } from '@/types'
-import { X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Check, Mic, Play, RefreshCcw, RotateCcw, Square, X } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { usePlayer } from '@/contexts/PlayerContext'
+import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useTimeEffect } from '@/hooks/useTimeEffect'
 import { cn } from '@/lib/utils'
-
-type SpeakingSubState = 'initial' | 'recording' | 'processing' | 'recorded'
 
 interface ShadowingSpeakingPhaseProps {
   segment: Segment
@@ -26,20 +25,13 @@ export function ShadowingSpeakingPhase({
   onExit,
 }: ShadowingSpeakingPhaseProps) {
   const { player } = usePlayer()
-  const [subState, setSubState] = useState<SpeakingSubState>('initial')
   const isReplayingRef = useRef(false)
-  const [blob, setBlob] = useState<Blob | null>(null)
-  const [shortError, setShortError] = useState(false)
-  const [interruptedError, setInterruptedError] = useState(false)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
-  const recordingStartRef = useRef<number>(0)
   const micBtnRef = useRef<HTMLButtonElement>(null)
-  // Stable ref for blob so keyboard handler always has current value
-  const blobRef = useRef<Blob | null>(null)
-  blobRef.current = blob
-  // Cancellation flag: set to true in tab-hidden handler so onstop ignores the blob
-  const cancelledRef = useRef(false)
+
+  const {
+    recordingState, blob, isPlaying: isPlayingBack,
+    startRecording, stopRecording, cancel, togglePlayback: handlePlayback, reset: handleRerecord,
+  } = useAudioRecorder({ minDurationMs: 500 })
 
   useEffect(() => {
     micBtnRef.current?.focus()
@@ -56,109 +48,48 @@ export function ShadowingSpeakingPhase({
   // Tab-hidden guard
   useEffect(() => {
     function handleVisibility() {
-      if (document.hidden && subState === 'recording') {
-        // Set cancelled BEFORE calling stop() so onstop ignores the blob
-        cancelledRef.current = true
-        mediaRecorderRef.current?.stop()
-        mediaRecorderRef.current = null
-        setBlob(null)
-        setSubState('initial')
-        setInterruptedError(true)
+      if (document.hidden && (recordingState === 'recording' || recordingState === 'processing')) {
+        cancel()
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [subState])
+  }, [recordingState, cancel])
 
   // Keyboard shortcuts
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === ' ') {
         e.preventDefault()
-        if (subState === 'initial')
+        if (recordingState === 'idle')
           void startRecording()
-        else if (subState === 'recording')
+        else if (recordingState === 'recording')
           stopRecording()
       }
-      if (e.key === 'Enter' && subState === 'recorded' && blobRef.current) {
+      if (e.key === 'Enter' && recordingState === 'stopped' && blob) {
         e.preventDefault()
-        onSubmit(blobRef.current)
+        onSubmit(blob)
       }
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subState])
-
-  async function startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
-      chunksRef.current = []
-      recorder.ondataavailable = e => chunksRef.current.push(e.data)
-      recorder.onstop = () => {
-        stream.getTracks().forEach(t => t.stop())
-        // If cancelled (e.g. tab-hidden interruption), ignore this blob entirely
-        if (cancelledRef.current) {
-          cancelledRef.current = false
-          return
-        }
-        const duration = Date.now() - recordingStartRef.current
-        if (duration < 500) {
-          setBlob(null)
-          setSubState('initial')
-          setShortError(true)
-          setTimeout(setShortError, 3000, false)
-          return
-        }
-        const b = new Blob(chunksRef.current, { type: 'audio/webm' })
-        setBlob(b)
-        setSubState('recorded')
-      }
-      recorder.start()
-      mediaRecorderRef.current = recorder
-      recordingStartRef.current = Date.now()
-      setSubState('recording')
-      setShortError(false)
-      setInterruptedError(false)
-    }
-    catch {
-      // Mic access denied — stay in initial
-    }
-  }
-
-  function stopRecording() {
-    mediaRecorderRef.current?.stop()
-    mediaRecorderRef.current = null
-    setSubState('processing')
-  }
-
-  function handleRerecord() {
-    setBlob(null)
-    setSubState('initial')
-  }
+  }, [recordingState, blob])
 
   function handleSkip() {
-    // Cancel any in-flight recording or onstop callback before handing off
-    if (subState === 'recording' || subState === 'processing') {
-      cancelledRef.current = true
-      mediaRecorderRef.current?.stop()
-      mediaRecorderRef.current = null
-    }
+    cancel()
     onSkip()
   }
 
-  const WAVE_COUNT = 8
-
   return (
     <div
-      className="flex h-full flex-col p-4 gap-3"
+      className="flex h-full flex-col"
       role="region"
       aria-label="Shadowing mode"
       tabIndex={0}
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between h-16 px-4">
         <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <Button
           variant="ghost"
@@ -178,95 +109,107 @@ export function ShadowingSpeakingPhase({
       </div>
 
       {/* Body */}
-      <div className="flex flex-1 flex-col items-center justify-center gap-4">
-        <span className="text-sm uppercase tracking-widest text-muted-foreground">
-          Speak what you heard
-        </span>
-
-        {/* Replay — initial only */}
-        {subState === 'initial' && (
-          <button
-            className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-sm transition-colors hover:bg-accent"
-            onClick={() => {
-              isReplayingRef.current = true
-              player?.seekTo(segment.start)
-              player?.play()
-            }}
-          >
-            ↺ Replay
-          </button>
-        )}
-
-        {/* Mic button (initial + recording) */}
-        {(subState === 'initial' || subState === 'recording') && (
-          <button
-            ref={micBtnRef}
-            className={cn(
-              'size-16 rounded-full flex items-center justify-center text-2xl transition-all',
-              subState === 'recording'
-                ? 'bg-destructive shadow-[0_0_0_10px_oklch(0.60_0.20_25/0.12)]'
-                : 'bg-destructive/80 hover:bg-destructive',
-            )}
-            onClick={subState === 'initial' ? () => void startRecording() : stopRecording}
-            aria-label={subState === 'recording' ? 'Stop recording' : 'Start recording'}
-          >
-            🎤
-          </button>
-        )}
-
-        {/* Recording waveform */}
-        {subState === 'recording' && (
-          <>
-            <span className="text-sm text-destructive">Recording…</span>
-            <div className="flex items-center gap-0.5" style={{ height: 20 }} aria-hidden>
-              {Array.from({ length: WAVE_COUNT }, (_, i) => (
-                <div
-                  key={i}
-                  className="w-0.5 rounded-full bg-destructive animate-[wave_1.3s_ease-in-out_infinite]"
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                />
-              ))}
-            </div>
-            <button
-              className="rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              onClick={stopRecording}
-            >
-              Stop & Submit
-            </button>
-          </>
-        )}
-
-        {subState === 'processing' && (
-          <span className="text-sm text-muted-foreground">Processing…</span>
-        )}
-
-        {subState === 'recorded' && blob && (
-          <div className="flex gap-2">
-            <button
-              className="rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              onClick={handleRerecord}
-            >
-              ↺ Re-record
-            </button>
-            <Button size="sm" onClick={() => onSubmit(blob)}>Submit</Button>
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="glass-card p-8 rounded-2xl max-w-md w-full flex flex-col items-center gap-6 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-sm uppercase tracking-[0.2em] text-muted-foreground font-medium">
+              Speak what you heard
+            </span>
           </div>
-        )}
 
-        {shortError && (
-          <p className="text-sm text-destructive">Recording too short — try again.</p>
-        )}
-        {interruptedError && (
-          <p className="text-sm text-destructive">Recording interrupted.</p>
-        )}
+          {/* Glass Card Ring containing Trigger Mic */}
+          <div className="relative flex items-center justify-center p-2 rounded-full h-32">
+            {(recordingState === 'idle' || recordingState === 'recording') && (
+              <Button
+                ref={micBtnRef}
+                className={cn(
+                  'size-20 rounded-full flex items-center justify-center text-3xl transition-all duration-300 relative p-0',
+                  recordingState === 'recording'
+                    ? 'bg-destructive text-white scale-105 shadow-[0_0_0_12px_rgba(239,68,68,0.1)] hover:bg-destructive'
+                    : 'bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-white hover:scale-105',
+                )}
+                onClick={recordingState === 'idle' ? () => void startRecording() : stopRecording}
+                aria-label={recordingState === 'recording' ? 'Stop recording' : 'Start recording'}
+              >
+                <div className={cn(
+                  'absolute inset-0 rounded-full bg-destructive/20 -z-10 transition-transform',
+                  recordingState === 'recording' && 'animate-ping opacity-60',
+                )}
+                />
+                <Mic className="size-8" />
+              </Button>
+            )}
+
+            {/* When processing */}
+            {recordingState === 'processing' && (
+              <div className="size-20 rounded-full flex items-center justify-center bg-muted/40 border border-border/40 backdrop-blur-sm animate-pulse">
+                <div className="border-2 border-primary border-t-transparent size-6 rounded-full animate-spin" />
+              </div>
+            )}
+
+            {/* When recorded */}
+            {recordingState === 'stopped' && blob && (
+              <div className="flex flex-col items-center gap-4 animate-in zoom-in-95 duration-200">
+                <Button
+                  onClick={handlePlayback}
+                  className={cn(
+                    'size-20 rounded-full flex items-center justify-center backdrop-blur-md border duration-300 transition-all text-xl p-0',
+                    isPlayingBack
+                      ? 'bg-emerald-500 text-white border-emerald-400 shadow-[0_0_0_8px_rgba(16,185,129,0.1)] hover:bg-emerald-600'
+                      : 'bg-yellow-400 hover:bg-yellow-400 border-border/60 hover:border-border text-foreground/80 hover:text-foreground hover:scale-105',
+                  )}
+                >
+                  {isPlayingBack ? <Square className="size-7" /> : <Play className="size-7" />}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Actions - matching Dictation row style */}
+          <div className="flex gap-3 w-full mt-2">
+            {recordingState === 'stopped'
+              ? (
+                  <Button
+                    variant="outline"
+                    className="flex-1 backdrop-blur-sm border-border/50 hover:bg-accent/40"
+                    onClick={handleRerecord}
+                  >
+                    ↺ Re-record
+                  </Button>
+                )
+              : (
+                  <Button
+                    variant="outline"
+                    className="flex-1 backdrop-blur-sm border-border/50 hover:bg-accent/40"
+                    onClick={() => {
+                      isReplayingRef.current = true
+                      player?.seekTo(segment.start)
+                      player?.play()
+                    }}
+                  >
+                    ↺ Replay
+                  </Button>
+                )}
+
+            <Button
+              className="flex-1"
+              disabled={recordingState !== 'stopped' || !blob}
+              onClick={() => blob && onSubmit(blob)}
+            >
+              Submit
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <button
-        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+      <Button
+        variant="ghost"
+        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground hover:bg-transparent h-auto p-0"
         onClick={handleSkip}
         aria-label="Skip this segment"
       >
         skip →
-      </button>
+      </Button>
     </div>
   )
 }
