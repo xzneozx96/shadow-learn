@@ -1,8 +1,9 @@
 import type { Segment } from '@/types'
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { ChineseInput } from '@/components/ui/ChineseInput'
+import { LanguageInput } from '@/components/ui/LanguageInput'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { useTimeEffect } from '@/hooks/useTimeEffect'
 import { cn } from '@/lib/utils'
@@ -14,6 +15,7 @@ interface ShadowingDictationPhaseProps {
   onSubmit: (answer: string) => void
   onSkip: () => void
   onExit: () => void
+  caps: LanguageCapabilities
 }
 
 export function ShadowingDictationPhase({
@@ -23,6 +25,7 @@ export function ShadowingDictationPhase({
   onSubmit,
   onSkip,
   onExit,
+  caps,
 }: ShadowingDictationPhaseProps) {
   const { player } = usePlayer()
   const [value, setValue] = useState('')
@@ -112,11 +115,12 @@ export function ShadowingDictationPhase({
 
           {/* Input field */}
           <div className="w-full relative py-2">
-            <ChineseInput
+            <LanguageInput
+              langInputMode={caps.inputMode}
               value={value}
               onChange={e => setValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入汉字…"
+              placeholder={caps.dictationPlaceholder}
               className={cn(
                 'h-12 text-center text-xl bg-transparent border-0 border-b-2 border-border/50 hover:border-border rounded-none focus-visible:ring-0 focus-visible:border-primary px-0 transition-all duration-200 placeholder:text-muted-foreground/40',
                 shake && 'animate-[shake_0.4s_ease-in-out] border-destructive',

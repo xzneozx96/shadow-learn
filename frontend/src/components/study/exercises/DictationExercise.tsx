@@ -1,9 +1,10 @@
 import type { VocabEntry } from '@/types'
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import { Loader2, Volume2 } from 'lucide-react'
 import { useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
-import { ChineseInput } from '@/components/ui/ChineseInput'
+import { LanguageInput } from '@/components/ui/LanguageInput'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -12,12 +13,13 @@ interface Props {
   onNext: (correct: boolean) => void
   playTTS: (text: string) => Promise<void>
   loadingText: string | null
+  caps: LanguageCapabilities
 }
 
-export function DictationExercise({ entry, progress = '', onNext, playTTS, loadingText }: Props) {
+export function DictationExercise({ entry, progress = '', onNext, playTTS, loadingText, caps }: Props) {
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
-  const expected = entry.sourceSegmentChinese
+  const expected = entry.sourceSegmentText
   const correct = value.trim() === expected.trim()
 
   const footer = (
@@ -41,14 +43,14 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
       </p>
 
       {(() => {
-        const isLoading = loadingText === entry.sourceSegmentChinese
+        const isLoading = loadingText === entry.sourceSegmentText
         return (
           <button
             type="button"
             aria-label="Play audio"
             disabled={isLoading}
             className="flex items-center justify-center mx-auto mb-5 size-14 rounded-full border border-border bg-secondary hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            onClick={() => void playTTS(entry.sourceSegmentChinese)}
+            onClick={() => void playTTS(entry.sourceSegmentText)}
           >
             {isLoading
               ? <Loader2 className="size-5 text-muted-foreground animate-spin" />
@@ -57,8 +59,9 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
         )
       })()}
 
-      <ChineseInput
-        placeholder="Type what you heard…"
+      <LanguageInput
+        langInputMode={caps.inputMode}
+        placeholder={caps.dictationPlaceholder}
         value={value}
         onChange={e => setValue(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && !checked && setChecked(true)}

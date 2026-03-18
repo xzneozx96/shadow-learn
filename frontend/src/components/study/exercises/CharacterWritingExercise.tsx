@@ -1,5 +1,6 @@
 import type HanziWriter from 'hanzi-writer'
 import type { VocabEntry } from '@/types'
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import { useRef, useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
@@ -10,9 +11,10 @@ interface Props {
   entry: VocabEntry
   progress?: string
   onNext: (correct: boolean) => void
+  caps: LanguageCapabilities
 }
 
-export function CharacterWritingExercise({ entry, progress = '', onNext }: Props) {
+export function CharacterWritingExercise({ entry, progress = '', onNext, caps }: Props) {
   const characters = [...entry.word]
   const [charIndex, setCharIndex] = useState(0)
   const [hintAnimating, setHintAnimating] = useState(false)
@@ -71,7 +73,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
       {/* Prompt */}
       <div className="text-center mb-4">
         <p className="text-sm text-muted-foreground">{entry.meaning}</p>
-        <p className="text-sm text-muted-foreground/60 mt-1">{entry.pinyin}</p>
+        {entry.romanization && <p className="text-sm text-muted-foreground/60 mt-1">{entry.romanization}</p>}
       </div>
 
       {/* Character progress */}

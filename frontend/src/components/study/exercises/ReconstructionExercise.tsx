@@ -21,8 +21,8 @@ export function ReconstructionExercise({ entry, words, progress = '', onNext }: 
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
   const active = getActiveChips(chips, value)
-  const correct = value.trim() === entry.sourceSegmentChinese.trim()
-  const diff = checked ? charDiff(value, entry.sourceSegmentChinese) : null
+  const correct = value.trim() === entry.sourceSegmentText.trim()
+  const diff = checked ? charDiff(value, entry.sourceSegmentText) : null
 
   const footer = (
     <div className="flex items-center justify-between px-[18px] py-3">

@@ -1,16 +1,18 @@
 // frontend/src/components/study/exercises/TranslationExercise.tsx
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
-import { ChineseInput } from '@/components/ui/ChineseInput'
+import { LanguageInput } from '@/components/ui/LanguageInput'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 
 interface Sentence {
-  chinese: string
+  text: string
+  romanization: string
   english: string
 }
 
@@ -32,6 +34,7 @@ interface Props {
   direction: 'en-to-zh' | 'zh-to-en'
   progress?: string
   onNext: (correct: boolean) => void
+  caps: LanguageCapabilities
 }
 
 function scoreColor(n: number) {
@@ -70,17 +73,17 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
   )
 }
 
-export function TranslationExercise({ sentence, direction, progress = '', onNext }: Props) {
+export function TranslationExercise({ sentence, direction, progress = '', onNext, caps }: Props) {
   const { keys } = useAuth()
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<EvaluateResult | null>(null)
 
-  const source = direction === 'zh-to-en' ? sentence.chinese : sentence.english
-  const reference = direction === 'zh-to-en' ? sentence.english : sentence.chinese
-  const sourceLang = direction === 'zh-to-en' ? 'chinese' : 'english'
-  const targetLang = direction === 'zh-to-en' ? 'english' : 'chinese'
-  const placeholder = direction === 'zh-to-en' ? 'Type your English translation…' : 'Type your Chinese translation…'
+  const source = direction === 'zh-to-en' ? sentence.text : sentence.english
+  const reference = direction === 'zh-to-en' ? sentence.english : sentence.text
+  const sourceLang = direction === 'zh-to-en' ? caps.languageName.toLowerCase() : 'english'
+  const targetLang = direction === 'zh-to-en' ? 'english' : caps.languageName.toLowerCase()
+  const placeholder = direction === 'zh-to-en' ? 'Type your English translation…' : `Type your ${caps.languageName} translation…`
 
   async function handleSubmit() {
     if (!value.trim() || !keys?.openrouterApiKey)
@@ -162,40 +165,23 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           <p className="text-xs text-muted-foreground mb-2">
             Translate to
             {' '}
-            {targetLang === 'english' ? 'English' : 'Chinese'}
+            {targetLang === 'english' ? 'English' : caps.languageName}
             :
           </p>
           <p className="text-2xl font-medium leading-snug">{source}</p>
         </div>
 
-        {direction === 'en-to-zh'
-          ? (
-              <ChineseInput
-                value={value}
-                onChange={e => setValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter')
-                    void handleSubmit()
-                }}
-                placeholder={placeholder}
-                disabled={loading}
-              />
-            )
-          : (
-              <input
-                type="text"
-                value={value}
-                onChange={e => setValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter')
-                    void handleSubmit()
-                }}
-                placeholder={placeholder}
-                maxLength={500}
-                disabled={loading}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              />
-            )}
+        <LanguageInput
+          langInputMode={direction === 'en-to-zh' ? caps.inputMode : 'standard'}
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter')
+              void handleSubmit()
+          }}
+          placeholder={placeholder}
+          disabled={loading}
+        />
 
         <Button
           className="w-full"

@@ -1,7 +1,6 @@
 import json
 import logging
 import time
-from typing import Literal
 
 import httpx
 from fastapi import APIRouter
@@ -107,8 +106,8 @@ async def generate_sentences(req: GenerateRequest):
 class EvaluateRequest(BaseModel):
     openrouter_api_key: str
     source: str
-    source_language: Literal['chinese', 'english']
-    target_language: Literal['chinese', 'english']
+    source_language: str    # e.g. 'chinese', 'english', 'japanese'
+    target_language: str
     reference: str
     user_answer: str
 

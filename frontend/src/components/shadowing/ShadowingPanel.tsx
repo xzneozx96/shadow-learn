@@ -1,3 +1,4 @@
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { SegmentResult } from '@/lib/shadowing-utils'
 import type { Segment } from '@/types'
 import { useEffect, useState } from 'react'
@@ -10,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { getLanguageCaps } from '@/lib/language-caps'
 import { computeSessionSummary, isAutoSkipSegment } from '@/lib/shadowing-utils'
 import { ShadowingDictationPhase } from './ShadowingDictationPhase'
 import { ShadowingListenPhase } from './ShadowingListenPhase'
@@ -25,9 +27,11 @@ interface ShadowingPanelProps {
   azureKey: string
   azureRegion: string
   onExit: () => void
+  caps?: LanguageCapabilities
 }
 
-export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit }: ShadowingPanelProps) {
+export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, caps }: ShadowingPanelProps) {
+  const resolvedCaps = caps ?? getLanguageCaps()
   const [segmentIndex, setSegmentIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>('listen')
   const [results, setResults] = useState<SegmentResult[]>([])
@@ -165,6 +169,7 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit }
           onSubmit={handleDictationSubmit}
           onSkip={handleSkip}
           onExit={handleExitRequest}
+          caps={resolvedCaps}
         />
       )}
 
