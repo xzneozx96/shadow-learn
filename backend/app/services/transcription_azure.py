@@ -118,15 +118,25 @@ def _run_continuous_recognition(
         details = evt.result.cancellation_details
         if details.reason == speechsdk.CancellationReason.Error:
             error.append(details.error_details)
+        else:
+            logger.warning("Azure STT canceled (non-error reason: %s)", details.reason)
         done.set()
 
     recognizer.recognized.connect(on_recognized)
     recognizer.session_stopped.connect(on_session_stopped)
     recognizer.canceled.connect(on_canceled)
 
+    _RECOGNITION_TIMEOUT_SECONDS = 600  # 10 minutes — fail loudly rather than hang forever
+
     recognizer.start_continuous_recognition()
-    done.wait()
+    finished = done.wait(timeout=_RECOGNITION_TIMEOUT_SECONDS)
     recognizer.stop_continuous_recognition()
+
+    if not finished:
+        raise RuntimeError(
+            f"Azure STT timed out after {_RECOGNITION_TIMEOUT_SECONDS}s — "
+            "session_stopped/canceled never fired"
+        )
 
     if error:
         raise RuntimeError(f"Azure STT canceled: {error[0]}")
