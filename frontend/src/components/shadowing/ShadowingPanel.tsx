@@ -1,6 +1,5 @@
-import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { SegmentResult } from '@/lib/shadowing-utils'
-import type { Segment } from '@/types'
+import type { LessonMeta, Segment } from '@/types'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,11 +26,11 @@ interface ShadowingPanelProps {
   azureKey: string
   azureRegion: string
   onExit: () => void
-  caps?: LanguageCapabilities
+  lesson: LessonMeta
 }
 
-export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, caps }: ShadowingPanelProps) {
-  const resolvedCaps = caps ?? getLanguageCaps()
+export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, lesson }: ShadowingPanelProps) {
+  const resolvedCaps = getLanguageCaps(lesson.sourceLanguage)
   const [segmentIndex, setSegmentIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>('listen')
   const [results, setResults] = useState<SegmentResult[]>([])

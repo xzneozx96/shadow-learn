@@ -45,8 +45,8 @@ function makeSegment(i: number, duration = 3): Segment {
     id: `seg-${i}`,
     start: i * 5,
     end: i * 5 + duration,
-    chinese: `中文${i}`,
-    pinyin: `zhongwen${i}`,
+    text: `中文${i}`,
+    romanization: `zhongwen${i}`,
     translations: { en: `English ${i}` },
     words: [],
   }
@@ -58,6 +58,18 @@ const DEFAULT_PROPS = {
   azureKey: '',
   azureRegion: '',
   onExit: vi.fn(),
+  lesson: {
+    id: 'lesson_1',
+    title: 'Test Lesson',
+    source: 'youtube' as const,
+    sourceUrl: null,
+    translationLanguages: ['en'],
+    sourceLanguage: 'zh-CN',
+    createdAt: '',
+    lastOpenedAt: '',
+    progressSegmentId: null,
+    tags: [],
+  },
 }
 
 function fireEnded() {

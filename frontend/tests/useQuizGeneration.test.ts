@@ -8,8 +8,8 @@ vi.mock('@/contexts/AuthContext', () => ({
 }))
 
 const mockPool = [
-  { word: '你好', pinyin: 'nǐ hǎo', meaning: 'hello', usage: 'greeting', sourceSegmentId: 's1', sourceSegmentChinese: '', sourceLessonTitle: '', sourceLessonId: '', id: '1', addedAt: '' },
-  { word: '再见', pinyin: 'zài jiàn', meaning: 'goodbye', usage: 'farewell', sourceSegmentId: 's1', sourceSegmentChinese: '', sourceLessonTitle: '', sourceLessonId: '', id: '2', addedAt: '' },
+  { word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: 'greeting', sourceSegmentId: 's1', sourceSegmentText: '', sourceLessonTitle: '', sourceLessonId: '', id: '1', sourceLanguage: 'zh-CN', createdAt: '' },
+  { word: '再见', romanization: 'zài jiàn', meaning: 'goodbye', usage: 'farewell', sourceSegmentId: 's1', sourceSegmentText: '', sourceLessonTitle: '', sourceLessonId: '', id: '2', sourceLanguage: 'zh-CN', createdAt: '' },
 ]
 
 beforeEach(() => {
@@ -94,7 +94,7 @@ describe('useQuizGeneration', () => {
     })
   })
 
-  it('sends words as { word, pinyin, meaning, usage } and uses story_count for cloze', async () => {
+  it('sends words as { word, romanization, meaning, usage } and uses story_count for cloze', async () => {
     const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ exercises: [] }) })
     vi.stubGlobal('fetch', mockFetch)
 
@@ -110,7 +110,7 @@ describe('useQuizGeneration', () => {
       exercise_type: 'cloze',
       story_count: 1,
       words: expect.arrayContaining([
-        expect.objectContaining({ word: '你好', pinyin: 'nǐ hǎo', meaning: 'hello', usage: 'greeting' }),
+        expect.objectContaining({ word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: 'greeting' }),
       ]),
     })
     // No extra fields like sourceSegmentId

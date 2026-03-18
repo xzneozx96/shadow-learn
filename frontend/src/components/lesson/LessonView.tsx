@@ -170,6 +170,7 @@ export function LessonView() {
                 azureKey={keys?.azureSpeechKey ?? ''}
                 azureRegion={keys?.azureSpeechRegion ?? ''}
                 onExit={handleShadowingExit}
+                lesson={meta}
               />
             )
           : (

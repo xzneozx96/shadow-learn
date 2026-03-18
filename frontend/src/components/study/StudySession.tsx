@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { CharacterWritingExercise } from '@/components/study/exercises/CharacterWritingExercise'
 import { ClozeExercise } from '@/components/study/exercises/ClozeExercise'
 import { DictationExercise } from '@/components/study/exercises/DictationExercise'
-import { PinyinRecallExercise } from '@/components/study/exercises/PinyinRecallExercise'
 import { RomanizationRecallExercise } from '@/components/study/exercises/RomanizationRecallExercise'
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { ReconstructionExercise } from '@/components/study/exercises/ReconstructionExercise'
@@ -29,7 +28,7 @@ interface Question {
   pronunciationData?: { sentence: string, translation: string }
   reconstructionTokens?: string[]
   translationData?: {
-    sentence: { chinese: string, english: string }
+    sentence: { text: string, romanization: string, english: string }
     direction: 'en-to-zh' | 'zh-to-en'
   }
 }
@@ -38,7 +37,7 @@ function getReconstructionTokens(entry: VocabEntry, allEntries: VocabEntry[]): s
   const segWords = allEntries
     .filter(e => e.sourceSegmentId === entry.sourceSegmentId)
     .map(e => e.word)
-    .filter(w => entry.sourceSegmentChinese.includes(w))
+    .filter(w => entry.sourceSegmentText.includes(w))
   return [...new Set(segWords)]
 }
 
@@ -126,7 +125,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     const pool = entries.toSorted(() => Math.random() - 0.5)
 
     try {
-      const { clozeExercises, pronExercises, translationResults } = await generateQuiz(types, pool, controller.signal)
+      const { clozeExercises, pronExercises, translationResults } = await generateQuiz(types, pool, controller.signal, entries[0]?.sourceLanguage)
       let clozeIdx = 0
       let pronIdx = 0
       let translationIdx = 0
@@ -252,15 +251,6 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
                 caps={caps}
               />
             )}
-            {q.type === 'pinyin' && (
-              <PinyinRecallExercise
-                key={current}
-                entry={q.entry}
-                progress={`${current + 1} / ${questions.length}`}
-                onNext={handleNext}
-                playTTS={playTTS}
-              />
-            )}
             {q.type === 'dictation' && (
               <DictationExercise
                 key={current}
@@ -269,6 +259,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
                 onNext={handleNext}
                 playTTS={playTTS}
                 loadingText={loadingText}
+                caps={caps}
               />
             )}
             {q.type === 'cloze' && q.clozeData && (
@@ -303,6 +294,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
                 entry={q.entry}
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
+                caps={caps}
               />
             )}
             {q.type === 'translation' && q.translationData && (
@@ -312,6 +304,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
                 direction={q.translationData.direction}
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
+                caps={caps}
               />
             )}
           </>

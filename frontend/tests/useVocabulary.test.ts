@@ -15,10 +15,10 @@ const mockDb = {
   getAllFromIndex: vi.fn().mockResolvedValue([]),
 }
 
-const word: Word = { word: '今天', pinyin: 'jīntiān', meaning: 'today', usage: '今天很好。' }
+const word: Word = { word: '今天', romanization: 'jīntiān', meaning: 'today', usage: '今天很好。' }
 const segment: Segment = {
   id: 'seg_001', start: 0, end: 5,
-  chinese: '今天天气非常好！', pinyin: '...', translations: { en: 'Nice today!' },
+  text: '今天天气非常好！', romanization: '...', translations: { en: 'Nice today!' },
   words: [word],
 }
 const lesson: LessonMeta = {
@@ -43,7 +43,7 @@ describe('useVocabulary', () => {
     })
     expect(mockDb.put).toHaveBeenCalledWith('vocabulary', expect.objectContaining({
       word: '今天',
-      pinyin: 'jīntiān',
+      romanization: 'jīntiān',
       sourceLessonId: 'lesson_abc',
       sourceSegmentId: 'seg_001',
       sourceSegmentTranslation: 'Nice today!',

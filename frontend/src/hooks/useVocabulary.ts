@@ -25,14 +25,15 @@ export function useVocabulary() {
       const entry: VocabEntry = {
         id: crypto.randomUUID(),
         word: word.word,
-        pinyin: word.pinyin,
+        romanization: word.romanization,
         meaning: word.meaning,
         usage: word.usage,
         sourceLessonId: lesson.id,
         sourceLessonTitle: lesson.title,
         sourceSegmentId: segment.id,
-        sourceSegmentChinese: segment.chinese,
+        sourceSegmentText: segment.text,
         sourceSegmentTranslation: segment.translations[activeLang] ?? '',
+        sourceLanguage: lesson.sourceLanguage ?? 'zh-CN',
         createdAt: new Date().toISOString(),
       }
       await db.put('vocabulary', entry)
