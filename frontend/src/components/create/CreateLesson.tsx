@@ -31,7 +31,7 @@ export function CreateLesson() {
   const [submitting, setSubmitting] = useState(false)
   const [queued, setQueued] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sttProvider, setSttProvider] = useState<string>('deepgram')
+  const [sttProvider, setSttProvider] = useState<string | null>(null)
 
   useEffect(() => {
     if (!db)
@@ -50,7 +50,7 @@ export function CreateLesson() {
   }, [])
 
   const handleGenerate = useCallback(async () => {
-    if (!db || !keys)
+    if (!db || !keys || !sttProvider)
       return
     const isYoutube = tab === 'youtube'
     if (isYoutube && !youtubeUrl.trim())
@@ -161,7 +161,8 @@ export function CreateLesson() {
     }
   }, [db, keys, tab, youtubeUrl, file, language, sourceLanguage, updateLesson, sttProvider])
 
-  const canGenerate = (tab === 'youtube' ? !!youtubeUrl.trim() : !!file)
+  const canGenerate = sttProvider !== null
+    && (tab === 'youtube' ? !!youtubeUrl.trim() : !!file)
     && (sttProvider === 'azure' ? !!keys?.azureSpeechKey : !!keys?.deepgramApiKey)
 
   if (queued) {
