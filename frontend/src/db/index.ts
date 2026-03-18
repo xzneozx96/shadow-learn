@@ -3,7 +3,81 @@ import type { AppSettings, ChatMessage, LessonMeta, Segment, VocabEntry } from '
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 4
+const DB_VERSION = 5
+
+export interface LearnerProfile {
+  name: string
+  nativeLanguage: string
+  targetLanguage: string
+  currentLevel: string
+  dailyGoalMinutes: number
+  currentStreakDays: number
+  totalSessions: number
+  totalStudyMinutes: number
+  lastStudyDate: string | null
+  profileCreated: string
+}
+
+export interface DailyAccuracy { date: string, accuracy: number, exercises: number }
+export interface SkillStats { sessions: number, accuracy: number, lastPracticed: string | null }
+
+export interface ProgressStats {
+  totalSessions: number
+  totalExercises: number
+  totalCorrect: number
+  totalIncorrect: number
+  accuracyRate: number
+  totalStudyMinutes: number
+  accuracyTrend: DailyAccuracy[]
+  skillProgress: Record<'writing' | 'speaking' | 'vocabulary' | 'reading' | 'listening', SkillStats>
+}
+
+export interface SpacedRepetitionItem {
+  itemId: string
+  itemType: 'vocabulary'
+  easinessFactor: number
+  intervalDays: number
+  repetitions: number
+  consecutiveCorrect: number
+  consecutiveIncorrect: number
+  masteryLevel: number
+  dueDate: string
+  lastReviewed: string | null
+  reviewHistory: { date: string, quality: number, intervalDays: number }[]
+}
+
+export interface MistakeExample {
+  userAnswer: string
+  correctAnswer: string
+  context?: string
+  date: string
+}
+
+export interface ErrorPattern {
+  patternId: string
+  frequency: number
+  lastOccurred: string
+  examples: MistakeExample[]
+}
+
+export interface SessionLog {
+  sessionId: string
+  date: string
+  durationMinutes: number
+  skillPracticed: 'writing' | 'speaking' | 'vocabulary' | 'reading' | 'listening' | 'mixed'
+  exercisesCompleted: number
+  exercisesCorrect: number
+  accuracy: number
+  itemsMastered: string[]
+}
+
+export interface SkillMastery {
+  masteryLevel: number
+  confidenceScore: number
+  totalPracticeTime: number
+  lastPracticed: string | null
+}
+export type MasteryData = Record<'writing' | 'speaking' | 'vocabulary' | 'reading' | 'listening', SkillMastery>
 
 interface ShadowLearnSchema extends DBSchema {
   'lessons': { key: string, value: LessonMeta }
@@ -18,6 +92,16 @@ interface ShadowLearnSchema extends DBSchema {
     value: VocabEntry
     indexes: { 'by-lesson': string, 'by-date': string }
   }
+  'learner-profile': { key: string, value: LearnerProfile }
+  'progress-db': { key: string, value: ProgressStats }
+  'mastery-db': { key: string, value: MasteryData }
+  'spaced-repetition': {
+    key: string
+    value: SpacedRepetitionItem
+    indexes: { 'by-due': string }
+  }
+  'session-logs': { key: string, value: SessionLog }
+  'mistakes-db': { key: string, value: ErrorPattern }
 }
 
 export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
@@ -73,6 +157,15 @@ export async function initDB(): Promise<ShadowLearnDB> {
           })
           vocabCursor = await vocabCursor.continue()
         }
+      }
+      if (oldVersion < 5) {
+        db.createObjectStore('learner-profile')
+        db.createObjectStore('progress-db')
+        db.createObjectStore('mastery-db')
+        const srStore = db.createObjectStore('spaced-repetition', { keyPath: 'itemId' })
+        srStore.createIndex('by-due', 'dueDate', { unique: false })
+        db.createObjectStore('session-logs', { keyPath: 'sessionId' })
+        db.createObjectStore('mistakes-db', { keyPath: 'patternId' })
       }
     },
   })
@@ -194,4 +287,54 @@ export async function getVocabEntriesByLesson(db: ShadowLearnDB, lessonId: strin
 
 export async function deleteVocabEntry(db: ShadowLearnDB, id: string): Promise<void> {
   await db.delete('vocabulary', id)
+}
+
+// Vocabulary by ID (needed for SM-2 review sessions)
+export async function getVocabEntryById(db: ShadowLearnDB, id: string): Promise<VocabEntry | undefined> {
+  return db.get('vocabulary', id)
+}
+
+// Spaced Repetition
+export async function getSpacedRepetitionItem(db: ShadowLearnDB, itemId: string) {
+  return db.get('spaced-repetition', itemId)
+}
+export async function saveSpacedRepetitionItem(db: ShadowLearnDB, item: SpacedRepetitionItem) {
+  await db.put('spaced-repetition', item)
+}
+export async function getDueItems(db: ShadowLearnDB, today: string): Promise<SpacedRepetitionItem[]> {
+  const all = await db.getAllFromIndex('spaced-repetition', 'by-due', IDBKeyRange.upperBound(today))
+  return all
+}
+
+// Progress Stats
+export async function getProgressStats(db: ShadowLearnDB) {
+  return db.get('progress-db', 'global')
+}
+export async function saveProgressStats(db: ShadowLearnDB, stats: ProgressStats) {
+  await db.put('progress-db', stats, 'global')
+}
+
+// Mastery
+export async function getMasteryData(db: ShadowLearnDB) {
+  return db.get('mastery-db', 'global')
+}
+export async function saveMasteryData(db: ShadowLearnDB, data: MasteryData) {
+  await db.put('mastery-db', data, 'global')
+}
+
+// Mistakes
+export async function getErrorPattern(db: ShadowLearnDB, patternId: string) {
+  return db.get('mistakes-db', patternId)
+}
+export async function saveErrorPattern(db: ShadowLearnDB, pattern: ErrorPattern) {
+  await db.put('mistakes-db', pattern)
+}
+export async function getRecentMistakes(db: ShadowLearnDB, limit = 20): Promise<ErrorPattern[]> {
+  const all = await db.getAll('mistakes-db')
+  return all.sort((a, b) => b.lastOccurred.localeCompare(a.lastOccurred)).slice(0, limit)
+}
+
+// Session Logs
+export async function saveSessionLog(db: ShadowLearnDB, log: SessionLog) {
+  await db.put('session-logs', log)
 }
