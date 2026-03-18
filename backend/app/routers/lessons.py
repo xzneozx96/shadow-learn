@@ -52,7 +52,7 @@ async def _shared_pipeline(
     enriched_segments = []
     for seg in segments:
         seg_pinyin = generate_pinyin(seg["text"])
-        enriched_segments.append({**seg, "pinyin": seg_pinyin})
+        enriched_segments.append({**seg, "romanization": seg_pinyin})
     logger.info("[pipeline] pinyin: done in %.1fs", time.monotonic() - t0)
 
     jobs[job_id].step = "translation"
