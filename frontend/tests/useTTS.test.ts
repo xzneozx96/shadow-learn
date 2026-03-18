@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getTTSCache, saveTTSCache } from '../src/db'
 import { useTTS } from '../src/hooks/useTTS'
+import { getAppConfig } from '../src/lib/config'
 
 vi.mock('../src/db', () => ({
   getTTSCache: vi.fn(),
@@ -14,16 +15,16 @@ vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }))
 
+// Mock getAppConfig so the module-level promise cache doesn't leak between tests
+vi.mock('../src/lib/config', () => ({
+  getAppConfig: vi.fn(),
+}))
+
 const mockDb = {} as any
 const mockKeys = { openrouterApiKey: 'sk-test', minimaxApiKey: 'mm-test', azureSpeechKey: 'az-key', azureSpeechRegion: 'eastus' }
 
-function mockProviderFetch(provider: string) {
-  vi.mocked(globalThis.fetch).mockImplementation(async (url: any) => {
-    if (String(url).includes('/api/config')) {
-      return { ok: true, json: () => Promise.resolve({ tts_provider: provider, stt_provider: 'deepgram' }) } as any
-    }
-    return { ok: false, statusText: 'Not Found' } as any
-  })
+function mockProvider(provider: string) {
+  vi.mocked(getAppConfig).mockResolvedValue({ ttsProvider: provider, sttProvider: 'deepgram' })
 }
 
 beforeEach(() => {
@@ -35,14 +36,14 @@ beforeEach(() => {
 
 describe('useTTS', () => {
   it('returns loadingText null initially', () => {
-    mockProviderFetch('azure')
+    mockProvider('azure')
     const { result } = renderHook(() => useTTS(mockDb, mockKeys))
     expect(result.current.loadingText).toBeNull()
   })
 
   it('is a no-op while provider is still loading (null)', async () => {
-    // Never resolve the provider fetch
-    vi.mocked(globalThis.fetch).mockImplementation(() => new Promise(() => {}))
+    // Never resolve getAppConfig so providerRef stays null
+    vi.mocked(getAppConfig).mockReturnValue(new Promise(() => {}))
     const { result } = renderHook(() => useTTS(mockDb, mockKeys))
 
     await act(async () => {
@@ -54,15 +55,10 @@ describe('useTTS', () => {
   })
 
   it('defaults to azure when provider fetch fails', async () => {
-    vi.mocked(globalThis.fetch).mockImplementation(async (url: any) => {
-      if (String(url).includes('/api/config')) {
-        return { ok: false, statusText: 'Internal Server Error' } as any
-      }
-      return { ok: false, statusText: 'Not Found' } as any
-    })
+    // getAppConfig falls back to azure internally on fetch failure — simulate that
+    mockProvider('azure')
     const { result } = renderHook(() => useTTS(mockDb, mockKeys))
 
-    // Wait for provider to resolve (to 'azure' fallback)
     await waitFor(() => expect(result.current.loadingText).toBeNull())
 
     // No error toast for the provider fetch failure
@@ -70,11 +66,11 @@ describe('useTTS', () => {
   })
 
   it('shows Azure error toast when azure_speech_key is missing and provider is azure', async () => {
-    mockProviderFetch('azure')
+    mockProvider('azure')
     const keysWithoutAzure = { openrouterApiKey: 'sk-test' }
     const { result } = renderHook(() => useTTS(mockDb, keysWithoutAzure as any))
 
-    await waitFor(() => {}) // let provider fetch settle
+    await waitFor(() => {}) // let provider settle
 
     await act(async () => {
       await result.current.playTTS('你好')
@@ -85,11 +81,11 @@ describe('useTTS', () => {
   })
 
   it('shows MiniMax error toast when minimaxApiKey is missing and provider is minimax', async () => {
-    mockProviderFetch('minimax')
+    mockProvider('minimax')
     const keysWithoutMinimax = { openrouterApiKey: 'sk-test' }
     const { result } = renderHook(() => useTTS(mockDb, keysWithoutMinimax as any))
 
-    await waitFor(() => {}) // let provider fetch settle
+    await waitFor(() => {}) // let provider settle
 
     await act(async () => {
       await result.current.playTTS('你好')
@@ -100,14 +96,12 @@ describe('useTTS', () => {
   })
 
   it('plays from cache without calling fetch for audio (azure provider)', async () => {
-    mockProviderFetch('azure')
+    mockProvider('azure')
     const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
     vi.mocked(getTTSCache).mockResolvedValueOnce(fakeBlob)
 
     const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-    await waitFor(() => {}) // let provider fetch settle
-
-    vi.mocked(globalThis.fetch).mockClear() // clear provider fetch call count
+    await waitFor(() => {}) // let provider settle
 
     await act(async () => {
       await result.current.playTTS('你好')
@@ -119,19 +113,13 @@ describe('useTTS', () => {
   })
 
   it('fetches from API with Azure keys on cache miss', async () => {
-    mockProviderFetch('azure')
+    mockProvider('azure')
     vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
     const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
-
-    vi.mocked(globalThis.fetch).mockImplementation(async (url: any) => {
-      if (String(url).includes('/api/config')) {
-        return { ok: true, json: () => Promise.resolve({ tts_provider: 'azure', stt_provider: 'deepgram' }) } as any
-      }
-      return { ok: true, blob: () => Promise.resolve(fakeBlob) } as any
-    })
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
 
     const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-    await waitFor(() => {}) // let provider fetch settle
+    await waitFor(() => {}) // let provider settle
 
     await act(async () => {
       await result.current.playTTS('你好')
@@ -145,19 +133,13 @@ describe('useTTS', () => {
   })
 
   it('fetches from API with MiniMax key on cache miss', async () => {
-    mockProviderFetch('minimax')
+    mockProvider('minimax')
     vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
     const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
-
-    vi.mocked(globalThis.fetch).mockImplementation(async (url: any) => {
-      if (String(url).includes('/api/config')) {
-        return { ok: true, json: () => Promise.resolve({ tts_provider: 'minimax', stt_provider: 'deepgram' }) } as any
-      }
-      return { ok: true, blob: () => Promise.resolve(fakeBlob) } as any
-    })
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
 
     const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-    await waitFor(() => {}) // let provider fetch settle
+    await waitFor(() => {}) // let provider settle
 
     await act(async () => {
       await result.current.playTTS('你好')
@@ -170,7 +152,7 @@ describe('useTTS', () => {
   })
 
   it('is a no-op for empty text', async () => {
-    mockProviderFetch('azure')
+    mockProvider('azure')
     const { result } = renderHook(() => useTTS(mockDb, mockKeys))
     await waitFor(() => {})
 
