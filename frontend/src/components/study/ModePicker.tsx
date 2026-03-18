@@ -11,6 +11,7 @@ const MODES: { id: ExerciseMode, icon: string, name: string, desc: string }[] = 
   { id: 'pronunciation', icon: '🎤', name: 'Speak', desc: 'Pronounce & score' },
   { id: 'reconstruction', icon: '🔀', name: 'Rebuild', desc: 'Unscramble sentence' },
   { id: 'writing', icon: '✏️', name: 'Write', desc: 'Draw the characters' },
+  { id: 'translation', icon: '🌐', name: 'Translate', desc: 'Translate & get AI feedback' },
 ]
 
 interface ModePickerProps {
