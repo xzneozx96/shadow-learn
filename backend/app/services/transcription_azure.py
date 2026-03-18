@@ -40,6 +40,7 @@ except ImportError:
     speechsdk = None  # type: ignore[assignment]
 
 _TICKS_PER_SECOND = 10_000_000
+_RECOGNITION_TIMEOUT_SECONDS = 600  # 10 minutes — fail loudly rather than hang forever
 
 
 def _run_continuous_recognition(
@@ -79,6 +80,7 @@ def _run_continuous_recognition(
     def on_recognized(evt) -> None:
         text = evt.result.text
         if not text:
+            logger.debug("Azure STT: recognized event with empty text, skipping")
             return
         if language.startswith("zh"):
             text = text.replace(" ", "")
@@ -109,9 +111,11 @@ def _run_continuous_recognition(
                 "text": text,
                 "word_timings": [],
             }
+        logger.debug("Azure STT: utterance #%d — %d words, text=%r", seg_id, len(word_timings), text[:60])
         segments.append(seg)
 
     def on_session_stopped(evt) -> None:
+        logger.info("Azure STT: session stopped cleanly")
         done.set()
 
     def on_canceled(evt) -> None:
@@ -126,8 +130,7 @@ def _run_continuous_recognition(
     recognizer.session_stopped.connect(on_session_stopped)
     recognizer.canceled.connect(on_canceled)
 
-    _RECOGNITION_TIMEOUT_SECONDS = 600  # 10 minutes — fail loudly rather than hang forever
-
+    logger.info("Azure STT: starting continuous recognition (language=%s)", language)
     recognizer.start_continuous_recognition()
     finished = done.wait(timeout=_RECOGNITION_TIMEOUT_SECONDS)
     recognizer.stop_continuous_recognition()
@@ -162,6 +165,7 @@ class AzureSTTProvider:
         """Convert MP3 → WAV 16kHz mono, then run continuous recognition."""
         with tempfile.TemporaryDirectory() as tmp:
             wav_path = Path(tmp) / "audio.wav"
+            logger.info("Azure STT: converting %s → WAV 16kHz mono", audio_path.name)
             result = subprocess.run(
                 [
                     "ffmpeg", "-y", "-i", str(audio_path),
@@ -173,4 +177,6 @@ class AzureSTTProvider:
             if result.returncode != 0:
                 raise RuntimeError(f"ffmpeg WAV conversion failed: {result.stderr.decode()[:200]}")
 
+            wav_size_mb = wav_path.stat().st_size / 1024 / 1024 if wav_path.exists() else 0.0
+            logger.info("Azure STT: WAV ready (%.1f MB), handing off to recognizer", wav_size_mb)
             return _run_continuous_recognition(wav_path, key, region, language)
