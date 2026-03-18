@@ -28,7 +28,7 @@ export function SessionSummary({ results, onStudyAgain, onBack }: Props) {
             <div key={e.id} className="flex items-center gap-3 mb-1">
               <span className="text-lg font-bold text-red-300">{e.word}</span>
               <div>
-                <div className="text-xs text-foreground">{e.pinyin} · {e.meaning}</div>
+                <div className="text-xs text-foreground">{e.romanization} · {e.meaning}</div>
               </div>
             </div>
           ))}

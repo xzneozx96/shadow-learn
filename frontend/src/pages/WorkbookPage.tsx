@@ -28,7 +28,7 @@ export function WorkbookPage() {
     const result: Record<string, typeof entries> = {}
     for (const [lid, group] of Object.entries(entriesByLesson)) {
       const filtered = group.filter(e =>
-        e.word.includes(q) || e.meaning.toLowerCase().includes(q) || e.pinyin.includes(q),
+        e.word.includes(q) || e.meaning.toLowerCase().includes(q) || e.romanization.includes(q),
       )
       if (filtered.length > 0) result[lid] = filtered
     }
