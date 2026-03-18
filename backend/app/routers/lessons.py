@@ -21,7 +21,7 @@ from app.services.audio import (
     probe_upload_duration,
 )
 from app.services.pinyin import generate_pinyin
-from app.services.transcription import transcribe_audio_deepgram
+from app.services.transcription_deepgram import transcribe_audio_deepgram
 from app.services.translation import translate_segments
 from app.services.validation import ValidationError, validate_upload_file, validate_youtube_url
 from app.services.vocabulary import extract_vocabulary
