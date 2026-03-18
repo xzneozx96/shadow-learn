@@ -1,3 +1,4 @@
+import type { Segment } from '@/types'
 import { describe, expect, it } from 'vitest'
 import {
   computeAccuracyScore,
@@ -7,7 +8,6 @@ import {
   isAutoSkipSegment,
   stripPinyinTones,
 } from '@/lib/shadowing-utils'
-import type { Segment } from '@/types'
 
 function seg(start: number, end: number): Segment {
   return { id: 's', start, end, chinese: '', pinyin: '', translations: {}, words: [] }
@@ -62,27 +62,37 @@ describe('stripPinyinTones', () => {
 })
 
 describe('computePinyinDiff', () => {
-  it('matches syllables ignoring tone diacritics', () => {
-    const tokens = computePinyinDiff('ni zai xue shenme', 'nǐ zài xué shénme')
+  it('matches syllables when tone diacritics match', () => {
+    const tokens = computePinyinDiff('nǐ zài xué shénme', 'nǐ zài xué shénme')
     expect(tokens.every(t => t.correct)).toBe(true)
   })
 
-  it('marks wrong syllables as incorrect', () => {
-    const tokens = computePinyinDiff('ni hao', 'nǐ zài')
+  it('marks syllables without tone as incorrect when correct has a tone', () => {
+    const tokens = computePinyinDiff('ni zai', 'nǐ zài')
+    expect(tokens.every(t => !t.correct)).toBe(true)
+  })
+
+  it('marks wrong base syllable as incorrect', () => {
+    const tokens = computePinyinDiff('ni3 hao3', 'nǐ zài')
     expect(tokens[0].correct).toBe(true)
     expect(tokens[1].correct).toBe(false)
   })
 
   it('pads shorter user input', () => {
-    const tokens = computePinyinDiff('ni', 'nǐ zài')
+    const tokens = computePinyinDiff('ni3', 'nǐ zài')
     expect(tokens).toHaveLength(2)
     expect(tokens[0].correct).toBe(true)
     expect(tokens[1].correct).toBe(false)
   })
 
   it('is case-insensitive', () => {
-    const tokens = computePinyinDiff('NI', 'nǐ')
+    const tokens = computePinyinDiff('NI3', 'nǐ')
     expect(tokens[0].correct).toBe(true)
+  })
+
+  it('matches syllables typed with tone numbers against tone-marked correct pinyin', () => {
+    const tokens = computePinyinDiff('ni3 zai4 xue2 shen2me', 'nǐ zài xué shénme')
+    expect(tokens.every(t => t.correct)).toBe(true)
   })
 })
 

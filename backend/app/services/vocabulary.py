@@ -120,7 +120,12 @@ async def _extract_batch_with_retry(
                         )
                     response.raise_for_status()
 
-                content = response.json()["choices"][0]["message"]["content"]
+                body = response.json()
+                if "error" in body:
+                    raise VocabularyExtractionError(
+                        f"Vocab batch {seg_ids}: OpenRouter error — {body['error']}"
+                    )
+                content = body["choices"][0]["message"]["content"]
                 try:
                     parsed = VocabularyResponse.model_validate_json(content)
                     return {seg.id: [w.model_dump() for w in seg.words] for seg in parsed.segments}

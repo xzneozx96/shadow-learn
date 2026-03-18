@@ -38,7 +38,7 @@ export function ProcessingStatus({ steps, onRetry }: ProcessingStatusProps) {
           <StepIcon status={step.status} />
           <span className="text-sm text-white/65">{step.label}</span>
           {step.status === 'error' && step.error && (
-            <span className="text-xs text-destructive">{step.error}</span>
+            <span className="text-sm text-destructive">{step.error}</span>
           )}
         </div>
       ))}

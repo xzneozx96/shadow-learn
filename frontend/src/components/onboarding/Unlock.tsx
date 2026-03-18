@@ -44,7 +44,10 @@ export function Unlock() {
     <div className="flex h-screen items-center justify-center glass-bg text-foreground px-4">
       <Card className="w-full max-w-sm px-10 py-20">
         <CardHeader>
-          <CardTitle className="text-center text-xl">ShadowLearn</CardTitle>
+          <CardTitle className="flex items-center flex-col gap-3 text-xl">
+            <img src="/favicon.svg" className="size-8" alt="ShadowLearn Logo" />
+            ShadowLearn
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-10">

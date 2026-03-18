@@ -3278,7 +3278,7 @@ export default function Setup() {
               placeholder="Enter your ElevenLabs API key"
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 mt-1">
               Used for speech-to-text transcription (Scribe).
             </p>
           </div>
@@ -3294,7 +3294,7 @@ export default function Setup() {
               placeholder="Enter your OpenRouter API key"
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 mt-1">
               Used for translations and AI companion chat.
             </p>
           </div>
@@ -3337,7 +3337,7 @@ export default function Setup() {
         </form>
 
         <div className="mt-6 p-3 bg-slate-700/50 rounded-lg">
-          <p className="text-xs text-slate-400">
+          <p className="text-sm text-slate-400">
             Your API keys are encrypted with AES-256-GCM using your PIN. They are stored
             only in your browser and never sent to any server except the respective API
             providers.
@@ -3429,18 +3429,18 @@ export default function Unlock() {
           {!showReset ? (
             <button
               onClick={() => setShowReset(true)}
-              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
             >
               Forgot PIN?
             </button>
           ) : (
             <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg">
-              <p className="text-xs text-red-300 mb-2">
+              <p className="text-sm text-red-300 mb-2">
                 This will erase your encrypted API keys. You will need to re-enter them.
               </p>
               <button
                 onClick={handleReset}
-                className="text-xs text-red-400 hover:text-red-300 font-medium"
+                className="text-sm text-red-400 hover:text-red-300 font-medium"
               >
                 Reset keys & set new PIN
               </button>
@@ -3575,7 +3575,7 @@ export default function LessonCard({ lesson, onDelete }: LessonCardProps) {
 
       <div className="p-4">
         <h3 className="font-medium text-white truncate mb-1">{lesson.title}</h3>
-        <div className="flex items-center gap-3 text-xs text-slate-400">
+        <div className="flex items-center gap-3 text-sm text-slate-400">
           <span>{formatDuration(lesson.duration)}</span>
           <span>{lesson.segmentCount} segments</span>
         </div>
@@ -3585,7 +3585,7 @@ export default function LessonCard({ lesson, onDelete }: LessonCardProps) {
             {lesson.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-0.5 bg-slate-700 text-slate-300 text-xs rounded-full"
+                className="px-2 py-0.5 bg-slate-700 text-slate-300 text-sm rounded-full"
               >
                 {tag}
               </span>
@@ -3692,7 +3692,7 @@ export default function Library() {
               <button
                 key={mode}
                 onClick={() => setSort(mode)}
-                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
                   sort === mode
                     ? "bg-blue-600 text-white"
                     : "bg-slate-700 text-slate-300 hover:bg-slate-600"
@@ -3846,7 +3846,7 @@ export default function UploadTab({ file, onFileSelect }: UploadTabProps) {
         ) : (
           <div>
             <p className="text-slate-400 mb-1">Drop a video file here or click to browse</p>
-            <p className="text-xs text-slate-500">mp4, mkv, webm, mov — max 2 GB, 2 hours</p>
+            <p className="text-sm text-slate-500">mp4, mkv, webm, mov — max 2 GB, 2 hours</p>
           </div>
         )}
       </div>
@@ -3888,7 +3888,7 @@ export default function ProcessingStatus({ steps, onRetry }: ProcessingStatusPro
               : "bg-slate-800 border border-slate-700"
           }`}
         >
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             {step.status === "pending" && (
               <div className="w-5 h-5 rounded-full border-2 border-slate-600" />
             )}
@@ -3896,12 +3896,12 @@ export default function ProcessingStatus({ steps, onRetry }: ProcessingStatusPro
               <div className="w-5 h-5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
             )}
             {step.status === "done" && (
-              <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white text-xs">
+              <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white text-sm">
                 ✓
               </div>
             )}
             {step.status === "error" && (
-              <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-white text-xs">
+              <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-white text-sm">
                 ✕
               </div>
             )}
@@ -3912,14 +3912,14 @@ export default function ProcessingStatus({ steps, onRetry }: ProcessingStatusPro
               {step.label}
             </span>
             {step.status === "error" && step.error && (
-              <p className="text-xs text-red-400 mt-1">{step.error}</p>
+              <p className="text-sm text-red-400 mt-1">{step.error}</p>
             )}
           </div>
 
           {step.status === "error" && onRetry && (
             <button
               onClick={onRetry}
-              className="px-2 py-1 text-xs bg-red-800 hover:bg-red-700 text-red-200 rounded transition-colors"
+              className="px-2 py-1 text-sm bg-red-800 hover:bg-red-700 text-red-200 rounded transition-colors"
             >
               Retry
             </button>
@@ -4284,7 +4284,7 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-300">ElevenLabs API Key</p>
-                <p className="text-xs text-slate-500 font-mono">
+                <p className="text-sm text-slate-500 font-mono">
                   {keys ? "••••••••" + keys.elevenlabsApiKey.slice(-4) : "Locked"}
                 </p>
               </div>
@@ -4293,7 +4293,7 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-300">OpenRouter API Key</p>
-                <p className="text-xs text-slate-500 font-mono">
+                <p className="text-sm text-slate-500 font-mono">
                   {keys ? "••••••••" + keys.openrouterApiKey.slice(-4) : "Locked"}
                 </p>
               </div>
@@ -4301,7 +4301,7 @@ export default function Settings() {
           </div>
 
           <div className="mt-4 p-3 bg-slate-700/50 rounded-lg">
-            <p className="text-xs text-slate-400">
+            <p className="text-sm text-slate-400">
               Keys are AES-256-GCM encrypted with your PIN and never leave this device.
             </p>
           </div>
@@ -4636,7 +4636,7 @@ export default function VideoPanel({
             </button>
           </div>
 
-          <span className="text-xs text-slate-400 font-mono">
+          <span className="text-sm text-slate-400 font-mono">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
 
@@ -4645,7 +4645,7 @@ export default function VideoPanel({
               <button
                 key={rate}
                 onClick={() => setPlaybackRate(rate)}
-                className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2 py-0.5 text-sm rounded transition-colors ${
                   playbackRate === rate
                     ? "bg-blue-600 text-white"
                     : "bg-slate-700 text-slate-400 hover:bg-slate-600"
@@ -4661,7 +4661,7 @@ export default function VideoPanel({
       {/* Metadata */}
       <div className="px-3 py-2 bg-slate-800 border-t border-slate-700">
         <p className="text-sm font-medium text-white truncate">{lesson.title}</p>
-        <p className="text-xs text-slate-400">
+        <p className="text-sm text-slate-400">
           {formatTime(lesson.duration)} · {lesson.segmentCount} segments
         </p>
       </div>
@@ -4752,7 +4752,7 @@ export default function WordTooltip({ text, words }: WordTooltipProps) {
           <div className="text-sm text-blue-300">{activeWord.pinyin}</div>
           <div className="text-sm text-slate-300 mt-1">{activeWord.meaning}</div>
           {activeWord.usage && (
-            <div className="text-xs text-slate-400 mt-1 italic">{activeWord.usage}</div>
+            <div className="text-sm text-slate-400 mt-1 italic">{activeWord.usage}</div>
           )}
         </div>
       )}
@@ -4891,7 +4891,7 @@ export default function TranscriptPanel({
               <button
                 key={lang}
                 onClick={() => setDisplayLang(lang)}
-                className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2 py-0.5 text-sm rounded transition-colors ${
                   displayLang === lang
                     ? "bg-blue-600 text-white"
                     : "bg-slate-700 text-slate-400 hover:bg-slate-600"
@@ -4919,7 +4919,7 @@ export default function TranscriptPanel({
                   : "border-transparent hover:bg-slate-800/50"
               }`}
             >
-              <div className="text-xs text-slate-500 mb-1">
+              <div className="text-sm text-slate-500 mb-1">
                 <WordTooltip text={segment.pinyin} words={[]} />
               </div>
               <div className="text-base text-white leading-relaxed">
@@ -4928,7 +4928,7 @@ export default function TranscriptPanel({
               <div className="text-sm text-slate-400 mt-1">
                 {segment.translations[displayLang] || ""}
               </div>
-              <div className="text-xs text-slate-600 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="text-sm text-slate-600 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 {formatTime(segment.start)}
               </div>
             </div>
@@ -5017,7 +5017,7 @@ export default function CompanionPanel({
           type="text"
           value={model}
           onChange={(e) => onModelChange(e.target.value)}
-          className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-slate-300 w-48 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-slate-300 w-48 focus:outline-none focus:ring-1 focus:ring-blue-500"
           placeholder="Model..."
         />
       </div>
@@ -5027,7 +5027,7 @@ export default function CompanionPanel({
         {messages.length === 0 && (
           <div className="text-center text-slate-500 text-sm mt-8">
             <p>Ask me about grammar, vocabulary, or the current segment.</p>
-            <p className="text-xs mt-1">I can explain patterns, break down sentences, and more.</p>
+            <p className="text-sm mt-1">I can explain patterns, break down sentences, and more.</p>
           </div>
         )}
 
@@ -5066,7 +5066,7 @@ export default function CompanionPanel({
       {/* Context pill + Input */}
       <div className="p-3 bg-slate-800 border-t border-slate-700">
         {activeSegment && (
-          <div className="mb-2 px-2 py-1 bg-slate-700 rounded text-xs text-slate-400 inline-block">
+          <div className="mb-2 px-2 py-1 bg-slate-700 rounded text-sm text-slate-400 inline-block">
             Context: [{formatTime(activeSegment.start)}] {activeSegment.chinese.slice(0, 30)}
             {activeSegment.chinese.length > 30 ? "..." : ""}
           </div>

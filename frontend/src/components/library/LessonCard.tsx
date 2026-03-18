@@ -1,11 +1,10 @@
 import type { LessonMeta } from '@/types'
-import { Clock, FileVideo, Loader2, MoreHorizontal, Trash2, Youtube } from 'lucide-react'
+import { Clock, FileVideo, Loader2, MoreHorizontal, Pencil, Trash2, Youtube } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MenuBackdrop, MenuItem, MenuPopup, MenuPortal, MenuPositioner, MenuRoot, MenuTrigger } from '@/components/ui/menu'
+import { cn } from '@/lib/utils'
 
 interface LessonCardProps {
   lesson: LessonMeta
@@ -20,14 +19,18 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardProps) {
   const status = lesson.status ?? 'complete'
   const isProcessing = status === 'processing'
   const isError = status === 'error'
 
-  const progress = lesson.progressSegmentId && lesson.segmentCount
-    ? Math.min(100, Math.round((Number.parseInt(lesson.progressSegmentId, 10) / lesson.segmentCount) * 100))
-    : 0
+  // const progress = lesson.progressSegmentId && lesson.segmentCount
+  //   ? Math.min(100, Math.round((Number.parseInt(lesson.progressSegmentId, 10) / lesson.segmentCount) * 100))
+  //   : 0
 
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
@@ -70,9 +73,17 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
     }
   }
 
+  const isYoutube = lesson.source === 'youtube'
+
   return (
-    <Card className="group relative flex flex-col transition-shadow hover:ring-2 hover:ring-white/15">
-      {/* Card-level navigation link — disabled while editing or processing */}
+    <div
+      className={cn(
+        'group relative flex h-full min-h-[180px] flex-col overflow-hidden rounded-xl transition-all duration-200',
+        'glass-card glass-hover',
+        isError && 'ring-1 ring-destructive/30',
+      )}
+    >
+      {/* Card-level navigation link */}
       <Link
         to={`/lesson/${lesson.id}`}
         className="absolute inset-0 z-10"
@@ -80,7 +91,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         style={{ pointerEvents: isEditing || isProcessing ? 'none' : undefined }}
       />
 
-      {/* Action menu */}
+      {/* Action menu — top-right, appears on hover */}
       <div className="absolute right-2 top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100">
         <MenuRoot>
           <MenuTrigger
@@ -100,6 +111,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                     startEditing()
                   }}
                 >
+                  <Pencil className="size-4" />
                   Rename
                 </MenuItem>
                 <MenuItem
@@ -118,63 +130,15 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         </MenuRoot>
       </div>
 
-      <CardHeader>
-        {/* Status badge — only shown for processing or error states */}
-        {isProcessing && (
-          <div className="mb-2 flex items-center gap-1.5 text-xs text-white/50">
-            <Loader2 className="size-3 animate-spin" />
-            <span>{lesson.currentStep ?? 'Processing…'}</span>
-          </div>
-        )}
-        {isError && (
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-xs font-medium text-destructive">
-              Failed
-            </span>
-            {/* YouTube: retry is possible programmatically */}
-            {lesson.source === 'youtube' && onRetry && (
-              <button
-                onClick={(e) => { e.preventDefault(); onRetry(lesson) }}
-                className="z-20 text-xs text-white/50 underline hover:text-white"
-              >
-                Retry
-              </button>
-            )}
-            {/* Upload: pipeline cannot be retried without re-uploading */}
-            {lesson.source === 'upload' && (
-              <span className="text-xs text-white/50">Re-upload to retry</span>
-            )}
-            {lesson.errorMessage && (
-              <span
-                className="max-w-[120px] truncate text-xs text-white/40"
-                title={lesson.errorMessage}
-              >
-                {lesson.errorMessage}
-              </span>
-            )}
-          </div>
-        )}
+      {/* Source icon */}
+      <div className="px-4 pt-4 pb-3">
+        {isYoutube
+          ? <Youtube className="size-7 text-red-400/80" />
+          : <FileVideo className="size-7 text-white/40" />}
+      </div>
 
-        <div className="flex items-center gap-2 text-white/40 mb-2">
-          {lesson.source === 'youtube'
-            ? <Youtube className="size-5 text-red-400" />
-            : <FileVideo className="size-5 text-white/50" />}
-          {/* Duration and segment count hidden until lesson is complete */}
-          {!isProcessing && lesson.duration != null && lesson.segmentCount != null && (
-            <>
-              <div className="flex items-center gap-1 text-xs">
-                <Clock className="size-4" />
-                {formatDuration(lesson.duration)}
-              </div>
-              <span className="text-xs">
-                {lesson.segmentCount}
-                {' '}
-                segments
-              </span>
-            </>
-          )}
-        </div>
-
+      {/* Title */}
+      <div className="flex-1 px-4 pb-2">
         {isEditing
           ? (
               <input
@@ -188,40 +152,64 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
               />
             )
           : (
-              <CardTitle className="line-clamp-2">{lesson.title}</CardTitle>
+              <p className="line-clamp-3 text-sm font-semibold leading-snug text-foreground">
+                {lesson.title}
+              </p>
             )}
-      </CardHeader>
+      </div>
 
-      <CardContent className="mt-auto flex flex-col gap-3">
-        {lesson.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {lesson.tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
+      {/* Status indicator */}
+      {isProcessing && (
+        <div className="px-4 pb-2 flex items-center gap-1.5 text-sm text-white/40">
+          <Loader2 className="size-3 animate-spin" />
+          <span className="truncate">{lesson.currentStep ?? 'Processing…'}</span>
+        </div>
+      )}
+      {isError && (
+        <div className="px-4 pb-2 flex flex-wrap items-center gap-1.5">
+          <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-sm font-medium text-destructive">
+            Failed
+          </span>
+          {lesson.source === 'youtube' && onRetry && (
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                onRetry(lesson)
+              }}
+              className="z-20 text-sm text-white/40 underline hover:text-white"
+            >
+              Retry
+            </button>
+          )}
+          {lesson.source === 'upload' && (
+            <span className="text-sm text-white/40">Re-upload to retry</span>
+          )}
+        </div>
+      )}
 
-        {/* Progress bar hidden while processing (no segments yet) */}
-        {!isProcessing && lesson.segmentCount != null && (
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-white/40">
-              <span>Progress</span>
-              <span>
-                {progress}
-                %
-              </span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
+      {/* Footer: date + meta */}
+      <div className="px-4 pb-3 pt-1 flex items-center gap-2 text-sm text-white/30">
+        <span>{formatDate(lesson.lastOpenedAt)}</span>
+        {!isProcessing && lesson.duration != null && (
+          <>
+            <span>·</span>
+            <span className="flex items-center gap-0.5">
+              <Clock className="size-3" />
+              {formatDuration(lesson.duration)}
+            </span>
+          </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Progress strip at bottom edge */}
+      {/* {!isProcessing && progress > 0 && (
+        <div className="h-0.5 w-full bg-white/5">
+          <div
+            className="h-full bg-emerald-500/60 transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )} */}
+    </div>
   )
 }

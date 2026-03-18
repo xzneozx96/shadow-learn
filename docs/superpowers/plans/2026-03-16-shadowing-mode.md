@@ -451,7 +451,7 @@ export function ShadowingModePicker({ open, speakingAvailable, onStart, onCancel
             onClick={() => setSelected('dictation')}
           >
             <div className="text-sm font-semibold">✍️ Dictation</div>
-            <div className="mt-0.5 text-xs text-muted-foreground">
+            <div className="mt-0.5 text-sm text-muted-foreground">
               Listen to each segment, type what you heard
             </div>
           </button>
@@ -473,7 +473,7 @@ export function ShadowingModePicker({ open, speakingAvailable, onStart, onCancel
                   aria-disabled={!speakingAvailable}
                 >
                   <div className="text-sm font-semibold">🎤 Speaking</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
+                  <div className="mt-0.5 text-sm text-muted-foreground">
                     Listen to each segment, speak it back — scored by Azure
                   </div>
                 </button>
@@ -533,29 +533,29 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
     >
       <div className="w-full max-w-xs space-y-4">
         <div className="text-center">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+          <div className="text-sm uppercase tracking-widest text-muted-foreground mb-1">
             Session Complete
           </div>
           <div className="text-2xl font-semibold">{attempted} / {total}</div>
-          <div className="text-xs text-muted-foreground">segments attempted</div>
+          <div className="text-sm text-muted-foreground">segments attempted</div>
         </div>
 
         <div className="flex gap-2">
           <div className="flex-1 rounded-lg border border-border glass-surface p-3 text-center">
             <div className="text-lg font-semibold">{skipped}</div>
-            <div className="text-xs text-muted-foreground">skipped</div>
+            <div className="text-sm text-muted-foreground">skipped</div>
           </div>
           <div className="flex-1 rounded-lg border border-border glass-surface p-3 text-center">
             <div className="text-lg font-semibold">
               {averageScore !== null ? averageScore : '—'}
             </div>
-            <div className="text-xs text-muted-foreground">avg score</div>
+            <div className="text-sm text-muted-foreground">avg score</div>
           </div>
         </div>
 
         {weakestSegments.length > 0 && (
           <div>
-            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+            <div className="text-sm uppercase tracking-widest text-muted-foreground mb-2">
               Needs Practice
             </div>
             <div className="space-y-1.5">
@@ -697,9 +697,9 @@ export function ShadowingListenPhase({
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
+        <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <button
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >
@@ -717,7 +717,7 @@ export function ShadowingListenPhase({
 
       {/* Body */}
       <div className="flex flex-1 flex-col items-center justify-center gap-5">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground">Listen</span>
+        <span className="text-sm uppercase tracking-widest text-muted-foreground">Listen</span>
 
         {/* Decorative waveform — heights applied from WAVE_HEIGHTS for visual variety */}
         <div className="flex items-center gap-0.5" style={{ height: 48 }} aria-hidden>
@@ -730,11 +730,11 @@ export function ShadowingListenPhase({
           ))}
         </div>
 
-        <span className="text-xs text-muted-foreground">Playing segment…</span>
+        <span className="text-sm text-muted-foreground">Playing segment…</span>
 
         <button
           ref={replayBtnRef}
-          className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+          className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-sm transition-colors hover:bg-accent"
           onClick={handleReplay}
         >
           ↺ Replay
@@ -742,7 +742,7 @@ export function ShadowingListenPhase({
       </div>
 
       <button
-        className="self-end text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground"
         onClick={onSkip}
         aria-label="Skip this segment"
       >
@@ -882,9 +882,9 @@ export function ShadowingDictationPhase({
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
+        <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <button
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >
@@ -902,12 +902,12 @@ export function ShadowingDictationPhase({
 
       {/* Body */}
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground">
+        <span className="text-sm uppercase tracking-widest text-muted-foreground">
           Type what you heard
         </span>
 
         <button
-          className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+          className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-sm transition-colors hover:bg-accent"
           onClick={handleReplay}
         >
           ↺ Replay
@@ -932,7 +932,7 @@ export function ShadowingDictationPhase({
             <button
               key={m}
               className={cn(
-                'rounded border px-2.5 py-0.5 text-xs transition-colors',
+                'rounded border px-2.5 py-0.5 text-sm transition-colors',
                 inputMode === m
                   ? 'border-foreground/25 bg-foreground/10 text-foreground'
                   : 'border-border text-muted-foreground hover:text-foreground',
@@ -948,7 +948,7 @@ export function ShadowingDictationPhase({
       </div>
 
       <button
-        className="self-end text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground"
         onClick={onSkip}
         aria-label="Skip this segment"
       >
@@ -1138,9 +1138,9 @@ export function ShadowingSpeakingPhase({
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
+        <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <button
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >
@@ -1158,14 +1158,14 @@ export function ShadowingSpeakingPhase({
 
       {/* Body */}
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground">
+        <span className="text-sm uppercase tracking-widest text-muted-foreground">
           Speak what you heard
         </span>
 
         {/* Replay — initial only */}
         {subState === 'initial' && (
           <button
-            className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+            className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-sm transition-colors hover:bg-accent"
             onClick={() => { player?.seekTo(segment.start); player?.play() }}
           >
             ↺ Replay
@@ -1192,7 +1192,7 @@ export function ShadowingSpeakingPhase({
         {/* Recording waveform */}
         {subState === 'recording' && (
           <>
-            <span className="text-xs text-destructive">Recording…</span>
+            <span className="text-sm text-destructive">Recording…</span>
             <div className="flex items-center gap-0.5" style={{ height: 20 }} aria-hidden>
               {Array.from({ length: WAVE_COUNT }, (_, i) => (
                 <div
@@ -1203,7 +1203,7 @@ export function ShadowingSpeakingPhase({
               ))}
             </div>
             <button
-              className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               onClick={stopRecording}
             >
               Stop & Submit
@@ -1212,31 +1212,31 @@ export function ShadowingSpeakingPhase({
         )}
 
         {subState === 'processing' && (
-          <span className="text-xs text-muted-foreground">Processing…</span>
+          <span className="text-sm text-muted-foreground">Processing…</span>
         )}
 
         {subState === 'recorded' && blob && (
           <div className="flex gap-2">
             <button
-              className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               onClick={handleRerecord}
             >
               ↺ Re-record
             </button>
-            <Button size="sm" onClick={() => onSubmit(blob)}>Submit</Button>
+            <Button onClick={() => onSubmit(blob)}>Submit</Button>
           </div>
         )}
 
         {shortError && (
-          <p className="text-xs text-destructive">Recording too short — try again.</p>
+          <p className="text-sm text-destructive">Recording too short — try again.</p>
         )}
         {interruptedError && (
-          <p className="text-xs text-destructive">Recording interrupted.</p>
+          <p className="text-sm text-destructive">Recording interrupted.</p>
         )}
       </div>
 
       <button
-        className="self-end text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground"
         onClick={handleSkip}
         aria-label="Skip this segment"
       >
@@ -1380,9 +1380,9 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
     >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
+        <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <button
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >
@@ -1401,8 +1401,8 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
       {/* Correct text reveal */}
       <div className="rounded-lg border border-border glass-surface p-3 text-center">
         <div className="text-xl tracking-widest">{segment.chinese}</div>
-        <div className="mt-1 text-xs text-muted-foreground">{segment.pinyin}</div>
-        <div className="mt-0.5 text-xs text-muted-foreground/60">
+        <div className="mt-1 text-sm text-muted-foreground">{segment.pinyin}</div>
+        <div className="mt-0.5 text-sm text-muted-foreground/60">
           {segment.translations?.en ?? ''}
         </div>
       </div>
@@ -1421,7 +1421,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
             ))}
           </div>
           {dictationScore !== null && (
-            <div className="text-center text-xs text-muted-foreground">
+            <div className="text-center text-sm text-muted-foreground">
               Accuracy: {dictationScore}%
             </div>
           )}
@@ -1442,14 +1442,14 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
       {/* Actions */}
       <div className="mt-auto flex gap-2">
         <button
-          className="flex-1 rounded-md border border-border py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          className="flex-1 rounded-md border border-border py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           onClick={onRetry}
         >
           ↺ Retry
         </button>
         <Button
           ref={nextBtnRef}
-          className="flex-1 py-1.5 text-xs"
+          className="flex-1 py-1.5 text-sm"
           onClick={() => onNext(props.mode === 'dictation' ? dictationScore : speakingScoreRef.current)}
         >
           Next →
@@ -1515,11 +1515,11 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore }: Speak
   }, []) // run once on mount
 
   if (loading) {
-    return <div className="py-2 text-center text-xs text-muted-foreground">Scoring…</div>
+    return <div className="py-2 text-center text-sm text-muted-foreground">Scoring…</div>
   }
 
   if (error) {
-    return <div className="py-2 text-center text-xs text-destructive">{error}</div>
+    return <div className="py-2 text-center text-sm text-destructive">{error}</div>
   }
 
   if (!result) return null
@@ -1530,7 +1530,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore }: Speak
         {(['accuracy', 'fluency', 'prosody'] as const).map(k => (
           <div key={k} className="flex-1 rounded-md border border-border glass-surface p-2 text-center">
             <div className="text-sm font-semibold">{Math.round(result.overall[k])}</div>
-            <div className="text-xs capitalize text-muted-foreground">{k}</div>
+            <div className="text-sm capitalize text-muted-foreground">{k}</div>
           </div>
         ))}
       </div>
@@ -2075,7 +2075,7 @@ In the metadata bar `<div>` (the last div before the closing `</div>` of the com
   <Button
     variant="ghost"
     size="xs"
-    className="ml-auto shrink-0 text-xs"
+    className="ml-auto shrink-0 text-sm"
     onClick={onShadowingClick}
     disabled={!hasSegments}
     title={hasSegments ? 'Start shadowing mode' : 'No segments yet'}

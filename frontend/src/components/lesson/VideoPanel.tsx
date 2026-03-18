@@ -229,7 +229,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
   return (
     <div className="flex h-full flex-col bg-background/50 backdrop-blur-md">
       {/* Header */}
-      <div className="h-14 flex items-center gap-2 border-b border-border px-3 py-2">
+      <div className="h-[65px] flex items-center gap-2 border-b border-border px-3 py-2">
         <Button variant="ghost" size="icon-sm" render={<Link to="/" />}>
           <Home className="size-4" />
         </Button>
@@ -285,7 +285,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
       </div>
 
       {/* Media area */}
-      <div className="relative flex-1 overflow-hidden bg-black">
+      <div className="relative flex-1 overflow-hidden">
         {isAudioOnly
           ? (
               <>

@@ -14,7 +14,7 @@ async def test_chat_rejects_empty_messages():
                 "video_title": "Test",
                 "active_segment": None,
                 "context_segments": [],
-                "openai_api_key": "key",
+                "openrouter_api_key": "key",
                 "model": "gpt-4o-mini",
             },
         )

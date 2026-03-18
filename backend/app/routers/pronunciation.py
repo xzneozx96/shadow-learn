@@ -1,6 +1,8 @@
 # backend/app/routers/pronunciation.py
+import asyncio
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile
@@ -28,39 +30,34 @@ class PronunciationResult(BaseModel):
     words: list[WordScore]
 
 
-@router.post("/assess", response_model=PronunciationResult)
-async def assess_pronunciation(
-    audio: UploadFile,
-    reference_text: str = Form(...),
-    language: str = Form("zh-CN"),
-    azure_key: str = Form(...),
-    azure_region: str = Form("eastus"),
-):
-    try:
-        import azure.cognitiveservices.speech as speechsdk
-    except ImportError:
-        raise HTTPException(503, "Azure Speech SDK not installed")
+def _run_assessment(
+    audio_bytes: bytes,
+    reference_text: str,
+    language: str,
+    azure_key: str,
+    azure_region: str,
+) -> dict:
+    """Blocking — runs on a thread via asyncio.to_thread."""
+    import azure.cognitiveservices.speech as speechsdk
 
     with tempfile.TemporaryDirectory() as tmp:
         webm_path = Path(tmp) / "input.webm"
         wav_path = Path(tmp) / "output.wav"
 
-        # Save uploaded audio
-        webm_path.write_bytes(await audio.read())
+        webm_path.write_bytes(audio_bytes)
 
-        # Transcode WebM → 16kHz mono WAV
+        t0 = time.perf_counter()
         result = subprocess.run(
             ["ffmpeg", "-y", "-i", str(webm_path),
              "-ar", "16000", "-ac", "1", "-f", "wav", str(wav_path)],
             capture_output=True, timeout=30,
         )
+        print(f"[assess] ffmpeg: {time.perf_counter() - t0:.2f}s")
         if result.returncode != 0:
-            raise HTTPException(500, f"ffmpeg failed: {result.stderr.decode()}")
+            return {"error": f"ffmpeg failed: {result.stderr.decode()}"}
 
-        # Configure Azure pronunciation assessment
-        speech_config = speechsdk.SpeechConfig(
-            subscription=azure_key, region=azure_region
-        )
+        t1 = time.perf_counter()
+        speech_config = speechsdk.SpeechConfig(subscription=azure_key, region=azure_region)
         audio_config = speechsdk.AudioConfig(filename=str(wav_path))
         pronunciation_config = speechsdk.PronunciationAssessmentConfig(
             reference_text=reference_text,
@@ -78,27 +75,57 @@ async def assess_pronunciation(
         pronunciation_config.apply_to(recognizer)
 
         ev = recognizer.recognize_once()
+        print(f"[assess] recognize_once: {time.perf_counter() - t1:.2f}s  reason={ev.reason}")
 
         if ev.reason != speechsdk.ResultReason.RecognizedSpeech:
-            raise HTTPException(422, "Speech not recognized — try speaking more clearly")
+            return {"error": "Speech not recognized"}
 
-        pa_result = speechsdk.PronunciationAssessmentResult(ev)
+        pa = speechsdk.PronunciationAssessmentResult(ev)
 
-        overall = OverallScore(
-            accuracy=pa_result.accuracy_score,
-            fluency=pa_result.fluency_score,
-            completeness=pa_result.completeness_score,
-            prosody=pa_result.prosody_score,
-        )
+        return {
+            "overall": {
+                "accuracy": pa.accuracy_score or 0.0,
+                "fluency": pa.fluency_score or 0.0,
+                "completeness": pa.completeness_score or 0.0,
+                "prosody": pa.prosody_score or 0.0,
+            },
+            "words": [
+                {
+                    "word": w.word,
+                    "accuracy": w.accuracy_score or 0.0,
+                    "error_type": w.error_type if w.error_type != "None" else None,
+                    "error_detail": None,
+                }
+                for w in pa.words
+            ],
+        }
 
-        words = []
-        for w in pa_result.words:
-            error_type = w.error_type if w.error_type != "None" else None
-            words.append(WordScore(
-                word=w.word,
-                accuracy=w.accuracy_score,
-                error_type=error_type,
-                error_detail=f"{w.word} — check pronunciation" if error_type else None,
-            ))
 
-        return PronunciationResult(overall=overall, words=words)
+@router.post("/assess", response_model=PronunciationResult)
+async def assess_pronunciation(
+    audio: UploadFile,
+    reference_text: str = Form(...),
+    language: str = Form("zh-CN"),
+    azure_key: str = Form(...),
+    azure_region: str = Form("eastus"),
+):
+    try:
+        import azure.cognitiveservices.speech  # noqa: F401
+    except ImportError:
+        raise HTTPException(503, "Azure Speech SDK not installed")
+
+    t0 = time.perf_counter()
+    audio_bytes = await audio.read()
+    print(f"[assess] upload read: {time.perf_counter() - t0:.2f}s ({len(audio_bytes)} bytes)")
+
+    data = await asyncio.to_thread(
+        _run_assessment, audio_bytes, reference_text, language, azure_key, azure_region,
+    )
+
+    if "error" in data:
+        raise HTTPException(422 if "not recognized" in data["error"] else 500, data["error"])
+
+    return PronunciationResult(
+        overall=OverallScore(**data["overall"]),
+        words=[WordScore(**w) for w in data["words"]],
+    )

@@ -1,8 +1,8 @@
 import type { Segment } from '@/types'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { Dialog } from '@/components/ui/dialog'
 import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
+import { Dialog } from '@/components/ui/dialog'
 
 function Wrapper({ children }: { children: React.ReactNode }) {
   return <Dialog open>{children}</Dialog>
@@ -30,7 +30,7 @@ const baseProps = {
   onClose: vi.fn(),
 }
 
-describe('ShadowingModePicker', () => {
+describe('shadowingModePicker', () => {
   it('shows start segment info in description', () => {
     render(<ShadowingModePicker {...baseProps} />, { wrapper: Wrapper })
     expect(screen.getByText(/segment 12/)).toBeInTheDocument()

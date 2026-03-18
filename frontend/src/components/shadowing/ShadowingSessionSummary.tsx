@@ -19,7 +19,7 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
     >
       <div className="w-full max-w-xs space-y-4">
         <div className="text-center">
-          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+          <div className="text-sm uppercase tracking-widest text-muted-foreground mb-1">
             Session Complete
           </div>
           <div className="text-2xl font-semibold">
@@ -29,25 +29,25 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
             {' '}
             {total}
           </div>
-          <div className="text-xs text-muted-foreground">segments attempted</div>
+          <div className="text-sm text-muted-foreground">segments attempted</div>
         </div>
 
         <div className="flex gap-2">
           <div className="flex-1 rounded-lg border border-border glass-surface p-3 text-center">
             <div className="text-lg font-semibold">{skipped}</div>
-            <div className="text-xs text-muted-foreground">skipped</div>
+            <div className="text-sm text-muted-foreground">skipped</div>
           </div>
           <div className="flex-1 rounded-lg border border-border glass-surface p-3 text-center">
             <div className="text-lg font-semibold">
               {averageScore !== null ? averageScore : '—'}
             </div>
-            <div className="text-xs text-muted-foreground">avg score</div>
+            <div className="text-sm text-muted-foreground">avg score</div>
           </div>
         </div>
 
         {weakestSegments.length > 0 && (
           <div>
-            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+            <div className="text-sm uppercase tracking-widest text-muted-foreground mb-2">
               Needs Practice
             </div>
             <div className="space-y-1.5">

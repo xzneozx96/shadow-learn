@@ -789,7 +789,7 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   		value={minimaxApiKey}
   		onChange={(e) => setMinimaxApiKey(e.target.value)}
   	/>
-  	<p className='text-xs text-slate-500'>
+  	<p className='text-sm text-slate-500'>
   		Used for word and sentence pronunciation (TTS). Can be added later in
   		Settings.
   	</p>
@@ -890,16 +890,16 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   			</Button>
   		</div>
   		<div className='space-y-2'>
-  			<label className='text-xs text-slate-400'>OpenAI API Key</label>
+  			<label className='text-sm text-slate-400'>OpenAI API Key</label>
   			<Input
   				type={showKeys ? 'text' : 'password'}
   				value={editOpenaiKey}
   				onChange={(e) => setEditOpenaiKey(e.target.value)}
-  				className='font-mono text-xs'
+  				className='font-mono text-sm'
   			/>
   		</div>
   		<div className='space-y-2'>
-  			<label className='text-xs text-slate-400'>
+  			<label className='text-sm text-slate-400'>
   				Minimax API Key{' '}
   				<span className='text-slate-600'>(for pronunciation)</span>
   			</label>
@@ -907,12 +907,12 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   				type={showKeys ? 'text' : 'password'}
   				value={editMinimaxKey}
   				onChange={(e) => setEditMinimaxKey(e.target.value)}
-  				className='font-mono text-xs'
+  				className='font-mono text-sm'
   				placeholder='Leave blank to disable TTS'
   			/>
   		</div>
   		<div className='space-y-2'>
-  			<label className='text-xs text-slate-400'>Confirm with PIN</label>
+  			<label className='text-sm text-slate-400'>Confirm with PIN</label>
   			<Input
   				type='password'
   				value={keysPin}
@@ -1110,7 +1110,7 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   	/* Pinyin + sentence play button */
   }
   <div className='mb-0.5 flex items-center gap-1.5'>
-  	<p className='text-xs text-muted-foreground'>{segment.pinyin}</p>
+  	<p className='text-sm text-muted-foreground'>{segment.pinyin}</p>
   	<Button
   		variant='ghost'
   		size='icon-xs'
@@ -1130,7 +1130,7 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   ```
 
   Remove the old standalone
-  `<p className="mb-0.5 text-xs text-muted-foreground">` pinyin line since it's
+  `<p className="mb-0.5 text-sm text-muted-foreground">` pinyin line since it's
   now inside the flex div.
 
 - [ ] **Step 2: Build to check TypeScript**

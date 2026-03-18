@@ -1804,32 +1804,32 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       <CardHeader>
         {/* Status badge — only shown for processing or error states */}
         {isProcessing && (
-          <div className="mb-2 flex items-center gap-1.5 text-xs text-white/50">
+          <div className="mb-2 flex items-center gap-1.5 text-sm text-white/50">
             <Loader2 className="size-3 animate-spin" />
             <span>{lesson.currentStep ?? 'Processing…'}</span>
           </div>
         )}
         {isError && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-xs font-medium text-destructive">
+            <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-sm font-medium text-destructive">
               Failed
             </span>
             {/* YouTube: retry is possible programmatically */}
             {lesson.source === 'youtube' && onRetry && (
               <button
                 onClick={(e) => { e.preventDefault(); onRetry(lesson) }}
-                className="z-20 text-xs text-white/50 underline hover:text-white"
+                className="z-20 text-sm text-white/50 underline hover:text-white"
               >
                 Retry
               </button>
             )}
             {/* Upload: pipeline cannot be retried without re-uploading */}
             {lesson.source === 'upload' && (
-              <span className="text-xs text-white/50">Re-upload to retry</span>
+              <span className="text-sm text-white/50">Re-upload to retry</span>
             )}
             {lesson.errorMessage && (
               <span
-                className="max-w-[120px] truncate text-xs text-white/40"
+                className="max-w-[120px] truncate text-sm text-white/40"
                 title={lesson.errorMessage}
               >
                 {lesson.errorMessage}
@@ -1845,11 +1845,11 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
           {/* Duration and segment count hidden until lesson is complete */}
           {!isProcessing && lesson.duration != null && lesson.segmentCount != null && (
             <>
-              <div className="flex items-center gap-1 text-xs">
+              <div className="flex items-center gap-1 text-sm">
                 <Clock className="size-4" />
                 {formatDuration(lesson.duration)}
               </div>
-              <span className="text-xs">
+              <span className="text-sm">
                 {lesson.segmentCount}
                 {' '}
                 segments
@@ -1879,7 +1879,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         {lesson.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {lesson.tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="text-xs">
+              <Badge key={tag} variant="secondary" className="text-sm">
                 {tag}
               </Badge>
             ))}
@@ -1889,7 +1889,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         {/* Progress bar hidden while processing (no segments yet) */}
         {!isProcessing && lesson.segmentCount != null && (
           <div className="space-y-1">
-            <div className="flex justify-between text-xs text-white/40">
+            <div className="flex justify-between text-sm text-white/40">
               <span>Progress</span>
               <span>
                 {progress}

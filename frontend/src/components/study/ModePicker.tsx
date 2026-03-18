@@ -40,7 +40,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, onStart, 
       <p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">Exercise type</p>
 
       {/* 3-column grid for individual modes */}
-      <div className="grid grid-cols-3 gap-2 mb-2">
+      <div className="grid grid-cols-3 gap-2 mb-8">
         {MODES.map(m => (
           <button
             key={m.id}
@@ -79,7 +79,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, onStart, 
         </div>
       </div>
 
-      <Button className="w-full mt-4" onClick={onStart} disabled={loading}>
+      <Button className="w-full mt-8" onClick={onStart} disabled={loading}>
         {loading ? 'Generating…' : 'Start session →'}
       </Button>
     </div>

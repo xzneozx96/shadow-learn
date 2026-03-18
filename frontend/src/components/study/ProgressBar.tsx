@@ -10,7 +10,13 @@ export function ProgressBar({ current, total }: ProgressBarProps) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-sm text-muted-foreground whitespace-nowrap">{current} / {total}</span>
+      <span className="text-sm text-muted-foreground whitespace-nowrap">
+        {current}
+        {' '}
+        /
+        {' '}
+        {total}
+      </span>
     </div>
   )
 }

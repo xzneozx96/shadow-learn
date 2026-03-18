@@ -17,7 +17,6 @@ export function useChat(
   activeSegment: Segment | null,
   contextSegments: Segment[],
   keys: DecryptedKeys | null,
-  model: string,
 ): UseChatResult {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
@@ -64,8 +63,7 @@ export function useChat(
             video_title: videoTitle,
             active_segment: activeSegment,
             context_segments: contextSegments.slice(-40),
-            openai_api_key: keys.openaiApiKey,
-            model,
+            openrouter_api_key: keys.openrouterApiKey,
           }),
           signal: abortRef.current.signal,
         })
@@ -154,7 +152,7 @@ export function useChat(
         setIsStreaming(false)
       }
     },
-    [messages, keys, isStreaming, videoTitle, activeSegment, contextSegments, model],
+    [messages, keys, isStreaming, videoTitle, activeSegment, contextSegments],
   )
 
   return { messages, isStreaming, sendMessage }

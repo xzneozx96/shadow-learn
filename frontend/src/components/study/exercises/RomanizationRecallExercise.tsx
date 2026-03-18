@@ -1,9 +1,9 @@
 import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { VocabEntry } from '@/types'
 import { useState } from 'react'
+import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { compareRomanization } from '@/lib/romanization-utils'
 import { cn } from '@/lib/utils'
 

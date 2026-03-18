@@ -79,13 +79,13 @@ export function ShadowingDictationPhase({
 
   return (
     <div
-      className="flex h-full flex-col p-4 gap-3"
+      className="flex h-full flex-col"
       role="region"
       aria-label="Shadowing mode"
       tabIndex={0}
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4 h-16">
         <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <Button
           variant="ghost"

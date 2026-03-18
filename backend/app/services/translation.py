@@ -1,4 +1,4 @@
-"""Translation service using OpenAI API with batching and retry."""
+"""Translation service using OpenRouter API with batching and retry."""
 
 import json
 import logging
@@ -11,8 +11,6 @@ from app.config import settings
 from app.services.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
-
-_DEFAULT_MODEL = "gpt-4o-mini"
 
 
 class LanguageTranslation(BaseModel):
@@ -59,21 +57,12 @@ async def _translate_batch(
     segments: list[dict],
     languages: list[str],
     api_key: str,
-    model: str,
     source_language: str = "zh-CN",
 ) -> list[dict]:
-    """Translate a single batch of segments via OpenAI API using Structured Outputs."""
+    """Translate a single batch of segments via OpenRouter API using Structured Outputs."""
     prompt = _build_translation_prompt(segments, languages, source_language=source_language)
     
-    # Define JSON schema for Structured Outputs
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "translation_response",
-            "strict": True,
-            "schema": TranslationResponse.model_json_schema()
-        }
-    }
+    response_format = {"type": "json_object"}
 
     max_retries = settings.translation_max_retries
     last_exc: Exception | None = None
@@ -82,21 +71,24 @@ async def _translate_batch(
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
-                    settings.openai_chat_url,
+                    settings.openrouter_chat_url,
                     headers={
                         "Authorization": f"Bearer {api_key}",
                         "Content-Type": "application/json",
                     },
                     json={
-                        "model": model,
+                        "model": settings.openrouter_model,
                         "messages": [{"role": "user", "content": prompt}],
                         "response_format": response_format,
                         "temperature": 0.1,
+                        "reasoning": {"effort": "none"},
                     },
                 )
                 response.raise_for_status()
 
             data = response.json()
+            if "choices" not in data:
+                raise ValueError(f"OpenRouter error response: {data}")
             content = data["choices"][0]["message"]["content"]
             
             try:
@@ -147,7 +139,6 @@ async def translate_segments(
     segments: list[dict],
     languages: list[str],
     api_key: str,
-    model: str = _DEFAULT_MODEL,
     source_language: str = "zh-CN",
 ) -> list[dict]:
     """Translate all segments in batches, returning enriched segment dicts.
@@ -159,7 +150,7 @@ async def translate_segments(
 
     for i in range(0, len(segments), batch_size):
         batch = segments[i : i + batch_size]
-        translated = await _translate_batch(batch, languages, api_key, model, source_language=source_language)
+        translated = await _translate_batch(batch, languages, api_key, source_language=source_language)
         results.extend(translated)
 
     return results

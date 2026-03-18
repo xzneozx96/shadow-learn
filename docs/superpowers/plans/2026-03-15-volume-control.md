@@ -513,7 +513,7 @@ Place this after the playback rate `<div>`, still inside the `justify-between` f
   </div>
 
   {/* Time display */}
-  <span className="font-mono text-xs text-muted-foreground">
+  <span className="font-mono text-sm text-muted-foreground">
     {formatTime(currentTime)} / {formatTime(duration)}
   </span>
 

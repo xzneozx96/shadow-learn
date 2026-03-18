@@ -74,7 +74,7 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
               <div className="flex items-center gap-2 text-white/65">
                 <FileVideo className="size-5" />
                 <span className="text-sm font-medium">{file.name}</span>
-                <span className="text-xs text-white/30">
+                <span className="text-sm text-white/30">
                   (
                   {formatFileSize(file.size)}
                   )

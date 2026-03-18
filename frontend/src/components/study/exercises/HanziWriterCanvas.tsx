@@ -48,7 +48,7 @@ export function HanziWriterCanvas({ character, writerRef, onComplete }: Props) {
     })
 
     return () => {
-      writer.cancelAnimation()
+      writer.cancelQuiz()
       if (container)
         container.innerHTML = ''
       internalWriterRef.current = null

@@ -450,7 +450,7 @@ Add the input field after the Minimax block:
     value={deepgramApiKey}
     onChange={e => setDeepgramApiKey(e.target.value)}
   />
-  <p className="text-xs text-white/30">
+  <p className="text-sm text-white/30">
     Used for transcription (faster, more accurate than Whisper). Can be added later in Settings.
   </p>
 </div>
@@ -486,7 +486,7 @@ const newKeys = {
 Add the input field after the Minimax input in JSX:
 ```tsx
 <div className="space-y-2">
-  <label className="text-xs text-white/40">
+  <label className="text-sm text-white/40">
     Deepgram API Key
     {' '}
     <span className="text-white/20">(for transcription)</span>
@@ -495,7 +495,7 @@ Add the input field after the Minimax input in JSX:
     type={showKeys ? 'text' : 'password'}
     value={editDeepgramKey}
     onChange={e => setEditDeepgramKey(e.target.value)}
-    className="font-mono text-xs"
+    className="font-mono text-sm"
     placeholder="Leave blank to use Whisper"
   />
 </div>

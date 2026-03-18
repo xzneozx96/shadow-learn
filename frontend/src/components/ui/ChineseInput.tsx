@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Input } from '@/components/ui/input'
 import { getCandidates } from '@/lib/pinyin-dict'
@@ -17,9 +17,10 @@ interface ChineseInputProps
 const PAGE_SIZE = 9
 
 export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClassName, ...rest }: ChineseInputProps) {
-  const [buffer, setBuffer] = useState('')
-  const [page, setPage] = useState(0)
-  const [barPos, setBarPos] = useState<{ top: number, left: number } | null>(null)
+  // buffer and page are combined so page resets atomically when buffer changes,
+  // avoiding a useEffect setter (rerender-derived-state-no-effect).
+  const [ime, setIme] = useState({ buffer: '', page: 0 })
+  const { buffer, page } = ime
   const wrapperRef = useRef<HTMLDivElement>(null)
   const isComposingRef = useRef(false)
 
@@ -28,17 +29,10 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
   const candidates = allCandidates.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
   const showCandidates = allCandidates.length > 0
 
-  // Reposition candidate bar when buffer changes. Reset page too.
-  // Uses `position: fixed` so coordinates are viewport-relative — do NOT add scrollY/scrollX.
-  useEffect(() => {
-    setPage(0)
-    if (!showCandidates || !wrapperRef.current) {
-      setBarPos(null)
-      return
-    }
-    const rect = wrapperRef.current.getBoundingClientRect()
-    setBarPos({ top: rect.bottom + 4, left: rect.left })
-  }, [buffer]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Derive bar position during render — ref is populated after first mount so this
+  // always reflects the current layout without needing an effect + state round-trip.
+  const wrapperRect = showCandidates ? wrapperRef.current?.getBoundingClientRect() : undefined
+  const barPos = wrapperRect ? { top: wrapperRect.bottom + 4, left: wrapperRect.left } : null
 
   function fireChange(newValue: string) {
     const event = {
@@ -48,7 +42,7 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
   }
 
   function selectCandidate(char: string) {
-    setBuffer('')
+    setIme({ buffer: '', page: 0 })
     fireChange(value + char)
   }
 
@@ -73,12 +67,12 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
       }
       if (e.key === '=' && page < totalPages - 1) {
         e.preventDefault()
-        setPage(p => p + 1)
+        setIme(s => ({ ...s, page: s.page + 1 }))
         return
       }
       if (e.key === '-' && page > 0) {
         e.preventDefault()
-        setPage(p => p - 1)
+        setIme(s => ({ ...s, page: s.page - 1 }))
         return
       }
     }
@@ -86,19 +80,19 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
     // Buffer editing
     if (RE_LETTER.test(e.key)) {
       e.preventDefault()
-      setBuffer(b => b + e.key.toLowerCase())
+      setIme(s => ({ buffer: s.buffer + e.key.toLowerCase(), page: 0 }))
       return
     }
 
     if (e.key === 'Backspace' && buffer.length > 0) {
       e.preventDefault()
-      setBuffer(b => b.slice(0, -1))
+      setIme(s => ({ buffer: s.buffer.slice(0, -1), page: 0 }))
       return
     }
 
     if (e.key === 'Escape' && buffer.length > 0) {
       e.preventDefault()
-      setBuffer('')
+      setIme({ buffer: '', page: 0 })
       return
     }
 
@@ -116,6 +110,7 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
     <div ref={wrapperRef} className={cn('relative', wrapperClassName)}>
       <Input
         {...rest}
+        className="text-center text-xl!"
         value={displayValue}
         onChange={(e) => {
           // Forward direct value changes (e.g., programmatic/test fireEvent.change)
@@ -131,7 +126,7 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
           // Let the OS IME commit its value normally
           const input = e.currentTarget
           fireChange(input.value)
-          setBuffer('')
+          setIme({ buffer: '', page: 0 })
         }}
         disabled={disabled}
       />
@@ -147,7 +142,10 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
               tabIndex={-1}
               disabled={page === 0}
               className="px-1.5 py-1 rounded text-sm text-muted-foreground hover:bg-accent disabled:opacity-30 disabled:cursor-default"
-              onMouseDown={(e) => { e.preventDefault(); setPage(p => p - 1) }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                setIme(s => ({ ...s, page: s.page - 1 }))
+              }}
             >
               ‹
             </button>
@@ -164,7 +162,7 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
                 selectCandidate(char)
               }}
             >
-              <span className="text-muted-foreground text-xs">{i + 1}</span>
+              <span className="text-muted-foreground text-sm">{i + 1}</span>
               <span>{char}</span>
             </button>
           ))}
@@ -181,7 +179,10 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
                 tabIndex={-1}
                 disabled={page === totalPages - 1}
                 className="px-1.5 py-1 rounded text-sm text-muted-foreground hover:bg-accent disabled:opacity-30 disabled:cursor-default"
-                onMouseDown={(e) => { e.preventDefault(); setPage(p => p + 1) }}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  setIme(s => ({ ...s, page: s.page + 1 }))
+                }}
               >
                 ›
               </button>

@@ -1,13 +1,11 @@
 import type { LessonMeta } from '@/types'
 import { Plus } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLessons } from '@/contexts/LessonsContext'
-import { cn } from '@/lib/utils'
 import { LessonCard } from './LessonCard'
 
 type SortMode = 'recent' | 'alpha' | 'progress'
@@ -16,7 +14,15 @@ export function Library() {
   const { keys } = useAuth()
   const { lessons, updateLesson, deleteLesson } = useLessons()
   const [search, setSearch] = useState('')
-  const [sort, setSort] = useState<SortMode>('recent')
+  const [sort] = useState<SortMode>('recent')
+  const [sttProvider, setSttProvider] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then((data: { stt_provider: string; tts_provider: string }) => setSttProvider(data.stt_provider))
+      .catch(() => setSttProvider('azure'))
+  }, [])
 
   const filtered = useMemo(() => {
     let result = lessons
@@ -60,62 +66,81 @@ export function Library() {
     // Upload retry: audio blob is already in IndexedDB; only the pipeline needs re-running.
     // The backend does not currently support re-running from a saved blob — the user must
     // re-upload. LessonCard shows "Re-upload to retry" text for upload-sourced errors.
-    if (!keys || lesson.source !== 'youtube' || !lesson.sourceUrl)
+    if (!keys || !sttProvider || lesson.source !== 'youtube' || !lesson.sourceUrl)
       return
-    const res = await fetch('/api/lessons/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        source: 'youtube',
-        youtube_url: lesson.sourceUrl,
-        translation_languages: lesson.translationLanguages,
-        openai_api_key: keys.openaiApiKey,
-        deepgram_api_key: keys.deepgramApiKey,
-        model: 'gpt-4o-mini',
-      }),
-    })
-    if (!res.ok)
-      return
-    const { job_id } = await res.json()
-    await updateLesson({
-      ...lesson,
-      status: 'processing',
-      jobId: job_id,
-      errorMessage: undefined,
-      currentStep: undefined,
-    })
-  }, [keys, updateLesson])
+    try {
+      const res = await fetch('/api/lessons/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: 'youtube',
+          youtube_url: lesson.sourceUrl,
+          source_language: lesson.sourceLanguage ?? 'zh-CN',
+          translation_languages: lesson.translationLanguages,
+          openrouter_api_key: keys.openrouterApiKey,
+          ...(sttProvider === 'azure'
+            ? { azure_speech_key: keys.azureSpeechKey, azure_speech_region: keys.azureSpeechRegion }
+            : { deepgram_api_key: keys.deepgramApiKey ?? null }),
+        }),
+      })
+      if (!res.ok) {
+        toast.error('Failed to retry lesson processing')
+        return
+      }
+      const { job_id } = await res.json()
+      await updateLesson({
+        ...lesson,
+        status: 'processing',
+        jobId: job_id,
+        errorMessage: undefined,
+        currentStep: undefined,
+      })
+    }
+    catch {
+      toast.error('Failed to retry lesson processing')
+    }
+  }, [keys, sttProvider, updateLesson])
 
-  const sortButtons: { mode: SortMode, label: string }[] = [
-    { mode: 'recent', label: 'Recent' },
-    { mode: 'alpha', label: 'A-Z' },
-    { mode: 'progress', label: 'Progress' },
-  ]
+  // const sortButtons: { mode: SortMode, label: string }[] = [
+  //   { mode: 'recent', label: 'Recent' },
+  //   { mode: 'alpha', label: 'A-Z' },
+  //   { mode: 'progress', label: 'Progress' },
+  // ]
 
   return (
     <Layout onSearch={setSearch} searchValue={search}>
-      <div className="p-4">
-        <div className="mb-4 flex items-center gap-1">
-          {sortButtons.map(({ mode, label }) => (
-            <Button
-              key={mode}
-              variant={sort === mode ? 'secondary' : 'ghost'}
-              size="xs"
-              onClick={() => setSort(mode)}
-              className={cn(sort === mode && 'font-semibold')}
-            >
-              {label}
-            </Button>
-          ))}
+      <div className="p-6">
+        {/* Section header */}
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-white/50 tracking-wide uppercase">
+            All lessons
+          </h2>
+          {/* <div className="flex items-center gap-1">
+            {sortButtons.map(({ mode, label }) => (
+              <Button
+                key={mode}
+                variant={sort === mode ? 'secondary' : 'ghost'}
+                size="xs"
+                onClick={() => setSort(mode)}
+                className={cn(sort === mode && 'font-semibold')}
+              >
+                {label}
+              </Button>
+            ))}
+          </div> */}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <Card className="flex min-h-[160px] items-center justify-center border-dashed">
-            <Button variant="ghost" size="lg" render={<Link to="/create" />}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
+          {/* Add new lesson card */}
+          <Link
+            to="/create"
+            className="group flex h-full min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/20 text-white/60 transition-all duration-200 hover:bg-white/3"
+          >
+            <div className="flex size-10 items-center justify-center rounded-full border border-white/25 transition-colors group-hover:bg-white/5">
               <Plus className="size-5" />
-              Add new lesson
-            </Button>
-          </Card>
+            </div>
+            <span className="text-sm font-medium">Add new lesson</span>
+          </Link>
 
           {filtered.map(lesson => (
             <LessonCard

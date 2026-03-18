@@ -23,7 +23,7 @@ vi.mock('@/hooks/useTTS', () => ({
   useTTS: () => ({ playTTS: vi.fn(), loadingText: null }),
 }))
 
-describe('StudySession', () => {
+describe('studySession', () => {
   it('renders ModePicker on initial mount', () => {
     render(<StudySession lessonId="lesson_1" onClose={vi.fn()} />)
     // ModePicker renders a Start button

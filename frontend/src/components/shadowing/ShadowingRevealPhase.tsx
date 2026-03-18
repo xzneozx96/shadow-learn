@@ -90,13 +90,13 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
   return (
     <div
       ref={containerRef}
-      className="flex h-full flex-col p-4 gap-3"
+      className="flex h-full flex-col"
       role="region"
       aria-label="Shadowing mode"
       tabIndex={0}
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4 h-16">
         <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <Button
           variant="ghost"
@@ -118,7 +118,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
       {/* Main Content / Results Canvas */}
       <div className="flex-1 flex flex-col items-center justify-center gap-8 py-4">
         {/* Correct Text Panel */}
-        <div className="bg-accent/60 p-6 rounded-2xl w-full max-w-md flex flex-col items-center gap-4 border border-border/40 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+        <div className="glass-card p-6 rounded-2xl w-full max-w-md flex flex-col items-center gap-4 border border-border/40 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col items-center gap-1.5">
             <div className="text-2xl font-bold tracking-wider text-foreground">
               {segment.text}
@@ -191,7 +191,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
       )}
 
       {/* Actions */}
-      <div className="mt-auto flex gap-2">
+      <div className="mt-auto flex gap-2 p-4">
         <Button
           variant="outline"
           className="flex-1 py-1.5 text-sm"
@@ -294,7 +294,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore, onLoadi
 
   if (error) {
     return (
-      <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-center text-sm text-destructive">
+      <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-3 text-center text-sm text-destructive">
         {error}
       </div>
     )
@@ -309,7 +309,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore, onLoadi
   const label = accuracy >= 90 ? 'Excellent' : accuracy >= 75 ? 'Good' : accuracy >= 60 ? 'Fair' : accuracy >= 40 ? 'Keep Practicing' : 'Needs Work'
 
   return (
-    <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="p-4 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Score panel */}
       <div className="rounded-xl border border-border/50 bg-muted/20 backdrop-blur-sm overflow-hidden">
         {/* Hero: accuracy */}

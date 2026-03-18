@@ -1,174 +1,139 @@
 import json
-import subprocess
-import threading
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
+import respx
+from httpx import Response
 
-from app.services.transcription_azure import AzureSTTProvider, _run_continuous_recognition
-
-
-def _make_sdk_mocks(utterances: list[dict]):
-    """Build a minimal azure.cognitiveservices.speech mock that fires events."""
-    speechsdk = MagicMock()
-
-    # CancellationReason.Error sentinel
-    speechsdk.CancellationReason.Error = "Error"
-
-    # OutputFormat
-    speechsdk.OutputFormat.Detailed = "Detailed"
-
-    # Track registered callbacks
-    callbacks = {}
-
-    def make_recognizer(*args, **kwargs):
-        rec = MagicMock()
-        rec._callbacks = {}
-
-        def connect(event_name, cb):
-            rec._callbacks[event_name] = cb
-
-        rec.recognized.connect = lambda cb: connect("recognized", cb)
-        rec.session_stopped.connect = lambda cb: connect("session_stopped", cb)
-        rec.canceled.connect = lambda cb: connect("canceled", cb)
-
-        done_event = threading.Event()
-
-        def start_continuous():
-            for utt in utterances:
-                evt = MagicMock()
-                evt.result.text = utt["text"]
-                result_json = {
-                    "NBest": [{
-                        "Words": [
-                            {"Word": w["word"], "Offset": w["offset"], "Duration": w["duration"]}
-                            for w in utt.get("words", [])
-                        ]
-                    }]
-                }
-                evt.result.json = json.dumps(result_json)
-                rec._callbacks.get("recognized", lambda e: None)(evt)
-            # Fire session_stopped
-            stop_evt = MagicMock()
-            rec._callbacks.get("session_stopped", lambda e: None)(stop_evt)
-
-        rec.start_continuous_recognition = start_continuous
-        rec.stop_continuous_recognition = MagicMock()
-        return rec
-
-    speechsdk.SpeechConfig = MagicMock()
-    speechsdk.AudioConfig = MagicMock()
-    speechsdk.SpeechRecognizer = make_recognizer
-    return speechsdk
+from app.services.transcription_azure import AzureSTTProvider, _parse_duration
 
 
-def test_run_continuous_recognition_converts_ticks_to_seconds(tmp_path):
-    """100ns offset ticks are correctly converted to seconds."""
-    wav_path = tmp_path / "audio.wav"
-    wav_path.write_bytes(b"fake wav")
+# ---------------------------------------------------------------------------
+# _parse_duration
+# ---------------------------------------------------------------------------
 
-    utterances = [{
-        "text": "你好",
-        "words": [
-            {"word": "你", "offset": 10_000_000, "duration": 5_000_000},   # 1.0s start, 0.5s dur → end 1.5s
-            {"word": "好", "offset": 20_000_000, "duration": 5_000_000},   # 2.0s start → end 2.5s
-        ],
-    }]
+def test_parse_duration_seconds():
+    assert _parse_duration("PT1.23S") == pytest.approx(1.23)
 
-    sdk = _make_sdk_mocks(utterances)
 
-    with patch("app.services.transcription_azure.speechsdk", sdk):
-        segments = _run_continuous_recognition(wav_path, "fake-key", "eastus", "zh-CN")
+def test_parse_duration_zero():
+    assert _parse_duration("PT0S") == pytest.approx(0.0)
+
+
+def test_parse_duration_whole():
+    assert _parse_duration("PT10S") == pytest.approx(10.0)
+
+
+# ---------------------------------------------------------------------------
+# AzureSTTProvider.transcribe
+# ---------------------------------------------------------------------------
+
+_API_URL = "https://eastus.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe"
+
+
+def _make_response(phrases: list[dict]) -> Response:
+    return Response(200, json={"phrases": phrases})
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_transcribe_maps_phrases_to_segments(tmp_path: Path):
+    """Phrases with word timings are mapped correctly to _Segment dicts."""
+    audio = tmp_path / "audio.mp3"
+    audio.write_bytes(b"fake mp3")
+
+    respx.post(_API_URL).mock(return_value=_make_response([
+        {
+            "text": "你好世界",
+            "offset": "PT1.0S",
+            "duration": "PT1.0S",
+            "words": [
+                {"text": "你好", "offset": "PT1.0S", "duration": "PT0.5S"},
+                {"text": "世界", "offset": "PT1.5S", "duration": "PT0.5S"},
+            ],
+        }
+    ]))
+
+    provider = AzureSTTProvider()
+    segments = await provider.transcribe(audio, {"azure_speech_key": "k", "azure_speech_region": "eastus"}, "zh-CN")
 
     assert len(segments) == 1
     seg = segments[0]
-    assert seg["text"] == "你好"
-    assert seg["word_timings"][0]["text"] == "你"
-    assert seg["word_timings"][0]["start"] == pytest.approx(1.0)
-    assert seg["word_timings"][0]["end"] == pytest.approx(1.5)
-    assert seg["word_timings"][1]["start"] == pytest.approx(2.0)
-    assert seg["word_timings"][1]["end"] == pytest.approx(2.5)
+    assert seg["id"] == 0
+    assert seg["text"] == "你好世界"
+    assert seg["start"] == pytest.approx(1.0)
+    assert seg["end"] == pytest.approx(2.0)
+    assert seg["word_timings"][0] == {"text": "你好", "start": pytest.approx(1.0), "end": pytest.approx(1.5)}
+    assert seg["word_timings"][1] == {"text": "世界", "start": pytest.approx(1.5), "end": pytest.approx(2.0)}
 
 
-def test_run_continuous_recognition_strips_chinese_spaces(tmp_path):
-    """Chinese utterance text has spaces stripped."""
-    wav_path = tmp_path / "audio.wav"
-    wav_path.write_bytes(b"fake wav")
+@pytest.mark.asyncio
+@respx.mock
+async def test_transcribe_strips_chinese_spaces(tmp_path: Path):
+    """Chinese phrase text with spaces is stripped."""
+    audio = tmp_path / "audio.mp3"
+    audio.write_bytes(b"fake mp3")
 
-    utterances = [{"text": "你 好", "words": []}]
-    sdk = _make_sdk_mocks(utterances)
+    respx.post(_API_URL).mock(return_value=_make_response([
+        {"text": "你 好", "offset": "PT0S", "duration": "PT1S", "words": []},
+    ]))
 
-    with patch("app.services.transcription_azure.speechsdk", sdk):
-        segments = _run_continuous_recognition(wav_path, "fake-key", "eastus", "zh-CN")
+    provider = AzureSTTProvider()
+    segments = await provider.transcribe(audio, {"azure_speech_key": "k", "azure_speech_region": "eastus"}, "zh-CN")
 
     assert segments[0]["text"] == "你好"
 
 
-def test_run_continuous_recognition_raises_on_cancellation(tmp_path):
-    """RuntimeError raised when canceled with CancellationReason.Error."""
-    wav_path = tmp_path / "audio.wav"
-    wav_path.write_bytes(b"fake wav")
+@pytest.mark.asyncio
+@respx.mock
+async def test_transcribe_phrase_without_words(tmp_path: Path):
+    """Phrase with no words array uses phrase-level offset/duration."""
+    audio = tmp_path / "audio.mp3"
+    audio.write_bytes(b"fake mp3")
 
-    speechsdk = MagicMock()
-    speechsdk.CancellationReason.Error = "Error"
-    speechsdk.OutputFormat.Detailed = "Detailed"
+    respx.post(_API_URL).mock(return_value=_make_response([
+        {"text": "你好", "offset": "PT2.5S", "duration": "PT1.0S", "words": []},
+    ]))
 
-    def make_recognizer(*args, **kwargs):
-        rec = MagicMock()
-        callbacks = {}
-        rec.recognized.connect = lambda cb: callbacks.update({"recognized": cb})
-        rec.session_stopped.connect = lambda cb: callbacks.update({"session_stopped": cb})
-        rec.canceled.connect = lambda cb: callbacks.update({"canceled": cb})
+    provider = AzureSTTProvider()
+    segments = await provider.transcribe(audio, {"azure_speech_key": "k", "azure_speech_region": "eastus"}, "zh-CN")
 
-        def start_continuous():
-            evt = MagicMock()
-            evt.result.cancellation_details.reason = "Error"
-            evt.result.cancellation_details.error_details = "Auth failed"
-            callbacks.get("canceled", lambda e: None)(evt)
-
-        rec.start_continuous_recognition = start_continuous
-        rec.stop_continuous_recognition = MagicMock()
-        return rec
-
-    speechsdk.SpeechConfig = MagicMock()
-    speechsdk.AudioConfig = MagicMock()
-    speechsdk.SpeechRecognizer = make_recognizer
-
-    with patch("app.services.transcription_azure.speechsdk", speechsdk):
-        with pytest.raises(RuntimeError, match="Auth failed"):
-            _run_continuous_recognition(wav_path, "fake-key", "eastus", "zh-CN")
+    assert segments[0]["start"] == pytest.approx(2.5)
+    assert segments[0]["end"] == pytest.approx(3.5)
+    assert segments[0]["word_timings"] == []
 
 
 @pytest.mark.asyncio
-async def test_azure_stt_provider_raises_without_key(tmp_path):
-    """ValueError raised when azure_speech_key is absent from keys."""
-    provider = AzureSTTProvider()
+@respx.mock
+async def test_transcribe_raises_on_http_error(tmp_path: Path):
+    """RuntimeError raised when API returns non-200."""
     audio = tmp_path / "audio.mp3"
-    audio.write_bytes(b"fake")
+    audio.write_bytes(b"fake mp3")
 
+    respx.post(_API_URL).mock(return_value=Response(400, text="Bad Request"))
+
+    provider = AzureSTTProvider()
+    with pytest.raises(RuntimeError, match="Azure Fast STT error 400"):
+        await provider.transcribe(audio, {"azure_speech_key": "k", "azure_speech_region": "eastus"}, "zh-CN")
+
+
+@pytest.mark.asyncio
+async def test_transcribe_raises_without_key(tmp_path: Path):
+    """ValueError raised when azure_speech_key is absent."""
+    audio = tmp_path / "audio.mp3"
+    audio.write_bytes(b"fake mp3")
+
+    provider = AzureSTTProvider()
     with pytest.raises(ValueError, match="Azure Speech key"):
         await provider.transcribe(audio, {}, "zh-CN")
 
 
 @pytest.mark.asyncio
-async def test_azure_stt_provider_converts_mp3_to_wav(tmp_path):
-    """Provider runs ffmpeg conversion before invoking the SDK."""
-    provider = AzureSTTProvider()
+async def test_transcribe_raises_without_region(tmp_path: Path):
+    """ValueError raised when azure_speech_region is absent."""
     audio = tmp_path / "audio.mp3"
     audio.write_bytes(b"fake mp3")
 
-    mock_segments = [{"id": 0, "start": 0.0, "end": 1.0, "text": "好", "word_timings": []}]
-
-    with (
-        patch("app.services.transcription_azure.subprocess.run") as mock_run,
-        patch("app.services.transcription_azure._run_continuous_recognition", return_value=mock_segments),
-    ):
-        mock_run.return_value = MagicMock(returncode=0)
-        result = await provider.transcribe(audio, {"azure_speech_key": "k", "azure_speech_region": "eastus"}, "zh-CN")
-
-    assert mock_run.called
-    cmd = mock_run.call_args[0][0]
-    assert "ffmpeg" in cmd
-    assert "-ar" in cmd and "16000" in cmd
-    assert result == mock_segments
+    provider = AzureSTTProvider()
+    with pytest.raises(ValueError, match="Azure Speech region"):
+        await provider.transcribe(audio, {"azure_speech_key": "k"}, "zh-CN")

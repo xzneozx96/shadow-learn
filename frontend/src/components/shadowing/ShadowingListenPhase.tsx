@@ -93,13 +93,13 @@ export function ShadowingListenPhase({
 
   return (
     <div
-      className="flex h-full flex-col p-4 gap-3"
+      className="flex h-full flex-col"
       role="region"
       aria-label="Shadowing mode"
       tabIndex={0}
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4 h-16">
         <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <Button
           variant="ghost"
@@ -135,22 +135,23 @@ export function ShadowingListenPhase({
 
         <span className="text-sm text-muted-foreground">Playing segment…</span>
 
-        <button
+        <Button
           ref={replayButtonRef}
-          className="rounded-md border border-border bg-accent/60 px-3 py-1.5 text-sm transition-colors hover:bg-accent"
+          variant="secondary"
           onClick={handleReplay}
         >
           ↺ Replay
-        </button>
+        </Button>
       </div>
 
-      <button
-        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+      <Button
+        variant="ghost"
+        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground hover:bg-transparent h-auto p-0"
         onClick={onSkip}
         aria-label="Skip this segment"
       >
         skip →
-      </button>
+      </Button>
     </div>
   )
 }

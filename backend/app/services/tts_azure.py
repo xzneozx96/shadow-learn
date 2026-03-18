@@ -10,7 +10,7 @@ from app.services.tts_provider import TTSKeys
 
 logger = logging.getLogger(__name__)
 
-_VOICE = "zh-CN-XiaoxiaoNeural"
+_VOICE = "zh-CN-XiaoxiaoMultilingualNeural"
 _OUTPUT_FORMAT = "audio-16khz-128kbitrate-mono-mp3"
 _MAX_TEXT_LENGTH = 2_000  # Azure REST API SSML limit is ~3,000 chars; 2,000 gives safe headroom
 

@@ -764,7 +764,7 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
           style={{ width: `${feedback.score}%` }}
         />
       </div>
-      <p className="text-xs text-muted-foreground">{feedback.comment}</p>
+      <p className="text-sm text-muted-foreground">{feedback.comment}</p>
     </div>
   )
 }
@@ -814,7 +814,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
       <ExerciseCard progress={progress}>
         <div className="space-y-5">
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Your translation of:</p>
+            <p className="text-sm text-muted-foreground mb-1">Your translation of:</p>
             <p className="text-lg font-medium">{source}</p>
             <p className="text-sm text-muted-foreground mt-1 italic">{value}</p>
           </div>
@@ -851,7 +851,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
     <ExerciseCard progress={progress}>
       <div className="space-y-4">
         <div>
-          <p className="text-xs text-muted-foreground mb-2">
+          <p className="text-sm text-muted-foreground mb-2">
             Translate to {targetLang === 'english' ? 'English' : 'Chinese'}:
           </p>
           <p className="text-2xl font-medium leading-snug">{source}</p>

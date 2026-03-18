@@ -4,7 +4,7 @@ import type { LanguageCapabilities } from '@/lib/language-caps'
 import { useRef, useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
-import { animateCharacter } from './hanzi-writer-utils'
+import { animateCharacter } from '../../../lib/hanzi-writer-utils'
 import { HanziWriterCanvas } from './HanziWriterCanvas'
 
 interface Props {

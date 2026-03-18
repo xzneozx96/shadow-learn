@@ -1,6 +1,6 @@
 import type { SegmentResult } from '@/lib/shadowing-utils'
 import type { LessonMeta, Segment } from '@/types'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -34,21 +34,19 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
   const [segmentIndex, setSegmentIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>('listen')
   const [results, setResults] = useState<SegmentResult[]>([])
-  const [showSummary, setShowSummary] = useState(false)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
 
   // State carried from Attempt phase → Reveal phase
   const [dictationAnswer, setDictationAnswer] = useState<string | null>(null)
   const [speakingBlob, setSpeakingBlob] = useState<Blob | null>(null)
 
-  const segment = segments[segmentIndex] ?? null
+  // showSummary is pure derived state
+  const showSummary = segmentIndex >= segments.length
 
-  // Auto-skip: runs when segmentIndex changes
-  useEffect(() => {
-    if (segmentIndex >= segments.length) {
-      setShowSummary(true)
-      return
-    }
+  // Auto-skip: setState-during-render pattern — avoids effect setter
+  const [lastAutoSkipCheck, setLastAutoSkipCheck] = useState(-1)
+  if (!showSummary && lastAutoSkipCheck !== segmentIndex) {
+    setLastAutoSkipCheck(segmentIndex)
     const seg = segments[segmentIndex]
     if (seg && isAutoSkipSegment(seg)) {
       setResults(prev => [...prev, {
@@ -60,7 +58,9 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
       }])
       setSegmentIndex(si => si + 1)
     }
-  }, [segmentIndex, segments])
+  }
+
+  const segment = segments[segmentIndex] ?? null
 
   // Count attempted segments (de-duplicated, same definition as session summary)
   function attemptedCount(): number {
@@ -121,13 +121,9 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
 
   function advanceToNextSegment() {
     const next = segmentIndex + 1
-    if (next >= segments.length) {
-      setShowSummary(true)
-    }
-    else {
-      setSegmentIndex(next)
+    setSegmentIndex(next)
+    if (next < segments.length)
       setPhase('listen')
-    }
   }
 
   const segmentLabel = `${segmentIndex + 1} / ${segments.length}`
@@ -147,7 +143,7 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
     return null
 
   return (
-    <div className="flex h-full flex-col glass-card">
+    <div className="flex h-full flex-col">
       {phase === 'listen' && (
         <ShadowingListenPhase
           key={`listen-${segmentIndex}`}

@@ -39,6 +39,11 @@ const TONE_MARK_TO_NUMBER: Record<string, string> = {
   ň: '3',
 }
 
+const TONE_NUMBERS_GLOBAL_REGEX = /[1-4]/g
+const TONE_NUMBERS_REGEX = /[1-4]/
+const TONE_MARKS_REGEX = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜńň]/
+const WHITESPACE_REGEX = /\s+/g
+
 function stripToneMarks(s: string): string {
   let result = s
   for (const [marked, base] of Object.entries(TONE_MAP)) {
@@ -48,7 +53,7 @@ function stripToneMarks(s: string): string {
 }
 
 function stripToneNumbers(s: string): string {
-  return s.replace(/[1-4]/g, '')
+  return s.replace(TONE_NUMBERS_GLOBAL_REGEX, '')
 }
 
 export function convertToneMarksToNumbers(s: string): string {
@@ -74,9 +79,9 @@ export function convertToneMarksToNumbers(s: string): string {
 export function normalizePinyin(raw: string): string {
   const lower = raw.trim().toLowerCase()
   // Determine if tone marks or tone numbers are used
-  const hasToneMarks = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜńň]/.test(lower)
+  const hasToneMarks = TONE_MARKS_REGEX.test(lower)
   const base = hasToneMarks ? stripToneMarks(lower) : stripToneNumbers(lower)
-  return base.replace(/\s+/g, '')
+  return base.replace(WHITESPACE_REGEX, '')
 }
 
 /** Extract tone numbers from a pinyin string (may have tone marks or tone numbers). */
@@ -86,7 +91,7 @@ function extractTones(s: string): string {
     if (TONE_MARK_TO_NUMBER[ch]) {
       result += TONE_MARK_TO_NUMBER[ch]
     }
-    else if (/[1-4]/.test(ch)) {
+    else if (TONE_NUMBERS_REGEX.test(ch)) {
       result += ch
     }
   }
@@ -107,13 +112,13 @@ export function comparePinyin(a: string, b: string): boolean {
     return false
 
   // Extract tones and compare (removing spaces)
-  const aTones = extractTones(aLower).replace(/\s+/g, '')
-  const bTones = extractTones(bLower).replace(/\s+/g, '')
+  const aTones = extractTones(aLower).replace(WHITESPACE_REGEX, '')
+  const bTones = extractTones(bLower).replace(WHITESPACE_REGEX, '')
 
-  // If either has no tones, they match on base alone
-  if (!aTones || !bTones)
+  // Correct has no tone (neutral-tone syllable) → base match is enough
+  if (!bTones)
     return true
 
-  // Both have tones, they must match
+  // Correct has a tone — user must supply and match it
   return aTones === bTones
 }

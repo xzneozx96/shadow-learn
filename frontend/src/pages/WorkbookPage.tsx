@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Layout } from '@/components/Layout'
-import { LessonGroup } from '@/components/workbook/LessonGroup'
-import { useVocabulary } from '@/hooks/useVocabulary'
 import { Input } from '@/components/ui/input'
+import { LessonGroup } from '@/components/workbook/LessonGroup'
+import { useAuth } from '@/contexts/AuthContext'
+import { useTTS } from '@/hooks/useTTS'
+import { useVocabulary } from '@/hooks/useVocabulary'
 
 export function WorkbookPage() {
   const { entries, entriesByLesson } = useVocabulary()
+  const { db, keys } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys)
   const [search, setSearch] = useState('')
 
   const lastSaved = entries.length
@@ -23,14 +27,16 @@ export function WorkbookPage() {
 
   // Filter entries by search
   const filteredByLesson = useMemo(() => {
-    if (!search.trim()) return entriesByLesson
+    if (!search.trim())
+      return entriesByLesson
     const q = search.toLowerCase()
     const result: Record<string, typeof entries> = {}
     for (const [lid, group] of Object.entries(entriesByLesson)) {
       const filtered = group.filter(e =>
         e.word.includes(q) || e.meaning.toLowerCase().includes(q) || e.romanization.includes(q),
       )
-      if (filtered.length > 0) result[lid] = filtered
+      if (filtered.length > 0)
+        result[lid] = filtered
     }
     return result
   }, [entriesByLesson, search])
@@ -43,7 +49,12 @@ export function WorkbookPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Workbook</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {entries.length} words · {sortedLessonIds.length} lessons
+              {entries.length}
+              {' '}
+              words ·
+              {sortedLessonIds.length}
+              {' '}
+              lessons
             </p>
           </div>
           <Input
@@ -55,7 +66,7 @@ export function WorkbookPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2.5 mb-7">
+        <div className="grid grid-cols-3 gap-3 mb-7">
           {[
             { value: entries.length, label: 'Words saved' },
             { value: sortedLessonIds.length, label: 'Lessons' },
@@ -63,7 +74,7 @@ export function WorkbookPage() {
           ].map(stat => (
             <div key={stat.label} className="rounded-xl border border-border bg-card backdrop-blur-xl p-4">
               <div className="text-xl font-bold">{stat.value}</div>
-              <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
+              <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -78,12 +89,14 @@ export function WorkbookPage() {
         {/* No search results state */}
         {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
           <div className="text-center py-20 text-muted-foreground text-sm">
-            No words match "{search}".
+            No words match "
+            {search}
+            ".
           </div>
         )}
 
         {/* Groups */}
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-7">
           {sortedLessonIds
             .filter(id => filteredByLesson[id])
             .map(id => (
@@ -92,6 +105,8 @@ export function WorkbookPage() {
                 lessonId={id}
                 lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
                 entries={filteredByLesson[id]}
+                onPlay={playTTS}
+                loadingWord={loadingText}
               />
             ))}
         </div>

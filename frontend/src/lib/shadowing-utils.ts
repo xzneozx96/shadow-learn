@@ -1,4 +1,5 @@
 import type { Segment } from '@/types'
+import { comparePinyin } from './pinyin-utils'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,10 @@ export function computeCharDiff(userInput: string, correctText: string): DiffTok
   for (let i = 0; i < len; i++) {
     const u = userClusters[i] ?? ''
     const c = correctClusters[i] ?? ''
-    tokens.push({ text: c || u, correct: u === c && u !== '' })
+    tokens.push({
+      text: u || c,
+      correct: u === c && u !== '',
+    })
   }
   return tokens
 }
@@ -66,7 +70,6 @@ export function stripPinyinTones(pinyin: string): string {
  * Both sides have diacritics stripped before comparison.
  */
 export function computePinyinDiff(userInput: string, correctPinyin: string): DiffToken[] {
-  const normalize = (s: string) => stripPinyinTones(s.trim().toLowerCase())
   const userSyllables = userInput.trim().split(SPLIT_RE).filter(FILTER_BOOL)
   const correctSyllables = correctPinyin.trim().split(SPLIT_RE).filter(FILTER_BOOL)
   const len = Math.max(userSyllables.length, correctSyllables.length)
@@ -75,8 +78,8 @@ export function computePinyinDiff(userInput: string, correctPinyin: string): Dif
     const u = userSyllables[i] ?? ''
     const c = correctSyllables[i] ?? ''
     tokens.push({
-      text: c || u,
-      correct: u !== '' && normalize(u) === normalize(c),
+      text: u || c,
+      correct: u !== '' && comparePinyin(u, c),
     })
   }
   return tokens

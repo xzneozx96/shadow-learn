@@ -12,7 +12,9 @@ export function useTimeEffect(cb: (t: number) => void, key: unknown): void {
   const { subscribeTime } = usePlayer()
   const cbRef = useRef(cb)
   // Keep cbRef current whenever cb changes — dep array [cb] satisfies exhaustive-deps
-  useEffect(() => { cbRef.current = cb }, [cb])
+  useEffect(() => {
+    cbRef.current = cb
+  }, [cb])
   useEffect(() => {
     return subscribeTime(t => cbRef.current(t))
   // subscribeTime is stable (useCallback with []); key triggers re-subscribe on segment change.

@@ -124,7 +124,7 @@ Follows the existing app's **achromatic glass system** exactly — no custom col
 - **Primary button (Study, Check, Start):** white bg `oklch(0.97 0 0)` with dark text `oklch(0.08 0 0)` — same as app's `variant="default"`
 - **Ghost button:** `var(--surface)` bg + `var(--border)` outline
 - **Spacing:** 8px base grid, consistent with existing components
-- **Typography:** Inter + Noto Sans SC, `text-sm` / `text-xs` hierarchy, `text-muted-foreground` for secondary text
+- **Typography:** Inter + Noto Sans SC, `text-sm` / `text-sm` hierarchy, `text-muted-foreground` for secondary text
 - **Score colours:** semantic only — muted oklch green (`oklch(0.75 0.14 142)`), yellow (`oklch(0.85 0.16 90)`), red (`oklch(0.65 0.18 25)`)
 - **Record button:** muted red `oklch(0.65 0.18 25)` — semantic destructive colour, same as app's destructive token
 

@@ -1,6 +1,7 @@
 # backend/app/routers/quiz.py
 import json
-import re
+import logging
+import time
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -9,6 +10,7 @@ from pydantic import BaseModel
 from app.config import settings
 from app.services.language_config import get_language_config
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/quiz", tags=["quiz"])
 
 
@@ -42,6 +44,61 @@ class QuizResponse(BaseModel):
     exercises: list[ClozeExercise | PronunciationExercise]
 
 
+_CLOZE_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "cloze_exercises",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "exercises": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "story": {"type": "string"},
+                            "blanks": {"type": "array", "items": {"type": "string"}},
+                        },
+                        "required": ["story", "blanks"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["exercises"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+_PRONUNCIATION_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "pronunciation_exercises",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "exercises": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "sentence": {"type": "string"},
+                            "translation": {"type": "string"},
+                        },
+                        "required": ["sentence", "translation"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["exercises"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
 def _build_cloze_prompt(words: list[WordInput], story_count: int, lang_cfg: dict) -> str:
     word_list = "\n".join(f"- {w.word} ({w.romanization}): {w.meaning}" for w in words[:5])
     return (
@@ -50,8 +107,7 @@ def _build_cloze_prompt(words: list[WordInput], story_count: int, lang_cfg: dict
         "Rules:\n"
         "- Each story should be 2-3 sentences, using up to 5 of these words naturally.\n"
         "- Mark each vocabulary word occurrence with {{word}}, e.g. {{今天}}.\n"
-        '- Return JSON: {"exercises": [{"story": "...", "blanks": ["word1", "word2"]}]}\n'
-        "- Only return valid JSON, no markdown fences."
+        "- The blanks array must list each marked vocabulary word in order of appearance."
     )
 
 
@@ -62,9 +118,7 @@ def _build_pronunciation_prompt(words: list[WordInput], count: int, lang_cfg: di
         f"using these vocabulary words:\n{word_list}\n\n"
         "Rules:\n"
         "- Each sentence should incorporate at least one vocabulary word.\n"
-        "- Include an English translation for each sentence.\n"
-        '- Return JSON: {"exercises": [{"sentence": "中文", "translation": "English"}]}\n'
-        "- Only return valid JSON, no markdown fences."
+        "- Include an English translation for each sentence."
     )
 
 
@@ -74,31 +128,42 @@ async def generate_quiz(req: QuizRequest):
 
     if req.exercise_type == "cloze":
         prompt = _build_cloze_prompt(req.words, req.story_count, lang_cfg)
+        response_format = _CLOZE_SCHEMA
     elif req.exercise_type == "pronunciation_sentence":
         prompt = _build_pronunciation_prompt(req.words, req.count, lang_cfg)
+        response_format = _PRONUNCIATION_SCHEMA
     else:
         raise HTTPException(400, f"Unknown exercise_type: {req.exercise_type}")
 
+    logger.info(
+        "[quiz] generate: type=%s story_count=%d count=%d words=%d",
+        req.exercise_type, req.story_count, req.count, len(req.words),
+    )
+
     payload = {
-        "model": "openai/gpt-4o-mini",
+        "model": settings.openrouter_model,
         "messages": [
             {"role": "system", "content": f"You are a {lang_cfg['language_name']} teacher creating learning exercises."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.7,
+        "response_format": response_format,
+        "reasoning": {"effort": "none"},
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
+    t0 = time.monotonic()
+    async with httpx.AsyncClient(timeout=90) as client:
         resp = await client.post(
-            settings.openai_chat_url,
+            settings.openrouter_chat_url,
             headers={"Authorization": f"Bearer {req.openrouter_api_key}"},
             json=payload,
         )
         resp.raise_for_status()
+    elapsed = time.monotonic() - t0
 
-    content = resp.json()["choices"][0]["message"]["content"]
-    # Strip any markdown fences just in case
-    content = re.sub(r"```(?:json)?\s*|\s*```", "", content).strip()
+    body = resp.json()
+    usage = body.get("usage", {})
 
+    content = body["choices"][0]["message"]["content"]
     data = json.loads(content)
     return QuizResponse(**data)

@@ -12,7 +12,8 @@ import { usePlayer } from '@/contexts/PlayerContext'
  * - null if time is before the first segment or segments is empty
  */
 function findActiveSegment(segments: Segment[], time: number): Segment | null {
-  if (segments.length === 0) return null
+  if (segments.length === 0)
+    return null
 
   // Find rightmost segment with start <= time
   let lo = 0
@@ -29,7 +30,8 @@ function findActiveSegment(segments: Segment[], time: number): Segment | null {
     }
   }
 
-  if (candidate === -1) return null // time before all segments
+  if (candidate === -1)
+    return null // time before all segments
   // Both the "active" and "last-before" cases correctly return segments[candidate]:
   // - If end > time:  candidate is the currently-active segment
   // - If end <= time: candidate is the most-recently-passed segment (the original "lastBefore")

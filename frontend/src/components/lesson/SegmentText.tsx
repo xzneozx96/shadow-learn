@@ -55,10 +55,10 @@ export const SegmentText = memo(({
 
   // One ref slot per character across all spans
   const totalChars = text.length
-  const charSpanRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const charSpanRef = useRef<(HTMLSpanElement | null)[]>([])
   // Ensure array is sized correctly when text changes
-  if (charSpanRefs.current.length !== totalChars) {
-    charSpanRefs.current = Array.from({ length: totalChars }, () => null)
+  if (charSpanRef.current.length !== totalChars) {
+    charSpanRef.current = Array.from({ length: totalChars }).fill(null) as (HTMLSpanElement | null)[]
   }
 
   // Karaoke: toggle CSS classes on char spans directly — no React re-renders.
@@ -67,11 +67,14 @@ export const SegmentText = memo(({
   useEffect(() => {
     function applyKaraoke(time: number) {
       const pm = posMapRef.current
-      if (!pm) return
-      charSpanRefs.current.forEach((el, charIdx) => {
-        if (!el) return
+      if (!pm)
+        return
+      charSpanRef.current.forEach((el, charIdx) => {
+        if (!el)
+          return
         const wt = pm.get(charIdx)
-        if (wt === undefined) return
+        if (wt === undefined)
+          return
         const spoken = wt.end <= time
         el.classList.toggle('text-yellow-400', spoken)
         el.classList.toggle('text-white', !spoken)
@@ -92,8 +95,8 @@ export const SegmentText = memo(({
             const charIdx = spanStart + j
             return (
               <span
-                key={j}
-                ref={el => { charSpanRefs.current[charIdx] = el }}
+                key={charIdx}
+                ref={(el) => { charSpanRef.current[charIdx] = el }}
               >
                 {char}
               </span>
@@ -101,11 +104,11 @@ export const SegmentText = memo(({
           })
 
           if (!span.word) {
-            return <span key={spanIdx}>{charSpans}</span>
+            return <span key={spanStart}>{charSpans}</span>
           }
 
           return (
-            <Tooltip key={spanIdx}>
+            <Tooltip key={spanStart}>
               <TooltipTrigger className="cursor-help rounded-sm px-0.5 text-inherit decoration-white/30 decoration-dotted underline-offset-4 transition-colors hover:bg-white/10 hover:underline">
                 {charSpans}
               </TooltipTrigger>

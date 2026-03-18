@@ -1,9 +1,12 @@
+import { Loader2, Volume2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { StudySession } from '@/components/study/StudySession'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useAuth } from '@/contexts/AuthContext'
+import { useTTS } from '@/hooks/useTTS'
 import { useVocabulary } from '@/hooks/useVocabulary'
 
 interface LessonWorkbookPanelProps {
@@ -12,6 +15,8 @@ interface LessonWorkbookPanelProps {
 
 export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const { entriesByLesson } = useVocabulary()
+  const { db, keys } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys)
   const navigate = useNavigate()
   const entries = entriesByLesson[lessonId] ?? []
   const count = entries.length
@@ -39,7 +44,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
         </span>
         <Link
           to="/vocabulary"
-          className="text-sm text-foreground transition-colors hover:text-foreground/70"
+          className="text-sm text-foreground/70 transition-colors hover:text-foreground"
         >
           View all →
         </Link>
@@ -58,17 +63,34 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
             <ScrollArea className="min-h-0 flex-1 p-3">
               <div className="grid grid-cols-2 gap-2">
                 {entries.map(entry => (
-                  <button
+                  <div
                     key={entry.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() =>
                       navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
-                    className="cursor-pointer rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-white/10 hover:border-white/15"
+                    onKeyDown={e => e.key === 'Enter' && navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
+                    className="relative cursor-pointer rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-white/10 hover:border-white/15"
                   >
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Play pronunciation of ${entry.word}`}
+                      disabled={loadingText === entry.word}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        playTTS(entry.word)
+                      }}
+                      className="absolute top-2 right-2 text-foreground"
+                    >
+                      {loadingText === entry.word
+                        ? <Loader2 className="size-4 animate-spin" />
+                        : <Volume2 className="size-4" />}
+                    </Button>
                     <p className="text-2xl font-bold text-foreground">{entry.word}</p>
                     {entry.romanization && <p className="text-sm text-muted-foreground">{entry.romanization}</p>}
                     <p className="line-clamp-2 text-sm text-muted-foreground/70">{entry.meaning}</p>
-                  </button>
+                  </div>
                 ))}
               </div>
             </ScrollArea>

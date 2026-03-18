@@ -55,8 +55,8 @@ Renders:
 - `ScrollArea` wrapping a `grid grid-cols-2 gap-2` container
 - Each cell: achromatic glass card (`bg-card border border-border rounded-lg p-3 cursor-pointer hover:bg-accent/40 transition-colors`)
   - Big Chinese character (`text-2xl font-bold text-foreground`)
-  - Pinyin below (`text-xs text-muted-foreground`)
-  - English meaning below (`text-xs text-muted-foreground/70 line-clamp-2`)
+  - Pinyin below (`text-sm text-muted-foreground`)
+  - English meaning below (`text-sm text-muted-foreground/70 line-clamp-2`)
 - Clicking a card calls `navigate(\`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}\`)` — the existing `deepLinkSegmentId` effect in `LessonView` re-fires because the `segmentId` search param changes, causing the player to seek and the transcript to scroll. **Known limitation:** clicking the same card twice while `?segmentId=X` is already the current URL will not re-seek (the effect dependency hasn't changed). This is acceptable for this scope.
 
 **Empty state** (when 0 words saved)

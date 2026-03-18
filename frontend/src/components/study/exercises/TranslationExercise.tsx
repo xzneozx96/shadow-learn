@@ -42,7 +42,7 @@ function scoreColor(n: number) {
     return 'text-emerald-400'
   if (n >= 60)
     return 'text-amber-400'
-  return 'text-destructive'
+  return 'text-rose-400'
 }
 
 function barColor(n: number) {
@@ -50,25 +50,50 @@ function barColor(n: number) {
     return 'bg-emerald-400'
   if (n >= 60)
     return 'bg-amber-400'
-  return 'bg-destructive'
+  return 'bg-rose-400'
+}
+
+function barGlow(n: number) {
+  if (n >= 80)
+    return 'shadow-[0_0_6px_rgba(52,211,153,0.55)]'
+  if (n >= 60)
+    return 'shadow-[0_0_6px_rgba(251,191,36,0.55)]'
+  return 'shadow-[0_0_6px_rgba(251,113,133,0.5)]'
+}
+
+function scoreRingColor(n: number) {
+  if (n >= 80)
+    return 'border-emerald-500/25 bg-emerald-500/8'
+  if (n >= 60)
+    return 'border-amber-500/25 bg-amber-500/8'
+  return 'border-rose-500/20 bg-rose-500/6'
+}
+
+function scoreLabel(n: number) {
+  if (n >= 80)
+    return 'Excellent'
+  if (n >= 60)
+    return 'Good effort'
+  return 'Keep practising'
 }
 
 function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedback }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className={cn('font-semibold tabular-nums', scoreColor(feedback.score))}>
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">{label}</span>
+        <span className={cn('text-sm font-bold tabular-nums', scoreColor(feedback.score))}>
           {feedback.score}
+          <span className="text-muted-foreground/50 font-normal text-sm">/100</span>
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-muted">
+      <div className="h-1.5 w-full rounded-full bg-muted/60 overflow-hidden">
         <div
-          className={cn('h-full rounded-full transition-all', barColor(feedback.score))}
+          className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(feedback.score), barGlow(feedback.score))}
           style={{ width: `${feedback.score}%` }}
         />
       </div>
-      <p className="text-xs text-muted-foreground">{feedback.comment}</p>
+      <p className="text-sm text-muted-foreground leading-relaxed">{feedback.comment}</p>
     </div>
   )
 }
@@ -116,42 +141,60 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
   }
 
   if (result) {
+    const passed = result.overall_score >= 60
     return (
       <ExerciseCard type="Translation" progress={progress} footer={null}>
-        <div className="space-y-5">
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Your translation of:</p>
-            <p className="text-lg font-medium">{source}</p>
-            <p className="text-sm text-muted-foreground mt-1 italic">{value}</p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Reference:
-              <span className="text-foreground not-italic">{reference}</span>
-            </p>
+        <div className="space-y-4">
+
+          {/* Source + answer/reference comparison */}
+          <div className="rounded-lg border border-border/50 bg-muted/20 overflow-hidden text-sm">
+            <div className="px-4 py-3 border-b border-border/40">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Question to translate</p>
+              <p className="font-medium leading-snug">{source}</p>
+            </div>
+            <div className="grid grid-cols-2 divide-x divide-border/40">
+              <div className="px-3 py-2.5">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Your answer</p>
+                <p className="text-sm italic text-foreground/75 leading-relaxed">{value}</p>
+              </div>
+              <div className="px-3 py-2.5">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Model answer</p>
+                <p className="text-sm text-foreground leading-relaxed">{reference}</p>
+                {direction === 'en-to-zh' && (
+                  <p className="text-xs text-muted-foreground mt-1">{sentence.romanization}</p>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold tabular-nums">
-              <span className={scoreColor(result.overall_score)}>{result.overall_score}</span>
-              <span className="text-muted-foreground text-lg">/100</span>
+          {/* Overall score — hero */}
+          <div className={cn('rounded-xl border px-5 py-4 flex items-center gap-4', scoreRingColor(result.overall_score))}>
+            <span className={cn('text-5xl font-black tabular-nums leading-none', scoreColor(result.overall_score))}>
+              {result.overall_score}
             </span>
-            <span className="text-sm text-muted-foreground">Overall score</span>
+            <div>
+              <p className="text-sm text-muted-foreground leading-none mb-1">out of 100</p>
+              <p className={cn('text-sm font-bold', scoreColor(result.overall_score))}>{scoreLabel(result.overall_score)}</p>
+            </div>
           </div>
 
-          <div className="space-y-4">
+          {/* Category breakdown */}
+          <div className="space-y-4 pt-1">
             <ScoreRow label="Accuracy" feedback={result.accuracy} />
             <ScoreRow label="Grammar" feedback={result.grammar} />
             <ScoreRow label="Naturalness" feedback={result.naturalness} />
           </div>
 
+          {/* Tip */}
           {result.tip && (
-            <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-foreground">
-              <span className="font-medium">Tip: </span>
-              {result.tip}
+            <div className="rounded-lg border border-sky-500/25 bg-sky-500/8 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-sky-400/80 mb-1.5">Tip</p>
+              <p className="text-sm text-foreground/90 leading-relaxed">{result.tip}</p>
             </div>
           )}
 
-          <Button className="w-full" onClick={() => onNext(result.overall_score >= 60)}>
-            Next
+          <Button className="w-full" onClick={() => onNext(passed)}>
+            Next →
           </Button>
         </div>
       </ExerciseCard>
@@ -162,13 +205,16 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
     <ExerciseCard type="Translation" progress={progress} footer={null}>
       <div className="space-y-4">
         <div>
-          <p className="text-xs text-muted-foreground mb-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">
             Translate to
             {' '}
             {targetLang === 'english' ? 'English' : caps.languageName}
             :
           </p>
           <p className="text-2xl font-medium leading-snug">{source}</p>
+          {direction === 'zh-to-en' && (
+            <p className="text-sm text-muted-foreground mt-1">{sentence.romanization}</p>
+          )}
         </div>
 
         <LanguageInput

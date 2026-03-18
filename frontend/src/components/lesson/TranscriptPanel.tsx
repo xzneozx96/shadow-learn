@@ -1,5 +1,5 @@
 import type { LessonMeta, Segment, Word } from '@/types'
-import { Check, Copy, Loader2, Search, Swords, Volume2 } from 'lucide-react'
+import { Check, Copy, Loader2, Search, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -162,7 +162,7 @@ export function TranscriptPanel({
               data-segment-id={segment.id}
               onClick={() => onSegmentClick(segment)}
               className={cn(
-                'cursor-pointer px-3 py-2.5 transition-colors hover:bg-accent/60',
+                'cursor-pointer px-5 py-3 transition-colors hover:bg-accent/60',
                 activeSegment?.id === segment.id
                 && 'border-l-2 border-l-primary bg-primary/10',
               )}
@@ -191,7 +191,7 @@ export function TranscriptPanel({
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex shrink-0 flex-col items-center gap-1 pt-0.5">
+                <div className="flex shrink-0 flex-col items-center gap-2 pt-0.5">
                   <Button
                     variant="ghost"
                     size="icon-xs"
@@ -228,7 +228,7 @@ export function TranscriptPanel({
                         onShadowClick(segment)
                       }}
                     >
-                      <Swords className="size-4" />
+                      <span className="size-4 flex items-center justify-center">🎯</span>
                     </Button>
                   )}
                 </div>

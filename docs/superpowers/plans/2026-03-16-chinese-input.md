@@ -469,7 +469,7 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, ...rest }: 
                 selectCandidate(char)
               }}
             >
-              <span className="text-muted-foreground text-xs">{i + 1}</span>
+              <span className="text-muted-foreground text-sm">{i + 1}</span>
               <span>{char}</span>
             </button>
           ))}
@@ -575,7 +575,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS }: Pro
 
       {checked && (
         <div className={cn(
-          'mt-4 rounded-lg border px-4 py-2.5 text-sm',
+          'mt-4 rounded-lg border px-4 py-3 text-sm',
           correct
             ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
             : 'border-destructive/25 bg-destructive/10 text-destructive',
@@ -1144,11 +1144,11 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
       {/* Prompt */}
       <div className="text-center mb-4">
         <p className="text-sm text-muted-foreground">{entry.meaning}</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">{entry.pinyin}</p>
+        <p className="text-sm text-muted-foreground/60 mt-1">{entry.pinyin}</p>
       </div>
 
       {/* Character progress */}
-      <p className="text-xs text-center text-muted-foreground mb-3">{charProgress}</p>
+      <p className="text-sm text-center text-muted-foreground mb-3">{charProgress}</p>
 
       {/* Canvas */}
       <div className="flex justify-center mb-2">

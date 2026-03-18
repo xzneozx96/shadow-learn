@@ -55,7 +55,6 @@ async def test_translate_segments_parses_response():
             segments,
             languages=languages,
             api_key="test_key",
-            model="openai/gpt-4o-mini",
         )
 
     assert len(result) == 2

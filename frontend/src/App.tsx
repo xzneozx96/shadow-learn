@@ -10,8 +10,10 @@ import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
-import { WorkbookPage } from '@/pages/WorkbookPage'
+import { VocabularyProvider } from '@/contexts/VocabularyContext'
+import { DocumentationPage } from '@/pages/DocumentationPage'
 import { StudySessionPage } from '@/pages/StudySessionPage'
+import { WorkbookPage } from '@/pages/WorkbookPage'
 
 function AuthGate() {
   const { isFirstSetup, isUnlocked } = useAuth()
@@ -37,20 +39,23 @@ function AuthGate() {
 
   // Authenticated -- show app
   return (
-    <LessonsProvider>
-      <BrowserRouter>
-        <PlayerProvider>
-          <Routes>
-            <Route path="/" element={<Library />} />
-            <Route path="/create" element={<CreateLesson />} />
-            <Route path="/lesson/:id" element={<LessonView />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/vocabulary" element={<WorkbookPage />} />
-            <Route path="/vocabulary/:lessonId/study" element={<StudySessionPage />} />
-          </Routes>
-        </PlayerProvider>
-      </BrowserRouter>
-    </LessonsProvider>
+    <VocabularyProvider>
+      <LessonsProvider>
+        <BrowserRouter>
+          <PlayerProvider>
+            <Routes>
+              <Route path="/" element={<Library />} />
+              <Route path="/create" element={<CreateLesson />} />
+              <Route path="/docs" element={<DocumentationPage />} />
+              <Route path="/lesson/:id" element={<LessonView />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/vocabulary" element={<WorkbookPage />} />
+              <Route path="/vocabulary/:lessonId/study" element={<StudySessionPage />} />
+            </Routes>
+          </PlayerProvider>
+        </BrowserRouter>
+      </LessonsProvider>
+    </VocabularyProvider>
   )
 }
 

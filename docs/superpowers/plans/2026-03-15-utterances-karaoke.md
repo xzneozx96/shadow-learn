@@ -868,7 +868,7 @@ export const SegmentText = memo(function SegmentText({
                 <div className="flex min-w-max divide-x divide-white/10">
                   {/* Section 1: Word & Pinyin */}
                   <div className="flex flex-col justify-center px-5 py-4">
-                    <p className="text-xs font-medium tracking-wide text-white/45">
+                    <p className="text-sm font-medium tracking-wide text-white/45">
                       {span.word.pinyin}
                     </p>
                     <p className="mt-1 text-3xl font-bold tracking-tight text-white">
@@ -878,7 +878,7 @@ export const SegmentText = memo(function SegmentText({
 
                   {/* Section 2: Meaning */}
                   <div className="flex max-w-60 flex-col justify-center px-5 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-white/30">Meaning</p>
+                    <p className="text-sm font-semibold uppercase tracking-wider text-white/30">Meaning</p>
                     <p className="mt-1.5 text-sm leading-relaxed text-white/80">
                       {span.word.meaning}
                     </p>
@@ -887,7 +887,7 @@ export const SegmentText = memo(function SegmentText({
                   {/* Section 3: Usage example */}
                   {span.word.usage && (
                     <div className="flex max-w-70 flex-col justify-center px-5 py-4 pr-12">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-white/30">Example</p>
+                      <p className="text-sm font-semibold uppercase tracking-wider text-white/30">Example</p>
                       <p className="mt-1.5 text-sm italic leading-relaxed text-white/65">
                         {span.word.usage}
                       </p>

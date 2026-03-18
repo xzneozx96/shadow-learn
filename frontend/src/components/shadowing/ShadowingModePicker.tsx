@@ -84,7 +84,7 @@ export function ShadowingModePicker({
               >
                 <div className="text-sm font-semibold">🎤 Speaking</div>
                 <div className="mt-0.5 text-sm text-muted-foreground">
-                  Listen to each segment, speak it back — scored by Azure
+                  Listen to each segment and repeat
                 </div>
               </div>
             </TooltipTrigger>

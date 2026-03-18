@@ -23,6 +23,7 @@ class GenerateRequest(BaseModel):
 
 class SentencePair(BaseModel):
     chinese: str
+    pinyin: str
     english: str
 
 
@@ -30,32 +31,7 @@ class GenerateResponse(BaseModel):
     sentences: list[SentencePair]
 
 
-_GENERATE_SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "translation_sentences",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "sentences": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "chinese": {"type": "string"},
-                            "english": {"type": "string"},
-                        },
-                        "required": ["chinese", "english"],
-                        "additionalProperties": False,
-                    },
-                }
-            },
-            "required": ["sentences"],
-            "additionalProperties": False,
-        },
-    },
-}
+_JSON_OBJECT_FORMAT = {"type": "json_object"}
 
 
 def _build_generate_prompt(req: GenerateRequest) -> str:
@@ -67,7 +43,9 @@ def _build_generate_prompt(req: GenerateRequest) -> str:
         "- Each sentence must naturally include the target word.\n"
         "- Keep sentences simple and clear, suitable for HSK 2–3 level learners.\n"
         "- Provide an accurate English translation for each sentence.\n"
-        "- Vary the sentence structures across examples."
+        "- Provide full pinyin with tone marks for each Chinese sentence.\n"
+        "- Vary the sentence structures across examples.\n\n"
+        'Return JSON: {"sentences": [{"chinese": "<str>", "pinyin": "<str>", "english": "<str>"}]}'
     )
 
 
@@ -81,7 +59,7 @@ async def generate_sentences(req: GenerateRequest):
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.7,
-        "response_format": _GENERATE_SCHEMA,
+        "response_format": _JSON_OBJECT_FORMAT,
         "reasoning": {"effort": "none"},
     }
 
@@ -98,7 +76,11 @@ async def generate_sentences(req: GenerateRequest):
     elapsed = time.monotonic() - t0
     logger.info("[translation] generate done: %.2fs", elapsed)
 
-    content = resp.json()["choices"][0]["message"]["content"]
+    body = resp.json()
+    if "error" in body or "choices" not in body:
+        logger.error("[translation] generate: unexpected response: %s", body)
+        raise ValueError(f"OpenRouter error: {body.get('error', body)}")
+    content = body["choices"][0]["message"]["content"]
     data = json.loads(content)
     return GenerateResponse(**data)
 
@@ -125,51 +107,6 @@ class EvaluateResponse(BaseModel):
     tip: str
 
 
-_EVALUATE_SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "translation_evaluation",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "overall_score": {"type": "integer"},
-                "accuracy": {
-                    "type": "object",
-                    "properties": {
-                        "score": {"type": "integer"},
-                        "comment": {"type": "string"},
-                    },
-                    "required": ["score", "comment"],
-                    "additionalProperties": False,
-                },
-                "grammar": {
-                    "type": "object",
-                    "properties": {
-                        "score": {"type": "integer"},
-                        "comment": {"type": "string"},
-                    },
-                    "required": ["score", "comment"],
-                    "additionalProperties": False,
-                },
-                "naturalness": {
-                    "type": "object",
-                    "properties": {
-                        "score": {"type": "integer"},
-                        "comment": {"type": "string"},
-                    },
-                    "required": ["score", "comment"],
-                    "additionalProperties": False,
-                },
-                "tip": {"type": "string"},
-            },
-            "required": ["overall_score", "accuracy", "grammar", "naturalness", "tip"],
-            "additionalProperties": False,
-        },
-    },
-}
-
-
 def _build_evaluate_prompt(req: EvaluateRequest) -> str:
     return (
         f"Evaluate this translation from {req.source_language} to {req.target_language}.\n\n"
@@ -182,7 +119,9 @@ def _build_evaluate_prompt(req: EvaluateRequest) -> str:
         "- naturalness: Does it sound like something a native speaker would say?\n"
         "- overall_score: Holistic score consistent with the three category scores.\n"
         "- tip: One concise, actionable suggestion to improve the translation.\n\n"
-        "Be constructive. A score of 60–79 means the answer is acceptable but has room for improvement."
+        "Be constructive. A score of 60–79 means the answer is acceptable but has room for improvement.\n\n"
+        'Return JSON: {"overall_score": <int>, "accuracy": {"score": <int>, "comment": "<str>"}, '
+        '"grammar": {"score": <int>, "comment": "<str>"}, "naturalness": {"score": <int>, "comment": "<str>"}, "tip": "<str>"}'
     )
 
 
@@ -196,7 +135,7 @@ async def evaluate_translation(req: EvaluateRequest):
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.3,
-        "response_format": _EVALUATE_SCHEMA,
+        "response_format": _JSON_OBJECT_FORMAT,
         "reasoning": {"effort": "none"},
     }
 
@@ -216,6 +155,10 @@ async def evaluate_translation(req: EvaluateRequest):
     elapsed = time.monotonic() - t0
     logger.info("[translation] evaluate done: %.2fs", elapsed)
 
-    content = resp.json()["choices"][0]["message"]["content"]
+    body = resp.json()
+    if "error" in body or "choices" not in body:
+        logger.error("[translation] evaluate: unexpected response: %s", body)
+        raise ValueError(f"OpenRouter error: {body.get('error', body)}")
+    content = body["choices"][0]["message"]["content"]
     data = json.loads(content)
     return EvaluateResponse(**data)

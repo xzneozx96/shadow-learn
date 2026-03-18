@@ -41,8 +41,8 @@ async def _shared_pipeline(
     source: str,
     source_url: str | None,
     duration: float,
-    media_filename: str | None = None,
     source_language: str = "zh-CN",
+    media_filename: str | None = None,
 ) -> None:
     """Background pipeline: romanization → translate + vocab → assemble → mark job complete."""
     t_pipeline = time.monotonic()
@@ -159,8 +159,8 @@ async def _process_youtube_lesson(
             "youtube",
             source_url,
             duration,
-            media_filename=video_path.name if video_path else None,
             source_language=request.source_language,
+            media_filename=video_path.name if video_path else None,
         )
 
     except Exception as exc:

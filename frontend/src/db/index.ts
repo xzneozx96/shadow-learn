@@ -6,17 +6,17 @@ const DB_NAME = 'shadowlearn'
 const DB_VERSION = 4
 
 interface ShadowLearnSchema extends DBSchema {
-  lessons: { key: string; value: LessonMeta }
-  segments: { key: string; value: Segment[] }
-  videos: { key: string; value: Blob }
-  chats: { key: string; value: ChatMessage[] }
-  settings: { key: string; value: AppSettings }
-  crypto: { key: string; value: { encrypted: ArrayBuffer; salt: Uint8Array; iv: Uint8Array } }
-  'tts-cache': { key: string; value: Blob }
-  vocabulary: {
+  'lessons': { key: string, value: LessonMeta }
+  'segments': { key: string, value: Segment[] }
+  'videos': { key: string, value: Blob }
+  'chats': { key: string, value: ChatMessage[] }
+  'settings': { key: string, value: AppSettings }
+  'crypto': { key: string, value: { encrypted: ArrayBuffer, salt: Uint8Array, iv: Uint8Array } }
+  'tts-cache': { key: string, value: Blob }
+  'vocabulary': {
     key: string
     value: VocabEntry
-    indexes: { 'by-lesson': string; 'by-date': string }
+    indexes: { 'by-lesson': string, 'by-date': string }
   }
 }
 

@@ -245,11 +245,11 @@
             {lesson.source === 'youtube'
               ? <Youtube className="size-5 text-red-400" />
               : <FileVideo className="size-5 text-white/50" />}
-            <div className="flex items-center gap-1 text-xs">
+            <div className="flex items-center gap-1 text-sm">
               <Clock className="size-4" />
               {formatDuration(lesson.duration)}
             </div>
-            <span className="text-xs">
+            <span className="text-sm">
               {lesson.segmentCount}
               {' '}
               segments
@@ -277,7 +277,7 @@
           {lesson.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {lesson.tags.map(tag => (
-                <Badge key={tag} variant="secondary" className="text-xs">
+                <Badge key={tag} variant="secondary" className="text-sm">
                   {tag}
                 </Badge>
               ))}
@@ -285,7 +285,7 @@
           )}
 
           <div className="space-y-1">
-            <div className="flex justify-between text-xs text-white/40">
+            <div className="flex justify-between text-sm text-white/40">
               <span>Progress</span>
               <span>
                 {progress}

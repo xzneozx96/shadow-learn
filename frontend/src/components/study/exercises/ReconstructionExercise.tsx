@@ -1,13 +1,11 @@
 import type { VocabEntry } from '@/types'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { charDiff, getActiveChips, shuffleArray } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
-
-export { getActiveChips }
 
 interface Props {
   entry: VocabEntry
@@ -45,7 +43,13 @@ export function ReconstructionExercise({ entry, words, progress = '', onNext }: 
         to={`/lesson/${entry.sourceLessonId}?segmentId=${entry.sourceSegmentId}`}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border/50 rounded-full px-2.5 py-1 mb-3 hover:text-foreground transition-colors"
       >
-        📍 {entry.sourceLessonTitle} — where you saved {entry.word}
+        📍
+        {' '}
+        {entry.sourceLessonTitle}
+        {' '}
+        — where you saved
+        {' '}
+        {entry.word}
       </Link>
 
       <p className="text-sm text-muted-foreground mb-3">Type the words in correct order.</p>
