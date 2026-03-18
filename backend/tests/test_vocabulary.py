@@ -155,3 +155,101 @@ async def test_extract_batch_with_retry_cancelled_error_propagates():
 
         with pytest.raises(asyncio.CancelledError):
             await _extract_batch_with_retry(segments, "test_key", semaphore)
+
+
+@pytest.mark.asyncio
+async def test_extract_vocabulary_returns_all_segments():
+    """All 6 segments across 2 batches (batch size 5) are returned in a single call."""
+    from app.services.vocabulary import extract_vocabulary
+
+    segments = [{"id": i, "text": f"句子{i}"} for i in range(6)]
+
+    def make_batch_content(ids):
+        import json
+        return json.dumps({
+            "segments": [
+                {"id": i, "words": [{"word": "词", "pinyin": "cí", "meaning": "word", "usage": "一个词"}]}
+                for i in ids
+            ]
+        })
+
+    # batch 0: segments 0-4, batch 1: segment 5
+    responses = [
+        _make_mock_response(200, make_batch_content(list(range(5)))),
+        _make_mock_response(200, make_batch_content([5])),
+    ]
+
+    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(side_effect=responses)
+        mock_cls.return_value = mock_client
+
+        result = await extract_vocabulary(segments, "test_key")
+
+    assert set(result.keys()) == set(range(6))
+
+
+@pytest.mark.asyncio
+async def test_extract_vocabulary_raises_on_batch_failure():
+    """If any batch fails after retries, extract_vocabulary raises VocabularyExtractionError."""
+    from app.services.vocabulary import extract_vocabulary, VocabularyExtractionError
+
+    segments = [{"id": i, "text": f"句子{i}"} for i in range(6)]
+
+    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        # All calls return 500 → immediate failure
+        mock_client.post = AsyncMock(return_value=_make_mock_response(500))
+        mock_cls.return_value = mock_client
+
+        with pytest.raises(VocabularyExtractionError):
+            await extract_vocabulary(segments, "test_key")
+
+
+@pytest.mark.asyncio
+async def test_extract_vocabulary_empty_segments():
+    """Empty segment list returns empty dict without making any requests."""
+    from app.services.vocabulary import extract_vocabulary
+
+    result = await extract_vocabulary([], "test_key")
+    assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_extract_vocabulary_result_order_matches_input():
+    """Result keys cover all segment IDs regardless of which batch finishes first."""
+    from app.services.vocabulary import extract_vocabulary
+
+    segments = [{"id": i, "text": f"句子{i}"} for i in range(10)]
+
+    def make_content(ids):
+        import json
+        return json.dumps({
+            "segments": [
+                {"id": i, "words": [{"word": str(i), "pinyin": "pīn", "meaning": "m", "usage": "u"}]}
+                for i in ids
+            ]
+        })
+
+    # Two batches of 5
+    responses = [
+        _make_mock_response(200, make_content(list(range(5)))),
+        _make_mock_response(200, make_content(list(range(5, 10)))),
+    ]
+
+    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(side_effect=responses)
+        mock_cls.return_value = mock_client
+
+        result = await extract_vocabulary(segments, "test_key")
+
+    assert set(result.keys()) == set(range(10))
+    for i in range(10):
+        assert result[i][0]["word"] == str(i)

@@ -194,23 +194,42 @@ async def extract_vocabulary(
     segments: list[dict],
     api_key: str,
 ) -> dict[int, list[dict]]:
-    """Extract vocabulary for all segments in batches, returning segment_id -> words map."""
+    """Extract vocabulary for all segments in parallel batches.
+
+    Fires all batch tasks concurrently (max 20 in-flight via semaphore).
+    Raises VocabularyExtractionError if any batch fails after retries —
+    guaranteeing all-or-nothing consistency.
+    """
     if not segments:
         return {}
 
-    result: dict[int, list[dict]] = {}
+    semaphore = asyncio.Semaphore(20)
+    batches = [
+        segments[i : i + _VOCAB_BATCH_SIZE]
+        for i in range(0, len(segments), _VOCAB_BATCH_SIZE)
+    ]
+    tasks = [
+        asyncio.create_task(_extract_batch_with_retry(batch, api_key, semaphore))
+        for batch in batches
+    ]
+    logger.info("Vocabulary: dispatching %d parallel batches for %d segments", len(tasks), len(segments))
 
-    for i in range(0, len(segments), _VOCAB_BATCH_SIZE):
-        batch = segments[i:i + _VOCAB_BATCH_SIZE]
-        try:
-            batch_result = await _extract_batch(batch, api_key)
-            result.update(batch_result)
-            logger.info(
-                "Vocabulary batch %d-%d: extracted words for %d/%d segments",
-                i, i + len(batch), len(batch_result), len(batch),
-            )
-        except Exception as exc:
-            logger.warning("Vocabulary batch %d-%d failed (non-fatal): %s", i, i + len(batch), exc)
+    try:
+        results: list[dict[int, list[dict]]] = await asyncio.gather(*tasks)
+    except VocabularyExtractionError:
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+    except Exception as e:
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise VocabularyExtractionError(f"Vocabulary extraction failed: {e}") from e
 
-    logger.info("Total vocabulary: %d segments with words", len(result))
-    return result
+    merged: dict[int, list[dict]] = {}
+    for batch_result in results:
+        merged.update(batch_result)
+
+    logger.info("Vocabulary: complete — %d segments with words", len(merged))
+    return merged
