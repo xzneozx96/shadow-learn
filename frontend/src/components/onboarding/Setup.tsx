@@ -10,6 +10,7 @@ export function Setup() {
   const { setup } = useAuth()
 
   const [provider, setProvider] = useState<string | null>(null)
+  const [sttProvider, setSttProvider] = useState<string>('deepgram')
   const [openrouterApiKey, setOpenrouterApiKey] = useState('')
   const [minimaxApiKey, setMinimaxApiKey] = useState('')
   const [deepgramApiKey, setDeepgramApiKey] = useState('')
@@ -23,8 +24,14 @@ export function Setup() {
   useEffect(() => {
     fetch('/api/config')
       .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch config')))
-      .then((data: { tts_provider: string; stt_provider: string }) => setProvider(data.tts_provider))
-      .catch(() => setProvider('azure'))
+      .then((data: { tts_provider: string; stt_provider: string }) => {
+        setProvider(data.tts_provider)
+        setSttProvider(data.stt_provider)
+      })
+      .catch(() => {
+        setProvider('azure')
+        setSttProvider('deepgram')
+      })
   }, [])
 
   async function handleSubmit(e: FormEvent) {
@@ -35,7 +42,7 @@ export function Setup() {
       setError('OpenRouter API key is required.')
       return
     }
-    if (!deepgramApiKey.trim()) {
+    if (sttProvider === 'deepgram' && !deepgramApiKey.trim()) {
       setError('Deepgram API key is required.')
       return
     }
@@ -111,21 +118,23 @@ export function Setup() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="deepgram" className="text-sm font-medium text-white/65">
-                Deepgram API Key
-              </label>
-              <Input
-                id="deepgram"
-                type="password"
-                placeholder="dg-..."
-                value={deepgramApiKey}
-                onChange={e => setDeepgramApiKey(e.target.value)}
-              />
-              <p className="text-sm text-white/30">
-                Used for transcription. Required to create lessons.
-              </p>
-            </div>
+            {sttProvider === 'deepgram' && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="deepgram" className="text-sm font-medium text-white/65">
+                  Deepgram API Key
+                </label>
+                <Input
+                  id="deepgram"
+                  type="password"
+                  placeholder="dg-..."
+                  value={deepgramApiKey}
+                  onChange={e => setDeepgramApiKey(e.target.value)}
+                />
+                <p className="text-sm text-white/30">
+                  Used for transcription. Required to create lessons.
+                </p>
+              </div>
+            )}
 
             {/* Azure TTS fields — shown when provider is 'azure' (or still loading, as safe default) */}
             {(provider === null || provider === 'azure') && (

@@ -15,6 +15,7 @@ export function Settings() {
   const { db, keys, lock, resetKeys, setup } = useAuth()
 
   const [provider, setProvider] = useState<string | null>(null)
+  const [sttProvider, setSttProvider] = useState<string>('deepgram')
   const [language, setLanguage] = useState('en')
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
@@ -34,8 +35,14 @@ export function Settings() {
   useEffect(() => {
     fetch('/api/config')
       .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch config')))
-      .then((data: { tts_provider: string; stt_provider: string }) => setProvider(data.tts_provider))
-      .catch(() => setProvider('azure'))
+      .then((data: { tts_provider: string; stt_provider: string }) => {
+        setProvider(data.tts_provider)
+        setSttProvider(data.stt_provider)
+      })
+      .catch(() => {
+        setProvider('azure')
+        setSttProvider('deepgram')
+      })
   }, [])
 
   useEffect(() => {
@@ -226,20 +233,22 @@ export function Settings() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-sm text-white/40">
-                Deepgram API Key
-                {' '}
-                <span className="text-white/20">(for video subtitles)</span>
-              </label>
-              <Input
-                type={showKeys ? 'text' : 'password'}
-                value={editDeepgramKey}
-                onChange={e => setEditDeepgramKey(e.target.value)}
-                className="font-mono text-sm"
-                placeholder="dg-..."
-              />
-            </div>
+            {sttProvider === 'deepgram' && (
+              <div className="space-y-2">
+                <label className="text-sm text-white/40">
+                  Deepgram API Key
+                  {' '}
+                  <span className="text-white/20">(for video subtitles)</span>
+                </label>
+                <Input
+                  type={showKeys ? 'text' : 'password'}
+                  value={editDeepgramKey}
+                  onChange={e => setEditDeepgramKey(e.target.value)}
+                  className="font-mono text-sm"
+                  placeholder="dg-..."
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-sm text-white/40">Confirm with PIN</label>
               <Input
