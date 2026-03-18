@@ -1,5 +1,5 @@
 import io
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -166,6 +166,37 @@ async def test_get_video_returns_404_for_missing_file():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/lessons/video/nonexistent.mp4")
     assert response.status_code == 404
+
+
+@pytest.mark.skip(reason="requires Task 6")
+@pytest.mark.asyncio
+async def test_shared_pipeline_assembles_text_and_romanization_keys():
+    """Assembled segment dicts must use 'text'/'romanization', not 'chinese'/'pinyin'."""
+    from app.routers.lessons import _shared_pipeline
+    from app.jobs import Job
+
+    job_id = "test-field-rename"
+    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+
+    raw_segments = [{"id": 0, "start": 0.0, "end": 1.0, "text": "Hello world"}]
+
+    with (
+        patch("app.routers.lessons.translate_segments", new=AsyncMock(return_value=raw_segments)),
+        patch("app.routers.lessons.extract_vocabulary", new=AsyncMock(return_value={})),
+        patch("app.routers.lessons.get_romanization_provider"),  # will fail until Task 6 wires it
+    ):
+        await _shared_pipeline(
+            job_id, raw_segments, ["es"], "key", "title", "upload", None, 60.0,
+            source_language="en",
+        )
+
+    result = jobs_module.jobs[job_id].result
+    seg = result["lesson"]["segments"][0]
+    assert "text" in seg, "assembled segment must use 'text' not 'chinese'"
+    assert "chinese" not in seg
+    assert "romanization" in seg
+    assert "pinyin" not in seg
+    del jobs_module.jobs[job_id]
 
 
 @pytest.mark.asyncio

@@ -28,8 +28,8 @@ def _build_system_prompt(request: ChatRequest) -> str:
         seg = request.active_segment
         lines += [
             "The user is currently on this segment:",
-            f'  [{seg.start:.1f}s – {seg.end:.1f}s] {seg.chinese}',
-            f'  Pinyin: {seg.pinyin}',
+            f'  [{seg.start:.1f}s – {seg.end:.1f}s] {seg.text}',
+            f'  Romanization: {seg.romanization}',
         ]
         if seg.translations:
             for lang, text in seg.translations.items():
@@ -40,7 +40,7 @@ def _build_system_prompt(request: ChatRequest) -> str:
     if context:
         lines.append("Nearby transcript segments:")
         for seg in context:
-            lines.append(f'  [{seg.start:.1f}s – {seg.end:.1f}s] {seg.chinese}')
+            lines.append(f'  [{seg.start:.1f}s – {seg.end:.1f}s] {seg.text}')
         lines.append("")
 
     lines += [

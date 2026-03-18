@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 class Word(BaseModel):
     word: str
-    pinyin: str
+    romanization: str
     meaning: str
     usage: str
 
@@ -12,8 +12,8 @@ class Segment(BaseModel):
     id: str
     start: float
     end: float
-    chinese: str
-    pinyin: str
+    text: str
+    romanization: str
     translations: dict[str, str]
     words: list[Word]
 
