@@ -8,14 +8,31 @@ import tempfile
 import threading
 from pathlib import Path
 
+from typing import TypedDict
+
 from app.services.transcription_provider import (
     TranscriptionKeys,
     _Segment,
+    _Word,
     _WordTiming,
     _finalize_segment,
 )
 
 logger = logging.getLogger(__name__)
+
+
+class _AzureWord(TypedDict):
+    Word: str
+    Offset: int  # 100-nanosecond ticks
+    Duration: int  # 100-nanosecond ticks
+
+
+class _AzureNBest(TypedDict):
+    Words: list[_AzureWord]
+
+
+class _AzureDetailResult(TypedDict):
+    NBest: list[_AzureNBest]
 
 try:
     import azure.cognitiveservices.speech as speechsdk
@@ -68,9 +85,10 @@ def _run_continuous_recognition(
 
         word_timings: list[_WordTiming] = []
         try:
-            detail = json.loads(evt.result.json)
-            words = detail.get("NBest", [{}])[0].get("Words", [])
-            for w in words:
+            detail: _AzureDetailResult = json.loads(evt.result.json)
+            nbest = detail.get("NBest", [])
+            azure_words: list[_AzureWord] = nbest[0].get("Words", []) if nbest else []
+            for w in azure_words:
                 start = w["Offset"] / _TICKS_PER_SECOND
                 end = start + w["Duration"] / _TICKS_PER_SECOND
                 word_timings.append({"text": w["Word"], "start": start, "end": end})
@@ -79,11 +97,8 @@ def _run_continuous_recognition(
 
         seg_id = len(segments)
         if word_timings:
-            seg = _finalize_segment(  # type: ignore[arg-type]
-                [{"text": wt["text"], "start": wt["start"], "end": wt["end"]} for wt in word_timings],
-                seg_id,
-                language,
-            )
+            word_dicts: list[_Word] = [{"text": wt["text"], "start": wt["start"], "end": wt["end"]} for wt in word_timings]
+            seg = _finalize_segment(word_dicts, seg_id, language)
             seg["word_timings"] = word_timings
         else:
             # No word timings — use utterance offset from result if available
