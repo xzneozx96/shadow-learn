@@ -1,4 +1,5 @@
 import type { LanguageCapabilities } from '@/lib/language-caps'
+import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -20,12 +21,14 @@ export function ModePicker({ selected, onSelect, count, onCountChange, onStart, 
     { id: 'mixed', icon: '✍️🎧🎤', name: 'Mixed', desc: 'All types shuffled together' },
     { id: 'cloze', icon: '✍️', name: 'Cloze', desc: 'Fill blanks in a story' },
     { id: 'dictation', icon: '🎧', name: 'Dictation', desc: 'Hear it, type it' },
-    ...(caps.romanizationSystem !== 'none' ? [{
-      id: 'romanization-recall' as ExerciseMode,
-      icon: '🔤',
-      name: `${caps.romanizationLabel} Recall`,
-      desc: `See the word, type its ${caps.romanizationLabel}`,
-    }] : []),
+    ...(caps.romanizationSystem !== 'none'
+      ? [{
+          id: 'romanization-recall' as ExerciseMode,
+          icon: '🔤',
+          name: `${caps.romanizationLabel} Recall`,
+          desc: `See the word, type its ${caps.romanizationLabel}`,
+        }]
+      : []),
     { id: 'pronunciation', icon: '🎤', name: 'Speak', desc: 'Pronounce & score' },
     { id: 'reconstruction', icon: '🔀', name: 'Rebuild', desc: 'Unscramble sentence' },
     ...(caps.hasCharacterWriting ? [{ id: 'writing' as ExerciseMode, icon: '✏️', name: 'Write', desc: 'Draw the characters' }] : []),
@@ -80,6 +83,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, onStart, 
       </div>
 
       <Button className="w-full mt-8" onClick={onStart} disabled={loading}>
+        <Sparkles className="size-4" />
         {loading ? 'Generating…' : 'Start session →'}
       </Button>
     </div>

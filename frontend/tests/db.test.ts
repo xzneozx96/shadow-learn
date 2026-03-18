@@ -103,7 +103,7 @@ describe('indexedDB storage', () => {
   it('should save and retrieve segments', async () => {
     const db = await initDB()
     const segments = [
-      { id: 'seg_000', start: 0, end: 1, chinese: '你好', pinyin: 'nǐ hǎo', translations: { en: 'Hello' }, words: [] },
+      { id: 'seg_000', start: 0, end: 1, text: '你好', romanization: 'nǐ hǎo', translations: { en: 'Hello' }, words: [] },
     ]
     await saveSegments(db, 'lesson_1', segments)
     const retrieved = await getSegments(db, 'lesson_1')
@@ -170,14 +170,15 @@ describe('vocabulary store', () => {
     const entry: VocabEntry = {
       id: 'test-id-1',
       word: '今天',
-      pinyin: 'jīntiān',
+      romanization: 'jīntiān',
       meaning: 'today',
       usage: '今天天气很好。',
       sourceLessonId: 'lesson_abc',
       sourceLessonTitle: 'Test Lesson',
       sourceSegmentId: 'seg_001',
-      sourceSegmentChinese: '今天天气非常好！',
+      sourceSegmentText: '今天天气非常好！',
       sourceSegmentTranslation: 'The weather is nice today!',
+      sourceLanguage: 'zh-CN',
       createdAt: new Date().toISOString(),
     }
     await db.put('vocabulary', entry)

@@ -1,5 +1,6 @@
 // frontend/src/components/study/exercises/TranslationExercise.tsx
 import type { LanguageCapabilities } from '@/lib/language-caps'
+import { Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
@@ -203,7 +204,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
 
   return (
     <ExerciseCard type="Translation" progress={progress} footer={null}>
-      <div className="space-y-4">
+      <div className="space-y-8">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">
             Translate to
@@ -229,13 +230,23 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           disabled={loading}
         />
 
-        <Button
-          className="w-full"
-          onClick={() => void handleSubmit()}
-          disabled={loading || !value.trim()}
-        >
-          {loading ? 'Evaluating…' : 'Submit'}
-        </Button>
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onNext(false)}
+          >
+            Skip
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => void handleSubmit()}
+            disabled={loading || !value.trim()}
+          >
+            <Sparkles className="size-4" />
+            {loading ? 'Evaluating…' : 'Submit'}
+          </Button>
+        </div>
       </div>
     </ExerciseCard>
   )

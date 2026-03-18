@@ -22,9 +22,9 @@ function tick(time: number) {
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const segments: Segment[] = [
-  { id: 'seg_000', start: 0, end: 2, chinese: 'A', pinyin: 'a', translations: {}, words: [] },
-  { id: 'seg_001', start: 3, end: 5, chinese: 'B', pinyin: 'b', translations: {}, words: [] },
-  { id: 'seg_002', start: 6, end: 8, chinese: 'C', pinyin: 'c', translations: {}, words: [] },
+  { id: 'seg_000', start: 0, end: 2, text: 'A', romanization: 'a', translations: {}, words: [] },
+  { id: 'seg_001', start: 3, end: 5, text: 'B', romanization: 'b', translations: {}, words: [] },
+  { id: 'seg_002', start: 6, end: 8, text: 'C', romanization: 'c', translations: {}, words: [] },
 ]
 
 describe('useActiveSegment', () => {
@@ -52,7 +52,7 @@ describe('useActiveSegment', () => {
 
   it('returns null when time is before the first segment', () => {
     const segs: Segment[] = [
-      { id: 'seg_000', start: 5, end: 10, chinese: 'A', pinyin: 'a', translations: {}, words: [] },
+      { id: 'seg_000', start: 5, end: 10, text: 'A', romanization: 'a', translations: {}, words: [] },
     ]
     const { result } = renderHook(() => useActiveSegment(segs))
     tick(2.0)

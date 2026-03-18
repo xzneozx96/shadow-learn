@@ -44,59 +44,7 @@ class QuizResponse(BaseModel):
     exercises: list[ClozeExercise | PronunciationExercise]
 
 
-_CLOZE_SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "cloze_exercises",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "exercises": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "story": {"type": "string"},
-                            "blanks": {"type": "array", "items": {"type": "string"}},
-                        },
-                        "required": ["story", "blanks"],
-                        "additionalProperties": False,
-                    },
-                }
-            },
-            "required": ["exercises"],
-            "additionalProperties": False,
-        },
-    },
-}
-
-_PRONUNCIATION_SCHEMA = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "pronunciation_exercises",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "exercises": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "sentence": {"type": "string"},
-                            "translation": {"type": "string"},
-                        },
-                        "required": ["sentence", "translation"],
-                        "additionalProperties": False,
-                    },
-                }
-            },
-            "required": ["exercises"],
-            "additionalProperties": False,
-        },
-    },
-}
+_JSON_OBJECT_FORMAT = {"type": "json_object"}
 
 
 def _build_cloze_prompt(words: list[WordInput], story_count: int, lang_cfg: dict) -> str:
@@ -107,7 +55,8 @@ def _build_cloze_prompt(words: list[WordInput], story_count: int, lang_cfg: dict
         "Rules:\n"
         "- Each story should be 2-3 sentences, using up to 5 of these words naturally.\n"
         "- Mark each vocabulary word occurrence with {{word}}, e.g. {{今天}}.\n"
-        "- The blanks array must list each marked vocabulary word in order of appearance."
+        "- The blanks array must list each marked vocabulary word in order of appearance.\n\n"
+        'Return JSON: {"exercises": [{"story": "<str>", "blanks": ["<str>"]}]}'
     )
 
 
@@ -118,7 +67,8 @@ def _build_pronunciation_prompt(words: list[WordInput], count: int, lang_cfg: di
         f"using these vocabulary words:\n{word_list}\n\n"
         "Rules:\n"
         "- Each sentence should incorporate at least one vocabulary word.\n"
-        "- Include an English translation for each sentence."
+        "- Include an English translation for each sentence.\n\n"
+        'Return JSON: {"exercises": [{"sentence": "<str>", "translation": "<str>"}]}'
     )
 
 
@@ -128,10 +78,8 @@ async def generate_quiz(req: QuizRequest):
 
     if req.exercise_type == "cloze":
         prompt = _build_cloze_prompt(req.words, req.story_count, lang_cfg)
-        response_format = _CLOZE_SCHEMA
     elif req.exercise_type == "pronunciation_sentence":
         prompt = _build_pronunciation_prompt(req.words, req.count, lang_cfg)
-        response_format = _PRONUNCIATION_SCHEMA
     else:
         raise HTTPException(400, f"Unknown exercise_type: {req.exercise_type}")
 
@@ -147,7 +95,7 @@ async def generate_quiz(req: QuizRequest):
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.7,
-        "response_format": response_format,
+        "response_format": _JSON_OBJECT_FORMAT,
         "reasoning": {"effort": "none"},
     }
 
@@ -162,7 +110,9 @@ async def generate_quiz(req: QuizRequest):
     elapsed = time.monotonic() - t0
 
     body = resp.json()
-    usage = body.get("usage", {})
+    if "error" in body or "choices" not in body:
+        logger.error("[quiz] generate: unexpected response: %s", body)
+        raise HTTPException(500, f"OpenRouter error: {body.get('error', body)}")
 
     content = body["choices"][0]["message"]["content"]
     data = json.loads(content)

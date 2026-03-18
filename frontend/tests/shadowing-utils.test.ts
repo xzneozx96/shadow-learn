@@ -10,7 +10,7 @@ import {
 } from '@/lib/shadowing-utils'
 
 function seg(start: number, end: number): Segment {
-  return { id: 's', start, end, chinese: '', pinyin: '', translations: {}, words: [] }
+  return { id: 's', start, end, text: '', romanization: '', translations: {}, words: [] }
 }
 
 describe('computeCharDiff', () => {

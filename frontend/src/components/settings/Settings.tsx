@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext'
 import { decryptKeys, encryptKeys } from '@/crypto'
 import { getCryptoData, getSettings, saveCryptoData, saveSettings } from '@/db'
+import { getAppConfig } from '@/lib/config'
 import { LANGUAGES } from '@/lib/constants'
 
 export function Settings() {
@@ -33,16 +34,10 @@ export function Settings() {
   const [keysError, setKeysError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/config')
-      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch config')))
-      .then((data: { tts_provider: string; stt_provider: string }) => {
-        setProvider(data.tts_provider)
-        setSttProvider(data.stt_provider)
-      })
-      .catch(() => {
-        setProvider('azure')
-        setSttProvider('deepgram')
-      })
+    getAppConfig().then((cfg) => {
+      setProvider(cfg.ttsProvider)
+      setSttProvider(cfg.sttProvider)
+    })
   }, [])
 
   useEffect(() => {

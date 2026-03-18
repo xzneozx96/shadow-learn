@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLessons } from '@/contexts/LessonsContext'
+import { getAppConfig } from '@/lib/config'
 import { LessonCard } from './LessonCard'
 
 type SortMode = 'recent' | 'alpha' | 'progress'
@@ -18,10 +19,7 @@ export function Library() {
   const [sttProvider, setSttProvider] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/config')
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: { stt_provider: string; tts_provider: string }) => setSttProvider(data.stt_provider))
-      .catch(() => setSttProvider('azure'))
+    getAppConfig().then(cfg => setSttProvider(cfg.sttProvider))
   }, [])
 
   const filtered = useMemo(() => {

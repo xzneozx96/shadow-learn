@@ -45,7 +45,7 @@ describe('useJobPoller', () => {
     renderHook(() => useJobPoller({ lessons: [lesson], db, updateLesson }))
 
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(10000)
       await Promise.resolve()
       await Promise.resolve()
     })
@@ -67,7 +67,7 @@ describe('useJobPoller', () => {
     renderHook(() => useJobPoller({ lessons: [lesson], db, updateLesson }))
 
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(10000)
       await Promise.resolve()
       await Promise.resolve()
     })
@@ -84,8 +84,8 @@ describe('useJobPoller', () => {
       id: '1',
       start: 0,
       end: 5,
-      chinese: '你好',
-      pinyin: 'nǐ hǎo',
+      text: '你好',
+      romanization: 'nǐ hǎo',
       translations: { en: 'Hello' },
       words: [],
     }]
@@ -111,7 +111,7 @@ describe('useJobPoller', () => {
     renderHook(() => useJobPoller({ lessons: [lesson], db, updateLesson }))
 
     act(() => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(10000)
     })
 
     // Wait for the async pipeline to fully complete (fetch → json → blob → IDB writes → updateLesson → DELETE)
@@ -145,7 +145,7 @@ describe('useJobPoller', () => {
     renderHook(() => useJobPoller({ lessons: [lesson], db, updateLesson }))
 
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(10000)
       await Promise.resolve()
       await Promise.resolve()
       await Promise.resolve()

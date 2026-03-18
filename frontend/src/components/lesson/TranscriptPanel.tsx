@@ -167,9 +167,9 @@ export function TranscriptPanel({
                 && 'border-l-2 border-l-primary bg-primary/10',
               )}
             >
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-4">
                 {/* Text content */}
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 text-justify">
                   <div className="text-foreground">
                     {/* key={segment.id} ensures fresh charSpanRefs when segment changes */}
                     <SegmentText
@@ -190,7 +190,7 @@ export function TranscriptPanel({
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex shrink-0 flex-col items-center gap-2 pt-0.5">
+                <div className="flex shrink-0 items-center gap-2">
                   <Button
                     variant="ghost"
                     size="icon-xs"

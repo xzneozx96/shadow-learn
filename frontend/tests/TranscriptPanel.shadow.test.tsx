@@ -17,13 +17,13 @@ vi.mock('@/components/lesson/SegmentText', () => ({
   SegmentText: ({ text }: { text: string }) => <span>{text}</span>,
 }))
 
-function makeSegment(id: string, chinese: string): Segment {
+function makeSegment(id: string, text: string): Segment {
   return {
     id,
     start: 0,
     end: 5,
-    chinese,
-    pinyin: '',
+    text,
+    romanization: '',
     translations: { en: 'test' },
     words: [],
   }
@@ -32,9 +32,14 @@ function makeSegment(id: string, chinese: string): Segment {
 const lesson = {
   id: 'l1',
   title: 'Test',
+  source: 'upload' as const,
+  sourceUrl: null,
   translationLanguages: ['en'],
-  createdAt: 0,
-  status: 'ready' as const,
+  createdAt: new Date().toISOString(),
+  lastOpenedAt: new Date().toISOString(),
+  progressSegmentId: null,
+  tags: [],
+  status: 'complete' as const,
 }
 
 describe('TranscriptPanel shadow icon', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getActiveChips } from '@/components/study/exercises/ReconstructionExercise'
+import { getActiveChips } from '@/lib/study-utils'
 
 describe('getActiveChips', () => {
   it('dims chips whose word appears in typed text', () => {

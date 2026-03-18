@@ -1,12 +1,17 @@
+import type { VocabEntry } from '@/types'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { VocabEntry } from '@/types'
+
+// Import after mocks are hoisted
+import { LessonWorkbookPanel } from '@/components/lesson/LessonWorkbookPanel'
 
 const mockNavigate = vi.fn()
 
+let mockVocab: { entriesByLesson: Record<string, VocabEntry[]> } = { entriesByLesson: {} }
+
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
-  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+  Link: ({ children, to }: { children: React.ReactNode, to: string }) => (
     <a href={to}>{children}</a>
   ),
 }))
@@ -32,37 +37,34 @@ const mockEntries: VocabEntry[] = [
   {
     id: 'e1',
     word: '今天',
-    pinyin: 'jīntiān',
+    romanization: 'jīntiān',
     meaning: 'today',
     usage: '今天很好。',
     sourceLessonId: 'lesson_1',
     sourceLessonTitle: 'Lesson 1',
     sourceSegmentId: 'seg_1',
-    sourceSegmentChinese: '今天好',
+    sourceSegmentText: '今天好',
     sourceSegmentTranslation: 'Good today',
+    sourceLanguage: 'zh-CN',
     createdAt: '2026-01-01T00:00:00.000Z',
   },
   {
     id: 'e2',
     word: '朋友',
-    pinyin: 'péngyou',
+    romanization: 'péngyou',
     meaning: 'friend',
     usage: '你是我的朋友。',
     sourceLessonId: 'lesson_1',
     sourceLessonTitle: 'Lesson 1',
     sourceSegmentId: 'seg_2',
-    sourceSegmentChinese: '你是我的朋友。',
+    sourceSegmentText: '你是我的朋友。',
     sourceSegmentTranslation: 'You are my friend',
+    sourceLanguage: 'zh-CN',
     createdAt: '2026-01-01T00:00:01.000Z',
   },
 ]
 
-let mockVocab: { entriesByLesson: Record<string, VocabEntry[]> } = { entriesByLesson: {} }
-
-// Import after mocks are hoisted
-import { LessonWorkbookPanel } from '@/components/lesson/LessonWorkbookPanel'
-
-describe('LessonWorkbookPanel', () => {
+describe('lessonWorkbookPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockVocab = { entriesByLesson: {} }
@@ -106,12 +108,12 @@ describe('LessonWorkbookPanel', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/lesson/lesson_1?segmentId=seg_1')
   })
 
-  it('Study button is disabled when no words saved', () => {
+  it('study button is disabled when no words saved', () => {
     render(<LessonWorkbookPanel lessonId="lesson_1" />)
     expect(screen.getByRole('button', { name: /study this lesson/i })).toBeDisabled()
   })
 
-  it('Study button is enabled when words exist', () => {
+  it('study button is enabled when words exist', () => {
     mockVocab = { entriesByLesson: { lesson_1: mockEntries } }
     render(<LessonWorkbookPanel lessonId="lesson_1" />)
     expect(screen.getByRole('button', { name: /study this lesson/i })).not.toBeDisabled()

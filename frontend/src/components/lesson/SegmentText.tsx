@@ -137,9 +137,9 @@ export const SegmentText = memo(({
 
           return (
             <Tooltip key={spanStart}>
-              <TooltipTrigger asChild>
+              <TooltipTrigger>
                 <span
-                  className="inline-flex flex-col items-center cursor-help rounded-sm px-0.5 transition-colors hover:bg-white/10"
+                  className="inline-flex flex-col items-center cursor-help rounded-sm px-1 transition-colors hover:bg-white/10"
                 >
                   {span.word.romanization && (
                     <span

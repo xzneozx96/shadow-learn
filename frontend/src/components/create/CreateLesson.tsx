@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { getSettings, saveVideo } from '@/db'
+import { getAppConfig } from '@/lib/config'
 import { LANGUAGES } from '@/lib/constants'
 import { UploadTab } from './UploadTab'
 import { YouTubeTab } from './YouTubeTab'
@@ -43,10 +44,7 @@ export function CreateLesson() {
   }, [db])
 
   useEffect(() => {
-    fetch('/api/config')
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: { stt_provider: string; tts_provider: string }) => setSttProvider(data.stt_provider))
-      .catch(() => setSttProvider('deepgram'))
+    getAppConfig().then(cfg => setSttProvider(cfg.sttProvider))
   }, [])
 
   const handleGenerate = useCallback(async () => {
@@ -105,11 +103,14 @@ export function CreateLesson() {
         formData.append('source_language', sourceLanguage)
         formData.append('openrouter_api_key', keys.openrouterApiKey)
         if (sttProvider === 'azure') {
-          if (keys.azureSpeechKey) formData.append('azure_speech_key', keys.azureSpeechKey)
-          if (keys.azureSpeechRegion) formData.append('azure_speech_region', keys.azureSpeechRegion)
+          if (keys.azureSpeechKey)
+            formData.append('azure_speech_key', keys.azureSpeechKey)
+          if (keys.azureSpeechRegion)
+            formData.append('azure_speech_region', keys.azureSpeechRegion)
         }
         else {
-          if (keys.deepgramApiKey) formData.append('deepgram_api_key', keys.deepgramApiKey)
+          if (keys.deepgramApiKey)
+            formData.append('deepgram_api_key', keys.deepgramApiKey)
         }
 
         const res = await fetch('/api/lessons/generate-upload', { method: 'POST', body: formData })

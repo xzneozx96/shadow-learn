@@ -5,7 +5,7 @@ import type { Word, WordTiming } from '@/types'
 
 const makeWord = (word: string): Word => ({
   word,
-  pinyin: 'pīnyīn',
+  romanization: 'pīnyīn',
   meaning: 'test meaning',
   usage: 'test usage',
 })

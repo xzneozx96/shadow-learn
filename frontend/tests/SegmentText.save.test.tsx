@@ -24,7 +24,7 @@ import { SegmentText } from '@/components/lesson/SegmentText'
 
 const word: Word = {
   word: '今天',
-  pinyin: 'jīntiān',
+  romanization: 'jīntiān',
   meaning: 'today',
   usage: '今天很好。',
 }
@@ -33,8 +33,8 @@ const segment: Segment = {
   id: 'seg_1',
   start: 0,
   end: 5,
-  chinese: '今天好',
-  pinyin: 'jīntiān hǎo',
+  text: '今天好',
+  romanization: 'jīntiān hǎo',
   translations: { en: 'Good today' },
   words: [word],
 }

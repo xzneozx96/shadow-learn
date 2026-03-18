@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
+import { getAppConfig } from '@/lib/config'
 
 export function Setup() {
   const { setup } = useAuth()
@@ -22,16 +23,10 @@ export function Setup() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    fetch('/api/config')
-      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch config')))
-      .then((data: { tts_provider: string; stt_provider: string }) => {
-        setProvider(data.tts_provider)
-        setSttProvider(data.stt_provider)
-      })
-      .catch(() => {
-        setProvider('azure')
-        setSttProvider('deepgram')
-      })
+    getAppConfig().then((cfg) => {
+      setProvider(cfg.ttsProvider)
+      setSttProvider(cfg.sttProvider)
+    })
   }, [])
 
   async function handleSubmit(e: FormEvent) {

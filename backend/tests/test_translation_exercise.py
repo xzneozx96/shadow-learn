@@ -15,7 +15,7 @@ async def test_generate_rejects_missing_word():
             "/api/translation/generate",
             json={
                 "openrouter_api_key": "key",
-                # missing required fields: word, pinyin, meaning
+                # missing required fields: word, romanization, meaning
             },
         )
         assert response.status_code == 422
@@ -47,9 +47,9 @@ async def test_generate_accepts_valid_payload(respx_mock):
                     "message": {
                         "content": json.dumps({
                             "sentences": [
-                                {"chinese": "今天天气很好。", "english": "The weather is nice today."},
-                                {"chinese": "我今天很忙。", "english": "I am very busy today."},
-                                {"chinese": "今天是星期一。", "english": "Today is Monday."},
+                                {"text": "今天天气很好。", "romanization": "jīntiān tiānqì hěn hǎo", "english": "The weather is nice today."},
+                                {"text": "我今天很忙。", "romanization": "wǒ jīntiān hěn máng", "english": "I am very busy today."},
+                                {"text": "今天是星期一。", "romanization": "jīntiān shì xīngqīyī", "english": "Today is Monday."},
                             ]
                         })
                     }
@@ -64,7 +64,7 @@ async def test_generate_accepts_valid_payload(respx_mock):
             json={
                 "openrouter_api_key": "key",
                 "word": "今天",
-                "pinyin": "jīntiān",
+                "romanization": "jīntiān",
                 "meaning": "today",
                 "usage": "",
                 "sentence_count": 3,
@@ -73,7 +73,7 @@ async def test_generate_accepts_valid_payload(respx_mock):
         assert response.status_code == 200
         data = response.json()
         assert len(data["sentences"]) == 3
-        assert "chinese" in data["sentences"][0]
+        assert "text" in data["sentences"][0]
         assert "english" in data["sentences"][0]
 
 

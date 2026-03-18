@@ -29,7 +29,7 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
   }
 
   const footer = (
-    <div className="flex items-center justify-between px-[18px] py-3">
+    <div className="flex items-center justify-center gap-3 p-3">
       <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
       {!checked
         ? <Button size="sm" onClick={handleCheck}>Check →</Button>

@@ -13,8 +13,8 @@ function makeSegment(overrides: Partial<Segment> = {}): Segment {
     id: 'seg-1',
     start: 3660, // 01:01:00
     end: 3665,
-    chinese: '你好吗',
-    pinyin: 'nǐ hǎo ma',
+    text: '你好吗',
+    romanization: 'nǐ hǎo ma',
     translations: { en: 'How are you?' },
     words: [],
     ...overrides,

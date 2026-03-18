@@ -2,7 +2,6 @@ import type { LessonMeta, Segment } from '@/types'
 import { Download, ExternalLink, Home, Pause, Pencil, Play, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { usePlayer } from '@/contexts/PlayerContext'
@@ -381,23 +380,6 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
             <span ref={timestampRef} className="font-mono text-sm text-muted-foreground" />
           </div>
         </div>
-      </div>
-
-      {/* Metadata bar */}
-      <div className="flex items-center gap-3 border-t border-border px-3 py-1.5">
-        <Badge variant="secondary" className="shrink-0 text-sm uppercase tracking-wider">
-          {lesson.segmentCount}
-          {' '}
-          segments
-        </Badge>
-        <Badge variant="outline" className="shrink-0 text-sm uppercase tracking-wider">
-          {formatTime(lesson.duration ?? 0)}
-        </Badge>
-        {isAudioOnly && (
-          <Badge variant="outline" className="shrink-0 text-sm uppercase tracking-wider text-primary">
-            Audio
-          </Badge>
-        )}
       </div>
     </div>
   )

@@ -27,15 +27,15 @@ export interface LessonMeta {
   title: string
   source: 'youtube' | 'upload'
   sourceUrl: string | null
-  duration?: number         // optional: stub lessons don't have it yet
-  segmentCount?: number     // optional: stub lessons don't have it yet
+  duration?: number // optional: stub lessons don't have it yet
+  segmentCount?: number // optional: stub lessons don't have it yet
   translationLanguages: string[]
   sourceLanguage?: string
   createdAt: string
   lastOpenedAt: string
   progressSegmentId: string | null
   tags: string[]
-  status?: 'processing' | 'complete' | 'error'  // undefined treated as 'complete'
+  status?: 'processing' | 'complete' | 'error' // undefined treated as 'complete'
   jobId?: string
   errorMessage?: string
   currentStep?: string

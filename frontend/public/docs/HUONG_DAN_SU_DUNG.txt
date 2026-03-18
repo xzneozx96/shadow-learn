@@ -1,0 +1,286 @@
+# Chào mừng bạn đến với ShadowLearn! 🎉
+
+**ShadowLearn** là người bạn đồng hành tuyệt vời giúp bạn chinh phục mọi ngoại ngữ qua phương pháp **Shadowing** (Nghe và lặp lại) kết hợp với các bài tập tương tác thông minh và sự hỗ trợ từ Trợ lý AI.
+
+Tài liệu này sẽ hướng dẫn bạn từng bước cách làm quen và sử dụng tối đa các tính năng của ứng dụng.
+
+---
+
+## 📑 Mục lục
+1. [Cài đặt Ban đầu (Dành cho người mới)](#1-cài-đặt-ban-đầu-dành-cho-người-mới)
+2. [Sử dụng hằng ngày: Mở khóa ứng dụng](#2-sử-dụng-hằng-ngày-mở-khóa-ứng-dụng)
+3. [Quản lý Thư viện & Tạo Bài học](#3-quản-lý-thư-viện--tạo-bài-học)
+4. [Giao diện Học tập (Lớp học)](#4-giao-diện-học-tập-lớp-học)
+5. [Thực hành Shadowing (Phát âm & Nghe)](#5-thực-hành-shadowing-phát-âm--nghe)
+6. [Sổ tay Từ vựng & Ôn tập](#6-sổ-tay-từ-vựng--ôn-tập)
+7. [Cài đặt (Settings)](#7-cài-đặt-settings)
+8. [Câu hỏi Thường gặp (FAQ)](#8-câu-hỏi-thường-gặp-faq)
+
+---
+
+## 🔑 1. Cài đặt Ban đầu (Dành cho người mới)
+
+Khi mở ứng dụng **lần đầu tiên**, bạn sẽ thấy màn hình **Setup (Cài đặt)** yêu cầu nhập các **API Keys** và **Mã PIN**. Bước này chỉ thực hiện một lần duy nhất.
+
+### 💡 API Keys là gì?
+Chúng là "chìa khóa" giúp ứng dụng kết nối với các mô hình trí tuệ nhân tạo (AI) để mang lại tính năng Dịch thuật, Nhận diện giọng nói và Phát âm cho bạn.
+
+| Tên mã (API Key) | Vai trò chính | Tầm quan trọng |
+| :--- | :--- | :--- |
+| **OpenRouter API Key** | Dịch nghĩa, giải thích ngữ pháp, trò chuyện với bạn. | **Bắt buộc** 🔴 |
+| **Deepgram API Key** | Chuyển giọng nói trong video thành văn bản để học. | **Bắt buộc** 🔴 |
+| **Minimax API Key** | Phát âm mẫu các từ đơn hoặc câu (Giọng đọc AI). | **Bắt buộc** 🔴 |
+| **Azure Speech Key & Region** | Chấm điểm phát âm của bạn xem đúng hay sai từng chữ. | **Bắt buộc** 🔴 |
+
+> ⚠️ **Bảo mật tuyệt đối**: Tất cả các mã khóa này sẽ được mã hóa và **chỉ lưu trên máy tính của bạn**. Ứng dụng không bao giờ gửi chúng lên máy chủ của chúng tôi.
+
+### 🔑 Cách lấy các API Keys
+
+#### 1. OpenRouter API Key (Dịch & Giải thích)
+*   Xem hướng dẫn ở đây: https://app.tango.us/app/workflow/Create-API-Key-in-OpenRouter-95b3cf6d85df49b48ad728d93c8d5b76
+
+#### 2. Deepgram API Key (Chuyển giọng nói thành văn bản)
+*   Xem hướng dẫn ở đây: https://app.tango.us/app/workflow/Create-API-Key-in-Deepgram-d2eab0f8d3c84b8ab315964c935c3945
+
+#### 3. Azure Speech Key & Region (Chấm điểm phát âm)
+*   **Bước 1**: Truy cập [portal.azure.com](https://portal.azure.com/).
+*   **Bước 2**: Tìm kiếm cụm từ **"Speech Services"** và chọn **Speech Services**.
+*   **Bước 3**: Nhấn **Create** → Điền thông tin (Subscription, Resource Group, Region, Name).
+    *   *Mẹo*: Chọn gói **Free F0** nếu tài khoản của bạn hỗ trợ.
+*   **Bước 4**: Sau khi tạo xong, vào tài nguyên → Chọn **Keys and Endpoint** ở menu trái.
+*   **Bước 5**: Bạn sẽ thấy **Key 1** (API Key) và **Location** (Region). Hãy ghi lại cả 2 thông tin này.
+
+---
+
+### 🔐 Tạo mã PIN
+- Tạo một mã PIN (ít nhất 4 ký tự) và xác nhận lại.
+- Mã PIN dùng để mã hóa dữ liệu bài học và mã khóa của bạn khi không dùng máy.
+
+> 🚨 **Quan trọng**: Nếu bạn quên mã PIN, bạn sẽ phải đặt lại ứng dụng và nhập lại toàn bộ API Keys. Không có cách nào khôi phục. Hãy ghi mã PIN ra chỗ an toàn!
+
+![Màn hình Cài đặt (Setup)](docs/images/setup_screen.png)
+
+---
+
+## 🔓 2. Sử dụng hằng ngày: Mở khóa ứng dụng
+
+Mỗi lần mở lại ShadowLearn, bạn sẽ thấy màn hình **Unlock (Mở khóa)**. Chỉ cần nhập mã PIN là bạn có thể truy cập vào bài học và dữ liệu của mình.
+
+> Đây là điều bình thường — ứng dụng đang bảo vệ dữ liệu của bạn khi bạn không sử dụng.
+
+---
+
+## 📚 3. Quản lý Thư viện & Tạo Bài học
+
+Màn hình chính của ứng dụng là **Thư viện (Library)**, nơi chứa tất cả các bài học bạn đã tạo.
+
+![Thư viện Bài học](docs/images/library.png)
+
+### ➕ Cách tạo bài học mới
+Nhấp vào thẻ **+** hoặc nút **Tạo bài học**, bạn sẽ có 2 lựa chọn:
+
+1. **Từ đường dẫn YouTube** 🌐:
+   - Dán liên kết (URL) của video vào khung.
+   - Ứng dụng sẽ tự động tải âm thanh và tạo phụ đề cho bạn.
+2. **Tải lên từ Máy tính (Upload)** 📁:
+   - Bạn có thể tải lên các file âm thanh (.mp3) hoặc video (.mp4).
+
+### 🌐 Chọn ngôn ngữ dịch thuật
+- Chọn ngôn ngữ bạn muốn dịch sang (Ví dụ: **Vietnamese - Tiếng Việt**).
+- Nhấp **Tạo bài học (Generate)**. Bài học sẽ vào hàng đợi xử lý — bạn có thể quay về Thư viện để đợi (trạng thái hiển thị là *Processing*).
+
+![Giao diện Tạo Bài học Mới](docs/images/create_lesson.png)
+
+### 🗂️ Quản lý bài học đã có
+
+Mỗi thẻ bài học trong Thư viện hỗ trợ các thao tác sau:
+
+- **Đổi tên** ✏️ — Nhấp biểu tượng bút chì để đặt tên mới cho bài học.
+- **Xóa** 🗑️ — Xóa bài học và toàn bộ dữ liệu liên quan vĩnh viễn.
+- **Thử lại** 🔄 — Nếu bài học YouTube bị lỗi xử lý, nhấn Retry để thử lại.
+- **Tìm kiếm** 🔍 — Dùng thanh tìm kiếm ở trên cùng để lọc bài học theo tiêu đề.
+
+---
+
+## 🖥️ 4. Giao diện Học tập (Lớp học)
+
+Khi mở một bài học, màn hình sẽ chia làm **3 cột chính**:
+
+![Màn hình Học tập](docs/images/shadowing_screen.png)
+
+### 📺 Cột Trái — Video / Âm thanh
+
+Phát nội dung bài học. Các điều khiển bao gồm:
+
+- Nút **Phát / Tạm dừng**
+- **Tốc độ phát**: Chọn 0.5×, 0.75×, 1×, 1.25× hoặc 1.5× — tốc độ chậm rất hữu ích cho người mới
+- **Thanh thời gian**: Nhấp bất kỳ điểm nào trên thanh để nhảy đến thời điểm đó
+- **Điều chỉnh âm lượng**: Kéo thanh trượt để thay đổi âm lượng
+- **Tải xuống** ⬇️: Lưu file video/âm thanh về máy tính của bạn
+- **Đổi tên** ✏️: Nhấp biểu tượng bút chì bên cạnh tiêu đề bài học để đổi tên
+
+### 📜 Cột Giữa — Phụ đề & Luyện tập
+
+- Hiển thị toàn bộ các đoạn với **Pinyin**, **chữ Hán** và **bản dịch**.
+- **Nhấp vào bất kỳ đoạn nào** để video nhảy đến đúng thời điểm đó.
+- **Rê chuột lên từ** để xem phát âm và biểu tượng bookmark.
+- **Bookmark 🔖**: Lưu từ vào Sổ tay Từ vựng.
+- **Phát 🔊**: Nghe AI đọc bất kỳ đoạn nào.
+- **Sao chép 📋**: Sao chép nội dung đoạn văn bản vào clipboard.
+- **Shadow 🎯**: Bắt đầu phiên Shadowing từ đúng đoạn đó.
+- **Nút Shadowing** 🎤 ở trên cùng: Bắt đầu phiên Shadowing toàn bài.
+
+### 🤖 Cột Phải — Trợ lý AI (2 Tab)
+
+**Tab 1 — Trò chuyện 💬**
+- Hỏi AI bất kỳ điều gì về bài học: ngữ pháp, từ vựng, ngữ cảnh, văn hóa.
+- Ví dụ: *"Câu này dùng cấu trúc ngữ pháp gì?"*, *"Từ X trong ngữ cảnh này có nghĩa thế nào?"*
+- AI biết bạn đang học đoạn nào và sẽ trả lời phù hợp.
+
+**Tab 2 — Sổ tay 📚**
+- Hiển thị danh sách từ bạn đã lưu từ bài học này.
+- Nhấp vào từ bất kỳ để nhảy lại đến đoạn phụ đề nơi từ đó xuất hiện.
+- Nút **Ôn tập bài này** ở cuối để mở phiên luyện tập với các từ đã lưu của bài học.
+
+---
+
+## 🎤 5. Thực hành Shadowing (Phát âm & Nghe)
+
+Nhấp nút **Shadowing** ở cột giữa (hoặc biểu tượng 🎯 trên một đoạn cụ thể). Một hộp thoại sẽ xuất hiện để bạn chọn chế độ và số đoạn muốn luyện.
+
+### Chọn chế độ
+
+![Giao diện các chế độ Shadowing](docs/images/shadowing_modes.png)
+
+| Chế độ | Bạn làm gì |
+| :--- | :--- |
+| 🔤 **Chế độ Chính tả** | Nghe một đoạn và gõ lại những gì bạn nghe được |
+| 🎤 **Chế độ Nói** | Nghe một đoạn và nói lại vào microphone |
+
+Bạn cũng có thể chọn **số đoạn** muốn luyện, hoặc chọn "Tất cả" để đi hết toàn bộ bài.
+
+---
+
+### 🔤 Luồng Chế độ Chính tả
+
+**Bước 1 — Nghe**
+- Đoạn âm thanh tự động phát.
+- Tập trung vào âm thanh, nhịp điệu và thanh điệu. Nhấn nút **Phát lại** hoặc nhấn phím **Space** để nghe lại.
+
+**Bước 2 — Gõ**
+- Một ô nhập văn bản xuất hiện. Gõ lại đúng những gì bạn nghe.
+- Nhấn **Nộp bài** khi xong.
+
+**Bước 3 — Xem kết quả**
+- Câu trả lời của bạn được hiển thị bên cạnh câu đúng.
+- Mỗi ký tự được tô màu: 🟢 Xanh = đúng, 🔴 Đỏ = sai.
+- Điểm chính xác của bạn được hiển thị.
+- Nhấn **Thử lại** hoặc **Tiếp theo** để sang đoạn mới.
+
+![Giao diện kết quả đánh giá](docs/images/shadowing_result.png)
+
+---
+
+### 🎤 Luồng Chế độ Nói
+
+**Bước 1 — Nghe**
+- Đoạn âm thanh tự động phát. Nhấn **Space** hoặc **Phát lại** để nghe lại.
+
+**Bước 2 — Nói**
+- Nhấp nút **microphone** (hoặc nhấn **Space**) để bắt đầu ghi âm.
+- Nói rõ ràng, sau đó nhấp lại để dừng.
+- Bạn có thể nghe lại bản ghi âm trước khi nộp, hoặc nhấn **Ghi lại** để thu âm lại.
+- Nhấn **Nộp bài** khi hài lòng.
+
+**Bước 3 — Xem kết quả**
+- Bản ghi âm của bạn được phát lại cùng với cách phát âm chuẩn từ AI.
+- Azure chấm điểm phát âm của bạn: 🟢 Xanh = tốt, 🔴 Đỏ = cần cải thiện.
+- Nhấn **Thử lại** hoặc **Tiếp theo** để tiếp tục.
+
+---
+
+### 📊 Tổng kết phiên học
+
+Sau khi hoàn thành tất cả các đoạn, bạn sẽ thấy bảng tổng kết đầy đủ:
+- Điểm chính xác cho từng đoạn
+- Các đoạn bạn đã thử, bỏ qua, hoặc tự động bỏ qua (đoạn quá ngắn sẽ tự động bỏ qua)
+- Điểm trung bình toàn phiên
+
+---
+
+## 📓 6. Sổ tay Từ vựng & Ôn tập
+
+### 📌 Cách lưu từ vựng
+Trong khi đọc phụ đề, **rê chuột lên bất kỳ từ nào** và nhấp biểu tượng **Bookmark 🔖**. Từ vựng sẽ lập tức được thêm vào Sổ tay.
+
+### 📖 Truy cập Sổ tay đầy đủ
+
+Nhấp **Workbook** trên thanh điều hướng ở trên cùng để mở trang Từ vựng. Tại đây bạn có thể:
+
+- Xem **tổng số từ đã lưu** và số bài học chứa các từ đó
+- **Tìm kiếm** từ theo ký tự, pinyin hoặc nghĩa
+- Duyệt từ được **nhóm theo bài học** — nhấp vào nhóm để mở rộng hoặc thu gọn
+- Nhấp **Phát 🔊** trên bất kỳ từ nào để nghe phát âm
+- Nhấp **Ôn tập** trên bất kỳ nhóm bài học nào để luyện tập riêng những từ đó
+
+![Giao diện Sổ tay (Workbook)](docs/images/workbook_dashboard.png)
+
+---
+
+### 🎮 Các hình thức ôn tập (Bài tập)
+
+Khi bắt đầu phiên ôn tập (từ Sổ tay hoặc tab Workbook trong bài học), chọn loại bài tập và số từ muốn luyện:
+
+| Tên bài tập | Bạn làm gì | Kỹ năng rèn luyện |
+| :--- | :--- | :--- |
+| 🔀 **Tổng hợp (Mixed)** | Ngẫu nhiên xen kẽ tất cả các loại bài tập | Toàn diện |
+| 📝 **Điền từ (Cloze)** | Điền từ còn thiếu vào đoạn văn do AI sáng tác | Đọc hiểu theo ngữ cảnh |
+| 🔤 **Chính tả (Dictation)** | Nghe và gõ lại câu tiếng Trung | Nghe & viết |
+| 🎤 **Luyện nói (Pronunciation)** | Đọc câu mẫu to để Azure chấm điểm | Phát âm |
+| 🧩 **Xếp câu (Reconstruction)** | Sắp xếp lại các từ xáo trộn thành câu đúng | Ngữ pháp & trật tự từ |
+| 🧠 **Nhớ Pinyin (Pinyin Recall)** | Nhìn chữ Hán — bạn có nhớ cách phát âm không? | Đọc & phát âm |
+| ✍️ **Viết chữ Hán (Character Writing)** | Viết nét chữ theo đúng thứ tự trên màn hình | Viết & ghi nhớ |
+
+> 💡 Mỗi bài tập có nút **ⓘ thông tin** — nhấp vào để đọc mô tả bài tập trước khi bắt đầu.
+
+![Giao diện chọn bài tập](docs/images/study_workbook.png)
+
+Sau khi hoàn thành, **Bảng tổng kết** hiển thị điểm của bạn theo từng loại bài tập.
+
+---
+
+## ⚙️ 7. Cài đặt (Settings)
+
+Nhấp biểu tượng **Cài đặt** (⚙️) trên thanh điều hướng bất kỳ lúc nào để:
+
+- **Cập nhật API Keys** — dán khóa mới hoặc đã sửa; dùng biểu tượng 👁️ để hiển thị/ẩn khóa
+- **Đổi mã PIN** — nhập mã PIN mới và xác nhận
+- **Đặt ngôn ngữ dịch mặc định** — chọn ngôn ngữ mà bài học sẽ tự động dịch sang
+- **Khóa ứng dụng** — khóa ứng dụng ngay lập tức (cần nhập PIN để mở lại)
+
+> 🚨 **Nút Quên mã PIN**: Thao tác này sẽ xóa toàn bộ API Keys đã lưu. Bạn phải nhập lại từ đầu khi mở ứng dụng lần sau. Chỉ dùng khi thực sự cần thiết.
+
+---
+
+## ❓ 8. Câu hỏi Thường gặp (FAQ)
+
+**Q: Tại sao tôi không thấy điểm chấm phát âm?**
+- **A:** Kiểm tra xem bạn đã nhập đúng **Azure Speech Key** và **Region** trong phần Cài đặt chưa. Mở Cài đặt từ biểu tượng ⚙️ để cập nhật bất cứ lúc nào.
+
+**Q: Tôi có thể đổi mã PIN không?**
+- **A:** Có — mở Cài đặt và dùng phần **Đổi mã PIN**. Hãy ghi nhớ mã PIN vì không có cách khôi phục nếu quên.
+
+**Q: Tạo bài học YouTube mất bao lâu?**
+- **A:** Tùy độ dài video, thường từ 1–3 phút (tải xuống + phiên âm + dịch thuật).
+
+**Q: Bài học hiện lỗi. Tôi phải làm gì?**
+- **A:** Với bài học YouTube, nhấp **Thử lại (Retry)** trên thẻ bài học trong Thư viện. Với file tải lên, xóa bài học và tải file lên lại.
+
+**Q: Tại sao một số đoạn bị bỏ qua trong chế độ Shadowing?**
+- **A:** Các đoạn rất ngắn (dưới 3 từ) sẽ tự động bỏ qua vì quá ngắn để luyện tập có ý nghĩa.
+
+**Q: Dữ liệu của tôi được lưu ở đâu?**
+- **A:** Tất cả — bài học, từ vựng, lịch sử chat, bộ nhớ cache âm thanh — đều được lưu cục bộ trên trình duyệt của bạn. Không có gì được gửi lên máy chủ của chúng tôi.
+
+---
+*Chúc bạn có những giây phút học tập hiệu quả và tràn đầy hứng khởi trên ShadowLearn!* 🚀

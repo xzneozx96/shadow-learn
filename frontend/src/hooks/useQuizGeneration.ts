@@ -5,9 +5,9 @@ import { useAuth } from '@/contexts/AuthContext'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 
-type ClozeExerciseData = { story: string, blanks: string[] }
-type PronExerciseData = { sentence: string, translation: string }
-type TranslationResult = { sentences: { text: string, romanization: string, english: string }[] } | null
+interface ClozeExerciseData { story: string, blanks: string[] }
+interface PronExerciseData { sentence: string, translation: string }
+interface TranslationSentence { text: string, romanization: string, english: string }
 
 interface UseQuizGenerationReturn {
   generateQuiz: (
@@ -18,7 +18,7 @@ interface UseQuizGenerationReturn {
   ) => Promise<{
     clozeExercises: ClozeExerciseData[]
     pronExercises: PronExerciseData[]
-    translationResults: TranslationResult[]
+    translationSentences: TranslationSentence[]
   }>
   loading: boolean
 }
@@ -27,12 +27,12 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
   const { keys } = useAuth()
   const [loading, setLoading] = useState(false)
 
-  const generateQuiz = useCallback(async function generateQuiz(
+  const generateQuiz = useCallback(async (
     types: Exclude<ExerciseMode, 'mixed'>[],
     pool: VocabEntry[],
     signal: AbortSignal,
     sourceLanguage: string = 'zh-CN',
-  ) {
+  ) => {
     const clozeCount = types.filter(t => t === 'cloze').length
     const pronCount = types.filter(t => t === 'pronunciation').length
     const translationCount = types.filter(t => t === 'translation').length
@@ -40,33 +40,46 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
     const wordMap = (entries: VocabEntry[]) =>
       entries.map(e => ({ word: e.word, romanization: e.romanization, meaning: e.meaning, usage: e.usage }))
 
-    setLoading(true)
-    try {
-      const translationPromises: Promise<TranslationResult>[] = Array.from({ length: translationCount }, (_, i) =>
-        fetch(`${API_BASE}/api/translation/generate`, {
+    // Count how many sentences each pool entry needs across all translation questions.
+    // This lets us send one request per unique word with the exact sentence_count needed,
+    // rather than one request per question.
+    const sentenceCountByIdx = new Map<number, number>()
+    for (let i = 0; i < translationCount; i++) {
+      const k = i % pool.length
+      sentenceCountByIdx.set(k, (sentenceCountByIdx.get(k) ?? 0) + 1)
+    }
+
+    const sentencesByEntryIdx = new Map<number, TranslationSentence[]>()
+    const translationPromises = Array.from(sentenceCountByIdx.entries(), async ([entryIdx, count]) => {
+      const entry = pool[entryIdx]
+      try {
+        const r = await fetch(`${API_BASE}/api/translation/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             openrouter_api_key: keys?.openrouterApiKey,
-            words: wordMap(pool.slice(i, i + 3)),
+            word: entry.word,
+            romanization: entry.romanization,
+            meaning: entry.meaning,
+            usage: entry.usage ?? '',
+            sentence_count: count,
+            source_language: sourceLanguage,
           }),
           signal,
         })
-          .then(r =>
-            r.ok
-              ? r.json().then((d: { sentences: { chinese: string, pinyin: string, english: string }[] }) => ({
-                  sentences: d.sentences.map(s => ({
-                    text: s.chinese,
-                    romanization: s.pinyin ?? '',
-                    english: s.english,
-                  })),
-                }))
-              : Promise.reject(),
-          )
-          .catch(() => null),
-      )
+        if (r.ok) {
+          const d = await r.json() as { sentences: TranslationSentence[] }
+          sentencesByEntryIdx.set(entryIdx, d.sentences)
+        }
+      }
+      catch {
+        // silently skip failed entries; StudySession skips questions with no sentence
+      }
+    })
 
-      const [clozeResp, pronResp, ...translationResps] = await Promise.all([
+    setLoading(true)
+    try {
+      const [clozeResp, pronResp] = await Promise.all([
         clozeCount > 0
           ? fetch(`${API_BASE}/api/quiz/generate`, {
               method: 'POST',
@@ -106,10 +119,22 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
         ...translationPromises,
       ])
 
+      // Flatten sentences in question order: q0→entry0_s0, q1→entry1_s0, …, qN→entry(N%pool)_s(usage)
+      const usageByIdx = new Map<number, number>()
+      const translationSentences: TranslationSentence[] = []
+      for (let i = 0; i < translationCount; i++) {
+        const k = i % pool.length
+        const used = usageByIdx.get(k) ?? 0
+        usageByIdx.set(k, used + 1)
+        const sentence = sentencesByEntryIdx.get(k)?.[used]
+        if (sentence)
+          translationSentences.push(sentence)
+      }
+
       return {
         clozeExercises: (clozeResp.exercises ?? []) as ClozeExerciseData[],
         pronExercises: (pronResp.exercises ?? []) as PronExerciseData[],
-        translationResults: translationResps as TranslationResult[],
+        translationSentences,
       }
     }
     finally {

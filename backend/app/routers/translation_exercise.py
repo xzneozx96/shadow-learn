@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.config import settings
+from app.services.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/translation", tags=["translation"])
@@ -15,15 +16,16 @@ router = APIRouter(prefix="/api/translation", tags=["translation"])
 class GenerateRequest(BaseModel):
     openrouter_api_key: str
     word: str
-    pinyin: str
+    romanization: str
     meaning: str
     usage: str = ""
     sentence_count: int = 3
+    source_language: str = "zh-CN"
 
 
 class SentencePair(BaseModel):
-    chinese: str
-    pinyin: str
+    text: str
+    romanization: str = ""
     english: str
 
 
@@ -35,27 +37,37 @@ _JSON_OBJECT_FORMAT = {"type": "json_object"}
 
 
 def _build_generate_prompt(req: GenerateRequest) -> str:
+    lang_cfg = get_language_config(req.source_language)
+    language_name = lang_cfg["language_name"]
+    romanization_label = lang_cfg["romanization_label"]
+    romanization_description = lang_cfg["romanization_description"]
     usage_line = f"\nExample usage from lesson: {req.usage}" if req.usage else ""
+    romanization_rule = (
+        f"- Provide {romanization_description} for each sentence in the 'romanization' field.\n"
+        if romanization_label else
+        "- Leave the 'romanization' field as an empty string.\n"
+    )
     return (
-        f"Generate {req.sentence_count} short, natural Chinese sentences using the word "
-        f"'{req.word}' ({req.pinyin}: {req.meaning}).{usage_line}\n\n"
+        f"Generate {req.sentence_count} short, natural {language_name} sentences using the word "
+        f"'{req.word}' ({req.romanization}: {req.meaning}).{usage_line}\n\n"
         "Rules:\n"
         "- Each sentence must naturally include the target word.\n"
-        "- Keep sentences simple and clear, suitable for HSK 2–3 level learners.\n"
+        "- Keep sentences simple and clear.\n"
         "- Provide an accurate English translation for each sentence.\n"
-        "- Provide full pinyin with tone marks for each Chinese sentence.\n"
+        f"{romanization_rule}"
         "- Vary the sentence structures across examples.\n\n"
-        'Return JSON: {"sentences": [{"chinese": "<str>", "pinyin": "<str>", "english": "<str>"}]}'
+        'Return JSON: {"sentences": [{"text": "<str>", "romanization": "<str>", "english": "<str>"}]}'
     )
 
 
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_sentences(req: GenerateRequest):
     prompt = _build_generate_prompt(req)
+    lang_cfg = get_language_config(req.source_language)
     payload = {
         "model": settings.openrouter_model,
         "messages": [
-            {"role": "system", "content": "You are a Mandarin Chinese teacher creating translation exercises."},
+            {"role": "system", "content": f"You are a {lang_cfg['language_name']} teacher creating translation exercises."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.7,

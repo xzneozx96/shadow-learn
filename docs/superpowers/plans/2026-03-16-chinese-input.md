@@ -542,7 +542,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS }: Pro
   const correct = value.trim() === expected.trim()
 
   const footer = (
-    <div className="flex items-center justify-between px-[18px] py-3">
+    <div className="flex items-center justify-center gap-3 p-3">
       <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
       {!checked
         ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
@@ -1127,7 +1127,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
   }
 
   const footer = (
-    <div className="flex items-center justify-between px-[18px] py-3">
+    <div className="flex items-center justify-center gap-3 p-3">
       <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
       {hintAnimating
         ? (

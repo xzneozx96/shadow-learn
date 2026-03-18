@@ -8,6 +8,7 @@ import {
   computeCharDiff,
 } from '@/lib/shadowing-utils'
 import { cn } from '@/lib/utils'
+import { ScrollArea } from '../ui/scroll-area'
 
 type AssessResult = PronunciationAssessResult
 
@@ -309,67 +310,71 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore, onLoadi
   const label = accuracy >= 90 ? 'Excellent' : accuracy >= 75 ? 'Good' : accuracy >= 60 ? 'Fair' : accuracy >= 40 ? 'Keep Practicing' : 'Needs Work'
 
   return (
-    <div className="p-4 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* Score panel */}
-      <div className="rounded-xl border border-border/50 bg-muted/20 backdrop-blur-sm overflow-hidden">
-        {/* Hero: accuracy */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-2.5">
-          <div>
-            <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(accuracy))}>
-              {Math.round(accuracy)}
+    <ScrollArea className="min-h-0 flex-1">
+      <div className="p-4 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        {/* Score panel */}
+        <div className="rounded-xl border border-border/50 bg-muted/20 backdrop-blur-sm overflow-hidden">
+          {/* Hero: accuracy */}
+          <div className="flex items-center justify-between px-4 pt-3 pb-2.5">
+            <div>
+              <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(accuracy))}>
+                {Math.round(accuracy)}
+              </div>
+              <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">Accuracy</div>
             </div>
-            <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">Accuracy</div>
+            <div className={cn('text-sm font-semibold', scoreColor(accuracy))}>
+              {label}
+            </div>
           </div>
-          <div className={cn('text-sm font-semibold', scoreColor(accuracy))}>
-            {label}
+          {/* Secondary scores */}
+          <div className="grid grid-cols-3 border-t border-border/40">
+            {(['fluency', 'completeness', 'prosody'] as const).map((k, i) => (
+              <div key={k} className={cn('px-3 py-2 text-center', i < 2 && 'border-r border-border/40')}>
+                <div className={cn('text-base font-bold tabular-nums', scoreColor(result.overall[k]))}>
+                  {Math.round(result.overall[k])}
+                </div>
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{k}</div>
+              </div>
+            ))}
           </div>
         </div>
-        {/* Secondary scores */}
-        <div className="grid grid-cols-3 border-t border-border/40">
-          {(['fluency', 'completeness', 'prosody'] as const).map((k, i) => (
-            <div key={k} className={cn('px-3 py-2 text-center', i < 2 && 'border-r border-border/40')}>
-              <div className={cn('text-base font-bold tabular-nums', scoreColor(result.overall[k]))}>
-                {Math.round(result.overall[k])}
+
+        {/* Word breakdown */}
+        <div className="space-y-1.5">
+          {result.words.map(w => (
+            <div
+              key={w.word}
+              className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2 transition-colors hover:bg-muted/40"
+            >
+              <span className={cn('w-20 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
+                {w.word}
+              </span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/60">
+                <div
+                  className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
+                  style={{ width: `${w.accuracy}%` }}
+                />
               </div>
-              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{k}</div>
+              <div className="flex items-center justify-end w-20 gap-2">
+                <span className={cn('w-7 shrink-0 text-right text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
+                  {Math.round(w.accuracy)}
+                </span>
+                {w.error_type && (
+                  <span className={cn(
+                    'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
+                    w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+                    w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
+                    w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+                  )}
+                  >
+                    {w.error_type === 'Mispronunciation' ? 'Mispron.' : w.error_type}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Word breakdown */}
-      <div className="space-y-1.5">
-        {result.words.map(w => (
-          <div
-            key={w.word}
-            className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2 transition-colors hover:bg-muted/40"
-          >
-            <span className={cn('w-10 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
-              {w.word}
-            </span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/60">
-              <div
-                className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
-                style={{ width: `${w.accuracy}%` }}
-              />
-            </div>
-            <span className={cn('w-7 shrink-0 text-right text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
-              {Math.round(w.accuracy)}
-            </span>
-            {w.error_type && (
-              <span className={cn(
-                'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
-                w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
-                w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
-                w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
-              )}
-              >
-                {w.error_type === 'Mispronunciation' ? 'Mispron.' : w.error_type}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+    </ScrollArea>
   )
 }

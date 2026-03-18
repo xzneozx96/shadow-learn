@@ -6,9 +6,9 @@ import { toast } from 'sonner'
 import { CharacterWritingExercise } from '@/components/study/exercises/CharacterWritingExercise'
 import { ClozeExercise } from '@/components/study/exercises/ClozeExercise'
 import { DictationExercise } from '@/components/study/exercises/DictationExercise'
-import { RomanizationRecallExercise } from '@/components/study/exercises/RomanizationRecallExercise'
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { ReconstructionExercise } from '@/components/study/exercises/ReconstructionExercise'
+import { RomanizationRecallExercise } from '@/components/study/exercises/RomanizationRecallExercise'
 import { TranslationExercise } from '@/components/study/exercises/TranslationExercise'
 import { ModePicker } from '@/components/study/ModePicker'
 import { SessionSummary } from '@/components/study/SessionSummary'
@@ -16,8 +16,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useQuizGeneration } from '@/hooks/useQuizGeneration'
 import { useTTS } from '@/hooks/useTTS'
 import { useVocabulary } from '@/hooks/useVocabulary'
-import { getLanguageCaps } from '@/lib/language-caps'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
+import { getLanguageCaps } from '@/lib/language-caps'
 
 type Phase = 'picker' | 'session' | 'summary'
 
@@ -125,7 +125,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     const pool = entries.toSorted(() => Math.random() - 0.5)
 
     try {
-      const { clozeExercises, pronExercises, translationResults } = await generateQuiz(types, pool, controller.signal, entries[0]?.sourceLanguage)
+      const { clozeExercises, pronExercises, translationSentences } = await generateQuiz(types, pool, controller.signal, entries[0]?.sourceLanguage)
       let clozeIdx = 0
       let pronIdx = 0
       let translationIdx = 0
@@ -136,11 +136,9 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
         const entry = pool[i % pool.length]
 
         if (type === 'translation') {
-          const result = translationResults[translationIdx++]
-          if (!result)
+          const sentence = translationSentences[translationIdx++]
+          if (!sentence)
             continue
-          const sentences = result.sentences
-          const sentence = sentences[Math.floor(Math.random() * sentences.length)]
           const direction: 'en-to-zh' | 'zh-to-en' = Math.random() < 0.5 ? 'en-to-zh' : 'zh-to-en'
           qs.push({ type, entry, translationData: { sentence, direction } })
           continue
@@ -164,7 +162,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     catch {
       toast.error('AI exercise generation failed — falling back to basic exercises')
       const fallbackTypes = types.map(t =>
-        (t === 'cloze' || t === 'translation') ? 'romanization-recall' : t
+        (t === 'cloze' || t === 'translation') ? 'romanization-recall' : t,
       ) as Exclude<ExerciseMode, 'mixed'>[]
       const qs: Question[] = fallbackTypes.map((type, i) => {
         const entry = pool[i % pool.length]

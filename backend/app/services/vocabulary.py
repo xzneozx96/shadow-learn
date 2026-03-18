@@ -79,14 +79,7 @@ async def _extract_batch_with_retry(
     """Extract vocabulary for a batch of segments with semaphore gating and retry on 429."""
     seg_ids = [s["id"] for s in segments]
     prompt = _build_vocab_prompt(segments, source_language=source_language)
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "vocabulary_extraction",
-            "strict": True,
-            "schema": VocabularyResponse.model_json_schema(),
-        },
-    }
+    response_format = {"type": "json_object"}
 
     async with semaphore:
         for attempt in range(_MAX_ATTEMPTS):

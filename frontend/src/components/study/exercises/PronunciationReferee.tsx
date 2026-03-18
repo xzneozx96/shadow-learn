@@ -1,8 +1,10 @@
-import { Pause, Play } from 'lucide-react'
+import { Loader2, Pause, Play, Volume2 } from 'lucide-react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { usePronunciationAssessment } from '@/hooks/usePronunciationAssessment'
+import { useTTS } from '@/hooks/useTTS'
 import { cn } from '@/lib/utils'
 
 interface PronunciationSentence { sentence: string, translation: string }
@@ -14,29 +16,46 @@ interface Props {
 }
 
 function scoreColor(n: number) {
-  if (n >= 80) return 'text-emerald-400'
-  if (n >= 60) return 'text-amber-400'
+  if (n >= 80)
+    return 'text-emerald-400'
+  if (n >= 60)
+    return 'text-amber-400'
   return 'text-destructive'
 }
 
 function barColor(n: number) {
-  if (n >= 80) return 'bg-emerald-400'
-  if (n >= 60) return 'bg-amber-400'
+  if (n >= 80)
+    return 'bg-emerald-400'
+  if (n >= 60)
+    return 'bg-amber-400'
   return 'bg-destructive'
 }
 
 function verdict(n: number) {
-  if (n >= 90) return 'Excellent'
-  if (n >= 75) return 'Good'
-  if (n >= 60) return 'Fair'
-  if (n >= 40) return 'Keep Practicing'
+  if (n >= 90)
+    return 'Excellent'
+  if (n >= 75)
+    return 'Good'
+  if (n >= 60)
+    return 'Fair'
+  if (n >= 40)
+    return 'Keep Practicing'
   return 'Needs Work'
 }
 
 export function PronunciationReferee({ sentence, progress = '', onNext }: Props) {
+  const { db, keys } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys)
+  const isTTSLoading = loadingText === sentence.sentence
   const {
-    recordingState, blob, isPlaying, attempt,
-    startRecording, stopRecording, togglePlayback, reset: audioReset,
+    recordingState,
+    blob,
+    isPlaying,
+    attempt,
+    startRecording,
+    stopRecording,
+    togglePlayback,
+    reset: audioReset,
   } = useAudioRecorder()
   const { submit, result, submitting, error, reset: assessmentReset } = usePronunciationAssessment()
 
@@ -46,7 +65,7 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
   const footer = result
     ? null
     : (
-        <div className="flex items-center justify-between px-[18px] py-3">
+        <div className="flex items-center justify-center gap-3 p-3">
           <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
           <Button
             size="sm"
@@ -74,11 +93,23 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
       info="Read the sentence aloud and get AI-scored feedback on accuracy, fluency, and prosody."
     >
       {/* Sentence display */}
-      <div className="rounded-lg border border-border bg-muted/20 p-4 text-center mb-4">
+      <div className="relative rounded-lg border border-border bg-muted/20 p-4 text-center mb-4">
         <div className="text-xl font-bold tracking-widest text-foreground">
           {sentence.sentence}
         </div>
         <div className="text-sm text-muted-foreground mt-1.5">{sentence.translation}</div>
+        {result && (
+          <button
+            aria-label="Play reference audio"
+            onClick={() => void playTTS(sentence.sentence)}
+            disabled={isTTSLoading}
+            className="absolute top-2 right-2 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
+          >
+            {isTTSLoading
+              ? <Loader2 className="size-4 animate-spin" />
+              : <Volume2 className="size-4" />}
+          </button>
+        )}
       </div>
 
       {/* Recording controls (hidden once scored) */}
@@ -189,9 +220,12 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => { assessmentReset(); audioReset() }}
+              onClick={() => {
+                assessmentReset()
+                audioReset()
+              }}
             >
-              ⏺ Try again
+              ↺ Try again
             </Button>
             <Button
               className="flex-1"

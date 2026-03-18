@@ -3,6 +3,7 @@ import type { DecryptedKeys } from '@/types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { getTTSCache, saveTTSCache } from '@/db'
+import { getAppConfig } from '@/lib/config'
 
 // Sentinel: undefined = not yet fetched, string = resolved provider name
 type ProviderState = string | null
@@ -34,28 +35,9 @@ export function useTTS(
 
   // Fetch the active provider once on mount
   useEffect(() => {
-    let cancelled = false
-    fetch('/api/config')
-      .then((res) => {
-        if (!res.ok)
-          throw new Error('config fetch failed')
-        return res.json()
-      })
-      .then((data: { tts_provider: string; stt_provider: string }) => {
-        if (!cancelled) {
-          providerRef.current = data.tts_provider
-        }
-      })
-      .catch(() => {
-        // Silently default to azure on failure
-        console.warn('[useTTS] Failed to fetch TTS provider, defaulting to azure')
-        if (!cancelled) {
-          providerRef.current = 'azure'
-        }
-      })
-    return () => {
-      cancelled = true
-    }
+    getAppConfig().then((cfg) => {
+      providerRef.current = cfg.ttsProvider
+    })
   }, [])
 
   const playTTS = useCallback(async (text: string) => {

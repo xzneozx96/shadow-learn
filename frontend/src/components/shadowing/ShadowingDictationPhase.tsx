@@ -1,5 +1,5 @@
-import type { Segment } from '@/types'
 import type { LanguageCapabilities } from '@/lib/language-caps'
+import type { Segment } from '@/types'
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'

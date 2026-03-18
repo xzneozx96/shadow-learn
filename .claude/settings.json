@@ -1,0 +1,32 @@
+{
+	"enabledPlugins": {
+		"superpowers@claude-plugins-official": true
+	},
+	"env": {
+		"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000"
+	},
+	"hooks": {
+		"PostToolUse": [
+			{
+				"matcher": "Write|Edit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "jq -r '.tool_input.file_path // empty' | grep -E '\\.(ts|tsx)$' | { read -r f; [ -n \"$f\" ] && cd /home/ross-geller/Projects/personal/shadowing-companion/frontend && npx tsc --noEmit 2>&1 | head -20; } 2>/dev/null || true",
+						"statusMessage": "Type-checking TypeScript..."
+					},
+					{
+						"type": "command",
+						"command": "jq -r '.tool_input.file_path // empty' | grep -E '\\.(ts|tsx)$' | { read -r f; [ -n \"$f\" ] && cd /home/ross-geller/Projects/personal/shadowing-companion/frontend && npx eslint \"$f\" --max-warnings=0 2>&1 | tail -15; } 2>/dev/null || true",
+						"statusMessage": "Linting with ESLint..."
+					},
+					{
+						"type": "command",
+						"command": "jq -r '.tool_input.file_path // empty' | grep -E '\\.py$' | { read -r f; [ -n \"$f\" ] && cd /home/ross-geller/Projects/personal/shadowing-companion/backend && uvx ruff check \"$f\" 2>&1; } 2>/dev/null || true",
+						"statusMessage": "Linting Python with ruff..."
+					}
+				]
+			}
+		]
+	}
+}

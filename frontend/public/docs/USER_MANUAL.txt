@@ -1,0 +1,286 @@
+# Welcome to ShadowLearn! 🎉
+
+**ShadowLearn** is your ultimate companion to conquer any foreign language using the **Shadowing** technique (Listen & Repeat) combined with smart interactive exercises and AI Assistance.
+
+This guide will walk you through setting up and maximizing the application's features.
+
+---
+
+## 📑 Table of Contents
+1. [Initial Setup (For Beginners)](#1-initial-setup-for-beginners)
+2. [Daily Use: Unlocking the App](#2-daily-use-unlocking-the-app)
+3. [Library & Lesson Management](#3-library--lesson-management)
+4. [Learning Interface (Classroom)](#4-learning-interface-classroom)
+5. [Shadowing Practice (Pronunciation & Listening)](#5-shadowing-practice-pronunciation--listening)
+6. [Vocabulary Workbook & Quizzes](#6-vocabulary-workbook--quizzes)
+7. [Settings](#7-settings)
+8. [Frequently Asked Questions (FAQ)](#8-frequently-asked-questions-faq)
+
+---
+
+## 🔑 1. Initial Setup (For Beginners)
+
+When you launch the app for the **first time**, you will see a **Setup** screen asking for **API Keys** and a **PIN**. This only happens once.
+
+### 💡 What are API Keys?
+They are "keys" that allow the app to connect with Artificial Intelligence (AI) models to power Translation, Speech Recognition, and Pronunciation features.
+
+| Key Name | Main Role | Importance |
+| :--- | :--- | :--- |
+| **OpenRouter API Key** | Translates, explains grammar, and chats with you. | **Required** 🔴 |
+| **Deepgram API Key** | Converts video audio to text for learning. | **Required** 🔴 |
+| **Minimax API Key** | Pronounces words/sentences (AI Voice). | **Required** 🔴 |
+| **Azure Speech Key & Region** | Grades your pronunciation word by word. | **Required** 🔴 |
+
+> ⚠️ **Absolute Security**: All keys are encrypted and **only saved on your computer**. The app never sends them to our servers.
+
+### 🔑 How to Get API Keys
+
+#### 1. OpenRouter API Key (Translation & Explanation)
+*   See tutorial here: https://app.tango.us/app/workflow/Create-API-Key-in-OpenRouter-95b3cf6d85df49b48ad728d93c8d5b76
+
+#### 2. Deepgram API Key (Speech-to-Text)
+*   See tutorial here: https://app.tango.us/app/workflow/Create-API-Key-in-Deepgram-d2eab0f8d3c84b8ab315964c935c3945
+
+#### 3. Azure Speech Key & Region (Pronunciation Grading)
+*   **Step 1**: Go to [portal.azure.com](https://portal.azure.com/).
+*   **Step 2**: Search for **"Speech Services"** and select it.
+*   **Step 3**: Click **Create** → Fill in Subscription, Resource Group, Region, Name.
+    *   *Tip*: Choose the **Free F0** tier if available.
+*   **Step 4**: After creating, open the resource → Click **Keys and Endpoint** in the left menu.
+*   **Step 5**: You will find **Key 1** (your API Key) and **Location** (your Region). Note both.
+
+---
+
+### 🔐 Create a PIN
+- Create a PIN (minimum 4 characters) and confirm it.
+- The PIN encrypts your keys and lesson data while the app is closed.
+
+> 🚨 **Important**: If you forget your PIN, you will need to reset the app and re-enter all API keys. There is no recovery option. Write your PIN somewhere safe!
+
+![Setup Screen](docs/images/setup_screen.png)
+
+---
+
+## 🔓 2. Daily Use: Unlocking the App
+
+Every time you re-open ShadowLearn, you will see the **Unlock** screen. Simply enter your PIN to access your lessons and data.
+
+> This is normal — it means your data is protected when you're not using the app.
+
+---
+
+## 📚 3. Library & Lesson Management
+
+The main dashboard is the **Library**, containing all your created lessons.
+
+![Library](docs/images/library.png)
+
+### ➕ Creating a New Lesson
+Click the **+** card or **Create Lesson** button. You have 2 options:
+
+1. **Via YouTube Link** 🌐:
+   - Paste the video URL into the box.
+   - The app will download the audio and generate subtitles automatically.
+2. **Upload from Computer** 📁:
+   - Upload an audio (.mp3) or video (.mp4) file from your device.
+
+### 🌐 Choose Translation Language
+- Select your target language (e.g., **English**).
+- Click **Generate**. The lesson enters a processing queue — you can return to the Library to wait (status shown as *Processing*).
+
+![Create New Lesson](docs/images/create_lesson.png)
+
+### 🗂️ Managing Existing Lessons
+
+Each lesson card in the Library supports:
+
+- **Rename** ✏️ — Click the pencil icon on a card to give it a new name.
+- **Delete** 🗑️ — Remove the lesson and all its data permanently.
+- **Retry** 🔄 — If a YouTube lesson failed to process, use Retry to try again.
+- **Search** 🔍 — Use the search bar at the top to filter lessons by title.
+
+---
+
+## 🖥️ 4. Learning Interface (Classroom)
+
+Opening a lesson divides the screen into **3 main columns**:
+
+![Shadowing Screen](docs/images/shadowing_screen.png)
+
+### 📺 Left Column — Video / Audio Player
+
+Plays the lesson content. Controls include:
+
+- **Play / Pause** button
+- **Playback speed**: Choose 0.5×, 0.75×, 1×, 1.25×, or 1.5× — slower speeds are great for beginners
+- **Seek bar**: Click anywhere on the timeline to jump to that moment
+- **Volume slider**: Adjust audio volume
+- **Download** ⬇️: Save the video/audio file to your computer
+- **Rename** ✏️: Click the pencil icon next to the lesson title to rename it
+
+### 📜 Middle Column — Subtitles & Practice
+
+- Displays all segments with **Pinyin**, **Chinese text**, and **translation**.
+- **Click any segment** to jump the video to that exact moment.
+- **Hover a word** to see its pronunciation and a bookmark icon.
+- **Bookmark 🔖**: Save any word to your Vocabulary Workbook.
+- **Play 🔊**: Hear the AI pronounce any segment.
+- **Copy 📋**: Copy the segment text to clipboard.
+- **Shadow 🎯**: Start a Shadowing session beginning from that specific segment.
+- **Shadowing button** 🎤 at the top: Start a full Shadowing session for the lesson.
+
+### 🤖 Right Column — AI Companion (2 Tabs)
+
+**Tab 1 — Chat 💬**
+- Ask the AI anything about the current lesson: grammar, vocabulary, context, cultural notes.
+- Example questions: *"What grammar pattern is used here?"*, *"What does X mean in this context?"*
+- The AI is aware of which segment you are currently on.
+
+**Tab 2 — Workbook 📚**
+- Shows a mini-view of words you have saved from this lesson.
+- Click any word to jump back to where it was used in the transcript.
+- **Study This Lesson** button at the bottom opens a quiz session for this lesson's saved words.
+
+---
+
+## 🎤 5. Shadowing Practice (Pronunciation & Listening)
+
+Click the **Shadowing** button in the middle column (or the 🎯 icon on a specific segment). A dialog will appear where you choose your mode and how many segments to practice.
+
+### Choosing a Mode
+
+![Shadowing Modes](docs/images/shadowing_modes.png)
+
+| Mode | What You Do |
+| :--- | :--- |
+| 🔤 **Dictation Mode** | Listen to a segment and type what you hear |
+| 🎤 **Speaking Mode** | Listen to a segment and speak it aloud into your microphone |
+
+You can also set **how many segments** to practice, or choose "All remaining" to go through the whole lesson.
+
+---
+
+### 🔤 Dictation Mode Flow
+
+**Step 1 — Listen Phase**
+- The segment audio plays automatically.
+- Focus on the sounds, rhythm, and tone. Use the **Replay** button or press **Space** to hear it again.
+
+**Step 2 — Type Phase**
+- A text input appears. Type exactly what you heard.
+- Click **Submit** when done.
+
+**Step 3 — Reveal Phase**
+- Your answer is shown alongside the correct text.
+- Each character is highlighted: 🟢 Green = correct, 🔴 Red = wrong.
+- Your accuracy score is shown.
+- Click **Retry** to try again or **Next** to move on.
+
+![Dictation Result](docs/images/shadowing_result.png)
+
+---
+
+### 🎤 Speaking Mode Flow
+
+**Step 1 — Listen Phase**
+- The segment audio plays automatically. Press **Space** or **Replay** to hear it again.
+
+**Step 2 — Speak Phase**
+- Click the **microphone button** (or press **Space**) to start recording.
+- Speak the segment aloud clearly, then click again to stop.
+- You can play back your recording before submitting, or click **Redo** to re-record.
+- Click **Submit** when satisfied.
+
+**Step 3 — Reveal Phase**
+- Your recording is played back alongside the correct AI pronunciation.
+- Azure grades your pronunciation: 🟢 Green = good, 🔴 Red = needs work.
+- Click **Retry** to try again or **Next** to continue.
+
+---
+
+### 📊 Session Summary
+
+After all segments are done, you see a full summary:
+- Accuracy score per segment
+- Which segments you attempted, skipped, or were auto-skipped (very short segments are skipped automatically)
+- Overall session average score
+
+---
+
+## 📓 6. Vocabulary Workbook & Quizzes
+
+### 📌 Saving Words
+While reading subtitles, **hover over any word** and click the **Bookmark 🔖** icon. The word is instantly added to your Workbook.
+
+### 📖 Accessing the Full Workbook
+
+Click **Workbook** in the top navigation to open the full Vocabulary page. Here you can:
+
+- See **total words saved** and how many lessons they come from
+- **Search** for any word by character, pinyin, or meaning
+- Browse words **grouped by lesson** — click a group to expand or collapse it
+- Click **Play 🔊** on any word to hear it pronounced
+- Click **Study** on any lesson group to practice only those words
+
+![Workbook Dashboard](docs/images/workbook_dashboard.png)
+
+---
+
+### 🎮 Quiz Formats
+
+When you start a study session (from the Workbook or the lesson's Workbook tab), choose your exercise type and how many words to practice:
+
+| Quiz Mode | What You Do | Skill Trained |
+| :--- | :--- | :--- |
+| 🔀 **Mixed** | Randomly cycles through all exercise types | All-round practice |
+| 📝 **Cloze** | Fill in blanks in an AI-generated story | Reading in context |
+| 🔤 **Dictation** | Listen and type the Chinese sentence | Listening & spelling |
+| 🎤 **Pronunciation** | Read the sentence aloud for Azure to grade | Speaking accuracy |
+| 🧩 **Reconstruction** | Arrange jumbled words into the correct sentence | Grammar & word order |
+| 🧠 **Pinyin Recall** | See the character — can you recall its pinyin? | Reading & pronunciation |
+| ✍️ **Character Writing** | Trace the stroke order of each character on screen | Writing & muscle memory |
+
+> 💡 Each exercise has an **ⓘ info button** — click it to read a description of the exercise before starting.
+
+![Study Session](docs/images/study_workbook.png)
+
+After finishing, a **Session Summary** shows your score breakdown by exercise type.
+
+---
+
+## ⚙️ 7. Settings
+
+Click the **Settings icon** (⚙️) in the top navigation at any time to:
+
+- **Update API Keys** — paste new or corrected keys; use the 👁️ icon to show/hide a key
+- **Change PIN** — enter a new PIN and confirm it
+- **Set Default Translation Language** — choose which language lessons translate into by default
+- **Lock App** — immediately lock the app (requires PIN to re-open)
+
+> 🚨 **Forgot PIN button**: This resets the app and erases all stored API keys. You will need to re-enter them on next launch. Use only as a last resort.
+
+---
+
+## ❓ 8. Frequently Asked Questions (FAQ)
+
+**Q: Why don't I see pronunciation scores?**
+- **A:** Check that your **Azure Speech Key** and **Region** are correctly entered in Settings. Open Settings from the ⚙️ icon anytime to update them.
+
+**Q: Can I change my PIN?**
+- **A:** Yes — open Settings and use the **Change PIN** section. Write your PIN down somewhere safe; there is no recovery if forgotten.
+
+**Q: How long does YouTube lesson creation take?**
+- **A:** Usually 1–3 minutes depending on video length (download + transcription + translation).
+
+**Q: The lesson shows an error. What do I do?**
+- **A:** For YouTube lessons, click **Retry** on the lesson card in the Library. For uploaded files, delete the lesson and upload again.
+
+**Q: Why are some segments skipped in Shadowing mode?**
+- **A:** Very short segments (fewer than 3 words) are automatically skipped — they are too brief to practice meaningfully.
+
+**Q: Where is my data stored?**
+- **A:** Everything — lessons, vocabulary, chat history, audio cache — is stored locally in your browser's storage. Nothing is sent to our servers.
+
+---
+*Wishing you productive and enjoyable learning sessions on ShadowLearn!* 🚀
