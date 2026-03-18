@@ -1,10 +1,10 @@
 // frontend/src/components/study/exercises/TranslationExercise.tsx
-import { use, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
-import { AuthContext } from '@/contexts/AuthContext'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { ChineseInput } from '@/components/ui/ChineseInput'
+import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
@@ -35,14 +35,18 @@ interface Props {
 }
 
 function scoreColor(n: number) {
-  if (n >= 80) return 'text-emerald-400'
-  if (n >= 60) return 'text-amber-400'
+  if (n >= 80)
+    return 'text-emerald-400'
+  if (n >= 60)
+    return 'text-amber-400'
   return 'text-destructive'
 }
 
 function barColor(n: number) {
-  if (n >= 80) return 'bg-emerald-400'
-  if (n >= 60) return 'bg-amber-400'
+  if (n >= 80)
+    return 'bg-emerald-400'
+  if (n >= 60)
+    return 'bg-amber-400'
   return 'bg-destructive'
 }
 
@@ -67,7 +71,7 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
 }
 
 export function TranslationExercise({ sentence, direction, progress = '', onNext }: Props) {
-  const { keys } = use(AuthContext)
+  const { keys } = useAuth()
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<EvaluateResult | null>(null)
@@ -79,7 +83,8 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
   const placeholder = direction === 'zh-to-en' ? 'Type your English translation…' : 'Type your Chinese translation…'
 
   async function handleSubmit() {
-    if (!value.trim() || !keys?.openrouterApiKey) return
+    if (!value.trim() || !keys?.openrouterApiKey)
+      return
     setLoading(true)
     try {
       const resp = await fetch(`${API_BASE}/api/translation/evaluate`, {
@@ -94,7 +99,8 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           user_answer: value.trim(),
         }),
       })
-      if (!resp.ok) throw new Error(`Evaluate failed (${resp.status})`)
+      if (!resp.ok)
+        throw new Error(`Evaluate failed (${resp.status})`)
       setResult(await resp.json())
     }
     catch {
@@ -114,7 +120,10 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
             <p className="text-xs text-muted-foreground mb-1">Your translation of:</p>
             <p className="text-lg font-medium">{source}</p>
             <p className="text-sm text-muted-foreground mt-1 italic">{value}</p>
-            <p className="text-xs text-muted-foreground mt-2">Reference: <span className="text-foreground not-italic">{reference}</span></p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Reference:
+              <span className="text-foreground not-italic">{reference}</span>
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -133,7 +142,8 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
 
           {result.tip && (
             <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-foreground">
-              <span className="font-medium">Tip: </span>{result.tip}
+              <span className="font-medium">Tip: </span>
+              {result.tip}
             </div>
           )}
 
@@ -150,7 +160,10 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
       <div className="space-y-4">
         <div>
           <p className="text-xs text-muted-foreground mb-2">
-            Translate to {targetLang === 'english' ? 'English' : 'Chinese'}:
+            Translate to
+            {' '}
+            {targetLang === 'english' ? 'English' : 'Chinese'}
+            :
           </p>
           <p className="text-2xl font-medium leading-snug">{source}</p>
         </div>
@@ -160,7 +173,10 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
               <ChineseInput
                 value={value}
                 onChange={e => setValue(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') void handleSubmit() }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter')
+                    void handleSubmit()
+                }}
                 placeholder={placeholder}
                 disabled={loading}
               />
@@ -170,7 +186,10 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
                 type="text"
                 value={value}
                 onChange={e => setValue(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') void handleSubmit() }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter')
+                    void handleSubmit()
+                }}
                 placeholder={placeholder}
                 maxLength={500}
                 disabled={loading}
