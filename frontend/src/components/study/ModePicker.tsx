@@ -1,18 +1,8 @@
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export type ExerciseMode = 'cloze' | 'dictation' | 'pinyin' | 'pronunciation' | 'reconstruction' | 'writing' | 'translation' | 'mixed'
-
-const MODES: { id: ExerciseMode, icon: string, name: string, desc: string }[] = [
-  { id: 'mixed', icon: '✍️🎧🎤', name: 'Mixed', desc: 'All types shuffled together' },
-  { id: 'cloze', icon: '✍️', name: 'Cloze', desc: 'Fill blanks in a story' },
-  { id: 'dictation', icon: '🎧', name: 'Dictation', desc: 'Hear it, type it' },
-  { id: 'pinyin', icon: '🔤', name: 'Pinyin', desc: 'See char, type pinyin' },
-  { id: 'pronunciation', icon: '🎤', name: 'Speak', desc: 'Pronounce & score' },
-  { id: 'reconstruction', icon: '🔀', name: 'Rebuild', desc: 'Unscramble sentence' },
-  { id: 'writing', icon: '✏️', name: 'Write', desc: 'Draw the characters' },
-  { id: 'translation', icon: '🌐', name: 'Translate', desc: 'Translate & get AI feedback' },
-]
+export type ExerciseMode = 'cloze' | 'dictation' | 'romanization-recall' | 'pronunciation' | 'reconstruction' | 'writing' | 'translation' | 'mixed'
 
 interface ModePickerProps {
   selected: ExerciseMode
@@ -22,9 +12,26 @@ interface ModePickerProps {
   onStart: () => void
   lessonTitle: string
   loading?: boolean
+  caps: LanguageCapabilities
 }
 
-export function ModePicker({ selected, onSelect, count, onCountChange, onStart, lessonTitle, loading }: ModePickerProps) {
+export function ModePicker({ selected, onSelect, count, onCountChange, onStart, lessonTitle, loading, caps }: ModePickerProps) {
+  const MODES: { id: ExerciseMode, icon: string, name: string, desc: string }[] = [
+    { id: 'mixed', icon: '✍️🎧🎤', name: 'Mixed', desc: 'All types shuffled together' },
+    { id: 'cloze', icon: '✍️', name: 'Cloze', desc: 'Fill blanks in a story' },
+    { id: 'dictation', icon: '🎧', name: 'Dictation', desc: 'Hear it, type it' },
+    ...(caps.romanizationSystem !== 'none' ? [{
+      id: 'romanization-recall' as ExerciseMode,
+      icon: '🔤',
+      name: `${caps.romanizationLabel} Recall`,
+      desc: `See the word, type its ${caps.romanizationLabel}`,
+    }] : []),
+    { id: 'pronunciation', icon: '🎤', name: 'Speak', desc: 'Pronounce & score' },
+    { id: 'reconstruction', icon: '🔀', name: 'Rebuild', desc: 'Unscramble sentence' },
+    ...(caps.hasCharacterWriting ? [{ id: 'writing' as ExerciseMode, icon: '✏️', name: 'Write', desc: 'Draw the characters' }] : []),
+    { id: 'translation', icon: '🌐', name: 'Translate', desc: 'Translate & get AI feedback' },
+  ]
+
   return (
     <div>
       <h2 className="text-xl font-bold tracking-tight">Start a Study Session</h2>

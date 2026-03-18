@@ -7,6 +7,7 @@ import { CharacterWritingExercise } from '@/components/study/exercises/Character
 import { ClozeExercise } from '@/components/study/exercises/ClozeExercise'
 import { DictationExercise } from '@/components/study/exercises/DictationExercise'
 import { PinyinRecallExercise } from '@/components/study/exercises/PinyinRecallExercise'
+import { RomanizationRecallExercise } from '@/components/study/exercises/RomanizationRecallExercise'
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { ReconstructionExercise } from '@/components/study/exercises/ReconstructionExercise'
 import { TranslationExercise } from '@/components/study/exercises/TranslationExercise'
@@ -16,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useQuizGeneration } from '@/hooks/useQuizGeneration'
 import { useTTS } from '@/hooks/useTTS'
 import { useVocabulary } from '@/hooks/useVocabulary'
+import { getLanguageCaps } from '@/lib/language-caps'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 
 type Phase = 'picker' | 'session' | 'summary'
@@ -48,7 +50,7 @@ function distributeExercises(
   hasWriting: boolean,
   hasOpenRouter: boolean,
 ): Exclude<ExerciseMode, 'mixed'>[] {
-  const available: Exclude<ExerciseMode, 'mixed'>[] = ['dictation', 'pinyin', 'reconstruction']
+  const available: Exclude<ExerciseMode, 'mixed'>[] = ['dictation', 'romanization-recall', 'reconstruction']
   if (hasAzure)
     available.push('pronunciation')
   if (hasWriting)
@@ -89,6 +91,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
 
   const entries = entriesByLesson[lessonId] ?? []
   const lessonTitle = entries[0]?.sourceLessonTitle ?? 'Unknown Lesson'
+  const caps = getLanguageCaps(entries[0]?.sourceLanguage)
 
   const [phase, setPhase] = useState<Phase>('picker')
   const [mode, setMode] = useState<ExerciseMode>('mixed')
@@ -162,7 +165,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     catch {
       toast.error('AI exercise generation failed — falling back to basic exercises')
       const fallbackTypes = types.map(t =>
-        (t === 'cloze' || t === 'translation') ? 'pinyin' : t
+        (t === 'cloze' || t === 'translation') ? 'romanization-recall' : t
       ) as Exclude<ExerciseMode, 'mixed'>[]
       const qs: Question[] = fallbackTypes.map((type, i) => {
         const entry = pool[i % pool.length]
@@ -226,6 +229,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
             onCountChange={setCount}
             onStart={() => void handleStart()}
             lessonTitle={lessonTitle}
+            caps={caps}
           />
         )}
 
@@ -238,6 +242,16 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
               </div>
             )}
             {/* <ProgressBar current={current} total={questions.length} /> */}
+            {q.type === 'romanization-recall' && (
+              <RomanizationRecallExercise
+                key={current}
+                entry={q.entry}
+                progress={`${current + 1} / ${questions.length}`}
+                onNext={handleNext}
+                playTTS={playTTS}
+                caps={caps}
+              />
+            )}
             {q.type === 'pinyin' && (
               <PinyinRecallExercise
                 key={current}
