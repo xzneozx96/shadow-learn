@@ -61,3 +61,12 @@ async def test_translate_segments_parses_response():
     assert len(result) == 2
     assert result[0]["translations"]["English"] == "Hello"
     assert result[1]["translations"]["English"] == "World"
+
+
+def test_build_translation_prompt_english():
+    """English source language should mention 'English' in the prompt, not 'Chinese'."""
+    segments = [{"id": 0, "text": "Hello world"}]
+    languages = ["Spanish"]
+    prompt = _build_translation_prompt(segments, languages, source_language="en")
+    assert "English" in prompt
+    assert "Chinese" not in prompt

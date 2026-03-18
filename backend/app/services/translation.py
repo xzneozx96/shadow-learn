@@ -8,6 +8,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict
 
 from app.config import settings
+from app.services.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
 
@@ -31,20 +32,27 @@ class TranslationResponse(BaseModel):
     translations: List[SegmentTranslation]
 
 
-def _build_translation_prompt(segments: list[dict], languages: list[str]) -> str:
-    """Build an LLM prompt requesting translations of Chinese segments."""
+def _build_translation_prompt(
+    segments: list[dict],
+    languages: list[str],
+    source_language: str = "zh-CN",
+) -> str:
+    """Build an LLM prompt requesting translations of the given source-language segments."""
+    lang_cfg = get_language_config(source_language)
     language_list = ", ".join(languages)
     segments_text = "\n".join(
         f'{{"id": {seg["id"]}, "text": "{seg["text"]}"}}'
         for seg in segments
     )
-    prompt = (
-        f"You are a professional translator specializing in Chinese.\n"
+    example_langs = [{"language": lang, "text": "<translated text>"} for lang in languages]
+    return (
+        f"You are a professional translator specializing in {lang_cfg['language_name']}.\n"
         f"Translate each segment below into the following languages: {language_list}.\n\n"
         f"Segments:\n{segments_text}\n\n"
-        f"Return the translations mapped to each segment ID."
+        f"Respond with a JSON object in exactly this structure:\n"
+        f'{{"translations": [{{"id": <segment_id>, "translations": {example_langs}}}, ...]}}\n\n'
+        f"Include every segment ID. Output only the JSON object, no other text."
     )
-    return prompt
 
 
 async def _translate_batch(
@@ -52,9 +60,10 @@ async def _translate_batch(
     languages: list[str],
     api_key: str,
     model: str,
+    source_language: str = "zh-CN",
 ) -> list[dict]:
     """Translate a single batch of segments via OpenAI API using Structured Outputs."""
-    prompt = _build_translation_prompt(segments, languages)
+    prompt = _build_translation_prompt(segments, languages, source_language=source_language)
     
     # Define JSON schema for Structured Outputs
     response_format = {
@@ -139,6 +148,7 @@ async def translate_segments(
     languages: list[str],
     api_key: str,
     model: str = _DEFAULT_MODEL,
+    source_language: str = "zh-CN",
 ) -> list[dict]:
     """Translate all segments in batches, returning enriched segment dicts.
 
@@ -149,7 +159,7 @@ async def translate_segments(
 
     for i in range(0, len(segments), batch_size):
         batch = segments[i : i + batch_size]
-        translated = await _translate_batch(batch, languages, api_key, model)
+        translated = await _translate_batch(batch, languages, api_key, model, source_language=source_language)
         results.extend(translated)
 
     return results
