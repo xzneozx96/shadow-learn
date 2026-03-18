@@ -1,7 +1,6 @@
 """Vocabulary extraction service using OpenRouter API."""
 
 import asyncio
-import json
 import logging
 import random
 from typing import List
@@ -130,64 +129,6 @@ async def _extract_batch_with_retry(
 
     # Unreachable, but satisfies type checker
     raise VocabularyExtractionError(f"Vocab batch {seg_ids}: exhausted all attempts")
-
-
-async def _extract_batch(
-    segments: list[dict],
-    api_key: str,
-) -> dict[int, list[dict]]:
-    """Extract vocabulary for a single batch of segments using Structured Outputs."""
-    prompt = _build_vocab_prompt(segments)
-
-    # Define the JSON schema for Structured Outputs
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "vocabulary_extraction",
-            "strict": True,
-            "schema": VocabularyResponse.model_json_schema()
-        }
-    }
-
-    async with httpx.AsyncClient(timeout=180.0) as client:
-        response = await client.post(
-            settings.openrouter_chat_url,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": settings.openrouter_model,
-                "messages": [{"role": "user", "content": prompt}],
-                "response_format": response_format,
-                "temperature": 0.1,
-                "reasoning": {"effort": "none"},
-            },
-        )
-        if response.status_code != 200:
-            logger.error("OpenRouter error %d: %s", response.status_code, response.text)
-        response.raise_for_status()
-
-    data = response.json()
-    content = data["choices"][0]["message"]["content"]
-    
-    try:
-        parsed = VocabularyResponse.model_validate_json(content)
-        return {seg.id: [w.model_dump() for w in seg.words] for seg in parsed.segments}
-    except Exception as e:
-        logger.error("Failed to parse vocabulary response: %s", e)
-        # Attempt fallback to simple json.loads if schema validation fails but it's still JSON
-        try:
-            raw_data = json.loads(content)
-            # If it's the old format (array), handle it
-            if isinstance(raw_data, list):
-                return {item.get("id"): item.get("words", []) for item in raw_data if "id" in item}
-            # If it's the new format but failed validation
-            if isinstance(raw_data, dict) and "segments" in raw_data:
-                return {item.get("id"): item.get("words", []) for item in raw_data["segments"] if "id" in item}
-        except:
-            pass
-        return {}
 
 
 async def extract_vocabulary(
