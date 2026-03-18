@@ -116,6 +116,7 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
   const togglePlayback = useCallback(() => {
     if (isPlaying) {
       audioRef.current?.pause()
+      audioRef.current = null
       setIsPlaying(false)
       return
     }
