@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import chat, config, jobs, lessons, pronunciation, quiz, tts
+from app.routers import chat, config, jobs, lessons, pronunciation, quiz, translation_exercise, tts
 from app.services.tts_factory import get_tts_provider
 from app.services.transcription_factory import get_stt_provider
 
@@ -39,6 +39,7 @@ app.include_router(tts.router)
 app.include_router(config.router)
 app.include_router(jobs.router)
 app.include_router(quiz.router)
+app.include_router(translation_exercise.router)
 app.include_router(pronunciation.router)
 
 
