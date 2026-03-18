@@ -1,6 +1,6 @@
 import type { ExerciseMode } from '@/components/study/ModePicker'
 import type { VocabEntry } from '@/types'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
@@ -21,7 +21,7 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
   const { keys } = useAuth()
   const [loading, setLoading] = useState(false)
 
-  async function generateQuiz(
+  const generateQuiz = useCallback(async function generateQuiz(
     types: Exclude<ExerciseMode, 'mixed'>[],
     pool: VocabEntry[],
     signal: AbortSignal,
@@ -79,7 +79,7 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
     finally {
       setLoading(false)
     }
-  }
+  }, [keys])
 
   return { generateQuiz, loading }
 }
