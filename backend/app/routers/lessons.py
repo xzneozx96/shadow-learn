@@ -8,7 +8,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.config import settings
@@ -21,7 +21,7 @@ from app.services.audio import (
     probe_upload_duration,
 )
 from app.services.pinyin import generate_pinyin
-from app.services.transcription_deepgram import transcribe_audio_deepgram
+from app.services.transcription_provider import STTProvider, TranscriptionKeys
 from app.services.translation import translate_segments
 from app.services.validation import ValidationError, validate_upload_file, validate_youtube_url
 from app.services.vocabulary import extract_vocabulary
@@ -106,6 +106,7 @@ async def _process_youtube_lesson(
     request: LessonRequest,
     video_id: str,
     job_id: str,
+    stt_provider: STTProvider,
 ) -> None:
     """Background task: validate duration → download video → extract audio →
     transcribe → shared pipeline."""
@@ -127,11 +128,14 @@ async def _process_youtube_lesson(
         audio_path = await extract_audio_from_upload(video_path)
 
         jobs[job_id].step = "transcription"
-        if not request.deepgram_api_key:
-            jobs[job_id].status = "error"
-            jobs[job_id].error = "Deepgram API key is required for transcription."
-            return
-        segments = await transcribe_audio_deepgram(audio_path, request.deepgram_api_key, request.source_language)
+        keys: TranscriptionKeys = {}
+        if request.deepgram_api_key:
+            keys["deepgram_api_key"] = request.deepgram_api_key
+        if request.azure_speech_key:
+            keys["azure_speech_key"] = request.azure_speech_key
+        if request.azure_speech_region:
+            keys["azure_speech_region"] = request.azure_speech_region
+        segments = await stt_provider.transcribe(audio_path, keys, request.source_language)
         # Audio no longer needed after transcription
         audio_path.unlink(missing_ok=True)
         audio_path = None
@@ -169,7 +173,10 @@ async def _process_upload_lesson(
     openrouter_api_key: str,
     job_id: str,
     deepgram_api_key: str | None = None,
+    azure_speech_key: str | None = None,
+    azure_speech_region: str | None = None,
     source_language: str = "zh-CN",
+    stt_provider: STTProvider | None = None,
 ) -> None:
     """Background task: save file → probe duration → extract audio → transcribe → shared pipeline."""
     _TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -217,11 +224,16 @@ async def _process_upload_lesson(
 
         jobs[job_id].step = "transcription"
         t0 = time.monotonic()
-        if not deepgram_api_key:
-            jobs[job_id].status = "error"
-            jobs[job_id].error = "Deepgram API key is required for transcription."
-            return
-        segments = await transcribe_audio_deepgram(audio_path, deepgram_api_key, source_language)
+        keys: TranscriptionKeys = {}
+        if deepgram_api_key:
+            keys["deepgram_api_key"] = deepgram_api_key
+        if azure_speech_key:
+            keys["azure_speech_key"] = azure_speech_key
+        if azure_speech_region:
+            keys["azure_speech_region"] = azure_speech_region
+        if stt_provider is None:
+            raise RuntimeError("No STT provider configured")
+        segments = await stt_provider.transcribe(audio_path, keys, source_language)
         logger.info("[pipeline] transcription: done in %.1fs, %d segments", time.monotonic() - t0, len(segments))
 
         await _shared_pipeline(
@@ -247,7 +259,7 @@ async def _process_upload_lesson(
 
 
 @router.post("/generate")
-async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTasks) -> dict:
+async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTasks, req: Request) -> dict:
     """Accept a LessonRequest JSON body, start background pipeline, return job_id immediately."""
     if request.source == "youtube":
         if not request.youtube_url:
@@ -257,9 +269,10 @@ async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTa
         except ValidationError as exc:
             raise HTTPException(status_code=400, detail=exc.message)
 
+        stt_provider = req.app.state.stt_provider
         job_id = str(uuid.uuid4())
         jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
-        background_tasks.add_task(_process_youtube_lesson, request, video_id, job_id)
+        background_tasks.add_task(_process_youtube_lesson, request, video_id, job_id, stt_provider)
         return {"job_id": job_id}
     else:
         raise HTTPException(
@@ -271,10 +284,13 @@ async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTa
 @router.post("/generate-upload")
 async def generate_lesson_upload(
     background_tasks: BackgroundTasks,
+    req: Request,
     file: UploadFile,
     translation_languages: str = Form(...),
     openrouter_api_key: str = Form(...),
     deepgram_api_key: str | None = Form(None),
+    azure_speech_key: str | None = Form(None),
+    azure_speech_region: str | None = Form(None),
     source_language: str = Form("zh-CN"),
 ) -> dict:
     """Accept a multipart upload, start background pipeline, return job_id immediately."""
@@ -282,6 +298,7 @@ async def generate_lesson_upload(
     if not languages:
         raise HTTPException(status_code=400, detail="translation_languages must not be empty")
 
+    stt_provider = req.app.state.stt_provider
     job_id = str(uuid.uuid4())
     jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
     background_tasks.add_task(
@@ -291,7 +308,10 @@ async def generate_lesson_upload(
         openrouter_api_key,
         job_id,
         deepgram_api_key,
+        azure_speech_key,
+        azure_speech_region,
         source_language,
+        stt_provider,
     )
     return {"job_id": job_id}
 

@@ -24,6 +24,8 @@ class LessonRequest(BaseModel):
     translation_languages: list[str] = Field(min_length=1)
     openrouter_api_key: str
     deepgram_api_key: str | None = None
+    azure_speech_key: str | None = None
+    azure_speech_region: str | None = None
     source_language: str = "zh-CN"
 
 

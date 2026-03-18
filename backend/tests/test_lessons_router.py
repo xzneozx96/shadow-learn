@@ -1,4 +1,5 @@
 import io
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -14,6 +15,15 @@ def clear_jobs():
     jobs_module.jobs.clear()
 
 
+@pytest.fixture(autouse=True)
+def mock_stt_provider():
+    provider = AsyncMock()
+    provider.transcribe = AsyncMock(return_value=[])
+    app.state.stt_provider = provider
+    yield provider
+    del app.state.stt_provider
+
+
 @pytest.mark.asyncio
 async def test_generate_lesson_rejects_missing_url():
     transport = ASGITransport(app=app)
@@ -24,7 +34,7 @@ async def test_generate_lesson_rejects_missing_url():
                 "source": "youtube",
                 "youtube_url": None,
                 "translation_languages": ["en"],
-                "openai_api_key": "key",
+                "openrouter_api_key": "key",
                 "model": "gpt-4o-mini",
             },
         )
@@ -40,7 +50,7 @@ async def test_generate_lesson_rejects_invalid_source():
             json={
                 "source": "invalid",
                 "translation_languages": ["en"],
-                "openai_api_key": "key",
+                "openrouter_api_key": "key",
                 "model": "gpt-4o-mini",
             },
         )
@@ -55,7 +65,7 @@ async def test_generate_lesson_accepts_deepgram_key_in_body():
         source="youtube",
         youtube_url="https://www.youtube.com/watch?v=test",
         translation_languages=["en"],
-        openai_api_key="sk-test",
+        openrouter_api_key="sk-test",
         deepgram_api_key="dg-test",
     )
     assert req.deepgram_api_key == "dg-test"
@@ -78,7 +88,7 @@ async def test_generate_lesson_youtube_returns_job_id():
                     "source": "youtube",
                     "youtube_url": "https://www.youtube.com/watch?v=abc123",
                     "translation_languages": ["en"],
-                    "openai_api_key": "sk-test",
+                    "openrouter_api_key": "sk-test",
                     "deepgram_api_key": "dg-test",
                     "model": "gpt-4o-mini",
                 },
@@ -88,6 +98,44 @@ async def test_generate_lesson_youtube_returns_job_id():
     assert "job_id" in data
     assert isinstance(data["job_id"], str)
     assert len(data["job_id"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_generate_lesson_accepts_azure_keys_in_body():
+    from app.models import LessonRequest
+
+    req = LessonRequest(
+        source="youtube",
+        youtube_url="https://www.youtube.com/watch?v=test",
+        translation_languages=["en"],
+        openrouter_api_key="sk-test",
+        azure_speech_key="az-key",
+        azure_speech_region="eastus",
+    )
+    assert req.azure_speech_key == "az-key"
+    assert req.azure_speech_region == "eastus"
+
+
+@pytest.mark.asyncio
+async def test_generate_lesson_upload_accepts_azure_form_fields():
+    """generate-upload accepts azure_speech_key and azure_speech_region as form fields."""
+    from unittest.mock import AsyncMock, patch
+
+    with patch("app.routers.lessons._process_upload_lesson", new=AsyncMock()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/lessons/generate-upload",
+                files={"file": ("test.mp4", io.BytesIO(b"fake"), "video/mp4")},
+                data={
+                    "translation_languages": "en",
+                    "openrouter_api_key": "sk-test",
+                    "azure_speech_key": "az-key",
+                    "azure_speech_region": "eastus",
+                },
+            )
+    assert response.status_code == 200
+    assert "job_id" in response.json()
 
 
 @pytest.mark.asyncio
@@ -133,7 +181,7 @@ async def test_generate_lesson_upload_returns_job_id():
                 files={"file": ("test.mp4", io.BytesIO(b"fake"), "video/mp4")},
                 data={
                     "translation_languages": "en",
-                    "openai_api_key": "sk-test",
+                    "openrouter_api_key": "sk-test",
                     "deepgram_api_key": "dg-test",
                     "model": "gpt-4o-mini",
                 },
