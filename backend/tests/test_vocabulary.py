@@ -39,7 +39,7 @@ def _make_mock_response(status_code: int, content: str = "") -> MagicMock:
 def _valid_vocab_content(seg_ids: list[int]) -> str:
     return json.dumps({
         "segments": [
-            {"id": i, "words": [{"word": "你好", "pinyin": "nǐ hǎo", "meaning": "hello", "usage": "你好世界"}]}
+            {"id": i, "words": [{"word": "你好", "romanization": "nǐ hǎo", "meaning": "hello", "usage": "你好世界"}]}
             for i in seg_ids
         ]
     })
@@ -168,7 +168,7 @@ async def test_extract_vocabulary_returns_all_segments():
         import json
         return json.dumps({
             "segments": [
-                {"id": i, "words": [{"word": "词", "pinyin": "cí", "meaning": "word", "usage": "一个词"}]}
+                {"id": i, "words": [{"word": "词", "romanization": "cí", "meaning": "word", "usage": "一个词"}]}
                 for i in ids
             ]
         })
@@ -230,7 +230,7 @@ async def test_extract_vocabulary_result_order_matches_input():
         import json
         return json.dumps({
             "segments": [
-                {"id": i, "words": [{"word": str(i), "pinyin": "pīn", "meaning": "m", "usage": "u"}]}
+                {"id": i, "words": [{"word": str(i), "romanization": "pīn", "meaning": "m", "usage": "u"}]}
                 for i in ids
             ]
         })
@@ -253,3 +253,13 @@ async def test_extract_vocabulary_result_order_matches_input():
     assert set(result.keys()) == set(range(10))
     for i in range(10):
         assert result[i][0]["word"] == str(i)
+
+
+def test_build_vocab_prompt_english():
+    """English prompt should say 'English language teacher' and 'IPA', not 'Chinese'."""
+    from app.services.vocabulary import _build_vocab_prompt
+    segments = [{"id": 0, "text": "Hello world"}]
+    prompt = _build_vocab_prompt(segments, source_language="en")
+    assert "English" in prompt
+    assert "IPA" in prompt
+    assert "Chinese" not in prompt

@@ -9,6 +9,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict
 
 from app.config import settings
+from app.services.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class VocabularyExtractionError(Exception):
 class WordEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
     word: str
-    pinyin: str
+    romanization: str
     meaning: str
     usage: str
 
@@ -36,23 +37,32 @@ class VocabularyResponse(BaseModel):
     segments: List[SegmentVocabulary]
 
 
-def _build_vocab_prompt(segments: list[dict]) -> str:
-    """Build a prompt to extract key vocabulary from Chinese segments."""
+def _build_vocab_prompt(segments: list[dict], source_language: str = "zh-CN") -> str:
+    """Build a prompt to extract key vocabulary from segments."""
+    lang_cfg = get_language_config(source_language)
+    no_romanization = lang_cfg["romanization_description"].startswith("leave empty")
+    romanization_line = (
+        '- "romanization": leave as empty string ""\n'
+        if no_romanization
+        else f'- "romanization": {lang_cfg["romanization_description"]}\n'
+    )
     segments_text = "\n".join(
         f'{{"id": {seg["id"]}, "text": "{seg["text"]}"}}'
         for seg in segments
     )
     return (
-        "You are a Chinese language teacher. For each segment below, break down ALL meaningful Chinese words and phrases.\n"
+        f"You are a {lang_cfg['language_name']} language teacher. For each segment below, break down ALL meaningful words and phrases.\n"
         "Include every content word (nouns, verbs, adjectives, adverbs, measure words, grammar particles).\n"
-        "Skip only pure punctuation. The goal is that a student can hover over ANY word in the sentence and see its meaning.\n\n"
+        "Skip only pure punctuation. The goal is that a student can hover over ANY word and see its meaning.\n\n"
         "For each word provide:\n"
-        '- "word": the Chinese characters as they appear in the text (must match exactly)\n'
-        '- "pinyin": with tone marks (e.g. "zhōng wén")\n'
+        '- "word": the characters/text exactly as they appear in the segment\n'
+        + romanization_line +
         '- "meaning": concise English meaning\n'
-        '- "usage": a short example sentence in Chinese (different from the source)\n\n'
+        '- "usage": a short example sentence (different from the source)\n\n'
         f"Segments:\n{segments_text}\n\n"
-        "IMPORTANT: Cover ALL words in each segment, not just key vocabulary."
+        "IMPORTANT: Cover ALL words in each segment, not just key vocabulary.\n\n"
+        "Return a JSON object with this exact structure:\n"
+        '{"segments": [{"id": <int>, "words": [{"word": "<str>", "romanization": "<str>", "meaning": "<str>", "usage": "<str>"}]}]}'
     )
 
 
@@ -64,10 +74,11 @@ async def _extract_batch_with_retry(
     segments: list[dict],
     api_key: str,
     semaphore: asyncio.Semaphore,
+    source_language: str = "zh-CN",
 ) -> dict[int, list[dict]]:
     """Extract vocabulary for a batch of segments with semaphore gating and retry on 429."""
     seg_ids = [s["id"] for s in segments]
-    prompt = _build_vocab_prompt(segments)
+    prompt = _build_vocab_prompt(segments, source_language=source_language)
     response_format = {
         "type": "json_schema",
         "json_schema": {
@@ -134,6 +145,7 @@ async def _extract_batch_with_retry(
 async def extract_vocabulary(
     segments: list[dict],
     api_key: str,
+    source_language: str = "zh-CN",
 ) -> dict[int, list[dict]]:
     """Extract vocabulary for all segments in parallel batches.
 
@@ -150,7 +162,7 @@ async def extract_vocabulary(
         for i in range(0, len(segments), _VOCAB_BATCH_SIZE)
     ]
     tasks = [
-        asyncio.create_task(_extract_batch_with_retry(batch, api_key, semaphore))
+        asyncio.create_task(_extract_batch_with_retry(batch, api_key, semaphore, source_language))
         for batch in batches
     ]
     logger.info("Vocabulary: dispatching %d parallel batches for %d segments", len(tasks), len(segments))
