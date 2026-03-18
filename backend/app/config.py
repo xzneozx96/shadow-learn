@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     openrouter_model: str = "qwen/qwen3.5-122b-a10b"
     minimax_tts_url: str = "https://api.minimax.io/v1/t2a_v2"
     tts_provider: str = "azure"  # env: SHADOWLEARN_TTS_PROVIDER; values: azure | minimax
+    stt_provider: str = "deepgram"  # env: SHADOWLEARN_STT_PROVIDER; values: deepgram | azure
 
     model_config = {"env_prefix": "SHADOWLEARN_"}
 
