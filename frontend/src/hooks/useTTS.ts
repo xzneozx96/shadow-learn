@@ -35,15 +35,15 @@ export function useTTS(
   // Fetch the active provider once on mount
   useEffect(() => {
     let cancelled = false
-    fetch('/api/tts/provider')
+    fetch('/api/config')
       .then((res) => {
         if (!res.ok)
-          throw new Error('provider fetch failed')
+          throw new Error('config fetch failed')
         return res.json()
       })
-      .then((data: { provider: string }) => {
+      .then((data: { tts_provider: string; stt_provider: string }) => {
         if (!cancelled) {
-          providerRef.current = data.provider
+          providerRef.current = data.tts_provider
         }
       })
       .catch(() => {

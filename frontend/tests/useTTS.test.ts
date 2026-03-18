@@ -19,8 +19,8 @@ const mockKeys = { openrouterApiKey: 'sk-test', minimaxApiKey: 'mm-test', azureS
 
 function mockProviderFetch(provider: string) {
   vi.mocked(globalThis.fetch).mockImplementation(async (url: any) => {
-    if (String(url).includes('/api/tts/provider')) {
-      return { ok: true, json: () => Promise.resolve({ provider }) } as any
+    if (String(url).includes('/api/config')) {
+      return { ok: true, json: () => Promise.resolve({ tts_provider: provider, stt_provider: 'deepgram' }) } as any
     }
     return { ok: false, statusText: 'Not Found' } as any
   })
@@ -55,7 +55,7 @@ describe('useTTS', () => {
 
   it('defaults to azure when provider fetch fails', async () => {
     vi.mocked(globalThis.fetch).mockImplementation(async (url: any) => {
-      if (String(url).includes('/api/tts/provider')) {
+      if (String(url).includes('/api/config')) {
         return { ok: false, statusText: 'Internal Server Error' } as any
       }
       return { ok: false, statusText: 'Not Found' } as any
@@ -124,8 +124,8 @@ describe('useTTS', () => {
     const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
 
     vi.mocked(globalThis.fetch).mockImplementation(async (url: any) => {
-      if (String(url).includes('/api/tts/provider')) {
-        return { ok: true, json: () => Promise.resolve({ provider: 'azure' }) } as any
+      if (String(url).includes('/api/config')) {
+        return { ok: true, json: () => Promise.resolve({ tts_provider: 'azure', stt_provider: 'deepgram' }) } as any
       }
       return { ok: true, blob: () => Promise.resolve(fakeBlob) } as any
     })
@@ -150,8 +150,8 @@ describe('useTTS', () => {
     const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
 
     vi.mocked(globalThis.fetch).mockImplementation(async (url: any) => {
-      if (String(url).includes('/api/tts/provider')) {
-        return { ok: true, json: () => Promise.resolve({ provider: 'minimax' }) } as any
+      if (String(url).includes('/api/config')) {
+        return { ok: true, json: () => Promise.resolve({ tts_provider: 'minimax', stt_provider: 'deepgram' }) } as any
       }
       return { ok: true, blob: () => Promise.resolve(fakeBlob) } as any
     })

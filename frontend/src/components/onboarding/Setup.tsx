@@ -21,9 +21,9 @@ export function Setup() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    fetch('/api/tts/provider')
-      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch provider')))
-      .then((data: { provider: string }) => setProvider(data.provider))
+    fetch('/api/config')
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch config')))
+      .then((data: { tts_provider: string; stt_provider: string }) => setProvider(data.tts_provider))
       .catch(() => setProvider('azure'))
   }, [])
 

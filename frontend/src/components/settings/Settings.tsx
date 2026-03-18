@@ -32,9 +32,9 @@ export function Settings() {
   const [keysError, setKeysError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/tts/provider')
-      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch provider')))
-      .then((data: { provider: string }) => setProvider(data.provider))
+    fetch('/api/config')
+      .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to fetch config')))
+      .then((data: { tts_provider: string; stt_provider: string }) => setProvider(data.tts_provider))
       .catch(() => setProvider('azure'))
   }, [])
 
@@ -48,13 +48,16 @@ export function Settings() {
     })
   }, [db])
 
-  useEffect(() => {
+  // Sync edit fields when keys load (setState-during-render pattern — avoids effect setter)
+  const [prevKeys, setPrevKeys] = useState(keys)
+  if (prevKeys !== keys) {
+    setPrevKeys(keys)
     setEditOpenrouterKey(keys?.openrouterApiKey ?? '')
     setEditMinimaxKey(keys?.minimaxApiKey ?? '')
     setEditDeepgramKey(keys?.deepgramApiKey ?? '')
     setEditAzureSpeechKey(keys?.azureSpeechKey ?? '')
     setEditAzureSpeechRegion(keys?.azureSpeechRegion ?? '')
-  }, [keys])
+  }
 
   async function handleSaveKeys() {
     setKeysError(null)
