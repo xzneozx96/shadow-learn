@@ -13,6 +13,7 @@ import { TranslationExercise } from '@/components/study/exercises/TranslationExe
 import { ModePicker } from '@/components/study/ModePicker'
 import { SessionSummary } from '@/components/study/SessionSummary'
 import { useAuth } from '@/contexts/AuthContext'
+import { useQuizGeneration } from '@/hooks/useQuizGeneration'
 import { useTTS } from '@/hooks/useTTS'
 import { useVocabulary } from '@/hooks/useVocabulary'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
@@ -30,8 +31,6 @@ interface Question {
     direction: 'en-to-zh' | 'zh-to-en'
   }
 }
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 
 function getReconstructionTokens(entry: VocabEntry, allEntries: VocabEntry[]): string[] {
   const segWords = allEntries
@@ -86,6 +85,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
   const { entriesByLesson } = useVocabulary()
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys)
+  const { generateQuiz, loading } = useQuizGeneration()
 
   const entries = entriesByLesson[lessonId] ?? []
   const lessonTitle = entries[0]?.sourceLessonTitle ?? 'Unknown Lesson'
@@ -96,7 +96,6 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
   const [questions, setQuestions] = useState<Question[]>([])
   const [current, setCurrent] = useState(0)
   const [results, setResults] = useState<{ entry: VocabEntry, correct: boolean }[]>([])
-  const [loading, setLoading] = useState(false)
   const [azureBanner, setAzureBanner] = useState(false)
   // Guard against double-click and track the in-flight controller for cleanup
   const abortRef = useRef<AbortController | null>(null)
@@ -110,92 +109,11 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
 
   const hasAzure = Boolean(keys?.azureSpeechKey)
 
-  async function fetchAIContent(types: Exclude<ExerciseMode, 'mixed'>[], pool: VocabEntry[], signal: AbortSignal) {
-    const clozeWords = pool.slice(0, 5).map(e => ({
-      word: e.word,
-      pinyin: e.pinyin,
-      meaning: e.meaning,
-      usage: e.usage,
-    }))
-    const pronWords = pool.map(e => ({
-      word: e.word,
-      pinyin: e.pinyin,
-      meaning: e.meaning,
-      usage: e.usage,
-    }))
-    const pronCount = types.filter(t => t === 'pronunciation').length
-    const clozeCount = types.filter(t => t === 'cloze').length
-
-    const translationEntries = types
-      .map((t, i) => t === 'translation' ? pool[i % pool.length] : null)
-      .filter((e): e is VocabEntry => e !== null)
-
-    const [clozeResp, pronResp, ...translationResps] = await Promise.all([
-      clozeCount > 0
-        ? fetch(`${API_BASE}/api/quiz/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              openrouter_api_key: keys?.openrouterApiKey,
-              words: clozeWords,
-              exercise_type: 'cloze',
-              story_count: clozeCount,
-            }),
-            signal,
-          }).then(async (r) => {
-            if (!r.ok)
-              throw new Error(`Quiz generation failed (${r.status})`)
-            return r.json()
-          })
-        : Promise.resolve({ exercises: [] }),
-      pronCount > 0
-        ? fetch(`${API_BASE}/api/quiz/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              openrouter_api_key: keys?.openrouterApiKey,
-              words: pronWords,
-              exercise_type: 'pronunciation_sentence',
-              count: pronCount,
-            }),
-            signal,
-          }).then(async (r) => {
-            if (!r.ok)
-              throw new Error(`Quiz generation failed (${r.status})`)
-            return r.json()
-          })
-        : Promise.resolve({ exercises: [] }),
-      ...translationEntries.map(entry =>
-        fetch(`${API_BASE}/api/translation/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            openrouter_api_key: keys?.openrouterApiKey,
-            word: entry.word,
-            pinyin: entry.pinyin,
-            meaning: entry.meaning,
-            usage: entry.usage ?? '',
-            sentence_count: 3,
-          }),
-          signal,
-        }).then(r => r.ok ? r.json() : Promise.reject(new Error('generate failed')))
-          .catch(() => null)
-      ),
-    ])
-
-    return {
-      clozeExercises: clozeResp.exercises ?? [],
-      pronExercises: pronResp.exercises ?? [],
-      translationResults: translationResps as (null | { sentences: { chinese: string, english: string }[] })[],
-    }
-  }
-
   async function handleStart() {
     if (entries.length === 0 || abortRef.current)
       return
     const controller = new AbortController()
     abortRef.current = controller
-    setLoading(true)
 
     const hasWriting = entries.some(e => isWritingSupported(e.word))
     const types = distributeExercises(entries, mode, count, hasAzure, hasWriting, Boolean(keys?.openrouterApiKey))
@@ -205,7 +123,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     const pool = entries.toSorted(() => Math.random() - 0.5)
 
     try {
-      const { clozeExercises, pronExercises, translationResults } = await fetchAIContent(types, pool, controller.signal)
+      const { clozeExercises, pronExercises, translationResults } = await generateQuiz(types, pool, controller.signal)
       let clozeIdx = 0
       let pronIdx = 0
       let translationIdx = 0
@@ -260,7 +178,6 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     }
     finally {
       abortRef.current = null
-      setLoading(false)
     }
   }
 
