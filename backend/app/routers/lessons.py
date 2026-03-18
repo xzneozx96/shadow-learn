@@ -20,7 +20,7 @@ from app.services.audio import (
     get_youtube_duration,
     probe_upload_duration,
 )
-from app.services.pinyin import generate_pinyin
+from app.services.romanization_provider import get_romanization_provider
 from app.services.transcription_provider import STTProvider, TranscriptionKeys
 from app.services.translation import translate_segments
 from app.services.validation import ValidationError, validate_upload_file, validate_youtube_url
@@ -42,24 +42,31 @@ async def _shared_pipeline(
     source_url: str | None,
     duration: float,
     media_filename: str | None = None,
+    source_language: str = "zh-CN",
 ) -> None:
-    """Background pipeline: pinyin → translate + vocab → assemble → mark job complete."""
+    """Background pipeline: romanization → translate + vocab → assemble → mark job complete."""
     t_pipeline = time.monotonic()
     logger.info("[pipeline] shared_pipeline: start segments=%d source=%s", len(segments), source)
 
-    jobs[job_id].step = "pinyin"
+    jobs[job_id].step = "romanization"
     t0 = time.monotonic()
+    romanizer = get_romanization_provider(source_language)
     enriched_segments = []
     for seg in segments:
-        seg_pinyin = generate_pinyin(seg["text"])
-        enriched_segments.append({**seg, "romanization": seg_pinyin})
-    logger.info("[pipeline] pinyin: done in %.1fs", time.monotonic() - t0)
+        enriched_segments.append({**seg, "romanization": romanizer.romanize_text(seg["text"])})
+    logger.info("[pipeline] romanization: done in %.1fs (source_language=%s)", time.monotonic() - t0, source_language)
 
     jobs[job_id].step = "translation"
     t0 = time.monotonic()
     translated_segments, vocab_map = await asyncio.gather(
-        translate_segments(enriched_segments, translation_languages, api_key),
-        extract_vocabulary(enriched_segments, api_key),
+        translate_segments(
+            enriched_segments, translation_languages, api_key,
+            source_language=source_language,
+        ),
+        extract_vocabulary(
+            enriched_segments, api_key,
+            source_language=source_language,
+        ),
     )
     logger.info(
         "[pipeline] translation+vocabulary: done in %.1fs, %d segments, %d vocab entries",
@@ -153,6 +160,7 @@ async def _process_youtube_lesson(
             source_url,
             duration,
             media_filename=video_path.name if video_path else None,
+            source_language=request.source_language,
         )
 
     except Exception as exc:
@@ -245,6 +253,7 @@ async def _process_upload_lesson(
             "upload",
             None,
             duration,
+            source_language=source_language,
         )
 
     except Exception as exc:

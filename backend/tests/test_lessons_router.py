@@ -168,22 +168,26 @@ async def test_get_video_returns_404_for_missing_file():
     assert response.status_code == 404
 
 
-@pytest.mark.skip(reason="requires Task 6")
 @pytest.mark.asyncio
 async def test_shared_pipeline_assembles_text_and_romanization_keys():
     """Assembled segment dicts must use 'text'/'romanization', not 'chinese'/'pinyin'."""
     from app.routers.lessons import _shared_pipeline
+    import app.jobs as jobs_module
     from app.jobs import Job
+    from unittest.mock import MagicMock
 
     job_id = "test-field-rename"
     jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
 
     raw_segments = [{"id": 0, "start": 0.0, "end": 1.0, "text": "Hello world"}]
 
+    mock_romanizer = MagicMock()
+    mock_romanizer.romanize_text.return_value = ""
+
     with (
         patch("app.routers.lessons.translate_segments", new=AsyncMock(return_value=raw_segments)),
         patch("app.routers.lessons.extract_vocabulary", new=AsyncMock(return_value={})),
-        patch("app.routers.lessons.get_romanization_provider"),  # will fail until Task 6 wires it
+        patch("app.routers.lessons.get_romanization_provider", return_value=mock_romanizer),
     ):
         await _shared_pipeline(
             job_id, raw_segments, ["es"], "key", "title", "upload", None, 60.0,
