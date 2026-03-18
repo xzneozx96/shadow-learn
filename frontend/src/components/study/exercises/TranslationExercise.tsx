@@ -1,7 +1,7 @@
 // frontend/src/components/study/exercises/TranslationExercise.tsx
-import { useState } from 'react'
+import { use, useState } from 'react'
 import { toast } from 'sonner'
-import { useAuth } from '@/contexts/AuthContext'
+import { AuthContext } from '@/contexts/AuthContext'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { ChineseInput } from '@/components/ui/ChineseInput'
@@ -67,7 +67,7 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
 }
 
 export function TranslationExercise({ sentence, direction, progress = '', onNext }: Props) {
-  const { keys } = useAuth()
+  const { keys } = use(AuthContext)
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<EvaluateResult | null>(null)
