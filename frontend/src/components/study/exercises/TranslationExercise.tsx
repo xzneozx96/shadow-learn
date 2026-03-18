@@ -114,6 +114,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
             <p className="text-xs text-muted-foreground mb-1">Your translation of:</p>
             <p className="text-lg font-medium">{source}</p>
             <p className="text-sm text-muted-foreground mt-1 italic">{value}</p>
+            <p className="text-xs text-muted-foreground mt-2">Reference: <span className="text-foreground not-italic">{reference}</span></p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -159,6 +160,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
               <ChineseInput
                 value={value}
                 onChange={e => setValue(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') void handleSubmit() }}
                 placeholder={placeholder}
                 disabled={loading}
               />
