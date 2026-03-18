@@ -1,5 +1,5 @@
 import type { Segment } from '@/types'
-import { Check, Mic, Play, RefreshCcw, RotateCcw, Square, X } from 'lucide-react'
+import { Mic, Play, Square, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { usePlayer } from '@/contexts/PlayerContext'
