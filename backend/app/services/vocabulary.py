@@ -1,4 +1,4 @@
-"""Vocabulary extraction service using OpenAI API."""
+"""Vocabulary extraction service using OpenRouter API."""
 
 import json
 import logging
@@ -10,6 +10,10 @@ from pydantic import BaseModel, ConfigDict
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+class VocabularyExtractionError(Exception):
+    """Raised when vocabulary extraction fails for one or more segment batches."""
 
 
 class WordEntry(BaseModel):
@@ -51,13 +55,12 @@ def _build_vocab_prompt(segments: list[dict]) -> str:
     )
 
 
-_VOCAB_BATCH_SIZE = 8
+_VOCAB_BATCH_SIZE = 5
 
 
 async def _extract_batch(
     segments: list[dict],
     api_key: str,
-    model: str,
 ) -> dict[int, list[dict]]:
     """Extract vocabulary for a single batch of segments using Structured Outputs."""
     prompt = _build_vocab_prompt(segments)
@@ -74,20 +77,21 @@ async def _extract_batch(
 
     async with httpx.AsyncClient(timeout=180.0) as client:
         response = await client.post(
-            settings.openai_chat_url,
+            settings.openrouter_chat_url,
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
             json={
-                "model": model,
+                "model": settings.openrouter_model,
                 "messages": [{"role": "user", "content": prompt}],
                 "response_format": response_format,
                 "temperature": 0.1,
+                "reasoning": {"effort": "none"},
             },
         )
         if response.status_code != 200:
-            logger.error("OpenAI error %d: %s", response.status_code, response.text)
+            logger.error("OpenRouter error %d: %s", response.status_code, response.text)
         response.raise_for_status()
 
     data = response.json()
@@ -115,7 +119,6 @@ async def _extract_batch(
 async def extract_vocabulary(
     segments: list[dict],
     api_key: str,
-    model: str = "gpt-4o-mini",
 ) -> dict[int, list[dict]]:
     """Extract vocabulary for all segments in batches, returning segment_id -> words map."""
     if not segments:
@@ -126,7 +129,7 @@ async def extract_vocabulary(
     for i in range(0, len(segments), _VOCAB_BATCH_SIZE):
         batch = segments[i:i + _VOCAB_BATCH_SIZE]
         try:
-            batch_result = await _extract_batch(batch, api_key, model)
+            batch_result = await _extract_batch(batch, api_key)
             result.update(batch_result)
             logger.info(
                 "Vocabulary batch %d-%d: extracted words for %d/%d segments",
