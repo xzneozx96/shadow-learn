@@ -3,7 +3,7 @@ import type { AppSettings, ChatMessage, LessonMeta, Segment, VocabEntry } from '
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 interface ShadowLearnSchema extends DBSchema {
   lessons: { key: string; value: LessonMeta }
@@ -24,7 +24,7 @@ export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
 
 export async function initDB(): Promise<ShadowLearnDB> {
   return openDB<ShadowLearnSchema>(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion) {
+    async upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         db.createObjectStore('lessons', { keyPath: 'id' })
         db.createObjectStore('segments')
@@ -40,6 +40,39 @@ export async function initDB(): Promise<ShadowLearnDB> {
         const vocabStore = db.createObjectStore('vocabulary', { keyPath: 'id' })
         vocabStore.createIndex('by-lesson', 'sourceLessonId', { unique: false })
         vocabStore.createIndex('by-date', 'createdAt', { unique: false })
+      }
+      if (oldVersion < 4) {
+        // segments store: each record value is a Segment[] array stored under lessonId as key
+        const segStore = transaction.objectStore('segments')
+        let segCursor = await segStore.openCursor()
+        while (segCursor) {
+          const segments = segCursor.value as any[]
+          const migrated = segments.map((s: any) => {
+            const { chinese, pinyin, ...rest } = s
+            return {
+              ...rest,
+              text: chinese ?? s.text ?? '',
+              romanization: pinyin ?? s.romanization ?? '',
+            }
+          })
+          await segCursor.update(migrated)
+          segCursor = await segCursor.continue()
+        }
+
+        // vocabulary store: each record is a flat VocabEntry
+        const vocabStore = transaction.objectStore('vocabulary')
+        let vocabCursor = await vocabStore.openCursor()
+        while (vocabCursor) {
+          const entry = vocabCursor.value as any
+          const { pinyin, sourceSegmentChinese, ...rest } = entry
+          await vocabCursor.update({
+            ...rest,
+            romanization: pinyin ?? entry.romanization ?? '',
+            sourceSegmentText: sourceSegmentChinese ?? entry.sourceSegmentText ?? '',
+            sourceLanguage: entry.sourceLanguage ?? 'zh-CN',
+          })
+          vocabCursor = await vocabCursor.continue()
+        }
       }
     },
   })

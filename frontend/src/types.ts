@@ -6,7 +6,7 @@ export interface WordTiming {
 
 export interface Word {
   word: string
-  pinyin: string
+  romanization: string
   meaning: string
   usage: string
 }
@@ -15,8 +15,8 @@ export interface Segment {
   id: string
   start: number
   end: number
-  chinese: string
-  pinyin: string
+  text: string
+  romanization: string
   translations: Record<string, string>
   words: Word[]
   wordTimings?: WordTiming[]
@@ -85,13 +85,14 @@ export interface PronunciationAssessResult {
 export interface VocabEntry {
   id: string
   word: string
-  pinyin: string
+  romanization: string
   meaning: string
   usage: string
   sourceLessonId: string
   sourceLessonTitle: string
   sourceSegmentId: string
-  sourceSegmentChinese: string
+  sourceSegmentText: string
   sourceSegmentTranslation: string
+  sourceLanguage: string
   createdAt: string
 }
