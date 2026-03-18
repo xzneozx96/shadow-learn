@@ -9,8 +9,8 @@ import { DictationExercise } from '@/components/study/exercises/DictationExercis
 import { PinyinRecallExercise } from '@/components/study/exercises/PinyinRecallExercise'
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { ReconstructionExercise } from '@/components/study/exercises/ReconstructionExercise'
+import { TranslationExercise } from '@/components/study/exercises/TranslationExercise'
 import { ModePicker } from '@/components/study/ModePicker'
-import { ProgressBar } from '@/components/study/ProgressBar'
 import { SessionSummary } from '@/components/study/SessionSummary'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTTS } from '@/hooks/useTTS'
@@ -25,6 +25,10 @@ interface Question {
   clozeData?: { story: string, blanks: string[] }
   pronunciationData?: { sentence: string, translation: string }
   reconstructionTokens?: string[]
+  translationData?: {
+    sentence: { chinese: string, english: string }
+    direction: 'en-to-zh' | 'zh-to-en'
+  }
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
@@ -43,12 +47,17 @@ function distributeExercises(
   count: number,
   hasAzure: boolean,
   hasWriting: boolean,
+  hasOpenRouter: boolean,
 ): Exclude<ExerciseMode, 'mixed'>[] {
-  const available: Exclude<ExerciseMode, 'mixed'>[] = ['cloze', 'dictation', 'pinyin', 'reconstruction']
+  const available: Exclude<ExerciseMode, 'mixed'>[] = ['dictation', 'pinyin', 'reconstruction']
   if (hasAzure)
     available.push('pronunciation')
   if (hasWriting)
     available.push('writing')
+  if (hasOpenRouter) {
+    available.push('cloze')
+    available.push('translation')
+  }
 
   if (mode !== 'mixed') {
     return Array.from<Exclude<ExerciseMode, 'mixed'>>({ length: count }).fill(mode as Exclude<ExerciseMode, 'mixed'>)
@@ -76,7 +85,7 @@ interface StudySessionProps {
 export function StudySession({ lessonId, onClose }: StudySessionProps) {
   const { entriesByLesson } = useVocabulary()
   const { db, keys } = useAuth()
-  const { playTTS } = useTTS(db, keys)
+  const { playTTS, loadingText } = useTTS(db, keys)
 
   const entries = entriesByLesson[lessonId] ?? []
   const lessonTitle = entries[0]?.sourceLessonTitle ?? 'Unknown Lesson'
@@ -117,7 +126,11 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     const pronCount = types.filter(t => t === 'pronunciation').length
     const clozeCount = types.filter(t => t === 'cloze').length
 
-    const [clozeResp, pronResp] = await Promise.all([
+    const translationEntries = types
+      .map((t, i) => t === 'translation' ? pool[i % pool.length] : null)
+      .filter((e): e is VocabEntry => e !== null)
+
+    const [clozeResp, pronResp, ...translationResps] = await Promise.all([
       clozeCount > 0
         ? fetch(`${API_BASE}/api/quiz/generate`, {
             method: 'POST',
@@ -152,9 +165,29 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
             return r.json()
           })
         : Promise.resolve({ exercises: [] }),
+      ...translationEntries.map(entry =>
+        fetch(`${API_BASE}/api/translation/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            openrouter_api_key: keys?.openrouterApiKey,
+            word: entry.word,
+            pinyin: entry.pinyin,
+            meaning: entry.meaning,
+            usage: entry.usage ?? '',
+            sentence_count: 3,
+          }),
+          signal,
+        }).then(r => r.ok ? r.json() : Promise.reject(new Error('generate failed')))
+          .catch(() => null)
+      ),
     ])
 
-    return { clozeExercises: clozeResp.exercises ?? [], pronExercises: pronResp.exercises ?? [] }
+    return {
+      clozeExercises: clozeResp.exercises ?? [],
+      pronExercises: pronResp.exercises ?? [],
+      translationResults: translationResps as (null | { sentences: { chinese: string, english: string }[] })[],
+    }
   }
 
   async function handleStart() {
@@ -165,19 +198,34 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     setLoading(true)
 
     const hasWriting = entries.some(e => isWritingSupported(e.word))
-    const types = distributeExercises(entries, mode, count, hasAzure, hasWriting)
+    const types = distributeExercises(entries, mode, count, hasAzure, hasWriting, Boolean(keys?.openrouterApiKey))
     if (mode === 'mixed' && !hasAzure)
       setAzureBanner(true)
 
     const pool = entries.toSorted(() => Math.random() - 0.5)
 
     try {
-      const { clozeExercises, pronExercises } = await fetchAIContent(types, pool, controller.signal)
+      const { clozeExercises, pronExercises, translationResults } = await fetchAIContent(types, pool, controller.signal)
       let clozeIdx = 0
       let pronIdx = 0
+      let translationIdx = 0
 
-      const qs: Question[] = types.map((type, i) => {
+      const qs: Question[] = []
+      for (let i = 0; i < types.length; i++) {
+        const type = types[i]
         const entry = pool[i % pool.length]
+
+        if (type === 'translation') {
+          const result = translationResults[translationIdx++]
+          if (!result)
+            continue
+          const sentences = result.sentences
+          const sentence = sentences[Math.floor(Math.random() * sentences.length)]
+          const direction: 'en-to-zh' | 'zh-to-en' = Math.random() < 0.5 ? 'en-to-zh' : 'zh-to-en'
+          qs.push({ type, entry, translationData: { sentence, direction } })
+          continue
+        }
+
         const q: Question = { type, entry }
         if (type === 'cloze')
           q.clozeData = clozeExercises[clozeIdx++]
@@ -185,8 +233,8 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
           q.pronunciationData = pronExercises[pronIdx++]
         if (type === 'reconstruction')
           q.reconstructionTokens = getReconstructionTokens(entry, entries)
-        return q
-      })
+        qs.push(q)
+      }
 
       setQuestions(qs)
       setCurrent(0)
@@ -195,7 +243,9 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     }
     catch {
       toast.error('AI exercise generation failed — falling back to basic exercises')
-      const fallbackTypes = types.map(t => (t === 'cloze' ? 'pinyin' : t)) as Exclude<ExerciseMode, 'mixed'>[]
+      const fallbackTypes = types.map(t =>
+        (t === 'cloze' || t === 'translation') ? 'pinyin' : t
+      ) as Exclude<ExerciseMode, 'mixed'>[]
       const qs: Question[] = fallbackTypes.map((type, i) => {
         const entry = pool[i % pool.length]
         const q: Question = { type, entry }
@@ -228,12 +278,13 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
   const q = questions[current]
 
   // Auto-skip writing questions for entries whose characters aren't in CJK range
-  useEffect(() => {
-    if (q?.type === 'writing' && !isWritingSupported(q.entry.word)) {
+  // (setState-during-render pattern — avoids effect setter)
+  const [lastAutoSkipCheck, setLastAutoSkipCheck] = useState(-1)
+  if (phase === 'session' && q && lastAutoSkipCheck !== current) {
+    setLastAutoSkipCheck(current)
+    if (q.type === 'writing' && !isWritingSupported(q.entry.word))
       handleNext(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current])
+  }
 
   return (
     <div className="relative min-h-full">
@@ -286,6 +337,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
                 playTTS={playTTS}
+                loadingText={loadingText}
               />
             )}
             {q.type === 'cloze' && q.clozeData && (
@@ -321,6 +373,15 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
               <CharacterWritingExercise
                 key={current}
                 entry={q.entry}
+                progress={`${current + 1} / ${questions.length}`}
+                onNext={handleNext}
+              />
+            )}
+            {q.type === 'translation' && q.translationData && (
+              <TranslationExercise
+                key={current}
+                sentence={q.translationData.sentence}
+                direction={q.translationData.direction}
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
               />

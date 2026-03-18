@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export type ExerciseMode = 'cloze' | 'dictation' | 'pinyin' | 'pronunciation' | 'reconstruction' | 'writing' | 'mixed'
+export type ExerciseMode = 'cloze' | 'dictation' | 'pinyin' | 'pronunciation' | 'reconstruction' | 'writing' | 'translation' | 'mixed'
 
 const MODES: { id: ExerciseMode, icon: string, name: string, desc: string }[] = [
   { id: 'mixed', icon: '✍️🎧🎤', name: 'Mixed', desc: 'All types shuffled together' },
