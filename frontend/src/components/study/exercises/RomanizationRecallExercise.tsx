@@ -37,7 +37,20 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
       <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
       {!checked
         ? <Button size="sm" onClick={handleCheck}>Check →</Button>
-        : <Button size="sm" onClick={() => onNext(accuracyScore)}>Next →</Button>}
+        : (
+            <Button
+              size="sm"
+              onClick={() => {
+                const today = new Date().toISOString().split('T')[0]
+                const mistakes: MistakeExample[] = accuracyScore < 100
+                  ? [{ userAnswer: value.trim(), correctAnswer: entry.romanization?.trim() ?? '', date: today }]
+                  : []
+                onNext(accuracyScore, { mistakes: mistakes.length > 0 ? mistakes : undefined })
+              }}
+            >
+              Next →
+            </Button>
+          )}
     </div>
   )
 
