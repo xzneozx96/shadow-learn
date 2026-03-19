@@ -43,7 +43,9 @@ export function WorkbookPage() {
     }
     if (db)
       void fetchDue()
-  }, [db, entries, getDueItemsList])
+    // getDueItemsList is an inline fn in useTracking, not stable — intentionally excluded
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, entries])
 
   // Fetch Progress Stats
   useEffect(() => {

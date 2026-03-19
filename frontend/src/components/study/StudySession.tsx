@@ -316,6 +316,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
             <div className="flex gap-3 w-full">
               <button
                 type="button"
+                autoFocus
                 onClick={handleCancelLeave}
                 className={cn(
                   'flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium',
