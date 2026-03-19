@@ -134,7 +134,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
     }
     catch {
       toast.error('Translation evaluation failed. Moving on.')
-      onNext(0)
+      onNext(0, { skipped: true })
     }
     finally {
       setLoading(false)
