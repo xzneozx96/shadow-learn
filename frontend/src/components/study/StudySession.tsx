@@ -1,4 +1,5 @@
 import type { ExerciseMode } from '@/components/study/ModePicker'
+import type { MistakeExample } from '@/db'
 import type { VocabEntry } from '@/types'
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -13,9 +14,10 @@ import { TranslationExercise } from '@/components/study/exercises/TranslationExe
 import { ModePicker } from '@/components/study/ModePicker'
 import { SessionSummary } from '@/components/study/SessionSummary'
 import { useAuth } from '@/contexts/AuthContext'
+import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useQuizGeneration } from '@/hooks/useQuizGeneration'
+import { useTracking } from '@/hooks/useTracking'
 import { useTTS } from '@/hooks/useTTS'
-import { useVocabulary } from '@/hooks/useVocabulary'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
 
@@ -80,16 +82,20 @@ function distributeExercises(
 interface StudySessionProps {
   lessonId: string
   onClose: () => void
+  preloadedEntries?: VocabEntry[]
 }
 
-export function StudySession({ lessonId, onClose }: StudySessionProps) {
+export function StudySession({ lessonId, onClose, preloadedEntries }: StudySessionProps) {
   const { entriesByLesson } = useVocabulary()
   const { db, keys } = useAuth()
+  const { logExerciseResult } = useTracking()
   const { playTTS, loadingText } = useTTS(db, keys)
   const { generateQuiz, loading } = useQuizGeneration()
 
-  const entries = entriesByLesson[lessonId] ?? []
-  const lessonTitle = entries[0]?.sourceLessonTitle ?? 'Unknown Lesson'
+  const entries = preloadedEntries ?? entriesByLesson[lessonId] ?? []
+  const lessonTitle = preloadedEntries
+    ? 'Review Session'
+    : (entries[0]?.sourceLessonTitle ?? 'Unknown Lesson')
   const caps = getLanguageCaps(entries[0]?.sourceLanguage)
 
   const [phase, setPhase] = useState<Phase>('picker')
@@ -97,7 +103,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
   const [count, setCount] = useState(10)
   const [questions, setQuestions] = useState<Question[]>([])
   const [current, setCurrent] = useState(0)
-  const [results, setResults] = useState<{ entry: VocabEntry, correct: boolean }[]>([])
+  const [results, setResults] = useState<{ entry: VocabEntry, correct: boolean, score: number }[]>([])
   const [azureBanner, setAzureBanner] = useState(false)
   // Guard against double-click and track the in-flight controller for cleanup
   const abortRef = useRef<AbortController | null>(null)
@@ -123,6 +129,25 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
       setAzureBanner(true)
 
     const pool = entries.toSorted(() => Math.random() - 0.5)
+
+    if (preloadedEntries) {
+      const fallbackTypes = types.map(t =>
+        (t === 'cloze' || t === 'translation') ? 'romanization-recall' : t,
+      ) as Exclude<ExerciseMode, 'mixed'>[]
+      const qs: Question[] = fallbackTypes.map((type, i) => {
+        const entry = pool[i % pool.length]
+        const q: Question = { type, entry }
+        if (type === 'reconstruction')
+          q.reconstructionTokens = getReconstructionTokens(entry, entries)
+        return q
+      })
+      setQuestions(qs)
+      setCurrent(0)
+      setResults([])
+      setPhase('session')
+      abortRef.current = null
+      return
+    }
 
     try {
       const { clozeExercises, pronExercises, translationSentences } = await generateQuiz(types, pool, controller.signal, entries[0]?.sourceLanguage)
@@ -181,9 +206,13 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
     }
   }
 
-  function handleNext(correct: boolean) {
+  function handleNext(score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) {
     const q = questions[current]
-    setResults(r => [...r, { entry: q.entry, correct }])
+    if (q && !opts?.skipped) {
+      void logExerciseResult({ vocabEntry: q.entry, score, exerciseType: q.type, mistakes: opts?.mistakes })
+      setResults(r => [...r, { entry: q.entry, score, correct: score >= 60 }])
+    }
+
     if (current + 1 >= questions.length) {
       setPhase('summary')
     }
@@ -200,7 +229,7 @@ export function StudySession({ lessonId, onClose }: StudySessionProps) {
   if (phase === 'session' && q && lastAutoSkipCheck !== current) {
     setLastAutoSkipCheck(current)
     if (q.type === 'writing' && !isWritingSupported(q.entry.word))
-      handleNext(false)
+      handleNext(0, { skipped: true })
   }
 
   return (
