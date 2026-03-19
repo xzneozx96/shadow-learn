@@ -1,6 +1,6 @@
 import type HanziWriter from 'hanzi-writer'
-import type { VocabEntry } from '@/types'
 import type { LanguageCapabilities } from '@/lib/language-caps'
+import type { VocabEntry } from '@/types'
 import { useRef, useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
@@ -10,11 +10,11 @@ import { HanziWriterCanvas } from './HanziWriterCanvas'
 interface Props {
   entry: VocabEntry
   progress?: string
-  onNext: (correct: boolean) => void
+  onNext: (score: number, opts?: { skipped?: boolean }) => void
   caps: LanguageCapabilities
 }
 
-export function CharacterWritingExercise({ entry, progress = '', onNext, caps }: Props) {
+export function CharacterWritingExercise({ entry, progress = '', onNext }: Props) {
   const characters = [...entry.word]
   const [charIndex, setCharIndex] = useState(0)
   const [hintAnimating, setHintAnimating] = useState(false)
@@ -37,7 +37,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, caps }:
       const next = idx + 1
       if (next >= characters.length) {
         // Use setTimeout to call onNext outside the setState cycle
-        setTimeout(onNext, 0, !anyHintUsedRef.current)
+        setTimeout(onNext, 0, anyHintUsedRef.current ? 80 : 100)
         return idx
       }
       return next
@@ -52,7 +52,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, caps }:
 
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
+      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
       {hintAnimating
         ? (
             <Button size="sm" onClick={advance}>Continue →</Button>

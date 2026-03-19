@@ -1,3 +1,4 @@
+import type { MistakeExample } from '@/db'
 import type { VocabEntry } from '@/types'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -11,7 +12,7 @@ interface Props {
   entry: VocabEntry
   words: string[]
   progress?: string
-  onNext: (correct: boolean) => void
+  onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
 }
 
 export function ReconstructionExercise({ entry, words, progress = '', onNext }: Props) {
@@ -24,10 +25,10 @@ export function ReconstructionExercise({ entry, words, progress = '', onNext }: 
 
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
+      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
       {!checked
         ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
-        : <Button size="sm" onClick={() => onNext(correct)}>Next →</Button>}
+        : <Button size="sm" onClick={() => onNext(correct ? 100 : 0)}>Next →</Button>}
     </div>
   )
 

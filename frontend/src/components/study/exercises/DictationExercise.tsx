@@ -1,3 +1,4 @@
+import type { MistakeExample } from '@/db'
 import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { VocabEntry } from '@/types'
 import { Loader2, Volume2 } from 'lucide-react'
@@ -5,12 +6,13 @@ import { useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { LanguageInput } from '@/components/ui/LanguageInput'
+import { computeAccuracyScore, computeCharDiff } from '@/lib/diff-utils'
 import { cn } from '@/lib/utils'
 
 interface Props {
   entry: VocabEntry
   progress?: string
-  onNext: (correct: boolean) => void
+  onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
   playTTS: (text: string) => Promise<void>
   loadingText: string | null
   caps: LanguageCapabilities
@@ -20,14 +22,15 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
   const expected = entry.sourceSegmentText
-  const correct = value.trim() === expected.trim()
+  const diff = checked ? computeCharDiff(value.trim(), expected.trim()) : []
+  const accuracyScore = checked ? computeAccuracyScore(diff) : 0
 
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
+      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
       {!checked
         ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
-        : <Button size="sm" onClick={() => onNext(correct)}>Next →</Button>}
+        : <Button size="sm" onClick={() => onNext(accuracyScore)}>Next →</Button>}
     </div>
   )
 
@@ -69,14 +72,35 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
       />
 
       {checked && (
-        <div className={cn(
-          'mt-4 rounded-lg border px-4 py-3 text-sm',
-          correct
-            ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
-            : 'border-destructive/25 bg-destructive/10 text-destructive',
-        )}
-        >
-          {correct ? '✓ Correct!' : `✗ Incorrect — ${expected}`}
+        <div className="mt-4 space-y-3">
+          <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-3">Your answer</p>
+            <div className="flex flex-wrap gap-1">
+              {diff.map((tok, i) => (
+                <span
+                  key={`${i}-${tok.text}`}
+                  className={cn(
+                    'text-xl font-semibold px-1.5 py-0.5 rounded-md',
+                    tok.correct
+                      ? 'text-emerald-500 bg-emerald-500/10'
+                      : 'text-destructive bg-destructive/10',
+                  )}
+                >
+                  {tok.text || '□'}
+                </span>
+              ))}
+            </div>
+          </div>
+          <p className={cn('text-sm font-bold', accuracyScore === 100 ? 'text-emerald-400' : 'text-amber-400')}>
+            {accuracyScore}
+            % accurate
+          </p>
+          {accuracyScore < 100 && (
+            <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-1">Correct answer</p>
+              <p className="text-xl font-medium">{expected}</p>
+            </div>
+          )}
         </div>
       )}
     </ExerciseCard>

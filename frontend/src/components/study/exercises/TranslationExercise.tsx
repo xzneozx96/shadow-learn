@@ -34,7 +34,7 @@ interface Props {
   sentence: Sentence
   direction: 'en-to-zh' | 'zh-to-en'
   progress?: string
-  onNext: (correct: boolean) => void
+  onNext: (score: number, opts?: { skipped?: boolean }) => void
   caps: LanguageCapabilities
 }
 
@@ -82,7 +82,7 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">{label}</span>
+        <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground/70">{label}</span>
         <span className={cn('text-sm font-bold tabular-nums', scoreColor(feedback.score))}>
           {feedback.score}
           <span className="text-muted-foreground/50 font-normal text-sm">/100</span>
@@ -134,7 +134,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
     }
     catch {
       toast.error('Translation evaluation failed. Moving on.')
-      onNext(false)
+      onNext(0)
     }
     finally {
       setLoading(false)
@@ -142,7 +142,6 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
   }
 
   if (result) {
-    const passed = result.overall_score >= 60
     return (
       <ExerciseCard type="Translation" progress={progress} footer={null}>
         <div className="space-y-4">
@@ -150,19 +149,19 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           {/* Source + answer/reference comparison */}
           <div className="rounded-lg border border-border/50 bg-muted/20 overflow-hidden text-sm">
             <div className="px-4 py-3 border-b border-border/40">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Question to translate</p>
+              <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Question to translate</p>
               <p className="font-medium leading-snug">{source}</p>
             </div>
             <div className="grid grid-cols-2 divide-x divide-border/40">
               <div className="px-3 py-2.5">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Your answer</p>
+                <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Your answer</p>
                 <p className="text-sm italic text-foreground/75 leading-relaxed">{value}</p>
               </div>
               <div className="px-3 py-2.5">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Model answer</p>
+                <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Model answer</p>
                 <p className="text-sm text-foreground leading-relaxed">{reference}</p>
                 {direction === 'en-to-zh' && (
-                  <p className="text-xs text-muted-foreground mt-1">{sentence.romanization}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{sentence.romanization}</p>
                 )}
               </div>
             </div>
@@ -189,12 +188,12 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           {/* Tip */}
           {result.tip && (
             <div className="rounded-lg border border-sky-500/25 bg-sky-500/8 px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-sky-400/80 mb-1.5">Tip</p>
+              <p className="text-sm font-bold uppercase tracking-widest text-sky-400/80 mb-1.5">Tip</p>
               <p className="text-sm text-foreground/90 leading-relaxed">{result.tip}</p>
             </div>
           )}
 
-          <Button className="w-full" onClick={() => onNext(passed)}>
+          <Button className="w-full" onClick={() => onNext(result.overall_score)}>
             Next →
           </Button>
         </div>
@@ -206,7 +205,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
     <ExerciseCard type="Translation" progress={progress} footer={null}>
       <div className="space-y-8">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">
+          <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">
             Translate to
             {' '}
             {targetLang === 'english' ? 'English' : caps.languageName}
@@ -234,7 +233,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onNext(false)}
+            onClick={() => onNext(0, { skipped: true })}
           >
             Skip
           </Button>

@@ -1,3 +1,4 @@
+import type { MistakeExample } from '@/db'
 import type { VocabEntry } from '@/types'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -15,7 +16,7 @@ interface Props {
   question: ClozeQuestion
   entries: VocabEntry[]
   progress?: string
-  onNext: (correct: boolean) => void
+  onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
 }
 
 const BLANK_REGEX = /\{\{([^}]+)\}\}/g
@@ -55,10 +56,10 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
 
   const footer = (
     <div className="flex items-center justify-center gap-3 px-[18px] py-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
+      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
       {!checked
         ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
-        : <Button size="sm" onClick={() => onNext(allCorrect)}>Next →</Button>}
+        : <Button size="sm" onClick={() => onNext(allCorrect ? 100 : 0)}>Next →</Button>}
     </div>
   )
 

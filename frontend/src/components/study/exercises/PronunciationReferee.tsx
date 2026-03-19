@@ -12,7 +12,7 @@ interface PronunciationSentence { sentence: string, translation: string }
 interface Props {
   sentence: PronunciationSentence
   progress?: string
-  onNext: (correct: boolean) => void
+  onNext: (score: number, opts?: { skipped?: boolean }) => void
 }
 
 function scoreColor(n: number) {
@@ -66,7 +66,7 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
     ? null
     : (
         <div className="flex items-center justify-center gap-3 p-3">
-          <Button variant="ghost" size="sm" onClick={() => onNext(false)}>Skip</Button>
+          <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
           <Button
             size="sm"
             disabled={!canSubmit}
@@ -184,9 +184,9 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
           </div>
 
           <div className="space-y-1.5">
-            {result.words.map(w => (
+            {result.words.map((w, i) => (
               <div
-                key={w.word}
+                key={`${w.word}-${i}`}
                 className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2"
               >
                 <span className={cn('w-10 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
@@ -229,7 +229,7 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
             </Button>
             <Button
               className="flex-1"
-              onClick={() => onNext(result.overall.accuracy >= 70)}
+              onClick={() => onNext(Math.round(result.overall.accuracy))}
             >
               Next →
             </Button>
