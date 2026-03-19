@@ -89,6 +89,47 @@ describe('useTracking', () => {
       score: 100,
     })).resolves.toBeNull()
   })
+
+  describe('logSessionComplete', () => {
+    let db: Awaited<ReturnType<typeof initDB>>
+
+    beforeEach(async () => {
+      globalThis.indexedDB = new IDBFactory()
+      db = await initDB()
+      vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+    })
+
+    it('increments totalSessions from 0 to 1', async () => {
+      const { result } = renderHook(() => useTracking())
+      await result.current.logSessionComplete()
+      const stats = await db.get('progress-db', 'global')
+      expect(stats?.totalSessions).toBe(1)
+    })
+
+    it('increments on successive calls', async () => {
+      const { result } = renderHook(() => useTracking())
+      await result.current.logSessionComplete()
+      await result.current.logSessionComplete()
+      const stats = await db.get('progress-db', 'global')
+      expect(stats?.totalSessions).toBe(2)
+    })
+
+    it('does not clobber other progress fields', async () => {
+      const { result } = renderHook(() => useTracking())
+      await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 100 })
+      await result.current.logSessionComplete()
+      const stats = await db.get('progress-db', 'global')
+      expect(stats?.totalSessions).toBe(1)
+      expect(stats?.totalExercises).toBe(1)
+    })
+
+    it('does nothing when db is null', async () => {
+      vi.mocked(useAuth).mockReturnValue({ db: null, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+      const { result } = renderHook(() => useTracking())
+      // Should not throw
+      await expect(result.current.logSessionComplete()).resolves.toBeUndefined()
+    })
+  })
 })
 
 // ── Per-exercise-type routing ─────────────────────────────────────────────────
