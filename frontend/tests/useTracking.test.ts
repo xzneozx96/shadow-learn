@@ -316,6 +316,7 @@ describe('mistake wiring — end-to-end contract', () => {
     })
     const pattern = await db.get('mistakes-db', 'entry-1')
     expect(pattern?.examples[0].userAnswer).toBe('ni hao')
+    expect(pattern?.examples[0].correctAnswer).toBe('nǐ hǎo')
   })
 
   it('cloze with two wrong blanks: both stored as separate examples', async () => {
