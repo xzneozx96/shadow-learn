@@ -65,7 +65,7 @@ export function WorkbookPage() {
       }
     }
     void fetchData()
-  }, [db])
+  }, [db, reviewOpen])
 
   const lastSaved = entries.length
     ? entries.reduce((a, b) => (a.createdAt > b.createdAt ? a : b)).createdAt

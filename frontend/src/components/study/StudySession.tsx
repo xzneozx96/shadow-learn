@@ -138,6 +138,17 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [phase])
 
+  useEffect(() => {
+    if (!confirmLeave)
+      return
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape')
+        handleCancelLeave()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [confirmLeave])
+
   const hasAzure = Boolean(keys?.azureSpeechKey)
 
   async function handleStart() {
@@ -305,6 +316,8 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
 
       {confirmLeave && (
         <div
+          role="dialog"
+          aria-label="Confirm leave session"
           className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-xl"
           onKeyDown={(e) => { if (e.key === 'Escape') handleCancelLeave() }}
         >
