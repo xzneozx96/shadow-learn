@@ -16,7 +16,16 @@ vi.mock('@/contexts/VocabularyContext', () => ({
 }))
 
 vi.mock('@/hooks/useTracking', () => ({
-  useTracking: () => ({ logExerciseResult: vi.fn(), getDueItemCount: vi.fn(), getDueItemsList: vi.fn() }),
+  useTracking: () => ({
+    logExerciseResult: vi.fn(),
+    getDueItemCount: vi.fn(),
+    getDueItemsList: vi.fn(),
+    logSessionComplete: vi.fn(),
+  }),
+}))
+
+vi.mock('react-router-dom', () => ({
+  useBlocker: () => ({ state: 'unblocked', proceed: vi.fn(), reset: vi.fn() }),
 }))
 
 vi.mock('@/hooks/useQuizGeneration', () => ({

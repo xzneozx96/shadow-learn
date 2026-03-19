@@ -3,6 +3,7 @@ import type { MistakeExample } from '@/db'
 import type { VocabEntry } from '@/types'
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useBlocker } from 'react-router-dom'
 import { toast } from 'sonner'
 import { CharacterWritingExercise } from '@/components/study/exercises/CharacterWritingExercise'
 import { ClozeExercise } from '@/components/study/exercises/ClozeExercise'
@@ -20,6 +21,7 @@ import { useTracking } from '@/hooks/useTracking'
 import { useTTS } from '@/hooks/useTTS'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
+import { cn } from '@/lib/utils'
 
 type Phase = 'picker' | 'session' | 'summary'
 
@@ -83,12 +85,13 @@ interface StudySessionProps {
   lessonId: string
   onClose: () => void
   preloadedEntries?: VocabEntry[]
+  onActiveChange?: (active: boolean) => void
 }
 
-export function StudySession({ lessonId, onClose, preloadedEntries }: StudySessionProps) {
+export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChange }: StudySessionProps) {
   const { entriesByLesson } = useVocabulary()
   const { db, keys } = useAuth()
-  const { logExerciseResult } = useTracking()
+  const { logExerciseResult, logSessionComplete } = useTracking()
   const { playTTS, loadingText } = useTTS(db, keys)
   const { generateQuiz, loading } = useQuizGeneration()
 
@@ -108,12 +111,32 @@ export function StudySession({ lessonId, onClose, preloadedEntries }: StudySessi
   // Guard against double-click and track the in-flight controller for cleanup
   const abortRef = useRef<AbortController | null>(null)
 
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const confirmedRef = useRef(false)
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      phase === 'session'
+      && !confirmedRef.current
+      && currentLocation.pathname !== nextLocation.pathname,
+  )
+
   useEffect(() => {
     const ctrl = abortRef
     return () => {
       ctrl.current?.abort()
     }
   }, [])
+
+  useEffect(() => {
+    if (phase !== 'session')
+      return
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [phase])
 
   const hasAzure = Boolean(keys?.azureSpeechKey)
 
@@ -208,17 +231,19 @@ export function StudySession({ lessonId, onClose, preloadedEntries }: StudySessi
 
   function handleNext(score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) {
     const q = questions[current]
+    const isLast = current + 1 >= questions.length
+
     if (q && !opts?.skipped) {
       void logExerciseResult({ vocabEntry: q.entry, score, exerciseType: q.type, mistakes: opts?.mistakes })
       setResults(r => [...r, { entry: q.entry, score, correct: score >= 60 }])
+      if (isLast)
+        void logSessionComplete()
     }
 
-    if (current + 1 >= questions.length) {
+    if (isLast)
       setPhase('summary')
-    }
-    else {
+    else
       setCurrent(c => c + 1)
-    }
   }
 
   const q = questions[current]
@@ -232,17 +257,87 @@ export function StudySession({ lessonId, onClose, preloadedEntries }: StudySessi
       handleNext(0, { skipped: true })
   }
 
+  // Sync blocker state → confirmLeave (setState-during-render)
+  const [lastBlockerState, setLastBlockerState] = useState(blocker.state)
+  if (lastBlockerState !== blocker.state) {
+    setLastBlockerState(blocker.state)
+    if (blocker.state === 'blocked')
+      setConfirmLeave(true)
+  }
+
+  // Notify parent and reset leave state when phase changes (setState-during-render)
+  const [lastPhase, setLastPhase] = useState<Phase>(phase)
+  if (lastPhase !== phase) {
+    setLastPhase(phase)
+    onActiveChange?.(phase === 'session')
+    if (phase !== 'session') {
+      confirmedRef.current = false
+      setConfirmLeave(false)
+    }
+  }
+
+  function handleConfirmLeave() {
+    confirmedRef.current = true
+    setConfirmLeave(false)
+    if (blocker.state === 'blocked')
+      blocker.proceed()
+    else
+      onClose()
+  }
+
+  function handleCancelLeave() {
+    setConfirmLeave(false)
+    if (blocker.state === 'blocked')
+      blocker.reset()
+  }
+
   return (
     <div className="relative min-h-full">
       {/* Close button — always visible */}
       <button
         type="button"
         aria-label="Close"
-        onClick={onClose}
+        onClick={() => phase === 'session' ? setConfirmLeave(true) : onClose()}
         className="absolute right-4 top-4 z-10 rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
       >
         <X className="size-5" />
       </button>
+
+      {confirmLeave && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-xl"
+          onKeyDown={(e) => { if (e.key === 'Escape') handleCancelLeave() }}
+        >
+          <div className="flex flex-col items-center gap-5 max-w-xs text-center px-6">
+            <p className="text-base font-semibold">Leave session?</p>
+            <p className="text-sm text-muted-foreground">
+              Progress for this session will be lost.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={handleCancelLeave}
+                className={cn(
+                  'flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium',
+                  'text-foreground hover:bg-muted/50 transition-colors',
+                )}
+              >
+                Keep going
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLeave}
+                className={cn(
+                  'flex-1 rounded-md px-4 py-2 text-sm font-medium',
+                  'bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors',
+                )}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-6 py-20">
         {/* Picker */}

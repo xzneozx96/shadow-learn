@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/contexts/AuthContext'
+import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useTTS } from '@/hooks/useTTS'
-import { useVocabulary } from '@/hooks/useVocabulary'
 
 interface LessonWorkbookPanelProps {
   lessonId: string
@@ -21,15 +21,28 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const entries = entriesByLesson[lessonId] ?? []
   const count = entries.length
   const [studyOpen, setStudyOpen] = useState(false)
+  const [sessionActive, setSessionActive] = useState(false)
 
   return (
     <div className="flex h-full flex-col">
-      <Dialog open={studyOpen} onOpenChange={setStudyOpen}>
+      <Dialog
+        open={studyOpen}
+        disablePointerDismissal={sessionActive}
+        onOpenChange={(open, _eventDetails) => {
+          if (!open && sessionActive)
+            return
+          setStudyOpen(open)
+        }}
+      >
         <DialogContent
           className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-2xl"
           showCloseButton={false}
         >
-          <StudySession lessonId={lessonId} onClose={() => setStudyOpen(false)} />
+          <StudySession
+            lessonId={lessonId}
+            onClose={() => setStudyOpen(false)}
+            onActiveChange={setSessionActive}
+          />
         </DialogContent>
       </Dialog>
 

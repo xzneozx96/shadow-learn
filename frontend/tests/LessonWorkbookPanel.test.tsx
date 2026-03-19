@@ -20,7 +20,7 @@ vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ db: null }),
 }))
 
-vi.mock('@/hooks/useVocabulary', () => ({
+vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: () => mockVocab,
 }))
 
