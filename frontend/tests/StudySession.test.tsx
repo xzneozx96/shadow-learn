@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { StudySession } from '@/components/study/StudySession'
 
 // Mock all deps that StudySession pulls in
-vi.mock('@/hooks/useVocabulary', () => ({
+vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: () => ({
     entriesByLesson: { lesson_1: [] },
     entries: [],
@@ -13,6 +13,14 @@ vi.mock('@/hooks/useVocabulary', () => ({
     save: vi.fn(),
     remove: vi.fn(),
   }),
+}))
+
+vi.mock('@/hooks/useTracking', () => ({
+  useTracking: () => ({ logExerciseResult: vi.fn(), getDueItemCount: vi.fn(), getDueItemsList: vi.fn() }),
+}))
+
+vi.mock('@/hooks/useQuizGeneration', () => ({
+  useQuizGeneration: () => ({ generateQuiz: vi.fn(), loading: false }),
 }))
 
 vi.mock('@/contexts/AuthContext', () => ({
