@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { LessonView } from '@/components/lesson/LessonView'
 import { Library } from '@/components/library/Library'
@@ -14,6 +14,29 @@ import { VocabularyProvider } from '@/contexts/VocabularyContext'
 import { DocumentationPage } from '@/pages/DocumentationPage'
 import { StudySessionPage } from '@/pages/StudySessionPage'
 import { WorkbookPage } from '@/pages/WorkbookPage'
+
+function AppLayout() {
+  return (
+    <PlayerProvider>
+      <Outlet />
+    </PlayerProvider>
+  )
+}
+
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      { path: '/', element: <Library /> },
+      { path: '/create', element: <CreateLesson /> },
+      { path: '/docs', element: <DocumentationPage /> },
+      { path: '/lesson/:id', element: <LessonView /> },
+      { path: '/settings', element: <Settings /> },
+      { path: '/vocabulary', element: <WorkbookPage /> },
+      { path: '/vocabulary/:lessonId/study', element: <StudySessionPage /> },
+    ],
+  },
+])
 
 function AuthGate() {
   const { isFirstSetup, isUnlocked } = useAuth()
@@ -41,19 +64,7 @@ function AuthGate() {
   return (
     <VocabularyProvider>
       <LessonsProvider>
-        <BrowserRouter>
-          <PlayerProvider>
-            <Routes>
-              <Route path="/" element={<Library />} />
-              <Route path="/create" element={<CreateLesson />} />
-              <Route path="/docs" element={<DocumentationPage />} />
-              <Route path="/lesson/:id" element={<LessonView />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/vocabulary" element={<WorkbookPage />} />
-              <Route path="/vocabulary/:lessonId/study" element={<StudySessionPage />} />
-            </Routes>
-          </PlayerProvider>
-        </BrowserRouter>
+        <RouterProvider router={router} />
       </LessonsProvider>
     </VocabularyProvider>
   )
