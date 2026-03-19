@@ -41,9 +41,9 @@ message.parts[] surfaces tool-invocation results
 CompanionPanel renders text parts + ExerciseRenderer for tool parts
 ```
 
-**Backend role:** Receive `{ messages, systemPrompt, openrouterApiKey }`, call OpenRouter via the `openai` Python client using the data-stream response protocol, stream back in AI SDK UI message format. ~50 lines of Python (see Backend Streaming Protocol below).
+**Backend role:** Receive `{ messages, system_prompt, openrouter_api_key, tools }`, call OpenRouter via the `openai` Python client, stream back in AI SDK v5 UI message format with `x-vercel-ai-ui-message-stream: v1` header.
 
-**Frontend role:** All tool execution, IDB access, component rendering, memory management.
+**Frontend role:** All tool execution, IDB access, component rendering, memory management. Frontend sends tool JSON schemas in the request body — backend passes them to the LLM without executing them.
 
 ### CompanionPanel Hook Boundary
 
@@ -51,13 +51,22 @@ CompanionPanel renders text parts + ExerciseRenderer for tool parts
 
 ### Package Dependencies
 
-| Package | Purpose |
-|---|---|
-| `ai` | `useChat`, `tool()`, schema types, `UIMessage` |
-| `@ai-sdk/react` | `useChat` React hook |
-| `zod` | Tool parameter schemas (already in project) |
+| Package | Version | Purpose |
+|---|---|---|
+| `ai` | `^5.0.76` | `useChat`, schema types, `UIMessage` (v5 parts API) |
+| `@ai-sdk/react` | `^2.0.76` | `useChat` React hook |
+| `zod` | `^3.23.8` | Tool parameter schemas (already in project) |
 
 No new backend Python packages required — uses existing `openai` client pointed at OpenRouter.
+
+### Backend Streaming — Python Confirmed
+
+The official `ai-sdk-preview-python-streaming` sample confirms Python is fully viable. The `agent.py` route adapts two utilities from that sample:
+
+- **`stream.py`** → adapted `stream_agent()`: handles the UI message stream SSE format (`start`, `text-start`, `text-delta`, `text-end`, `tool-input-start`, `tool-input-delta`, `tool-input-available`, `finish`). Remove server-side tool execution (lines 179–207 in the original) — our tools execute client-side.
+- **`prompt.py`** → adapted `convert_to_openai_messages()`: converts AI SDK v5 `UIMessage` parts format → OpenAI API messages. Remove attachment handling (unused in this project).
+
+**Tool definitions sent by client.** The frontend sends the tool JSON schemas in the request body (`AgentRequest.tools`) alongside `messages`, `system_prompt`, and `openrouter_api_key`. The backend does not hard-code tool schemas — it passes whatever schemas the client sends to `client.chat.completions.create(tools=...)`. This keeps tool definitions co-located with their execute functions in `agent-tools.ts`.
 
 ### Backend Streaming Protocol
 
@@ -172,14 +181,26 @@ For `pronunciation`, `onToolCall` ignores `itemIds`, fetches the segment from th
 
 ## Generative UI — Exercise Rendering
 
+### AI SDK v5 Part Type Format
+
+In AI SDK v5 (`ai@^5.0`), tool parts use a **dynamic type** based on the tool name:
+
+| Concept | AI SDK v4 (old) | AI SDK v5 (used here) |
+|---|---|---|
+| Part type | `"tool-invocation"` | `"tool-{toolName}"` e.g. `"tool-render_exercise"` |
+| Input state | `"call"` / `"partial-call"` | `"input-streaming"` / `"input-available"` |
+| Output state | `"result"` | `"output-available"` |
+| Input field | `part.args` | `part.input` |
+| Output field | `part.result` | `part.output` |
+
 ### Flow
 
 1. LLM calls `render_exercise({ type: "dictation", itemIds: ["id1", "id2"] })`
 2. `onToolCall` fires in browser — fetches full item data from IDB, builds component props
 3. Returns `{ type: "dictation", props: { items, segment, mode: "review" } }`
-4. `message.parts` entry: `{ type: "tool-invocation", toolName: "render_exercise", state: "result", result: { type, props } }`
+4. `message.parts` entry: `{ type: "tool-render_exercise", toolCallId: "...", state: "output-available", input: { type, itemIds }, output: { type, props } }`
 5. `CompanionPanel` detects this part → renders `<ExerciseRenderer>`
-6. `ExerciseRenderer` maps type → component, spreads props, injects `onNext` adapter
+6. `ExerciseRenderer` maps `output.type` → component, spreads `output.props`, injects `onNext` adapter
 
 ### Exercise callback adapter
 
@@ -206,7 +227,7 @@ All 7 exercise components use `onNext: (score: number, opts?: { skipped?: boolea
 
 ### CompanionPanel parts rendering
 
-`CompanionPanel` replaces its current `msg.content` render loop with a `message.parts` iterator:
+`CompanionPanel` replaces its current `msg.content` render loop with a `message.parts` iterator using AI SDK v5 part types:
 
 ```tsx
 {messages.map(msg =>
@@ -214,18 +235,23 @@ All 7 exercise components use `onNext: (score: number, opts?: { skipped?: boolea
     if (part.type === 'text')
       return <Markdown key={i}>{part.text}</Markdown>
 
-    if (part.type === 'tool-invocation' && part.state === 'result') {
-      if (part.toolName === 'render_exercise')
-        return <ExerciseRenderer key={i} result={part.result} sendMessage={sendMessage} />
-      if (part.toolName === 'render_progress_chart')
-        return <ProgressChartRenderer key={i} result={part.result} />
-      if (part.toolName === 'render_vocab_card')
-        return <VocabCardRenderer key={i} result={part.result} />
-    }
+    // v5: tool parts have type 'tool-{toolName}'
+    if (part.type?.startsWith('tool-')) {
+      const toolName = part.type.replace('tool-', '')
 
-    // tool-invocation in 'call' or 'partial-call' state → show loading indicator
-    if (part.type === 'tool-invocation')
-      return <ToolCallIndicator key={i} toolName={part.toolName} />
+      if (part.state === 'output-available') {
+        if (toolName === 'render_exercise')
+          return <ExerciseRenderer key={i} output={part.output} sendMessage={sendMessage} />
+        if (toolName === 'render_progress_chart')
+          return <ProgressChartRenderer key={i} output={part.output} />
+        if (toolName === 'render_vocab_card')
+          return <VocabCardRenderer key={i} output={part.output} />
+      }
+
+      // input-streaming or input-available → loading indicator
+      if (part.state === 'input-streaming' || part.state === 'input-available')
+        return <ToolCallIndicator key={i} toolName={toolName} />
+    }
 
     return null
   })
@@ -253,14 +279,15 @@ function normalizeMessage(msg: ChatMessage): UIMessage {
 | `src/lib/agent-tools.ts` | All 11 tool execute functions. Takes `db` as parameter. |
 | `src/lib/agent-memory.ts` | `saveMemory()`, `recallMemory()`, `getMemorySummary()` helpers. |
 | `src/lib/agent-system-prompt.ts` | Pure function: `buildSystemPrompt(profile, lesson, segment, memories): string` |
-| `src/components/lesson/ExerciseRenderer.tsx` | Maps `render_exercise` tool result type → exercise component. Injects `onNext` adapter per component. |
+| `src/components/lesson/ExerciseRenderer.tsx` | Maps `render_exercise` tool output type → exercise component. Injects `onNext` adapter. Also injects `playTTS` (from `useTTS`) and `caps` (from `useLanguageCaps`) for exercises that require them. |
 
 ### Modified frontend files
 
 | File | Change |
 |---|---|
 | `src/db/index.ts` | Schema v6: add `agent-memory` store + `ShadowLearnSchema` type update + indexes. Add `getLearnerProfile` / `saveLearnerProfile` typed helpers. Non-destructive migration (no existing data touched). |
-| `src/components/lesson/CompanionPanel.tsx` | Swap `useChat` → `useAgentChat`. Render `message.parts[]` iterator. Mount `ExerciseRenderer` / `ProgressChartRenderer` / `VocabCardRenderer` for tool parts. Add `ToolCallIndicator` for in-progress calls. |
+| `src/components/lesson/CompanionPanel.tsx` | Swap `useChat` → `useAgentChat`. Render `message.parts[]` iterator with v5 part types. Mount `ExerciseRenderer` / `ProgressChartRenderer` / `VocabCardRenderer` for tool parts. Add `ToolCallIndicator` for in-progress calls. |
+| `src/components/lesson/LessonView.tsx` (or equivalent lesson page) | Remove `useChat()` call, `contextSegments` state, and related props passed to `<CompanionPanel>`. Simplify to pass only `activeSegment` and `lessonId`. |
 
 ### New backend files
 
@@ -333,7 +360,6 @@ export async function saveLearnerProfile(db: ShadowLearnDB, profile: LearnerProf
 
 ## Open Questions
 
-1. **Model selection** — which OpenRouter model to default to? GPT-4o is reliable for tool calling; Claude 3.5 Sonnet also strong. Should be configurable in settings.
-2. **Backend streaming format** — evaluate during Phase 2 whether a thin Node.js proxy (Hono) is simpler than replicating the AI SDK data-stream wire format in Python.
-3. **`maxSteps` tuning** — 8 is a reasonable default. Monitor real usage to see if typical interactions stay under 4 steps (goal).
-4. **Memory pruning** — no pruning in v1. If `agent-memory` grows large (e.g., 500+ entries), a future `prune_old_memories()` maintenance tool would compact low-importance entries.
+1. **Model selection** — default to `openai/gpt-5.1-mini` via OpenRouter (confirmed viable with tool calling). Should be configurable in settings.
+2. **`maxSteps` tuning** — 8 is a reasonable default. Monitor real usage to see if typical interactions stay under 4 steps (goal).
+3. **Memory pruning** — no pruning in v1. If `agent-memory` grows large (e.g., 500+ entries), a future `prune_old_memories()` maintenance tool would compact low-importance entries.
