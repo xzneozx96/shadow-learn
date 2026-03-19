@@ -28,7 +28,20 @@ export function ReconstructionExercise({ entry, words, progress = '', onNext }: 
       <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
       {!checked
         ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
-        : <Button size="sm" onClick={() => onNext(correct ? 100 : 0)}>Next →</Button>}
+        : (
+            <Button
+              size="sm"
+              onClick={() => {
+                const today = new Date().toISOString().split('T')[0]
+                const mistakes: MistakeExample[] = !correct
+                  ? [{ userAnswer: value.trim(), correctAnswer: entry.sourceSegmentText.trim(), date: today }]
+                  : []
+                onNext(correct ? 100 : 0, { mistakes: mistakes.length > 0 ? mistakes : undefined })
+              }}
+            >
+              Next →
+            </Button>
+          )}
     </div>
   )
 

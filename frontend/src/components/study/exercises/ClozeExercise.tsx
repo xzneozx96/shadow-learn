@@ -59,7 +59,24 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
       <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
       {!checked
         ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
-        : <Button size="sm" onClick={() => onNext(allCorrect ? 100 : 0)}>Next →</Button>}
+        : (
+            <Button
+              size="sm"
+              onClick={() => {
+                const today = new Date().toISOString().split('T')[0]
+                const mistakes: MistakeExample[] = blankIndices
+                  .filter(i => answers[i]?.trim() !== parts[i].blank)
+                  .map(i => ({
+                    userAnswer: answers[i]?.trim() ?? '',
+                    correctAnswer: parts[i].blank!,
+                    date: today,
+                  }))
+                onNext(allCorrect ? 100 : 0, { mistakes: mistakes.length > 0 ? mistakes : undefined })
+              }}
+            >
+              Next →
+            </Button>
+          )}
     </div>
   )
 
