@@ -37,7 +37,7 @@ A Chinese language learning platform built around the **shadowing technique**. U
 
 ### Prerequisites
 
-- Node.js 20+ and npm
+- Node.js 20+ and [pnpm](https://pnpm.io/installation)
 - Python 3.12+ and [uv](https://docs.astral.sh/uv/)
 - `ffmpeg` installed on the system (required for audio processing)
 - API keys — see [API Keys](#api-keys) below
@@ -56,7 +56,7 @@ cd backend
 cp .env.example .env
 # Fill in SHADOWLEARN_TTS_PROVIDER and any optional overrides in .env
 uv sync
-uv run fastapi dev app/main.py
+uv run uvicorn app.main:app --reload
 ```
 
 The backend runs at `http://localhost:8000`.
@@ -65,8 +65,8 @@ The backend runs at `http://localhost:8000`.
 
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 The frontend runs at `http://localhost:5173`.
@@ -102,11 +102,15 @@ The app will be available at `http://localhost`.
 
 ## Deployment
 
-See [deployment_guide.md](deployment_guide.md.resolved) for step-by-step instructions on deploying the frontend to **Vercel** and the backend to **Hugging Face Spaces** (16 GB RAM free tier) or **Koyeb**.
+**Frontend → Vercel**
 
-Short version:
-- **Frontend** → Vercel, root directory `frontend`, build command `npm run build`, output `dist`
-- **Backend** → Hugging Face Spaces (Docker SDK) or any Docker host; set `VITE_API_BASE` env var in Vercel to point to your backend URL
+1. Import the repo in Vercel
+2. Set root directory to `frontend`, build command `pnpm build`, output directory `dist`
+3. Add env var `VITE_API_BASE=<your-backend-url>` in Vercel project settings
+
+**Backend → Hugging Face Spaces (Docker)**
+
+HF Spaces Docker SDK gives 16 GB RAM / 2 vCPU free. Create a new Space with SDK: Docker, push the `backend/` directory, and add secret env vars (`AZURE_SPEECH_KEY`, `DEEPGRAM_API_KEY`, etc.) in the Space settings.
 
 ---
 
@@ -138,14 +142,14 @@ shadow-learn/
 ## Development
 
 ```bash
-# Backend tests
-cd backend && uv run pytest
+# Backend tests (install dev deps first)
+cd backend && uv sync --extra dev && uv run pytest
 
 # Frontend tests
-cd frontend && npm test
+cd frontend && pnpm test
 
 # Frontend lint
-cd frontend && npm run lint
+cd frontend && pnpm lint
 ```
 
 ---
