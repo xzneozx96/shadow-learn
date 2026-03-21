@@ -46,5 +46,8 @@ dist/
 # Claude Code local config (contains personal hook paths)
 .claude/settings.json
 
+# Internal dev docs (local use only)
+docs/
+
 # Temp / resolved conflict files
 *.resolved
