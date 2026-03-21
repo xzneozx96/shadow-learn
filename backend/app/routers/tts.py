@@ -6,7 +6,9 @@ import logging
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 
+from app.config import settings
 from app.models import TTSRequest
+from app.routers._utils import _resolve_key
 from app.services.tts_provider import TTSKeys
 
 logger = logging.getLogger(__name__)
@@ -40,19 +42,12 @@ async def text_to_speech(body: TTSRequest, request: Request) -> Response:
     # Step 2: key validation
     keys: TTSKeys = {}
     if provider_name == "azure":
-        if not body.azure_speech_key or not body.azure_speech_region:
-            raise HTTPException(
-                status_code=400,
-                detail="Azure Speech key and region required",
-            )
-        keys = {
-            "azure_speech_key": body.azure_speech_key,
-            "azure_speech_region": body.azure_speech_region,
-        }
+        az_key = _resolve_key(body.azure_speech_key, settings.azure_speech_key, "Azure Speech key")
+        az_region = _resolve_key(body.azure_speech_region, settings.azure_speech_region, "Azure Speech region")
+        keys = {"azure_speech_key": az_key, "azure_speech_region": az_region}
     elif provider_name == "minimax":
-        if not body.minimax_api_key:
-            raise HTTPException(status_code=400, detail="MiniMax API key required")
-        keys = {"minimax_api_key": body.minimax_api_key}
+        mm_key = _resolve_key(body.minimax_api_key, settings.minimax_api_key, "MiniMax API key")
+        keys = {"minimax_api_key": mm_key}
 
     # Step 3: synthesize
     try:

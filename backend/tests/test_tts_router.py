@@ -132,6 +132,32 @@ async def test_tts_rejects_oversized_text(mock_tts_provider):
 
 
 @pytest.mark.asyncio
+async def test_tts_uses_server_fallback_key_when_request_key_empty(mock_tts_provider):
+    from app.main import app
+    from app.config import settings
+
+    mock_tts_provider.synthesize = AsyncMock(return_value=b"audio")
+    app.state.tts_provider_name = "azure"
+    original_key = settings.azure_speech_key
+    original_region = settings.azure_speech_region
+    settings.azure_speech_key = "server-az-key"
+    settings.azure_speech_region = "eastus"
+
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # No keys in request body — should use server fallback
+            response = await client.post("/api/tts", json={"text": "你好"})
+    finally:
+        settings.azure_speech_key = original_key
+        settings.azure_speech_region = original_region
+    assert response.status_code == 200
+    mock_tts_provider.synthesize.assert_called_once()
+    call_keys = mock_tts_provider.synthesize.call_args[0][1]
+    assert call_keys["azure_speech_key"] == "server-az-key"
+
+
+@pytest.mark.asyncio
 async def test_tts_returns_502_on_provider_error(mock_tts_provider):
     """POST /api/tts returns 502 when provider raises RuntimeError."""
     mock_tts_provider.synthesize = AsyncMock(side_effect=RuntimeError("Azure key invalid"))

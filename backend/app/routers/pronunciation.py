@@ -8,6 +8,9 @@ from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from app.config import settings
+from app.routers._utils import _resolve_key
+
 router = APIRouter(prefix="/api/pronunciation", tags=["pronunciation"])
 
 
@@ -106,20 +109,23 @@ async def assess_pronunciation(
     audio: UploadFile,
     reference_text: str = Form(...),
     language: str = Form("zh-CN"),
-    azure_key: str = Form(...),
-    azure_region: str = Form("eastus"),
+    azure_key: str | None = Form(None),
+    azure_region: str | None = Form(None),
 ):
     try:
         import azure.cognitiveservices.speech  # noqa: F401
     except ImportError:
         raise HTTPException(503, "Azure Speech SDK not installed")
 
+    resolved_key = _resolve_key(azure_key, settings.azure_speech_key, "Azure Speech key")
+    resolved_region = _resolve_key(azure_region, settings.azure_speech_region, "Azure Speech region")
+
     t0 = time.perf_counter()
     audio_bytes = await audio.read()
     print(f"[assess] upload read: {time.perf_counter() - t0:.2f}s ({len(audio_bytes)} bytes)")
 
     data = await asyncio.to_thread(
-        _run_assessment, audio_bytes, reference_text, language, azure_key, azure_region,
+        _run_assessment, audio_bytes, reference_text, language, resolved_key, resolved_region,
     )
 
     if "error" in data:
