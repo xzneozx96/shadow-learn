@@ -12,6 +12,7 @@ interface PronunciationSentence { sentence: string, translation: string }
 
 interface Props {
   sentence: PronunciationSentence
+  language: string
   progress?: string
   onNext: (score: number, opts?: { skipped?: boolean }) => void
 }
@@ -47,7 +48,7 @@ function useVerdict() {
   }
 }
 
-export function PronunciationReferee({ sentence, progress = '', onNext }: Props) {
+export function PronunciationReferee({ sentence, language, progress = '', onNext }: Props) {
   const { db, keys, trialMode } = useAuth()
   const { t } = useI18n()
   const verdict = useVerdict()
@@ -76,7 +77,7 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
           <Button
             size="sm"
             disabled={!canSubmit}
-            onClick={() => blob && void submit(blob, sentence.sentence)}
+            onClick={() => blob && void submit(blob, sentence.sentence, language)}
           >
             {isProcessing
               ? (

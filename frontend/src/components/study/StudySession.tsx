@@ -106,7 +106,6 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
   const [questions, setQuestions] = useState<Question[]>([])
   const [current, setCurrent] = useState(0)
   const [results, setResults] = useState<{ entry: VocabEntry, correct: boolean, score: number }[]>([])
-  const [azureBanner, setAzureBanner] = useState(false)
   // Guard against double-click and track the in-flight controller for cleanup
   const abortRef = useRef<AbortController | null>(null)
 
@@ -149,7 +148,9 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmLeave])
 
-  const hasAzure = Boolean(keys?.azureSpeechKey)
+  const azurePronunciationLocale = caps.azurePronunciationLocale
+  const hasAzure = azurePronunciationLocale !== null && (trialMode || Boolean(keys?.azureSpeechKey))
+  const hasOpenRouter = trialMode || Boolean(keys?.openrouterApiKey)
 
   async function handleStart() {
     if (entries.length === 0 || abortRef.current)
@@ -158,9 +159,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
     abortRef.current = controller
 
     const hasWriting = entries.some(e => isWritingSupported(e.word))
-    const types = distributeExercises(entries, mode, count, hasAzure, hasWriting, Boolean(keys?.openrouterApiKey))
-    if (mode === 'mixed' && !hasAzure)
-      setAzureBanner(true)
+    const types = distributeExercises(entries, mode, count, hasAzure, hasWriting, hasOpenRouter)
 
     const pool = entries.toSorted(() => Math.random() - 0.5)
 
@@ -374,11 +373,6 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
         {/* Session */}
         {phase === 'session' && q && !loading && (
           <>
-            {azureBanner && (
-              <div className="text-sm text-amber-400 bg-amber-500/8 border border-amber-500/20 rounded-md px-4 py-3 mb-4">
-                {t('study.pronunciation.unavailable')}
-              </div>
-            )}
             {/* <ProgressBar current={current} total={questions.length} /> */}
             {q.type === 'romanization-recall' && (
               <RomanizationRecallExercise
@@ -406,14 +400,16 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
                 key={current}
                 question={q.clozeData}
                 entries={entries}
+                caps={caps}
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
               />
             )}
-            {q.type === 'pronunciation' && q.pronunciationData && (
+            {q.type === 'pronunciation' && q.pronunciationData && azurePronunciationLocale && (
               <PronunciationReferee
                 key={current}
                 sentence={q.pronunciationData}
+                language={azurePronunciationLocale}
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
               />

@@ -5,8 +5,8 @@
  */
 
 import type { DailyAccuracy } from '@/db'
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from '@/components/ai-elements/tool'
-import { AccuracyTrendChart } from '@/components/progress/AccuracyTrendChart'
 import { cn } from '@/lib/utils'
 
 // -------------------------------------------------------------------------- //
@@ -138,9 +138,35 @@ export function ProgressChartRenderer({ result }: { result: ProgressChartResult 
   }
 
   if (result.metric === 'accuracy' && Array.isArray(result.data)) {
+    const data = result.data.slice(-30).map(d => ({
+      date: d.date,
+      accuracy: Math.round(d.accuracy * 100),
+      exercises: d.exercises,
+    }))
     return (
-      <div className="h-52 my-1">
-        <AccuracyTrendChart trend={result.data} />
+      <div className="rounded-2xl border border-border/40 bg-card p-4 my-1">
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-3">
+          Accuracy Trend
+        </p>
+        <ResponsiveContainer width="100%" height={160}>
+          <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="companionAccuracyGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#22c55e" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+            <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
+            <Tooltip
+              contentStyle={{ background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '11px', fontWeight: 700 }}
+              formatter={(value, _name, props) => [`${value}% · ${props.payload.exercises} exercises`, 'Accuracy']}
+              cursor={{ stroke: 'rgba(34,197,94,0.3)', strokeWidth: 1 }}
+            />
+            <Area type="monotone" dataKey="accuracy" stroke="#22c55e" strokeWidth={2} fill="url(#companionAccuracyGradient)" dot={false} activeDot={{ r: 4, fill: '#22c55e', strokeWidth: 0 }} />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     )
   }

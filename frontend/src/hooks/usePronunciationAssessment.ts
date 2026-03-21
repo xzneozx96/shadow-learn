@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { API_BASE } from '@/lib/config'
 
 interface UsePronunciationAssessmentReturn {
-  submit: (blob: Blob, sentence: string) => Promise<void>
+  submit: (blob: Blob, sentence: string, language?: string) => Promise<void>
   result: PronunciationAssessResult | null
   submitting: boolean
   error: string | null
@@ -17,16 +17,18 @@ export function usePronunciationAssessment(): UsePronunciationAssessmentReturn {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const submit = useCallback(async (blob: Blob, sentence: string) => {
+  const submit = useCallback(async (blob: Blob, sentence: string, language = 'zh-CN') => {
     setSubmitting(true)
     setError(null)
     try {
       const form = new FormData()
       form.append('audio', blob, 'recording.webm')
       form.append('reference_text', sentence)
-      form.append('language', 'zh-CN')
-      form.append('azure_key', keys?.azureSpeechKey ?? '')
-      form.append('azure_region', keys?.azureSpeechRegion ?? 'eastus')
+      form.append('language', language)
+      if (keys?.azureSpeechKey)
+        form.append('azure_key', keys.azureSpeechKey)
+      if (keys?.azureSpeechRegion)
+        form.append('azure_region', keys.azureSpeechRegion)
       const resp = await fetch(`${API_BASE}/api/pronunciation/assess`, { method: 'POST', body: form })
       if (!resp.ok)
         throw new Error(await resp.text())

@@ -9,6 +9,12 @@ export interface LanguageCapabilities {
   inputMode: InputMode // drives LanguageInput: ChineseInput vs plain Input
   dictationPlaceholder: string // placeholder in DictationExercise + ShadowingDictationPhase
   languageName: string // "Chinese", "English" — informational
+  /**
+   * BCP-47 locale to send to Azure Speech pronunciation assessment.
+   * null = language not supported by Azure pronunciation assessment.
+   * Confirmed supported: zh-CN, en-US. Others are not supported.
+   */
+  azurePronunciationLocale: string | null
 }
 
 const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
@@ -20,6 +26,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     inputMode: 'ime-chinese',
     dictationPlaceholder: '输入汉字…',
     languageName: 'Chinese',
+    azurePronunciationLocale: 'zh-CN',
   },
   'zh-TW': {
     romanizationSystem: 'pinyin',
@@ -29,6 +36,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     inputMode: 'ime-chinese',
     dictationPlaceholder: '輸入漢字…',
     languageName: 'Chinese (Traditional)',
+    azurePronunciationLocale: null, // zh-TW not confirmed supported
   },
   'en': {
     romanizationSystem: 'ipa',
@@ -38,6 +46,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     inputMode: 'standard',
     dictationPlaceholder: 'Type what you heard…',
     languageName: 'English',
+    azurePronunciationLocale: 'en-US',
   },
   'ja': {
     romanizationSystem: 'romaji',
@@ -47,6 +56,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     inputMode: 'standard',
     dictationPlaceholder: 'テキストを入力…',
     languageName: 'Japanese',
+    azurePronunciationLocale: null, // ja-JP not confirmed supported
   },
   'ko': {
     romanizationSystem: 'none',
@@ -56,6 +66,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     inputMode: 'standard',
     dictationPlaceholder: 'Type what you heard…',
     languageName: 'Korean',
+    azurePronunciationLocale: null, // ko-KR not confirmed supported
   },
   'vi': {
     romanizationSystem: 'none',
@@ -65,6 +76,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     inputMode: 'standard',
     dictationPlaceholder: 'Type what you heard…',
     languageName: 'Vietnamese',
+    azurePronunciationLocale: null, // vi-VN not confirmed supported
   },
 }
 

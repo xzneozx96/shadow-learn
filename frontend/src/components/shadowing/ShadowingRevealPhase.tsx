@@ -30,6 +30,7 @@ interface SpeakingRevealProps {
   blob: Blob
   azureKey: string
   azureRegion: string
+  language: string
 }
 
 // ── Combined ──────────────────────────────────────────────────────────────
@@ -192,6 +193,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           segment={segment}
           azureKey={props.azureKey}
           azureRegion={props.azureRegion}
+          language={props.language}
           onLoading={setLoadingScore}
           onScore={(score) => { speakingScoreRef.current = score }}
         />
@@ -228,11 +230,12 @@ interface SpeakingScoresProps {
   segment: Segment
   azureKey: string
   azureRegion: string
+  language: string
   onScore: (score: number | null) => void
   onLoading?: (isLoading: boolean) => void
 }
 
-function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore, onLoading }: SpeakingScoresProps) {
+function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScore, onLoading }: SpeakingScoresProps) {
   const [result, setResult] = useState<AssessResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -255,9 +258,11 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore, onLoadi
         const form = new FormData()
         form.append('audio', blob, 'recording.webm')
         form.append('reference_text', segment.text)
-        form.append('language', 'zh-CN')
-        form.append('azure_key', azureKey)
-        form.append('azure_region', azureRegion)
+        form.append('language', language)
+        if (azureKey)
+          form.append('azure_key', azureKey)
+        if (azureRegion)
+          form.append('azure_region', azureRegion)
         const resp = await fetch(`${API_BASE}/api/pronunciation/assess`, {
           method: 'POST',
           body: form,

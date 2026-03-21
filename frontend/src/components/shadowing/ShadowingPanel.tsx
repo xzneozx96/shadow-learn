@@ -201,6 +201,7 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
           blob={speakingBlob}
           azureKey={azureKey}
           azureRegion={azureRegion}
+          language={resolvedCaps.azurePronunciationLocale ?? lesson.sourceLanguage ?? 'zh-CN'}
           segmentLabel={segmentLabel}
           progress={progress}
           onRetry={handleRetry}

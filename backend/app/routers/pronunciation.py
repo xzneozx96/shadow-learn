@@ -80,8 +80,13 @@ def _run_assessment(
         ev = recognizer.recognize_once()
         print(f"[assess] recognize_once: {time.perf_counter() - t1:.2f}s  reason={ev.reason}")
 
+        if ev.reason == speechsdk.ResultReason.Canceled:
+            cancellation = speechsdk.CancellationDetails(ev)
+            print(f"[assess] CANCELED: reason={cancellation.reason}, details={cancellation.error_details}")
+            return {"error": f"Azure Speech canceled: {cancellation.reason} — {cancellation.error_details}"}
+
         if ev.reason != speechsdk.ResultReason.RecognizedSpeech:
-            return {"error": "Speech not recognized"}
+            return {"error": f"Speech not recognized (reason={ev.reason})"}
 
         pa = speechsdk.PronunciationAssessmentResult(ev)
 
@@ -119,6 +124,8 @@ async def assess_pronunciation(
 
     resolved_key = _resolve_key(azure_key, settings.azure_speech_key, "Azure Speech key")
     resolved_region = _resolve_key(azure_region, settings.azure_speech_region, "Azure Speech region")
+    key_source = "request" if azure_key else "env"
+    print(f"[assess] key_source={key_source}, region={resolved_region}, key=...{resolved_key[-4:]}")
 
     t0 = time.perf_counter()
     audio_bytes = await audio.read()

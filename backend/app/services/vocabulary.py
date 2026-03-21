@@ -67,7 +67,7 @@ def _build_vocab_prompt(segments: list[dict], source_language: str = "zh-CN") ->
 
 
 _VOCAB_BATCH_SIZE = 5
-_MAX_ATTEMPTS = 5
+_MAX_ATTEMPTS = 3
 
 
 async def _extract_batch_with_retry(
@@ -118,7 +118,20 @@ async def _extract_batch_with_retry(
                     raise VocabularyExtractionError(
                         f"Vocab batch {seg_ids}: OpenRouter error — {body['error']}"
                     )
-                content = body["choices"][0]["message"]["content"]
+                choice = body["choices"][0]
+                finish_reason = choice.get("finish_reason", "")
+                if finish_reason == "length":
+                    logger.warning(
+                        "Vocab batch %s: response truncated (finish_reason=length), "
+                        "output hit max_tokens limit — retry %d/%d",
+                        seg_ids, attempt + 1, _MAX_ATTEMPTS - 1,
+                    )
+                    if attempt < _MAX_ATTEMPTS - 1:
+                        continue
+                    raise VocabularyExtractionError(
+                        f"Vocab batch {seg_ids}: response truncated after {_MAX_ATTEMPTS} attempts"
+                    )
+                content = choice["message"]["content"]
                 try:
                     parsed = VocabularyResponse.model_validate_json(content)
                     return {seg.id: [w.model_dump() for w in seg.words] for seg in parsed.segments}

@@ -89,12 +89,11 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
     )
   }
 
-  const caps: LanguageCapabilities = getLanguageCaps('zh-CN')
-
   const { type, props } = result
 
   // For single-item exercises, pick the first item
   const entry = props.items?.[0]
+  const caps: LanguageCapabilities = getLanguageCaps(entry?.sourceLanguage)
 
   switch (type) {
     case 'dictation':
@@ -150,15 +149,20 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
       )
     }
 
-    case 'pronunciation':
+    case 'pronunciation': {
       if (!props.sentence)
         return <ExerciseError msg="No sentence for pronunciation" />
+      const pronLocale = caps.azurePronunciationLocale
+      if (!pronLocale)
+        return <ExerciseError msg="Pronunciation assessment is not supported for this lesson's language" />
       return (
         <PronunciationReferee
           sentence={props.sentence}
+          language={pronLocale}
           onNext={makeOnNext('pronunciation', entry)}
         />
       )
+    }
 
     case 'cloze':
       if (!props.question || !props.items)
@@ -167,6 +171,7 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
         <ClozeExercise
           question={props.question}
           entries={props.items}
+          caps={caps}
           onNext={makeOnNext('cloze', entry)}
         />
       )

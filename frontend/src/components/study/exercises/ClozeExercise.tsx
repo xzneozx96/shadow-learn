@@ -1,10 +1,11 @@
 import type { MistakeExample } from '@/db'
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { VocabEntry } from '@/types'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
-import { ChineseInput } from '@/components/ui/ChineseInput'
+import { LanguageInput } from '@/components/ui/LanguageInput'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
@@ -16,6 +17,7 @@ interface ClozeQuestion {
 interface Props {
   question: ClozeQuestion
   entries: VocabEntry[]
+  caps: LanguageCapabilities
   progress?: string
   onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
 }
@@ -38,7 +40,7 @@ function parseStory(story: string): { text: string, blank: string | null }[] {
   return parts
 }
 
-export function ClozeExercise({ question, entries, progress = '', onNext }: Props) {
+export function ClozeExercise({ question, entries, caps, progress = '', onNext }: Props) {
   const { t } = useI18n()
   const parts = parseStory(question.story)
   const [answers, setAnswers] = useState<Record<number, string>>({})
@@ -98,8 +100,9 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
           const correct = answers[i]?.trim() === part.blank
           return (
 
-            <ChineseInput
+            <LanguageInput
               key={i} // eslint-disable-line react/no-array-index-key
+              langInputMode={caps.inputMode}
               wrapperClassName="inline-block w-14 mx-1"
               className={cn(
                 'w-14 text-center text-sm border-0 border-b bg-transparent px-1 rounded-none focus-visible:ring-0',
@@ -136,7 +139,7 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
           >
             <span className="shrink-0">{correct ? '✓' : '✗'}</span>
             <div>
-              <span className="font-semibold">{blank}</span>
+              <span className="font-semibold">{correct ? blank : (answers[i]?.trim() || '(empty)')}</span>
               {' — '}
               {correct ? 'correct!' : `expected "${blank}"`}
               {entry && (
