@@ -65,7 +65,14 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
         await saveSegments(db, lesson.id, resultLesson.segments)
         if (lesson.source === 'youtube' && video_url) {
           try {
-            const videoBlob = await fetch(video_url).then(r => r.blob())
+            const absoluteUrl = video_url.startsWith('http') ? video_url : `${API_BASE}${video_url}`
+            const videoRes = await fetch(absoluteUrl)
+            if (!videoRes.ok)
+              throw new Error(`Video fetch failed: ${videoRes.status}`)
+            const contentType = videoRes.headers.get('content-type') ?? ''
+            if (!contentType.startsWith('audio/') && !contentType.startsWith('video/'))
+              throw new Error(`Unexpected content type: ${contentType}`)
+            const videoBlob = await videoRes.blob()
             await saveVideo(db, lesson.id, videoBlob)
           }
           catch {
