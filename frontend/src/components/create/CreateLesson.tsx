@@ -21,7 +21,7 @@ const YOUTUBE_REGEX = /(?:v=|youtu\.be\/)([\w-]{11})/
 const FILE_EXTENSION_REGEX = /\.[^/.]+$/
 
 export function CreateLesson() {
-  const { db, keys } = useAuth()
+  const { db, keys, trialMode } = useAuth()
   const { t } = useI18n()
   const navigate = useNavigate()
   const { updateLesson } = useLessons()
@@ -50,7 +50,7 @@ export function CreateLesson() {
   }, [])
 
   const handleGenerate = useCallback(async () => {
-    if (!db || !keys || !sttProvider)
+    if (!db || (!keys && !trialMode) || !sttProvider)
       return
     const isYoutube = tab === 'youtube'
     if (isYoutube && !youtubeUrl.trim())
@@ -77,10 +77,10 @@ export function CreateLesson() {
             youtube_url: youtubeUrl,
             translation_languages: [language],
             source_language: sourceLanguage,
-            openrouter_api_key: keys.openrouterApiKey,
+            openrouter_api_key: keys?.openrouterApiKey ?? '',
             ...(sttProvider === 'azure'
-              ? { azure_speech_key: keys.azureSpeechKey, azure_speech_region: keys.azureSpeechRegion }
-              : { deepgram_api_key: keys.deepgramApiKey ?? null }),
+              ? { azure_speech_key: keys?.azureSpeechKey ?? '', azure_speech_region: keys?.azureSpeechRegion ?? '' }
+              : { deepgram_api_key: keys?.deepgramApiKey ?? '' }),
           }),
         })
         if (!res.ok) {
@@ -103,16 +103,13 @@ export function CreateLesson() {
         formData.append('file', file!)
         formData.append('translation_languages', language)
         formData.append('source_language', sourceLanguage)
-        formData.append('openrouter_api_key', keys.openrouterApiKey)
+        formData.append('openrouter_api_key', keys?.openrouterApiKey ?? '')
         if (sttProvider === 'azure') {
-          if (keys.azureSpeechKey)
-            formData.append('azure_speech_key', keys.azureSpeechKey)
-          if (keys.azureSpeechRegion)
-            formData.append('azure_speech_region', keys.azureSpeechRegion)
+          formData.append('azure_speech_key', keys?.azureSpeechKey ?? '')
+          formData.append('azure_speech_region', keys?.azureSpeechRegion ?? '')
         }
         else {
-          if (keys.deepgramApiKey)
-            formData.append('deepgram_api_key', keys.deepgramApiKey)
+          formData.append('deepgram_api_key', keys?.deepgramApiKey ?? '')
         }
 
         const res = await fetch(`${API_BASE}/api/lessons/generate-upload`, { method: 'POST', body: formData })
@@ -166,7 +163,7 @@ export function CreateLesson() {
 
   const canGenerate = sttProvider !== null
     && (tab === 'youtube' ? !!youtubeUrl.trim() : !!file)
-    && (sttProvider === 'azure' ? !!keys?.azureSpeechKey : !!keys?.deepgramApiKey)
+    && (trialMode || (sttProvider === 'azure' ? !!keys?.azureSpeechKey : !!keys?.deepgramApiKey))
 
   if (queued) {
     return (
