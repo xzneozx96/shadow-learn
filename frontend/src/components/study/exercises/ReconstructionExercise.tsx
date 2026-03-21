@@ -55,7 +55,7 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
       type={t('study.mode.reconstruction')}
       progress={progress}
       footer={footer}
-      info="Rearrange the scrambled word chips into the correct sentence. Tests grammar and word order."
+      info={t('study.exercise.reconstruction.info')}
     >
       {/* Source context link */}
       <Link

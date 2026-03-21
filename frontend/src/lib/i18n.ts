@@ -199,6 +199,17 @@ export const TRANSLATIONS = {
     'study.stopRecord': '⏹ Stop',
     'study.startRecord': '⏺ Record',
     'study.pause': 'Pause',
+    'study.acceptsToneMarks': 'Accepts tone marks or tone numbers',
+    'study.typeRomanization': 'Type {romanization}',
+    'study.exercise.romanizationRecall.type': '{romanization} Recall',
+    'study.exercise.romanizationRecall.info': 'See the word and type its {romanization}. Tests pronunciation knowledge without speaking aloud.',
+    'study.exercise.dictation.info': 'Listen to the audio clip and type the Chinese sentence you hear. Tests listening comprehension and character recall.',
+    'study.exercise.cloze.info': 'Read a short story and fill in the missing vocabulary words from context. Tests contextual understanding.',
+    'study.exercise.reconstruction.info': 'Rearrange the scrambled word chips into the correct sentence. Tests grammar and word order.',
+    'study.exercise.writing.info': 'Trace each stroke of the character in the correct order. Builds handwriting muscle memory.',
+    'study.exercise.pronunciation.info': 'Read the sentence aloud and get AI-scored feedback on accuracy, fluency, and prosody.',
+    'study.translation.placeholder.toEnglish': 'Type your English translation…',
+    'study.translation.placeholder.toLanguage': 'Type your {language} translation…',
 
     // Shadowing
     'shadowing.listen': 'Listen',
@@ -294,6 +305,11 @@ export const TRANSLATIONS = {
     'progress.startReview': 'Start Review →',
     'progress.exercise': 'exercise',
     'progress.exercisesPlural': 'exercises',
+    'progress.skill.writing': 'Writing',
+    'progress.skill.speaking': 'Speaking',
+    'progress.skill.vocabulary': 'Vocabulary',
+    'progress.skill.reading': 'Reading',
+    'progress.skill.listening': 'Listening',
 
     // Settings
     'settings.title': 'Settings',
@@ -341,14 +357,8 @@ export const TRANSLATIONS = {
     'nav.create': 'Tạo mới',
     'nav.settings': 'Cài đặt',
     'nav.workbook': 'Sổ tay',
-    'nav.documentation': 'Tài liệu',
-    'nav.search': 'Tìm bài học...',
-
-    // Auth
-    'auth.welcome': 'Chào mừng đến ShadowLearn',
-    'auth.setup.subtitle': 'Nhập khóa API để bắt đầu',
-    'auth.openrouterKey': 'Khóa API OpenRouter',
-    'auth.deepgramKey': 'Khóa API Deepgram',
+    'nav.documentation': 'Hướng dẫn',
+    'nav.search': 'Tìm kiếm bài học...',
     'auth.azureSpeechKey': 'Khóa Azure Speech',
     'auth.azureSpeechRegion': 'Vùng Azure Speech',
     'auth.minimaxKey': 'Khóa API Minimax',
@@ -533,6 +543,17 @@ export const TRANSLATIONS = {
     'study.stopRecord': '⏹ Dừng',
     'study.startRecord': '⏺ Ghi âm',
     'study.pause': 'Tạm dừng',
+    'study.acceptsToneMarks': 'Chấp nhận dấu thanh hoặc số thanh',
+    'study.typeRomanization': 'Nhập {romanization}',
+    'study.exercise.romanizationRecall.type': '{romanization} — Ghi nhớ',
+    'study.exercise.romanizationRecall.info': 'Xem từ và nhập {romanization} của nó. Kiểm tra kiến thức phát âm mà không cần nói to.',
+    'study.exercise.dictation.info': 'Nghe đoạn âm thanh và gõ câu tiếng Trung bạn nghe được. Kiểm tra khả năng nghe hiểu và nhớ ký tự.',
+    'study.exercise.cloze.info': 'Đọc câu chuyện ngắn và điền các từ vựng còn thiếu dựa vào ngữ cảnh. Kiểm tra khả năng hiểu ngữ cảnh.',
+    'study.exercise.reconstruction.info': 'Sắp xếp lại các từ bị xáo trộn thành câu đúng. Kiểm tra ngữ pháp và thứ tự từ.',
+    'study.exercise.writing.info': 'Tô từng nét chữ theo đúng thứ tự. Xây dựng trí nhớ cơ bắp cho chữ viết tay.',
+    'study.exercise.pronunciation.info': 'Đọc to câu và nhận phản hồi điểm số AI về độ chính xác, độ trôi chảy và ngữ điệu.',
+    'study.translation.placeholder.toEnglish': 'Nhập bản dịch tiếng Anh…',
+    'study.translation.placeholder.toLanguage': 'Nhập bản dịch {language}…',
 
     // Shadowing
     'shadowing.listen': 'Nghe',
@@ -628,6 +649,11 @@ export const TRANSLATIONS = {
     'progress.startReview': 'Bắt đầu ôn tập →',
     'progress.exercise': 'bài tập',
     'progress.exercisesPlural': 'bài tập',
+    'progress.skill.writing': 'Viết',
+    'progress.skill.speaking': 'Nói',
+    'progress.skill.vocabulary': 'Từ vựng',
+    'progress.skill.reading': 'Đọc',
+    'progress.skill.listening': 'Nghe',
 
     // Settings
     'settings.title': 'Cài đặt',
@@ -675,6 +701,8 @@ export type TranslationKey = keyof typeof TRANSLATIONS['en']
 
 export function getTranslation(locale: Locale) {
   const fallback: Locale = 'en'
-  return (key: TranslationKey): string =>
-    TRANSLATIONS[locale][key] ?? TRANSLATIONS[fallback][key] ?? key
+  return (key: TranslationKey): string => {
+    const dict = TRANSLATIONS[locale] as Record<string, string>
+    return dict[key] ?? TRANSLATIONS[fallback][key] ?? key
+  }
 }

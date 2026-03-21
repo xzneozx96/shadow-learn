@@ -1,3 +1,4 @@
+import type { Locale } from '@/lib/i18n'
 import { Eye, EyeOff, Lock, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -5,15 +6,13 @@ import { Layout } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { decryptKeys, encryptKeys } from '@/crypto'
 import { getCryptoData, getSettings, saveCryptoData, saveSettings } from '@/db'
 import { getAppConfig } from '@/lib/config'
-import { LANGUAGES } from '@/lib/constants'
-import type { Locale } from '@/lib/i18n'
+import { INTERFACE_LANGUAGES, LANGUAGES } from '@/lib/constants'
 
 export function Settings() {
   const { db, keys, lock, resetKeys, setup } = useAuth()
@@ -318,17 +317,21 @@ export function Settings() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>{t('settings.interfaceLanguage')}</Label>
+              <label className="text-sm text-white/40">{t('settings.interfaceLanguage')}</label>
               <Select
                 value={locale}
-                onValueChange={(v) => setLocale(v as Locale)}
+                onValueChange={v => setLocale(v as Locale)}
+                items={INTERFACE_LANGUAGES}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="vi">Tiếng Việt</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
+                  {INTERFACE_LANGUAGES.map(l => (
+                    <SelectItem key={l.value} value={l.value}>
+                      {l.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

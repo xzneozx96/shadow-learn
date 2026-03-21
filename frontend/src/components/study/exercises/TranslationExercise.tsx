@@ -114,7 +114,9 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
   const reference = direction === 'zh-to-en' ? sentence.english : sentence.text
   const sourceLang = direction === 'zh-to-en' ? caps.languageName.toLowerCase() : 'english'
   const targetLang = direction === 'zh-to-en' ? 'english' : caps.languageName.toLowerCase()
-  const placeholder = direction === 'zh-to-en' ? 'Type your English translation…' : `Type your ${caps.languageName} translation…`
+  const placeholder = direction === 'zh-to-en'
+    ? t('study.translation.placeholder.toEnglish')
+    : t('study.translation.placeholder.toLanguage').replace('{language}', caps.languageName)
 
   async function handleSubmit() {
     if (!value.trim() || !keys?.openrouterApiKey)

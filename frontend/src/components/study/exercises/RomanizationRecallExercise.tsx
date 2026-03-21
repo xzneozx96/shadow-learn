@@ -58,10 +58,10 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
 
   return (
     <ExerciseCard
-      type={`${caps.romanizationLabel} Recall`}
+      type={t('study.exercise.romanizationRecall.type').replace('{romanization}', caps.romanizationLabel)}
       progress={progress}
       footer={footer}
-      info={`See the word and type its ${caps.romanizationLabel}. Tests pronunciation knowledge without speaking aloud.`}
+      info={t('study.exercise.romanizationRecall.info').replace('{romanization}', caps.romanizationLabel)}
     >
       <div className="text-center py-2 pb-5">
         <div className="text-[52px] font-extrabold tracking-widest leading-none text-foreground">
@@ -79,7 +79,7 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
         disabled={checked}
       />
       <p className="text-[11px] text-muted-foreground/50 text-center mt-1.5">
-        {caps.romanizationSystem === 'pinyin' ? 'Accepts tone marks or tone numbers' : `Type ${caps.romanizationLabel}`}
+        {caps.romanizationSystem === 'pinyin' ? t('study.acceptsToneMarks') : t('study.typeRomanization').replace('{romanization}', caps.romanizationLabel)}
       </p>
 
       {checked && (
@@ -89,6 +89,7 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
             <div className="flex flex-wrap gap-2">
               {diff.map((tok, i) => (
                 <span
+                  // eslint-disable-next-line react/no-array-index-key
                   key={i}
                   className={cn(
                     'text-base font-semibold px-2 py-0.5 rounded-md',

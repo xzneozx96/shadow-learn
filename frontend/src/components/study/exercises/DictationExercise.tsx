@@ -54,7 +54,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
       type={t('study.mode.dictation')}
       progress={progress}
       footer={footer}
-      info="Listen to the audio clip and type the Chinese sentence you hear. Tests listening comprehension and character recall."
+      info={t('study.exercise.dictation.info')}
     >
       <p className="text-sm text-muted-foreground mb-4">
         {t('study.listenAndType')}
@@ -93,6 +93,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
             <div className="flex flex-wrap gap-1">
               {diff.map((tok, i) => (
                 <span
+                  // eslint-disable-next-line react/no-array-index-key
                   key={`${i}-${tok.text}`}
                   className={cn(
                     'text-xl font-semibold px-1.5 py-0.5 rounded-md',

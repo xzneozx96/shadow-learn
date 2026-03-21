@@ -96,7 +96,7 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
       type={t('study.mode.pronunciation')}
       progress={progress}
       footer={footer}
-      info="Read the sentence aloud and get AI-scored feedback on accuracy, fluency, and prosody."
+      info={t('study.exercise.pronunciation.info')}
     >
       {/* Sentence display */}
       <div className="relative rounded-lg border border-border bg-muted/20 p-4 text-center mb-4">
@@ -192,6 +192,7 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
           <div className="space-y-1.5">
             {result.words.map((w, i) => (
               <div
+                // eslint-disable-next-line react/no-array-index-key
                 key={`${w.word}-${i}`}
                 className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2"
               >

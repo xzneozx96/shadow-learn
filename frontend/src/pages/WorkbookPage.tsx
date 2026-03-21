@@ -163,7 +163,8 @@ export function WorkbookPage() {
                 {t('workbook.noSearchResults')}
                 {' "'}
                 {search}
-                {'".'}
+                ".
+                {' '}
               </div>
             )}
 

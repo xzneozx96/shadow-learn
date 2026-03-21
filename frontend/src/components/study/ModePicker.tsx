@@ -27,7 +27,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, onStart, 
       ? [{
           id: 'romanization-recall' as ExerciseMode,
           icon: '🔤',
-          name: `${caps.romanizationLabel} Recall`,
+          name: t('study.exercise.romanizationRecall.type').replace('{romanization}', caps.romanizationLabel),
           desc: t('study.mode.romanization.desc').replace('romanization', caps.romanizationLabel),
         }]
       : []),

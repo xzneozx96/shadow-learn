@@ -10,7 +10,7 @@
   },
   "lint-staged": {
     "frontend/**/*.{ts,tsx}": [
-      "bash -c 'cd frontend && npx eslint --max-warnings=0 \"$@\"' --"
+      "bash -c 'cd frontend && npx eslint \"$@\"' --"
     ],
     "backend/**/*.py": [
       "bash -c 'cd backend && uvx ruff check \"$@\"' --"

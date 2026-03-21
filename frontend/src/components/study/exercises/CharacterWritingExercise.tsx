@@ -70,7 +70,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
       type={t('study.mode.writing')}
       progress={progress}
       footer={footer}
-      info="Trace each stroke of the character in the correct order. Builds handwriting muscle memory."
+      info={t('study.exercise.writing.info')}
     >
       {/* Prompt */}
       <div className="text-center mb-4">

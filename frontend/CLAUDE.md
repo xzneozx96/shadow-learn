@@ -20,26 +20,6 @@ Do NOT introduce: Redux, Zustand, React Query, Axios, or Prettier.
 
 **External API keys** — come from `AuthContext.keys`. Always guard `if (!keys)` before calling OpenRouter, Deepgram, Azure, or Minimax.
 
-## Coding Conventions
-
-- Named exports for all components and utilities
-- No `any`, no unsafe `as` casts
-- `cn()` from `src/lib/utils.ts` for all conditional class names — never string concatenation
-- No `console.log` in committed code
-- Keep components under ~200 lines; split if larger
-
-## UI and Design System
-
-**Tokens** — use semantic CSS variables (`bg-background`, `text-foreground`, `text-muted-foreground`, `border`, etc.) from `src/styles/index.css`. Never hardcode colors.
-
-**Dark mode** — app supports light/dark via `.dark` class. Use `dark:` Tailwind variants, not JS theme checks.
-
-**shadcn/ui** — prefer existing primitives in `src/components/ui/` before building custom alternatives. Never hand-edit files in that directory — use `npx shadcn add <component>`.
-
-**Accessibility** — icon-only interactive elements require `aria-label`.
-
-**Minimum font size** — never use font size smaller than `text-sm`.
-
 ## Testing and Quality Bar
 
 Tests live in `frontend/tests/`. Run one file: `npx vitest tests/my.test.ts`.

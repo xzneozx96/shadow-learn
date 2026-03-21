@@ -100,7 +100,7 @@ export function SkillMasteryGrid({ stats }: Props) {
                 {`${accuracy}%`}
               </span>
               <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground mt-1.5 antialiased">
-                {skill}
+                {t(`progress.skill.${skill}`)}
               </h4>
               <p className="text-sm font-medium text-muted-foreground/40 mt-1">
                 {data.sessions === 1 ? `1 ${t('progress.exercise')}` : `${data.sessions} ${t('progress.exercisesPlural')}`}

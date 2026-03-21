@@ -87,7 +87,7 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
       type={t('study.mode.cloze')}
       progress={progress}
       footer={footer}
-      info="Read a short story and fill in the missing vocabulary words from context. Tests contextual understanding."
+      info={t('study.exercise.cloze.info')}
     >
       {/* Story with inline inputs */}
       <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-lg leading-[2.4] text-foreground/90 mb-0">
