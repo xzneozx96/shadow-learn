@@ -49,6 +49,7 @@ export interface ChatMessage {
 
 export interface AppSettings {
   translationLanguage: string
+  uiLanguage?: 'en' | 'vi'
 }
 
 export interface DecryptedKeys {
