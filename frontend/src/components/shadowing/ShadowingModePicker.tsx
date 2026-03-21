@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
 function formatTimestamp(seconds: number): string {
@@ -35,13 +36,14 @@ export function ShadowingModePicker({
   onStart,
   onClose,
 }: ShadowingModePickerProps) {
+  const { t } = useI18n()
   const [selectedMode, setSelectedMode] = useState<'dictation' | 'speaking'>('dictation')
   const [count, setCount] = useState<number | 'all'>(totalRemaining > 10 ? 10 : 'all')
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Shadowing Mode</DialogTitle>
+        <DialogTitle>{t('shadowing.modeTitle')}</DialogTitle>
         <DialogDescription>
           {`Starting from segment ${startSegmentNumber} — "${startSegment.text}" (${formatTimestamp(startSegment.start)})`}
         </DialogDescription>
@@ -58,9 +60,9 @@ export function ShadowingModePicker({
           )}
           onClick={() => setSelectedMode('dictation')}
         >
-          <div className="text-sm font-semibold">✍️ Dictation</div>
+          <div className="text-sm font-semibold">{t('shadowing.dictationMode.label')}</div>
           <div className="mt-0.5 text-sm text-muted-foreground">
-            Listen to each segment, type what you heard
+            {t('shadowing.dictationMode.desc')}
           </div>
         </button>
 
@@ -82,14 +84,14 @@ export function ShadowingModePicker({
                 onClick={() => speakingAvailable && setSelectedMode('speaking')}
                 aria-disabled={!speakingAvailable}
               >
-                <div className="text-sm font-semibold">🎤 Speaking</div>
+                <div className="text-sm font-semibold">{t('shadowing.speakingMode.label')}</div>
                 <div className="mt-0.5 text-sm text-muted-foreground">
-                  Listen to each segment and repeat
+                  {t('shadowing.speakingMode.desc')}
                 </div>
               </div>
             </TooltipTrigger>
             {!speakingAvailable && (
-              <TooltipContent>Azure key required in Settings</TooltipContent>
+              <TooltipContent>{t('shadowing.azureRequired')}</TooltipContent>
             )}
           </Tooltip>
         </TooltipProvider>
@@ -97,7 +99,7 @@ export function ShadowingModePicker({
 
       {/* Count chips */}
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm text-muted-foreground">Segments to practice:</span>
+        <span className="text-sm text-muted-foreground">{t('shadowing.segmentsToPractice')}</span>
         <div className="flex gap-2">
           {COUNT_OPTIONS.map(n => (
             <Button
@@ -127,8 +129,8 @@ export function ShadowingModePicker({
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button onClick={() => onStart(selectedMode, count)}>Start →</Button>
+        <Button variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
+        <Button onClick={() => onStart(selectedMode, count)}>{t('shadowing.startArrow')}</Button>
       </div>
     </>
   )

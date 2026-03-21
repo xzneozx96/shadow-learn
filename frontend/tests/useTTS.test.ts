@@ -2,11 +2,11 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getTTSCache, saveTTSCache } from '../src/db'
+import { getTTSCache, saveTTSCache } from '@/db'
 import { useTTS } from '../src/hooks/useTTS'
-import { getAppConfig } from '../src/lib/config'
+import { getAppConfig } from '@/lib/config'
 
-vi.mock('../src/db', () => ({
+vi.mock('@/db', () => ({
   getTTSCache: vi.fn(),
   saveTTSCache: vi.fn(),
 }))
@@ -16,8 +16,9 @@ vi.mock('sonner', () => ({
 }))
 
 // Mock getAppConfig so the module-level promise cache doesn't leak between tests
-vi.mock('../src/lib/config', () => ({
+vi.mock('@/lib/config', () => ({
   getAppConfig: vi.fn(),
+  API_BASE: '',
 }))
 
 const mockDb = {} as any

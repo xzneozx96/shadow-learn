@@ -3,6 +3,7 @@ import { Mic, Play, Square, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { usePlayer } from '@/contexts/PlayerContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useTimeEffect } from '@/hooks/useTimeEffect'
 import { cn } from '@/lib/utils'
@@ -24,6 +25,7 @@ export function ShadowingSpeakingPhase({
   onSkip,
   onExit,
 }: ShadowingSpeakingPhaseProps) {
+  const { t } = useI18n()
   const { player } = usePlayer()
   const isReplayingRef = useRef(false)
   const micBtnRef = useRef<HTMLButtonElement>(null)
@@ -119,7 +121,7 @@ export function ShadowingSpeakingPhase({
         <div className="glass-card p-8 rounded-2xl max-w-md w-full flex flex-col items-center gap-6 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col items-center gap-2">
             <span className="text-sm uppercase tracking-[0.2em] text-muted-foreground font-medium">
-              Speak what you heard
+              {t('shadowing.speakWhatYouHeard')}
             </span>
           </div>
 
@@ -180,7 +182,7 @@ export function ShadowingSpeakingPhase({
                     className="flex-1 backdrop-blur-sm border-border/50 hover:bg-accent/40"
                     onClick={handleRerecord}
                   >
-                    ↺ Re-record
+                    {t('shadowing.rerecord')}
                   </Button>
                 )
               : (
@@ -193,7 +195,7 @@ export function ShadowingSpeakingPhase({
                       player?.play()
                     }}
                   >
-                    ↺ Replay
+                    {t('shadowing.replay')}
                   </Button>
                 )}
 
@@ -202,7 +204,7 @@ export function ShadowingSpeakingPhase({
               disabled={recordingState !== 'stopped' || !blob}
               onClick={() => blob && onSubmit(blob)}
             >
-              Submit
+              {t('shadowing.submit')}
             </Button>
           </div>
         </div>
@@ -214,7 +216,7 @@ export function ShadowingSpeakingPhase({
         onClick={handleSkip}
         aria-label="Skip this segment"
       >
-        skip →
+        {t('shadowing.skip')}
       </Button>
     </div>
   )

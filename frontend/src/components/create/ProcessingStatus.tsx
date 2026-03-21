@@ -1,5 +1,6 @@
 import { Check, Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/contexts/I18nContext'
 
 export type StepStatus = 'pending' | 'active' | 'done' | 'error'
 
@@ -29,6 +30,7 @@ function StepIcon({ status }: { status: StepStatus }) {
 }
 
 export function ProcessingStatus({ steps, onRetry }: ProcessingStatusProps) {
+  const { t } = useI18n()
   const hasError = steps.some(s => s.status === 'error')
 
   return (
@@ -45,7 +47,7 @@ export function ProcessingStatus({ steps, onRetry }: ProcessingStatusProps) {
 
       {hasError && onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>
-          Retry
+          {t('create.processing.retry')}
         </Button>
       )}
     </div>

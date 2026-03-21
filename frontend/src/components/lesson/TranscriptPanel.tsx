@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useTTS } from '@/hooks/useTTS'
 import { cn } from '@/lib/utils'
@@ -28,6 +29,7 @@ export function TranscriptPanel({
   onProgressUpdate,
   onShadowClick,
 }: TranscriptPanelProps) {
+  const { t } = useI18n()
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys)
   const { save, isSaved } = useVocabulary()
@@ -74,7 +76,7 @@ export function TranscriptPanel({
   const handleSaveWord = useCallback(
     async (word: Word, seg: Segment) => {
       await save(word, seg, lesson, activeLang)
-      toast.success('Saved to Workbook')
+      toast.success(t('lesson.savedToWorkbook'))
     },
     [save, lesson, activeLang],
   )
@@ -126,7 +128,7 @@ export function TranscriptPanel({
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search segments..."
+              placeholder={t('lesson.searchSegments')}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-8"

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useAgentChat } from '@/hooks/useAgentChat'
 import {
@@ -222,6 +223,7 @@ export function CompanionPanel({
   lessonId,
   lessonTitle,
 }: CompanionPanelProps) {
+  const { t } = useI18n()
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const { entriesByLesson } = useVocabulary()
@@ -266,9 +268,9 @@ export function CompanionPanel({
       className="flex h-full flex-col gap-0"
     >
       <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3 rounded-none h-[65px]!">
-        <TabsTrigger value="ai">AI Companion</TabsTrigger>
+        <TabsTrigger value="ai">{t('lesson.aiCompanion')}</TabsTrigger>
         <TabsTrigger value="workbook" className="gap-1.5">
-          Workbook
+          {t('lesson.workbook')}
           {count > 0 && (
             <Badge className="px-1.5 py-0 text-xs">{count}</Badge>
           )}
@@ -318,7 +320,7 @@ export function CompanionPanel({
 
         <div className="flex items-center gap-2 border-t border-border p-3 h-16">
           <Textarea
-            placeholder="Ask about this segment..."
+            placeholder={t('lesson.askAboutSegment')}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

@@ -5,15 +5,19 @@ import { Layout } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { decryptKeys, encryptKeys } from '@/crypto'
 import { getCryptoData, getSettings, saveCryptoData, saveSettings } from '@/db'
 import { getAppConfig } from '@/lib/config'
 import { LANGUAGES } from '@/lib/constants'
+import type { Locale } from '@/lib/i18n'
 
 export function Settings() {
   const { db, keys, lock, resetKeys, setup } = useAuth()
+  const { locale, setLocale, t } = useI18n()
 
   const [provider, setProvider] = useState<string | null>(null)
   const [sttProvider, setSttProvider] = useState<string>('deepgram')
@@ -101,7 +105,7 @@ export function Settings() {
       await setup(newKeys, keysPin)
       setKeysSaved(true)
       setKeysPin('')
-      toast.success('API keys updated')
+      toast.success(t('settings.keysSaved'))
       setTimeout(setKeysSaved, 2000, false)
     }
     catch {
@@ -117,11 +121,11 @@ export function Settings() {
     setPinSuccess(false)
 
     if (newPin.length < 4) {
-      setPinError('PIN must be at least 4 characters')
+      setPinError(t('settings.pinTooShort'))
       return
     }
     if (newPin !== confirmPin) {
-      setPinError('PINs do not match')
+      setPinError(t('settings.pinMismatch'))
       return
     }
 
@@ -131,43 +135,45 @@ export function Settings() {
       setNewPin('')
       setConfirmPin('')
       setPinSuccess(true)
-      toast.success('PIN changed successfully')
+      toast.success(t('settings.pinChanged'))
     }
     catch {
-      setPinError('Failed to change PIN')
-      toast.error('Failed to change PIN')
+      setPinError(t('settings.pinChangeFailed'))
+      toast.error(t('settings.pinChangeFailed'))
     }
   }
 
   async function handleSaveSettings() {
     if (!db)
       return
+    const current = await getSettings(db)
     await saveSettings(db, {
+      ...(current ?? { translationLanguage: '' }),
       translationLanguage: language,
     })
     setSaved(true)
-    toast.success('Settings saved')
+    toast.success(t('settings.saved'))
     setTimeout(setSaved, 2000, false)
   }
 
   return (
     <Layout>
       <div className="mx-auto max-w-2xl space-y-6 p-4">
-        <h1 className="text-xl font-bold">Settings</h1>
+        <h1 className="text-xl font-bold">{t('settings.title')}</h1>
 
         <Card>
           <CardHeader>
-            <CardTitle>API Keys</CardTitle>
+            <CardTitle>{t('settings.apiKeys')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-white/40">Visibility</span>
+              <span className="text-sm text-white/40">{t('settings.visibility')}</span>
               <Button variant="ghost" size="icon-sm" onClick={() => setShowKeys(!showKeys)}>
                 {showKeys ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </Button>
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/40">OpenRouter API Key</label>
+              <label className="text-sm text-white/40">{t('settings.openrouterKey')}</label>
               <Input
                 type={showKeys ? 'text' : 'password'}
                 value={editOpenrouterKey}
@@ -181,7 +187,7 @@ export function Settings() {
               <>
                 <div className="space-y-2">
                   <label className="text-sm text-white/40">
-                    Azure Speech Key
+                    {t('settings.azureSpeechKey')}
                     {' '}
                     <span className="text-white/20">(for TTS and pronunciation assessment)</span>
                   </label>
@@ -195,7 +201,7 @@ export function Settings() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm text-white/40">
-                    Azure Speech Region
+                    {t('settings.azureSpeechRegion')}
                     {' '}
                     <span className="text-white/20">(e.g. eastus)</span>
                   </label>
@@ -214,7 +220,7 @@ export function Settings() {
             {provider === 'minimax' && (
               <div className="space-y-2">
                 <label className="text-sm text-white/40">
-                  Minimax API Key
+                  {t('settings.minimaxKey')}
                   {' '}
                   <span className="text-white/20">(for listening practice)</span>
                 </label>
@@ -231,7 +237,7 @@ export function Settings() {
             {sttProvider === 'deepgram' && (
               <div className="space-y-2">
                 <label className="text-sm text-white/40">
-                  Deepgram API Key
+                  {t('settings.deepgramKey')}
                   {' '}
                   <span className="text-white/20">(for video subtitles)</span>
                 </label>
@@ -245,7 +251,7 @@ export function Settings() {
               </div>
             )}
             <div className="space-y-2">
-              <label className="text-sm text-white/40">Confirm with PIN</label>
+              <label className="text-sm text-white/40">{t('settings.confirmWithPin')}</label>
               <Input
                 type="password"
                 value={keysPin}
@@ -255,39 +261,39 @@ export function Settings() {
             </div>
             {keysError && <p className="text-sm text-destructive">{keysError}</p>}
             {keysSaved && <p className="text-sm text-emerald-400">Keys saved</p>}
-            <Button onClick={handleSaveKeys} disabled={provider === null}>Save Keys</Button>
+            <Button onClick={handleSaveKeys} disabled={provider === null}>{t('settings.saveKeys')}</Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Change PIN</CardTitle>
+            <CardTitle>{t('settings.changePin')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
-              <label className="text-sm text-white/40">New PIN</label>
+              <label className="text-sm text-white/40">{t('settings.newPin')}</label>
               <Input
                 type="password"
                 value={newPin}
                 onChange={e => setNewPin(e.target.value)}
-                placeholder="Enter new PIN"
+                placeholder={t('settings.newPinPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/40">Confirm PIN</label>
+              <label className="text-sm text-white/40">{t('settings.confirmPin')}</label>
               <Input
                 type="password"
                 value={confirmPin}
                 onChange={e => setConfirmPin(e.target.value)}
-                placeholder="Confirm new PIN"
+                placeholder={t('settings.confirmPinPlaceholder')}
               />
             </div>
             {pinError && <p className="text-sm text-destructive">{pinError}</p>}
-            {pinSuccess && <p className="text-sm text-emerald-400">PIN changed successfully</p>}
+            {pinSuccess && <p className="text-sm text-emerald-400">{t('settings.pinChanged')}</p>}
             <div className="flex gap-2">
-              <Button onClick={handleChangePin} size="sm">Change PIN</Button>
+              <Button onClick={handleChangePin} size="sm">{t('settings.changePin')}</Button>
               <Button variant="destructive" size="sm" onClick={resetKeys}>
-                Forgot PIN
+                {t('settings.forgotPin')}
               </Button>
             </div>
           </CardContent>
@@ -295,11 +301,11 @@ export function Settings() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Language</CardTitle>
+            <CardTitle>{t('settings.language')}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-white/40">Translation Language</label>
+              <label className="text-sm text-white/40">{t('settings.translationLanguage')}</label>
               <Select value={language} onValueChange={v => v !== null && setLanguage(v)} items={LANGUAGES}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -311,17 +317,32 @@ export function Settings() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>{t('settings.interfaceLanguage')}</Label>
+              <Select
+                value={locale}
+                onValueChange={(v) => setLocale(v as Locale)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vi">Tiếng Việt</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
 
         <div className="flex gap-3">
           <Button onClick={handleSaveSettings}>
             <Save className="size-4" />
-            {saved ? 'Saved!' : 'Save Settings'}
+            {saved ? t('settings.saved') : t('settings.saveSettings')}
           </Button>
           <Button variant="outline" onClick={lock}>
             <Lock className="size-4" />
-            Lock App
+            {t('settings.lockApp')}
           </Button>
         </div>
       </div>

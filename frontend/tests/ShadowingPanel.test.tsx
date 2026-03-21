@@ -27,6 +27,10 @@ const mockPlayer = {
   destroy: vi.fn(),
 }
 
+vi.mock('@/contexts/I18nContext', () => ({
+  useI18n: () => ({ t: (key: string) => key, locale: 'en', setLocale: async () => {} }),
+}))
+
 vi.mock('@/contexts/PlayerContext', () => ({
   usePlayer: () => ({
     player: mockPlayer,
@@ -110,7 +114,7 @@ describe('shadowingPanel', () => {
     render(<ShadowingPanel {...DEFAULT_PROPS} />)
     fireEnded()
     await waitFor(() => {
-      expect(screen.getByText(/type what you heard/i)).toBeTruthy()
+      expect(screen.getByRole('textbox')).toBeTruthy()
     })
   })
 
@@ -119,7 +123,7 @@ describe('shadowingPanel', () => {
     fireEnded()
     fireEnded()
     await waitFor(() => {
-      expect(screen.getByText(/type what you heard/i)).toBeTruthy()
+      expect(screen.getByRole('textbox')).toBeTruthy()
     })
     // Still in dictation, not skipped forward
     expect(screen.getByText(/1 \/ 2/)).toBeTruthy()
@@ -163,7 +167,7 @@ describe('shadowingPanel', () => {
     render(<ShadowingPanel {...DEFAULT_PROPS} segments={[makeSegment(0)]} />)
     await advanceThroughDictation('中文0')
     await waitFor(() => {
-      expect(screen.getByText(/session complete/i)).toBeTruthy()
+      expect(screen.getByRole('region', { name: /session summary/i })).toBeTruthy()
     })
   })
 
@@ -172,7 +176,7 @@ describe('shadowingPanel', () => {
     render(<ShadowingPanel {...DEFAULT_PROPS} onExit={onExit} />)
     fireEvent.click(screen.getByLabelText(/exit shadowing mode/i))
     expect(onExit).toHaveBeenCalledOnce()
-    expect(screen.queryByText(/exit shadowing mode\?/i)).toBeNull()
+    expect(screen.queryByText('shadowing.exitTitle')).toBeNull()
   })
 
   it('shows confirmation dialog when >= 3 attempts', async () => {
@@ -185,7 +189,7 @@ describe('shadowingPanel', () => {
 
     fireEvent.click(screen.getByLabelText(/exit shadowing mode/i))
     await waitFor(() => {
-      expect(screen.getByText(/exit shadowing mode\?/i)).toBeTruthy()
+      expect(screen.getByText('shadowing.exitTitle')).toBeTruthy()
     })
   })
 

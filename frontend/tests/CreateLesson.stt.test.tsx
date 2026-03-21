@@ -5,6 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { getAppConfig } from '@/lib/config'
 
+vi.mock('@/contexts/I18nContext', async () => {
+  const { getTranslation } = await import('@/lib/i18n')
+  return {
+    useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),
+  }
+})
+
 // Minimal auth context mock
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -28,6 +35,7 @@ vi.mock('@/db', () => ({
 // Mock getAppConfig so the module-level promise cache doesn't leak between tests
 vi.mock('@/lib/config', () => ({
   getAppConfig: vi.fn(),
+  API_BASE: 'http://test-api',
 }))
 
 function renderCreateLesson() {
@@ -53,6 +61,8 @@ describe('createLesson STT key selection', () => {
     renderCreateLesson()
 
     await userEvent.type(screen.getByPlaceholderText(/youtube/i), 'https://www.youtube.com/watch?v=abc12345678')
+    // Wait for sttProvider to load (canGenerate becomes true) before clicking
+    await waitFor(() => expect(screen.getByRole('button', { name: /generate lesson/i })).not.toBeDisabled())
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
     await waitFor(() => {
@@ -74,6 +84,8 @@ describe('createLesson STT key selection', () => {
     renderCreateLesson()
 
     await userEvent.type(screen.getByPlaceholderText(/youtube/i), 'https://www.youtube.com/watch?v=abc12345678')
+    // Wait for sttProvider to load (canGenerate becomes true) before clicking
+    await waitFor(() => expect(screen.getByRole('button', { name: /generate lesson/i })).not.toBeDisabled())
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
     await waitFor(() => {

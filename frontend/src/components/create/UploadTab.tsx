@@ -1,5 +1,6 @@
 import { FileVideo, Upload } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
 const MAX_SIZE = 2 * 1024 * 1024 * 1024 // 2 GB
@@ -20,19 +21,20 @@ function formatFileSize(bytes: number): string {
 }
 
 export function UploadTab({ file, onFileChange }: UploadTabProps) {
+  const { t } = useI18n()
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleFile = useCallback((f: File) => {
     if (f.size > MAX_SIZE) {
-      setError('File exceeds 2 GB limit')
+      setError(t('create.fileSizeError'))
       onFileChange(null)
       return
     }
     setError(null)
     onFileChange(f)
-  }, [onFileChange])
+  }, [onFileChange, t])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -85,7 +87,7 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
               <>
                 <Upload className="size-8 text-white/30" />
                 <p className="text-sm text-white/40">
-                  Drag and drop a video or audio file, or click to browse
+                  {t('create.dragDropHint')}
                 </p>
               </>
             )}

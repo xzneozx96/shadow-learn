@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { API_BASE, getAppConfig } from '@/lib/config'
 import { LessonCard } from './LessonCard'
@@ -13,6 +14,7 @@ type SortMode = 'recent' | 'alpha' | 'progress'
 
 export function Library() {
   const { keys } = useAuth()
+  const { t } = useI18n()
   const { lessons, updateLesson, deleteLesson } = useLessons()
   const [search, setSearch] = useState('')
   const [sort] = useState<SortMode>('recent')
@@ -82,7 +84,7 @@ export function Library() {
         }),
       })
       if (!res.ok) {
-        toast.error('Failed to retry lesson processing')
+        toast.error(t('library.retryFailed'))
         return
       }
       const { job_id } = await res.json()
@@ -95,9 +97,9 @@ export function Library() {
       })
     }
     catch {
-      toast.error('Failed to retry lesson processing')
+      toast.error(t('library.retryFailed'))
     }
-  }, [keys, sttProvider, updateLesson])
+  }, [keys, sttProvider, updateLesson, t])
 
   // const sortButtons: { mode: SortMode, label: string }[] = [
   //   { mode: 'recent', label: 'Recent' },
@@ -111,7 +113,7 @@ export function Library() {
         {/* Section header */}
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-sm font-medium text-white/50 tracking-wide uppercase">
-            All lessons
+            {t('library.allLessons')}
           </h2>
           {/* <div className="flex items-center gap-1">
             {sortButtons.map(({ mode, label }) => (
@@ -137,7 +139,7 @@ export function Library() {
             <div className="flex size-10 items-center justify-center rounded-full border border-white/25 transition-colors group-hover:bg-white/5">
               <Plus className="size-5" />
             </div>
-            <span className="text-sm font-medium">Add new lesson</span>
+            <span className="text-sm font-medium">{t('library.addNew')}</span>
           </Link>
 
           {filtered.map(lesson => (

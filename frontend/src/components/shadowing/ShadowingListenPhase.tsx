@@ -2,6 +2,7 @@ import type { Segment } from '@/types'
 import { X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { usePlayer } from '@/contexts/PlayerContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useTimeEffect } from '@/hooks/useTimeEffect'
 import { Button } from '../ui/button'
 
@@ -24,6 +25,7 @@ export function ShadowingListenPhase({
   onSkip,
   onExit,
 }: ShadowingListenPhaseProps) {
+  const { t } = useI18n()
   const { player } = usePlayer()
   const hasAutoTransitionedRef = useRef(false)
   // Guards against stale currentTime (pre-session or pre-retry position) triggering
@@ -120,7 +122,7 @@ export function ShadowingListenPhase({
 
       {/* Body */}
       <div className="flex flex-1 flex-col items-center justify-center gap-5">
-        <span className="text-sm uppercase tracking-widest text-muted-foreground">Listen</span>
+        <span className="text-sm uppercase tracking-widest text-muted-foreground">{t('shadowing.listen')}</span>
 
         {/* Decorative waveform — heights applied from WAVE_HEIGHTS for visual variety */}
         <div className="flex items-center gap-0.5" style={{ height: 48 }} aria-hidden>
@@ -133,14 +135,14 @@ export function ShadowingListenPhase({
           ))}
         </div>
 
-        <span className="text-sm text-muted-foreground">Playing segment…</span>
+        <span className="text-sm text-muted-foreground">{t('shadowing.playingSegment')}</span>
 
         <Button
           ref={replayButtonRef}
           variant="secondary"
           onClick={handleReplay}
         >
-          ↺ Replay
+          {t('shadowing.replay')}
         </Button>
       </div>
 
@@ -150,7 +152,7 @@ export function ShadowingListenPhase({
         onClick={onSkip}
         aria-label="Skip this segment"
       >
-        skip →
+        {t('shadowing.skip')}
       </Button>
     </div>
   )

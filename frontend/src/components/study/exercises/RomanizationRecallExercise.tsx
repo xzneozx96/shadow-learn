@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useI18n } from '@/contexts/I18nContext'
 import { computeAccuracyScore, computePinyinDiff } from '@/lib/diff-utils'
 import { compareRomanization } from '@/lib/romanization-utils'
 import { cn } from '@/lib/utils'
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function RomanizationRecallExercise({ entry, progress = '', onNext, playTTS, caps }: Props) {
+  const { t } = useI18n()
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
   const correct = compareRomanization(value, entry.romanization, caps.romanizationSystem)
@@ -34,9 +36,9 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
 
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
+      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {!checked
-        ? <Button size="sm" onClick={handleCheck}>Check →</Button>
+        ? <Button size="sm" onClick={handleCheck}>{t('study.checkButton')}</Button>
         : (
             <Button
               size="sm"
@@ -48,7 +50,7 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
                 onNext(accuracyScore, { mistakes: mistakes.length > 0 ? mistakes : undefined })
               }}
             >
-              Next →
+              {t('study.nextButton')}
             </Button>
           )}
     </div>
@@ -83,7 +85,7 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
       {checked && (
         <div className="mt-4 space-y-3">
           <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-3">Your answer</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-3">{t('study.yourAnswer')}</p>
             <div className="flex flex-wrap gap-2">
               {diff.map((tok, i) => (
                 <span
@@ -102,11 +104,11 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
           </div>
           <p className={cn('text-sm font-bold', accuracyScore === 100 ? 'text-emerald-400' : 'text-amber-400')}>
             {accuracyScore}
-            % accurate
+            {t('study.accurate')}
           </p>
           {accuracyScore < 100 && entry.romanization && (
             <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-1">Correct answer</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-1">{t('study.correctAnswer')}</p>
               <p className="text-xl font-medium">{entry.romanization}</p>
             </div>
           )}

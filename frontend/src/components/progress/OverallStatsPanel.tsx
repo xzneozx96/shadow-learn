@@ -1,10 +1,12 @@
 import type { ProgressStats } from '@/db'
+import { useI18n } from '@/contexts/I18nContext'
 
 interface Props {
   stats?: ProgressStats
 }
 
 export function OverallStatsPanel({ stats }: Props) {
+  const { t } = useI18n()
   const s = stats ?? {
     totalExercises: 0,
     accuracyRate: 0,
@@ -29,10 +31,10 @@ export function OverallStatsPanel({ stats }: Props) {
           {s.totalExercises}
         </div>
         <div className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80 mt-4 relative z-10">
-          Exercises
+          {t('progress.exercises')}
         </div>
         <p className="text-xs font-medium text-muted-foreground/50 mt-1 relative z-10">
-          Completed exercises
+          {t('progress.completedExercises')}
         </p>
       </div>
 
@@ -72,7 +74,7 @@ export function OverallStatsPanel({ stats }: Props) {
               {`${accuracy}%`}
             </span>
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 mt-1 antialiased">
-              Accuracy
+              {t('progress.accuracy')}
             </span>
           </div>
         </div>
@@ -80,14 +82,16 @@ export function OverallStatsPanel({ stats }: Props) {
         {/* Outer text content bottom */}
         <div className="mt-4 flex flex-col items-center">
           <h4 className="text-sm font-bold text-foreground">
-            Overall Performance
+            {t('progress.overallPerformance')}
           </h4>
           <p className="text-xs font-medium text-muted-foreground/40 mt-1">
             {s.totalCorrect}
-            {' correct · '}
+            {' '}
+            {t('progress.correct')}
+            {' · '}
             {s.totalIncorrect}
             {' '}
-            wrong
+            {t('progress.wrong')}
           </p>
         </div>
       </div>
@@ -99,10 +103,10 @@ export function OverallStatsPanel({ stats }: Props) {
           {s.totalSessions}
         </div>
         <div className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80 mt-4 relative z-10">
-          Sessions
+          {t('progress.sessions')}
         </div>
         <p className="text-xs font-medium text-muted-foreground/50 mt-1 relative z-10">
-          Completed sets
+          {t('progress.completedSets')}
         </p>
       </div>
     </div>

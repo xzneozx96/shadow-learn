@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useI18n } from '@/contexts/I18nContext'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { cn } from '@/lib/utils'
 import { HTML5Player } from '@/player/HTML5Player'
@@ -64,6 +65,7 @@ interface VideoPanelProps {
 }
 
 export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
+  const { t } = useI18n()
   const { player, subscribeTime, getTime, playbackRate, volume, setPlayer, setPlaybackRate, setVolume } = usePlayer()
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -276,7 +278,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
                 <Download className="size-4" />
               </Button>
               <TooltipContent>
-                {videoBlob?.type.startsWith('video/') ? 'Download video' : 'Download audio'}
+                {videoBlob?.type.startsWith('video/') ? t('lesson.downloadVideo') : t('lesson.downloadAudio')}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -305,7 +307,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
                       className="flex items-center gap-1.5 text-sm text-white/50 transition-colors hover:text-white/80"
                     >
                       <ExternalLink className="size-4" />
-                      Open on YouTube
+                      {t('lesson.openOnYouTube')}
                     </a>
                   )}
                 </div>

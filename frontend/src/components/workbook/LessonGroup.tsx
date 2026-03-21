@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 import { WordCard } from './WordCard'
 
@@ -26,6 +27,7 @@ interface LessonGroupProps {
 const PREVIEW_COUNT = 5
 
 export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGroup, loadingWord }: LessonGroupProps) {
+  const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const navigate = useNavigate()
@@ -51,7 +53,9 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGr
           <div className="text-sm text-muted-foreground mt-0.5">
             {entries.length}
             {' '}
-            words · saved
+            {t('workbook.wordCount')}
+            {' · '}
+            {t('workbook.lastSaved')}
             {' '}
             {lastSavedDate}
           </div>
@@ -67,7 +71,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGr
           </Button>
         )}
         <Button onClick={() => navigate(`/vocabulary/${lessonId}/study`)}>
-          Study
+          {t('lessonGroup.study')}
         </Button>
       </div>
 
@@ -87,7 +91,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGr
               className="w-full py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/30 border-t border-border transition-colors"
               onClick={() => setExpanded(e => !e)}
             >
-              {expanded ? 'Show less ↑' : `Show all ${entries.length} words ↓`}
+              {expanded ? t('lessonGroup.showLess') : `${t('lessonGroup.showAll')} ${entries.length} ${t('lessonGroup.showAllWords')}`}
             </button>
           )}
         </>
@@ -103,11 +107,11 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGr
       >
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle>Delete lesson group?</DialogTitle>
-            <DialogDescription>This will remove all vocabulary words saved from this lesson. This action cannot be undone.</DialogDescription>
+            <DialogTitle>{t('lessonGroup.deleteTitle')}</DialogTitle>
+            <DialogDescription>{t('lessonGroup.deleteDescription')}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('common.cancel')}</Button>
             <Button
               variant="destructive"
               onClick={() => {
@@ -116,7 +120,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGr
                   onDeleteGroup(lessonId)
               }}
             >
-              Delete
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

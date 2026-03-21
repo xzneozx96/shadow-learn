@@ -7,6 +7,7 @@ import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { LanguageInput } from '@/components/ui/LanguageInput'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { API_BASE } from '@/lib/config'
 import { cn } from '@/lib/utils'
 
@@ -69,12 +70,15 @@ function scoreRingColor(n: number) {
   return 'border-rose-500/20 bg-rose-500/6'
 }
 
-function scoreLabel(n: number) {
-  if (n >= 80)
-    return 'Excellent'
-  if (n >= 60)
-    return 'Good effort'
-  return 'Keep practising'
+function useScoreLabel() {
+  const { t } = useI18n()
+  return (n: number) => {
+    if (n >= 80)
+      return t('study.translation.excellent')
+    if (n >= 60)
+      return t('study.translation.goodEffort')
+    return t('study.translation.keepPractising')
+  }
 }
 
 function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedback }) {
@@ -100,6 +104,8 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
 
 export function TranslationExercise({ sentence, direction, progress = '', onNext, caps }: Props) {
   const { keys } = useAuth()
+  const { t } = useI18n()
+  const scoreLabel = useScoreLabel()
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<EvaluateResult | null>(null)
@@ -132,7 +138,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
       setResult(await resp.json())
     }
     catch {
-      toast.error('Translation evaluation failed. Moving on.')
+      toast.error(t('study.translationEvaluationFailed'))
       onNext(0, { skipped: true })
     }
     finally {
@@ -142,22 +148,22 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
 
   if (result) {
     return (
-      <ExerciseCard type="Translation" progress={progress} footer={null}>
+      <ExerciseCard type={t('study.mode.translation')} progress={progress} footer={null}>
         <div className="space-y-4">
 
           {/* Source + answer/reference comparison */}
           <div className="rounded-lg border border-border/50 bg-muted/20 overflow-hidden text-sm">
             <div className="px-4 py-3 border-b border-border/40">
-              <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Question to translate</p>
+              <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">{t('study.questionToTranslate')}</p>
               <p className="font-medium leading-snug">{source}</p>
             </div>
             <div className="grid grid-cols-2 divide-x divide-border/40">
               <div className="px-3 py-2.5">
-                <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Your answer</p>
+                <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">{t('study.yourAnswer')}</p>
                 <p className="text-sm italic text-foreground/75 leading-relaxed">{value}</p>
               </div>
               <div className="px-3 py-2.5">
-                <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">Model answer</p>
+                <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">{t('study.modelAnswer')}</p>
                 <p className="text-sm text-foreground leading-relaxed">{reference}</p>
                 {direction === 'en-to-zh' && (
                   <p className="text-sm text-muted-foreground mt-1">{sentence.romanization}</p>
@@ -172,28 +178,28 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
               {result.overall_score}
             </span>
             <div>
-              <p className="text-sm text-muted-foreground leading-none mb-1">out of 100</p>
+              <p className="text-sm text-muted-foreground leading-none mb-1">{t('study.outOf100')}</p>
               <p className={cn('text-sm font-bold', scoreColor(result.overall_score))}>{scoreLabel(result.overall_score)}</p>
             </div>
           </div>
 
           {/* Category breakdown */}
           <div className="space-y-4 pt-1">
-            <ScoreRow label="Accuracy" feedback={result.accuracy} />
-            <ScoreRow label="Grammar" feedback={result.grammar} />
-            <ScoreRow label="Naturalness" feedback={result.naturalness} />
+            <ScoreRow label={t('study.translation.accuracy')} feedback={result.accuracy} />
+            <ScoreRow label={t('study.translation.grammar')} feedback={result.grammar} />
+            <ScoreRow label={t('study.translation.naturalness')} feedback={result.naturalness} />
           </div>
 
           {/* Tip */}
           {result.tip && (
             <div className="rounded-lg border border-sky-500/25 bg-sky-500/8 px-4 py-3">
-              <p className="text-sm font-bold uppercase tracking-widest text-sky-400/80 mb-1.5">Tip</p>
+              <p className="text-sm font-bold uppercase tracking-widest text-sky-400/80 mb-1.5">{t('study.translation.tip')}</p>
               <p className="text-sm text-foreground/90 leading-relaxed">{result.tip}</p>
             </div>
           )}
 
           <Button className="w-full" onClick={() => onNext(result.overall_score)}>
-            Next →
+            {t('study.nextButton')}
           </Button>
         </div>
       </ExerciseCard>
@@ -201,11 +207,11 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
   }
 
   return (
-    <ExerciseCard type="Translation" progress={progress} footer={null}>
+    <ExerciseCard type={t('study.mode.translation')} progress={progress} footer={null}>
       <div className="space-y-8">
         <div>
           <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">
-            Translate to
+            {t('study.translateTo')}
             {' '}
             {targetLang === 'english' ? 'English' : caps.languageName}
             :
@@ -234,7 +240,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
             size="sm"
             onClick={() => onNext(0, { skipped: true })}
           >
-            Skip
+            {t('study.skip')}
           </Button>
           <Button
             size="sm"
@@ -242,7 +248,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
             disabled={loading || !value.trim()}
           >
             <Sparkles className="size-4" />
-            {loading ? 'Evaluating…' : 'Submit'}
+            {loading ? t('study.translation.evaluating') : t('study.translation.submit')}
           </Button>
         </div>
       </div>

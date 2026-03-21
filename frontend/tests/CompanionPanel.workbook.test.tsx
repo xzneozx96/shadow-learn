@@ -6,6 +6,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CompanionPanel } from '@/components/lesson/CompanionPanel'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 
+// Mock I18nContext so CompanionPanel can be rendered without an I18nProvider in tests.
+vi.mock('@/contexts/I18nContext', async () => {
+  const { getTranslation } = await import('@/lib/i18n')
+  return {
+    useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),
+  }
+})
+
 // Mock useVocabulary from its actual module path
 vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: vi.fn(() => ({ entriesByLesson: {} })),

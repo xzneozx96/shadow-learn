@@ -15,6 +15,7 @@ import { TranslationExercise } from '@/components/study/exercises/TranslationExe
 import { ModePicker } from '@/components/study/ModePicker'
 import { SessionSummary } from '@/components/study/SessionSummary'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useQuizGeneration } from '@/hooks/useQuizGeneration'
 import { useTracking } from '@/hooks/useTracking'
@@ -88,14 +89,15 @@ interface StudySessionProps {
 export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChange }: StudySessionProps) {
   const { entriesByLesson } = useVocabulary()
   const { db, keys } = useAuth()
+  const { t } = useI18n()
   const { logExerciseResult, logSessionComplete } = useTracking()
   const { playTTS, loadingText } = useTTS(db, keys)
   const { generateQuiz, loading } = useQuizGeneration()
 
   const entries = preloadedEntries ?? entriesByLesson[lessonId] ?? []
   const lessonTitle = preloadedEntries
-    ? 'Review Session'
-    : (entries[0]?.sourceLessonTitle ?? 'Unknown Lesson')
+    ? t('study.reviewSession')
+    : (entries[0]?.sourceLessonTitle ?? t('study.unknownLesson'))
   const caps = getLanguageCaps(entries[0]?.sourceLanguage)
 
   const [phase, setPhase] = useState<Phase>('picker')
@@ -217,7 +219,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
       setPhase('session')
     }
     catch {
-      toast.error('AI exercise generation failed — falling back to basic exercises')
+      toast.error(t('study.aiGenerationFailed'))
       const fallbackTypes = types.map(t =>
         (t === 'cloze' || t === 'translation') ? 'romanization-recall' : t,
       ) as Exclude<ExerciseMode, 'mixed'>[]
@@ -323,9 +325,9 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
           }}
         >
           <div className="flex flex-col items-center gap-5 max-w-xs text-center px-6">
-            <p className="text-base font-semibold">Leave session?</p>
+            <p className="text-base font-semibold">{t('study.leaveSession')}</p>
             <p className="text-sm text-muted-foreground">
-              Progress for this session will be lost.
+              {t('study.leaveSessionProgress')}
             </p>
             <div className="flex gap-3 w-full">
               <button
@@ -337,7 +339,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
                   'text-foreground hover:bg-muted/50 transition-colors',
                 )}
               >
-                Keep going
+                {t('study.keepGoing')}
               </button>
               <button
                 type="button"
@@ -347,7 +349,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
                   'bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors',
                 )}
               >
-                Leave
+                {t('study.leave')}
               </button>
             </div>
           </div>
@@ -374,7 +376,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
           <>
             {azureBanner && (
               <div className="text-sm text-amber-400 bg-amber-500/8 border border-amber-500/20 rounded-md px-4 py-3 mb-4">
-                Pronunciation exercises are unavailable — add an Azure Speech Key in Settings.
+                {t('study.pronunciation.unavailable')}
               </div>
             )}
             {/* <ProgressBar current={current} total={questions.length} /> */}

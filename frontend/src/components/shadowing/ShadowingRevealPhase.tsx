@@ -3,6 +3,7 @@ import type { PronunciationAssessResult, Segment } from '@/types'
 import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/contexts/I18nContext'
 import { API_BASE } from '@/lib/config'
 import {
   computeAccuracyScore,
@@ -42,6 +43,7 @@ type ShadowingRevealPhaseProps = (DictationRevealProps | SpeakingRevealProps) & 
 }
 
 export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
+  const { t } = useI18n()
   const { segment, segmentLabel, progress, onRetry, onNext, onExit } = props
   const [loadingScore, setLoadingScore] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
@@ -145,7 +147,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
         {props.mode === 'dictation' && dictationDiff && (
           <div className="flex flex-col items-center gap-4 w-full animate-in fade-in animate-delay-200">
             <span className="text-sm uppercase tracking-[0.2em] text-muted-foreground font-medium">
-              Your Attempt
+              {t('shadowing.yourAttempt')}
             </span>
             <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 px-4">
               {dictationDiff.map((tok, i) => (
@@ -172,7 +174,8 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
                   dictationScore >= 80 ? 'bg-emerald-400' : dictationScore >= 50 ? 'bg-amber-400' : 'bg-red-400',
                 )}
                 />
-                Accuracy:
+                {t('shadowing.accuracy')}
+                :
                 {' '}
                 {dictationScore}
                 %
@@ -202,7 +205,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           onClick={onRetry}
           disabled={loadingScore}
         >
-          ↺ Retry
+          {t('shadowing.retry')}
         </Button>
         <Button
           ref={nextBtnRef}
@@ -211,7 +214,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           disabled={loadingScore}
         >
           {loadingScore && <div className="size-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />}
-          {loadingScore ? 'Analyzing…' : 'Next →'}
+          {loadingScore ? t('shadowing.analyzing') : t('shadowing.nextArrow')}
         </Button>
       </div>
     </div>
