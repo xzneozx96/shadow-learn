@@ -103,7 +103,7 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
 }
 
 export function TranslationExercise({ sentence, direction, progress = '', onNext, caps }: Props) {
-  const { keys } = useAuth()
+  const { keys, trialMode } = useAuth()
   const { t } = useI18n()
   const scoreLabel = useScoreLabel()
   const [value, setValue] = useState('')
@@ -119,7 +119,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
     : t('study.translation.placeholder.toLanguage').replace('{language}', caps.languageName)
 
   async function handleSubmit() {
-    if (!value.trim() || !keys?.openrouterApiKey)
+    if (!value.trim() || (!trialMode && !keys?.openrouterApiKey))
       return
     setLoading(true)
     try {
@@ -127,7 +127,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          openrouter_api_key: keys.openrouterApiKey,
+          openrouter_api_key: keys?.openrouterApiKey ?? '',
           source,
           source_language: sourceLang,
           target_language: targetLang,

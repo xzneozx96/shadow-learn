@@ -48,10 +48,10 @@ function useVerdict() {
 }
 
 export function PronunciationReferee({ sentence, progress = '', onNext }: Props) {
-  const { db, keys } = useAuth()
+  const { db, keys, trialMode } = useAuth()
   const { t } = useI18n()
   const verdict = useVerdict()
-  const { playTTS, loadingText } = useTTS(db, keys)
+  const { playTTS, loadingText } = useTTS(db, keys, trialMode)
   const isTTSLoading = loadingText === sentence.sentence
   const {
     recordingState,

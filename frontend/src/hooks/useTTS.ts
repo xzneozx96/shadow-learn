@@ -16,6 +16,7 @@ interface UseTTSReturn {
 export function useTTS(
   db: ShadowLearnDB | null,
   keys: DecryptedKeys | null,
+  trialMode: boolean = false,
 ): UseTTSReturn {
   const [loadingText, setLoadingText] = useState<string | null>(null)
   // providerRef always holds the latest value — avoids stale closure in playTTS
@@ -24,6 +25,7 @@ export function useTTS(
   const urlRef = useRef<string | null>(null)
   const dbRef = useRef(db)
   const keysRef = useRef(keys)
+  const trialModeRef = useRef(trialMode)
 
   // Keep refs in sync with props
   useEffect(() => {
@@ -32,6 +34,9 @@ export function useTTS(
   useEffect(() => {
     keysRef.current = keys
   }, [keys])
+  useEffect(() => {
+    trialModeRef.current = trialMode
+  }, [trialMode])
 
   // Fetch the active provider once on mount
   useEffect(() => {
@@ -51,17 +56,19 @@ export function useTTS(
 
     const currentKeys = keysRef.current
 
-    // Key validation per provider
-    if (currentProvider === 'azure') {
-      if (!currentKeys?.azureSpeechKey || !currentKeys?.azureSpeechRegion) {
-        toast.error('Add your Azure Speech key in Settings to use pronunciation')
-        return
+    // Key validation per provider — skip in trial mode (backend provides fallback keys)
+    if (!trialModeRef.current) {
+      if (currentProvider === 'azure') {
+        if (!currentKeys?.azureSpeechKey || !currentKeys?.azureSpeechRegion) {
+          toast.error('Add your Azure Speech key in Settings to use pronunciation')
+          return
+        }
       }
-    }
-    else if (currentProvider === 'minimax') {
-      if (!currentKeys?.minimaxApiKey) {
-        toast.error('Add your MiniMax API key in Settings to use pronunciation')
-        return
+      else if (currentProvider === 'minimax') {
+        if (!currentKeys?.minimaxApiKey) {
+          toast.error('Add your MiniMax API key in Settings to use pronunciation')
+          return
+        }
       }
     }
 
@@ -90,11 +97,11 @@ export function useTTS(
         // Build request body based on active provider
         const body: Record<string, string> = { text }
         if (currentProvider === 'azure') {
-          body.azure_speech_key = currentKeys!.azureSpeechKey!
-          body.azure_speech_region = currentKeys!.azureSpeechRegion!
+          body.azure_speech_key = currentKeys?.azureSpeechKey ?? ''
+          body.azure_speech_region = currentKeys?.azureSpeechRegion ?? ''
         }
         else if (currentProvider === 'minimax') {
-          body.minimax_api_key = currentKeys!.minimaxApiKey!
+          body.minimax_api_key = currentKeys?.minimaxApiKey ?? ''
         }
 
         const response = await fetch(`${API_BASE}/api/tts`, {

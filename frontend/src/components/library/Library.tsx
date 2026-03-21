@@ -13,7 +13,7 @@ import { LessonCard } from './LessonCard'
 type SortMode = 'recent' | 'alpha' | 'progress'
 
 export function Library() {
-  const { keys } = useAuth()
+  const { keys, trialMode } = useAuth()
   const { t } = useI18n()
   const { lessons, updateLesson, deleteLesson } = useLessons()
   const [search, setSearch] = useState('')
@@ -66,7 +66,7 @@ export function Library() {
     // Upload retry: audio blob is already in IndexedDB; only the pipeline needs re-running.
     // The backend does not currently support re-running from a saved blob — the user must
     // re-upload. LessonCard shows "Re-upload to retry" text for upload-sourced errors.
-    if (!keys || !sttProvider || lesson.source !== 'youtube' || !lesson.sourceUrl)
+    if ((!keys && !trialMode) || !sttProvider || lesson.source !== 'youtube' || !lesson.sourceUrl)
       return
     try {
       const res = await fetch(`${API_BASE}/api/lessons/generate`, {
@@ -77,10 +77,10 @@ export function Library() {
           youtube_url: lesson.sourceUrl,
           source_language: lesson.sourceLanguage ?? 'zh-CN',
           translation_languages: lesson.translationLanguages,
-          openrouter_api_key: keys.openrouterApiKey,
+          openrouter_api_key: keys?.openrouterApiKey ?? '',
           ...(sttProvider === 'azure'
-            ? { azure_speech_key: keys.azureSpeechKey, azure_speech_region: keys.azureSpeechRegion }
-            : { deepgram_api_key: keys.deepgramApiKey ?? null }),
+            ? { azure_speech_key: keys?.azureSpeechKey ?? '', azure_speech_region: keys?.azureSpeechRegion ?? '' }
+            : { deepgram_api_key: keys?.deepgramApiKey ?? '' }),
         }),
       })
       if (!res.ok) {

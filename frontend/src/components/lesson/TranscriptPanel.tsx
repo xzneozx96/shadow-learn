@@ -31,8 +31,8 @@ export function TranscriptPanel({
   onShadowClick,
 }: TranscriptPanelProps) {
   const { t } = useI18n()
-  const { db, keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys)
+  const { db, keys, trialMode } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys, trialMode)
   const { entries, save, remove, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
   const [pendingRemove, setPendingRemove] = useState<VocabEntry | null>(null)

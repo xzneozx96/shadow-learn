@@ -32,7 +32,8 @@ export interface ExerciseRenderResult {
   type: string
   props: {
     items?: VocabEntry[]
-    sentence?: { sentence: string, translation: string }
+    sentence?: { sentence: string, translation: string } | { text: string, romanization: string, english: string }
+    direction?: 'en-to-zh' | 'zh-to-en'
     question?: { story: string, blanks: string[] }
     words?: string[]
     mode?: string
@@ -50,8 +51,8 @@ interface ExerciseRendererProps {
 // -------------------------------------------------------------------------- //
 
 export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps) {
-  const { db, keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys)
+  const { db, keys, trialMode } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys, trialMode)
 
   const makeOnNext = useCallback(
     (exerciseType: ExerciseType, vocabEntry: VocabEntry | undefined) =>
@@ -132,21 +133,22 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
         />
       )
 
-    case 'translation':
+    case 'translation': {
       if (!entry)
         return <ExerciseError msg="No vocabulary items for translation" />
+      const sentence = props.sentence as { text: string, romanization: string, english: string } | undefined
+      if (!sentence || !('text' in sentence))
+        return <ExerciseError msg="No sentence data for translation" />
+      const direction = props.direction ?? 'zh-to-en'
       return (
         <TranslationExercise
-          sentence={{
-            text: entry.sourceSegmentText,
-            romanization: entry.romanization,
-            english: entry.meaning,
-          }}
-          direction="zh-to-en"
+          sentence={sentence}
+          direction={direction}
           onNext={makeOnNext('translation', entry)}
           caps={caps}
         />
       )
+    }
 
     case 'pronunciation':
       if (!props.sentence)

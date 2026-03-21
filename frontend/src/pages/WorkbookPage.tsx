@@ -21,8 +21,8 @@ import { useTTS } from '@/hooks/useTTS'
 export function WorkbookPage() {
   const { t } = useI18n()
   const { entries, entriesByLesson, removeGroup } = useVocabulary()
-  const { db, keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys)
+  const { db, keys, trialMode } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys, trialMode)
   const { getDueItemsList } = useTracking()
 
   // Workbook State
