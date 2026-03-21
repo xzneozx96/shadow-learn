@@ -48,6 +48,7 @@ export const TRANSLATIONS = {
     'auth.trial.title': 'Try for free',
     'auth.trial.hint': 'Uses shared API keys. May be discontinued when costs become unsustainable — add your own keys in Settings anytime.',
     'auth.trial.button': 'Start free trial',
+    'auth.trial.banner': 'Free trial mode — add your own API keys in Settings anytime.',
 
     // Create Lesson
     'create.title': 'Create New Lesson',
@@ -417,6 +418,7 @@ export const TRANSLATIONS = {
     'auth.trial.title': 'Dùng thử miễn phí',
     'auth.trial.hint': 'Sử dụng API key chung. Có thể ngừng khi chi phí vượt mức — bạn có thể thêm key của mình trong Cài đặt bất cứ lúc nào.',
     'auth.trial.button': 'Bắt đầu dùng thử',
+    'auth.trial.banner': 'Đang dùng thử miễn phí — thêm API key của bạn trong Cài đặt bất cứ lúc nào.',
 
     // Create Lesson
     'create.title': 'Tạo bài học mới',

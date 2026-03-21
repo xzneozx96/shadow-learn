@@ -191,11 +191,6 @@ export function Settings() {
   return (
     <Layout>
       <div className="mx-auto max-w-2xl space-y-6 p-4">
-        {trialMode && (
-          <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
-            You're using the free trial. Add your own API keys below to switch — your lessons will be preserved.
-          </div>
-        )}
         <h1 className="text-xl font-bold">{t('settings.title')}</h1>
 
         <Card>
