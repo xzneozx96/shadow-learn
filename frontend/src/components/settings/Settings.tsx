@@ -103,8 +103,10 @@ export function Settings() {
         setKeysError('PINs do not match')
         return
       }
-      if (!db)
+      if (!db) {
+        setKeysError('Database not ready')
         return
+      }
       try {
         await setup(newKeys, newTrialPin)
         setNewTrialPin('')
@@ -131,7 +133,7 @@ export function Settings() {
       const cryptoData = await getCryptoData(db)
       if (!cryptoData)
         throw new Error('No stored keys found')
-      await decryptKeys(cryptoData, keysPin)
+      await decryptKeys(cryptoData, keysPin) // PIN verification — result intentionally discarded; no separate verifyPin() exists
       await setup(newKeys, keysPin)
       setKeysSaved(true)
       setKeysPin('')
