@@ -89,6 +89,14 @@ export function Setup() {
     }
   }
 
+  const formReady
+    = !!openrouterApiKey.trim()
+      && pin.length >= 4
+      && pin === pinConfirm
+      && (sttProvider !== 'deepgram' || !!deepgramApiKey.trim())
+      && (provider !== 'azure' || (!!azureSpeechKey.trim() && !!azureSpeechRegion.trim()))
+      && (provider !== 'minimax' || !!minimaxApiKey.trim())
+
   return (
     <div className="flex h-screen items-center justify-center bg-[oklch(0.08_0_0)] px-4">
       <div className="flex w-full max-w-md flex-col gap-3">
@@ -217,7 +225,7 @@ export function Setup() {
                 <p className="text-sm text-red-400">{error}</p>
               )}
 
-              <Button type="submit" disabled={loading || provider === null || !openrouterApiKey.trim()} className="mt-1">
+              <Button type="submit" disabled={loading || provider === null || !formReady} className="mt-1">
                 {loading ? t('auth.settingUp') : t('auth.getStarted')}
               </Button>
             </form>
