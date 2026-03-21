@@ -1,4 +1,5 @@
 import type { ProgressStats } from '@/db'
+import type { TranslationKey } from '@/lib/i18n'
 import { BookOpen, Ear, Edit3, MessageSquare, Type } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
@@ -100,7 +101,7 @@ export function SkillMasteryGrid({ stats }: Props) {
                 {`${accuracy}%`}
               </span>
               <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground mt-1.5 antialiased">
-                {t(`progress.skill.${skill}`)}
+                {t(`progress.skill.${skill}` as TranslationKey)}
               </h4>
               <p className="text-sm font-medium text-muted-foreground/40 mt-1">
                 {data.sessions === 1 ? `1 ${t('progress.exercise')}` : `${data.sessions} ${t('progress.exercisesPlural')}`}
