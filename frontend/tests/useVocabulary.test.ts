@@ -4,11 +4,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useVocabulary, VocabularyProvider } from '@/contexts/VocabularyContext'
 
 // Mock AuthContext
+const mockTx = {
+  store: { delete: vi.fn().mockResolvedValue(undefined) },
+  done: Promise.resolve(),
+}
 const mockDb = {
   getAll: vi.fn().mockResolvedValue([]),
   put: vi.fn().mockResolvedValue(undefined),
   delete: vi.fn().mockResolvedValue(undefined),
   getAllFromIndex: vi.fn().mockResolvedValue([]),
+  transaction: vi.fn().mockReturnValue(mockTx),
 }
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -41,6 +46,8 @@ describe('useVocabulary', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.getAll.mockResolvedValue([])
+    mockDb.transaction.mockReturnValue(mockTx)
+    mockTx.store.delete.mockResolvedValue(undefined)
   })
 
   it('isSaved returns false when entry not in list', () => {
@@ -94,6 +101,29 @@ describe('useVocabulary', () => {
     expect(mockDb.delete).toHaveBeenCalledWith('vocabulary', id)
     expect(mockDb.delete).toHaveBeenCalledWith('spaced-repetition', id)
     expect(mockDb.delete).toHaveBeenCalledWith('mistakes-db', id)
+    await waitFor(() => expect(result.current.entries).toHaveLength(0))
+  })
+
+  it('removeGroup cascades SR and mistakes deletes for all entries in the group', async () => {
+    const { result } = renderHook(() => useVocabulary(), { wrapper: VocabularyProvider })
+    await act(async () => {
+      await result.current.save(word, segment, lesson, 'en')
+    })
+    await act(async () => {
+      await result.current.save(word, segment, lesson, 'en')
+    })
+    await waitFor(() => expect(result.current.entries).toHaveLength(2))
+    const ids = result.current.entries.map(e => e.id)
+    mockDb.delete.mockClear()
+
+    await act(async () => {
+      await result.current.removeGroup(lesson.id)
+    })
+
+    for (const id of ids) {
+      expect(mockDb.delete).toHaveBeenCalledWith('spaced-repetition', id)
+      expect(mockDb.delete).toHaveBeenCalledWith('mistakes-db', id)
+    }
     await waitFor(() => expect(result.current.entries).toHaveLength(0))
   })
 })

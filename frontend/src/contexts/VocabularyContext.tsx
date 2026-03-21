@@ -76,10 +76,10 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
       const tx = db.transaction('vocabulary', 'readwrite')
       await Promise.all(idsToDelete.map(id => tx.store.delete(id)))
       await tx.done
-      for (const id of idsToDelete) {
-        await deleteSpacedRepetitionItem(db, id)
-        await deleteErrorPattern(db, id)
-      }
+      await Promise.all(idsToDelete.flatMap(id => [
+        deleteSpacedRepetitionItem(db, id),
+        deleteErrorPattern(db, id),
+      ]))
       setEntries(prev => prev.filter(e => e.sourceLessonId !== lessonId))
     },
     [db, entries],

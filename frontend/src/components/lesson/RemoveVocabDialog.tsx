@@ -28,20 +28,19 @@ export function RemoveVocabDialog({ entry, onClose, onConfirm }: RemoveVocabDial
   const [srItem, setSrItem] = useState<SpacedRepetitionItem | undefined>()
   const [mistakes, setMistakes] = useState<ErrorPattern | undefined>()
 
-  const currentId = entry?.id ?? null
-  if (prevId !== currentId) {
-    setPrevId(currentId)
+  const entryId = entry?.id ?? null
+  if (prevId !== entryId) {
+    setPrevId(entryId)
     setSrItem(undefined)
     setMistakes(undefined)
   }
 
   useEffect(() => {
-    if (!entry || !db)
+    if (!entryId || !db)
       return
-    getSpacedRepetitionItem(db, entry.id).then(r => setSrItem(r ?? undefined))
-    getErrorPattern(db, entry.id).then(r => setMistakes(r ?? undefined))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entry?.id, db])
+    getSpacedRepetitionItem(db, entryId).then(r => setSrItem(r ?? undefined))
+    getErrorPattern(db, entryId).then(r => setMistakes(r ?? undefined))
+  }, [entryId, db])
 
   return (
     <Dialog open={entry !== null} onOpenChange={open => !open && onClose()}>

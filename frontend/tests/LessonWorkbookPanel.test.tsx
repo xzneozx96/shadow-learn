@@ -20,6 +20,17 @@ vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ db: null }),
 }))
 
+vi.mock('@/contexts/I18nContext', async () => {
+  const { TRANSLATIONS } = await import('@/lib/i18n')
+  return {
+    useI18n: () => ({
+      locale: 'en' as const,
+      setLocale: async () => {},
+      t: (key: string) => (TRANSLATIONS.en as Record<string, string>)[key] ?? key,
+    }),
+  }
+})
+
 vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: () => mockVocab,
 }))

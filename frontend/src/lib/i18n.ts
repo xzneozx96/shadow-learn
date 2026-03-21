@@ -725,7 +725,7 @@ export const TRANSLATIONS = {
     'settings.pinChangeFailed': 'Thay đổi mã PIN thất bại',
 
     // Common
-    'common.save': 'Lưu lại',
+    'common.save': 'Lưu',
     'common.cancel': 'Hủy bỏ',
     'common.back': 'Trở lại',
     'common.loading': 'Vui lòng đợi...',

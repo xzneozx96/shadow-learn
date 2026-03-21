@@ -80,7 +80,7 @@ export function TranscriptPanel({
       await save(word, seg, lesson, activeLang)
       toast.success(t('lesson.savedToWorkbook'))
     },
-    [save, lesson, activeLang],
+    [save, lesson, activeLang, t],
   )
 
   const handleIsSaved = useCallback(
@@ -102,8 +102,7 @@ export function TranscriptPanel({
       remove(entry.id)
       toast.success(t('lesson.removedFromWorkbook'))
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [remove],
+    [remove, t],
   )
 
   // Event delegation for keyboard activation — one handler instead of N closures.
