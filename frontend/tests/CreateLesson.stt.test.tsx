@@ -35,6 +35,7 @@ vi.mock('@/db', () => ({
 // Mock getAppConfig so the module-level promise cache doesn't leak between tests
 vi.mock('@/lib/config', () => ({
   getAppConfig: vi.fn(),
+  API_BASE: 'http://test-api',
 }))
 
 function renderCreateLesson() {
@@ -60,6 +61,8 @@ describe('createLesson STT key selection', () => {
     renderCreateLesson()
 
     await userEvent.type(screen.getByPlaceholderText(/youtube/i), 'https://www.youtube.com/watch?v=abc12345678')
+    // Wait for sttProvider to load (canGenerate becomes true) before clicking
+    await waitFor(() => expect(screen.getByRole('button', { name: /generate lesson/i })).not.toBeDisabled())
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
     await waitFor(() => {
@@ -81,6 +84,8 @@ describe('createLesson STT key selection', () => {
     renderCreateLesson()
 
     await userEvent.type(screen.getByPlaceholderText(/youtube/i), 'https://www.youtube.com/watch?v=abc12345678')
+    // Wait for sttProvider to load (canGenerate becomes true) before clicking
+    await waitFor(() => expect(screen.getByRole('button', { name: /generate lesson/i })).not.toBeDisabled())
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
     await waitFor(() => {
