@@ -27,7 +27,7 @@ _VIDEO_EXTS = {".mp4", ".mkv", ".webm"}
 
 def _ydl_extra_opts() -> dict:
     """Return optional yt-dlp opts for cookies, proxy, and/or BGUtil PO tokens."""
-    opts: dict = {}
+    opts: dict = {"js_runtimes": "node"}
     path = settings.ytdlp_cookies_file
     if path and Path(path).is_file():
         opts["cookiefile"] = path
