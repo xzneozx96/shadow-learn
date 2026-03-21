@@ -6,14 +6,13 @@ import time
 import uuid
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
-
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.config import settings
 from app.jobs import Job, jobs
 from app.models import LessonRequest
+from app.routers._utils import _resolve_key
 from app.services.audio import (
     download_youtube_video,
     extract_audio_from_upload,
@@ -25,6 +24,8 @@ from app.services.transcription_provider import STTProvider, TranscriptionKeys
 from app.services.translation import translate_segments
 from app.services.validation import ValidationError, validate_upload_file, validate_youtube_url
 from app.services.vocabulary import extract_vocabulary
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/lessons")
 
@@ -136,12 +137,15 @@ async def _process_youtube_lesson(
 
         jobs[job_id].step = "transcription"
         keys: TranscriptionKeys = {}
-        if request.deepgram_api_key:
-            keys["deepgram_api_key"] = request.deepgram_api_key
-        if request.azure_speech_key:
-            keys["azure_speech_key"] = request.azure_speech_key
-        if request.azure_speech_region:
-            keys["azure_speech_region"] = request.azure_speech_region
+        deepgram = request.deepgram_api_key or settings.deepgram_api_key
+        azure_key = request.azure_speech_key or settings.azure_speech_key
+        azure_region = request.azure_speech_region or settings.azure_speech_region
+        if deepgram:
+            keys["deepgram_api_key"] = deepgram
+        if azure_key:
+            keys["azure_speech_key"] = azure_key
+        if azure_region:
+            keys["azure_speech_region"] = azure_region
         segments = await stt_provider.transcribe(audio_path, keys, request.source_language)
         # Audio no longer needed after transcription
         audio_path.unlink(missing_ok=True)
@@ -150,11 +154,14 @@ async def _process_youtube_lesson(
         source_url = f"https://www.youtube.com/watch?v={video_id}"
         title = f"YouTube Video ({video_id})"
 
+        openrouter_key = _resolve_key(
+            request.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key"
+        )
         await _shared_pipeline(
             job_id,
             segments,
             request.translation_languages,
-            request.openrouter_api_key,
+            openrouter_key,
             title,
             "youtube",
             source_url,
@@ -233,22 +240,28 @@ async def _process_upload_lesson(
         jobs[job_id].step = "transcription"
         t0 = time.monotonic()
         keys: TranscriptionKeys = {}
-        if deepgram_api_key:
-            keys["deepgram_api_key"] = deepgram_api_key
-        if azure_speech_key:
-            keys["azure_speech_key"] = azure_speech_key
-        if azure_speech_region:
-            keys["azure_speech_region"] = azure_speech_region
+        deepgram = deepgram_api_key or settings.deepgram_api_key
+        azure_key = azure_speech_key or settings.azure_speech_key
+        azure_region = azure_speech_region or settings.azure_speech_region
+        if deepgram:
+            keys["deepgram_api_key"] = deepgram
+        if azure_key:
+            keys["azure_speech_key"] = azure_key
+        if azure_region:
+            keys["azure_speech_region"] = azure_region
         if stt_provider is None:
             raise RuntimeError("No STT provider configured")
         segments = await stt_provider.transcribe(audio_path, keys, source_language)
         logger.info("[pipeline] transcription: done in %.1fs, %d segments", time.monotonic() - t0, len(segments))
 
+        openrouter_key = _resolve_key(
+            openrouter_api_key or None, settings.openrouter_api_key, "OpenRouter API key"
+        )
         await _shared_pipeline(
             job_id,
             segments,
             translation_languages,
-            openrouter_api_key,
+            openrouter_key,
             title,
             "upload",
             None,
@@ -296,7 +309,7 @@ async def generate_lesson_upload(
     req: Request,
     file: UploadFile,
     translation_languages: str = Form(...),
-    openrouter_api_key: str = Form(...),
+    openrouter_api_key: str = Form(default=""),
     deepgram_api_key: str | None = Form(None),
     azure_speech_key: str | None = Form(None),
     azure_speech_region: str | None = Form(None),
