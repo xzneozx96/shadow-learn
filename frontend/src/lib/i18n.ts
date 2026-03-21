@@ -1,6 +1,6 @@
 export type Locale = 'en' | 'vi'
 
-export const TRANSLATIONS: Record<Locale, Record<string, string>> = {
+export const TRANSLATIONS = {
   en: {
     // Navigation
     'nav.library': 'Library',
@@ -291,7 +291,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, string>> = {
     'common.yes': 'Có',
     'common.no': 'Không',
   },
-}
+} satisfies Record<Locale, Record<string, string>>
 
 export type TranslationKey = keyof typeof TRANSLATIONS['en']
 
