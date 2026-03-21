@@ -4,9 +4,16 @@ import { describe, expect, it, vi } from 'vitest'
 import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
 import { Dialog } from '@/components/ui/dialog'
 
-vi.mock('@/contexts/I18nContext', () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: 'en', setLocale: async () => {} }),
-}))
+vi.mock('@/contexts/I18nContext', async () => {
+  const { TRANSLATIONS } = await import('@/lib/i18n')
+  return {
+    useI18n: () => ({
+      locale: 'en' as const,
+      setLocale: async () => {},
+      t: (key: string) => (TRANSLATIONS.en as Record<string, string>)[key] ?? key,
+    }),
+  }
+})
 
 function Wrapper({ children }: { children: React.ReactNode }) {
   return <Dialog open>{children}</Dialog>
@@ -27,7 +34,6 @@ function makeSegment(overrides: Partial<Segment> = {}): Segment {
 
 const baseProps = {
   startSegment: makeSegment(),
-  startSegmentNumber: 12,
   totalRemaining: 88,
   speakingAvailable: true,
   onStart: vi.fn(),
@@ -37,7 +43,6 @@ const baseProps = {
 describe('shadowingModePicker', () => {
   it('shows start segment info in description', () => {
     render(<ShadowingModePicker {...baseProps} />, { wrapper: Wrapper })
-    expect(screen.getByText(/segment 12/)).toBeInTheDocument()
     expect(screen.getByText(/你好吗/)).toBeInTheDocument()
     expect(screen.getByText(/01:01:00/)).toBeInTheDocument()
   })
@@ -86,21 +91,21 @@ describe('shadowingModePicker', () => {
     const onStart = vi.fn()
     render(<ShadowingModePicker {...baseProps} onStart={onStart} />, { wrapper: Wrapper })
     fireEvent.click(screen.getByRole('button', { name: '20' }))
-    fireEvent.click(screen.getByRole('button', { name: /shadowing\.startArrow/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Start →/ }))
     expect(onStart).toHaveBeenCalledWith('dictation', 20)
   })
 
   it('calls onStart with "all" when All chip selected', () => {
     const onStart = vi.fn()
     render(<ShadowingModePicker {...baseProps} totalRemaining={5} onStart={onStart} />, { wrapper: Wrapper })
-    fireEvent.click(screen.getByRole('button', { name: /shadowing\.startArrow/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Start →/ }))
     expect(onStart).toHaveBeenCalledWith('dictation', 'all')
   })
 
   it('calls onClose on Cancel', () => {
     const onClose = vi.fn()
     render(<ShadowingModePicker {...baseProps} onClose={onClose} />, { wrapper: Wrapper })
-    fireEvent.click(screen.getByRole('button', { name: /common\.cancel/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/ }))
     expect(onClose).toHaveBeenCalled()
   })
 })
