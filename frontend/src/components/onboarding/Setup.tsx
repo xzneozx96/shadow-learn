@@ -217,7 +217,7 @@ export function Setup() {
                 <p className="text-sm text-red-400">{error}</p>
               )}
 
-              <Button type="submit" disabled={loading || provider === null} className="mt-1">
+              <Button type="submit" disabled={loading || provider === null || !openrouterApiKey.trim()} className="mt-1">
                 {loading ? t('auth.settingUp') : t('auth.getStarted')}
               </Button>
             </form>
