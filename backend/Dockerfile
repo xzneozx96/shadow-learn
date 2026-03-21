@@ -3,6 +3,7 @@ FROM python:3.12-slim
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
+        nodejs \
         libasound2 \
         libssl3 \
         libgstreamer1.0-0 \

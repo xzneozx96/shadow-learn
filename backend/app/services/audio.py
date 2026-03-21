@@ -22,7 +22,7 @@ def _ensure_temp_dir() -> Path:
     return _TEMP_DIR
 
 
-_VIDEO_EXTS = {".mp4", ".mkv", ".webm"}
+_MEDIA_EXTS = {".mp4", ".mkv", ".webm", ".m4a", ".ogg", ".opus", ".mp3"}
 
 
 def _ydl_extra_opts() -> dict:
@@ -43,24 +43,23 @@ def _ydl_extra_opts() -> dict:
 
 
 def _download_youtube_video(video_id: str, file_uuid: str, temp_dir: Path) -> Path:
-    """Blocking: download video+audio from YouTube using yt-dlp.
+    """Blocking: download audio from YouTube using yt-dlp.
 
+    Downloads audio-only since the file is only used for transcription.
     Uses %(ext)s in outtmpl so yt-dlp chooses the container; discovers the
-    output file by globbing for the UUID to handle non-mp4 fallbacks.
+    output file by globbing for the UUID to handle format fallbacks.
     """
     url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
-        "format": "bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/best[ext=mp4][height<=720]/best",
+        "format": "bestaudio[ext=m4a]/bestaudio/best",
         "outtmpl": str(temp_dir / f"{file_uuid}.%(ext)s"),
-        "merge_output_format": "mp4",
         "quiet": True,
         "no_warnings": True,
         **_ydl_extra_opts(),
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
-    # Filter to known video extensions to avoid .part / .ytdl sidecars
-    matches = [p for p in temp_dir.glob(f"{file_uuid}.*") if p.suffix in _VIDEO_EXTS]
+    matches = [p for p in temp_dir.glob(f"{file_uuid}.*") if p.suffix in _MEDIA_EXTS]
     if not matches:
         raise FileNotFoundError(f"Video download produced no output for video_id={video_id}")
     return matches[0]
