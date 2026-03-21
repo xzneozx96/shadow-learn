@@ -107,7 +107,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                       }}
                       className="absolute top-1.5 right-1.5 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/card:opacity-100"
                     >
-                      <X className="size-3" />
+                      <X className="size-4" />
                     </button>
                     <Button
                       size="icon"
@@ -140,7 +140,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
           disabled={count === 0}
           onClick={() => setStudyOpen(true)}
         >
-          Study This Lesson →
+          {t('lesson.studyThisLesson')}
         </Button>
       </div>
 
