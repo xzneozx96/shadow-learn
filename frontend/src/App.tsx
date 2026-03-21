@@ -40,10 +40,11 @@ const router = createBrowserRouter([
 ])
 
 function AuthGate() {
-  const { isFirstSetup, isUnlocked } = useAuth()
+  const { isFirstSetup, isUnlocked, trialMode, db } = useAuth()
 
-  // Loading state
-  if (isFirstSetup === null) {
+  // Loading state — wait for DB regardless of trial mode
+  // (trialMode is synchronous; db is async — show spinner until both are ready)
+  if (isFirstSetup === null || db === null) {
     return (
       <div className="flex h-screen items-center justify-center glass-bg">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -51,17 +52,17 @@ function AuthGate() {
     )
   }
 
-  // First launch -- set up keys
-  if (isFirstSetup) {
+  // First launch — set up keys (skip if in trial)
+  if (isFirstSetup && !trialMode) {
     return <Setup />
   }
 
-  // Keys exist but locked
-  if (!isUnlocked) {
+  // Keys exist but locked (skip if in trial)
+  if (!isUnlocked && !trialMode) {
     return <Unlock />
   }
 
-  // Authenticated -- show app
+  // Authenticated or trial mode — show app
   return (
     <VocabularyProvider>
       <LessonsProvider>
