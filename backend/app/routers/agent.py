@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from openai import AsyncOpenAI
 from app.config import settings
+from app.routers._utils import _resolve_key
 from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class ClientMessage(BaseModel):
 class AgentRequest(BaseModel):
     messages: list[ClientMessage]
     system_prompt: str
-    openrouter_api_key: str
+    openrouter_api_key: str | None = None
     tools: list[dict] | None = None
     model: str | None = None
 
@@ -373,8 +374,9 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
     if not request.messages:
         raise HTTPException(status_code=400, detail="messages must not be empty")
 
+    api_key = _resolve_key(request.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     client = AsyncOpenAI(
-        api_key=request.openrouter_api_key,
+        api_key=api_key,
         base_url=_OPENROUTER_BASE_URL,
     )
 

@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.config import settings
+from app.routers._utils import _resolve_key
 from app.services.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/api/translation", tags=["translation"])
 
 
 class GenerateRequest(BaseModel):
-    openrouter_api_key: str
+    openrouter_api_key: str | None = None
     word: str
     romanization: str
     meaning: str
@@ -64,6 +65,7 @@ def _build_generate_prompt(req: GenerateRequest) -> str:
 async def generate_sentences(req: GenerateRequest):
     prompt = _build_generate_prompt(req)
     lang_cfg = get_language_config(req.source_language)
+    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     payload = {
         "model": settings.openrouter_model,
         "messages": [
@@ -81,7 +83,7 @@ async def generate_sentences(req: GenerateRequest):
     async with httpx.AsyncClient(timeout=90) as client:
         resp = await client.post(
             settings.openrouter_chat_url,
-            headers={"Authorization": f"Bearer {req.openrouter_api_key}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json=payload,
         )
         resp.raise_for_status()
@@ -98,7 +100,7 @@ async def generate_sentences(req: GenerateRequest):
 
 
 class EvaluateRequest(BaseModel):
-    openrouter_api_key: str
+    openrouter_api_key: str | None = None
     source: str
     source_language: str    # e.g. 'chinese', 'english', 'japanese'
     target_language: str
@@ -140,6 +142,7 @@ def _build_evaluate_prompt(req: EvaluateRequest) -> str:
 @router.post("/evaluate", response_model=EvaluateResponse)
 async def evaluate_translation(req: EvaluateRequest):
     prompt = _build_evaluate_prompt(req)
+    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     payload = {
         "model": settings.openrouter_model,
         "messages": [
@@ -160,7 +163,7 @@ async def evaluate_translation(req: EvaluateRequest):
     async with httpx.AsyncClient(timeout=90) as client:
         resp = await client.post(
             settings.openrouter_chat_url,
-            headers={"Authorization": f"Bearer {req.openrouter_api_key}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json=payload,
         )
         resp.raise_for_status()

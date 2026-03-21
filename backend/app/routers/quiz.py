@@ -1,13 +1,13 @@
 # backend/app/routers/quiz.py
 import json
 import logging
-import time
 
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.config import settings
+from app.routers._utils import _resolve_key
 from app.services.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class WordInput(BaseModel):
 
 
 class QuizRequest(BaseModel):
-    openrouter_api_key: str
+    openrouter_api_key: str | None = None
     words: list[WordInput]
     exercise_type: str  # "cloze" | "pronunciation_sentence"
     story_count: int = 1
@@ -75,6 +75,7 @@ def _build_pronunciation_prompt(words: list[WordInput], count: int, lang_cfg: di
 @router.post("/generate", response_model=QuizResponse)
 async def generate_quiz(req: QuizRequest):
     lang_cfg = get_language_config(req.source_language)
+    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
 
     if req.exercise_type == "cloze":
         prompt = _build_cloze_prompt(req.words, req.story_count, lang_cfg)
@@ -99,16 +100,13 @@ async def generate_quiz(req: QuizRequest):
         "reasoning": {"effort": "none"},
     }
 
-    t0 = time.monotonic()
     async with httpx.AsyncClient(timeout=90) as client:
         resp = await client.post(
             settings.openrouter_chat_url,
-            headers={"Authorization": f"Bearer {req.openrouter_api_key}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json=payload,
         )
         resp.raise_for_status()
-    elapsed = time.monotonic() - t0
-
     body = resp.json()
     if "error" in body or "choices" not in body:
         logger.error("[quiz] generate: unexpected response: %s", body)

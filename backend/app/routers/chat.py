@@ -8,7 +8,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.config import settings
-from app.models import ChatRequest, Segment
+from app.models import ChatRequest
+from app.routers._utils import _resolve_key
 
 router = APIRouter(prefix="/api")
 
@@ -90,7 +91,7 @@ async def _stream_chat(
                     except (KeyError, json.JSONDecodeError):
                         continue
 
-        yield f"event: done\ndata: {{}}\n\n"
+        yield "event: done\ndata: {}\n\n"
 
     except httpx.HTTPStatusError as exc:
         payload = json.dumps({"message": f"Upstream error: {exc.response.status_code}"})
@@ -114,7 +115,8 @@ async def chat(request: ChatRequest) -> StreamingResponse:
     messages: list[dict] = [{"role": "system", "content": system_prompt}]
     messages += [{"role": m.role, "content": m.content} for m in recent_messages]
 
+    api_key = _resolve_key(request.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     return StreamingResponse(
-        _stream_chat(messages, request.openrouter_api_key, settings.openrouter_model),
+        _stream_chat(messages, api_key, settings.openrouter_model),
         media_type="text/event-stream",
     )
