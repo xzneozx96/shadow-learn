@@ -8,6 +8,7 @@ import { Unlock } from '@/components/onboarding/Unlock'
 import { Settings } from '@/components/settings/Settings'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
 import { VocabularyProvider } from '@/contexts/VocabularyContext'
@@ -73,8 +74,10 @@ function AuthGate() {
 export default function App() {
   return (
     <AuthProvider>
-      <AuthGate />
-      <Toaster position="top-right" richColors closeButton />
+      <I18nProvider>
+        <AuthGate />
+        <Toaster position="top-right" richColors closeButton />
+      </I18nProvider>
     </AuthProvider>
   )
 }
