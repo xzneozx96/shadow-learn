@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     translation_max_retries: int = 2
     openrouter_chat_url: str = "https://openrouter.ai/api/v1/chat/completions"
     openrouter_model: str = "qwen/qwen3.5-flash-02-23" # "deepseek/deepseek-v3.2", "qwen/qwen3.5-122b-a10b", "minimax/minimax-m2.7"
+    openrouter_agent_model: str = "deepseek/deepseek-v3.2"
     minimax_tts_url: str = "https://api.minimax.io/v1/t2a_v2"
     tts_provider: str = "azure"  # env: SHADOWLEARN_TTS_PROVIDER; values: azure | minimax
     stt_provider: str = "deepgram"  # env: SHADOWLEARN_STT_PROVIDER; values: deepgram | azure

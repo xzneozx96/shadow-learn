@@ -381,7 +381,7 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
         base_url=_OPENROUTER_BASE_URL,
     )
 
-    resolved_model = request.model or settings.openrouter_model
+    resolved_model = request.model or settings.openrouter_agent_model
 
     openai_messages = _convert_to_openai_messages(
         request.messages, request.system_prompt
