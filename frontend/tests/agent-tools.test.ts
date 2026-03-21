@@ -9,7 +9,7 @@ import {
   executeRenderReconstructionExercise,
   executeRenderRomanizationExercise,
   executeRenderTranslationExercise,
-} from './agent-tools'
+} from '@/lib/agent-tools'
 
 // Mock DB utilities
 vi.mock('@/db', () => ({

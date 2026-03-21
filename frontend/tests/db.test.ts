@@ -121,8 +121,20 @@ describe('indexedDB storage', () => {
   it('should save and retrieve chat messages', async () => {
     const db = await initDB()
     const msgs = [
-      { role: 'user' as const, content: 'Hello', timestamp: new Date().toISOString() },
-      { role: 'assistant' as const, content: 'Hi!', timestamp: new Date().toISOString() },
+      {
+        id: '1',
+        role: 'user' as const,
+        content: 'Hello',
+        timestamp: new Date().toISOString(),
+        parts: [{ type: 'text' as const, text: 'Hello' }],
+      },
+      {
+        id: '2',
+        role: 'assistant' as const,
+        content: 'Hi!',
+        timestamp: new Date().toISOString(),
+        parts: [{ type: 'text' as const, text: 'Hi!' }],
+      },
     ]
     await saveChatMessages(db, 'lesson_1', msgs)
     const retrieved = await getChatMessages(db, 'lesson_1')
