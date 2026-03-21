@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 
 export function Unlock() {
   const { unlock, resetKeys } = useAuth()
+  const { t } = useI18n()
 
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +21,7 @@ export function Unlock() {
     setError(null)
 
     if (!pin) {
-      setError('Please enter your PIN.')
+      setError(t('auth.error.pinRequired'))
       return
     }
 
@@ -28,8 +30,8 @@ export function Unlock() {
       await unlock(pin)
     }
     catch {
-      setError('Incorrect PIN. Please try again.')
-      toast.error('Incorrect PIN')
+      setError(t('auth.error.incorrectPin'))
+      toast.error(t('auth.error.incorrectPinToast'))
     }
     finally {
       setLoading(false)
@@ -53,7 +55,7 @@ export function Unlock() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-10">
             <Input
               type="password"
-              placeholder="Enter PIN"
+              placeholder={t('auth.enterPin')}
               value={pin}
               onChange={e => setPin(e.target.value)}
               className="text-center tracking-widest"
@@ -65,7 +67,7 @@ export function Unlock() {
             )}
 
             <Button type="submit" disabled={loading}>
-              {loading ? 'Unlocking...' : 'Unlock'}
+              {loading ? t('auth.unlocking') : t('auth.unlock')}
             </Button>
           </form>
 
@@ -75,16 +77,16 @@ export function Unlock() {
               onClick={() => setShowReset(!showReset)}
               className="text-sm text-white/40 underline-offset-2 hover:text-white/65 hover:underline"
             >
-              Forgot PIN?
+              {t('auth.forgotPin')}
             </button>
 
             {showReset && (
               <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
                 <p className="mb-2">
-                  This will delete all stored API keys. You will need to re-enter them.
+                  {t('auth.resetConfirm')}
                 </p>
                 <Button variant="destructive" size="sm" onClick={handleReset}>
-                  Reset Keys
+                  {t('auth.resetKeys')}
                 </Button>
               </div>
             )}

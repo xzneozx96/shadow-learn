@@ -2,6 +2,7 @@ import { Settings } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useI18n } from '@/contexts/I18nContext'
 import { ScrollArea } from './ui/scroll-area'
 
 interface LayoutProps {
@@ -13,6 +14,7 @@ interface LayoutProps {
 export function Layout({ children, onSearch, searchValue }: LayoutProps) {
   const location = useLocation()
   const isHome = location.pathname === '/'
+  const { t } = useI18n()
 
   return (
     <ScrollArea className="glass-bg">
@@ -25,7 +27,7 @@ export function Layout({ children, onSearch, searchValue }: LayoutProps) {
 
           {isHome && onSearch && (
             <Input
-              placeholder="Search lessons..."
+              placeholder={t('nav.search')}
               value={searchValue ?? ''}
               onChange={e => onSearch(e.target.value)}
               className="ml-2 max-w-xs"
@@ -38,14 +40,14 @@ export function Layout({ children, onSearch, searchValue }: LayoutProps) {
               size="sm"
               render={<Link to="/docs" />}
             >
-              Documentation
+              {t('nav.documentation')}
             </Button>
             <Button
               variant={location.pathname.startsWith('/vocabulary') ? 'default' : 'outline'}
               size="sm"
               render={<Link to="/vocabulary" />}
             >
-              Workbook
+              {t('nav.workbook')}
             </Button>
             <Button variant="outline" size="icon" render={<Link to="/settings" />}>
               <Settings className="size-4" />

@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { getAppConfig } from '@/lib/config'
 
 export function Setup() {
   const { setup } = useAuth()
+  const { t } = useI18n()
 
   const [provider, setProvider] = useState<string | null>(null)
   const [sttProvider, setSttProvider] = useState<string>('deepgram')
@@ -34,31 +36,31 @@ export function Setup() {
     setError(null)
 
     if (!openrouterApiKey.trim()) {
-      setError('OpenRouter API key is required.')
+      setError(t('auth.error.openrouterRequired'))
       return
     }
     if (sttProvider === 'deepgram' && !deepgramApiKey.trim()) {
-      setError('Deepgram API key is required.')
+      setError(t('auth.error.deepgramRequired'))
       return
     }
     if (provider === 'azure') {
       if (!azureSpeechKey.trim() || !azureSpeechRegion.trim()) {
-        setError('Azure Speech key and region are required for pronunciation.')
+        setError(t('auth.error.azureRequired'))
         return
       }
     }
     if (provider === 'minimax') {
       if (!minimaxApiKey.trim()) {
-        setError('MiniMax API key is required for pronunciation.')
+        setError(t('auth.error.minimaxRequired'))
         return
       }
     }
     if (pin.length < 4) {
-      setError('PIN must be at least 4 characters.')
+      setError(t('auth.error.pinTooShort'))
       return
     }
     if (pin !== pinConfirm) {
-      setError('PINs do not match.')
+      setError(t('auth.error.pinMismatch'))
       return
     }
 
@@ -76,7 +78,7 @@ export function Setup() {
       )
     }
     catch (err) {
-      const msg = err instanceof Error ? err.message : 'Setup failed.'
+      const msg = err instanceof Error ? err.message : t('auth.error.setupFailed')
       setError(msg)
       toast.error(msg)
     }
@@ -89,17 +91,16 @@ export function Setup() {
     <div className="flex h-screen items-center justify-center bg-[oklch(0.08_0_0)] px-4">
       <Card className="w-full max-w-md bg-white/6 text-white/90">
         <CardHeader>
-          <CardTitle className="text-xl">Welcome to ShadowLearn</CardTitle>
+          <CardTitle className="text-xl">{t('auth.welcome')}</CardTitle>
           <CardDescription className="text-white/40">
-            Enter your API keys to get started. They will be encrypted with your PIN and stored
-            locally in your browser — nothing leaves this device.
+            {t('auth.setup.subtitle')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="openai" className="text-sm font-medium text-white/65">
-                OpenRouter API Key
+                {t('auth.openrouterKey')}
               </label>
               <Input
                 id="openai"
@@ -109,14 +110,14 @@ export function Setup() {
                 onChange={e => setOpenrouterApiKey(e.target.value)}
               />
               <p className="text-sm text-white/30">
-                Used for translation and AI chat.
+                {t('auth.setup.openrouterHint')}
               </p>
             </div>
 
             {sttProvider === 'deepgram' && (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="deepgram" className="text-sm font-medium text-white/65">
-                  Deepgram API Key
+                  {t('auth.deepgramKey')}
                 </label>
                 <Input
                   id="deepgram"
@@ -126,7 +127,7 @@ export function Setup() {
                   onChange={e => setDeepgramApiKey(e.target.value)}
                 />
                 <p className="text-sm text-white/30">
-                  Used for transcription. Required to create lessons.
+                  {t('auth.setup.deepgramHint')}
                 </p>
               </div>
             )}
@@ -136,7 +137,7 @@ export function Setup() {
               <>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="azure-speech-key" className="text-sm font-medium text-white/65">
-                    Azure Speech Key
+                    {t('auth.azureSpeechKey')}
                   </label>
                   <Input
                     id="azure-speech-key"
@@ -146,13 +147,12 @@ export function Setup() {
                     onChange={e => setAzureSpeechKey(e.target.value)}
                   />
                   <p className="text-sm text-white/30">
-                    Used for word and sentence pronunciation (TTS) and pronunciation assessment.
-                    Free tier: 500K characters/month.
+                    {t('auth.setup.azureHint')}
                   </p>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="azure-speech-region" className="text-sm font-medium text-white/65">
-                    Azure Speech Region
+                    {t('auth.azureSpeechRegion')}
                   </label>
                   <Input
                     id="azure-speech-region"
@@ -169,7 +169,7 @@ export function Setup() {
             {provider === 'minimax' && (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="minimax" className="text-sm font-medium text-white/65">
-                  Minimax API Key
+                  {t('auth.minimaxKey')}
                 </label>
                 <Input
                   id="minimax"
@@ -179,19 +179,19 @@ export function Setup() {
                   onChange={e => setMinimaxApiKey(e.target.value)}
                 />
                 <p className="text-sm text-white/30">
-                  Used for word and sentence pronunciation (TTS).
+                  {t('auth.setup.minimaxHint')}
                 </p>
               </div>
             )}
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="pin" className="text-sm font-medium text-white/65">
-                PIN (4+ characters)
+                {t('auth.pin')}
               </label>
               <Input
                 id="pin"
                 type="password"
-                placeholder="Enter a PIN"
+                placeholder={t('auth.pinEnterPlaceholder')}
                 value={pin}
                 onChange={e => setPin(e.target.value)}
               />
@@ -199,12 +199,12 @@ export function Setup() {
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="pin-confirm" className="text-sm font-medium text-white/65">
-                Confirm PIN
+                {t('auth.confirmPin')}
               </label>
               <Input
                 id="pin-confirm"
                 type="password"
-                placeholder="Re-enter your PIN"
+                placeholder={t('auth.pinConfirmPlaceholder')}
                 value={pinConfirm}
                 onChange={e => setPinConfirm(e.target.value)}
               />
@@ -215,7 +215,7 @@ export function Setup() {
             )}
 
             <Button type="submit" disabled={loading || provider === null} className="mt-1">
-              {loading ? 'Setting up...' : 'Get Started'}
+              {loading ? t('auth.settingUp') : t('auth.getStarted')}
             </Button>
           </form>
         </CardContent>
