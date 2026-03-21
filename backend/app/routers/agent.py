@@ -176,6 +176,7 @@ async def _stream_agent(
             "messages": messages,
             "model": model,
             "stream": True,
+            "extra_body": {"reasoning": {"effort": "none"}},
         }
         if tool_definitions:
             create_kwargs["tools"] = tool_definitions

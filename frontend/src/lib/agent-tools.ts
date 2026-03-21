@@ -7,7 +7,7 @@
  */
 
 import type { ShadowLearnDB } from '@/db'
-import type { Segment, VocabEntry } from '@/types'
+import type { VocabEntry } from '@/types'
 import {
   getDueItems,
   getErrorPattern,
@@ -15,7 +15,6 @@ import {
   getMasteryData,
   getProgressStats,
   getRecentMistakes,
-  getSegments,
   getSpacedRepetitionItem,
   getVocabEntriesByLesson,
   saveErrorPattern,
@@ -23,6 +22,7 @@ import {
   saveSpacedRepetitionItem,
 } from '@/db'
 import { recallMemory, saveMemory } from '@/lib/agent-memory'
+import { API_BASE } from '@/lib/config'
 import { updateSpacedRepetition } from '@/lib/spacedRepetition'
 import { getSegmentTokens } from '@/lib/study-utils'
 
@@ -216,13 +216,13 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'render_pronunciation_exercise',
-      description: 'Render an interactive pronunciation exercise for a specific sentence segment.',
+      description: 'Render an interactive pronunciation exercise. Generates a practice sentence from the given vocabulary.',
       parameters: {
         type: 'object',
         properties: {
-          segmentId: { type: 'string', description: 'Segment ID from the current lesson context' },
+          itemIds: { type: 'array', items: { type: 'string' }, description: 'Vocabulary item IDs from get_vocabulary results' },
         },
-        required: ['segmentId'],
+        required: ['itemIds'],
       },
     },
   },
@@ -231,21 +231,13 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'render_cloze_exercise',
-      description: 'Render a fill-in-the-blanks story exercise. You MUST generate a short story and specify blanks.',
+      description: 'Render a fill-in-the-blanks story exercise. A story with blanks is generated automatically from the vocabulary.',
       parameters: {
         type: 'object',
         properties: {
-          question: {
-            type: 'object',
-            properties: {
-              story: { type: 'string', description: 'Short story with blanks like "{{word}}" containing missing vocabulary' },
-              blanks: { type: 'array', items: { type: 'string' }, description: 'The answers that fill the blanks in order' },
-            },
-            required: ['story', 'blanks'],
-          },
-          itemIds: { type: 'array', items: { type: 'string' }, description: 'Vocabulary item IDs from get_vocabulary results for the blanked words' },
+          itemIds: { type: 'array', items: { type: 'string' }, description: 'Vocabulary item IDs from get_vocabulary results (up to 5)' },
         },
-        required: ['question', 'itemIds'],
+        required: ['itemIds'],
       },
     },
   },
@@ -507,44 +499,130 @@ export async function executeRenderRomanizationExercise(db: ShadowLearnDB, args:
   return { type: 'romanization-recall', props: { items: entries, mode: 'review' } }
 }
 
-export async function executeRenderTranslationExercise(db: ShadowLearnDB, args: { itemIds: string[] }) {
+export async function executeRenderTranslationExercise(
+  db: ShadowLearnDB,
+  args: { itemIds: string[], sourceLanguage?: string },
+  openrouterApiKey: string,
+) {
   const entries = await fetchVocabEntries(db, args.itemIds)
-  if (entries.length === 0) {
+  if (entries.length === 0)
     return { error: 'No items available for translation.' }
+
+  const entry = entries[0]
+  try {
+    const resp = await fetch(`${API_BASE}/api/translation/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        openrouter_api_key: openrouterApiKey,
+        word: entry.word,
+        romanization: entry.romanization,
+        meaning: entry.meaning,
+        usage: entry.usage ?? '',
+        sentence_count: 1,
+        source_language: args.sourceLanguage ?? entry.sourceLanguage ?? 'zh-CN',
+      }),
+    })
+    if (!resp.ok)
+      return { error: `Translation generation failed (${resp.status})` }
+
+    const data = await resp.json() as { sentences: { text: string, romanization: string, english: string }[] }
+    const sentence = data.sentences[0]
+    if (!sentence)
+      return { error: 'No sentence generated.' }
+
+    const direction: 'en-to-zh' | 'zh-to-en' = Math.random() < 0.5 ? 'en-to-zh' : 'zh-to-en'
+    return { type: 'translation', props: { items: entries, sentence, direction } }
   }
-  return { type: 'translation', props: { items: entries, mode: 'review' } }
+  catch (err: any) {
+    return { error: `Translation generation error: ${err.message}` }
+  }
 }
 
 export async function executeRenderPronunciationExercise(
   db: ShadowLearnDB,
-  args: { segmentId: string },
-  lessonId: string,
+  args: { itemIds: string[], sourceLanguage?: string },
+  openrouterApiKey: string,
 ) {
-  if (!args.segmentId) {
-    return { error: 'segmentId is required for pronunciation exercises' }
+  const entries = await fetchVocabEntries(db, args.itemIds)
+  if (entries.length === 0)
+    return { error: 'No items available for pronunciation.' }
+
+  const words = entries.map(e => ({
+    word: e.word,
+    romanization: e.romanization,
+    meaning: e.meaning,
+    usage: e.usage ?? '',
+  }))
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        openrouter_api_key: openrouterApiKey,
+        words,
+        exercise_type: 'pronunciation_sentence',
+        count: 1,
+        source_language: args.sourceLanguage ?? entries[0].sourceLanguage ?? 'zh-CN',
+      }),
+    })
+    if (!resp.ok)
+      return { error: `Pronunciation generation failed (${resp.status})` }
+
+    const data = await resp.json() as { exercises: { sentence: string, translation: string }[] }
+    const exercise = data.exercises[0]
+    if (!exercise)
+      return { error: 'No pronunciation sentence generated.' }
+
+    return { type: 'pronunciation', props: { sentence: exercise, items: entries } }
   }
-  const segments = await getSegments(db, lessonId)
-  const segment = segments?.find((s: Segment) => s.id === args.segmentId)
-  if (!segment) {
-    return { error: `Segment ${args.segmentId} not found` }
-  }
-  return {
-    type: 'pronunciation',
-    props: {
-      sentence: { sentence: segment.text, translation: Object.values(segment.translations ?? {})[0] ?? '' },
-    },
+  catch (err: any) {
+    return { error: `Pronunciation generation error: ${err.message}` }
   }
 }
 
 export async function executeRenderClozeExercise(
   db: ShadowLearnDB,
-  args: { question: { story: string, blanks: string[] }, itemIds: string[] },
+  args: { itemIds: string[], sourceLanguage?: string },
+  openrouterApiKey: string,
 ) {
   const entries = await fetchVocabEntries(db, args.itemIds)
-  if (entries.length === 0) {
-    return { error: 'No items available for feedback.' }
+  if (entries.length === 0)
+    return { error: 'No items available for cloze.' }
+
+  const words = entries.slice(0, 5).map(e => ({
+    word: e.word,
+    romanization: e.romanization,
+    meaning: e.meaning,
+    usage: e.usage ?? '',
+  }))
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        openrouter_api_key: openrouterApiKey,
+        words,
+        exercise_type: 'cloze',
+        story_count: 1,
+        source_language: args.sourceLanguage ?? entries[0].sourceLanguage ?? 'zh-CN',
+      }),
+    })
+    if (!resp.ok)
+      return { error: `Cloze generation failed (${resp.status})` }
+
+    const data = await resp.json() as { exercises: { story: string, blanks: string[] }[] }
+    const exercise = data.exercises[0]
+    if (!exercise)
+      return { error: 'No cloze story generated.' }
+
+    return { type: 'cloze', props: { question: exercise, items: entries } }
   }
-  return { type: 'cloze', props: { question: args.question, items: entries } }
+  catch (err: any) {
+    return { error: `Cloze generation error: ${err.message}` }
+  }
 }
 
 export async function executeRenderReconstructionExercise(
@@ -567,18 +645,18 @@ export async function executeRenderProgressChart(
   db: ShadowLearnDB,
   args: { metric: 'accuracy' | 'mastery' },
 ) {
+  const stats = await getProgressStats(db)
+
   if (args.metric === 'accuracy') {
-    const stats = await getProgressStats(db)
     return {
       metric: 'accuracy',
       data: stats?.accuracyTrend ?? [],
     }
   }
 
-  const mastery = await getMasteryData(db)
   return {
     metric: 'mastery',
-    data: mastery ?? null,
+    data: stats?.skillProgress ?? null,
   }
 }
 

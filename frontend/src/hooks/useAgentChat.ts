@@ -145,6 +145,7 @@ export function useAgentChat(
       if (!currentDb)
         return
 
+      const openrouterApiKey = keys?.openrouterApiKey ?? ''
       let result: unknown
 
       try {
@@ -193,13 +194,13 @@ export function useAgentChat(
             result = await executeRenderRomanizationExercise(currentDb, toolCall.input as { itemIds: string[] })
             break
           case 'render_translation_exercise':
-            result = await executeRenderTranslationExercise(currentDb, toolCall.input as { itemIds: string[] })
+            result = await executeRenderTranslationExercise(currentDb, toolCall.input as { itemIds: string[], sourceLanguage?: string }, openrouterApiKey)
             break
           case 'render_pronunciation_exercise':
-            result = await executeRenderPronunciationExercise(currentDb, toolCall.input as { segmentId: string }, lessonId)
+            result = await executeRenderPronunciationExercise(currentDb, toolCall.input as { itemIds: string[], sourceLanguage?: string }, openrouterApiKey)
             break
           case 'render_cloze_exercise':
-            result = await executeRenderClozeExercise(currentDb, toolCall.input as { question: { story: string, blanks: string[] }, itemIds: string[] })
+            result = await executeRenderClozeExercise(currentDb, toolCall.input as { itemIds: string[], sourceLanguage?: string }, openrouterApiKey)
             break
           case 'render_reconstruction_exercise':
             result = await executeRenderReconstructionExercise(currentDb, toolCall.input as { itemId: string })

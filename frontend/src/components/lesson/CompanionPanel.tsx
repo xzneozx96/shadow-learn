@@ -50,8 +50,10 @@ type SendMessage = (opts: { text: string }) => void
 
 /**
  * Render all parts of a message using AI SDK v5 part types.
+ * activeWideIds: set of toolCallIds that should render as full widgets.
+ * Parts not in this set collapse to compact ToolCallCards to prevent history clutter.
  */
-function renderMessageParts(msg: UIMessage, sendMessage: SendMessage) {
+function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, activeWideIds: ReadonlySet<string>) {
   if (!msg.parts || msg.parts.length === 0)
     return null
 
@@ -107,6 +109,20 @@ function renderMessageParts(msg: UIMessage, sendMessage: SendMessage) {
           )
         }
 
+        // Older occurrences of wide tools collapse to compact cards to avoid history clutter.
+        // Use toolCallId ?? part.type (without index) to match the key used in activeWideIds.
+        const wideCheckId = part.toolCallId ?? part.type
+        if (!activeWideIds.has(wideCheckId)) {
+          return (
+            <ToolCallCard
+              key={partKey}
+              toolName={toolName}
+              state="output-available"
+              input={part.input}
+            />
+          )
+        }
+
         if (EXERCISE_TOOLS.has(toolName)) {
           return (
             <ExerciseRenderer
@@ -147,12 +163,12 @@ function renderMessageParts(msg: UIMessage, sendMessage: SendMessage) {
 }
 
 const MessageItem = memo(
-  ({ msg, sendMessage }: { msg: UIMessage, sendMessage: SendMessage }) => {
+  ({ msg, sendMessage, activeWideIds }: { msg: UIMessage, sendMessage: SendMessage, activeWideIds: ReadonlySet<string> }) => {
     if (msg.role !== 'assistant') {
       return (
         <div className="flex justify-end">
           <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
-            {renderMessageParts(msg, sendMessage)}
+            {renderMessageParts(msg, sendMessage, activeWideIds)}
           </div>
         </div>
       )
@@ -169,8 +185,8 @@ const MessageItem = memo(
     })
     const fullWidthParts = parts.filter(isWidePart)
 
-    const bubbleContent = renderMessageParts({ ...msg, parts: bubbleParts } as UIMessage, sendMessage)
-    const fullWidthContent = renderMessageParts({ ...msg, parts: fullWidthParts } as UIMessage, sendMessage)
+    const bubbleContent = renderMessageParts({ ...msg, parts: bubbleParts } as UIMessage, sendMessage, activeWideIds)
+    const fullWidthContent = renderMessageParts({ ...msg, parts: fullWidthParts } as UIMessage, sendMessage, activeWideIds)
     const hasBubble = bubbleParts.some((p) => {
       if (p.type === 'text' && 'text' in p)
         return (p.text as string)?.trim()
@@ -197,6 +213,8 @@ const MessageItem = memo(
     )
   },
   (prev, next) => {
+    if (prev.activeWideIds !== next.activeWideIds)
+      return false
     if (prev.msg.id !== next.msg.id)
       return false
     const p1 = prev.msg.parts
@@ -242,6 +260,32 @@ export function CompanionPanel({
       return true
     })
   }, [messages])
+
+  // For each "wide" tool type (exercises, charts, vocab cards), only the LAST
+  // occurrence across all messages renders as a full widget. Earlier occurrences
+  // collapse to a compact ToolCallCard to prevent history clutter.
+  // Stabilize the Set reference so MessageItem memo isn't defeated during streaming.
+  const prevWideIdsRef = useRef<ReadonlySet<string>>(new Set())
+  const activeWideIds = useMemo(() => {
+    const lastByToolName = new Map<string, string>() // toolName → toolCallId
+    for (const msg of uniqueMessages) {
+      for (const part of msg.parts) {
+        if (!isToolPart(part) || part.state !== 'output-available')
+          continue
+        const toolName = getToolName(part)
+        if (EXERCISE_TOOLS.has(toolName) || toolName === 'render_progress_chart' || toolName === 'render_vocab_card') {
+          const id = part.toolCallId ?? part.type
+          lastByToolName.set(toolName, id)
+        }
+      }
+    }
+    const next = new Set(lastByToolName.values())
+    const prev = prevWideIdsRef.current
+    if (prev.size === next.size && [...next].every(id => prev.has(id)))
+      return prev
+    prevWideIdsRef.current = next
+    return next
+  }, [uniqueMessages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -298,7 +342,7 @@ export function CompanionPanel({
 
           <div className="space-y-3">
             {uniqueMessages.map((msg: UIMessage) => (
-              <MessageItem key={msg.id} msg={msg} sendMessage={sendMessage} />
+              <MessageItem key={msg.id} msg={msg} sendMessage={sendMessage} activeWideIds={activeWideIds} />
             ))}
 
             {isLoading && messages.length > 0 && (

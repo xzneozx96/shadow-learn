@@ -4,7 +4,9 @@
  * tool parts reach output-available state.
  */
 
+import type { DailyAccuracy } from '@/db'
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from '@/components/ai-elements/tool'
+import { AccuracyTrendChart } from '@/components/progress/AccuracyTrendChart'
 import { cn } from '@/lib/utils'
 
 // -------------------------------------------------------------------------- //
@@ -117,14 +119,13 @@ export function VocabCardRenderer({ result }: { result: VocabCardResult }) {
 }
 
 // -------------------------------------------------------------------------- //
-// ProgressChartRenderer — accuracy trend or mastery overview
+// ProgressChartRenderer — reuses the workbook AccuracyTrendChart (recharts)
+// for accuracy, and a compact MasteryGrid for skill mastery.
 // -------------------------------------------------------------------------- //
-
-interface AccuracyDataPoint { date: string, accuracy: number, exercises: number }
 
 interface ProgressChartResult {
   metric: 'accuracy' | 'mastery'
-  data: AccuracyDataPoint[] | Record<string, { masteryLevel: number }> | null
+  data: DailyAccuracy[] | Record<string, { accuracy: number, sessions: number }> | null
 }
 
 export function ProgressChartRenderer({ result }: { result: ProgressChartResult }) {
@@ -137,7 +138,11 @@ export function ProgressChartRenderer({ result }: { result: ProgressChartResult 
   }
 
   if (result.metric === 'accuracy' && Array.isArray(result.data)) {
-    return <AccuracyMiniChart data={result.data} />
+    return (
+      <div className="h-52 my-1">
+        <AccuracyTrendChart trend={result.data} />
+      </div>
+    )
   }
 
   if (result.metric === 'mastery' && !Array.isArray(result.data)) {
@@ -147,76 +152,36 @@ export function ProgressChartRenderer({ result }: { result: ProgressChartResult 
   return null
 }
 
-function AccuracyMiniChart({ data }: { data: AccuracyDataPoint[] }) {
-  if (data.length === 0) {
-    return (
-      <div className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-        No accuracy data yet.
-      </div>
-    )
-  }
-
-  const max = Math.max(...data.map(d => d.accuracy), 1)
-
-  return (
-    <div className="rounded-lg border border-border/50 bg-muted/20 p-3 my-1 max-w-md">
-      <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">
-        Accuracy Trend (last
-        {' '}
-        {data.length}
-        {' '}
-        days)
-      </p>
-      <div className="flex items-end gap-1 h-16">
-        {data.map((d) => {
-          const pct = (d.accuracy / max) * 100
-          return (
-            <div key={d.date} className="flex-1 flex flex-col items-center gap-0.5">
-              <div
-                className={cn(
-                  'w-full rounded-t-sm transition-all',
-                  d.accuracy >= 80 ? 'bg-emerald-400/70' : d.accuracy >= 60 ? 'bg-amber-400/70' : 'bg-rose-400/70',
-                )}
-                style={{ height: `${Math.max(pct, 4)}%` }}
-              />
-              <span className="text-sm text-muted-foreground/50">
-                {d.date.slice(5)}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function MasteryGrid({ data }: { data: Record<string, { masteryLevel: number }> }) {
+function MasteryGrid({ data }: { data: Record<string, { accuracy: number, sessions: number }> }) {
   const skills = Object.entries(data)
 
   return (
-    <div className="rounded-lg border border-border/50 bg-muted/20 p-3 my-1 max-w-md">
+    <div className="rounded-lg border border-border/50 bg-muted/20 p-3 my-1">
       <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">
         Skill Mastery
       </p>
       <div className="grid grid-cols-2 gap-2">
-        {skills.map(([name, stats]) => (
-          <div key={name} className="flex items-center gap-2">
-            <div className="h-2 flex-1 rounded-full bg-muted/60 overflow-hidden">
-              <div
-                className={cn(
-                  'h-full rounded-full',
-                  stats.masteryLevel >= 80 ? 'bg-emerald-400' : stats.masteryLevel >= 50 ? 'bg-amber-400' : 'bg-rose-400',
-                )}
-                style={{ width: `${stats.masteryLevel}%` }}
-              />
+        {skills.map(([name, stats]) => {
+          const pct = Math.round(stats.accuracy * 100)
+          return (
+            <div key={name} className="flex items-center gap-2">
+              <div className="h-2 flex-1 rounded-full bg-muted/60 overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full rounded-full',
+                    pct >= 80 ? 'bg-emerald-400' : pct >= 50 ? 'bg-amber-400' : 'bg-rose-400',
+                  )}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="text-sm text-muted-foreground capitalize w-16 truncate">{name}</span>
+              <span className="text-sm font-medium tabular-nums">
+                {pct}
+                %
+              </span>
             </div>
-            <span className="text-sm text-muted-foreground capitalize w-16 truncate">{name}</span>
-            <span className="text-sm font-medium tabular-nums">
-              {stats.masteryLevel}
-              %
-            </span>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
