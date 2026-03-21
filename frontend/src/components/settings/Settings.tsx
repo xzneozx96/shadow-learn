@@ -121,11 +121,11 @@ export function Settings() {
     setPinSuccess(false)
 
     if (newPin.length < 4) {
-      setPinError('PIN must be at least 4 characters')
+      setPinError(t('settings.pinTooShort'))
       return
     }
     if (newPin !== confirmPin) {
-      setPinError('PINs do not match')
+      setPinError(t('settings.pinMismatch'))
       return
     }
 
@@ -135,11 +135,11 @@ export function Settings() {
       setNewPin('')
       setConfirmPin('')
       setPinSuccess(true)
-      toast.success('PIN changed successfully')
+      toast.success(t('settings.pinChanged'))
     }
     catch {
-      setPinError('Failed to change PIN')
-      toast.error('Failed to change PIN')
+      setPinError(t('settings.pinChangeFailed'))
+      toast.error(t('settings.pinChangeFailed'))
     }
   }
 
@@ -276,7 +276,7 @@ export function Settings() {
                 type="password"
                 value={newPin}
                 onChange={e => setNewPin(e.target.value)}
-                placeholder="Enter new PIN"
+                placeholder={t('settings.newPinPlaceholder')}
               />
             </div>
             <div className="space-y-2">
@@ -285,15 +285,15 @@ export function Settings() {
                 type="password"
                 value={confirmPin}
                 onChange={e => setConfirmPin(e.target.value)}
-                placeholder="Confirm new PIN"
+                placeholder={t('settings.confirmPinPlaceholder')}
               />
             </div>
             {pinError && <p className="text-sm text-destructive">{pinError}</p>}
-            {pinSuccess && <p className="text-sm text-emerald-400">PIN changed successfully</p>}
+            {pinSuccess && <p className="text-sm text-emerald-400">{t('settings.pinChanged')}</p>}
             <div className="flex gap-2">
-              <Button onClick={handleChangePin} size="sm">Change PIN</Button>
+              <Button onClick={handleChangePin} size="sm">{t('settings.changePin')}</Button>
               <Button variant="destructive" size="sm" onClick={resetKeys}>
-                Forgot PIN
+                {t('settings.forgotPin')}
               </Button>
             </div>
           </CardContent>

@@ -134,6 +134,13 @@ export const TRANSLATIONS = {
     'settings.lockApp': 'Lock App',
     'settings.saved': 'Settings saved',
     'settings.keysSaved': 'Keys saved',
+    'settings.pinChanged': 'PIN changed successfully',
+    'settings.forgotPin': 'Forgot PIN',
+    'settings.newPinPlaceholder': 'Enter new PIN',
+    'settings.confirmPinPlaceholder': 'Confirm new PIN',
+    'settings.pinMismatch': 'PINs do not match',
+    'settings.pinTooShort': 'PIN must be at least 4 characters',
+    'settings.pinChangeFailed': 'Failed to change PIN',
 
     // Common
     'common.save': 'Save',
@@ -279,6 +286,13 @@ export const TRANSLATIONS = {
     'settings.lockApp': 'Khóa ứng dụng',
     'settings.saved': 'Đã lưu cài đặt',
     'settings.keysSaved': 'Đã lưu khóa',
+    'settings.pinChanged': 'Đổi mã PIN thành công',
+    'settings.forgotPin': 'Quên mã PIN',
+    'settings.newPinPlaceholder': 'Nhập mã PIN mới',
+    'settings.confirmPinPlaceholder': 'Xác nhận mã PIN mới',
+    'settings.pinMismatch': 'Mã PIN không khớp',
+    'settings.pinTooShort': 'Mã PIN phải có ít nhất 4 ký tự',
+    'settings.pinChangeFailed': 'Đổi mã PIN thất bại',
 
     // Common
     'common.save': 'Lưu',
