@@ -15,7 +15,7 @@ import { getAppConfig } from '@/lib/config'
 import { INTERFACE_LANGUAGES, LANGUAGES } from '@/lib/constants'
 
 export function Settings() {
-  const { db, keys, lock, resetKeys, setup } = useAuth()
+  const { db, keys, lock, resetKeys, setup, trialMode } = useAuth()
   const { locale, setLocale, t } = useI18n()
 
   const [provider, setProvider] = useState<string | null>(null)
@@ -35,6 +35,8 @@ export function Settings() {
   const [keysPin, setKeysPin] = useState('')
   const [keysSaved, setKeysSaved] = useState(false)
   const [keysError, setKeysError] = useState<string | null>(null)
+  const [newTrialPin, setNewTrialPin] = useState('')
+  const [newTrialPinConfirm, setNewTrialPinConfirm] = useState('')
 
   useEffect(() => {
     getAppConfig().then((cfg) => {
@@ -66,10 +68,6 @@ export function Settings() {
 
   async function handleSaveKeys() {
     setKeysError(null)
-    if (!keysPin) {
-      setKeysError('Enter your PIN to save key changes')
-      return
-    }
     if (!editOpenrouterKey.trim()) {
       setKeysError('OpenRouter API key cannot be empty')
       return
@@ -86,6 +84,47 @@ export function Settings() {
         return
       }
     }
+
+    const newKeys = {
+      openrouterApiKey: editOpenrouterKey.trim(),
+      minimaxApiKey: editMinimaxKey.trim() || undefined,
+      deepgramApiKey: editDeepgramKey.trim() || undefined,
+      azureSpeechKey: editAzureSpeechKey.trim() || undefined,
+      azureSpeechRegion: editAzureSpeechRegion.trim() || undefined,
+    }
+
+    if (trialMode) {
+      // Trial path: create a new PIN (no existing one to verify)
+      if (newTrialPin.length < 4) {
+        setKeysError('PIN must be at least 4 digits')
+        return
+      }
+      if (newTrialPin !== newTrialPinConfirm) {
+        setKeysError('PINs do not match')
+        return
+      }
+      if (!db)
+        return
+      try {
+        await setup(newKeys, newTrialPin)
+        setNewTrialPin('')
+        setNewTrialPinConfirm('')
+        setKeysSaved(true)
+        toast.success(t('settings.keysSaved'))
+        setTimeout(setKeysSaved, 2000, false)
+      }
+      catch {
+        setKeysError('Failed to save API keys')
+        toast.error('Failed to save API keys')
+      }
+      return
+    }
+
+    // Own-keys path: verify existing PIN before saving
+    if (!keysPin) {
+      setKeysError('Enter your PIN to save key changes')
+      return
+    }
     if (!db)
       return
     try {
@@ -93,14 +132,6 @@ export function Settings() {
       if (!cryptoData)
         throw new Error('No stored keys found')
       await decryptKeys(cryptoData, keysPin)
-
-      const newKeys = {
-        openrouterApiKey: editOpenrouterKey.trim(),
-        minimaxApiKey: editMinimaxKey.trim() || undefined,
-        deepgramApiKey: editDeepgramKey.trim() || undefined,
-        azureSpeechKey: editAzureSpeechKey.trim() || undefined,
-        azureSpeechRegion: editAzureSpeechRegion.trim() || undefined,
-      }
       await setup(newKeys, keysPin)
       setKeysSaved(true)
       setKeysPin('')
@@ -158,6 +189,11 @@ export function Settings() {
   return (
     <Layout>
       <div className="mx-auto max-w-2xl space-y-6 p-4">
+        {trialMode && (
+          <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
+            You're using the free trial. Add your own API keys below to switch — your lessons will be preserved.
+          </div>
+        )}
         <h1 className="text-xl font-bold">{t('settings.title')}</h1>
 
         <Card>
@@ -249,54 +285,81 @@ export function Settings() {
                 />
               </div>
             )}
-            <div className="space-y-2">
-              <label className="text-sm text-white/40">{t('settings.confirmWithPin')}</label>
-              <Input
-                type="password"
-                value={keysPin}
-                onChange={e => setKeysPin(e.target.value)}
-                placeholder="Enter your PIN to save"
-              />
-            </div>
+            {trialMode
+              ? (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm text-white/40">Create a PIN</label>
+                      <Input
+                        type="password"
+                        value={newTrialPin}
+                        onChange={e => setNewTrialPin(e.target.value)}
+                        placeholder="4+ digits"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-white/40">Confirm PIN</label>
+                      <Input
+                        type="password"
+                        value={newTrialPinConfirm}
+                        onChange={e => setNewTrialPinConfirm(e.target.value)}
+                        placeholder="Repeat your PIN"
+                      />
+                    </div>
+                  </>
+                )
+              : (
+                  <div className="space-y-2">
+                    <label className="text-sm text-white/40">{t('settings.confirmWithPin')}</label>
+                    <Input
+                      type="password"
+                      value={keysPin}
+                      onChange={e => setKeysPin(e.target.value)}
+                      placeholder="Enter your PIN to save"
+                    />
+                  </div>
+                )}
             {keysError && <p className="text-sm text-destructive">{keysError}</p>}
             {keysSaved && <p className="text-sm text-emerald-400">Keys saved</p>}
             <Button onClick={handleSaveKeys} disabled={provider === null}>{t('settings.saveKeys')}</Button>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('settings.changePin')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <label className="text-sm text-white/40">{t('settings.newPin')}</label>
-              <Input
-                type="password"
-                value={newPin}
-                onChange={e => setNewPin(e.target.value)}
-                placeholder={t('settings.newPinPlaceholder')}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-white/40">{t('settings.confirmPin')}</label>
-              <Input
-                type="password"
-                value={confirmPin}
-                onChange={e => setConfirmPin(e.target.value)}
-                placeholder={t('settings.confirmPinPlaceholder')}
-              />
-            </div>
-            {pinError && <p className="text-sm text-destructive">{pinError}</p>}
-            {pinSuccess && <p className="text-sm text-emerald-400">{t('settings.pinChanged')}</p>}
-            <div className="flex gap-2">
-              <Button onClick={handleChangePin} size="sm">{t('settings.changePin')}</Button>
-              <Button variant="destructive" size="sm" onClick={resetKeys}>
-                {t('settings.forgotPin')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {!trialMode && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('settings.changePin')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <label className="text-sm text-white/40">{t('settings.newPin')}</label>
+                <Input
+                  type="password"
+                  value={newPin}
+                  onChange={e => setNewPin(e.target.value)}
+                  placeholder={t('settings.newPinPlaceholder')}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/40">{t('settings.confirmPin')}</label>
+                <Input
+                  type="password"
+                  value={confirmPin}
+                  onChange={e => setConfirmPin(e.target.value)}
+                  placeholder={t('settings.confirmPinPlaceholder')}
+                />
+              </div>
+              {pinError && <p className="text-sm text-destructive">{pinError}</p>}
+              {pinSuccess && <p className="text-sm text-emerald-400">{t('settings.pinChanged')}</p>}
+              <div className="flex gap-2">
+                <Button onClick={handleChangePin} size="sm">{t('settings.changePin')}</Button>
+                <Button variant="destructive" size="sm" onClick={resetKeys}>
+                  {t('settings.forgotPin')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
