@@ -233,16 +233,16 @@ export function Setup() {
         </Card>
 
         {freeTrialAvailable && (
-          <Card className="bg-white/6 text-white/90">
-            <CardContent className="flex flex-col gap-3 pt-5">
+          <Card className="mt-5">
+            <CardContent className="flex flex-col gap-3 ">
               <div>
-                <p className="text-sm font-medium">Try for free</p>
+                <p className="text-sm font-medium">{t('auth.trial.title')}</p>
                 <p className="mt-0.5 text-xs text-white/40">
-                  Uses shared API keys. May be discontinued when costs become unsustainable — add your own keys in Settings anytime.
+                  {t('auth.trial.hint')}
                 </p>
               </div>
               <Button type="button" variant="outline" onClick={startTrial} className="w-full">
-                Start free trial
+                {t('auth.trial.button')}
               </Button>
             </CardContent>
           </Card>

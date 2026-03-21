@@ -45,6 +45,9 @@ export const TRANSLATIONS = {
     'auth.setup.deepgramHint': 'Used for transcription. Required to create lessons.',
     'auth.setup.azureHint': 'Used for word and sentence pronunciation (TTS) and pronunciation assessment. Free tier: 500K characters/month.',
     'auth.setup.minimaxHint': 'Used for word and sentence pronunciation (TTS).',
+    'auth.trial.title': 'Try for free',
+    'auth.trial.hint': 'Uses shared API keys. May be discontinued when costs become unsustainable — add your own keys in Settings anytime.',
+    'auth.trial.button': 'Start free trial',
 
     // Create Lesson
     'create.title': 'Create New Lesson',
@@ -411,6 +414,9 @@ export const TRANSLATIONS = {
     'auth.setup.deepgramHint': 'Dùng để chuyển video thành đoạn hội thoại.',
     'auth.setup.azureHint': 'Dùng để chuyển văn bản thành giọng nói và chấm điểm phát âm của bạn.',
     'auth.setup.minimaxHint': 'Dùng để nghe phát âm và đọc chữ.',
+    'auth.trial.title': 'Dùng thử miễn phí',
+    'auth.trial.hint': 'Sử dụng API key chung. Có thể ngừng khi chi phí vượt mức — bạn có thể thêm key của mình trong Cài đặt bất cứ lúc nào.',
+    'auth.trial.button': 'Bắt đầu dùng thử',
 
     // Create Lesson
     'create.title': 'Tạo bài học mới',
