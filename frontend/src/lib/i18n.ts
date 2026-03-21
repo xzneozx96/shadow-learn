@@ -379,6 +379,8 @@ export const TRANSLATIONS = {
     'nav.workbook': 'Sổ tay',
     'nav.documentation': 'Hướng dẫn',
     'nav.search': 'Tìm kiếm bài học...',
+    'auth.welcome': 'Chào mừng bạn đến với ShadowLearn',
+    'auth.setup.subtitle': 'Vui lòng nhập các khóa API để bắt đầu',
     'auth.azureSpeechKey': 'Khóa Azure Speech',
     'auth.azureSpeechRegion': 'Vùng Azure Speech',
     'auth.minimaxKey': 'Khóa API Minimax',
@@ -406,8 +408,8 @@ export const TRANSLATIONS = {
     'auth.error.incorrectPin': 'Mã PIN chưa chính xác. Bạn vui lòng thử lại nhé.',
     'auth.error.incorrectPinToast': 'Mã PIN chưa đúng',
     'auth.setup.openrouterHint': 'Dùng cho các chức năng dịch thuật và hội thoại AI.',
-    'auth.setup.deepgramHint': 'Dùng để nghe âm thanh video thành chữ để tạo bài học.',
-    'auth.setup.azureHint': 'Dùng để nghe phát âm và chấm điểm phát âm của bạn.',
+    'auth.setup.deepgramHint': 'Dùng để chuyển video thành đoạn hội thoại.',
+    'auth.setup.azureHint': 'Dùng để chuyển văn bản thành giọng nói và chấm điểm phát âm của bạn.',
     'auth.setup.minimaxHint': 'Dùng để nghe phát âm và đọc chữ.',
 
     // Create Lesson
