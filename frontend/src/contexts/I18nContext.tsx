@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from 'react'
+import { createContext, use, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getSettings, saveSettings } from '@/db'
@@ -42,4 +42,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       {children}
     </I18nContext>
   )
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useI18n(): I18nContextValue {
+  return use(I18nContext)
 }
