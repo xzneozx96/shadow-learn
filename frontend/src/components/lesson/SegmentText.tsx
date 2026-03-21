@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useI18n } from '@/contexts/I18nContext'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { buildPositionMap, buildWordSpans } from '@/lib/segment-text'
 import { cn } from '@/lib/utils'
@@ -36,6 +37,7 @@ export const SegmentText = memo(({
   segment,
   showRomanization = true,
 }: SegmentTextProps) => {
+  const { t } = useI18n()
   const { subscribeTime, getTime } = usePlayer()
 
   // Build spans once per text/words change
@@ -210,8 +212,8 @@ export const SegmentText = memo(({
                           ? 'text-yellow-400 disabled:opacity-100'
                           : 'text-white/30 hover:text-white',
                       )}
-                      title={isSaved?.(span.word.word) ? 'Already in Workbook' : 'Save to Workbook'}
-                      aria-label={isSaved?.(span.word.word) ? 'Already in Workbook' : 'Save to Workbook'}
+                      title={isSaved?.(span.word.word) ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
+                      aria-label={isSaved?.(span.word.word) ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
                       disabled={isSaved?.(span.word.word)}
                       onClick={(e) => {
                         e.stopPropagation()

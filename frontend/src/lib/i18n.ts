@@ -101,6 +101,14 @@ export const TRANSLATIONS = {
     'lesson.savedToWorkbook': 'Saved to Workbook',
     'lesson.alreadyInWorkbook': 'Already in Workbook',
     'lesson.saveMemory': 'Save Memory',
+    'lesson.notFound': 'Lesson not found',
+    'lesson.backToLibrary': 'Back to Library',
+    'lesson.searchSegments': 'Search segments...',
+    'lesson.aiCompanion': 'AI Companion',
+    'lesson.askAboutSegment': 'Ask about this segment...',
+    'lesson.openOnYouTube': 'Open on YouTube',
+    'lesson.downloadVideo': 'Download video',
+    'lesson.downloadAudio': 'Download audio',
 
     // Study
     'study.check': 'Check',
@@ -286,6 +294,14 @@ export const TRANSLATIONS = {
     'lesson.savedToWorkbook': 'Đã lưu vào sổ tay',
     'lesson.alreadyInWorkbook': 'Đã có trong sổ tay',
     'lesson.saveMemory': 'Lưu ghi nhớ',
+    'lesson.notFound': 'Không tìm thấy bài học',
+    'lesson.backToLibrary': 'Về thư viện',
+    'lesson.searchSegments': 'Tìm đoạn...',
+    'lesson.aiCompanion': 'Trợ lý AI',
+    'lesson.askAboutSegment': 'Hỏi về đoạn này...',
+    'lesson.openOnYouTube': 'Mở trên YouTube',
+    'lesson.downloadVideo': 'Tải video',
+    'lesson.downloadAudio': 'Tải âm thanh',
 
     // Study
     'study.check': 'Kiểm tra',

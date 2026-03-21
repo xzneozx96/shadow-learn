@@ -7,6 +7,7 @@ import { ShadowingPanel } from '@/components/shadowing/ShadowingPanel'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { getVideo, saveLessonMeta } from '@/db'
@@ -18,6 +19,7 @@ import { VideoPanel } from './VideoPanel'
 
 export function LessonView() {
   const { id } = useParams<{ id: string }>()
+  const { t } = useI18n()
   const { db, keys } = useAuth()
   const { player } = usePlayer()
   const { updateLesson } = useLessons()
@@ -119,9 +121,9 @@ export function LessonView() {
   if (error || !meta) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 glass-bg">
-        <p className="text-sm text-red-400">{error ?? 'Lesson not found'}</p>
+        <p className="text-sm text-red-400">{error ?? t('lesson.notFound')}</p>
         <Button variant="outline" render={<Link to="/" />}>
-          Back to Library
+          {t('lesson.backToLibrary')}
         </Button>
       </div>
     )

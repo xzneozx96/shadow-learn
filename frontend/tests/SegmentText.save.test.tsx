@@ -14,6 +14,14 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
+// Mock I18nContext so SegmentText can be rendered without an I18nProvider in tests.
+vi.mock('@/contexts/I18nContext', async () => {
+  const { getTranslation } = await import('@/lib/i18n')
+  return {
+    useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),
+  }
+})
+
 // Mock PlayerContext so SegmentText can be rendered without a PlayerProvider in tests.
 vi.mock('@/contexts/PlayerContext', () => ({
   usePlayer: () => ({
