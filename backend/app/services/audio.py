@@ -114,7 +114,7 @@ def _get_youtube_duration_blocking(video_id: str) -> float:
         **_ydl_extra_opts(),
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
+        info = ydl.extract_info(url, download=False, process=False)
         return float(info.get("duration", 0))
 
 
