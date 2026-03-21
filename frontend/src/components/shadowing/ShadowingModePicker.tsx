@@ -21,7 +21,6 @@ const COUNT_OPTIONS = [5, 10, 15, 20] as const
 
 interface ShadowingModePickerProps {
   startSegment: Segment
-  startSegmentNumber: number
   totalRemaining: number
   speakingAvailable: boolean
   onStart: (mode: 'dictation' | 'speaking', count: number | 'all') => void
@@ -30,7 +29,6 @@ interface ShadowingModePickerProps {
 
 export function ShadowingModePicker({
   startSegment,
-  startSegmentNumber,
   totalRemaining,
   speakingAvailable,
   onStart,
@@ -45,7 +43,7 @@ export function ShadowingModePicker({
       <DialogHeader>
         <DialogTitle>{t('shadowing.modeTitle')}</DialogTitle>
         <DialogDescription>
-          {`Starting from segment ${startSegmentNumber} — "${startSegment.text}" (${formatTimestamp(startSegment.start)})`}
+          {t('shadowing.startingFrom').replace('{text}', startSegment.text).replace('{time}', formatTimestamp(startSegment.start))}
         </DialogDescription>
       </DialogHeader>
 

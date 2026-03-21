@@ -291,7 +291,7 @@ export function CompanionPanel({
           {messages.length === 0 && !isLoading && (
             <div className="flex h-full items-center justify-center py-12">
               <p className="text-center text-sm text-muted-foreground">
-                Ask about vocabulary, grammar, pronunciation — or say "quiz me" for an exercise.
+                {t('lesson.companionPlaceholder')}
               </p>
             </div>
           )}

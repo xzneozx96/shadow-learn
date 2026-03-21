@@ -187,7 +187,6 @@ export function LessonView() {
           {pickerSegment !== null && pickerStartIdx >= 0 && (
             <ShadowingModePicker
               startSegment={pickerSegment}
-              startSegmentNumber={pickerStartIdx + 1}
               totalRemaining={totalRemaining}
               speakingAvailable={speakingAvailable}
               onStart={handleShadowingStart}

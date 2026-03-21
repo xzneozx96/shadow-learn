@@ -106,6 +106,7 @@ export const TRANSLATIONS = {
     'lesson.searchSegments': 'Search segments...',
     'lesson.aiCompanion': 'AI Companion',
     'lesson.askAboutSegment': 'Ask about this segment...',
+    'lesson.companionPlaceholder': 'Ask about vocabulary, grammar, pronunciation — or say "quiz me" for an exercise.',
     'lesson.openOnYouTube': 'Open on YouTube',
     'lesson.downloadVideo': 'Download video',
     'lesson.downloadAudio': 'Download audio',
@@ -257,6 +258,7 @@ export const TRANSLATIONS = {
     'shadowing.azureRequired': 'Azure key required in Settings',
     'shadowing.segmentsToPractice': 'Segments to practice:',
     'shadowing.startArrow': 'Start →',
+    'shadowing.startingFrom': 'Starting from "{text}" ({time})',
 
     // Workbook
     'workbook.title': 'Learning & Progress',
@@ -450,6 +452,7 @@ export const TRANSLATIONS = {
     'lesson.searchSegments': 'Tìm đoạn...',
     'lesson.aiCompanion': 'Trợ lý AI',
     'lesson.askAboutSegment': 'Hỏi về đoạn này...',
+    'lesson.companionPlaceholder': 'Hỏi về từ vựng, ngữ pháp, phát âm — hoặc nói "ra bài" để làm bài tập.',
     'lesson.openOnYouTube': 'Mở trên YouTube',
     'lesson.downloadVideo': 'Tải video',
     'lesson.downloadAudio': 'Tải âm thanh',
@@ -601,6 +604,7 @@ export const TRANSLATIONS = {
     'shadowing.azureRequired': 'Cần khóa Azure trong Cài đặt',
     'shadowing.segmentsToPractice': 'Đoạn cần luyện:',
     'shadowing.startArrow': 'Bắt đầu →',
+    'shadowing.startingFrom': 'Bắt đầu từ "{text}" ({time})',
 
     // Workbook
     'workbook.title': 'Học tập & Tiến trình',
