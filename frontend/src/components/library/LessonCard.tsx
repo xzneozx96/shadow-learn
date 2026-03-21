@@ -1,3 +1,4 @@
+import type { TranslationKey } from '@/lib/i18n'
 import type { LessonMeta } from '@/types'
 import { Clock, FileVideo, Loader2, MoreHorizontal, Pencil, Trash2, Youtube } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -164,7 +165,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       {isProcessing && (
         <div className="px-4 pb-2 flex items-center gap-1.5 text-sm text-white/40">
           <Loader2 className="size-3 animate-spin" />
-          <span className="truncate">{lesson.currentStep ?? t('library.processing')}</span>
+          <span className="truncate">{lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}</span>
         </div>
       )}
       {isError && (
