@@ -9,6 +9,8 @@ from pathlib import Path
 import ffmpeg
 import yt_dlp
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +23,23 @@ def _ensure_temp_dir() -> Path:
 
 
 _VIDEO_EXTS = {".mp4", ".mkv", ".webm"}
+
+
+def _ydl_extra_opts() -> dict:
+    """Return optional yt-dlp opts for cookies, proxy, and/or BGUtil PO tokens."""
+    opts: dict = {}
+    path = settings.ytdlp_cookies_file
+    if path and Path(path).is_file():
+        opts["cookiefile"] = path
+    if settings.ytdlp_proxy:
+        opts["proxy"] = settings.ytdlp_proxy
+    if settings.ytdlp_bgutil_url:
+        opts["extractor_args"] = {
+            "youtubepot-bgutilhttp": {
+                "base_url": [settings.ytdlp_bgutil_url],
+            },
+        }
+    return opts
 
 
 def _download_youtube_video(video_id: str, file_uuid: str, temp_dir: Path) -> Path:
@@ -36,6 +55,7 @@ def _download_youtube_video(video_id: str, file_uuid: str, temp_dir: Path) -> Pa
         "merge_output_format": "mp4",
         "quiet": True,
         "no_warnings": True,
+        **_ydl_extra_opts(),
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
@@ -91,6 +111,7 @@ def _get_youtube_duration_blocking(video_id: str) -> float:
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
+        **_ydl_extra_opts(),
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)

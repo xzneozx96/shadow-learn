@@ -49,5 +49,8 @@ dist/
 # Internal dev docs (local use only)
 docs/
 
+# YouTube cookies (session secrets — never commit)
+**/youtube_cookies.txt
+
 # Temp / resolved conflict files
 *.resolved

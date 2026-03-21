@@ -1,9 +1,25 @@
 services:
+  bgutil-provider:
+    image: brainicism/bgutil-ytdlp-pot-provider:latest
+    restart: unless-stopped
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
   backend:
     build: ./backend
     restart: unless-stopped
     expose:
       - "8000"
+    volumes:
+      - ./backend/youtube_cookies.txt:/app/youtube_cookies.txt:ro
+    environment:
+      - SHADOWLEARN_YTDLP_COOKIES_FILE=/app/youtube_cookies.txt
+      - SHADOWLEARN_YTDLP_BGUTIL_URL=http://bgutil-provider:4416
+    depends_on:
+      - bgutil-provider
 
   frontend:
     build: ./frontend
