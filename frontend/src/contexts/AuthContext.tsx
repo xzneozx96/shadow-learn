@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const startTrial = useCallback(() => {
     sessionStorage.setItem(TRIAL_SESSION_KEY, 'trial')
+    window.history.replaceState({}, '', '/')
     setTrialMode(true)
     setIsUnlocked(true)
   }, [])
