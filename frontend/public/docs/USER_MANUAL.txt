@@ -29,8 +29,8 @@ They are "keys" that allow the app to connect with Artificial Intelligence (AI) 
 | Key Name | Main Role | Importance |
 | :--- | :--- | :--- |
 | **OpenRouter API Key** | Translates, explains grammar, and chats with you. | **Required** 🔴 |
-| **Minimax API Key** | Pronounces words/sentences (AI Voice). | **Required** 🔴 |
-| **Azure Speech Key & Region** | Converts video audio to text **and** grades your pronunciation word by word. | **Required** 🔴 |
+| **Deepgram API Key** | Converts video audio to text for learning. | **Required** 🔴 |
+| **Azure Speech Key & Region** | Grades your pronunciation word by word. | **Required** 🔴 |
 
 > ⚠️ **Absolute Security**: All keys are encrypted and **only saved on your computer**. The app never sends them to our servers.
 
@@ -39,7 +39,10 @@ They are "keys" that allow the app to connect with Artificial Intelligence (AI) 
 #### 1. OpenRouter API Key (Translation & Explanation)
 *   See tutorial here: https://app.tango.us/app/workflow/Create-API-Key-in-OpenRouter-95b3cf6d85df49b48ad728d93c8d5b76
 
-#### 2. Azure Speech Key & Region (Speech-to-Text & Pronunciation Grading)
+#### 2. Deepgram API Key (Speech-to-Text)
+*   See tutorial here: https://app.tango.us/app/workflow/Create-API-Key-in-Deepgram-d2eab0f8d3c84b8ab315964c935c3945
+
+#### 3. Azure Speech Key & Region (Pronunciation Grading)
 *   **Step 1**: Go to [portal.azure.com](https://portal.azure.com/).
 *   **Step 2**: Search for **"Speech Services"** and select it.
 *   **Step 3**: Click **Create** → Fill in Subscription, Resource Group, Region, Name.

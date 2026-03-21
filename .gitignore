@@ -47,7 +47,7 @@ dist/
 .claude/settings.json
 
 # Internal dev docs (local use only)
-docs/
+/docs/
 
 # YouTube cookies (session secrets — never commit)
 **/youtube_cookies.txt
