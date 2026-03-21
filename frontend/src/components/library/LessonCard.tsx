@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { MenuBackdrop, MenuItem, MenuPopup, MenuPortal, MenuPositioner, MenuRoot, MenuTrigger } from '@/components/ui/menu'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
 interface LessonCardProps {
@@ -24,6 +25,7 @@ function formatDate(iso: string): string {
 }
 
 export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardProps) {
+  const { t } = useI18n()
   const status = lesson.status ?? 'complete'
   const isProcessing = status === 'processing'
   const isError = status === 'error'
@@ -96,7 +98,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         <MenuRoot>
           <MenuTrigger
             render={(
-              <Button variant="ghost" size="icon-sm" aria-label="Lesson actions">
+              <Button variant="ghost" size="icon-sm" aria-label={t('library.lessonActions')}>
                 <MoreHorizontal className="size-4" />
               </Button>
             )}
@@ -112,7 +114,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                   }}
                 >
                   <Pencil className="size-4" />
-                  Rename
+                  {t('library.rename')}
                 </MenuItem>
                 <MenuItem
                   className="text-destructive focus:text-destructive"
@@ -122,7 +124,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                   }}
                 >
                   <Trash2 className="size-4" />
-                  Delete
+                  {t('common.delete')}
                 </MenuItem>
               </MenuPopup>
             </MenuPositioner>
@@ -148,7 +150,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                 onBlur={confirmEdit}
                 onKeyDown={handleKeyDown}
                 className="w-full rounded border border-border bg-transparent px-1 py-0.5 text-sm font-semibold text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
-                aria-label="Rename lesson"
+                aria-label={t('library.renameLesson')}
               />
             )
           : (
@@ -162,13 +164,13 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       {isProcessing && (
         <div className="px-4 pb-2 flex items-center gap-1.5 text-sm text-white/40">
           <Loader2 className="size-3 animate-spin" />
-          <span className="truncate">{lesson.currentStep ?? 'Processing…'}</span>
+          <span className="truncate">{lesson.currentStep ?? t('library.processing')}</span>
         </div>
       )}
       {isError && (
         <div className="px-4 pb-2 flex flex-wrap items-center gap-1.5">
           <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-sm font-medium text-destructive">
-            Failed
+            {t('library.failed')}
           </span>
           {lesson.source === 'youtube' && onRetry && (
             <button
@@ -178,11 +180,11 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
               }}
               className="z-20 text-sm text-white/40 underline hover:text-white"
             >
-              Retry
+              {t('library.retry')}
             </button>
           )}
           {lesson.source === 'upload' && (
-            <span className="text-sm text-white/40">Re-upload to retry</span>
+            <span className="text-sm text-white/40">{t('library.reuploadToRetry')}</span>
           )}
         </div>
       )}

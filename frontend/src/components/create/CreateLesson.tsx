@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { getSettings, saveVideo } from '@/db'
 import { API_BASE, getAppConfig } from '@/lib/config'
@@ -21,6 +22,7 @@ const FILE_EXTENSION_REGEX = /\.[^/.]+$/
 
 export function CreateLesson() {
   const { db, keys } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const { updateLesson } = useLessons()
 
@@ -173,11 +175,11 @@ export function CreateLesson() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
               <p className="text-sm text-white/65">
-                Lesson queued — track progress in the library
+                {t('create.queued')}
               </p>
               <div className="flex gap-2">
-                <Button onClick={() => navigate('/')}>Go to Library</Button>
-                <Button variant="outline" onClick={() => setQueued(false)}>Queue Another</Button>
+                <Button onClick={() => navigate('/')}>{t('create.goToLibrary')}</Button>
+                <Button variant="outline" onClick={() => setQueued(false)}>{t('create.queueAnother')}</Button>
               </div>
             </CardContent>
           </Card>
@@ -191,13 +193,13 @@ export function CreateLesson() {
       <div className="mx-auto max-w-2xl p-4">
         <Card>
           <CardHeader>
-            <CardTitle>Create New Lesson</CardTitle>
+            <CardTitle>{t('create.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <Tabs value={tab} onValueChange={v => setTab(v as string)}>
               <TabsList>
-                <TabsTrigger value="youtube">YouTube</TabsTrigger>
-                <TabsTrigger value="upload">Upload</TabsTrigger>
+                <TabsTrigger value="youtube">{t('create.youtube')}</TabsTrigger>
+                <TabsTrigger value="upload">{t('create.upload')}</TabsTrigger>
               </TabsList>
               <TabsContent value="youtube">
                 <YouTubeTab url={youtubeUrl} onUrlChange={setYoutubeUrl} />
@@ -208,7 +210,7 @@ export function CreateLesson() {
             </Tabs>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-white/65">Video Language</label>
+              <label className="text-sm font-medium text-white/65">{t('create.videoLanguage')}</label>
               <Select value={sourceLanguage} onValueChange={v => v !== null && setSourceLanguage(v)} items={LANGUAGES}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -222,7 +224,7 @@ export function CreateLesson() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-white/65">Translation Language</label>
+              <label className="text-sm font-medium text-white/65">{t('create.translationLanguage')}</label>
               <Select value={language} onValueChange={v => v !== null && setLanguage(v)} items={LANGUAGES}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -241,7 +243,7 @@ export function CreateLesson() {
               className="w-full"
             >
               <Sparkles className="size-4" />
-              {submitting ? 'Starting…' : 'Generate Lesson'}
+              {submitting ? t('create.starting') : t('create.generate')}
             </Button>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
