@@ -739,11 +739,11 @@ export const TRANSLATIONS = {
     'common.cancel': 'Hủy bỏ',
     'common.back': 'Trở lại',
     'common.loading': 'Vui lòng đợi...',
-    'common.error': 'Đã xảy ra lỗi nhẹ',
-    'common.delete': 'Xóa ngay',
+    'common.error': 'Đã xảy ra lỗi',
+    'common.delete': 'Xóa',
     'common.confirm': 'Xác minh',
-    'common.yes': 'Đúng vậy',
-    'common.no': 'Để sau',
+    'common.yes': 'Đồng ý',
+    'common.no': 'Hủy bỏ',
   },
 } satisfies Record<Locale, Record<string, string>>
 

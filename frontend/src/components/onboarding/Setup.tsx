@@ -233,15 +233,15 @@ export function Setup() {
         </Card>
 
         {freeTrialAvailable && (
-          <Card className="mt-5">
+          <Card className="mt-5 bg-white/6 text-white/90">
             <CardContent className="flex flex-col gap-3 ">
               <div>
-                <p className="text-sm font-medium">{t('auth.trial.title')}</p>
-                <p className="mt-0.5 text-xs text-white/40">
+                <p className="text-lg font-medium">{t('auth.trial.title')}</p>
+                <p className="mt-0.5 text-sm text-white/40">
                   {t('auth.trial.hint')}
                 </p>
               </div>
-              <Button type="button" variant="outline" onClick={startTrial} className="w-full">
+              <Button type="button" variant="outline" onClick={startTrial} className="w-full mt-3">
                 {t('auth.trial.button')}
               </Button>
             </CardContent>
