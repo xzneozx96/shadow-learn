@@ -52,7 +52,7 @@ describe('createLesson STT key selection', () => {
   })
 
   it('sends deepgram_api_key when stt_provider is deepgram', async () => {
-    vi.mocked(getAppConfig).mockResolvedValue({ sttProvider: 'deepgram', ttsProvider: 'azure' })
+    vi.mocked(getAppConfig).mockResolvedValue({ sttProvider: 'deepgram', ttsProvider: 'azure', freeTrialAvailable: false })
     globalThis.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ job_id: 'job-1' }),
@@ -75,7 +75,7 @@ describe('createLesson STT key selection', () => {
   })
 
   it('sends azure_speech_key and region when stt_provider is azure', async () => {
-    vi.mocked(getAppConfig).mockResolvedValue({ sttProvider: 'azure', ttsProvider: 'azure' })
+    vi.mocked(getAppConfig).mockResolvedValue({ sttProvider: 'azure', ttsProvider: 'azure', freeTrialAvailable: false })
     globalThis.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ job_id: 'job-2' }),

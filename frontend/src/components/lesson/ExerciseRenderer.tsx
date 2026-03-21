@@ -152,14 +152,15 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
     case 'pronunciation': {
       if (!entry)
         return <ExerciseError msg="No vocabulary items for pronunciation" />
-      if (!props.sentence)
+      const pronSentence = props.sentence as { sentence: string, translation: string } | undefined
+      if (!pronSentence || !('sentence' in pronSentence))
         return <ExerciseError msg="No sentence for pronunciation" />
       const pronLocale = caps.azurePronunciationLocale
       if (!pronLocale)
         return <ExerciseError msg="Pronunciation assessment is not supported for this lesson's language" />
       return (
         <PronunciationReferee
-          sentence={props.sentence}
+          sentence={pronSentence}
           language={pronLocale}
           onNext={makeOnNext('pronunciation', entry)}
         />

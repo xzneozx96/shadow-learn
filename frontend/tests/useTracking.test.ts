@@ -140,7 +140,7 @@ describe('useTracking', () => {
 //   3. mastery-db.{skill}.lastPracticed is set
 //   4. Mistakes are recorded in mistakes-db when the answer is wrong
 
-type ExerciseCase = {
+interface ExerciseCase {
   exerciseType: Exclude<ExerciseMode, 'mixed'>
   skill: 'writing' | 'speaking' | 'vocabulary' | 'reading' | 'listening'
 }

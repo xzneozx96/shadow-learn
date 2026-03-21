@@ -3,8 +3,8 @@ import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getTTSCache, saveTTSCache } from '@/db'
-import { useTTS } from '../src/hooks/useTTS'
 import { getAppConfig } from '@/lib/config'
+import { useTTS } from '../src/hooks/useTTS'
 
 vi.mock('@/db', () => ({
   getTTSCache: vi.fn(),
@@ -25,7 +25,7 @@ const mockDb = {} as any
 const mockKeys = { openrouterApiKey: 'sk-test', minimaxApiKey: 'mm-test', azureSpeechKey: 'az-key', azureSpeechRegion: 'eastus' }
 
 function mockProvider(provider: string) {
-  vi.mocked(getAppConfig).mockResolvedValue({ ttsProvider: provider, sttProvider: 'deepgram' })
+  vi.mocked(getAppConfig).mockResolvedValue({ ttsProvider: provider, sttProvider: 'deepgram', freeTrialAvailable: false })
 }
 
 beforeEach(() => {

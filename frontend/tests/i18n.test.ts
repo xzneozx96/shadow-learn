@@ -1,6 +1,6 @@
+import type { TranslationKey } from '@/lib/i18n'
 import { describe, expect, it } from 'vitest'
 import { getTranslation, TRANSLATIONS } from '@/lib/i18n'
-import type { TranslationKey } from '@/lib/i18n'
 
 describe('getTranslation', () => {
   it('returns English string for en locale', () => {
@@ -16,8 +16,8 @@ describe('getTranslation', () => {
   })
 
   it('falls back to English when key is missing from vi', () => {
-    const en = TRANSLATIONS['en'] as Record<string, string>
-    const vi = TRANSLATIONS['vi'] as Record<string, string>
+    const en = TRANSLATIONS.en as Record<string, string>
+    const vi = TRANSLATIONS.vi as Record<string, string>
     const testKey = '__test_fallback__' as TranslationKey
     en[testKey] = 'Fallback Value'
     delete vi[testKey]
@@ -34,7 +34,7 @@ describe('getTranslation', () => {
   })
 
   it('en dictionary has all required namespaces', () => {
-    const keys = Object.keys(TRANSLATIONS['en'])
+    const keys = Object.keys(TRANSLATIONS.en)
     expect(keys.some(k => k.startsWith('nav.'))).toBe(true)
     expect(keys.some(k => k.startsWith('auth.'))).toBe(true)
     expect(keys.some(k => k.startsWith('create.'))).toBe(true)

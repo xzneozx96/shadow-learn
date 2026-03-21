@@ -1,6 +1,6 @@
-import * as React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
+import * as React from 'react'
 import { use } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nContext, I18nProvider } from '@/contexts/I18nContext'
@@ -31,7 +31,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return <I18nProvider>{children}</I18nProvider>
 }
 
-describe('I18nProvider', () => {
+describe('i18nProvider', () => {
   it('defaults to vi when no uiLanguage in IDB', async () => {
     render(<LocaleConsumer />, { wrapper })
     await waitFor(() => {
