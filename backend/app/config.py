@@ -9,13 +9,20 @@ class Settings(BaseSettings):
     translation_batch_size: int = 30
     translation_max_retries: int = 2
     openrouter_chat_url: str = "https://openrouter.ai/api/v1/chat/completions"
-    openrouter_model: str = "qwen/qwen3.5-122b-a10b" # "minimax/minimax-m2.7"
+    openrouter_model: str = "deepseek/deepseek-v3.2" # "qwen/qwen3.5-122b-a10b", "minimax/minimax-m2.7"
     minimax_tts_url: str = "https://api.minimax.io/v1/t2a_v2"
     tts_provider: str = "azure"  # env: SHADOWLEARN_TTS_PROVIDER; values: azure | minimax
     stt_provider: str = "deepgram"  # env: SHADOWLEARN_STT_PROVIDER; values: deepgram | azure
     ytdlp_cookies_file: str = ""  # env: SHADOWLEARN_YTDLP_COOKIES_FILE; path to Netscape cookies.txt
     ytdlp_proxy: str = ""  # env: SHADOWLEARN_YTDLP_PROXY; e.g. http://user:pass@brd.superproxy.io:22225
     ytdlp_bgutil_url: str = ""  # env: SHADOWLEARN_YTDLP_BGUTIL_URL; e.g. http://bgutil-provider:4416
+
+    # Fallback API keys for free trial — all optional; unset means trial unavailable
+    openrouter_api_key: str | None = None       # env: SHADOWLEARN_OPENROUTER_API_KEY
+    deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
+    azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
+    azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
+    minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
 
     model_config = {"env_prefix": "SHADOWLEARN_"}
 

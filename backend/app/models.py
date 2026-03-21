@@ -22,7 +22,7 @@ class LessonRequest(BaseModel):
     source: str = Field(pattern=r"^(youtube|upload)$")
     youtube_url: str | None = None
     translation_languages: list[str] = Field(min_length=1)
-    openrouter_api_key: str
+    openrouter_api_key: str | None = None
     deepgram_api_key: str | None = None
     azure_speech_key: str | None = None
     azure_speech_region: str | None = None
@@ -48,7 +48,7 @@ class ChatRequest(BaseModel):
     video_title: str
     active_segment: Segment | None
     context_segments: list[Segment]
-    openrouter_api_key: str
+    openrouter_api_key: str | None = None
 
 
 class TTSRequest(BaseModel):
