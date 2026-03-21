@@ -13,6 +13,7 @@ import { usePlayer } from '@/contexts/PlayerContext'
 import { getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
 import { useLesson } from '@/hooks/useLesson'
+import { getLanguageCaps } from '@/lib/language-caps'
 import { CompanionPanel } from './CompanionPanel'
 import { TranscriptPanel } from './TranscriptPanel'
 import { VideoPanel } from './VideoPanel'
@@ -90,6 +91,7 @@ export function LessonView() {
   const speakingAvailable
     = Boolean(keys?.azureSpeechKey && keys?.azureSpeechRegion)
       && typeof MediaRecorder !== 'undefined'
+      && getLanguageCaps(meta?.sourceLanguage).azurePronunciationLocale !== null
 
   const [searchParams] = useSearchParams()
   const deepLinkSegmentId = searchParams.get('segmentId')

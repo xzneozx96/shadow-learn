@@ -119,8 +119,8 @@ export function VocabCardRenderer({ result }: { result: VocabCardResult }) {
 }
 
 // -------------------------------------------------------------------------- //
-// ProgressChartRenderer — reuses the workbook AccuracyTrendChart (recharts)
-// for accuracy, and a compact MasteryGrid for skill mastery.
+// ProgressChartRenderer — inline recharts area chart for accuracy trend,
+// and a compact MasteryGrid for skill mastery.
 // -------------------------------------------------------------------------- //
 
 interface ProgressChartResult {
