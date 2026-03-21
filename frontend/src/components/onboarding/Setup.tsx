@@ -9,11 +9,12 @@ import { useI18n } from '@/contexts/I18nContext'
 import { getAppConfig } from '@/lib/config'
 
 export function Setup() {
-  const { setup } = useAuth()
+  const { setup, startTrial } = useAuth()
   const { t } = useI18n()
 
   const [provider, setProvider] = useState<string | null>(null)
   const [sttProvider, setSttProvider] = useState<string>('deepgram')
+  const [freeTrialAvailable, setFreeTrialAvailable] = useState(false)
   const [openrouterApiKey, setOpenrouterApiKey] = useState('')
   const [minimaxApiKey, setMinimaxApiKey] = useState('')
   const [deepgramApiKey, setDeepgramApiKey] = useState('')
@@ -28,6 +29,7 @@ export function Setup() {
     getAppConfig().then((cfg) => {
       setProvider(cfg.ttsProvider)
       setSttProvider(cfg.sttProvider)
+      setFreeTrialAvailable(cfg.freeTrialAvailable)
     })
   }, [])
 
@@ -217,6 +219,27 @@ export function Setup() {
             <Button type="submit" disabled={loading || provider === null} className="mt-1">
               {loading ? t('auth.settingUp') : t('auth.getStarted')}
             </Button>
+            {freeTrialAvailable && (
+              <div className="mt-2 flex flex-col gap-2">
+                <div className="relative flex items-center">
+                  <div className="grow border-t border-white/10" />
+                  <span className="mx-3 shrink text-xs text-white/25">or</span>
+                  <div className="grow border-t border-white/10" />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={startTrial}
+                  className="w-full"
+                >
+                  Try for free
+                </Button>
+                <p className="text-center text-xs text-white/30">
+                  Free trial uses shared API keys. This may be discontinued when costs
+                  become unsustainable — add your own keys in Settings anytime.
+                </p>
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>
