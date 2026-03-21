@@ -31,7 +31,7 @@ export function SessionSummary({ results, onStudyAgain, onBack }: Props) {
         <div className="rounded-md border border-red-500/20 bg-red-500/8 px-4 py-3 mb-6 text-left">
           <p className="text-sm font-semibold tracking-widest text-red-400 uppercase mb-2">Review these</p>
           {wrong.map(e => (
-            <div key={e.id} className="flex items-center gap-3 mb-1">
+            <div key={wrong.indexOf(e)} className="flex items-center gap-3 mb-1">
               <span className="text-lg font-bold text-red-300">{e.word}</span>
               <div>
                 <div className="text-sm text-foreground">

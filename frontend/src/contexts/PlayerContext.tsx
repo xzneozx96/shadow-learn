@@ -33,8 +33,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // Fan-out: wire current player's onTimeUpdate to all subscribers
   useEffect(() => {
-    if (!player) return
-    if (unsubRef.current) unsubRef.current()
+    if (!player)
+      return
+    if (unsubRef.current)
+      unsubRef.current()
     unsubRef.current = player.onTimeUpdate((time) => {
       timeRef.current = time
       for (const cb of subscribersRef.current) cb(time)
@@ -51,7 +53,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const subscribeTime = useCallback((cb: (t: number) => void) => {
     subscribersRef.current.add(cb)
-    return () => { subscribersRef.current.delete(cb) }
+    return () => {
+      subscribersRef.current.delete(cb)
+    }
   }, [])
 
   const getTime = useCallback(() => timeRef.current, [])

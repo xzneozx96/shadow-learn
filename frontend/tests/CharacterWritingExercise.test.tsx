@@ -57,22 +57,22 @@ describe('characterWritingExercise', () => {
     expect(screen.getByText('2 / 2')).toBeTruthy()
   })
 
-  it('calls onNext(true) when all chars complete without hint', () => {
+  it('calls onNext(100) when all chars complete without hint', () => {
     const onNext = vi.fn()
     render(<CharacterWritingExercise entry={entry} onNext={onNext} caps={caps} />)
     fireEvent.click(screen.getByText('complete-no-hint'))
     fireEvent.click(screen.getByText('complete-no-hint'))
     vi.runAllTimers()
-    expect(onNext).toHaveBeenCalledWith(true)
+    expect(onNext).toHaveBeenCalledWith(100)
   })
 
-  it('calls onNext(false) when any char used a hint', () => {
+  it('calls onNext(80) when any char used a hint', () => {
     const onNext = vi.fn()
     render(<CharacterWritingExercise entry={entry} onNext={onNext} caps={caps} />)
     fireEvent.click(screen.getByText('complete-with-hint'))
     fireEvent.click(screen.getByText('complete-no-hint'))
     vi.runAllTimers()
-    expect(onNext).toHaveBeenCalledWith(false)
+    expect(onNext).toHaveBeenCalledWith(80)
   })
 
   it('shows meaning and romanization as prompt', () => {

@@ -1,8 +1,9 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import type { LessonMeta } from '@/types'
 import type { ShadowLearnDB } from '@/db'
-import { deleteFullLesson, getAllLessonMetas, saveLessonMeta } from '@/db'
+import type { LessonMeta } from '@/types'
+import * as React from 'react'
+import { createContext, use, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { deleteFullLesson, getAllLessonMetas, saveLessonMeta } from '@/db'
 import { useJobPoller } from '@/hooks/useJobPoller'
 
 interface LessonsContextValue {
@@ -30,7 +31,7 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
     if (!db)
       return
     await saveLessonMeta(db, meta)
-    setLessons(prev => {
+    setLessons((prev) => {
       const idx = prev.findIndex(l => l.id === meta.id)
       if (idx === -1)
         return [...prev, meta]
@@ -54,14 +55,15 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
   useJobPoller({ lessons, db, updateLesson })
 
   return (
-    <LessonsContext.Provider value={{ lessons, db, updateLesson, deleteLesson, refreshLessons }}>
+    <LessonsContext value={{ lessons, db, updateLesson, deleteLesson, refreshLessons }}>
       {children}
-    </LessonsContext.Provider>
+    </LessonsContext>
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useLessons(): LessonsContextValue {
-  const ctx = useContext(LessonsContext)
+  const ctx = use(LessonsContext)
   if (!ctx)
     throw new Error('useLessons must be used within LessonsProvider')
   return ctx

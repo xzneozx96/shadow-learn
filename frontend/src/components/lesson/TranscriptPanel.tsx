@@ -1,13 +1,13 @@
 import type { LessonMeta, Segment, Word } from '@/types'
-import { Check, Copy, Loader2, Search, Volume2 } from 'lucide-react'
+import { Check, Copy, Languages, Loader2, Search, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/contexts/AuthContext'
+import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useTTS } from '@/hooks/useTTS'
-import { useVocabulary } from '@/hooks/useVocabulary'
 import { cn } from '@/lib/utils'
 import { SegmentText } from './SegmentText'
 
@@ -36,6 +36,7 @@ export function TranscriptPanel({
     lesson.translationLanguages[0] ?? 'en',
   )
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [showRomanization, setShowRomanization] = useState(true)
   const activeRef = useRef<HTMLDivElement>(null)
   const prevActiveIdRef = useRef<string | null>(null)
 
@@ -131,6 +132,14 @@ export function TranscriptPanel({
               className="pl-8"
             />
           </div>
+          <Button
+            variant={showRomanization ? 'secondary' : 'ghost'}
+            size="icon-lg"
+            aria-label={showRomanization ? 'Hide romanization' : 'Show romanization'}
+            onClick={() => setShowRomanization(v => !v)}
+          >
+            <Languages className="size-4" />
+          </Button>
         </div>
 
         {/* Language toggle */}
@@ -182,6 +191,7 @@ export function TranscriptPanel({
                       segment={segment}
                       onSaveWord={handleSaveWord}
                       isSaved={handleIsSaved}
+                      showRomanization={showRomanization}
                     />
                   </div>
                   <p className="mt-1 text-muted-foreground">

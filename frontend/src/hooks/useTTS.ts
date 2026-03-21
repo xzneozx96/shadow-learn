@@ -3,7 +3,7 @@ import type { DecryptedKeys } from '@/types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { getTTSCache, saveTTSCache } from '@/db'
-import { getAppConfig } from '@/lib/config'
+import { API_BASE, getAppConfig } from '@/lib/config'
 
 // Sentinel: undefined = not yet fetched, string = resolved provider name
 type ProviderState = string | null
@@ -97,7 +97,7 @@ export function useTTS(
           body.minimax_api_key = currentKeys!.minimaxApiKey!
         }
 
-        const response = await fetch('/api/tts', {
+        const response = await fetch(`${API_BASE}/api/tts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),

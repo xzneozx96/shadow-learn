@@ -21,6 +21,7 @@ import { useTracking } from '@/hooks/useTracking'
 import { useTTS } from '@/hooks/useTTS'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
+import { getSegmentTokens } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
 type Phase = 'picker' | 'session' | 'summary'
@@ -37,12 +38,8 @@ interface Question {
   }
 }
 
-function getReconstructionTokens(entry: VocabEntry, allEntries: VocabEntry[]): string[] {
-  const segWords = allEntries
-    .filter(e => e.sourceSegmentId === entry.sourceSegmentId)
-    .map(e => e.word)
-    .filter(w => entry.sourceSegmentText.includes(w))
-  return [...new Set(segWords)]
+function getReconstructionTokens(entry: VocabEntry): string[] {
+  return getSegmentTokens(entry.sourceSegmentText, entry.sourceLanguage ?? 'zh-CN')
 }
 
 function distributeExercises(
@@ -147,6 +144,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmLeave])
 
   const hasAzure = Boolean(keys?.azureSpeechKey)
@@ -172,7 +170,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
         const entry = pool[i % pool.length]
         const q: Question = { type, entry }
         if (type === 'reconstruction')
-          q.reconstructionTokens = getReconstructionTokens(entry, entries)
+          q.reconstructionTokens = getReconstructionTokens(entry)
         return q
       })
       setQuestions(qs)
@@ -209,7 +207,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
         if (type === 'pronunciation')
           q.pronunciationData = pronExercises[pronIdx++]
         if (type === 'reconstruction')
-          q.reconstructionTokens = getReconstructionTokens(entry, entries)
+          q.reconstructionTokens = getReconstructionTokens(entry)
         qs.push(q)
       }
 
@@ -227,7 +225,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
         const entry = pool[i % pool.length]
         const q: Question = { type, entry }
         if (type === 'reconstruction')
-          q.reconstructionTokens = getReconstructionTokens(entry, entries)
+          q.reconstructionTokens = getReconstructionTokens(entry)
         return q
       })
       setQuestions(qs)
@@ -319,7 +317,10 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
           role="dialog"
           aria-label="Confirm leave session"
           className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-xl"
-          onKeyDown={(e) => { if (e.key === 'Escape') handleCancelLeave() }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape')
+              handleCancelLeave()
+          }}
         >
           <div className="flex flex-col items-center gap-5 max-w-xs text-center px-6">
             <p className="text-base font-semibold">Leave session?</p>
@@ -422,6 +423,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
                 words={q.reconstructionTokens ?? [q.entry.word]}
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
+                caps={caps}
               />
             )}
             {q.type === 'writing' && isWritingSupported(q.entry.word) && (

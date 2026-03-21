@@ -8,8 +8,8 @@ vi.mock('@/contexts/AuthContext', () => ({
 }))
 
 const mockPool = [
-  { word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: 'greeting', sourceSegmentId: 's1', sourceSegmentText: '', sourceLessonTitle: '', sourceLessonId: '', id: '1', sourceLanguage: 'zh-CN', createdAt: '' },
-  { word: '再见', romanization: 'zài jiàn', meaning: 'goodbye', usage: 'farewell', sourceSegmentId: 's1', sourceSegmentText: '', sourceLessonTitle: '', sourceLessonId: '', id: '2', sourceLanguage: 'zh-CN', createdAt: '' },
+  { word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: 'greeting', sourceSegmentId: 's1', sourceSegmentText: '', sourceLessonTitle: '', sourceLessonId: '', id: '1', sourceLanguage: 'zh-CN', sourceSegmentTranslation: '', createdAt: '' },
+  { word: '再见', romanization: 'zài jiàn', meaning: 'goodbye', usage: 'farewell', sourceSegmentId: 's1', sourceSegmentText: '', sourceLessonTitle: '', sourceLessonId: '', id: '2', sourceLanguage: 'zh-CN', sourceSegmentTranslation: '', createdAt: '' },
 ]
 
 beforeEach(() => {
@@ -25,15 +25,16 @@ describe('useQuizGeneration', () => {
   it('sets loading=true while in flight and false after', async () => {
     let resolveFirst!: (v: any) => void
     vi.stubGlobal('fetch', vi.fn()
-      .mockImplementationOnce(() => new Promise(res => { resolveFirst = res }))
-      .mockResolvedValue({ ok: true, json: () => Promise.resolve({ exercises: [] }) }),
-    )
+      .mockImplementationOnce(() => new Promise((res) => { resolveFirst = res }))
+      .mockResolvedValue({ ok: true, json: () => Promise.resolve({ exercises: [] }) }))
 
     const { result } = renderHook(() => useQuizGeneration())
     const controller = new AbortController()
 
     let promise!: Promise<any>
-    act(() => { promise = result.current.generateQuiz(['cloze', 'pronunciation'], mockPool, controller.signal) })
+    act(() => {
+      promise = result.current.generateQuiz(['cloze', 'pronunciation'], mockPool, controller.signal)
+    })
     expect(result.current.loading).toBe(true)
 
     await act(async () => {
@@ -49,8 +50,7 @@ describe('useQuizGeneration', () => {
 
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: clozeResult }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: pronResult }) }),
-    )
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: pronResult }) }))
 
     const { result } = renderHook(() => useQuizGeneration())
     const controller = new AbortController()
@@ -89,7 +89,7 @@ describe('useQuizGeneration', () => {
 
     await act(async () => {
       await expect(
-        result.current.generateQuiz(['cloze'], mockPool, controller.signal)
+        result.current.generateQuiz(['cloze'], mockPool, controller.signal),
       ).rejects.toThrow('Quiz generation failed (500)')
     })
   })

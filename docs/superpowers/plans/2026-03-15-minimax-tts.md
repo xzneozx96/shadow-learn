@@ -492,9 +492,9 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
 
   beforeEach(() => {
   	vi.clearAllMocks();
-  	global.fetch = vi.fn();
-  	global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
-  	global.URL.revokeObjectURL = vi.fn();
+  	globalThis.fetch = vi.fn();
+  	globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+  	globalThis.URL.revokeObjectURL = vi.fn();
   });
 
   describe('useTTS', () => {
@@ -516,7 +516,7 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   		expect(toast.error).toHaveBeenCalledWith(
   			expect.stringContaining('Minimax'),
   		);
-  		expect(global.fetch).not.toHaveBeenCalled();
+  		expect(globalThis.fetch).not.toHaveBeenCalled();
   	});
 
   	it('plays from cache without calling fetch', async () => {
@@ -532,7 +532,7 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   		});
 
   		expect(getTTSCache).toHaveBeenCalledWith(mockDb, '你好');
-  		expect(global.fetch).not.toHaveBeenCalled();
+  		expect(globalThis.fetch).not.toHaveBeenCalled();
   		expect(saveTTSCache).not.toHaveBeenCalled();
   	});
 
@@ -541,7 +541,7 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   		const fakeBlob = new Blob([new Uint8Array([0xff, 0xfb])], {
   			type: 'audio/mpeg',
   		});
-  		vi.mocked(global.fetch).mockResolvedValueOnce({
+  		vi.mocked(globalThis.fetch).mockResolvedValueOnce({
   			ok: true,
   			blob: () => Promise.resolve(fakeBlob),
   		} as any);
@@ -552,7 +552,7 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   			await result.current.playTTS('你好');
   		});
 
-  		expect(global.fetch).toHaveBeenCalledWith(
+  		expect(globalThis.fetch).toHaveBeenCalledWith(
   			'/api/tts',
   			expect.objectContaining({
   				method: 'POST',
@@ -564,7 +564,7 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
 
   	it('shows error toast on API failure', async () => {
   		vi.mocked(getTTSCache).mockResolvedValueOnce(undefined);
-  		vi.mocked(global.fetch).mockResolvedValueOnce({
+  		vi.mocked(globalThis.fetch).mockResolvedValueOnce({
   			ok: false,
   			statusText: 'Bad Gateway',
   		} as any);
@@ -586,7 +586,7 @@ in a new IndexedDB `tts-cache` store. Two play buttons are added: one in
   		});
 
   		expect(getTTSCache).not.toHaveBeenCalled();
-  		expect(global.fetch).not.toHaveBeenCalled();
+  		expect(globalThis.fetch).not.toHaveBeenCalled();
   	});
   });
   ```

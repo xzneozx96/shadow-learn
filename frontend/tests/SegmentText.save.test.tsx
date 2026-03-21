@@ -1,6 +1,9 @@
+import type { Segment, Word } from '@/types'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { Segment, Word } from '@/types'
+
+// Import after mocks are hoisted
+import { SegmentText } from '@/components/lesson/SegmentText'
 
 // Mock the tooltip components so TooltipContent renders inline (no hover/portal required).
 // This lets us assert on the bookmark button without fighting with jsdom hover mechanics.
@@ -19,9 +22,6 @@ vi.mock('@/contexts/PlayerContext', () => ({
   }),
 }))
 
-// Import after mocks are hoisted
-import { SegmentText } from '@/components/lesson/SegmentText'
-
 const word: Word = {
   word: '今天',
   romanization: 'jīntiān',
@@ -39,7 +39,7 @@ const segment: Segment = {
   words: [word],
 }
 
-describe('SegmentText save button', () => {
+describe('segmentText save button', () => {
   it('renders bookmark button when onSaveWord and segment are provided', () => {
     const onSave = vi.fn()
     render(

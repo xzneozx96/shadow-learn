@@ -88,14 +88,16 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
       info="Read a short story and fill in the missing vocabulary words from context. Tests contextual understanding."
     >
       {/* Story with inline inputs */}
-      <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-sm leading-[2.4] text-foreground/90 mb-0">
+      <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-lg leading-[2.4] text-foreground/90 mb-0">
         {parts.map((part, i) => {
           if (!part.blank)
+            // eslint-disable-next-line react/no-array-index-key
             return <span key={i}>{part.text}</span>
           const correct = answers[i]?.trim() === part.blank
           return (
+
             <ChineseInput
-              key={i}
+              key={i} // eslint-disable-line react/no-array-index-key
               wrapperClassName="inline-block w-14 mx-1"
               className={cn(
                 'w-14 text-center text-sm border-0 border-b bg-transparent px-1 rounded-none focus-visible:ring-0',

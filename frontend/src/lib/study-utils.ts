@@ -1,5 +1,16 @@
+const CHAR_BASED_LANG = /^(?:zh|ja|ko)/
+const WHITESPACE = /\s+/
+
 export function getActiveChips(chips: string[], typed: string): boolean[] {
   return chips.map(chip => !typed.includes(chip))
+}
+
+export function getSegmentTokens(text: string, language: string): string[] {
+  const isCharBased = CHAR_BASED_LANG.test(language)
+  if (isCharBased) {
+    return text.split('').filter(c => c.trim() !== '')
+  }
+  return text.split(WHITESPACE).filter(Boolean)
 }
 
 export function shuffleArray<T>(arr: T[]): T[] {
@@ -13,4 +24,19 @@ export function shuffleArray<T>(arr: T[]): T[] {
 
 export function charDiff(typed: string, expected: string): { char: string, ok: boolean }[] {
   return expected.split('').map((ch, i) => ({ char: ch, ok: typed[i] === ch }))
+}
+
+const SENTENCE_END = /[。！？!?.]+$/u
+
+function normalizeAnswer(s: string): string {
+  return s.trim().replace(SENTENCE_END, '')
+}
+
+export function scoreReconstruction(typed: string, expected: string): number {
+  const t = normalizeAnswer(typed)
+  const e = normalizeAnswer(expected)
+  if (e.length === 0)
+    return t.length === 0 ? 100 : 0
+  const correct = e.split('').filter((ch, i) => t[i] === ch).length
+  return Math.round((correct / e.length) * 100)
 }

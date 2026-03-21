@@ -29,8 +29,14 @@ export function ShadowingSpeakingPhase({
   const micBtnRef = useRef<HTMLButtonElement>(null)
 
   const {
-    recordingState, blob, isPlaying: isPlayingBack,
-    startRecording, stopRecording, cancel, togglePlayback: handlePlayback, reset: handleRerecord,
+    recordingState,
+    blob,
+    isPlaying: isPlayingBack,
+    startRecording,
+    stopRecording,
+    cancel,
+    togglePlayback: handlePlayback,
+    reset: handleRerecord,
   } = useAudioRecorder({ minDurationMs: 500 })
 
   useEffect(() => {

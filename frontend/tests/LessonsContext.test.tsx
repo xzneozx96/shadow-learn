@@ -1,11 +1,11 @@
-import 'fake-indexeddb/auto'
-import React from 'react'
-import { IDBFactory } from 'fake-indexeddb'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
-import { LessonsProvider, useLessons } from '@/contexts/LessonsContext'
-import { initDB, saveLessonMeta, getAllLessonMetas } from '@/db'
 import type { LessonMeta } from '@/types'
+import { act, renderHook, waitFor } from '@testing-library/react'
+import { IDBFactory } from 'fake-indexeddb'
+import * as React from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { LessonsProvider, useLessons } from '@/contexts/LessonsContext'
+import { getAllLessonMetas, initDB, saveLessonMeta } from '@/db'
+import 'fake-indexeddb/auto'
 
 function makeMeta(overrides: Partial<LessonMeta> = {}): LessonMeta {
   return {
@@ -32,11 +32,11 @@ beforeEach(async () => {
   ;(globalThis as any).__testDb = await initDB()
 })
 
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <LessonsProvider>{children}</LessonsProvider>
-)
+function wrapper({ children }: { children: React.ReactNode }) {
+  return <LessonsProvider>{children}</LessonsProvider>
+}
 
-describe('LessonsProvider', () => {
+describe('lessonsProvider', () => {
   it('loads lessons from IndexedDB on mount', async () => {
     const db = (globalThis as any).__testDb
     await saveLessonMeta(db, makeMeta())

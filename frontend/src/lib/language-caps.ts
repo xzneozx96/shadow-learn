@@ -69,7 +69,8 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
 }
 
 export function getLanguageCaps(sourceLanguage?: string): LanguageCapabilities {
-  if (!sourceLanguage) return LANGUAGE_CAPS['zh-CN']
+  if (!sourceLanguage)
+    return LANGUAGE_CAPS['zh-CN']
   return (
     LANGUAGE_CAPS[sourceLanguage]
     ?? LANGUAGE_CAPS[sourceLanguage.split('-')[0]]

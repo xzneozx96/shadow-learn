@@ -1,26 +1,29 @@
 import type { MistakeExample } from '@/db'
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { VocabEntry } from '@/types'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { charDiff, getActiveChips, shuffleArray } from '@/lib/study-utils'
+import { LanguageInput } from '@/components/ui/LanguageInput'
+import { charDiff, getActiveChips, scoreReconstruction, shuffleArray } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
 interface Props {
   entry: VocabEntry
   words: string[]
+  caps: LanguageCapabilities
   progress?: string
   onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
 }
 
-export function ReconstructionExercise({ entry, words, progress = '', onNext }: Props) {
+export function ReconstructionExercise({ entry, words, caps, progress = '', onNext }: Props) {
   const chips = useMemo(() => shuffleArray(words), [words])
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
   const active = getActiveChips(chips, value)
-  const correct = value.trim() === entry.sourceSegmentText.trim()
+  const score = checked ? scoreReconstruction(value, entry.sourceSegmentText) : null
+  const correct = score === 100
   const diff = checked ? charDiff(value, entry.sourceSegmentText) : null
 
   const footer = (
@@ -36,7 +39,7 @@ export function ReconstructionExercise({ entry, words, progress = '', onNext }: 
                 const mistakes: MistakeExample[] = !correct
                   ? [{ userAnswer: value.trim(), correctAnswer: entry.sourceSegmentText.trim(), date: today }]
                   : []
-                onNext(correct ? 100 : 0, { mistakes: mistakes.length > 0 ? mistakes : undefined })
+                onNext(score ?? 0, { mistakes: mistakes.length > 0 ? mistakes : undefined })
               }}
             >
               Next →
@@ -71,10 +74,11 @@ export function ReconstructionExercise({ entry, words, progress = '', onNext }: 
       {/* Word chips */}
       <div className="flex flex-wrap gap-2 mb-4">
         {chips.map((chip, i) => (
+
           <span
-            key={i}
+            key={i} // eslint-disable-line react/no-array-index-key
             className={cn(
-              'px-3 py-1.5 rounded-md text-sm font-semibold border border-border bg-secondary transition-opacity',
+              'px-3 py-1.5 rounded-md text-base font-semibold border border-border bg-secondary transition-opacity',
               !active[i] && 'opacity-25',
             )}
           >
@@ -84,8 +88,9 @@ export function ReconstructionExercise({ entry, words, progress = '', onNext }: 
       </div>
 
       {/* Input */}
-      <Input
-        className="text-base tracking-wide"
+      <LanguageInput
+        langInputMode={caps.inputMode}
+        className="text-lg tracking-wide"
         placeholder="Type the sentence…"
         value={value}
         onChange={e => setValue(e.target.value)}
@@ -97,6 +102,7 @@ export function ReconstructionExercise({ entry, words, progress = '', onNext }: 
       {diff && (
         <div className="mt-3 px-3 py-2 rounded-lg bg-muted/30 text-lg font-bold tracking-wider">
           {diff.map((d, i) => (
+            // eslint-disable-next-line react/no-array-index-key
             <span key={i} className={d.ok ? 'text-emerald-400' : 'text-destructive'}>{d.char}</span>
           ))}
         </div>

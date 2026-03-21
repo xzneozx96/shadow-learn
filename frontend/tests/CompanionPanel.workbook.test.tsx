@@ -1,9 +1,25 @@
+// Import after mocks are hoisted
+import type { VocabEntry } from '@/types'
 import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Mock useVocabulary as vi.fn so individual tests can override return value
-vi.mock('@/hooks/useVocabulary', () => ({
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { CompanionPanel } from '@/components/lesson/CompanionPanel'
+import { useVocabulary } from '@/contexts/VocabularyContext'
+
+// Mock useVocabulary from its actual module path
+vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: vi.fn(() => ({ entriesByLesson: {} })),
+}))
+
+// Mock useAgentChat so CompanionPanel renders without hitting real IDB/API
+vi.mock('@/hooks/useAgentChat', () => ({
+  useAgentChat: vi.fn(() => ({
+    messages: [],
+    isLoading: false,
+    status: 'ready',
+    sendMessage: vi.fn(),
+    error: undefined,
+  })),
 }))
 
 // Avoid rendering LessonWorkbookPanel internals in these tab-bar tests
@@ -13,25 +29,27 @@ vi.mock('@/components/lesson/LessonWorkbookPanel', () => ({
   ),
 }))
 
-// Import after mocks are hoisted
-import type { VocabEntry } from '@/types'
-import { useVocabulary } from '@/hooks/useVocabulary'
-import { CompanionPanel } from '@/components/lesson/CompanionPanel'
-
 const defaultProps = {
-  messages: [],
-  isStreaming: false,
-  onSend: vi.fn(),
   activeSegment: null,
-  model: 'gpt-4o-mini',
-  onModelChange: vi.fn(),
   lessonId: 'lesson_1',
 }
 
-describe('CompanionPanel — tab bar', () => {
+function mockVocabContext(overrides: Partial<ReturnType<typeof useVocabulary>> = {}): ReturnType<typeof useVocabulary> {
+  return {
+    entries: [],
+    entriesByLesson: {},
+    save: vi.fn(),
+    remove: vi.fn(),
+    removeGroup: vi.fn(),
+    isSaved: vi.fn(),
+    ...overrides,
+  }
+}
+
+describe('companionPanel — tab bar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useVocabulary).mockReturnValue({ entriesByLesson: {} } as ReturnType<typeof useVocabulary>)
+    vi.mocked(useVocabulary).mockReturnValue(mockVocabContext())
   })
 
   it('renders "AI Companion" tab trigger', () => {
@@ -51,11 +69,11 @@ describe('CompanionPanel — tab bar', () => {
   })
 
   it('shows badge with count when words are saved for this lesson', () => {
-    vi.mocked(useVocabulary).mockReturnValue({
+    vi.mocked(useVocabulary).mockReturnValue(mockVocabContext({
       entriesByLesson: {
         lesson_1: [{} as VocabEntry, {} as VocabEntry],
       },
-    } as ReturnType<typeof useVocabulary>)
+    }))
     render(<CompanionPanel {...defaultProps} />)
     expect(screen.getByText('2')).toBeTruthy()
   })

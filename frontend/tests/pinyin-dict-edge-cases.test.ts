@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { getCandidates } from '@/lib/pinyin-dict'
 
 describe('getCandidates - edge cases', () => {

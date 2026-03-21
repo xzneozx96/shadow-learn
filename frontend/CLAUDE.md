@@ -1,3 +1,5 @@
+@~/.claude/react-vite-ts.md
+
 # Frontend CLAUDE.md
 
 Supplements root CLAUDE.md — read it first. Commands, full architecture overview, context list, and React setState rules are defined there.

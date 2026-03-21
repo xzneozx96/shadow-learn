@@ -2,8 +2,7 @@ import type { ExerciseMode } from '@/components/study/ModePicker'
 import type { VocabEntry } from '@/types'
 import { useCallback, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+import { API_BASE } from '@/lib/config'
 
 interface ClozeExerciseData { story: string, blanks: string[] }
 interface PronExerciseData { sentence: string, translation: string }

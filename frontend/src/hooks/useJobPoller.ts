@@ -2,6 +2,7 @@ import type { ShadowLearnDB } from '@/db'
 import type { LessonMeta } from '@/types'
 import { useCallback, useEffect, useRef } from 'react'
 import { saveSegments, saveVideo } from '@/db'
+import { API_BASE } from '@/lib/config'
 
 interface UseJobPollerProps {
   lessons: LessonMeta[]
@@ -31,7 +32,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
         continue
       let res: Response
       try {
-        res = await fetch(`/api/jobs/${lesson.jobId}`)
+        res = await fetch(`${API_BASE}/api/jobs/${lesson.jobId}`)
       }
       catch {
         continue // network error — retry on next tick
@@ -82,7 +83,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
           duration: resultLesson.duration,
           segmentCount: resultLesson.segments.length,
         })
-        await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
+        await fetch(`${API_BASE}/api/jobs/${jobId}`, { method: 'DELETE' })
       }
       else if (job.status === 'error') {
         const jobId = lesson.jobId
@@ -93,7 +94,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
           jobId: undefined,
           currentStep: undefined,
         })
-        await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
+        await fetch(`${API_BASE}/api/jobs/${jobId}`, { method: 'DELETE' })
       }
     }
   }, [db, updateLesson])

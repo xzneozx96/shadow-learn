@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { getCandidates } from '@/lib/pinyin-dict'
 import { cn } from '@/lib/utils'
 
@@ -21,18 +21,12 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
   // avoiding a useEffect setter (rerender-derived-state-no-effect).
   const [ime, setIme] = useState({ buffer: '', page: 0 })
   const { buffer, page } = ime
-  const wrapperRef = useRef<HTMLDivElement>(null)
   const isComposingRef = useRef(false)
 
   const allCandidates = getCandidates(buffer)
   const totalPages = Math.ceil(allCandidates.length / PAGE_SIZE)
   const candidates = allCandidates.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
   const showCandidates = allCandidates.length > 0
-
-  // Derive bar position during render — ref is populated after first mount so this
-  // always reflects the current layout without needing an effect + state round-trip.
-  const wrapperRect = showCandidates ? wrapperRef.current?.getBoundingClientRect() : undefined
-  const barPos = wrapperRect ? { top: wrapperRect.bottom + 4, left: wrapperRect.left } : null
 
   function fireChange(newValue: string) {
     const event = {
@@ -107,90 +101,94 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
   const displayValue = value + buffer
 
   return (
-    <div ref={wrapperRef} className={cn('relative', wrapperClassName)}>
-      <Input
-        {...rest}
-        className="text-center text-xl!"
-        value={displayValue}
-        onChange={(e) => {
-          // Forward direct value changes (e.g., programmatic/test fireEvent.change)
-          // when buffer is empty. When buffer is active the display includes buffer chars
-          // and direct changes would corrupt the committed value.
-          if (!buffer)
-            fireChange(e.target.value)
-        }}
-        onKeyDown={handleKeyDown}
-        onCompositionStart={() => { isComposingRef.current = true }}
-        onCompositionEnd={(e) => {
-          isComposingRef.current = false
-          // Let the OS IME commit its value normally
-          const input = e.currentTarget
-          fireChange(input.value)
-          setIme({ buffer: '', page: 0 })
-        }}
-        disabled={disabled}
-      />
+    <Popover open={showCandidates}>
+      <PopoverTrigger className="w-full">
+        <div className={cn('relative', wrapperClassName)}>
+          <Input
+            {...rest}
+            className="text-center text-xl!"
+            value={displayValue}
+            onChange={(e) => {
+              // Forward direct value changes (e.g., programmatic/test fireEvent.change)
+              // when buffer is empty. When buffer is active the display includes buffer chars
+              // and direct changes would corrupt the committed value.
+              if (!buffer)
+                fireChange(e.target.value)
+            }}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={() => { isComposingRef.current = true }}
+            onCompositionEnd={(e) => {
+              isComposingRef.current = false
+              // Let the OS IME commit its value normally
+              const input = e.currentTarget
+              fireChange(input.value)
+              setIme({ buffer: '', page: 0 })
+            }}
+            disabled={disabled}
+          />
+        </div>
+      </PopoverTrigger>
 
-      {showCandidates && barPos && createPortal(
-        <div
-          className="fixed z-50 flex items-center gap-1 rounded-md border border-border bg-popover shadow-md p-1"
-          style={{ top: barPos.top, left: barPos.left }}
-        >
-          {totalPages > 1 && (
+      <PopoverContent
+        initialFocus={false}
+        className="p-1 flex items-center gap-1 bg-popover text-popover-foreground shadow-md rounded-md border m-0"
+        side="bottom"
+        align="start"
+        sideOffset={4}
+      >
+        {totalPages > 1 && (
+          <button
+            type="button"
+            tabIndex={-1}
+            disabled={page === 0}
+            className="px-1.5 py-1 rounded text-sm text-muted-foreground hover:bg-accent disabled:opacity-30 disabled:cursor-default"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setIme(s => ({ ...s, page: s.page - 1 }))
+            }}
+          >
+            ‹
+          </button>
+        )}
+
+        {candidates.map((char, i) => (
+          <button
+            key={char}
+            type="button"
+            tabIndex={-1}
+            className="flex items-center gap-0.5 px-2 py-1 rounded text-base hover:bg-accent cursor-pointer"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              selectCandidate(char)
+            }}
+          >
+            <span className="text-muted-foreground">{i + 1}</span>
+            <span>{char}</span>
+          </button>
+        ))}
+
+        {totalPages > 1 && (
+          <>
+            <span className="text-[10px] text-muted-foreground px-1 tabular-nums">
+              {page + 1}
+              /
+              {totalPages}
+            </span>
             <button
               type="button"
               tabIndex={-1}
-              disabled={page === 0}
+              disabled={page === totalPages - 1}
               className="px-1.5 py-1 rounded text-sm text-muted-foreground hover:bg-accent disabled:opacity-30 disabled:cursor-default"
               onMouseDown={(e) => {
                 e.preventDefault()
-                setIme(s => ({ ...s, page: s.page - 1 }))
+                setIme(s => ({ ...s, page: s.page + 1 }))
               }}
             >
-              ‹
+              ›
             </button>
-          )}
-
-          {candidates.map((char, i) => (
-            <button
-              key={char}
-              type="button"
-              tabIndex={-1}
-              className="flex items-center gap-0.5 px-2 py-1 rounded text-sm hover:bg-accent cursor-pointer"
-              onMouseDown={(e) => {
-                e.preventDefault()
-                selectCandidate(char)
-              }}
-            >
-              <span className="text-muted-foreground text-sm">{i + 1}</span>
-              <span>{char}</span>
-            </button>
-          ))}
-
-          {totalPages > 1 && (
-            <>
-              <span className="text-[10px] text-muted-foreground px-1 tabular-nums">
-                {page + 1}
-                /
-                {totalPages}
-              </span>
-              <button
-                type="button"
-                tabIndex={-1}
-                disabled={page === totalPages - 1}
-                className="px-1.5 py-1 rounded text-sm text-muted-foreground hover:bg-accent disabled:opacity-30 disabled:cursor-default"
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  setIme(s => ({ ...s, page: s.page + 1 }))
-                }}
-              >
-                ›
-              </button>
-            </>
-          )}
-        </div>,
-        document.body,
-      )}
-    </div>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
   )
 }

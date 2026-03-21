@@ -1,5 +1,5 @@
-import type { InputMode } from '@/lib/language-caps'
 import type { ComponentProps } from 'react'
+import type { InputMode } from '@/lib/language-caps'
 import { ChineseInput } from './ChineseInput'
 import { Input } from './input'
 

@@ -58,6 +58,7 @@ export function updateSpacedRepetition(
   }
   else if (consecutiveIncorrect >= 3) {
     masteryLevel = Math.max(0, masteryLevel - 1)
+    consecutiveIncorrect = 0
   }
 
   const dueDate = new Date()

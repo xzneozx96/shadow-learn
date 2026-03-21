@@ -15,6 +15,7 @@ describe('scoreToQuality', () => {
   it('maps 0 → 0', () => expect(scoreToQuality(0)).toBe(0))
   it('maps 99 → 4', () => expect(scoreToQuality(99)).toBe(4))
   it('maps 19 → 0', () => expect(scoreToQuality(19)).toBe(0))
+  it('clamps scores above 100 to quality 5', () => expect(scoreToQuality(120)).toBe(5))
 })
 
 describe('createSpacedRepetitionItem', () => {
@@ -83,11 +84,12 @@ describe('updateSpacedRepetition', () => {
     expect(item.consecutiveCorrect).toBe(0) // counter resets so next level-up requires another 5
   })
 
-  it('decrements masteryLevel after 3 consecutive incorrect answers', () => {
+  it('decrements masteryLevel after 3 consecutive incorrect answers and resets counter', () => {
     let item = createSpacedRepetitionItem('vocab-1')
     item = { ...item, masteryLevel: 3 }
     for (let i = 0; i < 3; i++) item = updateSpacedRepetition(item, 0)
     expect(item.masteryLevel).toBe(2)
+    expect(item.consecutiveIncorrect).toBe(0) // counter resets so next level-down requires another 3
   })
 
   it('does not exceed masteryLevel 5 or go below 0', () => {

@@ -1,7 +1,7 @@
+import type { Segment } from '@/types'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ShadowingPanel } from '@/components/shadowing/ShadowingPanel'
-import type { Segment } from '@/types'
 
 // ── Mock PlayerContext ─────────────────────────────────────────────────────
 
@@ -18,7 +18,9 @@ const mockPlayer = {
   onTimeUpdate: vi.fn(() => vi.fn()),
   onEnded: vi.fn((cb: () => void) => {
     endedCallbacks.push(cb)
-    return () => { endedCallbacks = endedCallbacks.filter(c => c !== cb) }
+    return () => {
+      endedCallbacks = endedCallbacks.filter(c => c !== cb)
+    }
   }),
   onPlay: vi.fn(() => vi.fn()),
   onPause: vi.fn(() => vi.fn()),
@@ -78,10 +80,14 @@ function fireEnded() {
 
 async function advanceThroughDictation(answer: string) {
   fireEnded()
-  await waitFor(() => { expect(screen.getByRole('textbox')).toBeTruthy() })
+  await waitFor(() => {
+    expect(screen.getByRole('textbox')).toBeTruthy()
+  })
   fireEvent.change(screen.getByRole('textbox'), { target: { value: answer } })
   fireEvent.click(screen.getByRole('button', { name: /submit/i }))
-  await waitFor(() => { expect(screen.getByRole('button', { name: /next/i })).toBeTruthy() })
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: /next/i })).toBeTruthy()
+  })
   fireEvent.click(screen.getByRole('button', { name: /next/i }))
 }
 

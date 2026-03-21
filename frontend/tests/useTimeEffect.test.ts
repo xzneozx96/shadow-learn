@@ -9,7 +9,9 @@ vi.mock('../src/contexts/PlayerContext', () => ({
   usePlayer: () => ({
     subscribeTime: (cb: (t: number) => void) => {
       timeSubscribers.add(cb)
-      return () => { timeSubscribers.delete(cb) }
+      return () => {
+        timeSubscribers.delete(cb)
+      }
     },
   }),
 }))

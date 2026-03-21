@@ -1,14 +1,16 @@
-import { describe, expect, it } from 'vitest'
-
-import { buildPositionMap, buildWordSpans } from '@/lib/segment-text'
 import type { Word, WordTiming } from '@/types'
 
-const makeWord = (word: string): Word => ({
-  word,
-  romanization: 'pīnyīn',
-  meaning: 'test meaning',
-  usage: 'test usage',
-})
+import { describe, expect, it } from 'vitest'
+import { buildPositionMap, buildWordSpans } from '@/lib/segment-text'
+
+function makeWord(word: string): Word {
+  return {
+    word,
+    romanization: 'pīnyīn',
+    meaning: 'test meaning',
+    usage: 'test usage',
+  }
+}
 
 describe('buildWordSpans', () => {
   it('returns single plain span when no vocab words', () => {

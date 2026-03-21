@@ -1,7 +1,16 @@
 import type { VocabEntry } from '@/types'
+import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { WordCard } from './WordCard'
 
@@ -10,13 +19,15 @@ interface LessonGroupProps {
   lessonTitle: string
   entries: VocabEntry[]
   onPlay?: (word: string) => void
+  onDeleteGroup?: (lessonId: string) => void
   loadingWord?: string | null
 }
 
 const PREVIEW_COUNT = 5
 
-export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, loadingWord }: LessonGroupProps) {
+export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGroup, loadingWord }: LessonGroupProps) {
   const [expanded, setExpanded] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const navigate = useNavigate()
   const lastSaved = entries.reduce((latest, e) =>
     e.createdAt > latest ? e.createdAt : latest, '')
@@ -41,9 +52,20 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, loadingWor
             {entries.length}
             {' '}
             words · saved
+            {' '}
             {lastSavedDate}
           </div>
         </div>
+        {onDeleteGroup && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        )}
         <Button onClick={() => navigate(`/vocabulary/${lessonId}/study`)}>
           Study
         </Button>
@@ -70,6 +92,35 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, loadingWor
           )}
         </>
       )}
+
+      {/* Delete confirmation modal */}
+      <Dialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          if (!open)
+            setShowDeleteConfirm(false)
+        }}
+      >
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Delete lesson group?</DialogTitle>
+            <DialogDescription>This will remove all vocabulary words saved from this lesson. This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowDeleteConfirm(false)
+                if (onDeleteGroup)
+                  onDeleteGroup(lessonId)
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

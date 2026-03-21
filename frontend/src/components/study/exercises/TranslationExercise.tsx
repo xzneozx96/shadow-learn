@@ -7,9 +7,8 @@ import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { LanguageInput } from '@/components/ui/LanguageInput'
 import { useAuth } from '@/contexts/AuthContext'
+import { API_BASE } from '@/lib/config'
 import { cn } from '@/lib/utils'
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 
 interface Sentence {
   text: string

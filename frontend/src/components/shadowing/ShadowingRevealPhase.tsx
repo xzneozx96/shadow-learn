@@ -1,12 +1,13 @@
-import type { DiffToken } from '@/lib/shadowing-utils'
+import type { DiffToken } from '@/lib/diff-utils'
 import type { PronunciationAssessResult, Segment } from '@/types'
 import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { API_BASE } from '@/lib/config'
 import {
   computeAccuracyScore,
   computeCharDiff,
-} from '@/lib/shadowing-utils'
+} from '@/lib/diff-utils'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '../ui/scroll-area'
 
@@ -54,6 +55,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
       return null
     return computeCharDiff(props.userAnswer, segment.text)
   // Props are fixed after mount (segment, userAnswer never change for a given reveal)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const dictationDiffRef = useRef(dictationDiff)
   dictationDiffRef.current = dictationDiff
@@ -147,6 +149,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
             </span>
             <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 px-4">
               {dictationDiff.map((tok, i) => (
+                // eslint-disable-next-line react/no-array-index-key
                 <div key={i} className="flex flex-col items-center gap-0.5">
                   <span
                     className={cn(
@@ -252,7 +255,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, onScore, onLoadi
         form.append('language', 'zh-CN')
         form.append('azure_key', azureKey)
         form.append('azure_region', azureRegion)
-        const resp = await fetch('/api/pronunciation/assess', {
+        const resp = await fetch(`${API_BASE}/api/pronunciation/assess`, {
           method: 'POST',
           body: form,
           signal: controller.signal,

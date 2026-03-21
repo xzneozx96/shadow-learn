@@ -1,12 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
 import type { LessonMeta, Segment, VocabEntry, Word } from '@/types'
+import { createContext, use, useCallback, useEffect, useMemo, useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface VocabularyContextValue {
   entries: VocabEntry[]
   entriesByLesson: Record<string, VocabEntry[]>
   save: (word: Word, segment: Segment, lesson: LessonMeta, activeLang: string) => Promise<void>
   remove: (id: string) => Promise<void>
+  removeGroup: (lessonId: string) => Promise<void>
   isSaved: (word: string, lessonId: string) => boolean
 }
 
@@ -17,7 +18,8 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
   const [entries, setEntries] = useState<VocabEntry[]>([])
 
   useEffect(() => {
-    if (!db) return
+    if (!db)
+      return
     db.getAll('vocabulary').then(setEntries)
   }, [db])
 
@@ -31,7 +33,8 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
 
   const save = useCallback(
     async (word: Word, segment: Segment, lesson: LessonMeta, activeLang: string) => {
-      if (!db) return
+      if (!db)
+        return
       const entry: VocabEntry = {
         id: crypto.randomUUID(),
         word: word.word,
@@ -54,11 +57,26 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
 
   const remove = useCallback(
     async (id: string) => {
-      if (!db) return
+      if (!db)
+        return
       await db.delete('vocabulary', id)
       setEntries(prev => prev.filter(e => e.id !== id))
     },
     [db],
+  )
+
+  const removeGroup = useCallback(
+    async (lessonId: string) => {
+      if (!db) {
+        return
+      }
+      const idsToDelete = entries.filter(e => e.sourceLessonId === lessonId).map(e => e.id)
+      const tx = db.transaction('vocabulary', 'readwrite')
+      await Promise.all(idsToDelete.map(id => tx.store.delete(id)))
+      await tx.done
+      setEntries(prev => prev.filter(e => e.sourceLessonId !== lessonId))
+    },
+    [db, entries],
   )
 
   const isSaved = useCallback(
@@ -68,14 +86,16 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
   )
 
   return (
-    <VocabularyContext.Provider value={{ entries, entriesByLesson, save, remove, isSaved }}>
+    <VocabularyContext value={{ entries, entriesByLesson, save, remove, removeGroup, isSaved }}>
       {children}
-    </VocabularyContext.Provider>
+    </VocabularyContext>
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useVocabulary() {
-  const ctx = useContext(VocabularyContext)
-  if (!ctx) throw new Error('useVocabulary must be used within VocabularyProvider')
+  const ctx = use(VocabularyContext)
+  if (!ctx)
+    throw new Error('useVocabulary must be used within VocabularyProvider')
   return ctx
 }

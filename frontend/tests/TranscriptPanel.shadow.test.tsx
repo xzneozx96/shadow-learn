@@ -10,7 +10,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 vi.mock('@/hooks/useTTS', () => ({
   useTTS: () => ({ playTTS: vi.fn(), loadingText: null }),
 }))
-vi.mock('@/hooks/useVocabulary', () => ({
+vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: () => ({ save: vi.fn(), isSaved: () => false }),
 }))
 vi.mock('@/components/lesson/SegmentText', () => ({
@@ -42,7 +42,7 @@ const lesson = {
   status: 'complete' as const,
 }
 
-describe('TranscriptPanel shadow icon', () => {
+describe('transcriptPanel shadow icon', () => {
   it('renders a shadow icon button for each segment', () => {
     const segments = [makeSegment('s1', '你好'), makeSegment('s2', '再见')]
     render(

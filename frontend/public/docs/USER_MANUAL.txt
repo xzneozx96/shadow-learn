@@ -11,10 +11,11 @@ This guide will walk you through setting up and maximizing the application's fea
 2. [Daily Use: Unlocking the App](#2-daily-use-unlocking-the-app)
 3. [Library & Lesson Management](#3-library--lesson-management)
 4. [Learning Interface (Classroom)](#4-learning-interface-classroom)
-5. [Shadowing Practice (Pronunciation & Listening)](#5-shadowing-practice-pronunciation--listening)
-6. [Vocabulary Workbook & Quizzes](#6-vocabulary-workbook--quizzes)
-7. [Settings](#7-settings)
-8. [Frequently Asked Questions (FAQ)](#8-frequently-asked-questions-faq)
+5. [AI Companion — Your Personal Language Tutor](#5-ai-companion--your-personal-language-tutor)
+6. [Shadowing Practice (Pronunciation & Listening)](#6-shadowing-practice-pronunciation--listening)
+7. [Vocabulary Workbook, Quizzes & Progress](#7-vocabulary-workbook-quizzes--progress)
+8. [Settings](#8-settings)
+9. [Frequently Asked Questions (FAQ)](#9-frequently-asked-questions-faq)
 
 ---
 
@@ -28,9 +29,8 @@ They are "keys" that allow the app to connect with Artificial Intelligence (AI) 
 | Key Name | Main Role | Importance |
 | :--- | :--- | :--- |
 | **OpenRouter API Key** | Translates, explains grammar, and chats with you. | **Required** 🔴 |
-| **Deepgram API Key** | Converts video audio to text for learning. | **Required** 🔴 |
 | **Minimax API Key** | Pronounces words/sentences (AI Voice). | **Required** 🔴 |
-| **Azure Speech Key & Region** | Grades your pronunciation word by word. | **Required** 🔴 |
+| **Azure Speech Key & Region** | Converts video audio to text **and** grades your pronunciation word by word. | **Required** 🔴 |
 
 > ⚠️ **Absolute Security**: All keys are encrypted and **only saved on your computer**. The app never sends them to our servers.
 
@@ -39,10 +39,7 @@ They are "keys" that allow the app to connect with Artificial Intelligence (AI) 
 #### 1. OpenRouter API Key (Translation & Explanation)
 *   See tutorial here: https://app.tango.us/app/workflow/Create-API-Key-in-OpenRouter-95b3cf6d85df49b48ad728d93c8d5b76
 
-#### 2. Deepgram API Key (Speech-to-Text)
-*   See tutorial here: https://app.tango.us/app/workflow/Create-API-Key-in-Deepgram-d2eab0f8d3c84b8ab315964c935c3945
-
-#### 3. Azure Speech Key & Region (Pronunciation Grading)
+#### 2. Azure Speech Key & Region (Speech-to-Text & Pronunciation Grading)
 *   **Step 1**: Go to [portal.azure.com](https://portal.azure.com/).
 *   **Step 2**: Search for **"Speech Services"** and select it.
 *   **Step 3**: Click **Create** → Fill in Subscription, Resource Group, Region, Name.
@@ -132,19 +129,124 @@ Plays the lesson content. Controls include:
 
 ### 🤖 Right Column — AI Companion (2 Tabs)
 
-**Tab 1 — Chat 💬**
-- Ask the AI anything about the current lesson: grammar, vocabulary, context, cultural notes.
-- Example questions: *"What grammar pattern is used here?"*, *"What does X mean in this context?"*
-- The AI is aware of which segment you are currently on.
+The right column is home to your personal AI tutor. See [Section 5](#5-ai-companion--your-personal-language-tutor) for the full guide — it's the most powerful feature in ShadowLearn.
 
-**Tab 2 — Workbook 📚**
-- Shows a mini-view of words you have saved from this lesson.
-- Click any word to jump back to where it was used in the transcript.
-- **Study This Lesson** button at the bottom opens a quiz session for this lesson's saved words.
+**Tab 1 — Chat 💬** — Talk to your AI tutor, ask questions, request exercises.
+**Tab 2 — Workbook 📚** — Browse words saved from this lesson; click any word to jump to it in the transcript. **Study This Lesson** button launches a quiz session.
 
 ---
 
-## 🎤 5. Shadowing Practice (Pronunciation & Listening)
+## 🧠 5. AI Companion — Your Personal Language Tutor
+
+> *Most language apps give you exercises. ShadowLearn gives you a tutor.*
+
+The **AI Companion** lives in the right panel of every lesson. It is not a simple chatbot — it is an intelligent, agentic tutor that **knows who you are**, **remembers you across sessions**, and **takes action** on your behalf. It can read your vocabulary list, check which words you're due to review, see exactly which sentence you're studying, and then launch a real interactive exercise — all directly inside the chat.
+
+---
+
+### ✨ What Makes It Different
+
+| Ordinary chatbot | ShadowLearn AI Companion |
+| :--- | :--- |
+| Answers questions | Answers questions **and acts on them** |
+| Forgets you next session | **Remembers** your preferences, struggles, and goals |
+| Gives generic advice | Adapts to **your level and progress** in real time |
+| Talks about exercises | **Runs exercises directly in the chat** |
+
+---
+
+### 💬 How to Start a Conversation
+
+Just type naturally. Here are ideas to get you going:
+
+**Ask about the current sentence:**
+- *"What does this sentence mean?"*
+- *"Break down the grammar of this line for me."*
+- *"What's the difference between 了 (le) and 过 (guò)?"*
+
+**Ask for practice:**
+- *"Quiz me on the words I saved from this lesson."*
+- *"Give me a dictation exercise."*
+- *"Can we practice the pronunciation of this sentence?"*
+- *"I keep forgetting 尤其 — can we drill it?"*
+
+**Ask for a progress check:**
+- *"How am I doing overall?"*
+- *"Show me my accuracy trend."*
+- *"What words should I review today?"*
+
+**Tell it about yourself:**
+- *"I'm a complete beginner, please keep explanations simple."*
+- *"My goal is to pass HSK 3 by the end of the year."*
+- *"I struggle with tones — focus on that when you quiz me."*
+
+The AI will remember everything you tell it, even in future sessions.
+
+---
+
+### 🎮 Interactive Exercises Right in the Chat
+
+This is the standout feature. When you ask for practice, the AI doesn't just describe an exercise — it **renders a live, interactive exercise directly inside the conversation**. You complete it, submit your answer, and the AI responds with feedback and updates your progress automatically.
+
+Exercises the AI can launch in chat:
+
+| Exercise | What happens |
+| :--- | :--- |
+| 🔤 **Dictation** | An audio clip plays; you type what you hear |
+| ✍️ **Character Writing** | A character appears; you trace its stroke order |
+| 🧠 **Pinyin Recall** | A character appears; you type its pinyin |
+| 📝 **Translation** | A sentence appears; you translate it |
+| 🎤 **Pronunciation** | A sentence appears; you record yourself saying it |
+| 📝 **Cloze (Fill-in-the-blank)** | The AI writes a short story using your words with gaps to fill |
+| 🧩 **Reconstruction** | Word chips appear scrambled; you drag them into the right order |
+
+The AI chooses which words to include based on what you've saved, what's due for review, and what you've been struggling with recently — not randomly.
+
+---
+
+### 🧠 It Knows You — The Learner Profile
+
+The first time you start chatting, the AI will ask you a few quick questions:
+- What is your current level?
+- What is your native language?
+- What is your daily study goal?
+
+These answers build your **Learner Profile**, which the AI reads at the start of every session to calibrate the difficulty of its explanations and exercise selections. You can update it at any time simply by telling the AI — *"I think I'm at intermediate level now"* — and it will adjust.
+
+---
+
+### 🗂️ Long-Term Memory
+
+The AI keeps a **persistent memory** of important things you share with it:
+- Your learning goals and motivations
+- Topics or grammar patterns you find difficult
+- Preferences for how you like to be taught
+- Observations it makes about your performance over time
+
+This memory carries over to every future session. The AI can also search its own memory when you ask — *"What have I told you about my goals?"* — and retrieve what it knows about you.
+
+---
+
+### 📊 Ask for Your Progress
+
+At any time, type:
+- *"Show me my progress chart."*
+- *"How is my skill breakdown looking?"*
+
+The AI will render a **visual chart** right in the chat — an accuracy trend graph or a mastery breakdown across all five skills (Listening, Speaking, Reading, Writing, Vocabulary).
+
+---
+
+### 💡 Tips for Getting the Best Out of It
+
+- **Be specific.** *"Quiz me on 想 and 觉得"* works better than *"quiz me"*.
+- **Tell it your mood.** *"I only have 5 minutes"* → it will keep the session short.
+- **Ask it to explain differently.** If an explanation doesn't click, say *"explain that another way"*.
+- **Trust its suggestions.** When it says *"you have 3 words due for review"*, take the quiz — spaced repetition works best when you don't skip.
+
+---
+
+## 🎤 6. Shadowing Practice (Pronunciation & Listening)
 
 Click the **Shadowing** button in the middle column (or the 🎯 icon on a specific segment). A dialog will appear where you choose your mode and how many segments to practice.
 
@@ -208,7 +310,7 @@ After all segments are done, you see a full summary:
 
 ---
 
-## 📓 6. Vocabulary Workbook & Quizzes
+## 📓 7. Vocabulary Workbook, Quizzes & Progress
 
 ### 📌 Saving Words
 While reading subtitles, **hover over any word** and click the **Bookmark 🔖** icon. The word is instantly added to your Workbook.
@@ -249,7 +351,52 @@ After finishing, a **Session Summary** shows your score breakdown by exercise ty
 
 ---
 
-## ⚙️ 7. Settings
+### 📊 Progress Dashboard
+
+The bottom of the Workbook page shows a live progress dashboard that updates automatically as you complete exercises.
+
+#### 🔢 Overall Stats
+Displays your total exercise count, overall accuracy rate, and total study time accumulated across all sessions.
+
+#### 📈 Accuracy Trend
+A chart showing your daily accuracy over the past 90 days — one data point per day. It reflects the running accuracy of all exercises you answered that day.
+
+#### 🏅 Skill Breakdown
+Five cards — **Writing**, **Speaking**, **Vocabulary**, **Reading**, **Listening** — each showing:
+- Accuracy percentage (correct answers ÷ total attempts for that skill)
+- Total exercise attempts logged
+
+![Progress Tracking](docs/images/progress_tracking.png)
+
+Each exercise type feeds into a specific skill:
+
+| Exercise | Skill tracked |
+| :--- | :--- |
+| ✍️ Character Writing | Writing |
+| 📝 Translation | Writing |
+| 🎤 Pronunciation | Speaking |
+| 🧠 Pinyin Recall | Speaking |
+| 📝 Cloze | Vocabulary |
+| 🧩 Reconstruction | Reading |
+| 🔤 Dictation | Listening |
+
+> 💡 **How scoring works:** Binary exercises (Dictation, Cloze, Reconstruction, Pinyin Recall) score 100 for correct or 0 for wrong. Character Writing scores 100 if no hints were used, 80 if hints were used. Translation and Pronunciation receive real numeric scores (0–100) from AI. A score of **60 or above** counts as a correct answer for accuracy purposes.
+
+#### 🐛 Common Mistakes
+Highlights vocabulary items you have struggled with most frequently, so you know where to focus.
+
+#### 🔁 Spaced Repetition & Review Queue
+Every time you answer an exercise, ShadowLearn schedules the next review for that vocabulary word using a scientifically-proven method that spaces reviews over increasing intervals based on how well you know the word:
+
+- Answer correctly and confidently → next review in several days
+- Answer incorrectly → reviewed again soon (tomorrow or the day after)
+- Consistently correct over 5 sessions → the word levels up and is reviewed less often
+
+When words are due for review, a banner appears at the top of the Workbook page: **"X items due for review today"**. Click **Start Review** to launch a targeted session with only those words.
+
+---
+
+## ⚙️ 8. Settings
 
 Click the **Settings icon** (⚙️) in the top navigation at any time to:
 
@@ -262,7 +409,7 @@ Click the **Settings icon** (⚙️) in the top navigation at any time to:
 
 ---
 
-## ❓ 8. Frequently Asked Questions (FAQ)
+## ❓ 9. Frequently Asked Questions (FAQ)
 
 **Q: Why don't I see pronunciation scores?**
 - **A:** Check that your **Azure Speech Key** and **Region** are correctly entered in Settings. Open Settings from the ⚙️ icon anytime to update them.
@@ -279,8 +426,14 @@ Click the **Settings icon** (⚙️) in the top navigation at any time to:
 **Q: Why are some segments skipped in Shadowing mode?**
 - **A:** Very short segments (fewer than 3 words) are automatically skipped — they are too brief to practice meaningfully.
 
+**Q: The AI Companion doesn't seem to know about my lesson / vocabulary.**
+- **A:** The AI looks up your data when it needs it (when you ask for a quiz or progress check). Just ask directly — *"quiz me on my saved words"* — and it will fetch them.
+
+**Q: Can the AI Companion remember things between sessions?**
+- **A:** Yes. It has a long-term memory system. Tell it your goals, level, or problem areas and it will remember for future sessions.
+
 **Q: Where is my data stored?**
-- **A:** Everything — lessons, vocabulary, chat history, audio cache — is stored locally in your browser's storage. Nothing is sent to our servers.
+- **A:** Everything — lessons, vocabulary, chat history, AI memory, audio cache — is stored locally in your browser's storage. Nothing is sent to our servers.
 
 ---
 *Wishing you productive and enjoyable learning sessions on ShadowLearn!* 🚀

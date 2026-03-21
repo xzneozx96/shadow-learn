@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { getAppConfig } from '@/lib/config'
 
@@ -34,18 +34,18 @@ function renderCreateLesson() {
   return render(
     <MemoryRouter>
       <CreateLesson />
-    </MemoryRouter>
+    </MemoryRouter>,
   )
 }
 
-describe('CreateLesson STT key selection', () => {
+describe('createLesson STT key selection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('sends deepgram_api_key when stt_provider is deepgram', async () => {
     vi.mocked(getAppConfig).mockResolvedValue({ sttProvider: 'deepgram', ttsProvider: 'azure' })
-    global.fetch = vi.fn().mockResolvedValueOnce({
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ job_id: 'job-1' }),
     } as Response)
@@ -56,7 +56,7 @@ describe('CreateLesson STT key selection', () => {
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
     await waitFor(() => {
-      const [lessonCall] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls
+      const [lessonCall] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
       const body = JSON.parse(lessonCall[1].body)
       expect(body.deepgram_api_key).toBe('dg-key')
       expect(body.azure_speech_key).toBeUndefined()
@@ -66,7 +66,7 @@ describe('CreateLesson STT key selection', () => {
 
   it('sends azure_speech_key and region when stt_provider is azure', async () => {
     vi.mocked(getAppConfig).mockResolvedValue({ sttProvider: 'azure', ttsProvider: 'azure' })
-    global.fetch = vi.fn().mockResolvedValueOnce({
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ job_id: 'job-2' }),
     } as Response)
@@ -77,7 +77,7 @@ describe('CreateLesson STT key selection', () => {
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
     await waitFor(() => {
-      const [lessonCall] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls
+      const [lessonCall] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
       const body = JSON.parse(lessonCall[1].body)
       expect(body.azure_speech_key).toBe('az-key')
       expect(body.azure_speech_region).toBe('eastus')

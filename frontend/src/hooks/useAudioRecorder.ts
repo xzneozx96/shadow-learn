@@ -47,12 +47,14 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
   useEffect(() => {
     return () => {
       cancelledRef.current = true
-      try { recorderRef.current?.stop() } catch { /* already stopped */ }
+      try {
+        recorderRef.current?.stop()
+      }
+      catch { /* already stopped */ }
       stopStream()
       revokeUrl()
       audioRef.current?.pause()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const startRecording = useCallback(async () => {
@@ -67,7 +69,9 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
       const recorder = new MediaRecorder(stream)
       recorderRef.current = recorder
 
-      recorder.ondataavailable = (e) => { chunksRef.current.push(e.data) }
+      recorder.ondataavailable = (e) => {
+        chunksRef.current.push(e.data)
+      }
       recorder.onstop = () => {
         stopStream()
         if (cancelledRef.current) {
@@ -107,7 +111,10 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
     const recorder = recorderRef.current
     if (recorder) {
       recorderRef.current = null
-      try { recorder.stop() } catch { /* already stopped */ }
+      try {
+        recorder.stop()
+      }
+      catch { /* already stopped */ }
     }
     stopStream()
     setRecordingState('idle')
@@ -120,11 +127,15 @@ export function useAudioRecorder(options: UseAudioRecorderOptions = {}): UseAudi
       setIsPlaying(false)
       return
     }
-    if (!objectUrlRef.current) return
+    if (!objectUrlRef.current)
+      return
     const audio = new Audio(objectUrlRef.current)
     audioRef.current = audio
     audio.onplay = () => setIsPlaying(true)
-    audio.onended = () => { setIsPlaying(false); audioRef.current = null }
+    audio.onended = () => {
+      setIsPlaying(false)
+      audioRef.current = null
+    }
     audio.onpause = () => setIsPlaying(false)
     audio.play().catch(() => {})
   }, [isPlaying])

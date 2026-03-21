@@ -1,0 +1,19 @@
+{
+  "name": "shadowing-companion",
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2"
+  },
+  "lint-staged": {
+    "frontend/**/*.{ts,tsx}": [
+      "bash -c 'cd frontend && npx eslint --max-warnings=0 \"$@\"' --"
+    ],
+    "backend/**/*.py": [
+      "bash -c 'cd backend && uvx ruff check \"$@\"' --"
+    ]
+  }
+}

@@ -1084,7 +1084,7 @@ export function SessionSummary({ results, smItems = [], onStudyAgain, onBack }: 
 ```tsx
 {nextReviews.length > 0 && (
   <div className="rounded-md border border-border/50 bg-muted/20 px-4 py-3 mb-4 text-left">
-    <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Next reviews</p>
+    <p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-2">Next reviews</p>
     {nextReviews.slice(0, 5).map(({ word, days }) => (
       <div key={word} className="flex items-center justify-between text-sm py-0.5">
         <span className="font-bold">{word}</span>
@@ -1135,7 +1135,7 @@ export function OverallStatsPanel({ stats }: { stats: ProgressStats }) {
       ].map(({ label, value }) => (
         <div key={label} className="rounded-lg border border-border bg-card p-4 text-center">
           <div className="text-2xl font-bold tabular-nums">{value}</div>
-          <div className="text-xs text-muted-foreground uppercase tracking-widest mt-1">{label}</div>
+          <div className="text-sm text-muted-foreground uppercase tracking-widest mt-1">{label}</div>
         </div>
       ))}
     </div>
@@ -1156,7 +1156,7 @@ export function AccuracyTrendChart({ trend }: { trend: DailyAccuracy[] }) {
   }
   return (
     <div>
-      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-3">Accuracy trend (last 30 days)</p>
+      <p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">Accuracy trend (last 30 days)</p>
       <div className="flex items-end gap-1 h-24">
         {recent.map(({ date, accuracy }) => (
           <div
@@ -1202,7 +1202,7 @@ function Stars({ level }: { level: number }) {
 export function SkillMasteryGrid({ mastery }: { mastery: MasteryData }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-3">Skill mastery</p>
+      <p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">Skill mastery</p>
       {(Object.keys(SKILL_LABELS) as Array<keyof MasteryData>).map(skill => (
         <div key={skill} className="flex items-center justify-between rounded-lg border border-border/50 bg-card px-4 py-2.5">
           <span className="text-sm font-medium">{SKILL_LABELS[skill]}</span>
@@ -1225,16 +1225,16 @@ export function MistakesPanel({ patterns }: { patterns: ErrorPattern[] }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-3">Recent mistakes</p>
+      <p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">Recent mistakes</p>
       {patterns.map(p => (
         <div key={p.patternId} className="flex items-center justify-between rounded-lg border border-border/50 bg-card px-4 py-2.5 text-sm">
           <div>
             <span className="font-bold">{p.examples.at(-1)?.correctAnswer ?? p.patternId}</span>
             {p.examples.at(-1)?.userAnswer && (
-              <span className="text-muted-foreground ml-2 text-xs">you wrote: {p.examples.at(-1)?.userAnswer}</span>
+              <span className="text-muted-foreground ml-2 text-sm">you wrote: {p.examples.at(-1)?.userAnswer}</span>
             )}
           </div>
-          <span className="text-xs text-muted-foreground tabular-nums">{p.frequency}×</span>
+          <span className="text-sm text-muted-foreground tabular-nums">{p.frequency}×</span>
         </div>
       ))}
     </div>
@@ -1342,7 +1342,7 @@ export function ReviewQueueBanner() {
     <div className="flex items-center justify-between rounded-lg border border-amber-500/25 bg-amber-500/8 px-4 py-3">
       <div>
         <p className="text-sm font-semibold text-amber-400">{dueCount} item{dueCount !== 1 ? 's' : ''} due for review today</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Keep your streak going</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Keep your streak going</p>
       </div>
       <Button size="sm" onClick={() => navigate('/progress/review')}>
         Start Review

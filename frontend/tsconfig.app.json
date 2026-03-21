@@ -14,9 +14,9 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    "resolveJsonModule": true,
     "types": ["vite/client"],
     "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
 
     /* Linting */
     "strict": true,

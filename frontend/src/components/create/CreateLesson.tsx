@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { getSettings, saveVideo } from '@/db'
-import { getAppConfig } from '@/lib/config'
+import { API_BASE, getAppConfig } from '@/lib/config'
 import { LANGUAGES } from '@/lib/constants'
 import { UploadTab } from './UploadTab'
 import { YouTubeTab } from './YouTubeTab'
@@ -67,7 +67,7 @@ export function CreateLesson() {
       let capturedFile: File | null = null
 
       if (isYoutube) {
-        const res = await fetch('/api/lessons/generate', {
+        const res = await fetch(`${API_BASE}/api/lessons/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -113,7 +113,7 @@ export function CreateLesson() {
             formData.append('deepgram_api_key', keys.deepgramApiKey)
         }
 
-        const res = await fetch('/api/lessons/generate-upload', { method: 'POST', body: formData })
+        const res = await fetch(`${API_BASE}/api/lessons/generate-upload`, { method: 'POST', body: formData })
         if (!res.ok) {
           const detail = await res.json().catch(() => null)
           const msg = detail?.detail || `Server error: ${res.status}`

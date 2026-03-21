@@ -1,5 +1,6 @@
-import { IDBFactory } from 'fake-indexeddb'
+import type { VocabEntry } from '../src/types'
 
+import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   deleteFullLesson,
@@ -17,7 +18,6 @@ import {
   saveSegments,
   saveSettings,
 } from '../src/db'
-import type { VocabEntry } from '../src/types'
 
 // We'll use fake-indexeddb for testing
 import 'fake-indexeddb/auto'

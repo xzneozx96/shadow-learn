@@ -1,8 +1,7 @@
 import type { PronunciationAssessResult } from '@/types'
 import { useCallback, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+import { API_BASE } from '@/lib/config'
 
 interface UsePronunciationAssessmentReturn {
   submit: (blob: Blob, sentence: string) => Promise<void>

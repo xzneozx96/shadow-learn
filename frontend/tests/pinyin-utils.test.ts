@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizePinyin, comparePinyin } from '@/lib/pinyin-utils'
+import { comparePinyin, normalizePinyin } from '@/lib/pinyin-utils'
 
 describe('normalizePinyin', () => {
   it('strips tone marks to base pinyin', () => {

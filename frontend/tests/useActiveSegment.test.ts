@@ -10,14 +10,18 @@ vi.mock('../src/contexts/PlayerContext', () => ({
   usePlayer: () => ({
     subscribeTime: (cb: (t: number) => void) => {
       timeSubscribers.add(cb)
-      return () => { timeSubscribers.delete(cb) }
+      return () => {
+        timeSubscribers.delete(cb)
+      }
     },
     getTime: () => 0,
   }),
 }))
 
 function tick(time: number) {
-  act(() => { timeSubscribers.forEach(cb => cb(time)) })
+  act(() => {
+    timeSubscribers.forEach(cb => cb(time))
+  })
 }
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────

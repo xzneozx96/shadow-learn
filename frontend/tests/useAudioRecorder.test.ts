@@ -19,8 +19,14 @@ function makeRecorderMock() {
   // Proxy so setting recorder.onstop updates our internal ref
   return new Proxy(recorder, {
     set(target: any, key, value) {
-      if (key === 'onstop') { onstop = value; return true }
-      if (key === 'ondataavailable') { ondataavailable = value; return true }
+      if (key === 'onstop') {
+        onstop = value
+        return true
+      }
+      if (key === 'ondataavailable') {
+        ondataavailable = value
+        return true
+      }
       target[key] = value
       return true
     },
@@ -57,10 +63,12 @@ describe('useAudioRecorder', () => {
     vi.stubGlobal('navigator', {
       mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     })
-    vi.stubGlobal('MediaRecorder', vi.fn(function () { return recorder }))
+    vi.stubGlobal('MediaRecorder', vi.fn(() => recorder))
 
     const { result } = renderHook(() => useAudioRecorder())
-    await act(async () => { await result.current.startRecording() })
+    await act(async () => {
+      await result.current.startRecording()
+    })
 
     expect(result.current.recordingState).toBe('recording')
     expect(result.current.attempt).toBe(1)
@@ -73,16 +81,22 @@ describe('useAudioRecorder', () => {
     vi.stubGlobal('navigator', {
       mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     })
-    vi.stubGlobal('MediaRecorder', vi.fn(function () { return recorder }))
+    vi.stubGlobal('MediaRecorder', vi.fn(() => recorder))
 
     const { result } = renderHook(() => useAudioRecorder())
-    await act(async () => { await result.current.startRecording() })
+    await act(async () => {
+      await result.current.startRecording()
+    })
 
     // Simulate a data chunk arriving
-    act(() => { (recorder as any).ondataavailable?.({ data: new Blob(['audio']) }) })
+    act(() => {
+      (recorder as any).ondataavailable?.({ data: new Blob(['audio']) })
+    })
 
     // stopRecording triggers recorder.stop() which synchronously calls onstop in our mock
-    act(() => { result.current.stopRecording() })
+    act(() => {
+      result.current.stopRecording()
+    })
 
     expect(result.current.recordingState).toBe('stopped')
     expect(result.current.blob).not.toBeNull()
@@ -94,7 +108,7 @@ describe('useAudioRecorder', () => {
     vi.stubGlobal('navigator', {
       mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     })
-    vi.stubGlobal('MediaRecorder', vi.fn(function () { return recorder }))
+    vi.stubGlobal('MediaRecorder', vi.fn(() => recorder))
 
     // Use real Date.now but control timing by patching it
     let now = 0
@@ -106,10 +120,14 @@ describe('useAudioRecorder', () => {
       await result.current.startRecording()
     })
 
-    act(() => { (recorder as any).ondataavailable?.({ data: new Blob(['audio']) }) })
+    act(() => {
+      (recorder as any).ondataavailable?.({ data: new Blob(['audio']) })
+    })
 
     // Stop immediately — duration = 0ms < 500ms
-    act(() => { result.current.stopRecording() })
+    act(() => {
+      result.current.stopRecording()
+    })
 
     expect(result.current.recordingState).toBe('idle')
     expect(result.current.blob).toBeNull()
@@ -122,22 +140,36 @@ describe('useAudioRecorder', () => {
     const recorder = {
       start: vi.fn(),
       stop: vi.fn(),
-      set onstop(fn: any) { capturedOnstop = fn },
+      get onstop() {
+        return capturedOnstop
+      },
+      set onstop(fn: any) {
+        capturedOnstop = fn
+      },
+      get ondataavailable() {
+        return undefined
+      },
       set ondataavailable(_fn: any) {},
     }
     vi.stubGlobal('navigator', {
       mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     })
-    vi.stubGlobal('MediaRecorder', vi.fn(function () { return recorder }))
+    vi.stubGlobal('MediaRecorder', vi.fn(() => recorder))
 
     const { result } = renderHook(() => useAudioRecorder())
-    await act(async () => { await result.current.startRecording() })
+    await act(async () => {
+      await result.current.startRecording()
+    })
 
-    act(() => { result.current.cancel() })
+    act(() => {
+      result.current.cancel()
+    })
     expect(result.current.recordingState).toBe('idle')
 
     // Now fire onstop — should be ignored
-    act(() => { capturedOnstop?.() })
+    act(() => {
+      capturedOnstop?.()
+    })
     expect(result.current.blob).toBeNull()
     expect(result.current.recordingState).toBe('idle')
   })
@@ -148,15 +180,23 @@ describe('useAudioRecorder', () => {
     vi.stubGlobal('navigator', {
       mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     })
-    vi.stubGlobal('MediaRecorder', vi.fn(function () { return recorder }))
+    vi.stubGlobal('MediaRecorder', vi.fn(() => recorder))
 
     const { result } = renderHook(() => useAudioRecorder())
-    await act(async () => { await result.current.startRecording() })
-    act(() => { (recorder as any).ondataavailable?.({ data: new Blob(['audio']) }) })
-    act(() => { result.current.stopRecording() })
+    await act(async () => {
+      await result.current.startRecording()
+    })
+    act(() => {
+      (recorder as any).ondataavailable?.({ data: new Blob(['audio']) })
+    })
+    act(() => {
+      result.current.stopRecording()
+    })
     expect(result.current.blob).not.toBeNull()
 
-    act(() => { result.current.reset() })
+    act(() => {
+      result.current.reset()
+    })
     expect(result.current.blob).toBeNull()
     expect(result.current.recordingState).toBe('idle')
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')

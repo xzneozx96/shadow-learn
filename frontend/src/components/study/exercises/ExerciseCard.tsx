@@ -14,7 +14,7 @@ interface ExerciseCardProps {
 
 export function ExerciseCard({ type, progress, footer, children, className, info }: ExerciseCardProps) {
   return (
-    <div className={cn('rounded-xl border border-border bg-card overflow-hidden', className)}>
+    <div className={cn('max-w-[90%] rounded-xl border border-border bg-card overflow-hidden', className)}>
       {/* Header */}
       <div className="flex items-center gap-2.5 px-[18px] py-3 border-b border-border">
         <div className="size-[7px] rounded-full bg-muted-foreground/50 shrink-0" />

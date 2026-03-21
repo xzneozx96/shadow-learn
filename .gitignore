@@ -42,3 +42,9 @@ out/
 dist/
 .superpowers/
 .worktrees/
+
+# Claude Code local config (contains personal hook paths)
+.claude/settings.json
+
+# Temp / resolved conflict files
+*.resolved

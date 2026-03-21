@@ -1393,7 +1393,7 @@ describe('CreateLesson STT key selection', () => {
   })
 
   it('sends deepgram_api_key when stt_provider is deepgram', async () => {
-    global.fetch = vi.fn()
+    globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ stt_provider: 'deepgram', tts_provider: 'azure' }),
@@ -1410,7 +1410,7 @@ describe('CreateLesson STT key selection', () => {
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
     await waitFor(() => {
-      const [, lessonCall] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls
+      const [, lessonCall] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
       const body = JSON.parse(lessonCall[1].body)
       expect(body.deepgram_api_key).toBe('dg-key')
       expect(body.azure_speech_key).toBeUndefined()
@@ -1419,7 +1419,7 @@ describe('CreateLesson STT key selection', () => {
   })
 
   it('sends azure_speech_key and region when stt_provider is azure', async () => {
-    global.fetch = vi.fn()
+    globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ stt_provider: 'azure', tts_provider: 'azure' }),
@@ -1435,7 +1435,7 @@ describe('CreateLesson STT key selection', () => {
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
     await waitFor(() => {
-      const [, lessonCall] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls
+      const [, lessonCall] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
       const body = JSON.parse(lessonCall[1].body)
       expect(body.azure_speech_key).toBe('az-key')
       expect(body.azure_speech_region).toBe('eastus')

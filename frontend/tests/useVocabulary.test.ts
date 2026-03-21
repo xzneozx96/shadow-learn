@@ -1,14 +1,9 @@
-import { renderHook, act } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { useVocabulary } from '@/hooks/useVocabulary'
-import { VocabularyProvider } from '@/contexts/VocabularyContext'
-import type { Word, Segment, LessonMeta } from '@/types'
+import type { LessonMeta, Segment, Word } from '@/types'
+import { act, renderHook } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useVocabulary, VocabularyProvider } from '@/contexts/VocabularyContext'
 
 // Mock AuthContext
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ db: mockDb, keys: null }),
-}))
-
 const mockDb = {
   getAll: vi.fn().mockResolvedValue([]),
   put: vi.fn().mockResolvedValue(undefined),
@@ -16,20 +11,34 @@ const mockDb = {
   getAllFromIndex: vi.fn().mockResolvedValue([]),
 }
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ db: mockDb, keys: null }),
+}))
+
 const word: Word = { word: '今天', romanization: 'jīntiān', meaning: 'today', usage: '今天很好。' }
 const segment: Segment = {
-  id: 'seg_001', start: 0, end: 5,
-  text: '今天天气非常好！', romanization: '...', translations: { en: 'Nice today!' },
+  id: 'seg_001',
+  start: 0,
+  end: 5,
+  text: '今天天气非常好！',
+  romanization: '...',
+  translations: { en: 'Nice today!' },
   words: [word],
 }
 const lesson: LessonMeta = {
-  id: 'lesson_abc', title: 'Test', source: 'youtube', sourceUrl: null,
-  translationLanguages: ['en'], createdAt: '', lastOpenedAt: '',
-  progressSegmentId: null, tags: [],
+  id: 'lesson_abc',
+  title: 'Test',
+  source: 'youtube',
+  sourceUrl: null,
+  translationLanguages: ['en'],
+  createdAt: '',
+  lastOpenedAt: '',
+  progressSegmentId: null,
+  tags: [],
 }
 
 describe('useVocabulary', () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => vi.clearAllMocks())
 
   it('isSaved returns false when entry not in list', () => {
     mockDb.getAll.mockResolvedValue([])
@@ -62,7 +71,7 @@ describe('useVocabulary', () => {
 
   it('remove calls db.delete with entry id', async () => {
     const { result } = renderHook(() => useVocabulary(), { wrapper: VocabularyProvider })
-    await act(async () => { await result.current.remove('entry-id') })
+    await act(async () => await result.current.remove('entry-id'))
     expect(mockDb.delete).toHaveBeenCalledWith('vocabulary', 'entry-id')
   })
 })

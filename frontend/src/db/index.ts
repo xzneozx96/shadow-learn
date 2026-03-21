@@ -1,9 +1,10 @@
+import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
-import type { AppSettings, ChatMessage, LessonMeta, Segment, VocabEntry } from '../types'
+import type { AppSettings, LessonMeta, Segment, VocabEntry } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 5
+const DB_VERSION = 6
 
 export interface LearnerProfile {
   name: string
@@ -79,11 +80,21 @@ export interface SkillMastery {
 }
 export type MasteryData = Record<'writing' | 'speaking' | 'vocabulary' | 'reading' | 'listening', SkillMastery>
 
+export interface AgentMemory {
+  id: string
+  content: string
+  tags: string[]
+  importance: 1 | 2 | 3
+  createdAt: number
+  lastAccessedAt: number
+  lessonId?: string
+}
+
 interface ShadowLearnSchema extends DBSchema {
   'lessons': { key: string, value: LessonMeta }
   'segments': { key: string, value: Segment[] }
   'videos': { key: string, value: Blob }
-  'chats': { key: string, value: ChatMessage[] }
+  'chats': { key: string, value: UIMessage[] }
   'settings': { key: string, value: AppSettings }
   'crypto': { key: string, value: { encrypted: ArrayBuffer, salt: Uint8Array, iv: Uint8Array } }
   'tts-cache': { key: string, value: Blob }
@@ -102,6 +113,14 @@ interface ShadowLearnSchema extends DBSchema {
   }
   'session-logs': { key: string, value: SessionLog }
   'mistakes-db': { key: string, value: ErrorPattern }
+  'agent-memory': {
+    key: string
+    value: AgentMemory
+    indexes: {
+      tags: string
+      importance: number
+    }
+  }
 }
 
 export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
@@ -167,6 +186,11 @@ export async function initDB(): Promise<ShadowLearnDB> {
         db.createObjectStore('session-logs', { keyPath: 'sessionId' })
         db.createObjectStore('mistakes-db', { keyPath: 'patternId' })
       }
+      if (oldVersion < 6) {
+        const memStore = db.createObjectStore('agent-memory', { keyPath: 'id' })
+        memStore.createIndex('tags', 'tags', { multiEntry: true })
+        memStore.createIndex('importance', 'importance')
+      }
     },
   })
 }
@@ -215,11 +239,11 @@ export async function deleteVideo(db: ShadowLearnDB, lessonId: string): Promise<
 }
 
 // Chat history
-export async function saveChatMessages(db: ShadowLearnDB, lessonId: string, messages: ChatMessage[]): Promise<void> {
+export async function saveChatMessages(db: ShadowLearnDB, lessonId: string, messages: UIMessage[]): Promise<void> {
   await db.put('chats', messages, lessonId)
 }
 
-export async function getChatMessages(db: ShadowLearnDB, lessonId: string): Promise<ChatMessage[] | undefined> {
+export async function getChatMessages(db: ShadowLearnDB, lessonId: string): Promise<UIMessage[] | undefined> {
   return db.get('chats', lessonId)
 }
 
@@ -302,8 +326,7 @@ export async function saveSpacedRepetitionItem(db: ShadowLearnDB, item: SpacedRe
   await db.put('spaced-repetition', item)
 }
 export async function getDueItems(db: ShadowLearnDB, today: string): Promise<SpacedRepetitionItem[]> {
-  const all = await db.getAllFromIndex('spaced-repetition', 'by-due', IDBKeyRange.upperBound(today))
-  return all
+  return db.getAllFromIndex('spaced-repetition', 'by-due', IDBKeyRange.upperBound(today))
 }
 
 // Progress Stats
@@ -337,4 +360,34 @@ export async function getRecentMistakes(db: ShadowLearnDB, limit = 20): Promise<
 // Session Logs
 export async function saveSessionLog(db: ShadowLearnDB, log: SessionLog) {
   await db.put('session-logs', log)
+}
+
+// Learner Profile
+export async function getLearnerProfile(db: ShadowLearnDB): Promise<LearnerProfile | undefined> {
+  return db.get('learner-profile', 'profile')
+}
+
+export async function saveLearnerProfile(db: ShadowLearnDB, profile: LearnerProfile): Promise<void> {
+  await db.put('learner-profile', profile, 'profile')
+}
+
+// Agent Memory
+export async function saveAgentMemory(db: ShadowLearnDB, memory: AgentMemory): Promise<void> {
+  await db.put('agent-memory', memory)
+}
+
+export async function getAgentMemory(db: ShadowLearnDB, id: string): Promise<AgentMemory | undefined> {
+  return db.get('agent-memory', id)
+}
+
+export async function getAllAgentMemories(db: ShadowLearnDB): Promise<AgentMemory[]> {
+  return db.getAll('agent-memory')
+}
+
+export async function getAgentMemoriesByTag(db: ShadowLearnDB, tag: string): Promise<AgentMemory[]> {
+  return db.getAllFromIndex('agent-memory', 'tags', tag)
+}
+
+export async function deleteAgentMemory(db: ShadowLearnDB, id: string): Promise<void> {
+  await db.delete('agent-memory', id)
 }

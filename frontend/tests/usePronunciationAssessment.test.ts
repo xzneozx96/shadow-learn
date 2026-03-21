@@ -26,10 +26,14 @@ describe('usePronunciationAssessment', () => {
 
   it('sets submitting=true while in flight and false after', async () => {
     let resolve!: (v: any) => void
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise(res => { resolve = res })))
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise((res) => {
+      resolve = res
+    })))
 
     const { result } = renderHook(() => usePronunciationAssessment())
-    act(() => { void result.current.submit(mockBlob, '你好') })
+    act(() => {
+      void result.current.submit(mockBlob, '你好')
+    })
     expect(result.current.submitting).toBe(true)
 
     await act(async () => {
@@ -45,7 +49,9 @@ describe('usePronunciationAssessment', () => {
     }))
 
     const { result } = renderHook(() => usePronunciationAssessment())
-    await act(async () => { await result.current.submit(mockBlob, '你好') })
+    await act(async () => {
+      await result.current.submit(mockBlob, '你好')
+    })
 
     expect(result.current.result).toEqual(mockResult)
     expect(result.current.error).toBeNull()
@@ -56,7 +62,9 @@ describe('usePronunciationAssessment', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     const { result } = renderHook(() => usePronunciationAssessment())
-    await act(async () => { await result.current.submit(mockBlob, '你好吗') })
+    await act(async () => {
+      await result.current.submit(mockBlob, '你好吗')
+    })
 
     const formData: FormData = mockFetch.mock.calls[0][1].body
     expect(formData.get('reference_text')).toBe('你好吗')
@@ -73,7 +81,9 @@ describe('usePronunciationAssessment', () => {
     }))
 
     const { result } = renderHook(() => usePronunciationAssessment())
-    await act(async () => { await result.current.submit(mockBlob, '你好') })
+    await act(async () => {
+      await result.current.submit(mockBlob, '你好')
+    })
 
     expect(result.current.error).toBe('Azure quota exceeded')
     expect(result.current.result).toBeNull()
@@ -83,10 +93,14 @@ describe('usePronunciationAssessment', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(mockResult) }))
 
     const { result } = renderHook(() => usePronunciationAssessment())
-    await act(async () => { await result.current.submit(mockBlob, '你好') })
+    await act(async () => {
+      await result.current.submit(mockBlob, '你好')
+    })
     expect(result.current.result).not.toBeNull()
 
-    act(() => { result.current.reset() })
+    act(() => {
+      result.current.reset()
+    })
     expect(result.current.result).toBeNull()
     expect(result.current.error).toBeNull()
   })

@@ -1,6 +1,6 @@
 import type { Segment } from '@/types'
 import { Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
 import { ShadowingPanel } from '@/components/shadowing/ShadowingPanel'
@@ -11,7 +11,6 @@ import { useLessons } from '@/contexts/LessonsContext'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
-import { useChat } from '@/hooks/useChat'
 import { useLesson } from '@/hooks/useLesson'
 import { CompanionPanel } from './CompanionPanel'
 import { TranscriptPanel } from './TranscriptPanel'
@@ -44,25 +43,6 @@ export function LessonView() {
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db, id, meta?.id])
-
-  // Context segments: a window around the active segment
-  const contextSegments = useMemo(() => {
-    if (!activeSegment)
-      return segments.slice(0, 5)
-    const idx = segments.findIndex(s => s.id === activeSegment.id)
-    const start = Math.max(0, idx - 2)
-    const end = Math.min(segments.length, idx + 3)
-    return segments.slice(start, end)
-  }, [segments, activeSegment])
-
-  const { messages, isStreaming, sendMessage } = useChat(
-    db,
-    id,
-    meta?.title ?? '',
-    activeSegment,
-    contextSegments,
-    keys,
-  )
 
   const handleSegmentClick = useCallback((segment: { start: number }) => {
     if (!player)
@@ -188,11 +168,9 @@ export function LessonView() {
       {/* Companion Panel — flex-1 */}
       <div className="h-full flex-1 overflow-hidden">
         <CompanionPanel
-          messages={messages}
-          isStreaming={isStreaming}
-          onSend={sendMessage}
           activeSegment={activeSegment}
           lessonId={id ?? ''}
+          lessonTitle={meta.title}
         />
       </div>
 

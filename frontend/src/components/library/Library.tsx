@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLessons } from '@/contexts/LessonsContext'
-import { getAppConfig } from '@/lib/config'
+import { API_BASE, getAppConfig } from '@/lib/config'
 import { LessonCard } from './LessonCard'
 
 type SortMode = 'recent' | 'alpha' | 'progress'
@@ -67,7 +67,7 @@ export function Library() {
     if (!keys || !sttProvider || lesson.source !== 'youtube' || !lesson.sourceUrl)
       return
     try {
-      const res = await fetch('/api/lessons/generate', {
+      const res = await fetch(`${API_BASE}/api/lessons/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -22,6 +22,7 @@ interface SegmentTextProps {
   onSaveWord?: (word: Word, segment: Segment) => void
   isSaved?: (word: string) => boolean
   segment?: Segment
+  showRomanization?: boolean
 }
 
 export const SegmentText = memo(({
@@ -33,6 +34,7 @@ export const SegmentText = memo(({
   onSaveWord,
   isSaved,
   segment,
+  showRomanization = true,
 }: SegmentTextProps) => {
   const { subscribeTime, getTime } = usePlayer()
 
@@ -141,7 +143,7 @@ export const SegmentText = memo(({
                 <span
                   className="inline-flex flex-col items-center cursor-help rounded-sm px-1 transition-colors hover:bg-white/10"
                 >
-                  {span.word.romanization && (
+                  {showRomanization && span.word.romanization && (
                     <span
                       className="text-sm text-muted-foreground"
                       ref={(el) => { wordPinyinRef.current[spanIdx] = el }}
