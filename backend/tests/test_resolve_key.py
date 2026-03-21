@@ -26,3 +26,4 @@ def test_raises_400_when_both_empty():
     with pytest.raises(HTTPException) as exc_info:
         _resolve_key("", None, "OpenRouter")
     assert exc_info.value.status_code == 400
+    assert "OpenRouter" in exc_info.value.detail
