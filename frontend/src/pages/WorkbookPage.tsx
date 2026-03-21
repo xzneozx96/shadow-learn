@@ -12,12 +12,14 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LessonGroup } from '@/components/workbook/LessonGroup'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { getProgressStats, getRecentMistakes } from '@/db'
 import { useTracking } from '@/hooks/useTracking'
 import { useTTS } from '@/hooks/useTTS'
 
 export function WorkbookPage() {
+  const { t } = useI18n()
   const { entries, entriesByLesson, removeGroup } = useVocabulary()
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys)
@@ -108,17 +110,17 @@ export function WorkbookPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-7 gap-4">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground to-foreground/70">
-                Learning & Progress
+                {t('workbook.title')}
               </h1>
               <p className="text-sm font-medium text-muted-foreground mt-2">
-                Manage your vocabulary and track your learning progress.
+                {t('workbook.subtitle')}
               </p>
             </div>
 
             <div className="flex items-center gap-4 w-full sm:w-auto">
               <TabsList className="grid w-full sm:w-64 grid-cols-2">
-                <TabsTrigger value="workbook">Workbook</TabsTrigger>
-                <TabsTrigger value="progress">Progress</TabsTrigger>
+                <TabsTrigger value="workbook">{t('workbook.tab')}</TabsTrigger>
+                <TabsTrigger value="progress">{t('workbook.progressTab')}</TabsTrigger>
               </TabsList>
             </div>
           </div>
@@ -128,16 +130,16 @@ export function WorkbookPage() {
               <div className="text-sm text-muted-foreground font-medium">
                 {entries.length}
                 {' '}
-                words ·
-                {' '}
+                {t('workbook.wordCount')}
+                {' · '}
                 {sortedLessonIds.length}
                 {' '}
-                lessons
-                {lastSaved && ` · Last saved ${new Date(lastSaved).toLocaleDateString()}`}
+                {t('workbook.lessonCount')}
+                {lastSaved && ` · ${t('workbook.lastSaved')} ${new Date(lastSaved).toLocaleDateString()}`}
               </div>
               <Input
                 className="w-48 bg-background/50 backdrop-blur-sm"
-                placeholder="Search words…"
+                placeholder={t('workbook.searchPlaceholder')}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -151,16 +153,17 @@ export function WorkbookPage() {
             {/* Empty state */}
             {sortedLessonIds.length === 0 && (
               <div className="text-center py-20 text-muted-foreground text-sm">
-                No words saved yet. Open a lesson and tap the bookmark icon on any word.
+                {t('workbook.noWords')}
               </div>
             )}
 
             {/* No search results state */}
             {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
               <div className="text-center py-20 text-muted-foreground text-sm">
-                No words match "
+                {t('workbook.noSearchResults')}
+                {' "'}
                 {search}
-                ".
+                {'".'}
               </div>
             )}
 
@@ -187,7 +190,7 @@ export function WorkbookPage() {
               ? (
                   <div className="h-64 flex flex-col items-center justify-center text-muted-foreground animate-pulse space-y-4">
                     <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                    <span className="text-sm font-medium tracking-widest uppercase">Loading Metrics...</span>
+                    <span className="text-sm font-medium tracking-widest uppercase">{t('workbook.loadingMetrics')}</span>
                   </div>
                 )
               : (
@@ -210,7 +213,7 @@ export function WorkbookPage() {
                     {/* Skill Mastery Grid - taking up full width */}
                     <div className="md:col-span-12 mt-2">
                       <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1">
-                        Skill Breakdown
+                        {t('workbook.skillBreakdown')}
                       </h3>
                       <SkillMasteryGrid stats={stats} />
                     </div>

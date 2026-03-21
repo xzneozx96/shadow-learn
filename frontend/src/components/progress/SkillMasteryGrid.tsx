@@ -1,5 +1,6 @@
 import type { ProgressStats } from '@/db'
 import { BookOpen, Ear, Edit3, MessageSquare, Type } from 'lucide-react'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -15,6 +16,7 @@ const ICONS: Record<string, any> = {
 }
 
 export function SkillMasteryGrid({ stats }: Props) {
+  const { t } = useI18n()
   const skills = stats?.skillProgress ?? {
     writing: { sessions: 0, accuracy: 0, lastPracticed: null },
     speaking: { sessions: 0, accuracy: 0, lastPracticed: null },
@@ -101,7 +103,7 @@ export function SkillMasteryGrid({ stats }: Props) {
                 {skill}
               </h4>
               <p className="text-sm font-medium text-muted-foreground/40 mt-1">
-                {data.sessions === 1 ? '1 exercise' : `${data.sessions} exercises`}
+                {data.sessions === 1 ? `1 ${t('progress.exercise')}` : `${data.sessions} ${t('progress.exercisesPlural')}`}
               </p>
             </div>
           </div>

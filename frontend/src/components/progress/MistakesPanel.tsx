@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useI18n } from '@/contexts/I18nContext'
 
 const ERR_PREFIX_RE = /^err-/
 
@@ -14,6 +15,7 @@ interface Props {
 }
 
 function MistakeItem({ mistake, entry }: { mistake: ErrorPattern, entry?: VocabEntry }) {
+  const { t } = useI18n()
   const word = entry?.word ?? mistake.patternId.replace(ERR_PREFIX_RE, '')
   const lastExample = mistake.examples.at(-1)
 
@@ -39,7 +41,7 @@ function MistakeItem({ mistake, entry }: { mistake: ErrorPattern, entry?: VocabE
           {mistake.frequency}
         </div>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold mt-1">
-          fails
+          {t('progress.fails')}
         </span>
       </div>
     </div>
@@ -47,6 +49,7 @@ function MistakeItem({ mistake, entry }: { mistake: ErrorPattern, entry?: VocabE
 }
 
 export function MistakesPanel({ mistakes = [], entries }: Props) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
 
   const entryMap = useMemo(
@@ -66,13 +69,13 @@ export function MistakesPanel({ mistakes = [], entries }: Props) {
       <div className="flex flex-col h-full rounded-2xl border border-border/40 bg-card backdrop-blur-xl p-6 shadow-sm relative overflow-hidden">
         <h3 className="text-sm font-bold uppercase tracking-widest text-destructive/90 mb-5 flex items-center gap-2">
           <AlertCircle className="size-4" />
-          Frequent Troubles
+          {t('progress.frequentTroubles')}
         </h3>
 
         {displayItems.length === 0
           ? (
               <div className="h-40 flex items-center justify-center text-sm text-muted-foreground/60">
-                No frequent mistakes recorded yet.
+                {t('progress.noMistakes')}
               </div>
             )
           : (
@@ -88,11 +91,11 @@ export function MistakesPanel({ mistakes = [], entries }: Props) {
                     className="mt-2 text-destructive/80 hover:text-destructive hover:bg-destructive/5 self-center text-xs font-bold gap-1"
                     onClick={() => setOpen(true)}
                   >
-                    View all
+                    {t('progress.viewAllMistakes')}
                     {' '}
                     {sortedAll.length}
                     {' '}
-                    mistakes
+                    {t('progress.mistakes')}
                     <ArrowUpRight className="size-3" />
                   </Button>
                 )}
@@ -105,7 +108,7 @@ export function MistakesPanel({ mistakes = [], entries }: Props) {
           <DialogHeader className="mb-4">
             <DialogTitle className="text-destructive/90 flex items-center gap-2">
               <AlertCircle className="size-5" />
-              All Frequent Troubles
+              {t('progress.allFrequentTroubles')}
             </DialogTitle>
           </DialogHeader>
 

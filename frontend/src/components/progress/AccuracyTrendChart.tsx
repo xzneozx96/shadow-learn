@@ -1,11 +1,13 @@
 import type { DailyAccuracy } from '@/db'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { useI18n } from '@/contexts/I18nContext'
 
 interface Props {
   trend?: DailyAccuracy[]
 }
 
 export function AccuracyTrendChart({ trend = [] }: Props) {
+  const { t } = useI18n()
   const displayTrend = trend.slice(-30)
 
   const data = displayTrend.map(d => ({
@@ -17,13 +19,13 @@ export function AccuracyTrendChart({ trend = [] }: Props) {
   return (
     <div className="flex flex-col h-full rounded-2xl border border-border/40 bg-card backdrop-blur-xl p-6 shadow-sm">
       <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80 mb-4">
-        Accuracy Trend (Last 30 Days)
+        {t('progress.accuracyTrend')}
       </h3>
 
       {data.length === 0
         ? (
             <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground/60">
-              No practice history logged yet.
+              {t('progress.noPracticeHistory')}
             </div>
           )
         : (
@@ -67,7 +69,7 @@ export function AccuracyTrendChart({ trend = [] }: Props) {
                     labelStyle={{ color: 'hsl(var(--foreground))', marginBottom: 2 }}
                     formatter={(value, _name, props) => [
                       `${value}% · ${props.payload.exercises} exercises`,
-                      'Accuracy',
+                      t('progress.accuracyTooltip'),
                     ]}
                     cursor={{ stroke: 'rgba(34,197,94,0.3)', strokeWidth: 1 }}
                   />

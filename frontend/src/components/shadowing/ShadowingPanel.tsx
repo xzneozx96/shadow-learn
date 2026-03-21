@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useI18n } from '@/contexts/I18nContext'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { computeSessionSummary, isAutoSkipSegment } from '@/lib/shadowing-utils'
 import { ShadowingDictationPhase } from './ShadowingDictationPhase'
@@ -30,6 +31,7 @@ interface ShadowingPanelProps {
 }
 
 export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, lesson }: ShadowingPanelProps) {
+  const { t } = useI18n()
   const resolvedCaps = getLanguageCaps(lesson.sourceLanguage)
   const [segmentIndex, setSegmentIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>('listen')
@@ -217,11 +219,11 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
       >
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle>Exit shadowing mode?</DialogTitle>
-            <DialogDescription>Your progress will be lost.</DialogDescription>
+            <DialogTitle>{t('shadowing.exitTitle')}</DialogTitle>
+            <DialogDescription>{t('shadowing.exitDescription')}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setShowExitConfirm(false)}>Keep going</Button>
+            <Button variant="outline" onClick={() => setShowExitConfirm(false)}>{t('shadowing.keepGoing')}</Button>
             <Button
               variant="destructive"
               onClick={() => {
@@ -229,7 +231,7 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
                 onExit()
               }}
             >
-              Exit
+              {t('shadowing.exit')}
             </Button>
           </DialogFooter>
         </DialogContent>

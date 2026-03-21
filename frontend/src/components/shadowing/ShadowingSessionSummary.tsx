@@ -1,6 +1,7 @@
 import type { SessionSummary } from '@/lib/shadowing-utils'
 import type { Segment } from '@/types'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/contexts/I18nContext'
 
 interface ShadowingSessionSummaryProps {
   summary: SessionSummary
@@ -9,6 +10,7 @@ interface ShadowingSessionSummaryProps {
 }
 
 export function ShadowingSessionSummary({ summary, segments, onDone }: ShadowingSessionSummaryProps) {
+  const { t } = useI18n()
   const { total, attempted, skipped, averageScore, weakestSegments } = summary
 
   return (
@@ -20,7 +22,7 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
       <div className="w-full max-w-xs space-y-4">
         <div className="text-center">
           <div className="text-sm uppercase tracking-widest text-muted-foreground mb-1">
-            Session Complete
+            {t('shadowing.sessionComplete')}
           </div>
           <div className="text-2xl font-semibold">
             {attempted}
@@ -29,26 +31,26 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
             {' '}
             {total}
           </div>
-          <div className="text-sm text-muted-foreground">segments attempted</div>
+          <div className="text-sm text-muted-foreground">{t('shadowing.segmentsAttempted')}</div>
         </div>
 
         <div className="flex gap-2">
           <div className="flex-1 rounded-lg border border-border glass-surface p-3 text-center">
             <div className="text-lg font-semibold">{skipped}</div>
-            <div className="text-sm text-muted-foreground">skipped</div>
+            <div className="text-sm text-muted-foreground">{t('shadowing.skipped')}</div>
           </div>
           <div className="flex-1 rounded-lg border border-border glass-surface p-3 text-center">
             <div className="text-lg font-semibold">
               {averageScore !== null ? averageScore : '—'}
             </div>
-            <div className="text-sm text-muted-foreground">avg score</div>
+            <div className="text-sm text-muted-foreground">{t('shadowing.avgScore')}</div>
           </div>
         </div>
 
         {weakestSegments.length > 0 && (
           <div>
             <div className="text-sm uppercase tracking-widest text-muted-foreground mb-2">
-              Needs Practice
+              {t('shadowing.needsPractice')}
             </div>
             <div className="space-y-1.5">
               {weakestSegments.map(({ segmentIndex, score }) => {
@@ -69,7 +71,7 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
           </div>
         )}
 
-        <Button className="w-full" onClick={onDone}>Done</Button>
+        <Button className="w-full" onClick={onDone}>{t('shadowing.done')}</Button>
       </div>
     </div>
   )
