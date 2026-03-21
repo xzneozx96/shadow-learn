@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { LanguageInput } from '@/components/ui/LanguageInput'
+import { useI18n } from '@/contexts/I18nContext'
 import { charDiff, getActiveChips, scoreReconstruction, shuffleArray } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function ReconstructionExercise({ entry, words, caps, progress = '', onNext }: Props) {
+  const { t } = useI18n()
   const chips = useMemo(() => shuffleArray(words), [words])
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
@@ -28,9 +30,9 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
 
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
+      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {!checked
-        ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
+        ? <Button size="sm" onClick={() => setChecked(true)}>{t('study.checkButton')}</Button>
         : (
             <Button
               size="sm"
@@ -42,7 +44,7 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
                 onNext(score ?? 0, { mistakes: mistakes.length > 0 ? mistakes : undefined })
               }}
             >
-              Next →
+              {t('study.nextButton')}
             </Button>
           )}
     </div>
@@ -50,7 +52,7 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
 
   return (
     <ExerciseCard
-      type="Sentence Reconstruction"
+      type={t('study.mode.reconstruction')}
       progress={progress}
       footer={footer}
       info="Rearrange the scrambled word chips into the correct sentence. Tests grammar and word order."
@@ -64,12 +66,12 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
         {' '}
         {entry.sourceLessonTitle}
         {' '}
-        — where you saved
+        {t('study.whereYouSaved')}
         {' '}
         {entry.word}
       </Link>
 
-      <p className="text-sm text-muted-foreground mb-3">Type the words in correct order.</p>
+      <p className="text-sm text-muted-foreground mb-3">{t('study.typeInOrder')}</p>
 
       {/* Word chips */}
       <div className="flex flex-wrap gap-2 mb-4">
@@ -91,7 +93,7 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
       <LanguageInput
         langInputMode={caps.inputMode}
         className="text-lg tracking-wide"
-        placeholder="Type the sentence…"
+        placeholder={t('study.typeTheSentence')}
         value={value}
         onChange={e => setValue(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && !checked && setChecked(true)}

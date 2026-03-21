@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { LanguageInput } from '@/components/ui/LanguageInput'
+import { useI18n } from '@/contexts/I18nContext'
 import { computeAccuracyScore, computeCharDiff } from '@/lib/diff-utils'
 import { cn } from '@/lib/utils'
 
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function DictationExercise({ entry, progress = '', onNext, playTTS, loadingText, caps }: Props) {
+  const { t } = useI18n()
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
   const expected = entry.sourceSegmentText
@@ -27,9 +29,9 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
 
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
+      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {!checked
-        ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
+        ? <Button size="sm" onClick={() => setChecked(true)}>{t('study.checkButton')}</Button>
         : (
             <Button
               size="sm"
@@ -41,7 +43,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
                 onNext(accuracyScore, { mistakes: mistakes.length > 0 ? mistakes : undefined })
               }}
             >
-              Next →
+              {t('study.nextButton')}
             </Button>
           )}
     </div>
@@ -49,13 +51,13 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
 
   return (
     <ExerciseCard
-      type="Dictation"
+      type={t('study.mode.dictation')}
       progress={progress}
       footer={footer}
       info="Listen to the audio clip and type the Chinese sentence you hear. Tests listening comprehension and character recall."
     >
       <p className="text-sm text-muted-foreground mb-4">
-        Listen carefully and type what you hear in Chinese.
+        {t('study.listenAndType')}
       </p>
 
       {(() => {
@@ -87,7 +89,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
       {checked && (
         <div className="mt-4 space-y-3">
           <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-3">Your answer</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-3">{t('study.yourAnswer')}</p>
             <div className="flex flex-wrap gap-1">
               {diff.map((tok, i) => (
                 <span
@@ -106,11 +108,11 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
           </div>
           <p className={cn('text-sm font-bold', accuracyScore === 100 ? 'text-emerald-400' : 'text-amber-400')}>
             {accuracyScore}
-            % accurate
+            {t('study.accurate')}
           </p>
           {accuracyScore < 100 && (
             <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-1">Correct answer</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-1">{t('study.correctAnswer')}</p>
               <p className="text-xl font-medium">{expected}</p>
             </div>
           )}

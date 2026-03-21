@@ -4,6 +4,7 @@ import type { VocabEntry } from '@/types'
 import { useRef, useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/contexts/I18nContext'
 import { animateCharacter } from '../../../lib/hanzi-writer-utils'
 import { HanziWriterCanvas } from './HanziWriterCanvas'
 
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function CharacterWritingExercise({ entry, progress = '', onNext }: Props) {
+  const { t } = useI18n()
   const characters = [...entry.word]
   const [charIndex, setCharIndex] = useState(0)
   const [hintAnimating, setHintAnimating] = useState(false)
@@ -52,20 +54,20 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
 
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
+      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {hintAnimating
         ? (
-            <Button size="sm" onClick={advance}>Continue →</Button>
+            <Button size="sm" onClick={advance}>{t('study.writing.continueButton')}</Button>
           )
         : (
-            <Button variant="outline" size="sm" onClick={handleHint}>Hint</Button>
+            <Button variant="outline" size="sm" onClick={handleHint}>{t('study.writing.hint')}</Button>
           )}
     </div>
   )
 
   return (
     <ExerciseCard
-      type="Character Writing"
+      type={t('study.mode.writing')}
       progress={progress}
       footer={footer}
       info="Trace each stroke of the character in the correct order. Builds handwriting muscle memory."

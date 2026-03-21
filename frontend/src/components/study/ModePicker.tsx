@@ -1,6 +1,7 @@
 import type { LanguageCapabilities } from '@/lib/language-caps'
 import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
 export type ExerciseMode = 'cloze' | 'dictation' | 'romanization-recall' | 'pronunciation' | 'reconstruction' | 'writing' | 'translation' | 'mixed'
@@ -17,30 +18,31 @@ interface ModePickerProps {
 }
 
 export function ModePicker({ selected, onSelect, count, onCountChange, onStart, lessonTitle, loading, caps }: ModePickerProps) {
+  const { t } = useI18n()
   const MODES: { id: ExerciseMode, icon: string, name: string, desc: string }[] = [
-    { id: 'mixed', icon: '✍️🎧🎤', name: 'Mixed', desc: 'All types shuffled together' },
-    { id: 'cloze', icon: '✍️', name: 'Cloze', desc: 'Fill blanks in a story' },
-    { id: 'dictation', icon: '🎧', name: 'Dictation', desc: 'Hear it, type it' },
+    { id: 'mixed', icon: '✍️🎧🎤', name: t('study.mode.mixed'), desc: t('study.mode.mixed.desc') },
+    { id: 'cloze', icon: '✍️', name: t('study.mode.cloze'), desc: t('study.mode.cloze.desc') },
+    { id: 'dictation', icon: '🎧', name: t('study.mode.dictation'), desc: t('study.mode.dictation.desc') },
     ...(caps.romanizationSystem !== 'none'
       ? [{
           id: 'romanization-recall' as ExerciseMode,
           icon: '🔤',
           name: `${caps.romanizationLabel} Recall`,
-          desc: `See the word, type its ${caps.romanizationLabel}`,
+          desc: t('study.mode.romanization.desc').replace('romanization', caps.romanizationLabel),
         }]
       : []),
-    { id: 'pronunciation', icon: '🎤', name: 'Speak', desc: 'Pronounce & score' },
-    { id: 'reconstruction', icon: '🔀', name: 'Rebuild', desc: 'Unscramble sentence' },
-    ...(caps.hasCharacterWriting ? [{ id: 'writing' as ExerciseMode, icon: '✏️', name: 'Write', desc: 'Draw the characters' }] : []),
-    { id: 'translation', icon: '🌐', name: 'Translate', desc: 'Translate & get AI feedback' },
+    { id: 'pronunciation', icon: '🎤', name: t('study.mode.pronunciation'), desc: t('study.mode.pronunciation.desc') },
+    { id: 'reconstruction', icon: '🔀', name: t('study.mode.reconstruction'), desc: t('study.mode.reconstruction.desc') },
+    ...(caps.hasCharacterWriting ? [{ id: 'writing' as ExerciseMode, icon: '✏️', name: t('study.mode.writing'), desc: t('study.mode.writing.desc') }] : []),
+    { id: 'translation', icon: '🌐', name: t('study.mode.translation'), desc: t('study.mode.translation.desc') },
   ]
 
   return (
     <div>
-      <h2 className="text-xl font-bold tracking-tight">Start a Study Session</h2>
+      <h2 className="text-xl font-bold tracking-tight">{t('study.startSession')}</h2>
       <p className="text-sm text-muted-foreground mt-1 mb-8">{lessonTitle}</p>
 
-      <p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">Exercise type</p>
+      <p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">{t('study.exerciseType')}</p>
 
       {/* 3-column grid for individual modes */}
       <div className="grid grid-cols-3 gap-2 mb-8">
@@ -64,7 +66,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, onStart, 
 
       {/* Question count */}
       <div className="flex items-center justify-between px-4 py-3 rounded-md bg-secondary border border-border">
-        <span className="text-sm text-muted-foreground">Questions</span>
+        <span className="text-sm text-muted-foreground">{t('study.questions')}</span>
         <div className="flex items-center gap-3">
           <button
             className="size-7 rounded-lg border border-border bg-card text-sm hover:bg-accent transition-colors"
@@ -84,7 +86,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, onStart, 
 
       <Button className="w-full mt-8" onClick={onStart} disabled={loading}>
         <Sparkles className="size-4" />
-        {loading ? 'Generating…' : 'Start session →'}
+        {loading ? t('study.generating') : t('study.startSessionButton')}
       </Button>
     </div>
   )

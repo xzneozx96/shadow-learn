@@ -4,6 +4,10 @@ import { describe, expect, it, vi } from 'vitest'
 // Import after mocks
 import { StudySession } from '@/components/study/StudySession'
 
+vi.mock('@/contexts/I18nContext', () => ({
+  useI18n: () => ({ t: (key: string) => key, locale: 'en', setLocale: async () => {} }),
+}))
+
 // Mock all deps that StudySession pulls in
 vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: () => ({

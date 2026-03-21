@@ -2,6 +2,7 @@ import { Loader2, Pause, Play, Volume2 } from 'lucide-react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { usePronunciationAssessment } from '@/hooks/usePronunciationAssessment'
 import { useTTS } from '@/hooks/useTTS'
@@ -31,20 +32,25 @@ function barColor(n: number) {
   return 'bg-destructive'
 }
 
-function verdict(n: number) {
-  if (n >= 90)
-    return 'Excellent'
-  if (n >= 75)
-    return 'Good'
-  if (n >= 60)
-    return 'Fair'
-  if (n >= 40)
-    return 'Keep Practicing'
-  return 'Needs Work'
+function useVerdict() {
+  const { t } = useI18n()
+  return (n: number) => {
+    if (n >= 90)
+      return t('study.pronunciation.excellent')
+    if (n >= 75)
+      return t('study.pronunciation.good')
+    if (n >= 60)
+      return t('study.pronunciation.fair')
+    if (n >= 40)
+      return t('study.pronunciation.keepPracticing')
+    return t('study.pronunciation.needsWork')
+  }
 }
 
 export function PronunciationReferee({ sentence, progress = '', onNext }: Props) {
   const { db, keys } = useAuth()
+  const { t } = useI18n()
+  const verdict = useVerdict()
   const { playTTS, loadingText } = useTTS(db, keys)
   const isTTSLoading = loadingText === sentence.sentence
   const {
@@ -66,7 +72,7 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
     ? null
     : (
         <div className="flex items-center justify-center gap-3 p-3">
-          <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
+          <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
           <Button
             size="sm"
             disabled={!canSubmit}
@@ -77,17 +83,17 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
                   <>
                     <div className="size-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
                     {' '}
-                    Scoring…
+                    {t('study.pronunciation.scoring')}
                   </>
                 )
-              : 'Submit →'}
+              : t('study.pronunciation.submitButton')}
           </Button>
         </div>
       )
 
   return (
     <ExerciseCard
-      type="Pronunciation Referee"
+      type={t('study.mode.pronunciation')}
       progress={progress}
       footer={footer}
       info="Read the sentence aloud and get AI-scored feedback on accuracy, fluency, and prosody."
@@ -124,7 +130,7 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
               )}
               onClick={recordingState === 'recording' ? stopRecording : () => void startRecording()}
             >
-              {recordingState === 'recording' ? '⏹ Stop' : '⏺ Record'}
+              {recordingState === 'recording' ? t('study.stopRecord') : t('study.startRecord')}
             </Button>
             <Button
               variant="outline"
@@ -132,16 +138,16 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
               onClick={togglePlayback}
             >
               {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
-              {isPlaying ? 'Pause' : 'Playback'}
+              {isPlaying ? t('study.pause') : t('study.pronunciation.playbackLabel')}
             </Button>
           </div>
           {attempt > 0 && (
             <p className="text-sm text-muted-foreground/50 text-center mb-2">
-              Attempt
+              {t('study.pronunciation.attempt')}
               {' '}
               {attempt}
               {' '}
-              · Re-record anytime before submitting
+              {t('study.pronunciation.rerecordNote')}
             </p>
           )}
         </>
@@ -225,13 +231,13 @@ export function PronunciationReferee({ sentence, progress = '', onNext }: Props)
                 audioReset()
               }}
             >
-              ↺ Try again
+              {t('study.pronunciation.tryAgain')}
             </Button>
             <Button
               className="flex-1"
               onClick={() => onNext(Math.round(result.overall.accuracy))}
             >
-              Next →
+              {t('study.pronunciation.nextButton')}
             </Button>
           </div>
         </div>

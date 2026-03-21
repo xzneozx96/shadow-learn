@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { Button } from '@/components/ui/button'
 import { ChineseInput } from '@/components/ui/ChineseInput'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
 interface ClozeQuestion {
@@ -38,6 +39,7 @@ function parseStory(story: string): { text: string, blank: string | null }[] {
 }
 
 export function ClozeExercise({ question, entries, progress = '', onNext }: Props) {
+  const { t } = useI18n()
   const parts = parseStory(question.story)
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [checked, setChecked] = useState(false)
@@ -56,9 +58,9 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
 
   const footer = (
     <div className="flex items-center justify-center gap-3 px-[18px] py-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>Skip</Button>
+      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {!checked
-        ? <Button size="sm" onClick={() => setChecked(true)}>Check →</Button>
+        ? <Button size="sm" onClick={() => setChecked(true)}>{t('study.checkButton')}</Button>
         : (
             <Button
               size="sm"
@@ -74,7 +76,7 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
                 onNext(allCorrect ? 100 : 0, { mistakes: mistakes.length > 0 ? mistakes : undefined })
               }}
             >
-              Next →
+              {t('study.nextButton')}
             </Button>
           )}
     </div>
@@ -82,7 +84,7 @@ export function ClozeExercise({ question, entries, progress = '', onNext }: Prop
 
   return (
     <ExerciseCard
-      type="Scenario Cloze"
+      type={t('study.mode.cloze')}
       progress={progress}
       footer={footer}
       info="Read a short story and fill in the missing vocabulary words from context. Tests contextual understanding."
