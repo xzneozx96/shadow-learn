@@ -1,5 +1,5 @@
 import type { LessonMeta, Segment, Word } from '@/types'
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useVocabulary, VocabularyProvider } from '@/contexts/VocabularyContext'
 
@@ -38,7 +38,10 @@ const lesson: LessonMeta = {
 }
 
 describe('useVocabulary', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockDb.getAll.mockResolvedValue([])
+  })
 
   it('isSaved returns false when entry not in list', () => {
     mockDb.getAll.mockResolvedValue([])
@@ -73,5 +76,24 @@ describe('useVocabulary', () => {
     const { result } = renderHook(() => useVocabulary(), { wrapper: VocabularyProvider })
     await act(async () => await result.current.remove('entry-id'))
     expect(mockDb.delete).toHaveBeenCalledWith('vocabulary', 'entry-id')
+  })
+
+  it('remove cascades to spaced-repetition and mistakes-db', async () => {
+    const { result } = renderHook(() => useVocabulary(), { wrapper: VocabularyProvider })
+    await act(async () => {
+      await result.current.save(word, segment, lesson, 'en')
+    })
+    await waitFor(() => expect(result.current.entries).toHaveLength(1))
+    const id = result.current.entries[0].id
+    mockDb.delete.mockClear()
+
+    await act(async () => {
+      await result.current.remove(id)
+    })
+
+    expect(mockDb.delete).toHaveBeenCalledWith('vocabulary', id)
+    expect(mockDb.delete).toHaveBeenCalledWith('spaced-repetition', id)
+    expect(mockDb.delete).toHaveBeenCalledWith('mistakes-db', id)
+    await waitFor(() => expect(result.current.entries).toHaveLength(0))
   })
 })

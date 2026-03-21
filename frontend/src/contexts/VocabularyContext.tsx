@@ -1,6 +1,7 @@
 import type { LessonMeta, Segment, VocabEntry, Word } from '@/types'
 import { createContext, use, useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { deleteErrorPattern, deleteSpacedRepetitionItem } from '@/db'
 
 interface VocabularyContextValue {
   entries: VocabEntry[]
@@ -60,6 +61,8 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
       if (!db)
         return
       await db.delete('vocabulary', id)
+      await deleteSpacedRepetitionItem(db, id)
+      await deleteErrorPattern(db, id)
       setEntries(prev => prev.filter(e => e.id !== id))
     },
     [db],
@@ -67,13 +70,16 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
 
   const removeGroup = useCallback(
     async (lessonId: string) => {
-      if (!db) {
+      if (!db)
         return
-      }
       const idsToDelete = entries.filter(e => e.sourceLessonId === lessonId).map(e => e.id)
       const tx = db.transaction('vocabulary', 'readwrite')
       await Promise.all(idsToDelete.map(id => tx.store.delete(id)))
       await tx.done
+      for (const id of idsToDelete) {
+        await deleteSpacedRepetitionItem(db, id)
+        await deleteErrorPattern(db, id)
+      }
       setEntries(prev => prev.filter(e => e.sourceLessonId !== lessonId))
     },
     [db, entries],

@@ -3,8 +3,10 @@ import type { VocabEntry } from '../src/types'
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  deleteErrorPattern,
   deleteFullLesson,
   deleteLessonMeta,
+  deleteSpacedRepetitionItem,
   getAllLessonMetas,
   getChatMessages,
   getCryptoData,
@@ -173,6 +175,61 @@ describe('indexedDB storage', () => {
     await deleteFullLesson(db, 'lesson_del')
     expect(await getLessonMeta(db, 'lesson_del')).toBeUndefined()
     expect(await getSegments(db, 'lesson_del')).toBeUndefined()
+  })
+})
+
+describe('deleteSpacedRepetitionItem', () => {
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory()
+  })
+
+  it('removes the SR record by itemId', async () => {
+    const db = await initDB()
+    await db.put('spaced-repetition', {
+      itemId: 'entry-1',
+      itemType: 'vocabulary',
+      easinessFactor: 2.5,
+      intervalDays: 1,
+      repetitions: 3,
+      consecutiveCorrect: 2,
+      consecutiveIncorrect: 0,
+      masteryLevel: 1,
+      dueDate: '2026-01-01',
+      lastReviewed: '2025-12-01',
+      reviewHistory: [],
+    })
+    await deleteSpacedRepetitionItem(db, 'entry-1')
+    expect(await db.get('spaced-repetition', 'entry-1')).toBeUndefined()
+  })
+
+  it('is a no-op if the record does not exist', async () => {
+    const db = await initDB()
+    await expect(deleteSpacedRepetitionItem(db, 'missing')).resolves.not.toThrow()
+  })
+})
+
+describe('deleteErrorPattern', () => {
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory()
+  })
+
+  it('removes the mistake record by patternId', async () => {
+    const db = await initDB()
+    await db.put('mistakes-db', { patternId: 'entry-1', frequency: 2, lastOccurred: '2026-01-01', examples: [] })
+    await deleteErrorPattern(db, 'entry-1')
+    expect(await db.get('mistakes-db', 'entry-1')).toBeUndefined()
+  })
+
+  it('is a no-op if the record does not exist', async () => {
+    const db = await initDB()
+    await expect(deleteErrorPattern(db, 'missing')).resolves.not.toThrow()
+  })
+
+  it('does not delete agent-created err-word patterns when removing by entry id', async () => {
+    const db = await initDB()
+    await db.put('mistakes-db', { patternId: 'err-好', frequency: 1, lastOccurred: '2026-01-01', examples: [] })
+    await deleteErrorPattern(db, 'entry-1') // different key — must not affect err-好
+    expect(await db.get('mistakes-db', 'err-好')).toBeDefined()
   })
 })
 

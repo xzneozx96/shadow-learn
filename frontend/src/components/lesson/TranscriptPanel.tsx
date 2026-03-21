@@ -1,4 +1,4 @@
-import type { LessonMeta, Segment, Word } from '@/types'
+import type { LessonMeta, Segment, VocabEntry, Word } from '@/types'
 import { Check, Copy, Languages, Loader2, Search, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -10,6 +10,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useTTS } from '@/hooks/useTTS'
 import { cn } from '@/lib/utils'
+import { RemoveVocabDialog } from './RemoveVocabDialog'
 import { SegmentText } from './SegmentText'
 
 interface TranscriptPanelProps {
@@ -32,8 +33,9 @@ export function TranscriptPanel({
   const { t } = useI18n()
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys)
-  const { save, isSaved } = useVocabulary()
+  const { entries, save, remove, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
+  const [pendingRemove, setPendingRemove] = useState<VocabEntry | null>(null)
   const [activeLang, setActiveLang] = useState(
     lesson.translationLanguages[0] ?? 'en',
   )
@@ -84,6 +86,24 @@ export function TranscriptPanel({
   const handleIsSaved = useCallback(
     (wordText: string) => isSaved(wordText, lesson.id),
     [isSaved, lesson.id],
+  )
+
+  const handleRemoveWord = useCallback(
+    (word: Word) => {
+      const entry = entries.find(e => e.word === word.word && e.sourceLessonId === lesson.id)
+      if (entry)
+        setPendingRemove(entry)
+    },
+    [entries, lesson.id],
+  )
+
+  const handleConfirmRemove = useCallback(
+    (entry: VocabEntry) => {
+      remove(entry.id)
+      toast.success(t('lesson.removedFromWorkbook'))
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [remove],
   )
 
   // Event delegation for keyboard activation — one handler instead of N closures.
@@ -192,6 +212,7 @@ export function TranscriptPanel({
                       loadingText={loadingText}
                       segment={segment}
                       onSaveWord={handleSaveWord}
+                      onRemoveWord={handleRemoveWord}
                       isSaved={handleIsSaved}
                       showRomanization={showRomanization}
                     />
@@ -248,6 +269,12 @@ export function TranscriptPanel({
           ))}
         </div>
       </ScrollArea>
+
+      <RemoveVocabDialog
+        entry={pendingRemove}
+        onClose={() => setPendingRemove(null)}
+        onConfirm={handleConfirmRemove}
+      />
     </div>
   )
 }

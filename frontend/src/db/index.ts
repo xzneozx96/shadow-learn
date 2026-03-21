@@ -325,6 +325,9 @@ export async function getSpacedRepetitionItem(db: ShadowLearnDB, itemId: string)
 export async function saveSpacedRepetitionItem(db: ShadowLearnDB, item: SpacedRepetitionItem) {
   await db.put('spaced-repetition', item)
 }
+export async function deleteSpacedRepetitionItem(db: ShadowLearnDB, itemId: string) {
+  await db.delete('spaced-repetition', itemId)
+}
 export async function getDueItems(db: ShadowLearnDB, today: string): Promise<SpacedRepetitionItem[]> {
   return db.getAllFromIndex('spaced-repetition', 'by-due', IDBKeyRange.upperBound(today))
 }
@@ -348,6 +351,9 @@ export async function saveMasteryData(db: ShadowLearnDB, data: MasteryData) {
 // Mistakes
 export async function getErrorPattern(db: ShadowLearnDB, patternId: string) {
   return db.get('mistakes-db', patternId)
+}
+export async function deleteErrorPattern(db: ShadowLearnDB, patternId: string) {
+  await db.delete('mistakes-db', patternId)
 }
 export async function saveErrorPattern(db: ShadowLearnDB, pattern: ErrorPattern) {
   await db.put('mistakes-db', pattern)

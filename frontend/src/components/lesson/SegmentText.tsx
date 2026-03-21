@@ -21,6 +21,7 @@ interface SegmentTextProps {
   playTTS: (text: string) => Promise<void>
   loadingText: string | null
   onSaveWord?: (word: Word, segment: Segment) => void
+  onRemoveWord?: (word: Word) => void
   isSaved?: (word: string) => boolean
   segment?: Segment
   showRomanization?: boolean
@@ -33,6 +34,7 @@ export const SegmentText = memo(({
   playTTS,
   loadingText,
   onSaveWord,
+  onRemoveWord,
   isSaved,
   segment,
   showRomanization = true,
@@ -202,27 +204,46 @@ export const SegmentText = memo(({
                   >
                     <Copy className="size-4" />
                   </Button>
-                  {onSaveWord && segment && (
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className={cn(
-                        'size-7 hover:bg-white/6',
-                        isSaved?.(span.word.word)
-                          ? 'text-yellow-400 disabled:opacity-100'
-                          : 'text-white/30 hover:text-white',
-                      )}
-                      title={isSaved?.(span.word.word) ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
-                      aria-label={isSaved?.(span.word.word) ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
-                      disabled={isSaved?.(span.word.word)}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onSaveWord(span.word!, segment)
-                      }}
-                    >
-                      <Bookmark className={cn('size-4', isSaved?.(span.word.word) && 'fill-current')} />
-                    </Button>
-                  )}
+                  {(onSaveWord || onRemoveWord) && segment && (() => {
+                    const saved = isSaved?.(span.word.word)
+                    if (saved && onRemoveWord) {
+                      return (
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          className="size-7 text-yellow-400 hover:bg-white/6 hover:text-yellow-300"
+                          title={t('lesson.removeFromWorkbook')}
+                          aria-label={t('lesson.removeFromWorkbook')}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onRemoveWord(span.word!)
+                          }}
+                        >
+                          <Bookmark className="size-4 fill-current" />
+                        </Button>
+                      )
+                    }
+                    return (
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className={cn(
+                          'size-7 hover:bg-white/6',
+                          saved ? 'text-yellow-400 disabled:opacity-100' : 'text-white/30 hover:text-white',
+                        )}
+                        title={saved ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
+                        aria-label={saved ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
+                        disabled={saved || !onSaveWord}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (onSaveWord && !saved)
+                            onSaveWord(span.word!, segment)
+                        }}
+                      >
+                        <Bookmark className={cn('size-4', saved && 'fill-current')} />
+                      </Button>
+                    )
+                  })()}
                 </div>
               </TooltipContent>
             </Tooltip>

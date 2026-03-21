@@ -104,7 +104,11 @@ describe('useJobPoller', () => {
           error: null,
         }),
       })
-      .mockResolvedValueOnce({ blob: async () => new Blob(['video'], { type: 'video/mp4' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: { get: (h: string) => h === 'content-type' ? 'video/mp4' : null },
+        blob: async () => new Blob(['video'], { type: 'video/mp4' }),
+      })
       .mockResolvedValue({ status: 204 })
 
     vi.stubGlobal('fetch', mockFetch)

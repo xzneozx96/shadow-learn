@@ -1,20 +1,25 @@
-import { Loader2, Volume2 } from 'lucide-react'
-import { useState } from 'react'
+import type { VocabEntry } from '@/types'
+import { Loader2, Volume2, X } from 'lucide-react'
+import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { StudySession } from '@/components/study/StudySession'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useTTS } from '@/hooks/useTTS'
+import { RemoveVocabDialog } from './RemoveVocabDialog'
 
 interface LessonWorkbookPanelProps {
   lessonId: string
 }
 
 export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
-  const { entriesByLesson } = useVocabulary()
+  const { entriesByLesson, remove } = useVocabulary()
+  const { t } = useI18n()
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys)
   const navigate = useNavigate()
@@ -22,6 +27,15 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const count = entries.length
   const [studyOpen, setStudyOpen] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
+  const [pendingRemove, setPendingRemove] = useState<VocabEntry | null>(null)
+
+  const handleConfirmRemove = useCallback(
+    (entry: VocabEntry) => {
+      remove(entry.id)
+      toast.success(t('lesson.removedFromWorkbook'))
+    },
+    [remove, t],
+  )
 
   return (
     <div className="flex h-full flex-col">
@@ -83,8 +97,18 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                     onClick={() =>
                       navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
                     onKeyDown={e => e.key === 'Enter' && navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
-                    className="relative cursor-pointer rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-white/10 hover:border-white/15"
+                    className="group/card relative cursor-pointer rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-white/10 hover:border-white/15"
                   >
+                    <button
+                      aria-label={t('lesson.removeFromWorkbook')}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setPendingRemove(entry)
+                      }}
+                      className="absolute top-1.5 right-1.5 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/card:opacity-100"
+                    >
+                      <X className="size-3" />
+                    </button>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -94,7 +118,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                         e.stopPropagation()
                         playTTS(entry.word)
                       }}
-                      className="absolute top-2 right-2 text-foreground"
+                      className="absolute bottom-2 right-2 text-foreground"
                     >
                       {loadingText === entry.word
                         ? <Loader2 className="size-4 animate-spin" />
@@ -119,6 +143,12 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
           Study This Lesson →
         </Button>
       </div>
+
+      <RemoveVocabDialog
+        entry={pendingRemove}
+        onClose={() => setPendingRemove(null)}
+        onConfirm={handleConfirmRemove}
+      />
     </div>
   )
 }
