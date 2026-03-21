@@ -23,19 +23,26 @@ interface AuthState {
   isUnlocked: boolean
   keys: DecryptedKeys | null
   db: ShadowLearnDB | null
+  trialMode: boolean
   unlock: (pin: string) => Promise<void>
   setup: (keys: DecryptedKeys, pin: string) => Promise<void>
   resetKeys: () => Promise<void>
   lock: () => void
+  startTrial: () => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
+
+const TRIAL_SESSION_KEY = 'shadowlearn_trial'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<ShadowLearnDB | null>(null)
   const [isFirstSetup, setIsFirstSetup] = useState<boolean | null>(null)
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [keys, setKeys] = useState<DecryptedKeys | null>(null)
+  const [trialMode, setTrialMode] = useState<boolean>(
+    () => sessionStorage.getItem(TRIAL_SESSION_KEY) === 'trial',
+  )
 
   useEffect(() => {
     initDB().then(async (database) => {
@@ -45,15 +52,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const startTrial = useCallback(() => {
+    sessionStorage.setItem(TRIAL_SESSION_KEY, 'trial')
+    setTrialMode(true)
+    setIsUnlocked(true)
+  }, [])
+
   const setup = useCallback(
     async (newKeys: DecryptedKeys, pin: string) => {
       if (!db)
         throw new Error('Database not initialized')
       const encrypted = await encryptKeys(newKeys, pin)
       await saveCryptoData(db, encrypted)
+      sessionStorage.removeItem(TRIAL_SESSION_KEY)
       setKeys(newKeys)
       setIsUnlocked(true)
       setIsFirstSetup(false)
+      setTrialMode(false)
     },
     [db],
   )
@@ -88,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext
-      value={{ isFirstSetup, isUnlocked, keys, db, unlock, setup, resetKeys, lock }}
+      value={{ isFirstSetup, isUnlocked, keys, db, trialMode, unlock, setup, resetKeys, lock, startTrial }}
     >
       {children}
     </AuthContext>
