@@ -19,7 +19,7 @@ class VocabularyExtractionError(Exception):
 
 
 class WordEntry(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     word: str
     romanization: str
     meaning: str
@@ -27,14 +27,50 @@ class WordEntry(BaseModel):
 
 
 class SegmentVocabulary(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     id: int
     words: List[WordEntry]
 
 
 class VocabularyResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     segments: List[SegmentVocabulary]
+
+
+# Fully inlined JSON schema for OpenAI strict structured outputs.
+# Cannot use model_json_schema() — OpenAI strict mode forbids $ref/$defs.
+_VOCABULARY_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "segments": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "words": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "word": {"type": "string"},
+                                "romanization": {"type": "string"},
+                                "meaning": {"type": "string"},
+                                "usage": {"type": "string"},
+                            },
+                            "required": ["word", "romanization", "meaning", "usage"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "required": ["id", "words"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["segments"],
+    "additionalProperties": False,
+}
 
 
 def _build_vocab_prompt(segments: list[dict], source_language: str = "zh-CN") -> str:
@@ -79,7 +115,14 @@ async def _extract_batch_with_retry(
     """Extract vocabulary for a batch of segments with semaphore gating and retry on 429."""
     seg_ids = [s["id"] for s in segments]
     prompt = _build_vocab_prompt(segments, source_language=source_language)
-    response_format = {"type": "json_object"}
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "vocabulary_response",
+            "strict": True,
+            "schema": _VOCABULARY_JSON_SCHEMA,
+        },
+    }
 
     async with semaphore:
         for attempt in range(_MAX_ATTEMPTS):
@@ -96,7 +139,6 @@ async def _extract_batch_with_retry(
                             "messages": [{"role": "user", "content": prompt}],
                             "response_format": response_format,
                             "temperature": 0.1,
-                            "reasoning": {"effort": "none"},
                         },
                     )
                     if response.status_code == 429:

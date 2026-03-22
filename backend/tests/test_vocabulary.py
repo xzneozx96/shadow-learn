@@ -67,6 +67,11 @@ async def test_extract_batch_with_retry_success():
     assert result[0][0]["word"] == "你好"
     assert result[1][0]["word"] == "你好"
 
+    call_kwargs = mock_client.post.call_args.kwargs["json"]
+    assert call_kwargs["response_format"]["type"] == "json_schema"
+    assert call_kwargs["response_format"]["json_schema"]["strict"] is True
+    assert "reasoning" not in call_kwargs
+
 
 @pytest.mark.asyncio
 async def test_extract_batch_with_retry_retries_on_429():
@@ -134,8 +139,8 @@ async def test_extract_batch_with_retry_raises_after_exhausted_retries():
             with pytest.raises(VocabularyExtractionError):
                 await _extract_batch_with_retry(segments, "test_key", semaphore)
 
-    # 5 attempts = 4 sleeps (no sleep after final attempt)
-    assert mock_sleep.call_count == 4
+    # _MAX_ATTEMPTS=3: sleeps after attempt 0 and 1, not after the final attempt
+    assert mock_sleep.call_count == 2
 
 
 @pytest.mark.asyncio
