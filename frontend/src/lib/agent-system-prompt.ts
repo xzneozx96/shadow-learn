@@ -11,8 +11,16 @@ export function buildSystemPrompt(
   lessonId: string | undefined,
   activeSegment: Segment | null,
   memories: AgentMemory[],
+  /** BCP-47 source language of the lesson, e.g. "zh-CN" */
+  lessonSourceLanguage?: string,
+  /** First translation language chosen by the user, e.g. "en", "vi" */
+  lessonTranslationLanguage?: string,
 ): string {
   const sections: string[] = []
+
+  // Derive languages from lesson metadata when profile is missing
+  const derivedTargetLang = profile?.targetLanguage ?? lessonSourceLanguage
+  const derivedNativeLang = profile?.nativeLanguage ?? lessonTranslationLanguage
 
   // Role + Identity
   sections.push(
@@ -28,18 +36,45 @@ export function buildSystemPrompt(
 
   // Onboarding — no profile yet
   if (!profile) {
+    const knownParts: string[] = []
+    if (derivedTargetLang)
+      knownParts.push(`Target language: ${derivedTargetLang} (derived from lesson)`)
+    if (derivedNativeLang)
+      knownParts.push(`Native language: ${derivedNativeLang} (derived from translation preference)`)
+
     sections.push(
       '## Onboarding Mode',
-      'No learner profile exists. **Your only task right now is onboarding.** Follow these steps exactly:',
+      'No learner profile exists. **Your only task right now is onboarding.**',
+    )
+
+    if (knownParts.length > 0) {
+      sections.push(
+        'Already known from lesson context:',
+        ...knownParts.map(p => `- ${p}`),
+        'Confirm these with the learner and ask for what\'s missing:',
+      )
+    }
+    else {
+      sections.push('Follow these steps exactly:')
+    }
+
+    sections.push(
       '1. Introduce yourself as Zober — warm, friendly, one short sentence.',
       '2. Ask for the learner\'s **name**.',
-      '3. Ask their **native language**.',
-      '4. Ask their **target language** (e.g. Mandarin Chinese, English).',
-      '5. Ask their **current level** (Beginner / Elementary / Intermediate / Advanced).',
-      '6. Ask their **main goal** (travel, work, exams, general fluency, etc.).',
-      '7. Ask how many **minutes per day** they can study.',
-      '8. Once all info is collected, call `update_learner_profile()` to persist the profile.',
-      '9. Greet them by name in their target language and offer to start the first session.',
+    )
+
+    let step = 3
+    if (!derivedNativeLang)
+      sections.push(`${step++}. Ask their **native language**.`)
+    if (!derivedTargetLang)
+      sections.push(`${step++}. Ask their **target language** (e.g. Mandarin Chinese, English).`)
+
+    sections.push(
+      `${step++}. Ask their **current level** of the target language (Beginner / Elementary / Intermediate / Advanced).`,
+      `${step++}. Ask their **main goal** (travel, work, exams, general fluency, etc.).`,
+      `${step++}. Ask how many **minutes per day** they can study.`,
+      `${step++}. Once all info is collected, call \`update_learner_profile()\` to persist the profile.`,
+      `${step}. Greet them by name in their target language and offer to start the first session.`,
       '**Do NOT call any exercise or vocabulary tools until `update_learner_profile()` has been called.**',
       '',
     )

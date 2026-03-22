@@ -14,7 +14,7 @@ import { DefaultChatTransport } from 'ai'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
-import { getChatMessages, getLearnerProfile, saveChatMessages } from '@/db'
+import { getChatMessages, getLearnerProfile, getLessonMeta, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
 import { buildSystemPrompt } from '@/lib/agent-system-prompt'
 import {
@@ -262,9 +262,10 @@ export function useAgentChat(
     let cancelled = false
 
     async function build() {
-      const [profile, memories] = await Promise.all([
+      const [profile, memories, lessonMeta] = await Promise.all([
         getLearnerProfile(db!),
         getMemorySummary(db!),
+        lessonId ? getLessonMeta(db!, lessonId) : undefined,
       ])
       if (cancelled)
         return
@@ -274,6 +275,8 @@ export function useAgentChat(
         lessonId,
         activeSegment,
         memories,
+        lessonMeta?.sourceLanguage,
+        lessonMeta?.translationLanguages?.[0],
       )
     }
 
