@@ -151,6 +151,7 @@ async def generate_quiz(req: QuizRequest):
         ],
         "temperature": 0.7,
         "response_format": response_format,
+        "reasoning": {"effort": "none"},
     }
 
     async with httpx.AsyncClient(timeout=90) as client:

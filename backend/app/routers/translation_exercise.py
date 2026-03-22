@@ -220,6 +220,7 @@ async def evaluate_translation(req: EvaluateRequest):
         ],
         "temperature": 0.3,
         "response_format": _EVALUATE_RESPONSE_FORMAT,
+        "reasoning": {"effort": "none"},
     }
 
     logger.info(

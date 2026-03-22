@@ -141,6 +141,7 @@ async def _extract_batch_with_retry(
                             "response_format": response_format,
                             "temperature": 0.1,
                             "max_tokens": 16384,
+                            "reasoning": {"effort": "none"},
                         },
                     )
                     if response.status_code == 429:

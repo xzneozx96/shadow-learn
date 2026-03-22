@@ -122,6 +122,7 @@ async def _translate_batch(
                         "messages": [{"role": "user", "content": prompt}],
                         "response_format": response_format,
                         "temperature": 0.1,
+                        "reasoning": {"effort": "none"},
                     },
                 )
                 response.raise_for_status()
