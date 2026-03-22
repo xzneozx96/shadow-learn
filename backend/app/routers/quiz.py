@@ -44,7 +44,59 @@ class QuizResponse(BaseModel):
     exercises: list[ClozeExercise | PronunciationExercise]
 
 
-_JSON_OBJECT_FORMAT = {"type": "json_object"}
+_CLOZE_JSON_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "cloze_response",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "exercises": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "story": {"type": "string"},
+                            "blanks": {"type": "array", "items": {"type": "string"}},
+                        },
+                        "required": ["story", "blanks"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["exercises"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+_PRONUNCIATION_JSON_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "pronunciation_response",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "exercises": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "sentence": {"type": "string"},
+                            "translation": {"type": "string"},
+                        },
+                        "required": ["sentence", "translation"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["exercises"],
+            "additionalProperties": False,
+        },
+    },
+}
 
 
 def _build_cloze_prompt(words: list[WordInput], story_count: int, lang_cfg: dict) -> str:
@@ -89,15 +141,16 @@ async def generate_quiz(req: QuizRequest):
         req.exercise_type, req.story_count, req.count, len(req.words),
     )
 
+    response_format = _CLOZE_JSON_SCHEMA if req.exercise_type == "cloze" else _PRONUNCIATION_JSON_SCHEMA
+
     payload = {
-        "model": settings.openrouter_model,
+        "model": settings.openrouter_structured_model,
         "messages": [
             {"role": "system", "content": f"You are a {lang_cfg['language_name']} teacher creating learning exercises."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.7,
-        "response_format": _JSON_OBJECT_FORMAT,
-        "reasoning": {"effort": "none"},
+        "response_format": response_format,
     }
 
     async with httpx.AsyncClient(timeout=90) as client:

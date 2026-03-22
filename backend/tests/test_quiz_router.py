@@ -1,5 +1,5 @@
 import pytest
-from app.routers.quiz import WordInput, QuizRequest, _build_cloze_prompt, _build_pronunciation_prompt
+from app.routers.quiz import WordInput, QuizRequest, _build_cloze_prompt
 
 
 def test_word_input_uses_romanization_field():
@@ -27,3 +27,65 @@ def test_build_cloze_prompt_english():
     prompt = _build_cloze_prompt(words, story_count=1, lang_cfg=lang_cfg)
     assert "English" in prompt
     assert "Chinese" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_quiz_uses_json_schema_for_cloze(respx_mock):
+    """generate_quiz must send json_schema response_format for cloze."""
+    import json
+    import httpx as _httpx
+    captured = {}
+
+    def capture_post(request: _httpx.Request):
+        captured["payload"] = json.loads(request.content)
+        return _httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps({"exercises": [{"story": "今天很好。", "blanks": ["今天"]}]})}}]},
+        )
+
+    respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(side_effect=capture_post)
+
+    from httpx import AsyncClient, ASGITransport
+    from app.main import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/api/quiz/generate", json={
+            "openrouter_api_key": "key",
+            "words": [{"word": "今天", "romanization": "jīntiān", "meaning": "today", "usage": "今天很好"}],
+            "exercise_type": "cloze",
+        })
+    assert resp.status_code == 200
+    assert captured["payload"]["response_format"]["type"] == "json_schema"
+    assert captured["payload"]["response_format"]["json_schema"]["name"] == "cloze_response"
+    assert "reasoning" not in captured["payload"]
+
+
+@pytest.mark.asyncio
+async def test_quiz_uses_json_schema_for_pronunciation(respx_mock):
+    """generate_quiz must send json_schema response_format for pronunciation_sentence."""
+    import json
+    import httpx as _httpx
+    captured = {}
+
+    def capture_post(request: _httpx.Request):
+        captured["payload"] = json.loads(request.content)
+        return _httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps({"exercises": [{"sentence": "今天天气很好。", "translation": "The weather is nice today."}]})}}]},
+        )
+
+    respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(side_effect=capture_post)
+
+    from httpx import AsyncClient, ASGITransport
+    from app.main import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/api/quiz/generate", json={
+            "openrouter_api_key": "key",
+            "words": [{"word": "今天", "romanization": "jīntiān", "meaning": "today", "usage": "今天很好"}],
+            "exercise_type": "pronunciation_sentence",
+        })
+    assert resp.status_code == 200
+    assert captured["payload"]["response_format"]["type"] == "json_schema"
+    assert captured["payload"]["response_format"]["json_schema"]["name"] == "pronunciation_response"
+    assert "reasoning" not in captured["payload"]
