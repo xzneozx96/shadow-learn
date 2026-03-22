@@ -5,6 +5,7 @@ from app.services.translation import (
     _build_translation_prompt,
     translate_segments,
 )
+from app.config import settings
 
 
 def test_build_translation_prompt():
@@ -65,7 +66,7 @@ async def test_translate_segments_parses_response():
     assert result[1]["translations"]["English"] == "World"
 
     call_kwargs = mock_client.post.call_args.kwargs["json"]
-    assert call_kwargs["model"] == "openai/gpt-4o-mini"
+    assert call_kwargs["model"] == settings.openrouter_model
 
 
 @pytest.mark.asyncio
@@ -104,6 +105,7 @@ async def test_translate_segments_parses_structured_output():
     assert result[1]["translations"]["English"] == "World"
 
     call_kwargs = mock_client.post.call_args.kwargs["json"]
+    assert call_kwargs["model"] == settings.openrouter_model
     assert call_kwargs["response_format"]["type"] == "json_schema"
     assert call_kwargs["response_format"]["json_schema"]["strict"] is True
     assert "reasoning" not in call_kwargs
