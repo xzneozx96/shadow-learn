@@ -240,10 +240,12 @@ async def test_extract_vocabulary_result_order_matches_input():
             ]
         })
 
-    # Two batches of 5
+    # Four batches of 3, 3, 3, 1 (batch_size=3)
     responses = [
-        _make_mock_response(200, make_content(list(range(5)))),
-        _make_mock_response(200, make_content(list(range(5, 10)))),
+        _make_mock_response(200, make_content(list(range(0, 3)))),
+        _make_mock_response(200, make_content(list(range(3, 6)))),
+        _make_mock_response(200, make_content(list(range(6, 9)))),
+        _make_mock_response(200, make_content(list(range(9, 10)))),
     ]
 
     with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
