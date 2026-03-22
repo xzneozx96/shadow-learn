@@ -64,6 +64,9 @@ async def test_translate_segments_parses_response():
     assert result[0]["translations"]["English"] == "Hello"
     assert result[1]["translations"]["English"] == "World"
 
+    call_kwargs = mock_client.post.call_args.kwargs["json"]
+    assert call_kwargs["model"] == "openai/gpt-4o-mini"
+
 
 @pytest.mark.asyncio
 async def test_translate_segments_parses_structured_output():
