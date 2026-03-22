@@ -15,7 +15,7 @@ def test_vocabulary_extraction_error_is_exception():
 
 
 def test_vocab_batch_size_is_five():
-    assert _VOCAB_BATCH_SIZE == 3
+    assert _VOCAB_BATCH_SIZE == 5
 
 
 def _make_mock_response(status_code: int, content: str = "") -> MagicMock:
@@ -240,12 +240,10 @@ async def test_extract_vocabulary_result_order_matches_input():
             ]
         })
 
-    # Four batches of 3, 3, 3, 1 (batch_size=3)
+    # Two batches of 5 (batch_size=5)
     responses = [
-        _make_mock_response(200, make_content(list(range(0, 3)))),
-        _make_mock_response(200, make_content(list(range(3, 6)))),
-        _make_mock_response(200, make_content(list(range(6, 9)))),
-        _make_mock_response(200, make_content(list(range(9, 10)))),
+        _make_mock_response(200, make_content(list(range(0, 5)))),
+        _make_mock_response(200, make_content(list(range(5, 10)))),
     ]
 
     with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:

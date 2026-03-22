@@ -23,6 +23,7 @@ from app.services.romanization_provider import get_romanization_provider
 from app.services.transcription_provider import STTProvider, TranscriptionKeys
 from app.services.translation import translate_segments
 from app.services.validation import ValidationError, validate_upload_file, validate_youtube_url
+from app.services.language_config import get_language_config
 from app.services.vocabulary import extract_vocabulary
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ async def _shared_pipeline(
         extract_vocabulary(
             enriched_segments, api_key,
             source_language=source_language,
+            meaning_language=get_language_config(translation_languages[0])["language_name"],
         ),
     )
     logger.info(

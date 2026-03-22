@@ -73,7 +73,7 @@ _VOCABULARY_JSON_SCHEMA = {
 }
 
 
-def _build_vocab_prompt(segments: list[dict], source_language: str = "zh-CN") -> str:
+def _build_vocab_prompt(segments: list[dict], source_language: str = "zh-CN", meaning_language: str = "English") -> str:
     """Build a prompt to extract key vocabulary from segments."""
     lang_cfg = get_language_config(source_language)
     no_romanization = lang_cfg["romanization_description"].startswith("leave empty")
@@ -93,7 +93,7 @@ def _build_vocab_prompt(segments: list[dict], source_language: str = "zh-CN") ->
         "For each word provide:\n"
         '- "word": the characters/text exactly as they appear in the segment\n'
         + romanization_line +
-        '- "meaning": concise English meaning\n'
+        f'- "meaning": concise {meaning_language} meaning\n'
         '- "usage": a short example sentence (different from the source)\n\n'
         f"Segments:\n{segments_text}\n\n"
         "IMPORTANT: Cover ALL words in each segment, not just key vocabulary.\n\n"
@@ -111,10 +111,11 @@ async def _extract_batch_with_retry(
     api_key: str,
     semaphore: asyncio.Semaphore,
     source_language: str = "zh-CN",
+    meaning_language: str = "English",
 ) -> dict[int, list[dict]]:
     """Extract vocabulary for a batch of segments with semaphore gating and retry on 429."""
     seg_ids = [s["id"] for s in segments]
-    prompt = _build_vocab_prompt(segments, source_language=source_language)
+    prompt = _build_vocab_prompt(segments, source_language=source_language, meaning_language=meaning_language)
     response_format = {
         "type": "json_schema",
         "json_schema": {
@@ -215,6 +216,7 @@ async def extract_vocabulary(
     segments: list[dict],
     api_key: str,
     source_language: str = "zh-CN",
+    meaning_language: str = "English",
 ) -> dict[int, list[dict]]:
     """Extract vocabulary for all segments in parallel batches.
 
@@ -231,7 +233,7 @@ async def extract_vocabulary(
         for i in range(0, len(segments), _VOCAB_BATCH_SIZE)
     ]
     tasks = [
-        asyncio.create_task(_extract_batch_with_retry(batch, api_key, semaphore, source_language))
+        asyncio.create_task(_extract_batch_with_retry(batch, api_key, semaphore, source_language, meaning_language))
         for batch in batches
     ]
     logger.info("Vocabulary: dispatching %d parallel batches for %d segments", len(tasks), len(segments))
