@@ -20,12 +20,12 @@ export function Layout({ children, onSearch, searchValue }: LayoutProps) {
 
   return (
     <div className="h-screen flex flex-col text-foreground glass-bg">
+      {trialMode && (
+        <div className="bg-yellow-500/10 text-yellow-500 text-center text-xs py-1.5 border-b border-yellow-500/20 backdrop-blur-md">
+          {t('auth.trial.banner')}
+        </div>
+      )}
       <nav className="z-50 flex items-center gap-3 border-b border-border bg-background/50 px-4 py-3 backdrop-blur-md">
-        {trialMode && (
-          <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-sm text-yellow-500">
-            {t('auth.trial.banner')}
-          </span>
-        )}
         <Link to="/" className="flex items-center gap-2 font-bold tracking-tight text-foreground hover:opacity-90 transition-opacity">
           <img src="/favicon.svg" className="size-5" alt="ShadowLearn Logo" />
           <span className="text-lg">ShadowLearn</span>

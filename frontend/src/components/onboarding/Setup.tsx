@@ -101,6 +101,22 @@ export function Setup() {
     <div className="h-screen overflow-y-auto bg-[oklch(0.08_0_0)] px-4">
       <div className="min-h-full flex items-center justify-center py-10">
         <div className="flex w-full max-w-md flex-col gap-3">
+          {freeTrialAvailable && (
+            <Card className="mb-5 bg-white/6 text-white/90">
+              <CardContent className="flex flex-col gap-3 ">
+                <div>
+                  <p className="text-lg font-medium">{t('auth.trial.title')}</p>
+                  <p className="mt-0.5 text-sm text-white/40">
+                    {t('auth.trial.hint')}
+                  </p>
+                </div>
+                <Button type="button" variant="outline" onClick={startTrial} className="w-full mt-3">
+                  {t('auth.trial.button')}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="bg-white/6 text-white/90">
             <CardHeader>
               <CardTitle className="text-xl">{t('auth.welcome')}</CardTitle>
@@ -232,22 +248,6 @@ export function Setup() {
               </form>
             </CardContent>
           </Card>
-
-          {freeTrialAvailable && (
-            <Card className="mt-5 bg-white/6 text-white/90">
-              <CardContent className="flex flex-col gap-3 ">
-                <div>
-                  <p className="text-lg font-medium">{t('auth.trial.title')}</p>
-                  <p className="mt-0.5 text-sm text-white/40">
-                    {t('auth.trial.hint')}
-                  </p>
-                </div>
-                <Button type="button" variant="outline" onClick={startTrial} className="w-full mt-3">
-                  {t('auth.trial.button')}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
