@@ -43,56 +43,58 @@ export function Unlock() {
   }
 
   return (
-    <div className="flex h-screen items-center justify-center glass-bg text-foreground px-4">
-      <Card className="w-full max-w-sm px-10 py-20">
-        <CardHeader>
-          <CardTitle className="flex items-center flex-col gap-3 text-xl">
-            <img src="/favicon.svg" className="size-8" alt="ShadowLearn Logo" />
-            ShadowLearn
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-10">
-            <Input
-              type="password"
-              placeholder={t('auth.enterPin')}
-              value={pin}
-              onChange={e => setPin(e.target.value)}
-              className="text-center tracking-widest"
-              autoFocus
-            />
+    <div className="h-screen overflow-y-auto glass-bg text-foreground px-4">
+      <div className="min-h-full flex items-center justify-center py-10">
+        <Card className="w-full max-w-sm px-10 py-20">
+          <CardHeader>
+            <CardTitle className="flex items-center flex-col gap-3 text-xl">
+              <img src="/favicon.svg" className="size-8" alt="ShadowLearn Logo" />
+              ShadowLearn
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-10">
+              <Input
+                type="password"
+                placeholder={t('auth.enterPin')}
+                value={pin}
+                onChange={e => setPin(e.target.value)}
+                className="text-center tracking-widest"
+                autoFocus
+              />
 
-            {error && (
-              <p className="text-center text-sm text-red-400">{error}</p>
-            )}
+              {error && (
+                <p className="text-center text-sm text-red-400">{error}</p>
+              )}
 
-            <Button type="submit" disabled={loading}>
-              {loading ? t('auth.unlocking') : t('auth.unlock')}
-            </Button>
-          </form>
+              <Button type="submit" disabled={loading}>
+                {loading ? t('auth.unlocking') : t('auth.unlock')}
+              </Button>
+            </form>
 
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setShowReset(!showReset)}
-              className="text-sm text-white/40 underline-offset-2 hover:text-white/65 hover:underline"
-            >
-              {t('auth.forgotPin')}
-            </button>
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setShowReset(!showReset)}
+                className="text-sm text-white/40 underline-offset-2 hover:text-white/65 hover:underline"
+              >
+                {t('auth.forgotPin')}
+              </button>
 
-            {showReset && (
-              <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
-                <p className="mb-2">
-                  {t('auth.resetConfirm')}
-                </p>
-                <Button variant="destructive" size="sm" onClick={handleReset}>
-                  {t('auth.resetKeys')}
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              {showReset && (
+                <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                  <p className="mb-2">
+                    {t('auth.resetConfirm')}
+                  </p>
+                  <Button variant="destructive" size="sm" onClick={handleReset}>
+                    {t('auth.resetKeys')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
