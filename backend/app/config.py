@@ -9,11 +9,10 @@ class Settings(BaseSettings):
     translation_batch_size: int = 30
     translation_max_retries: int = 2
     openrouter_chat_url: str = "https://openrouter.ai/api/v1/chat/completions"
-    openrouter_model: str = "qwen/qwen3.5-flash-02-23" # "deepseek/deepseek-v3.2", "qwen/qwen3.5-122b-a10b"
-    openrouter_structured_model: str = "openai/gpt-4o-mini" # "deepseek/deepseek-v3.2", "qwen/qwen3.5-122b-a10b"
+    openrouter_structured_model: str = "openai/gpt-oss-120b" # "openai/gpt-4o-mini"
     openrouter_agent_model: str = "deepseek/deepseek-v3.2"
     minimax_tts_url: str = "https://api.minimax.io/v1/t2a_v2"
-    tts_provider: str = "azure"  # env: SHADOWLEARN_TTS_PROVIDER; values: azure | minimax
+    tts_provider: str = "minimax"  # env: SHADOWLEARN_TTS_PROVIDER; values: azure | minimax
     stt_provider: str = "deepgram"  # env: SHADOWLEARN_STT_PROVIDER; values: deepgram | azure
     ytdlp_cookies_file: str = ""  # env: SHADOWLEARN_YTDLP_COOKIES_FILE; path to Netscape cookies.txt
     ytdlp_proxy: str = ""  # env: SHADOWLEARN_YTDLP_PROXY; e.g. http://user:pass@brd.superproxy.io:22225

@@ -50,7 +50,7 @@ def _download_youtube_video(video_id: str, file_uuid: str, temp_dir: Path) -> Pa
     """
     url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
-        "format": "bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/best[ext=mp4][height<=720]/best",
+        "format": "bestvideo[ext=mp4][height<=480]+bestaudio[ext=m4a]/best[ext=mp4][height<=480]/best",
         "outtmpl": str(temp_dir / f"{file_uuid}.%(ext)s"),
         "merge_output_format": "mp4",
         "quiet": True,
