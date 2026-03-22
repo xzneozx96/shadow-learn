@@ -118,7 +118,7 @@ async def _translate_batch(
                         "Content-Type": "application/json",
                     },
                     json={
-                        "model": settings.openrouter_model,
+                        "model": settings.openrouter_structured_model,
                         "messages": [{"role": "user", "content": prompt}],
                         "response_format": response_format,
                         "temperature": 0.1,

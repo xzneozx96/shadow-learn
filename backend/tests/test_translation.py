@@ -66,7 +66,7 @@ async def test_translate_segments_parses_response():
     assert result[1]["translations"]["English"] == "World"
 
     call_kwargs = mock_client.post.call_args.kwargs["json"]
-    assert call_kwargs["model"] == settings.openrouter_model
+    assert call_kwargs["model"] == settings.openrouter_structured_model
 
 
 @pytest.mark.asyncio
@@ -105,7 +105,7 @@ async def test_translate_segments_parses_structured_output():
     assert result[1]["translations"]["English"] == "World"
 
     call_kwargs = mock_client.post.call_args.kwargs["json"]
-    assert call_kwargs["model"] == settings.openrouter_model
+    assert call_kwargs["model"] == settings.openrouter_structured_model
     assert call_kwargs["response_format"]["type"] == "json_schema"
     assert call_kwargs["response_format"]["json_schema"]["strict"] is True
     assert "reasoning" not in call_kwargs
