@@ -102,7 +102,7 @@ def _build_vocab_prompt(segments: list[dict], source_language: str = "zh-CN") ->
     )
 
 
-_VOCAB_BATCH_SIZE = 5
+_VOCAB_BATCH_SIZE = 3
 _MAX_ATTEMPTS = 3
 
 
@@ -139,7 +139,7 @@ async def _extract_batch_with_retry(
                             "messages": [{"role": "user", "content": prompt}],
                             "response_format": response_format,
                             "temperature": 0.1,
-                            "max_tokens": 8192,
+                            "max_tokens": 16384,
                         },
                     )
                     if response.status_code == 429:

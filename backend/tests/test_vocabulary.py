@@ -15,7 +15,7 @@ def test_vocabulary_extraction_error_is_exception():
 
 
 def test_vocab_batch_size_is_five():
-    assert _VOCAB_BATCH_SIZE == 5
+    assert _VOCAB_BATCH_SIZE == 3
 
 
 def _make_mock_response(status_code: int, content: str = "") -> MagicMock:
