@@ -12,7 +12,7 @@ services:
     build: ./backend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8000"
     volumes:
       - ./backend/youtube_cookies.txt:/app/youtube_cookies.txt
     env_file:
