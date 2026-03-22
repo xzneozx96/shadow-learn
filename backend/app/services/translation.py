@@ -157,11 +157,15 @@ async def _translate_batch(
                         for item in segments_list
                     }
                 elif isinstance(raw_data, list):
-                    id_to_translations = {
-                        item["id"]: {lt["language"]: lt["text"] for lt in item["translations"]}
-                        for item in raw_data
-                        if "id" in item
-                    }
+                    id_to_translations = {}
+                    for item in raw_data:
+                        if "id" not in item:
+                            continue
+                        trans = item["translations"]
+                        if isinstance(trans, dict):
+                            id_to_translations[item["id"]] = trans
+                        else:
+                            id_to_translations[item["id"]] = {lt["language"]: lt["text"] for lt in trans}
                 else:
                     raise e
 

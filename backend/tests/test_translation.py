@@ -32,10 +32,12 @@ async def test_translate_segments_parses_response():
     languages = ["English"]
 
     # Simulate LLM response with a JSON array of translation objects
-    mock_content = (
-        '[{"id": 0, "translations": {"English": "Hello"}}, '
-        '{"id": 1, "translations": {"English": "World"}}]'
-    )
+    mock_content = json.dumps({
+        "translations": [
+            {"id": 0, "translations": [{"language": "English", "text": "Hello"}]},
+            {"id": 1, "translations": [{"language": "English", "text": "World"}]},
+        ]
+    })
     mock_response_data = {
         "choices": [{"message": {"content": mock_content}}]
     }
@@ -97,6 +99,11 @@ async def test_translate_segments_parses_structured_output():
     assert len(result) == 2
     assert result[0]["translations"]["English"] == "Hello"
     assert result[1]["translations"]["English"] == "World"
+
+    call_kwargs = mock_client.post.call_args.kwargs["json"]
+    assert call_kwargs["response_format"]["type"] == "json_schema"
+    assert call_kwargs["response_format"]["json_schema"]["strict"] is True
+    assert "reasoning" not in call_kwargs
 
 
 def test_build_translation_prompt_english():
