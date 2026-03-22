@@ -139,11 +139,12 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'update_learner_profile',
-      description: 'Update learner profile fields (level, goals, etc).',
+      description: 'Create or update learner profile. Use during onboarding to create the initial profile, or later to update fields.',
       parameters: {
         type: 'object',
         properties: {
-          currentLevel: { type: 'string' },
+          name: { type: 'string', description: 'Learner\'s display name' },
+          currentLevel: { type: 'string', description: 'Beginner / Elementary / Intermediate / Advanced' },
           dailyGoalMinutes: { type: 'number' },
           nativeLanguage: { type: 'string' },
           targetLanguage: { type: 'string' },
@@ -454,15 +455,25 @@ export async function executeLogMistake(
 
 export async function executeUpdateLearnerProfile(
   db: ShadowLearnDB,
-  args: Partial<{ currentLevel: string, dailyGoalMinutes: number, nativeLanguage: string, targetLanguage: string }>,
+  args: Partial<{ name: string, currentLevel: string, dailyGoalMinutes: number, nativeLanguage: string, targetLanguage: string }>,
 ) {
   const existing = await getLearnerProfile(db)
-  if (!existing)
-    return { error: 'No learner profile found. Create one first.' }
+  const profile = existing ?? {
+    name: '',
+    nativeLanguage: '',
+    targetLanguage: '',
+    currentLevel: 'Beginner',
+    dailyGoalMinutes: 30,
+    currentStreakDays: 0,
+    totalSessions: 0,
+    totalStudyMinutes: 0,
+    lastStudyDate: null,
+    profileCreated: new Date().toISOString(),
+  }
 
-  const updated = { ...existing, ...args }
+  const updated = { ...profile, ...args }
   await saveLearnerProfile(db, updated)
-  return { ok: true }
+  return { ok: true, created: !existing }
 }
 
 // -------------------------------------------------------------------------- //

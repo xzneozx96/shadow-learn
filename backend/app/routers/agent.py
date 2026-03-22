@@ -388,9 +388,6 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
     )
 
     # Log the full prompt payload for debugging Provider/Inspection errors
-    logger.info(f"[agent_chat] Sending {len(openai_messages)} messages to OpenRouter")
-    logger.info(f"[agent_chat] Full OpenAI messages payload:\n{json.dumps(openai_messages, indent=2, ensure_ascii=False)}")
-
     response = StreamingResponse(
         _stream_agent(client, openai_messages, request.tools, resolved_model),
         media_type="text/event-stream",
