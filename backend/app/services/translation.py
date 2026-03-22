@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Dict, List
+from typing import List
 
 import httpx
 from pydantic import BaseModel, ConfigDict
@@ -14,20 +14,54 @@ logger = logging.getLogger(__name__)
 
 
 class LanguageTranslation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     language: str
     text: str
 
 
 class SegmentTranslation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     id: int
     translations: List[LanguageTranslation]
 
 
 class TranslationResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     translations: List[SegmentTranslation]
+
+
+# Fully inlined JSON schema for OpenAI strict structured outputs.
+# Cannot use model_json_schema() — OpenAI strict mode forbids $ref/$defs.
+_TRANSLATION_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "translations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "translations": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "language": {"type": "string"},
+                                "text": {"type": "string"},
+                            },
+                            "required": ["language", "text"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "required": ["id", "translations"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["translations"],
+    "additionalProperties": False,
+}
 
 
 def _build_translation_prompt(
@@ -62,7 +96,14 @@ async def _translate_batch(
     """Translate a single batch of segments via OpenRouter API using Structured Outputs."""
     prompt = _build_translation_prompt(segments, languages, source_language=source_language)
     
-    response_format = {"type": "json_object"}
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "translation_response",
+            "strict": True,
+            "schema": _TRANSLATION_JSON_SCHEMA,
+        },
+    }
 
     max_retries = settings.translation_max_retries
     last_exc: Exception | None = None
@@ -81,7 +122,6 @@ async def _translate_batch(
                         "messages": [{"role": "user", "content": prompt}],
                         "response_format": response_format,
                         "temperature": 0.1,
-                        "reasoning": {"effort": "none"},
                     },
                 )
                 response.raise_for_status()
@@ -102,9 +142,26 @@ async def _translate_batch(
                 # Fallback to standard JSON parsing if schema validation fails
                 raw_data = json.loads(content)
                 if isinstance(raw_data, dict) and "translations" in raw_data:
-                    id_to_translations = {item["id"]: item["translations"] for item in raw_data["translations"]}
+                    segments_list = raw_data["translations"]
+                    # Unwrap extra nesting: model sometimes wraps all segments inside a single item
+                    if (
+                        len(segments_list) == 1
+                        and "translations" in segments_list[0]
+                        and isinstance(segments_list[0]["translations"], list)
+                        and segments_list[0]["translations"]
+                        and "id" in segments_list[0]["translations"][0]
+                    ):
+                        segments_list = segments_list[0]["translations"]
+                    id_to_translations = {
+                        item["id"]: {lt["language"]: lt["text"] for lt in item["translations"]}
+                        for item in segments_list
+                    }
                 elif isinstance(raw_data, list):
-                    id_to_translations = {item["id"]: item["translations"] for item in raw_data if "id" in item}
+                    id_to_translations = {
+                        item["id"]: {lt["language"]: lt["text"] for lt in item["translations"]}
+                        for item in raw_data
+                        if "id" in item
+                    }
                 else:
                     raise e
 
