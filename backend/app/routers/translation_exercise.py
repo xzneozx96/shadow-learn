@@ -34,7 +34,77 @@ class GenerateResponse(BaseModel):
     sentences: list[SentencePair]
 
 
-_JSON_OBJECT_FORMAT = {"type": "json_object"}
+_GENERATE_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "generate_response",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "sentences": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "romanization": {"type": "string"},
+                            "english": {"type": "string"},
+                        },
+                        "required": ["text", "romanization", "english"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["sentences"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+_EVALUATE_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "evaluate_response",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "overall_score": {"type": "integer"},
+                "accuracy": {
+                    "type": "object",
+                    "properties": {
+                        "score": {"type": "integer"},
+                        "comment": {"type": "string"},
+                    },
+                    "required": ["score", "comment"],
+                    "additionalProperties": False,
+                },
+                "grammar": {
+                    "type": "object",
+                    "properties": {
+                        "score": {"type": "integer"},
+                        "comment": {"type": "string"},
+                    },
+                    "required": ["score", "comment"],
+                    "additionalProperties": False,
+                },
+                "naturalness": {
+                    "type": "object",
+                    "properties": {
+                        "score": {"type": "integer"},
+                        "comment": {"type": "string"},
+                    },
+                    "required": ["score", "comment"],
+                    "additionalProperties": False,
+                },
+                "tip": {"type": "string"},
+            },
+            "required": ["overall_score", "accuracy", "grammar", "naturalness", "tip"],
+            "additionalProperties": False,
+        },
+    },
+}
 
 
 def _build_generate_prompt(req: GenerateRequest) -> str:
@@ -67,14 +137,13 @@ async def generate_sentences(req: GenerateRequest):
     lang_cfg = get_language_config(req.source_language)
     api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     payload = {
-        "model": settings.openrouter_model,
+        "model": settings.openrouter_structured_model,
         "messages": [
             {"role": "system", "content": f"You are a {lang_cfg['language_name']} teacher creating translation exercises."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.7,
-        "response_format": _JSON_OBJECT_FORMAT,
-        "reasoning": {"effort": "none"},
+        "response_format": _GENERATE_RESPONSE_FORMAT,
     }
 
     logger.info("[translation] generate: word=%s sentence_count=%d", req.word, req.sentence_count)
@@ -144,14 +213,13 @@ async def evaluate_translation(req: EvaluateRequest):
     prompt = _build_evaluate_prompt(req)
     api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     payload = {
-        "model": settings.openrouter_model,
+        "model": settings.openrouter_structured_model,
         "messages": [
             {"role": "system", "content": "You are a language teacher evaluating student translations."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.3,
-        "response_format": _JSON_OBJECT_FORMAT,
-        "reasoning": {"effort": "none"},
+        "response_format": _EVALUATE_RESPONSE_FORMAT,
     }
 
     logger.info(

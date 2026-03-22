@@ -119,3 +119,64 @@ async def test_evaluate_accepts_valid_payload(respx_mock):
         assert "grammar" in data
         assert "naturalness" in data
         assert "tip" in data
+
+
+@pytest.mark.asyncio
+async def test_generate_uses_json_schema(respx_mock):
+    """generate_sentences must send json_schema response_format."""
+    import httpx as _httpx
+    captured = {}
+
+    def capture_post(request: _httpx.Request):
+        import json as _json
+        captured["payload"] = _json.loads(request.content)
+        return _httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": _json.dumps({"sentences": [{"text": "今天。", "romanization": "jīntiān", "english": "Today."}]})}}]},
+        )
+
+    respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(side_effect=capture_post)
+
+    from httpx import AsyncClient, ASGITransport
+    from app.main import app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post("/api/translation/generate", json={
+            "openrouter_api_key": "key", "word": "今天", "romanization": "jīntiān", "meaning": "today",
+        })
+    assert resp.status_code == 200
+    assert captured["payload"]["response_format"]["type"] == "json_schema"
+    assert captured["payload"]["response_format"]["json_schema"]["name"] == "generate_response"
+    assert "reasoning" not in captured["payload"]
+
+
+@pytest.mark.asyncio
+async def test_evaluate_uses_json_schema(respx_mock):
+    """evaluate_translation must send json_schema response_format."""
+    import httpx as _httpx
+    captured = {}
+
+    def capture_post(request: _httpx.Request):
+        import json as _json
+        captured["payload"] = _json.loads(request.content)
+        return _httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": _json.dumps({
+                "overall_score": 80, "accuracy": {"score": 85, "comment": "Good."},
+                "grammar": {"score": 75, "comment": "OK."}, "naturalness": {"score": 80, "comment": "Natural."},
+                "tip": "Try harder.",
+            })}}]},
+        )
+
+    respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(side_effect=capture_post)
+
+    from httpx import AsyncClient, ASGITransport
+    from app.main import app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post("/api/translation/evaluate", json={
+            "openrouter_api_key": "key", "source": "今天。", "source_language": "chinese",
+            "target_language": "english", "reference": "Today.", "user_answer": "Today.",
+        })
+    assert resp.status_code == 200
+    assert captured["payload"]["response_format"]["type"] == "json_schema"
+    assert captured["payload"]["response_format"]["json_schema"]["name"] == "evaluate_response"
+    assert "reasoning" not in captured["payload"]
