@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import agent, chat, config, jobs, lessons, pronunciation, quiz, translation_exercise, tts
+from app.routers import agent, config, jobs, lessons, pronunciation, quiz, translation_exercise, tts
 from app.services.tts_factory import get_tts_provider
 from app.services.transcription_factory import get_stt_provider
 
@@ -13,7 +13,6 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,7 +33,6 @@ app.add_middleware(
 )
 
 app.include_router(lessons.router)
-app.include_router(chat.router)
 app.include_router(tts.router)
 app.include_router(config.router)
 app.include_router(jobs.router)

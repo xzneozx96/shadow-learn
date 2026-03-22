@@ -130,13 +130,16 @@ async def _translate_batch(
             if "choices" not in data:
                 raise ValueError(f"OpenRouter error response: {data}")
             content = data["choices"][0]["message"]["content"]
-            
             try:
                 parsed = TranslationResponse.model_validate_json(content)
                 id_to_translations = {
                     item.id: {lt.language: lt.text for lt in item.translations}
                     for item in parsed.translations
                 }
+                logger.info(
+                    "Translation batch: OK — %d segments translated",
+                    len(parsed.translations),
+                )
             except Exception as e:
                 logger.error("Failed to parse translation response: %s", e)
                 # Fallback to standard JSON parsing if schema validation fails

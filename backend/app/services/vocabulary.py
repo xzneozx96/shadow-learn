@@ -102,7 +102,7 @@ def _build_vocab_prompt(segments: list[dict], source_language: str = "zh-CN") ->
     )
 
 
-_VOCAB_BATCH_SIZE = 3
+_VOCAB_BATCH_SIZE = 5
 _MAX_ATTEMPTS = 3
 
 
@@ -156,6 +156,16 @@ async def _extract_batch_with_retry(
                         )
                     response.raise_for_status()
 
+                if not response.text.strip():
+                    if attempt < _MAX_ATTEMPTS - 1:
+                        logger.warning(
+                            "Vocab batch %s: empty response body (HTTP 200), retry %d/%d",
+                            seg_ids, attempt + 1, _MAX_ATTEMPTS - 1,
+                        )
+                        continue
+                    raise VocabularyExtractionError(
+                        f"Vocab batch {seg_ids}: empty response body after {_MAX_ATTEMPTS} attempts"
+                    )
                 body = response.json()
                 if "error" in body:
                     raise VocabularyExtractionError(
@@ -177,6 +187,11 @@ async def _extract_batch_with_retry(
                 content = choice["message"]["content"]
                 try:
                     parsed = VocabularyResponse.model_validate_json(content)
+                    total_words = sum(len(seg.words) for seg in parsed.segments)
+                    logger.info(
+                        "Vocab batch %s: OK — %d segments, %d words extracted",
+                        seg_ids, len(parsed.segments), total_words,
+                    )
                     return {seg.id: [w.model_dump() for w in seg.words] for seg in parsed.segments}
                 except Exception as e:
                     raise VocabularyExtractionError(
