@@ -117,6 +117,7 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
           entry={entry}
           onNext={makeOnNext('writing', entry)}
           caps={caps}
+          writingReps={1}
         />
       )
 

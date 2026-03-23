@@ -102,6 +102,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
 
   const [phase, setPhase] = useState<Phase>('picker')
   const [mode, setMode] = useState<ExerciseMode>('mixed')
+  const [writingReps, setWritingReps] = useState(1)
   const [count, setCount] = useState(10)
   const [questions, setQuestions] = useState<Question[]>([])
   const [current, setCurrent] = useState(0)
@@ -151,6 +152,12 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
   const azurePronunciationLocale = caps.azurePronunciationLocale
   const hasAzure = azurePronunciationLocale !== null && (trialMode || Boolean(keys?.azureSpeechKey))
   const hasOpenRouter = trialMode || Boolean(keys?.openrouterApiKey)
+
+  function handleModeSelect(newMode: ExerciseMode) {
+    setMode(newMode)
+    if (newMode !== 'writing')
+      setWritingReps(1)
+  }
 
   async function handleStart() {
     if (entries.length === 0 || abortRef.current)
@@ -360,10 +367,12 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
         {phase === 'picker' && (
           <ModePicker
             selected={mode}
-            onSelect={setMode}
+            onSelect={handleModeSelect}
             count={count}
             loading={loading}
             onCountChange={setCount}
+            writingReps={writingReps}
+            onWritingRepsChange={setWritingReps}
             onStart={() => void handleStart()}
             lessonTitle={lessonTitle}
             caps={caps}
@@ -431,6 +440,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
                 caps={caps}
+                writingReps={writingReps}
               />
             )}
             {q.type === 'translation' && q.translationData && (
