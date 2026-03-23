@@ -5,9 +5,10 @@ interface Props {
   character: string
   writerRef?: React.RefObject<HanziWriter | null>
   onComplete: (usedHint: boolean) => void
+  showOutline?: boolean
 }
 
-export function HanziWriterCanvas({ character, writerRef, onComplete }: Props) {
+export function HanziWriterCanvas({ character, writerRef, onComplete, showOutline = true }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const internalWriterRef = useRef<HanziWriter | null>(null)
   const hintUsedRef = useRef(false)
@@ -21,7 +22,7 @@ export function HanziWriterCanvas({ character, writerRef, onComplete }: Props) {
       width: 200,
       height: 200,
       padding: 10,
-      showOutline: true,
+      showOutline,
       strokeColor: '#ffffff',
       outlineColor: '#3f3f46',
       drawingColor: '#60a5fa',
