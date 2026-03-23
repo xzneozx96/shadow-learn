@@ -7,11 +7,12 @@
  * - Persists chat history to IDB with backward-compat normalization
  */
 
+import type { UIMessage } from '@ai-sdk/react'
 import type { ShadowLearnDB } from '@/db'
 import type { Segment } from '@/types'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { getChatMessages, getLearnerProfile, getLessonMeta, saveChatMessages } from '@/db'
@@ -98,6 +99,10 @@ function normalizeMessagesForBackend(messages: any[], limit: number = 15) {
   return normalized.slice(startIndex)
 }
 
+// Number of messages to load into useChat state on mount, and per loadMore() batch.
+// Also used to cap the LLM context window via normalizeMessagesForBackend.
+const PAGE_SIZE = 15
+
 // -------------------------------------------------------------------------- //
 // Hook
 // -------------------------------------------------------------------------- //
@@ -120,13 +125,27 @@ export function useAgentChat(
   const toolRoundsRef = useRef(0)
   const MAX_TOOL_ROUNDS = 5
 
+  // Pagination: full IDB snapshot lives in a ref; only last PAGE_SIZE messages go into useChat state
+  const allStoredRef = useRef<UIMessage[]>([])
+  const loadedOffsetRef = useRef(0)
+  const [hasMore, setHasMore] = useState(false)
+  // Track lessonId to reset pagination state synchronously during render on lesson change
+  // (pattern #3 from CLAUDE.md — setState-during-render with guard)
+  const [prevLessonId, setPrevLessonId] = useState(lessonId)
+  if (prevLessonId !== lessonId) {
+    setPrevLessonId(lessonId)
+    setHasMore(false)
+    allStoredRef.current = []
+    loadedOffsetRef.current = 0
+  }
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: `${API_BASE}/api/agent`,
         prepareSendMessagesRequest: ({ messages }) => ({
           body: {
-            messages: normalizeMessagesForBackend(messages, 15),
+            messages: normalizeMessagesForBackend(messages, PAGE_SIZE),
             system_prompt: systemPromptRef.current,
             openrouter_api_key: keys?.openrouterApiKey ?? '',
             tools: getToolDefinitionsArray(),
@@ -286,23 +305,25 @@ export function useAgentChat(
     }
   }, [db, lessonId, lessonTitle, activeSegment])
 
-  // Load saved chat history on mount
+  // Load saved chat history on mount — full array into ref, only last PAGE_SIZE into useChat state
   useEffect(() => {
     if (!db || !lessonId)
       return
     getChatMessages(db, lessonId).then((saved) => {
-      if (saved && saved.length > 0) {
-        // Deduplicate before setting state
-        const seen = new Set<string>()
-        const uniqueSaved = saved.filter((m) => {
-          if (seen.has(m.id)) {
-            return false
-          }
-          seen.add(m.id)
-          return true
-        })
-        setMessages(uniqueSaved)
-      }
+      if (!saved || saved.length === 0)
+        return
+      const seen = new Set<string>()
+      const unique = saved.filter((m) => {
+        if (seen.has(m.id))
+          return false
+        seen.add(m.id)
+        return true
+      })
+      allStoredRef.current = unique
+      const offset = Math.max(0, unique.length - PAGE_SIZE)
+      loadedOffsetRef.current = offset
+      setMessages(unique.slice(offset))
+      setHasMore(offset > 0)
     })
   }, [db, lessonId, setMessages])
 
@@ -316,15 +337,18 @@ export function useAgentChat(
 
     // Deduplicate before saving to IDB
     const seen = new Set<string>()
-    const uniqueMessages = messagesRef.current.filter((m) => {
-      if (seen.has(m.id)) {
+    const uniqueCurrent = messagesRef.current.filter((m) => {
+      if (seen.has(m.id))
         return false
-      }
       seen.add(m.id)
       return true
     })
 
-    void saveChatMessages(db, lessonId, uniqueMessages)
+    // Invariant: allStoredRef[0..loadedOffsetRef) is the unloaded prefix not yet in useChat
+    // state. uniqueCurrent covers [loadedOffsetRef..end] plus any new messages this session.
+    // Together they reconstruct the full history without losing messages the user never scrolled to.
+    const unloaded = allStoredRef.current.slice(0, loadedOffsetRef.current)
+    void saveChatMessages(db, lessonId, [...unloaded, ...uniqueCurrent])
   }, [db, lessonId])
 
   // Persist on status change (idle means stream finished)
@@ -378,11 +402,24 @@ export function useAgentChat(
     sendMessage({ text: '' })
   }, [status, isLoading, messages, sendMessage])
 
+  const loadMore = useCallback(() => {
+    const offset = loadedOffsetRef.current
+    if (offset <= 0)
+      return
+    const newOffset = Math.max(0, offset - PAGE_SIZE)
+    const olderBatch = allStoredRef.current.slice(newOffset, offset)
+    loadedOffsetRef.current = newOffset
+    setMessages(prev => [...olderBatch, ...prev])
+    setHasMore(newOffset > 0)
+  }, [setMessages])
+
   return {
     messages,
     isLoading,
     status,
     sendMessage: sendMessageWithReset,
+    loadMore,
+    hasMore,
     error,
   }
 }

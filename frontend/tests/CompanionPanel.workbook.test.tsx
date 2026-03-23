@@ -26,6 +26,8 @@ vi.mock('@/hooks/useAgentChat', () => ({
     isLoading: false,
     status: 'ready',
     sendMessage: vi.fn(),
+    loadMore: vi.fn(),
+    hasMore: false,
     error: undefined,
   })),
 }))

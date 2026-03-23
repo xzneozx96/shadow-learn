@@ -2,12 +2,11 @@ import type { UIMessage } from '@ai-sdk/react'
 import type { ExerciseRenderResult } from './ExerciseRenderer'
 import type { Segment } from '@/types'
 import { Send } from 'lucide-react'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useI18n } from '@/contexts/I18nContext'
@@ -244,10 +243,15 @@ export function CompanionPanel({
   const { t } = useI18n()
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const topSentinelRef = useRef<HTMLDivElement>(null)
+  const scrollFromBottomRef = useRef<number | null>(null)
+  const prevFirstIdRef = useRef<string | undefined>(undefined)
+  const isAtBottomRef = useRef(true)
   const { entriesByLesson } = useVocabulary()
   const count = (entriesByLesson[lessonId] ?? []).length
 
-  const { messages, isLoading, sendMessage } = useAgentChat(lessonId, activeSegment, lessonTitle)
+  const { messages, isLoading, sendMessage, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
 
   const uniqueMessages = useMemo(() => {
     const seen = new Set<string>()
@@ -287,14 +291,69 @@ export function CompanionPanel({
     return next
   }, [uniqueMessages])
 
+  // Track scroll position to know if user is near the bottom
   useEffect(() => {
+    const container = scrollRef.current
+    if (!container)
+      return
+    const onScroll = () => {
+      const dist = container.scrollHeight - container.scrollTop - container.clientHeight
+      isAtBottomRef.current = dist < 80
+    }
+    container.addEventListener('scroll', onScroll, { passive: true })
+    return () => container.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // IntersectionObserver: load older messages when top sentinel is visible
+  // Uses event-handler-refs pattern so observer is created once and never recreated
+  const hasMoreRef = useRef(hasMore)
+  hasMoreRef.current = hasMore
+  const loadMoreRef = useRef(loadMore)
+  loadMoreRef.current = loadMore
+
+  useEffect(() => {
+    const sentinel = topSentinelRef.current
+    const container = scrollRef.current
+    if (!sentinel || !container)
+      return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMoreRef.current) {
+          scrollFromBottomRef.current = container.scrollHeight - container.scrollTop
+          loadMoreRef.current()
+        }
+      },
+      { root: container, threshold: 0 },
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
+
+  // Restore scroll position after older messages are prepended (prevents viewport jump)
+  useLayoutEffect(() => {
+    if (scrollFromBottomRef.current !== null && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight - scrollFromBottomRef.current
+      scrollFromBottomRef.current = null
+    }
+  }, [messages])
+
+  // Auto-scroll to bottom only when new messages arrive, not when older ones are prepended
+  useEffect(() => {
+    const firstId = uniqueMessages[0]?.id
+    const wasPrepend = firstId !== prevFirstIdRef.current && prevFirstIdRef.current !== undefined
+    prevFirstIdRef.current = firstId
+    if (wasPrepend)
+      return
+    if (!isAtBottomRef.current)
+      return
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isLoading])
+  }, [messages, isLoading, uniqueMessages])
 
   const handleSend = () => {
     const trimmed = input.trim()
     if (!trimmed || isLoading)
       return
+    isAtBottomRef.current = true
     sendMessage({ text: trimmed })
     setInput('')
   }
@@ -331,7 +390,7 @@ export function CompanionPanel({
           </div>
         )}
 
-        <ScrollArea className="min-h-0 flex-1 px-3 py-2">
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
           {messages.length === 0 && !isLoading && (
             <div className="flex h-full items-center justify-center py-12">
               <p className="text-center text-sm text-muted-foreground">
@@ -341,6 +400,12 @@ export function CompanionPanel({
           )}
 
           <div className="space-y-3">
+            <div ref={topSentinelRef} />
+            {hasMore && (
+              <div className="flex justify-center py-1">
+                <span className="text-xs text-muted-foreground">↑ Scroll for older messages</span>
+              </div>
+            )}
             {uniqueMessages.map((msg: UIMessage) => (
               <MessageItem key={msg.id} msg={msg} sendMessage={sendMessage} activeWideIds={activeWideIds} />
             ))}
@@ -360,7 +425,7 @@ export function CompanionPanel({
           </div>
 
           <div ref={bottomRef} className="h-px" />
-        </ScrollArea>
+        </div>
 
         <div className="flex items-center gap-2 border-t border-border p-3 h-16">
           <Textarea
