@@ -57,7 +57,9 @@ export function HanziWriterCanvas({ character, writerRef, onComplete, showOutlin
         writerRef.current = null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [character]) // re-mount when character changes; writerRef and onComplete are stable refs/callbacks
+  }, [character]) // re-mount when character changes; writerRef and onComplete are stable refs/callbacks;
+  // showOutline is safe to omit because CharacterWritingExercise always changes the key when stage changes,
+  // forcing a remount — so the effect always captures the current showOutline value
 
   return (
     <div className="relative">
