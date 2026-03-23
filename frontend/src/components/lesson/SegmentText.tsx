@@ -180,7 +180,7 @@ export const SegmentText = memo(({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-7 text-white/30 hover:bg-white/6 hover:text-white"
+                    className="size-7 text-muted-foreground hover:bg-white/6 hover:text-white"
                     aria-label={loadingText === span.word.word ? 'Loading pronunciation' : `Play pronunciation of ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -194,7 +194,7 @@ export const SegmentText = memo(({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-7 text-white/30 hover:bg-white/6 hover:text-white"
+                    className="size-7 text-muted-foreground hover:bg-white/6 hover:text-white"
                     aria-label={`Copy ${span.word.word}`}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -229,7 +229,7 @@ export const SegmentText = memo(({
                         size="icon-xs"
                         className={cn(
                           'size-7 hover:bg-white/6',
-                          saved ? 'text-yellow-400 disabled:opacity-100' : 'text-white/30 hover:text-white',
+                          saved ? 'text-yellow-400 disabled:opacity-100' : 'text-muted-foreground hover:text-white',
                         )}
                         title={saved ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
                         aria-label={saved ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}

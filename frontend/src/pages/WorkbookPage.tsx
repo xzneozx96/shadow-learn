@@ -100,11 +100,6 @@ export function WorkbookPage() {
 
   return (
     <Layout>
-      {/* Subtle background ambient mesh */}
-      <div className="fixed inset-0 pointer-events-none -z-10 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-primary/5 via-background to-background" />
-      <div className="fixed top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-50 pointer-events-none -z-10" />
-      <div className="fixed bottom-0 right-1/4 w-[500px] h-[500px] bg-secondary/10 rounded-full blur-3xl opacity-50 pointer-events-none -z-10" />
-
       <div className="max-w-5xl mx-auto px-6 py-9 pb-20">
         <Tabs defaultValue="workbook" className="w-full relative z-10">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-7 gap-4">
@@ -138,7 +133,7 @@ export function WorkbookPage() {
                 {lastSaved && ` · ${t('workbook.lastSaved')} ${new Date(lastSaved).toLocaleDateString()}`}
               </div>
               <Input
-                className="w-48 bg-background/50 backdrop-blur-sm"
+                className="w-48 bg-background backdrop-blur-sm"
                 placeholder={t('workbook.searchPlaceholder')}
                 value={search}
                 onChange={e => setSearch(e.target.value)}

@@ -199,13 +199,13 @@ export function Settings() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-white/40">{t('settings.visibility')}</span>
+              <span className="text-sm text-muted-foreground">{t('settings.visibility')}</span>
               <Button variant="ghost" size="icon-sm" onClick={() => setShowKeys(!showKeys)}>
                 {showKeys ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </Button>
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/40">{t('settings.openrouterKey')}</label>
+              <label className="text-sm text-muted-foreground">{t('settings.openrouterKey')}</label>
               <Input
                 type={showKeys ? 'text' : 'password'}
                 value={editOpenrouterKey}
@@ -218,7 +218,7 @@ export function Settings() {
             {(provider === null || provider === 'azure') && (
               <>
                 <div className="space-y-2">
-                  <label className="text-sm text-white/40">
+                  <label className="text-sm text-muted-foreground">
                     {t('settings.azureSpeechKey')}
                     {' '}
                     <span className="text-white/20">(for TTS and pronunciation assessment)</span>
@@ -232,7 +232,7 @@ export function Settings() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm text-white/40">
+                  <label className="text-sm text-muted-foreground">
                     {t('settings.azureSpeechRegion')}
                     {' '}
                     <span className="text-white/20">(e.g. eastus)</span>
@@ -251,7 +251,7 @@ export function Settings() {
             {/* MiniMax key — shown only when provider is minimax */}
             {provider === 'minimax' && (
               <div className="space-y-2">
-                <label className="text-sm text-white/40">
+                <label className="text-sm text-muted-foreground">
                   {t('settings.minimaxKey')}
                   {' '}
                   <span className="text-white/20">(for listening practice)</span>
@@ -268,7 +268,7 @@ export function Settings() {
 
             {sttProvider === 'deepgram' && (
               <div className="space-y-2">
-                <label className="text-sm text-white/40">
+                <label className="text-sm text-muted-foreground">
                   {t('settings.deepgramKey')}
                   {' '}
                   <span className="text-white/20">(for video subtitles)</span>
@@ -286,7 +286,7 @@ export function Settings() {
               ? (
                   <>
                     <div className="space-y-2">
-                      <label className="text-sm text-white/40">Create a PIN</label>
+                      <label className="text-sm text-muted-foreground">Create a PIN</label>
                       <Input
                         type="password"
                         value={newTrialPin}
@@ -295,7 +295,7 @@ export function Settings() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm text-white/40">Confirm PIN</label>
+                      <label className="text-sm text-muted-foreground">Confirm PIN</label>
                       <Input
                         type="password"
                         value={newTrialPinConfirm}
@@ -307,7 +307,7 @@ export function Settings() {
                 )
               : (
                   <div className="space-y-2">
-                    <label className="text-sm text-white/40">{t('settings.confirmWithPin')}</label>
+                    <label className="text-sm text-muted-foreground">{t('settings.confirmWithPin')}</label>
                     <Input
                       type="password"
                       value={keysPin}
@@ -329,7 +329,7 @@ export function Settings() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-2">
-                <label className="text-sm text-white/40">{t('settings.newPin')}</label>
+                <label className="text-sm text-muted-foreground">{t('settings.newPin')}</label>
                 <Input
                   type="password"
                   value={newPin}
@@ -338,7 +338,7 @@ export function Settings() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm text-white/40">{t('settings.confirmPin')}</label>
+                <label className="text-sm text-muted-foreground">{t('settings.confirmPin')}</label>
                 <Input
                   type="password"
                   value={confirmPin}
@@ -364,7 +364,7 @@ export function Settings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm text-white/40">{t('settings.translationLanguage')}</label>
+              <label className="text-sm text-muted-foreground">{t('settings.translationLanguage')}</label>
               <Select value={language} onValueChange={v => v !== null && setLanguage(v)} items={LANGUAGES}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -377,7 +377,7 @@ export function Settings() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-white/40">{t('settings.interfaceLanguage')}</label>
+              <label className="text-sm text-muted-foreground">{t('settings.interfaceLanguage')}</label>
               <Select
                 value={locale}
                 onValueChange={v => setLocale(v as Locale)}

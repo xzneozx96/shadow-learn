@@ -140,7 +140,7 @@ export function TranscriptPanel({
   }
 
   return (
-    <div className="flex h-full flex-col bg-background/20 backdrop-blur-md">
+    <div className="flex h-full flex-col bg-background backdrop-blur-md">
       {/* Search bar */}
       <div className="space-y-2 border-b border-border p-3">
         <div className="flex items-center gap-2">

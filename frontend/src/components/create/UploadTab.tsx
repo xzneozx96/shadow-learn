@@ -76,7 +76,7 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
               <div className="flex items-center gap-2 text-white/65">
                 <FileVideo className="size-5" />
                 <span className="text-sm font-medium">{file.name}</span>
-                <span className="text-sm text-white/30">
+                <span className="text-sm text-muted-foreground">
                   (
                   {formatFileSize(file.size)}
                   )
@@ -85,8 +85,8 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
             )
           : (
               <>
-                <Upload className="size-8 text-white/30" />
-                <p className="text-sm text-white/40">
+                <Upload className="size-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
                   {t('create.dragDropHint')}
                 </p>
               </>

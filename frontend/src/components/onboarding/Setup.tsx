@@ -106,7 +106,7 @@ export function Setup() {
               <CardContent className="flex flex-col gap-3 ">
                 <div>
                   <p className="text-lg font-medium">{t('auth.trial.title')}</p>
-                  <p className="mt-0.5 text-sm text-white/40">
+                  <p className="mt-0.5 text-sm text-muted-foreground">
                     {t('auth.trial.hint')}
                   </p>
                 </div>
@@ -120,7 +120,7 @@ export function Setup() {
           <Card className="bg-white/6 text-white/90">
             <CardHeader>
               <CardTitle className="text-xl">{t('auth.welcome')}</CardTitle>
-              <CardDescription className="text-white/40">
+              <CardDescription className="text-muted-foreground">
                 {t('auth.setup.subtitle')}
               </CardDescription>
             </CardHeader>
@@ -137,7 +137,7 @@ export function Setup() {
                     value={openrouterApiKey}
                     onChange={e => setOpenrouterApiKey(e.target.value)}
                   />
-                  <p className="text-sm text-white/30">
+                  <p className="text-sm text-muted-foreground">
                     {t('auth.setup.openrouterHint')}
                   </p>
                 </div>
@@ -154,7 +154,7 @@ export function Setup() {
                       value={deepgramApiKey}
                       onChange={e => setDeepgramApiKey(e.target.value)}
                     />
-                    <p className="text-sm text-white/30">
+                    <p className="text-sm text-muted-foreground">
                       {t('auth.setup.deepgramHint')}
                     </p>
                   </div>
@@ -174,7 +174,7 @@ export function Setup() {
                         value={azureSpeechKey}
                         onChange={e => setAzureSpeechKey(e.target.value)}
                       />
-                      <p className="text-sm text-white/30">
+                      <p className="text-sm text-muted-foreground">
                         {t('auth.setup.azureHint')}
                       </p>
                     </div>
@@ -206,7 +206,7 @@ export function Setup() {
                       value={minimaxApiKey}
                       onChange={e => setMinimaxApiKey(e.target.value)}
                     />
-                    <p className="text-sm text-white/30">
+                    <p className="text-sm text-muted-foreground">
                       {t('auth.setup.minimaxHint')}
                     </p>
                   </div>

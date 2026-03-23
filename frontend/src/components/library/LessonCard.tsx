@@ -82,7 +82,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
     <div
       className={cn(
         'group relative flex h-full min-h-[180px] flex-col overflow-hidden rounded-xl transition-all duration-200',
-        'glass-card glass-hover',
+        'bg-card border border-border hover:border-muted-foreground/60',
         isError && 'ring-1 ring-destructive/30',
       )}
     >
@@ -137,7 +137,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       <div className="px-4 pt-4 pb-3">
         {isYoutube
           ? <Youtube className="size-7 text-red-400/80" />
-          : <FileVideo className="size-7 text-white/40" />}
+          : <FileVideo className="size-7 text-muted-foreground" />}
       </div>
 
       {/* Title */}
@@ -163,7 +163,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
       {/* Status indicator */}
       {isProcessing && (
-        <div className="px-4 pb-2 flex items-center gap-1.5 text-sm text-white/40">
+        <div className="px-4 pb-2 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Loader2 className="size-3 animate-spin" />
           <span className="truncate">{lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}</span>
         </div>
@@ -179,19 +179,19 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                 e.preventDefault()
                 onRetry(lesson)
               }}
-              className="z-20 text-sm text-white/40 underline hover:text-white"
+              className="z-20 text-sm text-muted-foreground underline hover:text-white"
             >
               {t('library.retry')}
             </button>
           )}
           {lesson.source === 'upload' && (
-            <span className="text-sm text-white/40">{t('library.reuploadToRetry')}</span>
+            <span className="text-sm text-muted-foreground">{t('library.reuploadToRetry')}</span>
           )}
         </div>
       )}
 
       {/* Footer: date + meta */}
-      <div className="px-4 pb-3 pt-1 flex items-center gap-2 text-sm text-white/30">
+      <div className="px-4 pb-3 pt-1 flex items-center gap-2 text-sm text-muted-foreground">
         <span>{formatDate(lesson.lastOpenedAt)}</span>
         {!isProcessing && lesson.duration != null && (
           <>

@@ -228,7 +228,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
   }, [videoBlob, lesson.title])
 
   return (
-    <div className="flex h-full flex-col bg-background/50 backdrop-blur-md">
+    <div className="flex h-full flex-col bg-background backdrop-blur-md">
       {/* Header */}
       <div className="h-[65px] flex items-center gap-2 border-b border-border px-3 py-2">
         <Button variant="ghost" size="icon-sm" render={<Link to="/" />}>
@@ -304,7 +304,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
                       href={lesson.sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm text-white/50 transition-colors hover:text-white/80"
+                      className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-white/80"
                     >
                       <ExternalLink className="size-4" />
                       {t('lesson.openOnYouTube')}

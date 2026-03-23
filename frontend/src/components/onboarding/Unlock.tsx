@@ -43,7 +43,7 @@ export function Unlock() {
   }
 
   return (
-    <div className="h-screen overflow-y-auto glass-bg text-foreground px-4">
+    <div className="h-screen overflow-y-auto text-foreground px-4">
       <div className="min-h-full flex items-center justify-center py-10">
         <Card className="w-full max-w-sm px-10 py-20">
           <CardHeader>
@@ -76,7 +76,7 @@ export function Unlock() {
               <button
                 type="button"
                 onClick={() => setShowReset(!showReset)}
-                className="text-sm text-white/40 underline-offset-2 hover:text-white/65 hover:underline"
+                className="text-sm text-muted-foreground underline-offset-2 hover:text-white/65 hover:underline"
               >
                 {t('auth.forgotPin')}
               </button>

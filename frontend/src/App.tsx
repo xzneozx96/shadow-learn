@@ -46,7 +46,7 @@ function AuthGate() {
   // (trialMode is synchronous; db is async — show spinner until both are ready)
   if (isFirstSetup === null || db === null) {
     return (
-      <div className="flex h-screen items-center justify-center glass-bg">
+      <div className="flex h-screen items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     )

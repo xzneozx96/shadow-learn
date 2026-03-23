@@ -112,7 +112,7 @@ export function Library() {
       <div className="p-6">
         {/* Section header */}
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-white/50 tracking-wide uppercase">
+          <h2 className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
             {t('library.allLessons')}
           </h2>
           {/* <div className="flex items-center gap-1">
@@ -134,7 +134,7 @@ export function Library() {
           {/* Add new lesson card */}
           <Link
             to="/create"
-            className="group flex h-full min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/20 text-white/60 transition-all duration-200 hover:bg-white/3"
+            className="group flex h-full min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/20 text-muted-foreground transition-all duration-200 hover:bg-white/3"
           >
             <div className="flex size-10 items-center justify-center rounded-full border border-white/25 transition-colors group-hover:bg-white/5">
               <Plus className="size-5" />
