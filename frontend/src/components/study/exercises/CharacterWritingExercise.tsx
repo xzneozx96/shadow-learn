@@ -13,9 +13,10 @@ interface Props {
   progress?: string
   onNext: (score: number, opts?: { skipped?: boolean }) => void
   caps: LanguageCapabilities
+  writingReps: number
 }
 
-export function CharacterWritingExercise({ entry, progress = '', onNext }: Props) {
+export function CharacterWritingExercise({ entry, progress = '', onNext, writingReps }: Props) {
   const { t } = useI18n()
   const characters = [...entry.word]
   const [charIndex, setCharIndex] = useState(0)
@@ -24,6 +25,10 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
   const anyHintUsedRef = useRef(false)
   const writerRef = useRef<HanziWriter | null>(null)
 
+  type WritingStage = 'guided' | 'blank'
+  const [stage, setStage] = useState<WritingStage>('guided')
+  const [blankRep, setBlankRep] = useState(0)
+
   const currentChar = characters[charIndex]
   const charProgress = `${charIndex + 1} / ${characters.length}`
 
@@ -31,7 +36,17 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
     if (usedHint)
       anyHintUsedRef.current = true
     setHintAnimating(false)
-    advance()
+
+    if (stage === 'guided') {
+      setStage('blank')
+      setBlankRep(0)
+    }
+    else if (blankRep < writingReps - 1) {
+      setBlankRep(blankRep + 1)
+    }
+    else {
+      advance()
+    }
   }
 
   function advance() {
@@ -44,6 +59,8 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
       }
       return next
     })
+    setStage('guided')
+    setBlankRep(0)
   }
 
   function handleHint() {
@@ -57,7 +74,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
       <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {hintAnimating
         ? (
-            <Button size="sm" onClick={advance}>{t('study.writing.continueButton')}</Button>
+            <Button size="sm" onClick={() => handleComplete(true)}>{t('study.writing.continueButton')}</Button>
           )
         : (
             <Button variant="outline" size="sm" onClick={handleHint}>{t('study.writing.hint')}</Button>
@@ -78,16 +95,25 @@ export function CharacterWritingExercise({ entry, progress = '', onNext }: Props
         {entry.romanization && <p className="text-sm text-muted-foreground/60 mt-1">{entry.romanization}</p>}
       </div>
 
-      {/* Character progress */}
-      <p className="text-sm text-center text-muted-foreground mb-3">{charProgress}</p>
+      {/* Character progress and stage label */}
+      <div className="text-center mb-3 space-y-0.5">
+        <p className="text-sm text-muted-foreground">
+          {stage === 'guided' ? t('study.writing.stageGuided') : t('study.writing.stageBlank')}
+        </p>
+        <p className="text-xs text-muted-foreground/60">
+          {characters.length > 1 && charProgress}
+          {stage === 'blank' && writingReps > 1 && ` · ${blankRep + 1} / ${writingReps}`}
+        </p>
+      </div>
 
       {/* Canvas */}
       <div className="flex justify-center mb-2">
         <HanziWriterCanvas
-          key={`${entry.id}-${charIndex}`}
+          key={`${entry.id}-${charIndex}-${stage}-${blankRep}`}
           character={currentChar}
           writerRef={writerRef}
           onComplete={handleComplete}
+          showOutline={stage === 'guided'}
         />
       </div>
     </ExerciseCard>
