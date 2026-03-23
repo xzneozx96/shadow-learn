@@ -11,13 +11,15 @@ interface ModePickerProps {
   onSelect: (mode: ExerciseMode) => void
   count: number
   onCountChange: (n: number) => void
+  writingReps: number
+  onWritingRepsChange: (n: number) => void
   onStart: () => void
   lessonTitle: string
   loading?: boolean
   caps: LanguageCapabilities
 }
 
-export function ModePicker({ selected, onSelect, count, onCountChange, onStart, lessonTitle, loading, caps }: ModePickerProps) {
+export function ModePicker({ selected, onSelect, count, onCountChange, writingReps, onWritingRepsChange, onStart, lessonTitle, loading, caps }: ModePickerProps) {
   const { t } = useI18n()
   const MODES: { id: ExerciseMode, icon: string, name: string, desc: string }[] = [
     { id: 'mixed', icon: '✍️🎧🎤', name: t('study.mode.mixed'), desc: t('study.mode.mixed.desc') },
@@ -83,6 +85,27 @@ export function ModePicker({ selected, onSelect, count, onCountChange, onStart, 
           </button>
         </div>
       </div>
+
+      {selected === 'writing' && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-md bg-secondary border border-border mt-2">
+          <span className="text-sm text-muted-foreground">{t('study.writing.repsLabel')}</span>
+          <div className="flex items-center gap-3">
+            <button
+              className="size-7 rounded-lg border border-border bg-card text-sm hover:bg-accent transition-colors"
+              onClick={() => onWritingRepsChange(Math.max(1, writingReps - 1))}
+            >
+              −
+            </button>
+            <span className="text-base font-bold w-6 text-center">{writingReps}</span>
+            <button
+              className="size-7 rounded-lg border border-border bg-card text-sm hover:bg-accent transition-colors"
+              onClick={() => onWritingRepsChange(Math.min(5, writingReps + 1))}
+            >
+              +
+            </button>
+          </div>
+        </div>
+      )}
 
       <Button className="w-full mt-8" onClick={onStart} disabled={loading}>
         <Sparkles className="size-4" />
