@@ -163,16 +163,16 @@ export const SegmentText = memo(({
               <TooltipContent
                 side="top"
                 align="center"
-                className="relative max-w-none min-w-72 rounded-2xl border border-white/10 bg-[oklch(0.13_0_0)]/95 p-0 shadow-2xl backdrop-blur-xl"
+                className="relative max-w-none min-w-72 rounded-2xl border border-white/10 bg-card p-0 shadow-2xl backdrop-blur-xl"
               >
                 <div className="flex flex-col gap-1 px-4 py-3 pr-10">
                   <p className="text-base font-bold text-white">
                     {span.word.word}
-                    {span.word.romanization && <span className="ml-2 text-sm font-normal text-white/45">{span.word.romanization}</span>}
+                    {span.word.romanization && <span className="ml-2 text-sm font-normal text-muted-foreground">{span.word.romanization}</span>}
                   </p>
                   <p className="text-sm text-white/70">{span.word.meaning}</p>
                   {span.word.usage && (
-                    <p className="text-sm text-white/45">{span.word.usage}</p>
+                    <p className="text-sm text-muted-foreground">{span.word.usage}</p>
                   )}
                 </div>
 
