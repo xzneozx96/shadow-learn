@@ -140,7 +140,7 @@ async def _extract_batch_with_retry(
                             "messages": [{"role": "user", "content": prompt}],
                             "response_format": response_format,
                             "temperature": 0.1,
-                            "max_tokens": 16384,
+                            "max_tokens": 64000,
                             "reasoning": {"effort": "none"},
                         },
                     )
