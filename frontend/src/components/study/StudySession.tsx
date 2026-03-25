@@ -362,7 +362,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto px-6 py-20">
+      <div className="mx-auto px-6 py-20">
         {/* Picker */}
         {phase === 'picker' && (
           <ModePicker

@@ -55,39 +55,3 @@ TTS provider is injected at startup via FastAPI lifespan and stored in `app.stat
 **Routing** is `react-router-dom` v7, configured in `App.tsx`.
 
 **Styling**: Tailwind CSS v4 (no separate config file — uses `@tailwindcss/vite` plugin). Use `clsx` + `tailwind-merge` for conditional classes. ESLint uses `@antfu/eslint-config` — no Prettier.
-
-## React Rules (enforced by ESLint)
-
-**`react-hooks-extra/no-direct-set-state-in-use-effect`** — never call a `useState` setter directly inside `useEffect` or `useLayoutEffect`. Three approved alternatives:
-
-1. **Derive during render** (preferred) — if the value can be computed from a ref or existing state/props, compute it inline during render. No effect needed.
-   ```tsx
-   // ✅ derive from ref during render
-   const rect = showPopup ? wrapperRef.current?.getBoundingClientRect() : undefined
-   const pos = rect ? { top: rect.bottom + 4, left: rect.left } : null
-   ```
-
-2. **Combine into one `useState`** — when two pieces of state must change atomically (e.g. resetting `page` when `buffer` changes), merge them into a single state object updated in one `setX` call inside an event handler. Never reset derived state via effect.
-   ```tsx
-   // ✅ atomic update in event handler
-   const [ime, setIme] = useState({ buffer: '', page: 0 })
-   // on keydown: setIme({ buffer: newBuffer, page: 0 })
-   ```
-
-3. **setState-during-render with a guard** — when state must change in response to a prop/state transition that can't be expressed as a pure derivation (e.g. auto-skip cascades, syncing form fields when async data arrives). Track what you've already processed with a `prev` state variable; React re-renders immediately and only once more.
-   ```tsx
-   // ✅ sync form fields when async `keys` prop arrives
-   const [prevKeys, setPrevKeys] = useState(keys)
-   if (prevKeys !== keys) {
-     setPrevKeys(keys)
-     setEditField(keys?.field ?? '')
-   }
-
-   // ✅ auto-skip cascade (advance past ineligible items)
-   const [lastAutoSkipCheck, setLastAutoSkipCheck] = useState(-1)
-   if (phase === 'session' && lastAutoSkipCheck !== current) {
-     setLastAutoSkipCheck(current)
-     if (shouldSkip(questions[current]))
-       handleNext(false)
-   }
-   ```

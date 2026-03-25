@@ -1,142 +1,64 @@
 @import "tailwindcss";
+@source "../";
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
-
-:root {
-  color-scheme: light;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.52 0.19 26.01);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.77 0.04 268.47);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.77 0.04 268.47);
-}
-
-.dark {
-  color-scheme: dark;
-  --background: oklch(0.18 0.01 254.17);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.24 0.01 267.02);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.767 0.042 268.42 / 0.2);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.767 0.042 268.42 / 0.2);
-  --muted-foreground: oklch(0.77 0.04 268.47);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.52 0.19 26.01);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.767 0.042 268.42 / 0.2);
-  --input: oklch(0.767 0.042 268.42 / 0.2);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.767 0.042 268.42 / 0.2);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.767 0.042 268.42 / 0.2);
-  --sidebar-ring: oklch(0.439 0 0);
-}
-
-@theme inline {
-  --font-sans: 'Inter', 'Noto Sans SC', sans-serif;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+@layer base {
+  :root {
+    --background: 222 18% 8%;
+    --foreground: 210 20% 90%;
+    --card: 222 16% 12%;
+    --card-foreground: 210 20% 90%;
+    --popover: 222 16% 12%;
+    --popover-foreground: 210 20% 90%;
+    --primary: 234.63 88.49% 72.75%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 14% 16%;
+    --secondary-foreground: 210 10% 70%;
+    --muted: 222 12% 16%;
+    --muted-foreground: 215 10% 50%;
+    --accent: 222 14% 18%;
+    --accent-foreground: 210 20% 90%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 12% 18%;
+    --input: 222 12% 18%;
+    --ring: 203 80% 55%;
+    --radius: 0.75rem;
+    --sidebar-background: 222 18% 7%;
+    --sidebar-foreground: 210 10% 70%;
+    --sidebar-primary: 203 80% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 14% 14%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 222 12% 16%;
+    --sidebar-ring: 203 80% 55%;
+    --tag-bg: 222 14% 16%;
+    --tag-foreground: 203 60% 65%;
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-  }
-
-  /* Full-screen SPA: clamp overflow at the browser level so no scrollbar
-     flash can occur before React mounts and its h-screen div takes over */
-  html,
-  body {
-    height: 100%;
-    overflow: hidden;
-  }
-
-  body {
-    @apply bg-background text-foreground;
+    @apply border-border;
   }
 
   html {
     @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    min-height: 100vh;
+  }
+
+  /* Full-screen SPA: clamp overflow at the browser level so no scrollbar
+  flash can occur before React mounts and its h-screen div takes over */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
   }
 
   #root {
@@ -144,41 +66,92 @@
   }
 }
 
+@theme inline {
+  --font-sans: 'Inter', 'Noto Sans SC', sans-serif;
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+}
+
+@layer components {
+
+  .elegant-card {
+    @apply bg-card rounded-xl border border-border transition-colors duration-150;
+  }
+
+  .elegant-card:hover {
+    border-color: hsl(var(--border));
+    background: hsl(222 16% 14%);
+  }
+
+  .elegant-input {
+    @apply rounded-lg border border-border bg-secondary px-4 py-3 text-foreground placeholder:text-muted-foreground transition-colors duration-150 outline-none;
+  }
+
+  .elegant-input:focus {
+    border-color: hsl(var(--primary) / 0.5);
+  }
+
+  .elegant-button {
+    @apply rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-150;
+  }
+
+  .elegant-button:hover {
+    opacity: 0.9;
+  }
+
+  .elegant-nav {
+    @apply border-b border-border bg-background;
+  }
+
+  .tag {
+    @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium;
+    background: hsl(var(--tag-bg));
+    color: hsl(var(--tag-foreground));
+  }
+
+  .gradient-text {
+    @apply text-primary;
+  }
+}
+
 /* YouTube iframe must fill its container */
 #yt-player {
   width: 100% !important;
   height: 100% !important;
-}
-
-@layer utilities {
-
-  /* Elevated glass card: frosted layer with top-edge light catch */
-  .glass-card {
-    background: oklch(0.24 0.01 267.02);
-    /* backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%); */
-    border: 1px solid oklch(1 0 0 / 0.08);
-  }
-
-  /* Interactive surface: slightly more opaque, lighter border */
-  .glass-surface {
-    background: oklch(1 0 0 / 0.06);
-    backdrop-filter: blur(12px) saturate(160%);
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    border: 1px solid oklch(1 0 0 / 0.11);
-    box-shadow:
-      0 1px 0 oklch(1 0 0 / 0.08) inset,
-      0 4px 16px oklch(0 0 0 / 0.35);
-  }
-
-  /* Hover state modifier — add to glass-card or glass-surface */
-  .glass-hover {
-    transition: background 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
-  }
-
-  .glass-hover:hover {
-    background: oklch(1 0 0 / 0.07);
-  }
 }
 
 @keyframes wave {

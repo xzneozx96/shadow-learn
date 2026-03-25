@@ -17,7 +17,7 @@ export function AccuracyTrendChart({ trend = [] }: Props) {
   }))
 
   return (
-    <div className="flex flex-col h-full rounded-2xl border border-border/40 bg-card backdrop-blur-xl p-6 shadow-sm">
+    <div className="flex flex-col h-full rounded-2xl border border-border/40 elegant-card backdrop-blur-xl p-6 shadow-sm">
       <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80 mb-4">
         {t('progress.accuracyTrend')}
       </h3>

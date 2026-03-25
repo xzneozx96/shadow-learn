@@ -192,7 +192,7 @@ export function TranscriptPanel({
               data-segment-id={segment.id}
               onClick={() => onSegmentClick(segment)}
               className={cn(
-                'cursor-pointer px-5 py-3 transition-colors hover:bg-card',
+                'cursor-pointer px-5 py-3 transition-colors hover:elegant-card',
                 activeSegment?.id === segment.id
                 && 'border-l-2 border-l-primary bg-primary/10',
               )}

@@ -12,7 +12,7 @@ interface WordCardProps {
 
 export function WordCard({ entry, className, onPlay, isLoading }: WordCardProps) {
   return (
-    <div className={cn('relative bg-background p-3 hover:bg-accent/40 transition-colors cursor-default border-r', className)}>
+    <div className={cn('relative bg-background p-3 hover:bg-card transition-colors cursor-default border-r', className)}>
       {onPlay && (
         <Button
           size="icon"

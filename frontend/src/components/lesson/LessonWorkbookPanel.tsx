@@ -97,7 +97,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                     onClick={() =>
                       navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
                     onKeyDown={e => e.key === 'Enter' && navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
-                    className="group/card relative cursor-pointer rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-white/10 hover:border-white/15"
+                    className="group/card relative cursor-pointer rounded-lg border border-border elegant-card p-3 text-left transition-colors"
                   >
                     <button
                       aria-label={t('lesson.removeFromWorkbook')}

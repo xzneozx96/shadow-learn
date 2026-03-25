@@ -25,7 +25,7 @@ export function OverallStatsPanel({ stats }: Props) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 h-full">
       {/* Card 1: Exercises */}
-      <div className="group flex flex-col items-center justify-center p-6 text-center rounded-2xl border border-border/40 bg-card/60 backdrop-blur-xl shadow-xs relative overflow-hidden h-full">
+      <div className="group flex flex-col items-center justify-center p-6 text-center rounded-2xl border border-border/40 elegant-card/60 backdrop-blur-xl shadow-xs relative overflow-hidden h-full">
         <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
         <div className="text-4xl font-black tracking-tighter text-foreground bg-clip-text relative z-10">
           {s.totalExercises}
@@ -39,7 +39,7 @@ export function OverallStatsPanel({ stats }: Props) {
       </div>
 
       {/* Card 2: Accuracy (Circular Redesign) */}
-      <div className="group flex flex-col items-center justify-center p-6 text-center rounded-2xl border border-border/40 bg-card/60 backdrop-blur-xl shadow-xs relative overflow-hidden h-full">
+      <div className="group flex flex-col items-center justify-center p-6 text-center rounded-2xl border border-border/40 elegant-card/60 backdrop-blur-xl shadow-xs relative overflow-hidden h-full">
         <div className="absolute inset-0 bg-linear-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
         {/* Circular Progress Ring */}
@@ -97,7 +97,7 @@ export function OverallStatsPanel({ stats }: Props) {
       </div>
 
       {/* Card 3: Sessions */}
-      <div className="group flex flex-col items-center justify-center p-6 text-center rounded-2xl border border-border/40 bg-card/60 backdrop-blur-xl shadow-xs relative overflow-hidden h-full">
+      <div className="group flex flex-col items-center justify-center p-6 text-center rounded-2xl border border-border/40 elegant-card/60 backdrop-blur-xl shadow-xs relative overflow-hidden h-full">
         <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
         <div className="text-4xl font-black tracking-tighter text-foreground bg-clip-text relative z-10">
           {s.totalSessions}

@@ -144,7 +144,7 @@ export function ProgressChartRenderer({ result }: { result: ProgressChartResult 
       exercises: d.exercises,
     }))
     return (
-      <div className="rounded-2xl border border-border/40 bg-card p-4 my-1">
+      <div className="rounded-2xl border border-border/40 elegant-card p-4 my-1">
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-3">
           Accuracy Trend
         </p>

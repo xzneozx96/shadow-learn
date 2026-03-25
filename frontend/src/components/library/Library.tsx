@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
+import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
@@ -99,7 +100,7 @@ export function Library() {
     catch {
       toast.error(t('library.retryFailed'))
     }
-  }, [keys, sttProvider, updateLesson, t])
+  }, [keys, trialMode, sttProvider, updateLesson, t])
 
   // const sortButtons: { mode: SortMode, label: string }[] = [
   //   { mode: 'recent', label: 'Recent' },
@@ -108,13 +109,19 @@ export function Library() {
   // ]
 
   return (
-    <Layout onSearch={setSearch} searchValue={search}>
-      <div className="p-6">
+    <Layout>
+      <div className="py-20">
         {/* Section header */}
-        <div className="mb-5 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between gap-4">
           <h2 className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
             {t('library.allLessons')}
           </h2>
+          <Input
+            placeholder={t('nav.search')}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
           {/* <div className="flex items-center gap-1">
             {sortButtons.map(({ mode, label }) => (
               <Button
@@ -130,7 +137,7 @@ export function Library() {
           </div> */}
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {/* Add new lesson card */}
           <Link
             to="/create"

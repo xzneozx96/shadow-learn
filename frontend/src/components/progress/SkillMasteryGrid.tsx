@@ -61,7 +61,7 @@ export function SkillMasteryGrid({ stats }: Props) {
         return (
           <div
             key={skill}
-            className="group rounded-3xl border border-white/5 bg-card backdrop-blur-xl p-6 flex flex-col items-center text-center justify-between shadow-xs transition-all duration-300 hover:border-white/10"
+            className="group rounded-3xl border border-white/5 elegant-card backdrop-blur-xl p-6 flex flex-col items-center text-center justify-between shadow-xs transition-all duration-300 hover:border-white/10"
           >
             {/* Circular Progress Ring */}
             <div className="relative flex items-center justify-center size-16">

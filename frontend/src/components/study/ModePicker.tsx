@@ -53,13 +53,13 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
             key={m.id}
             onClick={() => onSelect(m.id)}
             className={cn(
-              'py-3.5 px-2.5 rounded-md text-center border transition-all',
+              'py-10 px-2.5 rounded-md text-center border transition-all',
               selected === m.id
                 ? 'bg-secondary border-border/60 shadow-sm'
                 : 'border-border hover:bg-accent/60',
             )}
           >
-            <span className="text-xl block mb-2">{m.icon}</span>
+            <span className="text-xl block mb-5">{m.icon}</span>
             <div className="text-sm font-semibold">{m.name}</div>
             <div className="text-sm text-muted-foreground mt-1 leading-tight">{m.desc}</div>
           </button>
@@ -71,14 +71,14 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
         <span className="text-sm text-muted-foreground">{t('study.questions')}</span>
         <div className="flex items-center gap-3">
           <button
-            className="size-7 rounded-lg border border-border bg-card text-sm hover:bg-accent transition-colors"
+            className="size-7 rounded-lg border border-border elegant-card text-sm hover:bg-accent transition-colors"
             onClick={() => onCountChange(Math.max(5, count - 1))}
           >
             −
           </button>
           <span className="text-base font-bold w-6 text-center">{count}</span>
           <button
-            className="size-7 rounded-lg border border-border bg-card text-sm hover:bg-accent transition-colors"
+            className="size-7 rounded-lg border border-border elegant-card text-sm hover:bg-accent transition-colors"
             onClick={() => onCountChange(Math.min(20, count + 1))}
           >
             +
@@ -91,14 +91,14 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
           <span className="text-sm text-muted-foreground">{t('study.writing.repsLabel')}</span>
           <div className="flex items-center gap-3">
             <button
-              className="size-7 rounded-lg border border-border bg-card text-sm hover:bg-accent transition-colors"
+              className="size-7 rounded-lg border border-border elegant-card text-sm hover:bg-accent transition-colors"
               onClick={() => onWritingRepsChange(Math.max(1, writingReps - 1))}
             >
               −
             </button>
             <span className="text-base font-bold w-6 text-center">{writingReps}</span>
             <button
-              className="size-7 rounded-lg border border-border bg-card text-sm hover:bg-accent transition-colors"
+              className="size-7 rounded-lg border border-border elegant-card text-sm hover:bg-accent transition-colors"
               onClick={() => onWritingRepsChange(Math.min(5, writingReps + 1))}
             >
               +

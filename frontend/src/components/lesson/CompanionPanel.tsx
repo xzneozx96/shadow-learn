@@ -198,7 +198,7 @@ const MessageItem = memo(
       <div className="flex flex-col gap-2 items-start w-full">
         {hasBubble && (
           <div className="flex justify-start w-full">
-            <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
+            <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm elegant-card border text-foreground">
               {bubbleContent}
             </div>
           </div>

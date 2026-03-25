@@ -39,7 +39,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGr
   return (
     <div className={cn(
       'rounded-md border border-border',
-      'bg-card backdrop-blur-xl overflow-hidden',
+      'bg-card/50 backdrop-blur-xl overflow-hidden',
       'relative',
     )}
     >
@@ -80,7 +80,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGr
         <>
           <div
             className="grid border-t border-border"
-            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '1px', background: 'hsl(var(--border))' }}
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '1px' }}
           >
             {displayed.map(entry => (
               <WordCard key={entry.id} entry={entry} onPlay={onPlay ? () => onPlay(entry.word) : undefined} isLoading={loadingWord === entry.word} />

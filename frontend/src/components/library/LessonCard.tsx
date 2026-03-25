@@ -4,6 +4,14 @@ import { Clock, FileVideo, Loader2, MoreHorizontal, Pencil, Trash2, Youtube } fr
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { MenuBackdrop, MenuItem, MenuPopup, MenuPortal, MenuPositioner, MenuRoot, MenuTrigger } from '@/components/ui/menu'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
@@ -37,6 +45,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const isCancelledRef = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -82,7 +91,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
     <div
       className={cn(
         'group relative flex h-full min-h-[180px] flex-col overflow-hidden rounded-xl transition-all duration-200',
-        'bg-card border border-border hover:border-muted-foreground/60',
+        'elegant-card border border-border hover:border-muted-foreground/60',
         isError && 'ring-1 ring-destructive/30',
       )}
     >
@@ -121,7 +130,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                   className="text-destructive focus:text-destructive"
                   onClick={(e) => {
                     e.preventDefault()
-                    onDelete(lesson.id)
+                    setShowDeleteConfirm(true)
                   }}
                 >
                   <Trash2 className="size-4" />
@@ -213,6 +222,33 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
           />
         </div>
       )} */}
+      {/* Delete confirmation modal */}
+      <Dialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          if (!open)
+            setShowDeleteConfirm(false)
+        }}
+      >
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>{t('library.deleteTitle' as TranslationKey)}</DialogTitle>
+            <DialogDescription>{t('library.deleteDescription' as TranslationKey)}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('common.cancel' as TranslationKey)}</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowDeleteConfirm(false)
+                onDelete(lesson.id)
+              }}
+            >
+              {t('common.delete' as TranslationKey)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
