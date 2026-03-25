@@ -22,6 +22,7 @@ import { useTracking } from '@/hooks/useTracking'
 import { useTTS } from '@/hooks/useTTS'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
+import { captureStudySessionCompleted } from '@/lib/posthog-events'
 import { getSegmentTokens } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
@@ -253,8 +254,13 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
     if (q && !opts?.skipped) {
       void logExerciseResult({ vocabEntry: q.entry, score, exerciseType: q.type, mistakes: opts?.mistakes })
       setResults(r => [...r, { entry: q.entry, score, correct: score >= 60 }])
-      if (isLast)
+      if (isLast) {
         void logSessionComplete()
+        // results state is batched — compute final count from current iteration data
+        const finalCorrect = results.filter(r => r.correct).length + (score >= 60 ? 1 : 0)
+        const total = questions.length
+        captureStudySessionCompleted({ lesson_id: lessonId, mode, score: finalCorrect, total, perfect: finalCorrect === total })
+      }
     }
 
     if (isLast)

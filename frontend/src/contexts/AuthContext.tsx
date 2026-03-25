@@ -17,6 +17,7 @@ import {
   saveCryptoData,
 
 } from '../db'
+import { captureAuthEvent } from '../lib/posthog-events'
 
 interface AuthState {
   isFirstSetup: boolean | null // null = loading
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.history.replaceState({}, '', '/')
     setTrialMode(true)
     setIsUnlocked(true)
+    captureAuthEvent('trial_started')
   }, [])
 
   const setup = useCallback(
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsUnlocked(true)
       setIsFirstSetup(false)
       setTrialMode(false)
+      captureAuthEvent('app_setup_complete')
     },
     [db],
   )
@@ -88,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const decrypted = await decryptKeys(cryptoData, pin)
       setKeys(decrypted)
       setIsUnlocked(true)
+      captureAuthEvent('app_unlocked')
     },
     [db],
   )

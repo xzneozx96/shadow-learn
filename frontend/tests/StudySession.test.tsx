@@ -44,6 +44,10 @@ vi.mock('@/hooks/useTTS', () => ({
   useTTS: () => ({ playTTS: vi.fn(), loadingText: null }),
 }))
 
+vi.mock('@/lib/posthog', () => ({
+  posthog: { capture: vi.fn(), captureException: vi.fn() },
+}))
+
 describe('studySession', () => {
   it('renders ModePicker on initial mount', () => {
     render(<StudySession lessonId="lesson_1" onClose={vi.fn()} />)

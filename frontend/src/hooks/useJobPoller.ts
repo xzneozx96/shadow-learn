@@ -3,6 +3,7 @@ import type { LessonMeta } from '@/types'
 import { useCallback, useEffect, useRef } from 'react'
 import { saveSegments, saveVideo } from '@/db'
 import { API_BASE } from '@/lib/config'
+import { captureLessonJobFailed } from '@/lib/posthog-events'
 
 interface UseJobPollerProps {
   lessons: LessonMeta[]
@@ -94,6 +95,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
       }
       else if (job.status === 'error') {
         const jobId = lesson.jobId
+        captureLessonJobFailed({ step: job.step ?? 'unknown', error_message: job.error ?? 'Unknown error' })
         await updateLesson({
           ...lesson,
           status: 'error',

@@ -14,6 +14,7 @@ import { useLessons } from '@/contexts/LessonsContext'
 import { getSettings, saveVideo } from '@/db'
 import { API_BASE, getAppConfig } from '@/lib/config'
 import { LANGUAGES } from '@/lib/constants'
+import { captureLessonCreated, captureLessonGenerationFailed } from '@/lib/posthog-events'
 import { UploadTab } from './UploadTab'
 import { YouTubeTab } from './YouTubeTab'
 
@@ -148,12 +149,14 @@ export function CreateLesson() {
         jobId,
       } as LessonMeta)
 
+      captureLessonCreated({ source: lessonSource })
       setQueued(true)
       setYoutubeUrl('')
       setFile(null)
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
+      captureLessonGenerationFailed({ source: tab === 'youtube' ? 'youtube' : 'upload', error_message: msg })
       setError(msg)
     }
     finally {

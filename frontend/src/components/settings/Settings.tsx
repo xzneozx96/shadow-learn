@@ -407,6 +407,7 @@ export function Settings() {
             <Lock className="size-4" />
             {t('settings.lockApp')}
           </Button>
+
         </div>
       </div>
     </Layout>

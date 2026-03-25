@@ -1,6 +1,8 @@
 import { Loader2 } from 'lucide-react'
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { FeedbackButton } from '@/components/FeedbackButton'
 import { LessonView } from '@/components/lesson/LessonView'
 import { Library } from '@/components/library/Library'
 import { Setup } from '@/components/onboarding/Setup'
@@ -20,6 +22,7 @@ function AppLayout() {
   return (
     <PlayerProvider>
       <Outlet />
+      <FeedbackButton />
     </PlayerProvider>
   )
 }
@@ -64,11 +67,13 @@ function AuthGate() {
 
   // Authenticated or trial mode — show app
   return (
-    <VocabularyProvider>
-      <LessonsProvider>
-        <RouterProvider router={router} />
-      </LessonsProvider>
-    </VocabularyProvider>
+    <ErrorBoundary>
+      <VocabularyProvider>
+        <LessonsProvider>
+          <RouterProvider router={router} />
+        </LessonsProvider>
+      </VocabularyProvider>
+    </ErrorBoundary>
   )
 }
 

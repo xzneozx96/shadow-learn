@@ -4,7 +4,12 @@ import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getSegments, getVideo, initDB } from '@/db'
 import { useJobPoller } from '@/hooks/useJobPoller'
+import { posthog } from '@/lib/posthog'
 import 'fake-indexeddb/auto'
+
+vi.mock('@/lib/posthog', () => ({
+  posthog: { capture: vi.fn(), captureException: vi.fn() },
+}))
 
 function makeProcessingLesson(overrides: Partial<LessonMeta> = {}): LessonMeta {
   return {
@@ -159,6 +164,32 @@ describe('useJobPoller', () => {
       expect.objectContaining({ status: 'error', errorMessage: 'API timeout', jobId: undefined }),
     )
     expect(mockFetch).toHaveBeenCalledWith('/api/jobs/job_abc', { method: 'DELETE' })
+  })
+
+  it('fires lesson_job_failed event with step and error_message when job errors', async () => {
+    const db = (globalThis as any).__testDb
+    const lesson = makeProcessingLesson()
+
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        status: 200,
+        json: async () => ({ status: 'error', step: 'transcription', result: null, error: 'API timeout' }),
+      })
+      .mockResolvedValue({ status: 204 }))
+
+    renderHook(() => useJobPoller({ lessons: [lesson], db, updateLesson: vi.fn(async () => {}) }))
+
+    await act(async () => {
+      vi.advanceTimersByTime(10000)
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(posthog.capture).toHaveBeenCalledWith('lesson_job_failed', {
+      step: 'transcription',
+      error_message: 'API timeout',
+    })
   })
 
   it('does not start interval when no processing lessons', async () => {
