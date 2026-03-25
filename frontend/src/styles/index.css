@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Noto+Sans+SC:wght@100..900&display=swap');
+
 @import "tailwindcss";
-@source "../";
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+
 
 @layer base {
   :root {
@@ -44,10 +46,6 @@
     @apply border-border;
   }
 
-  html {
-    @apply font-sans;
-  }
-
   body {
     @apply bg-background text-foreground antialiased;
     min-height: 100vh;
@@ -67,7 +65,7 @@
 }
 
 @theme inline {
-  --font-sans: 'Inter', 'Noto Sans SC', sans-serif;
+  --font-sans: 'Nunito', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));

@@ -112,15 +112,20 @@ export function Library() {
     <Layout>
       <div className="py-20">
         {/* Section header */}
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
-            {t('library.allLessons')}
+        <div className="mb-20 flex flex-col items-center justify-center gap-8">
+          <h2 className="text-4xl sm:text-5xl text-center font-bold tracking-wide leading-tight">
+            {t('library.heroTitleLine1')}
+            <br />
+            <span className="gradient-text">{t('library.heroTitleLine2')}</span>
           </h2>
+          <h4 className="text-base lg:text-lg text-muted-foreground max-w-xl text-center tracking-wide">
+            {t('library.heroSubtitle')}
+          </h4>
           <Input
             placeholder={t('nav.search')}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="max-w-xs"
+            className="max-w-lg h-12"
           />
           {/* <div className="flex items-center gap-1">
             {sortButtons.map(({ mode, label }) => (
