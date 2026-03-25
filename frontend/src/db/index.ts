@@ -125,8 +125,9 @@ interface ShadowLearnSchema extends DBSchema {
 
 export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
 
-export async function initDB(): Promise<ShadowLearnDB> {
+export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> {
   return openDB<ShadowLearnSchema>(DB_NAME, DB_VERSION, {
+    terminated: onTerminated,
     async upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         db.createObjectStore('lessons', { keyPath: 'id' })

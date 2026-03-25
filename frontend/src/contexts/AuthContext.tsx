@@ -45,11 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    initDB().then(async (database) => {
+    const connect = async (isReconnect = false) => {
+      const database = await initDB(() => connect(true))
       setDb(database)
-      const cryptoData = await getCryptoData(database)
-      setIsFirstSetup(!cryptoData)
-    })
+      if (!isReconnect) {
+        const cryptoData = await getCryptoData(database)
+        setIsFirstSetup(!cryptoData)
+      }
+    }
+    connect()
   }, [])
 
   const startTrial = useCallback(() => {
