@@ -91,7 +91,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
     <div
       className={cn(
         'group relative flex h-full min-h-[180px] flex-col overflow-hidden rounded-xl transition-all duration-200',
-        'elegant-card border border-border hover:border-muted-foreground/60',
+        'elegant-card border border-border hover:border-b-primary',
         isError && 'ring-1 ring-destructive/30',
       )}
     >
@@ -104,7 +104,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       />
 
       {/* Action menu — top-right, appears on hover */}
-      <div className="absolute right-2 top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="absolute right-2 top-2 z-20">
         <MenuRoot>
           <MenuTrigger
             render={(
@@ -213,15 +213,6 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         )}
       </div>
 
-      {/* Progress strip at bottom edge */}
-      {/* {!isProcessing && progress > 0 && (
-        <div className="h-0.5 w-full bg-white/5">
-          <div
-            className="h-full bg-emerald-500/60 transition-all"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      )} */}
       {/* Delete confirmation modal */}
       <Dialog
         open={showDeleteConfirm}
