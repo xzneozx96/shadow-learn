@@ -38,6 +38,7 @@ import {
   executeUpdateLearnerProfile,
   executeUpdateSrItem,
   getToolDefinitionsArray,
+  ToolInputSchemas,
 } from '@/lib/agent-tools'
 import { API_BASE } from '@/lib/config'
 
@@ -170,6 +171,20 @@ export function useAgentChat(
       const currentDb = dbRef.current
       if (!currentDb)
         return
+
+      // Validate tool input schema if one exists
+      const schema = ToolInputSchemas[toolCall.toolName as keyof typeof ToolInputSchemas]
+      if (schema) {
+        const parsed = schema.safeParse(toolCall.input)
+        if (!parsed.success) {
+          addToolResult({
+            tool: toolCall.toolName,
+            toolCallId: toolCall.toolCallId,
+            output: { error: `Invalid tool input: ${parsed.error.message}` },
+          })
+          return
+        }
+      }
 
       const openrouterApiKey = keys?.openrouterApiKey ?? ''
       let result: unknown

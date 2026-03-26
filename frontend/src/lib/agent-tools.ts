@@ -8,10 +8,10 @@
 
 import type { ShadowLearnDB } from '@/db'
 import type { VocabEntry } from '@/types'
+import { z } from 'zod'
 import {
   getDueItems,
   getErrorPattern,
-  getExerciseAccuracy,
   getLearnerProfile,
   getMasteryData,
   getProgressStats,
@@ -306,6 +306,39 @@ export function getToolDefinitionsArray(): object[] {
 }
 
 // -------------------------------------------------------------------------- //
+// Input validation schemas (Zod)
+// -------------------------------------------------------------------------- //
+
+const CLOZE_PLACEHOLDER_RE = /\{\{.+?\}\}/
+
+export const ToolInputSchemas = {
+  render_cloze_exercise: z.object({
+    itemIds: z.array(z.string()).min(1),
+    sourceLanguage: z.string().optional(),
+  }),
+  render_reconstruction_exercise: z.object({
+    itemId: z.string(),
+  }),
+  render_translation_exercise: z.object({
+    itemIds: z.array(z.string()).min(1),
+    sourceLanguage: z.string().optional(),
+  }),
+  render_pronunciation_exercise: z.object({
+    itemIds: z.array(z.string()).min(1),
+    sourceLanguage: z.string().optional(),
+  }),
+  render_dictation_exercise: z.object({
+    itemIds: z.array(z.string()).min(1),
+  }),
+  render_character_writing_exercise: z.object({
+    itemIds: z.array(z.string()).min(1),
+  }),
+  render_romanization_exercise: z.object({
+    itemIds: z.array(z.string()).min(1),
+  }),
+} satisfies Partial<Record<string, z.ZodSchema>>
+
+// -------------------------------------------------------------------------- //
 // Execute functions (called client-side via onToolCall)
 // -------------------------------------------------------------------------- //
 
@@ -553,6 +586,8 @@ export async function executeRenderTranslationExercise(
     const sentence = data.sentences[0]
     if (!sentence)
       return { error: 'No sentence generated.' }
+    if (!('text' in sentence) || !sentence.text)
+      return { error: 'Translation sentence missing text field' }
 
     const direction: 'en-to-zh' | 'zh-to-en' = Math.random() < 0.5 ? 'en-to-zh' : 'zh-to-en'
     return { type: 'translation', props: { items: entries, sentence, direction } }
@@ -641,6 +676,10 @@ export async function executeRenderClozeExercise(
     if (!exercise)
       return { error: 'No cloze story generated.' }
 
+    // Output guard: verify story has {{word}} placeholders (e.g. {{天气}})
+    if (!CLOZE_PLACEHOLDER_RE.test(exercise.story)) {
+      return { type: 'cloze', props: {}, error: 'Cloze story missing {{word}} placeholder — LLM generated invalid story' }
+    }
     return { type: 'cloze', props: { question: exercise, items: entries } }
   }
   catch (err: any) {

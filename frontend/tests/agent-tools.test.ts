@@ -8,6 +8,7 @@ import {
   executeRenderReconstructionExercise,
   executeRenderRomanizationExercise,
   executeRenderTranslationExercise,
+  ToolInputSchemas,
 } from '@/lib/agent-tools'
 
 describe('agent-tools executors', () => {
@@ -279,5 +280,52 @@ describe('agent-tools executors', () => {
 
       expect(result).toEqual({ error: 'Guidelines load error: Failed to load guidelines: Not Found' })
     })
+  })
+})
+
+describe('toolInputSchemas — input validation', () => {
+  it('render_cloze_exercise rejects empty itemIds', () => {
+    const result = ToolInputSchemas.render_cloze_exercise.safeParse({ itemIds: [] })
+    expect(result.success).toBe(false)
+  })
+
+  it('render_cloze_exercise accepts valid input', () => {
+    const result = ToolInputSchemas.render_cloze_exercise.safeParse({ itemIds: ['vocab-1'] })
+    expect(result.success).toBe(true)
+  })
+
+  it('render_reconstruction_exercise rejects missing itemId', () => {
+    const result = ToolInputSchemas.render_reconstruction_exercise.safeParse({})
+    expect(result.success).toBe(false)
+  })
+
+  it('render_translation_exercise accepts optional sourceLanguage', () => {
+    const result = ToolInputSchemas.render_translation_exercise.safeParse({
+      itemIds: ['vocab-1'],
+      sourceLanguage: 'zh-CN',
+    })
+    expect(result.success).toBe(true)
+  })
+})
+
+describe('executeRenderClozeExercise — output guard (standalone)', () => {
+  const mockDb = {
+    get: vi.fn(),
+  } as any
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns error when cloze story is missing {{word}} placeholder', async () => {
+    mockDb.get.mockResolvedValue({ id: 'vocab-1', word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: '你好！', sourceLanguage: 'zh-CN' } as any)
+    // Mock fetch to return a story without {{word}}
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ exercises: [{ story: 'A story with no blank.', blanks: ['你好'] }] }),
+    } as any)
+    const result = await executeRenderClozeExercise(mockDb, { itemIds: ['vocab-1'] }, '')
+    expect(result).toHaveProperty('error')
+    expect((result as any).error).toContain('{{word}}')
   })
 })
