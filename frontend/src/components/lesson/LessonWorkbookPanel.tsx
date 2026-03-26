@@ -82,7 +82,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
         ? (
             <div className="flex flex-1 items-center justify-center px-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Hover any word in the transcript and tap the bookmark to save it here
+                Tap any word in the transcript and tap the bookmark to save it here
               </p>
             </div>
           )
@@ -105,7 +105,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                         e.stopPropagation()
                         setPendingRemove(entry)
                       }}
-                      className="absolute top-1.5 right-1.5 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/card:opacity-100"
+                      className="absolute top-1.5 right-1.5 rounded p-0.5 text-muted-foreground opacity-40 transition-opacity hover:opacity-100 hover:text-foreground"
                     >
                       <X className="size-4" />
                     </button>

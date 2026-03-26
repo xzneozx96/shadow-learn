@@ -192,7 +192,7 @@ export function TranscriptPanel({
               data-segment-id={segment.id}
               onClick={() => onSegmentClick(segment)}
               className={cn(
-                'cursor-pointer px-5 py-3 transition-colors hover:elegant-card',
+                'cursor-pointer p-3 transition-colors hover:elegant-card',
                 activeSegment?.id === segment.id
                 && 'border-l-2 border-l-primary bg-primary/10',
               )}
@@ -226,7 +226,7 @@ export function TranscriptPanel({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-5 text-muted-foreground hover:text-foreground"
+                    className="size-8 text-muted-foreground hover:text-foreground"
                     aria-label={loadingText === segment.text ? 'Loading pronunciation' : 'Play sentence pronunciation'}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -234,32 +234,32 @@ export function TranscriptPanel({
                     }}
                   >
                     {loadingText === segment.text
-                      ? <Loader2 className="size-4 animate-spin" />
-                      : <Volume2 className="size-4" />}
+                      ? <Loader2 className="size-5 animate-spin" />
+                      : <Volume2 className="size-5" />}
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="size-5 text-muted-foreground hover:text-foreground"
+                    className="size-8 text-muted-foreground hover:text-foreground"
                     aria-label="Copy transcription"
                     onClick={e => handleCopy(e, segment)}
                   >
                     {copiedId === segment.id
-                      ? <Check className="size-4 text-green-500" />
-                      : <Copy className="size-4" />}
+                      ? <Check className="size-5 text-green-500" />
+                      : <Copy className="size-5" />}
                   </Button>
                   {onShadowClick && (
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      className="size-5 text-muted-foreground hover:text-foreground"
+                      className="size-8 text-muted-foreground hover:text-foreground"
                       aria-label="Shadow from this segment"
                       onClick={(e) => {
                         e.stopPropagation()
                         onShadowClick(segment)
                       }}
                     >
-                      <span className="size-4 flex items-center justify-center">🎯</span>
+                      <span className="text-lg flex items-center justify-center">🎯</span>
                     </Button>
                   )}
                 </div>

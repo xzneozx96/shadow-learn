@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
@@ -65,34 +64,30 @@ export function ShadowingModePicker({
         </button>
 
         {/* Speaking (may be disabled) */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger>
-              <div
-                role="button"
-                tabIndex={0}
-                className={cn(
-                  'rounded-lg border p-3 text-left transition-colors',
-                  !speakingAvailable && 'cursor-not-allowed opacity-40',
-                  selectedMode === 'speaking' && speakingAvailable
-                    ? 'border-foreground/25 bg-foreground/8'
-                    : 'border-border',
-                  speakingAvailable && 'hover:bg-accent',
-                )}
-                onClick={() => speakingAvailable && setSelectedMode('speaking')}
-                aria-disabled={!speakingAvailable}
-              >
-                <div className="text-sm font-semibold">{t('shadowing.speakingMode.label')}</div>
-                <div className="mt-0.5 text-sm text-muted-foreground">
-                  {t('shadowing.speakingMode.desc')}
-                </div>
-              </div>
-            </TooltipTrigger>
-            {!speakingAvailable && (
-              <TooltipContent>{t('shadowing.azureRequired')}</TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+        <div
+          role="button"
+          tabIndex={0}
+          className={cn(
+            'rounded-lg border p-3 text-left transition-colors',
+            !speakingAvailable && 'cursor-not-allowed opacity-40',
+            selectedMode === 'speaking' && speakingAvailable
+              ? 'border-foreground/25 bg-foreground/8'
+              : 'border-border',
+            speakingAvailable && 'hover:bg-accent',
+          )}
+          onClick={() => speakingAvailable && setSelectedMode('speaking')}
+          aria-disabled={!speakingAvailable}
+        >
+          <div className="text-sm font-semibold">{t('shadowing.speakingMode.label')}</div>
+          <div className="mt-0.5 text-sm text-muted-foreground">
+            {t('shadowing.speakingMode.desc')}
+          </div>
+          {!speakingAvailable && (
+            <div className="mt-1 text-xs text-muted-foreground/70">
+              {t('shadowing.azureRequired')}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Count chips */}

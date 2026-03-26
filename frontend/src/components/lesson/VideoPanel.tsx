@@ -3,7 +3,6 @@ import { Download, ExternalLink, Home, Pause, Pencil, Play, Volume2 } from 'luci
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useI18n } from '@/contexts/I18nContext'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { cn } from '@/lib/utils'
@@ -266,22 +265,15 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
           )}
         </div>
         {videoBlob && (
-          <TooltipProvider>
-            <Tooltip>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="ml-auto shrink-0"
-                onClick={handleDownload}
-                render={<TooltipTrigger />}
-              >
-                <Download className="size-4" />
-              </Button>
-              <TooltipContent>
-                {videoBlob?.type.startsWith('video/') ? t('lesson.downloadVideo') : t('lesson.downloadAudio')}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="ml-auto shrink-0"
+            onClick={handleDownload}
+            aria-label={videoBlob.type.startsWith('video/') ? t('lesson.downloadVideo') : t('lesson.downloadAudio')}
+          >
+            <Download className="size-4" />
+          </Button>
         )}
       </div>
 

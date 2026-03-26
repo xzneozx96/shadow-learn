@@ -3,12 +3,7 @@ import { Bookmark, Copy, Loader2, Volume2 } from 'lucide-react'
 import { memo, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useI18n } from '@/contexts/I18nContext'
 import { usePlayer } from '@/contexts/PlayerContext'
 import { buildPositionMap, buildWordSpans } from '@/lib/segment-text'
@@ -120,137 +115,135 @@ export const SegmentText = memo(({
   }, [subscribeTime, getTime])
 
   return (
-    <TooltipProvider>
-      <span className="text-lg">
-        {spans.map((span, spanIdx) => {
-          const spanStart = spanStarts[spanIdx]
+    <span className="text-lg">
+      {spans.map((span, spanIdx) => {
+        const spanStart = spanStarts[spanIdx]
 
-          const charSpans = span.text.split('').map((char, j) => {
-            const charIdx = spanStart + j
-            return (
-              <span
-                key={charIdx}
-                ref={(el) => { charSpanRef.current[charIdx] = el }}
-              >
-                {char}
-              </span>
-            )
-          })
-
-          if (!span.word) {
-            return <span key={spanStart}>{charSpans}</span>
-          }
-
+        const charSpans = span.text.split('').map((char, j) => {
+          const charIdx = spanStart + j
           return (
-            <Tooltip key={spanStart}>
-              <TooltipTrigger>
-                <span
-                  className="inline-flex flex-col items-center cursor-help rounded-sm px-1 transition-colors hover:bg-white/10"
-                >
-                  {showRomanization && span.word.romanization && (
-                    <span
-                      className="text-sm text-muted-foreground"
-                      ref={(el) => { wordPinyinRef.current[spanIdx] = el }}
-                    >
-                      {span.word.romanization}
-                    </span>
-                  )}
-                  <span className="hover:underline decoration-white/30 decoration-dotted underline-offset-4">
-                    {charSpans}
-                  </span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                align="center"
-                className="relative max-w-none min-w-72 rounded-2xl border border-white/10 bg-card p-0 shadow-2xl backdrop-blur-xl"
-              >
-                <div className="flex flex-col gap-1 px-4 py-3 pr-10">
-                  <p className="text-base font-bold text-white">
-                    {span.word.word}
-                    {span.word.romanization && <span className="ml-2 text-sm font-normal text-muted-foreground">{span.word.romanization}</span>}
-                  </p>
-                  <p className="text-sm text-white/70">{span.word.meaning}</p>
-                  {span.word.usage && (
-                    <p className="text-sm text-muted-foreground">{span.word.usage}</p>
-                  )}
-                </div>
+            <span
+              key={charIdx}
+              ref={(el) => { charSpanRef.current[charIdx] = el }}
+            >
+              {char}
+            </span>
+          )
+        })
 
-                <div className="absolute top-1 right-1 flex gap-0.5">
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="size-7 text-muted-foreground hover:bg-white/6 hover:text-white"
-                    aria-label={loadingText === span.word.word ? 'Loading pronunciation' : `Play pronunciation of ${span.word.word}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      playTTS(span.word!.word)
-                    }}
-                  >
-                    {loadingText === span.word.word
-                      ? <Loader2 className="size-4 animate-spin" />
-                      : <Volume2 className="size-4" />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="size-7 text-muted-foreground hover:bg-white/6 hover:text-white"
-                    aria-label={`Copy ${span.word.word}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      navigator.clipboard.writeText(span.word!.word)
-                      toast.success(`Copied "${span.word!.word}" to clipboard`)
-                    }}
-                  >
-                    <Copy className="size-4" />
-                  </Button>
-                  {(onSaveWord || onRemoveWord) && segment && (() => {
-                    const saved = isSaved?.(span.word.word)
-                    if (saved && onRemoveWord) {
-                      return (
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="size-7 text-yellow-400 hover:bg-white/6 hover:text-yellow-300"
-                          title={t('lesson.removeFromWorkbook')}
-                          aria-label={t('lesson.removeFromWorkbook')}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onRemoveWord(span.word!)
-                          }}
-                        >
-                          <Bookmark className="size-4 fill-current" />
-                        </Button>
-                      )
-                    }
+        if (!span.word) {
+          return <span key={spanStart}>{charSpans}</span>
+        }
+
+        return (
+          <Popover key={spanStart}>
+            <PopoverTrigger
+              className="inline-flex flex-col items-center cursor-pointer rounded-sm px-1 transition-colors hover:bg-white/10"
+              onClick={e => e.stopPropagation()}
+            >
+              {showRomanization && span.word.romanization && (
+                <span
+                  className="text-sm text-muted-foreground"
+                  ref={(el) => { wordPinyinRef.current[spanIdx] = el }}
+                >
+                  {span.word.romanization}
+                </span>
+              )}
+              <span className="decoration-white/30 decoration-dotted underline-offset-4">
+                {charSpans}
+              </span>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="center"
+              initialFocus={false}
+              className="relative max-w-none min-w-72 rounded-2xl border border-white/10 bg-card p-0 shadow-2xl backdrop-blur-xl"
+            >
+              <div className="flex flex-col gap-1 px-4 py-3 pr-10">
+                <p className="text-base font-bold text-white">
+                  {span.word.word}
+                  {span.word.romanization && <span className="ml-2 text-sm font-normal text-muted-foreground">{span.word.romanization}</span>}
+                </p>
+                <p className="text-sm text-white/70">{span.word.meaning}</p>
+                {span.word.usage && (
+                  <p className="text-sm text-muted-foreground">{span.word.usage}</p>
+                )}
+              </div>
+
+              <div className="absolute top-1 right-1 flex gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-7 text-muted-foreground hover:bg-white/6 hover:text-white"
+                  aria-label={loadingText === span.word.word ? 'Loading pronunciation' : `Play pronunciation of ${span.word.word}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    playTTS(span.word!.word)
+                  }}
+                >
+                  {loadingText === span.word.word
+                    ? <Loader2 className="size-4 animate-spin" />
+                    : <Volume2 className="size-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-7 text-muted-foreground hover:bg-white/6 hover:text-white"
+                  aria-label={`Copy ${span.word.word}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText(span.word!.word)
+                    toast.success(`Copied "${span.word!.word}" to clipboard`)
+                  }}
+                >
+                  <Copy className="size-4" />
+                </Button>
+                {(onSaveWord || onRemoveWord) && segment && (() => {
+                  const saved = isSaved?.(span.word.word)
+                  if (saved && onRemoveWord) {
                     return (
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        className={cn(
-                          'size-7 hover:bg-white/6',
-                          saved ? 'text-yellow-400 disabled:opacity-100' : 'text-muted-foreground hover:text-white',
-                        )}
-                        title={saved ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
-                        aria-label={saved ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
-                        disabled={saved || !onSaveWord}
+                        className="size-7 text-yellow-400 hover:bg-white/6 hover:text-yellow-300"
+                        title={t('lesson.removeFromWorkbook')}
+                        aria-label={t('lesson.removeFromWorkbook')}
                         onClick={(e) => {
                           e.stopPropagation()
-                          if (onSaveWord && !saved)
-                            onSaveWord(span.word!, segment)
+                          onRemoveWord(span.word!)
                         }}
                       >
-                        <Bookmark className={cn('size-4', saved && 'fill-current')} />
+                        <Bookmark className="size-4 fill-current" />
                       </Button>
                     )
-                  })()}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          )
-        })}
-      </span>
-    </TooltipProvider>
+                  }
+                  return (
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className={cn(
+                        'size-7 hover:bg-white/6',
+                        saved ? 'text-yellow-400 disabled:opacity-100' : 'text-muted-foreground hover:text-white',
+                      )}
+                      title={saved ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
+                      aria-label={saved ? t('lesson.alreadyInWorkbook') : t('lesson.saveToWorkbook')}
+                      disabled={saved || !onSaveWord}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onSaveWord && !saved)
+                          onSaveWord(span.word!, segment)
+                      }}
+                    >
+                      <Bookmark className={cn('size-4', saved && 'fill-current')} />
+                    </Button>
+                  )
+                })()}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )
+      })}
+    </span>
   )
 })
 

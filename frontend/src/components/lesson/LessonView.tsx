@@ -133,43 +133,46 @@ export function LessonView() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Video Panel — 36% */}
-      <div className="h-full overflow-hidden border-r border-border" style={{ width: '36%' }}>
-        <VideoPanel
-          lesson={meta}
-          segments={segments}
-          activeSegment={activeSegment}
-          videoBlob={videoBlob}
-          onRename={handleRename}
-        />
+      {/* Left column: video stacked on transcript */}
+      <div className="flex flex-col h-full w-[55%] overflow-hidden border-r border-border">
+        {/* Video Panel — 40% height */}
+        <div className="h-1/2 shrink-0 overflow-hidden border-b border-border">
+          <VideoPanel
+            lesson={meta}
+            segments={segments}
+            activeSegment={activeSegment}
+            videoBlob={videoBlob}
+            onRename={handleRename}
+          />
+        </div>
+
+        {/* Transcript / Shadowing Panel — flex-1 fills remaining space */}
+        <div className="flex-1 overflow-hidden">
+          {shadowingMode
+            ? (
+                <ShadowingPanel
+                  segments={shadowingMode.segments}
+                  mode={shadowingMode.mode}
+                  azureKey={keys?.azureSpeechKey ?? ''}
+                  azureRegion={keys?.azureSpeechRegion ?? ''}
+                  onExit={handleShadowingExit}
+                  lesson={meta}
+                />
+              )
+            : (
+                <TranscriptPanel
+                  segments={segments}
+                  activeSegment={activeSegment}
+                  lesson={meta}
+                  onSegmentClick={handleSegmentClick}
+                  onProgressUpdate={handleProgressUpdate}
+                  onShadowClick={handleShadowClick}
+                />
+              )}
+        </div>
       </div>
 
-      {/* Transcript / Shadowing Panel — 34% */}
-      <div className="h-full overflow-hidden border-r border-border" style={{ width: '34%' }}>
-        {shadowingMode
-          ? (
-              <ShadowingPanel
-                segments={shadowingMode.segments}
-                mode={shadowingMode.mode}
-                azureKey={keys?.azureSpeechKey ?? ''}
-                azureRegion={keys?.azureSpeechRegion ?? ''}
-                onExit={handleShadowingExit}
-                lesson={meta}
-              />
-            )
-          : (
-              <TranscriptPanel
-                segments={segments}
-                activeSegment={activeSegment}
-                lesson={meta}
-                onSegmentClick={handleSegmentClick}
-                onProgressUpdate={handleProgressUpdate}
-                onShadowClick={handleShadowClick}
-              />
-            )}
-      </div>
-
-      {/* Companion Panel — flex-1 */}
+      {/* Companion Panel — flex-1 fills remaining width */}
       <div className="h-full flex-1 overflow-hidden">
         <CompanionPanel
           activeSegment={activeSegment}
