@@ -144,6 +144,7 @@ async def generate_sentences(req: GenerateRequest):
         ],
         "temperature": 0.7,
         "response_format": _GENERATE_RESPONSE_FORMAT,
+        "reasoning": {"effort": "none"},
     }
 
     logger.info("[translation] generate: word=%s sentence_count=%d", req.word, req.sentence_count)
