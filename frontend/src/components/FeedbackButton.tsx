@@ -10,7 +10,7 @@ export function FeedbackButton() {
     <Button
       size="lg"
       onClick={() => posthog.capture('feedback_button_clicked')}
-      className="fixed bottom-6 right-6 z-50 transition-transform hover:scale-105 active:scale-95"
+      className="fixed bottom-20 right-6 z-50 transition-transform hover:scale-105 active:scale-95"
       aria-label="Give feedback"
     >
       <ThumbsUp className="size-5" />
