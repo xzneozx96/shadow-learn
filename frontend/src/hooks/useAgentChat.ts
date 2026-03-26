@@ -14,6 +14,7 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useAgentActions } from '@/contexts/AgentActionsContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { getChatMessages, getDueItems, getExerciseAccuracy, getLearnerProfile, getLessonMeta, getRecentMistakes, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
@@ -117,6 +118,7 @@ export function useAgentChat(
   const systemPromptRef = useRef<string>('')
   const dbRef = useRef<ShadowLearnDB | null>(null)
   dbRef.current = db
+  const { dispatchAction } = useAgentActions()
   // Tracks multi-round tool re-submits. We allow one re-submit per assistant
   // message (identified by ID) so multi-round tool calls work, but cap total
   // rounds to prevent infinite loops. `activeRef` gates re-submits until the
@@ -260,6 +262,22 @@ export function useAgentChat(
             break
           case 'get_pedagogical_guidelines':
             result = await executeGetPedagogicalGuidelines()
+            break
+          case 'navigate_to_segment':
+            dispatchAction({ type: 'navigate_to_segment', payload: toolCall.input as Record<string, unknown> })
+            result = { ok: true }
+            break
+          case 'start_shadowing':
+            dispatchAction({ type: 'start_shadowing', payload: toolCall.input as Record<string, unknown> })
+            result = { ok: true }
+            break
+          case 'switch_tab':
+            dispatchAction({ type: 'switch_tab', payload: toolCall.input as Record<string, unknown> })
+            result = { ok: true }
+            break
+          case 'play_segment_audio':
+            dispatchAction({ type: 'play_segment_audio', payload: toolCall.input as Record<string, unknown> })
+            result = { ok: true }
             break
           default:
             result = { error: `Unknown tool: ${toolCall.toolName}` }

@@ -33,6 +33,8 @@ interface CompanionPanelProps {
   activeSegment: Segment | null
   lessonId: string
   lessonTitle?: string
+  activeTab?: string
+  onTabChange?: (tab: string) => void
 }
 
 function StreamingDots() {
@@ -239,6 +241,8 @@ export function CompanionPanel({
   activeSegment,
   lessonId,
   lessonTitle,
+  activeTab,
+  onTabChange,
 }: CompanionPanelProps) {
   const { t } = useI18n()
   const [input, setInput] = useState('')
@@ -368,6 +372,8 @@ export function CompanionPanel({
   return (
     <Tabs
       defaultValue="ai"
+      value={activeTab}
+      onValueChange={onTabChange}
       className="flex h-full flex-col gap-0"
     >
       <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3 rounded-none h-[65px]!">

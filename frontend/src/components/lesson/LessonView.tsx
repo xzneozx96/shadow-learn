@@ -6,6 +6,7 @@ import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
 import { ShadowingPanel } from '@/components/shadowing/ShadowingPanel'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { AgentActionsProvider, useAgentActions } from '@/contexts/AgentActionsContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
@@ -13,12 +14,13 @@ import { usePlayer } from '@/contexts/PlayerContext'
 import { getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
 import { useLesson } from '@/hooks/useLesson'
+import { useTTS } from '@/hooks/useTTS'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { CompanionPanel } from './CompanionPanel'
 import { TranscriptPanel } from './TranscriptPanel'
 import { VideoPanel } from './VideoPanel'
 
-export function LessonView() {
+function LessonViewContent() {
   const { id } = useParams<{ id: string }>()
   const { t } = useI18n()
   const { db, keys } = useAuth()
@@ -31,10 +33,57 @@ export function LessonView() {
   type ShadowingActiveMode = null | { mode: 'dictation' | 'speaking', segments: Segment[] }
   const [shadowingMode, setShadowingMode] = useState<ShadowingActiveMode>(null)
   const [pickerSegment, setPickerSegment] = useState<Segment | null>(null)
+  const [companionTab, setCompanionTab] = useState('ai')
+
   const pickerStartIdx = pickerSegment
     ? segments.findIndex(s => s.id === pickerSegment.id)
     : -1
   const totalRemaining = pickerStartIdx >= 0 ? segments.length - pickerStartIdx : 0
+
+  const { playTTS } = useTTS(db, keys)
+  const { pendingAction, clearAction } = useAgentActions()
+
+  // Handle agent-dispatched UI actions
+  useEffect(() => {
+    if (!pendingAction)
+      return
+    switch (pendingAction.type) {
+      case 'switch_tab': {
+        const tab = pendingAction.payload?.tab as string | undefined
+        if (tab === 'workbook')
+          setCompanionTab('workbook')
+        else if (tab === 'companion' || tab === 'ai')
+          setCompanionTab('ai')
+        // transcript and study are in the left panel — no tab state to switch here
+        break
+      }
+      case 'navigate_to_segment': {
+        const idx = pendingAction.payload?.segmentIndex as number | undefined
+        if (idx !== undefined && segments[idx] && player) {
+          player.seekTo(segments[idx].start)
+          player.play()
+        }
+        break
+      }
+      case 'start_shadowing': {
+        const idx = pendingAction.payload?.segmentIndex as number | undefined
+        const startIdx = idx !== undefined && segments[idx] ? idx : segments.findIndex(s => activeSegment && s.id === activeSegment.id)
+        const resolvedIdx = startIdx >= 0 ? startIdx : 0
+        if (segments[resolvedIdx]) {
+          setPickerSegment(segments[resolvedIdx])
+        }
+        break
+      }
+      case 'play_segment_audio': {
+        const idx = pendingAction.payload?.segmentIndex as number | undefined
+        if (idx !== undefined && segments[idx]) {
+          void playTTS(segments[idx].text)
+        }
+        break
+      }
+    }
+    clearAction()
+  }, [pendingAction, clearAction, segments, player, activeSegment, playTTS])
 
   // Load media blob (video for uploads, audio for YouTube lessons)
   useEffect(() => {
@@ -178,6 +227,8 @@ export function LessonView() {
           activeSegment={activeSegment}
           lessonId={id ?? ''}
           lessonTitle={meta.title}
+          activeTab={companionTab}
+          onTabChange={setCompanionTab}
         />
       </div>
 
@@ -201,5 +252,13 @@ export function LessonView() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export function LessonView() {
+  return (
+    <AgentActionsProvider>
+      <LessonViewContent />
+    </AgentActionsProvider>
   )
 }

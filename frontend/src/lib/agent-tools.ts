@@ -296,6 +296,62 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
       parameters: { type: 'object', properties: {} },
     },
   },
+  navigate_to_segment: {
+    type: 'function',
+    function: {
+      name: 'navigate_to_segment',
+      description: 'Seek the video to a specific segment by zero-based index.',
+      parameters: {
+        type: 'object',
+        properties: {
+          segmentIndex: { type: 'number', description: 'Zero-based segment index to seek to' },
+        },
+        required: ['segmentIndex'],
+      },
+    },
+  },
+  start_shadowing: {
+    type: 'function',
+    function: {
+      name: 'start_shadowing',
+      description: 'Launch shadowing mode, optionally starting from a specific segment.',
+      parameters: {
+        type: 'object',
+        properties: {
+          segmentIndex: { type: 'number', description: 'Segment index to start from (defaults to active)' },
+        },
+        required: [],
+      },
+    },
+  },
+  switch_tab: {
+    type: 'function',
+    function: {
+      name: 'switch_tab',
+      description: 'Switch the lesson panel to a different tab.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tab: { type: 'string', enum: ['transcript', 'workbook', 'study', 'companion'] },
+        },
+        required: ['tab'],
+      },
+    },
+  },
+  play_segment_audio: {
+    type: 'function',
+    function: {
+      name: 'play_segment_audio',
+      description: 'Play TTS audio for a specific segment.',
+      parameters: {
+        type: 'object',
+        properties: {
+          segmentIndex: { type: 'number', description: 'Zero-based segment index to play' },
+        },
+        required: ['segmentIndex'],
+      },
+    },
+  },
 }
 
 /**

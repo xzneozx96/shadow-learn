@@ -29,6 +29,10 @@ export const SILENT_TOOLS = new Set([
   'update_sr_item',
   'log_mistake',
   'update_learner_profile',
+  'navigate_to_segment',
+  'start_shadowing',
+  'switch_tab',
+  'play_segment_audio',
 ])
 
 // Exercise render tools
