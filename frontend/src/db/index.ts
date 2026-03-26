@@ -4,7 +4,7 @@ import type { AppSettings, LessonMeta, Segment, VocabEntry } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 6
+const DB_VERSION = 7
 
 export interface LearnerProfile {
   name: string
@@ -90,6 +90,23 @@ export interface AgentMemory {
   lessonId?: string
 }
 
+export interface ExerciseStat {
+  correct: number
+  total: number
+  lastAttempt: string // ISO date string
+}
+
+export interface AgentLog {
+  id?: number // auto-increment primary key
+  lessonId: string
+  timestamp: string // ISO
+  durationMs: number
+  messageCount: number
+  toolCallCount: number
+  errorCount: number
+  exercisesCompleted: number
+}
+
 interface ShadowLearnSchema extends DBSchema {
   'lessons': { key: string, value: LessonMeta }
   'segments': { key: string, value: Segment[] }
@@ -120,6 +137,14 @@ interface ShadowLearnSchema extends DBSchema {
       tags: string
       importance: number
     }
+  }
+  'exercise-stats': {
+    key: string // 'vocabId:exerciseType'
+    value: ExerciseStat
+  }
+  'agent-logs': {
+    key: number // autoincrement
+    value: AgentLog
   }
 }
 
@@ -191,6 +216,10 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
         const memStore = db.createObjectStore('agent-memory', { keyPath: 'id' })
         memStore.createIndex('tags', 'tags', { multiEntry: true })
         memStore.createIndex('importance', 'importance')
+      }
+      if (oldVersion < 7) {
+        db.createObjectStore('exercise-stats')
+        db.createObjectStore('agent-logs', { keyPath: 'id', autoIncrement: true })
       }
     },
   })
@@ -397,4 +426,68 @@ export async function getAgentMemoriesByTag(db: ShadowLearnDB, tag: string): Pro
 
 export async function deleteAgentMemory(db: ShadowLearnDB, id: string): Promise<void> {
   await db.delete('agent-memory', id)
+}
+
+// Exercise Stats
+
+export async function upsertExerciseStat(
+  db: ShadowLearnDB,
+  key: string,
+  correct: boolean,
+): Promise<void> {
+  const existing = await db.get('exercise-stats', key)
+  const today = new Date().toISOString().split('T')[0]
+  if (existing) {
+    await db.put('exercise-stats', {
+      correct: existing.correct + (correct ? 1 : 0),
+      total: existing.total + 1,
+      lastAttempt: today,
+    }, key)
+  }
+  else {
+    await db.put('exercise-stats', {
+      correct: correct ? 1 : 0,
+      total: 1,
+      lastAttempt: today,
+    }, key)
+  }
+}
+
+export async function getExerciseAccuracy(
+  db: ShadowLearnDB,
+): Promise<Record<string, { accuracy: number, attempts: number }>> {
+  const all = await db.getAll('exercise-stats')
+  const keys = await db.getAllKeys('exercise-stats')
+  const byType: Record<string, { correct: number, total: number }> = {}
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i] as string
+    const colonIdx = key.lastIndexOf(':')
+    if (colonIdx === -1)
+      continue
+    const exerciseType = key.slice(colonIdx + 1)
+    const stat = all[i]
+    if (!byType[exerciseType])
+      byType[exerciseType] = { correct: 0, total: 0 }
+    byType[exerciseType].correct += stat.correct
+    byType[exerciseType].total += stat.total
+  }
+
+  const result: Record<string, { accuracy: number, attempts: number }> = {}
+  for (const [type, agg] of Object.entries(byType)) {
+    result[type] = {
+      accuracy: agg.total > 0 ? agg.correct / agg.total : 0,
+      attempts: agg.total,
+    }
+  }
+  return result
+}
+
+// Agent Logs
+
+export async function appendAgentLog(
+  db: ShadowLearnDB,
+  log: Omit<AgentLog, 'id'>,
+): Promise<void> {
+  await db.add('agent-logs', log as AgentLog)
 }
