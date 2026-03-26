@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAgentActions } from '@/contexts/AgentActionsContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { getChatMessages, getDueItems, getExerciseAccuracy, getLearnerProfile, getLessonMeta, getRecentMistakes, saveChatMessages } from '@/db'
+import { appendAgentLog, getChatMessages, getDueItems, getExerciseAccuracy, getLearnerProfile, getLessonMeta, getRecentMistakes, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
 import { buildSystemPrompt } from '@/lib/agent-system-prompt'
 import {
@@ -134,6 +134,8 @@ export function useAgentChat(
   // and doesn't expose a controlled prop. The value is advisory only; deferred sync is a future improvement.
   const currentTabRef = useRef<string>('companion')
   const exerciseAccuracyRef = useRef<Record<string, { accuracy: number, attempts: number }>>({})
+  const toolCallCountRef = useRef(0)
+  const errorCountRef = useRef(0)
 
   // Pagination: full IDB snapshot lives in a ref; only last PAGE_SIZE messages go into useChat state
   const allStoredRef = useRef<UIMessage[]>([])
@@ -170,6 +172,7 @@ export function useAgentChat(
     transport,
 
     async onToolCall({ toolCall }) {
+      toolCallCountRef.current += 1
       const currentDb = dbRef.current
       if (!currentDb)
         return
@@ -287,6 +290,7 @@ export function useAgentChat(
         console.error(`Tool execution error or hang [${toolCall.toolName}]:`, err)
         toast.error(`Tool [${toolCall.toolName}] failed: ${err.message || 'Unknown error'}`)
         result = { error: err.message || 'Execution failed' }
+        errorCountRef.current += 1
       }
 
       // Use addToolResult to provide the result to the SDK
@@ -298,6 +302,7 @@ export function useAgentChat(
       })
     },
     onError(err) {
+      errorCountRef.current += 1
       console.error('Agent chat error:', err)
       toast.error(`Connection error: ${err.message || 'Unknown error'}`)
     },
@@ -426,8 +431,21 @@ export function useAgentChat(
   useEffect(() => {
     if (status === 'ready' && messages.length > 0) {
       persistMessages()
+
+      // Write telemetry snapshot (fire-and-forget)
+      if (db && lessonId) {
+        void appendAgentLog(db, {
+          lessonId,
+          timestamp: new Date().toISOString(),
+          durationMs: Date.now() - sessionStartRef.current,
+          messageCount: messages.length,
+          toolCallCount: toolCallCountRef.current,
+          errorCount: errorCountRef.current,
+          exercisesCompleted: exercisesThisSessionRef.current,
+        })
+      }
     }
-  }, [status, messages.length, persistMessages])
+  }, [status, messages.length, persistMessages, db, lessonId])
 
   const isLoading = status === 'submitted' || status === 'streaming'
 
