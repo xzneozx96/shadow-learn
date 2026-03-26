@@ -53,7 +53,7 @@ describe('buildSystemPrompt', () => {
   it('includes role section', () => {
     const prompt = buildSystemPrompt(undefined, undefined, undefined, null, [])
     expect(prompt).toContain('## Role')
-    expect(prompt).toContain('Expert language tutor for Shadowing Companion')
+    expect(prompt).toContain('You are **Zober**')
   })
 
   it('includes learner profile when provided', () => {
