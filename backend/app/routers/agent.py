@@ -12,7 +12,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, RateLimitError, APIStatusError
 from app.config import settings
 from app.routers._utils import _resolve_key
 from pydantic import BaseModel, ConfigDict
@@ -151,13 +151,8 @@ def _convert_to_openai_messages(
 # --------------------------------------------------------------------------- #
 
 _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-async def _stream_agent(
-    client: AsyncOpenAI,
-    messages: list[dict],
-    tool_definitions: list[dict] | None,
-    model: str,
-):
-    """Yield SSE events in AI SDK v5 UIMessage stream format."""
+async def _stream_agent(stream):
+    """Yield SSE events in AI SDK v5 UIMessage stream format. Caller creates the stream."""
     try:
         def fmt(payload: dict) -> str:
             return f"data: {json.dumps(payload, separators=(',', ':'))}\n\n"
@@ -171,17 +166,6 @@ async def _stream_agent(
         tool_calls_state: dict[int, dict[str, Any]] = {}
 
         yield fmt({"type": "start", "messageId": message_id})
-
-        create_kwargs: dict[str, Any] = {
-            "messages": messages,
-            "model": model,
-            "stream": True,
-            "extra_body": {"reasoning": {"effort": "low"}},
-        }
-        if tool_definitions:
-            create_kwargs["tools"] = tool_definitions
-
-        stream = await client.chat.completions.create(**create_kwargs)
 
         try:
             async for chunk in stream:
@@ -368,6 +352,8 @@ def _patch_headers(response: StreamingResponse) -> StreamingResponse:
 # Route
 # --------------------------------------------------------------------------- #
 
+_RETRYABLE_STATUS_CODES = {429, 502, 503}
+
 @router.post("/agent")
 async def agent_chat(request: AgentRequest) -> StreamingResponse:
     """Stream agent response in AI SDK v5 UIMessage format."""
@@ -381,15 +367,37 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
         base_url=_OPENROUTER_BASE_URL,
     )
 
-    resolved_model = request.model or settings.openrouter_agent_model
+    primary = request.model or settings.openrouter_agent_model
+    cascade = [primary, *settings.openrouter_fallback_models]
+    # Deduplicate preserving order
+    seen: set[str] = set()
+    unique_cascade = [m for m in cascade if not (m in seen or seen.add(m))]  # type: ignore[func-returns-value]
 
-    openai_messages = _convert_to_openai_messages(
-        request.messages, request.system_prompt
-    )
+    openai_messages = _convert_to_openai_messages(request.messages, request.system_prompt)
 
-    # Log the full prompt payload for debugging Provider/Inspection errors
-    response = StreamingResponse(
-        _stream_agent(client, openai_messages, request.tools, resolved_model),
-        media_type="text/event-stream",
-    )
-    return _patch_headers(response)
+    create_kwargs: dict[str, Any] = {
+        "stream": True,
+        "extra_body": {"reasoning": {"effort": "low"}},
+        "messages": openai_messages,
+    }
+    if request.tools:
+        create_kwargs["tools"] = request.tools
+
+    last_error: Exception | None = None
+    for model in unique_cascade:
+        try:
+            stream = await client.chat.completions.create(model=model, **create_kwargs)
+            logger.info(f"[agent_chat] Streaming with model={model}")
+            response = StreamingResponse(
+                _stream_agent(stream),
+                media_type="text/event-stream",
+            )
+            return _patch_headers(response)
+        except (RateLimitError, APIStatusError) as e:
+            status = getattr(e, "status_code", None)
+            if status not in _RETRYABLE_STATUS_CODES:
+                raise
+            logger.warning(f"[agent_chat] Model {model} returned {status}, trying next in cascade")
+            last_error = e
+
+    raise last_error or HTTPException(status_code=503, detail="All models in cascade unavailable")

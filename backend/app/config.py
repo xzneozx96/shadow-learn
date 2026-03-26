@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     openrouter_chat_url: str = "https://openrouter.ai/api/v1/chat/completions"
     openrouter_structured_model: str = "openai/gpt-oss-120b" # "openai/gpt-4o-mini"
     openrouter_agent_model: str = "deepseek/deepseek-v3.2"
+    openrouter_fallback_models: list[str] = []
+    # env: SHADOWLEARN_OPENROUTER_FALLBACK_MODELS
+    # Set as JSON array: '["google/gemini-2.0-flash-001","anthropic/claude-haiku-4-5"]'
     minimax_tts_url: str = "https://api.minimax.io/v1/t2a_v2"
     tts_provider: str = "minimax"  # env: SHADOWLEARN_TTS_PROVIDER; values: azure | minimax
     stt_provider: str = "deepgram"  # env: SHADOWLEARN_STT_PROVIDER; values: deepgram | azure
