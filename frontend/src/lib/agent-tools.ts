@@ -11,6 +11,7 @@ import type { VocabEntry } from '@/types'
 import {
   getDueItems,
   getErrorPattern,
+  getExerciseAccuracy,
   getLearnerProfile,
   getMasteryData,
   getProgressStats,
@@ -323,6 +324,16 @@ export async function executeGetStudyContext(
   // Also get lesson-specific vocab for context
   const lessonVocab = await getVocabEntriesByLesson(db, args.lessonId)
 
+  const allStatKeys = await db.getAllKeys('exercise-stats') as string[]
+  const allStats = await Promise.all(allStatKeys.map(k => db.get('exercise-stats', k)))
+
+  const weakItems = allStatKeys
+    .map((key, i) => ({ key, stat: allStats[i]! }))
+    .filter(({ stat }) => stat && stat.total >= 3)
+    .sort((a, b) => (a.stat.correct / a.stat.total) - (b.stat.correct / b.stat.total))
+    .slice(0, 5)
+    .map(({ key, stat }) => ({ key, accuracy: stat.correct / stat.total, total: stat.total }))
+
   return {
     dueItems: dueItems.slice(0, 10).map(i => ({
       itemId: i.itemId,
@@ -344,6 +355,7 @@ export async function executeGetStudyContext(
         }
       : null,
     lessonVocabCount: lessonVocab.length,
+    weakItems,
   }
 }
 

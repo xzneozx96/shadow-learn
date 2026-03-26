@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth } from '@/contexts/AuthContext'
-import { initDB } from '@/db'
+import { initDB, upsertExerciseStat } from '@/db'
 import { useTracking } from '@/hooks/useTracking'
 import 'fake-indexeddb/auto'
 
@@ -88,6 +88,32 @@ describe('useTracking', () => {
       exerciseType: 'dictation',
       score: 100,
     })).resolves.toBeNull()
+  })
+
+  it('writes exercise-stats entry after logExerciseResult', async () => {
+    const { result } = renderHook(() => useTracking())
+    await result.current.logExerciseResult({
+      vocabEntry: mockVocabEntry,
+      exerciseType: 'dictation',
+      score: 100,
+    })
+    // Read back from exercise-stats store
+    const stat = await db.get('exercise-stats', 'entry-1:dictation')
+    expect(stat).toBeDefined()
+    expect(stat!.correct).toBe(1)
+    expect(stat!.total).toBe(1)
+  })
+
+  it('increments exercise-stats on incorrect answer', async () => {
+    const { result } = renderHook(() => useTracking())
+    await result.current.logExerciseResult({
+      vocabEntry: mockVocabEntry,
+      exerciseType: 'dictation',
+      score: 40, // below 60 threshold = incorrect
+    })
+    const stat = await db.get('exercise-stats', 'entry-1:dictation')
+    expect(stat!.correct).toBe(0)
+    expect(stat!.total).toBe(1)
   })
 
   describe('logSessionComplete', () => {

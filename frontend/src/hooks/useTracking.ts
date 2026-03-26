@@ -12,6 +12,7 @@ import {
   saveMasteryData,
   saveProgressStats,
   saveSpacedRepetitionItem,
+  upsertExerciseStat,
 } from '@/db'
 import { createSpacedRepetitionItem, updateSpacedRepetition } from '@/lib/spacedRepetition'
 
@@ -79,6 +80,10 @@ export async function logExerciseCompletion(
   const item = existing ?? createSpacedRepetitionItem(vocabEntry.id)
   const updated = updateSpacedRepetition(item, score)
   await saveSpacedRepetitionItem(db, updated)
+
+  // Update exercise-stats (difficulty tracking per vocabId:exerciseType)
+  const statKey = `${vocabEntry.id}:${exerciseType}`
+  await upsertExerciseStat(db, statKey, isCorrect)
 
   // 2. Update progress-db
   const skill = EXERCISE_TO_SKILL[exerciseType]
