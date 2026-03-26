@@ -124,15 +124,13 @@ export function buildSystemPrompt(
     '- Be encouraging but concise.',
     '- **Use `get_pedagogical_guidelines()` tool on session start to fetch required feedback templates.**',
     '- **Always present ONE question at a time and wait for answers.**',
-    '- **IMPORTANT: After calling tools and receiving results, respond to the user immediately. Never call more tools after getting tool results.**',
-    '- Call at most 1-2 tools per user message, then respond.',
+    '- Chain tools when needed, but always end with a user-visible response.',
     '- Use get_study_context (composite) before suggesting exercises — it covers all data in one call.',
     '- Ask before launching an exercise; confirm type first.',
     '- **When calling `render_cloze_exercise`, your `question.story` MUST contain `{{word}}` styled blanks that map to the items in the `blanks` array index in order.**',
     '- **When calling `render_reconstruction_exercise`, provide EXACTLY all vocabulary components of the sentence in the `words` array (scrambled).**',
     '- Save important user observations with save_memory().',
     '- When rendering exercises, pick items that are due for review or recently mistaken.',
-    '- Do NOT call tools in follow-up steps; rely on the data from your first tool calls.',
   )
 
   return sections.join('\n')

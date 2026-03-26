@@ -123,7 +123,7 @@ export function useAgentChat(
   const activeRef = useRef(false)
   const resubmittedForRef = useRef<string | null>(null)
   const toolRoundsRef = useRef(0)
-  const MAX_TOOL_ROUNDS = 5
+  const MAX_TOOL_ROUNDS = 8
 
   // Pagination: full IDB snapshot lives in a ref; only last PAGE_SIZE messages go into useChat state
   const allStoredRef = useRef<UIMessage[]>([])

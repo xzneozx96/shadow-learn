@@ -115,6 +115,17 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('## Memory Summary')
     expect(prompt).toContain('## Instructions')
   })
+
+  it('does not include the old restrictive single-tool-call instruction', () => {
+    const prompt = buildSystemPrompt(mockProfile, undefined, undefined, null, [])
+    expect(prompt).not.toContain('After calling tools and receiving results, respond to the user immediately')
+    expect(prompt).not.toContain('Call at most 1-2 tools per user message')
+  })
+
+  it('includes the chain-tools instruction', () => {
+    const prompt = buildSystemPrompt(mockProfile, undefined, undefined, null, [])
+    expect(prompt).toContain('Chain tools when needed')
+  })
 })
 
 describe('formatProgressSummary', () => {
