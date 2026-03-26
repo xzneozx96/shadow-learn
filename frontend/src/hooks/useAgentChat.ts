@@ -15,7 +15,7 @@ import { DefaultChatTransport } from 'ai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
-import { getChatMessages, getLearnerProfile, getLessonMeta, saveChatMessages } from '@/db'
+import { getChatMessages, getDueItems, getExerciseAccuracy, getLearnerProfile, getLessonMeta, getRecentMistakes, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
 import { buildSystemPrompt } from '@/lib/agent-system-prompt'
 import {
@@ -124,6 +124,13 @@ export function useAgentChat(
   const resubmittedForRef = useRef<string | null>(null)
   const toolRoundsRef = useRef(0)
   const MAX_TOOL_ROUNDS = 8
+
+  const sessionStartRef = useRef<number>(Date.now())
+  const exercisesThisSessionRef = useRef<number>(0)
+  // currentTab defaults to 'companion' — CompanionPanel manages tab state internally
+  // and doesn't expose a controlled prop. The value is advisory only; deferred sync is a future improvement.
+  const currentTabRef = useRef<string>('companion')
+  const exerciseAccuracyRef = useRef<Record<string, { accuracy: number, attempts: number }>>({})
 
   // Pagination: full IDB snapshot lives in a ref; only last PAGE_SIZE messages go into useChat state
   const allStoredRef = useRef<UIMessage[]>([])
@@ -269,6 +276,20 @@ export function useAgentChat(
       activeRef.current = true
       resubmittedForRef.current = null
       toolRoundsRef.current = 0
+
+      // Detect exercise result messages and count them
+      if ('text' in opts && opts.text) {
+        try {
+          const parsed = JSON.parse(opts.text)
+          if (parsed?.type === 'exercise_result') {
+            exercisesThisSessionRef.current += 1
+          }
+        }
+        catch {
+          // Not JSON — normal user message, no action
+        }
+      }
+
       sendMessage(opts)
     },
     [sendMessage],
@@ -281,13 +302,28 @@ export function useAgentChat(
     let cancelled = false
 
     async function build() {
-      const [profile, memories, lessonMeta] = await Promise.all([
+      const today = new Date().toISOString().split('T')[0]
+      const [profile, memories, lessonMeta, dueItems, recentMistakes, accuracy] = await Promise.all([
         getLearnerProfile(db!),
         getMemorySummary(db!),
         lessonId ? getLessonMeta(db!, lessonId) : undefined,
+        getDueItems(db!, today),
+        getRecentMistakes(db!, 5),
+        getExerciseAccuracy(db!),
       ])
       if (cancelled)
         return
+
+      exerciseAccuracyRef.current = accuracy
+
+      const appState = {
+        currentTab: currentTabRef.current,
+        sessionDurationMinutes: Math.floor((Date.now() - sessionStartRef.current) / 60_000),
+        exercisesThisSession: exercisesThisSessionRef.current,
+        recentMistakeWords: recentMistakes.map(e => e.patternId).slice(0, 5),
+        vocabularyDueCount: dueItems.length,
+      }
+
       systemPromptRef.current = buildSystemPrompt(
         profile,
         lessonTitle,
@@ -296,6 +332,8 @@ export function useAgentChat(
         memories,
         lessonMeta?.sourceLanguage,
         lessonMeta?.translationLanguages?.[0],
+        appState,
+        accuracy,
       )
     }
 

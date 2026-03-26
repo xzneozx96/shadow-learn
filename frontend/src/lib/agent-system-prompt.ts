@@ -15,6 +15,14 @@ export function buildSystemPrompt(
   lessonSourceLanguage?: string,
   /** First translation language chosen by the user, e.g. "en", "vi" */
   lessonTranslationLanguage?: string,
+  appState?: {
+    currentTab: string
+    sessionDurationMinutes: number
+    exercisesThisSession: number
+    recentMistakeWords: string[]
+    vocabularyDueCount: number
+  },
+  exerciseAccuracy?: Record<string, { accuracy: number, attempts: number }>,
 ): string {
   const sections: string[] = []
 
@@ -116,6 +124,33 @@ export function buildSystemPrompt(
       sections.push(`- ${mem.content}`)
     }
     sections.push('')
+  }
+
+  // Session Snapshot (optional runtime context — omitted when appState not provided)
+  if (appState) {
+    const snapshotLines: string[] = ['## Session Snapshot']
+    const parts: string[] = [
+      `Tab: ${appState.currentTab}.`,
+      `Duration: ${appState.sessionDurationMinutes}min.`,
+      `Exercises done: ${appState.exercisesThisSession}.`,
+    ]
+    if (appState.vocabularyDueCount > 0)
+      parts.push(`Vocabulary due: ${appState.vocabularyDueCount}.`)
+    snapshotLines.push(parts.join(' '))
+
+    if (appState.recentMistakeWords.length > 0)
+      snapshotLines.push(`Recent mistakes: ${appState.recentMistakeWords.join(', ')}.`)
+
+    if (exerciseAccuracy && Object.keys(exerciseAccuracy).length > 0) {
+      const accParts = Object.entries(exerciseAccuracy)
+        .filter(([, v]) => v.attempts >= 3)
+        .map(([type, v]) => `${type} ${Math.round(v.accuracy * 100)}% (${v.attempts})`)
+      if (accParts.length > 0)
+        snapshotLines.push(`Per-type accuracy: ${accParts.join(', ')}.`)
+    }
+
+    snapshotLines.push('')
+    sections.push(...snapshotLines)
   }
 
   // Instructions

@@ -128,6 +128,78 @@ describe('buildSystemPrompt', () => {
   })
 })
 
+describe('buildSystemPrompt — Session Snapshot', () => {
+  const appState = {
+    currentTab: 'lesson',
+    sessionDurationMinutes: 12,
+    exercisesThisSession: 3,
+    recentMistakeWords: ['你好', '谢谢'],
+    vocabularyDueCount: 8,
+  }
+
+  const exerciseAccuracy = {
+    dictation: { accuracy: 0.6, attempts: 10 },
+    translation: { accuracy: 0.8, attempts: 5 },
+  }
+
+  it('includes ## Session Snapshot when appState provided', () => {
+    const prompt = buildSystemPrompt(
+      mockProfile,
+      undefined,
+      undefined,
+      null,
+      [],
+      undefined,
+      undefined,
+      appState,
+      exerciseAccuracy,
+    )
+    expect(prompt).toContain('## Session Snapshot')
+    expect(prompt).toContain('12min')
+    expect(prompt).toContain('Exercises done: 3')
+    expect(prompt).toContain('Vocabulary due: 8')
+    expect(prompt).toContain('你好')
+    expect(prompt).toContain('dictation 60%')
+    expect(prompt).toContain('translation 80%')
+  })
+
+  it('omits ## Session Snapshot when appState not provided', () => {
+    const prompt = buildSystemPrompt(mockProfile, undefined, undefined, null, [])
+    expect(prompt).not.toContain('## Session Snapshot')
+  })
+
+  it('omits Recent mistakes line when recentMistakeWords is empty', () => {
+    const emptyState = { ...appState, recentMistakeWords: [] }
+    const prompt = buildSystemPrompt(
+      mockProfile,
+      undefined,
+      undefined,
+      null,
+      [],
+      undefined,
+      undefined,
+      emptyState,
+    )
+    expect(prompt).not.toContain('Recent mistakes:')
+  })
+
+  it('## Session Snapshot appears before ## Instructions', () => {
+    const prompt = buildSystemPrompt(
+      mockProfile,
+      undefined,
+      undefined,
+      null,
+      [],
+      undefined,
+      undefined,
+      appState,
+    )
+    const snapshotIdx = prompt.indexOf('## Session Snapshot')
+    const instructionsIdx = prompt.indexOf('## Instructions')
+    expect(snapshotIdx).toBeLessThan(instructionsIdx)
+  })
+})
+
 describe('formatProgressSummary', () => {
   it('formats stats correctly', () => {
     const stats: ProgressStats = {
