@@ -77,6 +77,21 @@ function normalizeMessagesForBackend(messages: any[], limit: number = 15) {
       }
 
       if (current.role === 'assistant') {
+        const lastHasToolParts = (last.parts ?? []).some((p: any) => p.type?.startsWith('tool-'))
+        const curHasToolParts = (current.parts ?? []).some((p: any) => p.type?.startsWith('tool-'))
+
+        // When both consecutive assistants have tool parts (happens because empty
+        // re-submit user messages between them were stripped above), merge all parts
+        // into one message so the LLM sees its full tool-call history and doesn't
+        // repeat the same call.
+        if (lastHasToolParts && curHasToolParts) {
+          normalized[normalized.length - 1] = {
+            ...last,
+            parts: [...(last.parts ?? []), ...(current.parts ?? [])],
+          }
+          continue
+        }
+
         // If last assistant had tool parts but no text, prefer current which has text
         const lastHasText = (last.parts ?? []).some((p: any) => p.type === 'text' && p.text?.trim())
         const curHasText = (current.parts ?? []).some((p: any) => p.type === 'text' && p.text?.trim())
@@ -126,7 +141,10 @@ export function useAgentChat(
   const activeRef = useRef(false)
   const resubmittedForRef = useRef<string | null>(null)
   const toolRoundsRef = useRef(0)
-  const MAX_TOOL_ROUNDS = 8
+  const MAX_TOOL_ROUNDS = 5
+  // Tracks the sorted tool-name set from the previous re-submit round.
+  // If the LLM calls the exact same tools in consecutive rounds, it's looping.
+  const prevToolSetRef = useRef<string>('')
 
   const sessionStartRef = useRef<number>(Date.now())
   const exercisesThisSessionRef = useRef<number>(0)
@@ -314,6 +332,7 @@ export function useAgentChat(
       activeRef.current = true
       resubmittedForRef.current = null
       toolRoundsRef.current = 0
+      prevToolSetRef.current = ''
 
       // Detect exercise result messages and count them
       if ('text' in opts && opts.text) {
@@ -484,6 +503,18 @@ export function useAgentChat(
     // Safety cap to prevent infinite tool loops
     if (toolRoundsRef.current >= MAX_TOOL_ROUNDS)
       return
+
+    // Detect same-tool loop: if the LLM called the exact same set of tools
+    // in consecutive rounds (e.g. render_character_writing_exercise twice in
+    // a row), it's stuck in a loop — stop re-submitting.
+    const currentToolSet = toolParts
+      .map((p: any) => p.toolName ?? p.type?.replace('tool-', '') ?? '')
+      .filter(Boolean)
+      .sort()
+      .join(',')
+    if (currentToolSet && currentToolSet === prevToolSetRef.current)
+      return
+    prevToolSetRef.current = currentToolSet
 
     resubmittedForRef.current = lastMsg.id
     toolRoundsRef.current += 1
