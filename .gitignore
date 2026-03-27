@@ -52,5 +52,12 @@ dist/
 # YouTube cookies (session secrets — never commit)
 **/youtube_cookies.txt
 
+# BMad agent framework
+_bmad/
+_bmad-output/
+
+# AI agent research (local notes)
+ai-agent-research/
+
 # Temp / resolved conflict files
 *.resolved
