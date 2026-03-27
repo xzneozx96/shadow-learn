@@ -14,6 +14,14 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
+// Mock Popover so PopoverContent always renders inline (not in a portal that requires open state).
+// The save button lives inside PopoverContent, so this lets us assert on it directly.
+vi.mock('@/components/ui/popover', () => ({
+  Popover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PopoverTrigger: ({ children, ...props }: { children: React.ReactNode, [key: string]: any }) => <span {...props}>{children}</span>,
+  PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
 // Mock I18nContext so SegmentText can be rendered without an I18nProvider in tests.
 vi.mock('@/contexts/I18nContext', async () => {
   const { getTranslation } = await import('@/lib/i18n')

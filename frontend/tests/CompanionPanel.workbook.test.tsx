@@ -2,7 +2,7 @@
 import type { VocabEntry } from '@/types'
 import { render, screen } from '@testing-library/react'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CompanionPanel } from '@/components/lesson/CompanionPanel'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 
@@ -57,6 +57,17 @@ function mockVocabContext(overrides: Partial<ReturnType<typeof useVocabulary>> =
 }
 
 describe('companionPanel — tab bar', () => {
+  beforeAll(() => {
+    // jsdom does not implement IntersectionObserver; stub it for the chat scroll sentinel
+    // jsdom does not implement IntersectionObserver; provide a no-op class stub
+    class MockIntersectionObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    globalThis.IntersectionObserver = MockIntersectionObserver as any
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useVocabulary).mockReturnValue(mockVocabContext())
