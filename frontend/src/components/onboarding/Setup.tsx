@@ -37,22 +37,6 @@ export function Setup() {
     e.preventDefault()
     setError(null)
 
-    if (sttProvider === 'deepgram' && !deepgramApiKey.trim()) {
-      setError(t('auth.error.deepgramRequired'))
-      return
-    }
-    if (provider === 'azure') {
-      if (!azureSpeechKey.trim() || !azureSpeechRegion.trim()) {
-        setError(t('auth.error.azureRequired'))
-        return
-      }
-    }
-    if (provider === 'minimax') {
-      if (!minimaxApiKey.trim()) {
-        setError(t('auth.error.minimaxRequired'))
-        return
-      }
-    }
     if (pin.length < 4) {
       setError(t('auth.error.pinTooShort'))
       return
@@ -85,12 +69,14 @@ export function Setup() {
     }
   }
 
-  const formReady
-    = pin.length >= 4
-      && pin === pinConfirm
-      && (sttProvider !== 'deepgram' || !!deepgramApiKey.trim())
-      && (provider !== 'azure' || (!!azureSpeechKey.trim() && !!azureSpeechRegion.trim()))
-      && (provider !== 'minimax' || !!minimaxApiKey.trim())
+  const hasAnyKey = !!(
+    openrouterApiKey.trim()
+    || deepgramApiKey.trim()
+    || minimaxApiKey.trim()
+    || azureSpeechKey.trim()
+  )
+
+  const formReady = pin.length >= 4 && pin === pinConfirm && hasAnyKey
 
   return (
     <div className="h-screen overflow-y-auto bg-[oklch(0.08_0_0)] px-4">
@@ -128,7 +114,7 @@ export function Setup() {
                   <Input
                     id="openai"
                     type="password"
-                    placeholder="Optional — uses server key if blank"
+                    placeholder={t('auth.placeholder.optionalKey')}
                     value={openrouterApiKey}
                     onChange={e => setOpenrouterApiKey(e.target.value)}
                   />
@@ -145,7 +131,7 @@ export function Setup() {
                     <Input
                       id="deepgram"
                       type="password"
-                      placeholder="dg-..."
+                      placeholder={t('auth.placeholder.optionalKey')}
                       value={deepgramApiKey}
                       onChange={e => setDeepgramApiKey(e.target.value)}
                     />
@@ -165,7 +151,7 @@ export function Setup() {
                       <Input
                         id="azure-speech-key"
                         type="password"
-                        placeholder="Paste your Azure Speech key…"
+                        placeholder={t('auth.placeholder.optionalKey')}
                         value={azureSpeechKey}
                         onChange={e => setAzureSpeechKey(e.target.value)}
                       />
@@ -180,7 +166,7 @@ export function Setup() {
                       <Input
                         id="azure-speech-region"
                         type="text"
-                        placeholder="e.g. eastus"
+                        placeholder={t('auth.placeholder.azureRegion')}
                         value={azureSpeechRegion}
                         onChange={e => setAzureSpeechRegion(e.target.value)}
                       />
@@ -197,7 +183,7 @@ export function Setup() {
                     <Input
                       id="minimax"
                       type="password"
-                      placeholder="eyJ..."
+                      placeholder={t('auth.placeholder.optionalKey')}
                       value={minimaxApiKey}
                       onChange={e => setMinimaxApiKey(e.target.value)}
                     />
@@ -237,7 +223,7 @@ export function Setup() {
                   <p className="text-sm text-red-400">{error}</p>
                 )}
 
-                <Button type="submit" disabled={loading || provider === null || !formReady} className="mt-1">
+                <Button type="submit" disabled={loading || !formReady} className="mt-1">
                   {loading ? t('auth.settingUp') : t('auth.getStarted')}
                 </Button>
               </form>

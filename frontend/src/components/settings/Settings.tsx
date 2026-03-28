@@ -195,7 +195,7 @@ export function Settings() {
                 value={editOpenrouterKey}
                 onChange={e => setEditOpenrouterKey(e.target.value)}
                 className="font-mono text-sm"
-                placeholder="Optional — uses server key if blank"
+                placeholder={t('auth.placeholder.optionalKey')}
               />
             </div>
 
@@ -213,7 +213,7 @@ export function Settings() {
                     value={editAzureSpeechKey}
                     onChange={e => setEditAzureSpeechKey(e.target.value)}
                     className="font-mono text-sm"
-                    placeholder="Optional — uses server key if blank"
+                    placeholder={t('auth.placeholder.optionalKey')}
                   />
                 </div>
                 <div className="space-y-2">
@@ -227,7 +227,7 @@ export function Settings() {
                     value={editAzureSpeechRegion}
                     onChange={e => setEditAzureSpeechRegion(e.target.value)}
                     className="font-mono text-sm"
-                    placeholder="Optional (e.g. eastus)"
+                    placeholder={t('auth.placeholder.azureRegion')}
                   />
                 </div>
               </>
@@ -246,7 +246,7 @@ export function Settings() {
                   value={editMinimaxKey}
                   onChange={e => setEditMinimaxKey(e.target.value)}
                   className="font-mono text-sm"
-                  placeholder="Leave blank to disable TTS"
+                  placeholder={t('auth.placeholder.optionalKey')}
                 />
               </div>
             )}
@@ -263,7 +263,7 @@ export function Settings() {
                   value={editDeepgramKey}
                   onChange={e => setEditDeepgramKey(e.target.value)}
                   className="font-mono text-sm"
-                  placeholder="dg-..."
+                  placeholder={t('auth.placeholder.optionalKey')}
                 />
               </div>
             )}
