@@ -1,16 +1,18 @@
 import type { MistakeExample } from '@/db'
 import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { VocabEntry } from '@/types'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
+import { HintButton } from '@/components/study/exercises/HintButton'
 import { Button } from '@/components/ui/button'
 import { LanguageInput } from '@/components/ui/LanguageInput'
 import { useI18n } from '@/contexts/I18nContext'
+import { useHint } from '@/hooks/useHint'
 import { cn } from '@/lib/utils'
 
 interface ClozeQuestion {
-  story: string // "小明说{{今天}}他要去..."
+  story: string
   blanks: string[]
 }
 
@@ -40,11 +42,77 @@ function parseStory(story: string): { text: string, blank: string | null }[] {
   return parts
 }
 
+// Each blank registers its hintScore via this callback type
+type RegisterHintScore = (blankIndex: number, score: number) => void
+
+interface BlankInputProps {
+  blankIndex: number
+  blank: string
+  entry: VocabEntry | undefined
+  checked: boolean
+  autoFocus: boolean
+  value: string
+  onChange: (v: string) => void
+  langInputMode: LanguageCapabilities['inputMode']
+  onRegisterHintScore: RegisterHintScore
+}
+
+function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onChange, langInputMode, onRegisterHintScore }: BlankInputProps) {
+  const hint = useHint(entry ? 3 : 0)
+  const correct = value.trim() === blank
+
+  // Register updated hintScore on every render so parent can read it at submit
+  onRegisterHintScore(blankIndex, hint.hintScore)
+
+  const hintLabel = entry && hint.level > 0
+    ? hint.level < 3
+      ? (entry.romanization ?? '')
+      : `${entry.romanization ?? ''} · ${entry.meaning}`
+    : null
+
+  return (
+    <span className="inline-flex flex-col items-center mx-1 align-bottom">
+      <span className="inline-flex items-center gap-1">
+        <LanguageInput
+          langInputMode={langInputMode}
+          wrapperClassName="inline-block w-14"
+          className={cn(
+            'w-14 text-center text-sm border-0 border-b bg-transparent px-1 rounded-none focus-visible:ring-0',
+            checked
+              ? correct
+                ? 'border-emerald-500/50 text-emerald-400'
+                : 'border-destructive/50 text-destructive'
+              : 'border-foreground/40',
+          )}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          disabled={checked}
+          placeholder="…"
+          autoFocus={autoFocus}
+        />
+        {!checked && entry && (
+          <HintButton
+            level={hint.level}
+            totalLevels={3}
+            exhausted={hint.exhausted}
+            onHint={hint.revealNext}
+            className="h-6 px-1.5 text-xs"
+          />
+        )}
+      </span>
+      {hintLabel && (
+        <span className="text-xs text-muted-foreground mt-0.5">{hintLabel}</span>
+      )}
+    </span>
+  )
+}
+
 export function ClozeExercise({ question, entries, caps, progress = '', onNext }: Props) {
   const { t } = useI18n()
   const parts = parseStory(question.story)
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [checked, setChecked] = useState(false)
+  const hintScoresRef = useRef<Record<number, number>>({})
 
   const blankIndices: number[] = []
   parts.forEach((p, i) => {
@@ -52,10 +120,35 @@ export function ClozeExercise({ question, entries, caps, progress = '', onNext }
       blankIndices.push(i)
   })
 
-  const allCorrect = blankIndices.every(i => answers[i]?.trim() === parts[i].blank)
-
   function findEntry(blank: string) {
     return entries.find(e => e.word === blank)
+  }
+
+  function registerHintScore(blankIndex: number, score: number) {
+    hintScoresRef.current[blankIndex] = score
+  }
+
+  function handleNext() {
+    const today = new Date().toISOString().split('T')[0]
+    const mistakes: MistakeExample[] = blankIndices
+      .filter(i => answers[i]?.trim() !== parts[i].blank)
+      .map(i => ({
+        userAnswer: answers[i]?.trim() ?? '',
+        correctAnswer: parts[i].blank!,
+        date: today,
+      }))
+
+    // Score per blank: correct × hintScore × 100, then average
+    const blankScores = blankIndices.map((i) => {
+      const correct = answers[i]?.trim() === parts[i].blank ? 1 : 0
+      const hs = hintScoresRef.current[i] ?? 1
+      return correct * hs * 100
+    })
+    const finalScore = blankScores.length > 0
+      ? Math.round(blankScores.reduce((a, b) => a + b, 0) / blankScores.length)
+      : 0
+
+    onNext(finalScore, { mistakes: mistakes.length > 0 ? mistakes : undefined })
   }
 
   const footer = (
@@ -63,24 +156,7 @@ export function ClozeExercise({ question, entries, caps, progress = '', onNext }
       <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {!checked
         ? <Button size="sm" onClick={() => setChecked(true)}>{t('study.checkButton')}</Button>
-        : (
-            <Button
-              size="sm"
-              onClick={() => {
-                const today = new Date().toISOString().split('T')[0]
-                const mistakes: MistakeExample[] = blankIndices
-                  .filter(i => answers[i]?.trim() !== parts[i].blank)
-                  .map(i => ({
-                    userAnswer: answers[i]?.trim() ?? '',
-                    correctAnswer: parts[i].blank!,
-                    date: today,
-                  }))
-                onNext(allCorrect ? 100 : 0, { mistakes: mistakes.length > 0 ? mistakes : undefined })
-              }}
-            >
-              {t('study.nextButton')}
-            </Button>
-          )}
+        : <Button size="sm" onClick={handleNext}>{t('study.nextButton')}</Button>}
     </div>
   )
 
@@ -91,38 +167,27 @@ export function ClozeExercise({ question, entries, caps, progress = '', onNext }
       footer={footer}
       info={t('study.exercise.cloze.info')}
     >
-      {/* Story with inline inputs */}
       <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-lg leading-[2.4] text-foreground/90 mb-0">
         {parts.map((part, i) => {
           if (!part.blank)
-            // eslint-disable-next-line react/no-array-index-key
             return <span key={i}>{part.text}</span>
-          const correct = answers[i]?.trim() === part.blank
           return (
-
-            <LanguageInput
-              key={i} // eslint-disable-line react/no-array-index-key
-              langInputMode={caps.inputMode}
-              wrapperClassName="inline-block w-14 mx-1"
-              className={cn(
-                'w-14 text-center text-sm border-0 border-b bg-transparent px-1 rounded-none focus-visible:ring-0',
-                checked
-                  ? correct
-                    ? 'border-emerald-500/50 text-emerald-400'
-                    : 'border-destructive/50 text-destructive'
-                  : 'border-foreground/40',
-              )}
-              value={answers[i] ?? ''}
-              onChange={e => setAnswers(a => ({ ...a, [i]: e.target.value }))}
-              disabled={checked}
-              placeholder="…"
+            <BlankInput
+              key={i}
+              blankIndex={i}
+              blank={part.blank}
+              entry={findEntry(part.blank)}
+              checked={checked}
               autoFocus={i === blankIndices[0]}
+              value={answers[i] ?? ''}
+              onChange={v => setAnswers(a => ({ ...a, [i]: v }))}
+              langInputMode={caps.inputMode}
+              onRegisterHintScore={registerHintScore}
             />
           )
         })}
       </div>
 
-      {/* Per-blank feedback (post-check) */}
       {checked && blankIndices.map((i) => {
         const blank = parts[i].blank!
         const entry = findEntry(blank)
