@@ -8,6 +8,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict
 
 from app.config import settings
+from app.services._retry import RetryableError, openrouter_retry
 from app.services.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
@@ -105,99 +106,91 @@ async def _translate_batch(
         },
     }
 
-    max_retries = settings.translation_max_retries
-    last_exc: Exception | None = None
-
-    for attempt in range(max_retries + 1):
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    settings.openrouter_chat_url,
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": settings.openrouter_structured_model,
-                        "messages": [{"role": "user", "content": prompt}],
-                        "response_format": response_format,
-                        "temperature": 0.1,
-                        "reasoning": {"effort": "none"},
-                    },
-                )
-                response.raise_for_status()
-
-            data = response.json()
-            if "choices" not in data:
-                raise ValueError(f"OpenRouter error response: {data}")
-            content = data["choices"][0]["message"]["content"]
-            try:
-                parsed = TranslationResponse.model_validate_json(content)
-                id_to_translations = {
-                    item.id: {lt.language: lt.text for lt in item.translations}
-                    for item in parsed.translations
-                }
-                logger.info(
-                    "Translation batch: OK — %d segments translated",
-                    len(parsed.translations),
-                )
-            except Exception as e:
-                logger.error("Failed to parse translation response: %s", e)
-                # Fallback to standard JSON parsing if schema validation fails
-                raw_data = json.loads(content)
-                if isinstance(raw_data, dict) and "translations" in raw_data:
-                    segments_list = raw_data["translations"]
-                    # Unwrap extra nesting: model sometimes wraps all segments inside a single item
-                    if (
-                        len(segments_list) == 1
-                        and "translations" in segments_list[0]
-                        and isinstance(segments_list[0]["translations"], list)
-                        and segments_list[0]["translations"]
-                        and "id" in segments_list[0]["translations"][0]
-                    ):
-                        segments_list = segments_list[0]["translations"]
-                    id_to_translations = {
-                        item["id"]: {lt["language"]: lt["text"] for lt in item["translations"]}
-                        for item in segments_list
-                    }
-                elif isinstance(raw_data, list):
-                    id_to_translations = {}
-                    for item in raw_data:
-                        if "id" not in item:
-                            continue
-                        trans = item["translations"]
-                        if isinstance(trans, dict):
-                            id_to_translations[item["id"]] = trans
-                        else:
-                            id_to_translations[item["id"]] = {lt["language"]: lt["text"] for lt in trans}
-                else:
-                    raise e
-
-            result = []
-            for seg in segments:
-                seg_copy = dict(seg)
-                seg_copy["translations"] = id_to_translations.get(
-                    seg["id"],
-                    {lang: "[translation unavailable]" for lang in languages},
-                )
-                result.append(seg_copy)
-            return result
-
-        except Exception as exc:
-            last_exc = exc
-            logger.warning(
-                "Translation batch attempt %d/%d failed: %s",
-                attempt + 1,
-                max_retries + 1,
-                exc,
+    @openrouter_retry(logger)
+    async def _call() -> dict:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                settings.openrouter_chat_url,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": settings.openrouter_structured_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "response_format": response_format,
+                    "temperature": 0.1,
+                    "reasoning": {"effort": "none"},
+                },
             )
+        response.raise_for_status()
+        data = response.json()
+        if "choices" not in data:
+            raise RetryableError(f"OpenRouter error response: {data}")
+        return data
 
-    # All retries exhausted — return unavailable placeholders
-    logger.error("Translation failed after %d attempts: %s", max_retries + 1, last_exc)
-    return [
-        {**seg, "translations": {lang: "[translation unavailable]" for lang in languages}, "_error": True}
-        for seg in segments
-    ]
+    try:
+        data = await _call()
+        content = data["choices"][0]["message"]["content"]
+        try:
+            parsed = TranslationResponse.model_validate_json(content)
+            id_to_translations = {
+                item.id: {lt.language: lt.text for lt in item.translations}
+                for item in parsed.translations
+            }
+            logger.info(
+                "Translation batch: OK — %d segments translated",
+                len(parsed.translations),
+            )
+        except Exception as e:
+            logger.error("Failed to parse translation response: %s", e)
+            # Fallback to standard JSON parsing if schema validation fails
+            raw_data = json.loads(content)
+            if isinstance(raw_data, dict) and "translations" in raw_data:
+                segments_list = raw_data["translations"]
+                # Unwrap extra nesting: model sometimes wraps all segments inside a single item
+                if (
+                    len(segments_list) == 1
+                    and "translations" in segments_list[0]
+                    and isinstance(segments_list[0]["translations"], list)
+                    and segments_list[0]["translations"]
+                    and "id" in segments_list[0]["translations"][0]
+                ):
+                    segments_list = segments_list[0]["translations"]
+                id_to_translations = {
+                    item["id"]: {lt["language"]: lt["text"] for lt in item["translations"]}
+                    for item in segments_list
+                }
+            elif isinstance(raw_data, list):
+                id_to_translations = {}
+                for item in raw_data:
+                    if "id" not in item:
+                        continue
+                    trans = item["translations"]
+                    if isinstance(trans, dict):
+                        id_to_translations[item["id"]] = trans
+                    else:
+                        id_to_translations[item["id"]] = {lt["language"]: lt["text"] for lt in trans}
+            else:
+                raise e
+
+        result = []
+        for seg in segments:
+            seg_copy = dict(seg)
+            seg_copy["translations"] = id_to_translations.get(
+                seg["id"],
+                {lang: "[translation unavailable]" for lang in languages},
+            )
+            result.append(seg_copy)
+        return result
+
+    except Exception as exc:
+        # All retries exhausted — return unavailable placeholders
+        logger.error("Translation failed after retries: %s", exc)
+        return [
+            {**seg, "translations": {lang: "[translation unavailable]" for lang in languages}, "_error": True}
+            for seg in segments
+        ]
 
 
 async def translate_segments(

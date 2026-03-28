@@ -70,7 +70,7 @@ async def test_extract_batch_with_retry_success():
     call_kwargs = mock_client.post.call_args.kwargs["json"]
     assert call_kwargs["response_format"]["type"] == "json_schema"
     assert call_kwargs["response_format"]["json_schema"]["strict"] is True
-    assert "reasoning" not in call_kwargs
+    assert call_kwargs["reasoning"] == {"effort": "none"}
 
 
 @pytest.mark.asyncio
@@ -92,7 +92,7 @@ async def test_extract_batch_with_retry_retries_on_429():
         mock_client.post = AsyncMock(side_effect=[rate_limit_response, ok_response])
         mock_cls.return_value = mock_client
 
-        with patch("app.services.vocabulary.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             result = await _extract_batch_with_retry(segments, "test_key", semaphore)
 
     mock_sleep.assert_called_once()
@@ -135,7 +135,7 @@ async def test_extract_batch_with_retry_raises_after_exhausted_retries():
         mock_client.post = AsyncMock(return_value=_make_mock_response(429))
         mock_cls.return_value = mock_client
 
-        with patch("app.services.vocabulary.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             with pytest.raises(VocabularyExtractionError):
                 await _extract_batch_with_retry(segments, "test_key", semaphore)
 
@@ -258,6 +258,32 @@ async def test_extract_vocabulary_result_order_matches_input():
     assert set(result.keys()) == set(range(10))
     for i in range(10):
         assert result[i][0]["word"] == str(i)
+
+
+@pytest.mark.asyncio
+async def test_extract_batch_retries_on_502():
+    """Should retry on 502 and return result on subsequent success."""
+    from app.services.vocabulary import _extract_batch_with_retry
+
+    segments = [{"id": 0, "text": "你好"}]
+    semaphore = asyncio.Semaphore(1)
+    content = _valid_vocab_content([0])
+
+    server_error_response = _make_mock_response(502)
+    ok_response = _make_mock_response(200, content)
+
+    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(side_effect=[server_error_response, ok_response])
+        mock_cls.return_value = mock_client
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            result = await _extract_batch_with_retry(segments, "test_key", semaphore)
+
+    assert result[0][0]["word"] == "你好"
+    assert mock_client.post.call_count == 2
 
 
 def test_build_vocab_prompt_english():

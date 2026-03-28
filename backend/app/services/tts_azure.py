@@ -6,6 +6,7 @@ import logging
 
 import httpx
 
+from app.services._retry import http_retry
 from app.services.tts_provider import TTSKeys
 
 logger = logging.getLogger(__name__)
@@ -57,11 +58,15 @@ class AzureTTSProvider:
             "X-Microsoft-OutputFormat": _OUTPUT_FORMAT,
         }
 
-        try:
+        @http_retry(logger)
+        async def _http_call() -> bytes:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(url, content=ssml.encode("utf-8"), headers=headers)
-                response.raise_for_status()
-                return response.content
+            response.raise_for_status()
+            return response.content
+
+        try:
+            return await _http_call()
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             if status == 401:

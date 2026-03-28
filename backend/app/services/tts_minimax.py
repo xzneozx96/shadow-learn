@@ -5,6 +5,7 @@ import logging
 import httpx
 
 from app.config import settings
+from app.services._retry import http_retry
 from app.services.tts_provider import TTSKeys
 
 logger = logging.getLogger(__name__)
@@ -50,11 +51,14 @@ async def synthesize_speech(text: str, api_key: str) -> bytes:
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(settings.minimax_tts_url, json=payload, headers=headers)
+    @http_retry(logger)
+    async def _http_call() -> dict:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(settings.minimax_tts_url, json=payload, headers=headers)
         response.raise_for_status()
+        return response.json()
 
-    body = response.json()
+    body = await _http_call()
     base_resp = body.get("base_resp", {})
     if base_resp.get("status_code", 0) != 0:
         msg = base_resp.get("status_msg", "Unknown Minimax error")

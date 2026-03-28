@@ -1,7 +1,6 @@
 import pytest
 import httpx
 from unittest.mock import patch, MagicMock, AsyncMock
-from pathlib import Path
 from app.services.transcription_provider import (
     _finalize_segment,
     _group_words_into_segments,
@@ -386,3 +385,85 @@ def test_segments_from_utterances_chinese_strips_spaces():
     ]
     segments = _segments_from_utterances(utterances, language="zh-CN")
     assert segments[0]["text"] == "你好世界。"
+
+
+def _minimal_deepgram_json():
+    return {
+        "results": {
+            "channels": [],
+            "utterances": [
+                {
+                    "start": 0.0, "end": 1.0, "transcript": "你好",
+                    "words": [
+                        {"word": "你好", "start": 0.0, "end": 1.0, "punctuated_word": "你好",
+                         "speaker": 0, "speaker_confidence": 0.9, "confidence": 0.9},
+                    ],
+                    "speaker": 0, "id": "u1", "channel": 0, "confidence": 0.99,
+                }
+            ],
+        }
+    }
+
+
+@pytest.mark.asyncio
+async def test_transcribe_retries_on_429_then_succeeds(tmp_path):
+    """transcribe_audio_deepgram retries on 429 and returns segments on success."""
+    audio_file = tmp_path / "test.mp3"
+    audio_file.write_bytes(b"fake audio data")
+
+    ok_response = MagicMock()
+    ok_response.status_code = 200
+    ok_response.raise_for_status = MagicMock()
+    ok_response.json.return_value = _minimal_deepgram_json()
+
+    rate_limit_response = MagicMock()
+    rate_limit_response.status_code = 429
+    rate_limit_response.text = "Too Many Requests"
+    rate_limit_response.raise_for_status = MagicMock(
+        side_effect=httpx.HTTPStatusError("429", request=MagicMock(), response=rate_limit_response)
+    )
+
+    with patch("app.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(side_effect=[rate_limit_response, ok_response])
+        mock_client_cls.return_value = mock_client
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            segments = await transcribe_audio_deepgram(audio_file, api_key="key", language="zh-CN")
+
+    assert len(segments) == 1
+    assert mock_client.post.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_transcribe_retries_on_503(tmp_path):
+    """transcribe_audio_deepgram retries on 503 and returns segments on success."""
+    audio_file = tmp_path / "test.mp3"
+    audio_file.write_bytes(b"fake audio data")
+
+    ok_response = MagicMock()
+    ok_response.status_code = 200
+    ok_response.raise_for_status = MagicMock()
+    ok_response.json.return_value = _minimal_deepgram_json()
+
+    server_error_response = MagicMock()
+    server_error_response.status_code = 503
+    server_error_response.text = "Service Unavailable"
+    server_error_response.raise_for_status = MagicMock(
+        side_effect=httpx.HTTPStatusError("503", request=MagicMock(), response=server_error_response)
+    )
+
+    with patch("app.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(side_effect=[server_error_response, ok_response])
+        mock_client_cls.return_value = mock_client
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            segments = await transcribe_audio_deepgram(audio_file, api_key="key", language="zh-CN")
+
+    assert len(segments) == 1
+    assert mock_client.post.call_count == 2

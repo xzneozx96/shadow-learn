@@ -1,4 +1,5 @@
 import json
+import httpx
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from app.services.translation import (
@@ -108,7 +109,7 @@ async def test_translate_segments_parses_structured_output():
     assert call_kwargs["model"] == settings.openrouter_structured_model
     assert call_kwargs["response_format"]["type"] == "json_schema"
     assert call_kwargs["response_format"]["json_schema"]["strict"] is True
-    assert "reasoning" not in call_kwargs
+    assert call_kwargs["reasoning"] == {"effort": "none"}
 
 
 def test_build_translation_prompt_english():
@@ -118,3 +119,64 @@ def test_build_translation_prompt_english():
     prompt = _build_translation_prompt(segments, languages, source_language="en")
     assert "English" in prompt
     assert "Chinese" not in prompt
+
+
+def _ok_translation_response():
+    content = json.dumps({
+        "translations": [{"id": 0, "translations": [{"language": "English", "text": "Hello"}]}]
+    })
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {"choices": [{"message": {"content": content}}]}
+    return mock_response
+
+
+@pytest.mark.asyncio
+async def test_translate_batch_retries_on_429():
+    """_translate_batch retries on 429 and returns translations on subsequent success."""
+    rate_limit_response = MagicMock()
+    rate_limit_response.status_code = 429
+    rate_limit_response.raise_for_status = MagicMock(
+        side_effect=httpx.HTTPStatusError("429", request=MagicMock(), response=rate_limit_response)
+    )
+
+    with patch("app.services.translation.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(side_effect=[rate_limit_response, _ok_translation_response()])
+        mock_client_cls.return_value = mock_client
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            result = await translate_segments(
+                [{"id": 0, "start": 0.0, "end": 1.0, "text": "你好"}],
+                languages=["English"],
+                api_key="key",
+            )
+
+    assert result[0]["translations"]["English"] == "Hello"
+    assert mock_client.post.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_translate_batch_retries_on_connect_error():
+    """_translate_batch retries on ConnectError and returns translations on subsequent success."""
+    with patch("app.services.translation.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(
+            side_effect=[httpx.ConnectError("connection refused"), _ok_translation_response()]
+        )
+        mock_client_cls.return_value = mock_client
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            result = await translate_segments(
+                [{"id": 0, "start": 0.0, "end": 1.0, "text": "你好"}],
+                languages=["English"],
+                api_key="key",
+            )
+
+    assert result[0]["translations"]["English"] == "Hello"
+    assert mock_client.post.call_count == 2

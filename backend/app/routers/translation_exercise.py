@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.config import settings
 from app.routers._utils import _resolve_key
+from app.services._retry import RetryableError, openrouter_retry
 from app.services.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
@@ -149,23 +150,28 @@ async def generate_sentences(req: GenerateRequest):
 
     logger.info("[translation] generate: word=%s sentence_count=%d", req.word, req.sentence_count)
 
-    t0 = time.monotonic()
-    async with httpx.AsyncClient(timeout=90) as client:
-        resp = await client.post(
-            settings.openrouter_chat_url,
-            headers={"Authorization": f"Bearer {api_key}"},
-            json=payload,
-        )
+    @openrouter_retry(logger)
+    async def _call() -> dict:
+        async with httpx.AsyncClient(timeout=90) as client:
+            resp = await client.post(
+                settings.openrouter_chat_url,
+                headers={"Authorization": f"Bearer {api_key}"},
+                json=payload,
+            )
         resp.raise_for_status()
+        body = resp.json()
+        if "error" in body or "choices" not in body:
+            logger.error("[translation] generate: unexpected response: %s", body)
+            raise ValueError(f"OpenRouter error: {body.get('error', body)}")
+        try:
+            return json.loads(body["choices"][0]["message"]["content"])
+        except json.JSONDecodeError as exc:
+            raise RetryableError(f"malformed JSON: {exc}") from exc
+
+    t0 = time.monotonic()
+    data = await _call()
     elapsed = time.monotonic() - t0
     logger.info("[translation] generate done: %.2fs", elapsed)
-
-    body = resp.json()
-    if "error" in body or "choices" not in body:
-        logger.error("[translation] generate: unexpected response: %s", body)
-        raise ValueError(f"OpenRouter error: {body.get('error', body)}")
-    content = body["choices"][0]["message"]["content"]
-    data = json.loads(content)
     return GenerateResponse(**data)
 
 
@@ -229,21 +235,26 @@ async def evaluate_translation(req: EvaluateRequest):
         req.source_language, req.target_language,
     )
 
-    t0 = time.monotonic()
-    async with httpx.AsyncClient(timeout=90) as client:
-        resp = await client.post(
-            settings.openrouter_chat_url,
-            headers={"Authorization": f"Bearer {api_key}"},
-            json=payload,
-        )
+    @openrouter_retry(logger)
+    async def _call() -> dict:
+        async with httpx.AsyncClient(timeout=90) as client:
+            resp = await client.post(
+                settings.openrouter_chat_url,
+                headers={"Authorization": f"Bearer {api_key}"},
+                json=payload,
+            )
         resp.raise_for_status()
+        body = resp.json()
+        if "error" in body or "choices" not in body:
+            logger.error("[translation] evaluate: unexpected response: %s", body)
+            raise ValueError(f"OpenRouter error: {body.get('error', body)}")
+        try:
+            return json.loads(body["choices"][0]["message"]["content"])
+        except json.JSONDecodeError as exc:
+            raise RetryableError(f"malformed JSON: {exc}") from exc
+
+    t0 = time.monotonic()
+    data = await _call()
     elapsed = time.monotonic() - t0
     logger.info("[translation] evaluate done: %.2fs", elapsed)
-
-    body = resp.json()
-    if "error" in body or "choices" not in body:
-        logger.error("[translation] evaluate: unexpected response: %s", body)
-        raise ValueError(f"OpenRouter error: {body.get('error', body)}")
-    content = body["choices"][0]["message"]["content"]
-    data = json.loads(content)
     return EvaluateResponse(**data)

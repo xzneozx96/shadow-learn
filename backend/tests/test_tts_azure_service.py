@@ -94,7 +94,7 @@ async def test_azure_synthesize_raises_on_403():
 
 @pytest.mark.asyncio
 async def test_azure_synthesize_raises_on_429():
-    """Provider raises RuntimeError on 429 Too Many Requests."""
+    """Provider raises RuntimeError on 429 after exhausting all retry attempts."""
     import httpx
 
     mock_response = MagicMock()
@@ -109,10 +109,46 @@ async def test_azure_synthesize_raises_on_429():
     mock_client.post = AsyncMock(return_value=mock_response)
 
     with patch("app.services.tts_azure.httpx.AsyncClient", return_value=mock_client):
-        from app.services.tts_azure import AzureTTSProvider
-        provider = AzureTTSProvider()
-        with pytest.raises(RuntimeError, match="rate limit"):
-            await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            from app.services.tts_azure import AzureTTSProvider
+            provider = AzureTTSProvider()
+            with pytest.raises(RuntimeError, match="rate limit"):
+                await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})
+
+    assert mock_client.post.call_count == 3  # retried max_attempts times
+
+
+@pytest.mark.asyncio
+async def test_azure_synthesize_retries_on_429_then_succeeds():
+    """Provider retries on 429 and returns bytes on subsequent success."""
+    import httpx
+
+    fake_mp3 = b"\xff\xfb\x90\x00" * 10
+
+    ok_response = MagicMock()
+    ok_response.status_code = 200
+    ok_response.content = fake_mp3
+    ok_response.raise_for_status = MagicMock()
+
+    rate_limit_response = MagicMock()
+    rate_limit_response.status_code = 429
+    rate_limit_response.raise_for_status = MagicMock(
+        side_effect=httpx.HTTPStatusError("429", request=MagicMock(), response=rate_limit_response)
+    )
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = AsyncMock(side_effect=[rate_limit_response, ok_response])
+
+    with patch("app.services.tts_azure.httpx.AsyncClient", return_value=mock_client):
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            from app.services.tts_azure import AzureTTSProvider
+            provider = AzureTTSProvider()
+            result = await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})
+
+    assert result == fake_mp3
+    assert mock_client.post.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -173,7 +209,7 @@ async def test_azure_synthesize_raises_on_400():
 
 @pytest.mark.asyncio
 async def test_azure_synthesize_raises_on_network_error():
-    """Provider raises RuntimeError on network/connection failure."""
+    """Provider raises RuntimeError on network/connection failure after retries."""
     import httpx
 
     mock_client = AsyncMock()
@@ -182,15 +218,16 @@ async def test_azure_synthesize_raises_on_network_error():
     mock_client.post = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
 
     with patch("app.services.tts_azure.httpx.AsyncClient", return_value=mock_client):
-        from app.services.tts_azure import AzureTTSProvider
-        provider = AzureTTSProvider()
-        with pytest.raises(RuntimeError):
-            await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            from app.services.tts_azure import AzureTTSProvider
+            provider = AzureTTSProvider()
+            with pytest.raises(RuntimeError):
+                await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})
 
 
 @pytest.mark.asyncio
 async def test_azure_synthesize_raises_on_5xx():
-    """Provider raises RuntimeError on 5xx server error."""
+    """Provider raises RuntimeError on 5xx server error after retries."""
     import httpx
 
     mock_response = MagicMock()
@@ -205,7 +242,8 @@ async def test_azure_synthesize_raises_on_5xx():
     mock_client.post = AsyncMock(return_value=mock_response)
 
     with patch("app.services.tts_azure.httpx.AsyncClient", return_value=mock_client):
-        from app.services.tts_azure import AzureTTSProvider
-        provider = AzureTTSProvider()
-        with pytest.raises(RuntimeError, match="HTTP 503"):
-            await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            from app.services.tts_azure import AzureTTSProvider
+            provider = AzureTTSProvider()
+            with pytest.raises(RuntimeError, match="HTTP 503"):
+                await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})

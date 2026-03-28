@@ -7,12 +7,12 @@ from typing import TypedDict
 
 import httpx
 
+from app.services._retry import http_retry
 from app.services.transcription_provider import (
     TranscriptionKeys,
     _Segment,
     _Word,
     _WordTiming,
-    _finalize_segment,
     _group_words_into_segments,
 )
 
@@ -122,23 +122,25 @@ async def transcribe_audio_deepgram(audio_path: Path, api_key: str, language: st
     audio_bytes = await asyncio.to_thread(audio_path.read_bytes)
     params = {**_DEEPGRAM_PARAMS, "language": language}
 
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        response = await client.post(
-            _DEEPGRAM_TRANSCRIPTION_URL,
-            params=params,
-            headers={
-                "Authorization": f"Token {api_key}",
-                "Content-Type": content_type,
-                "Content-Length": str(file_size),
-            },
-            content=audio_bytes,
-        )
+    @http_retry(logger)
+    async def _http_call() -> dict:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            response = await client.post(
+                _DEEPGRAM_TRANSCRIPTION_URL,
+                params=params,
+                headers={
+                    "Authorization": f"Token {api_key}",
+                    "Content-Type": content_type,
+                    "Content-Length": str(file_size),
+                },
+                content=audio_bytes,
+            )
+        if response.status_code != 200:
+            logger.error("Deepgram API error %d: %s", response.status_code, response.text[:500])
+        response.raise_for_status()
+        return response.json()
 
-    if response.status_code != 200:
-        logger.error("Deepgram API error %d: %s", response.status_code, response.text[:500])
-    response.raise_for_status()
-
-    data: _DeepgramResponse = response.json()
+    data: _DeepgramResponse = await _http_call()
     results = data.get("results", {})  # type: ignore[union-attr]
 
     utterances: list[_DeepgramUtterance] = results.get("utterances", [])  # type: ignore[assignment]
