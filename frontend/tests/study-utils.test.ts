@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSessionQuestions, isClozeExercise, isPronExercise, isTranslationSentence } from '@/lib/study-utils'
+import { buildSessionQuestions, isClozeExercise, isPronExercise, isTranslationSentence, toFallbackType } from '@/lib/study-utils'
 
 function entry(id: string) {
   return {
@@ -252,5 +252,26 @@ describe('buildSessionQuestions — mixed', () => {
     expect(qs[0].type).toBe('dictation')
     expect(qs[1].type).toBe('romanization-recall')
     expect(qs[2].type).toBe('reconstruction')
+  })
+})
+
+describe('toFallbackType', () => {
+  it('maps cloze to romanization-recall', () => {
+    expect(toFallbackType('cloze')).toBe('romanization-recall')
+  })
+
+  it('maps translation to romanization-recall', () => {
+    expect(toFallbackType('translation')).toBe('romanization-recall')
+  })
+
+  it('maps pronunciation to romanization-recall', () => {
+    expect(toFallbackType('pronunciation')).toBe('romanization-recall')
+  })
+
+  it('leaves non-AI types unchanged', () => {
+    expect(toFallbackType('dictation')).toBe('dictation')
+    expect(toFallbackType('romanization-recall')).toBe('romanization-recall')
+    expect(toFallbackType('reconstruction')).toBe('reconstruction')
+    expect(toFallbackType('writing')).toBe('writing')
   })
 })

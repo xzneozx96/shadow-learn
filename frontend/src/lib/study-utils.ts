@@ -40,6 +40,10 @@ export function isTranslationSentence(x: unknown): x is { text: string, romaniza
   )
 }
 
+export function toFallbackType(t: Exclude<ExerciseMode, 'mixed'>): Exclude<ExerciseMode, 'mixed'> {
+  return (t === 'cloze' || t === 'translation' || t === 'pronunciation') ? 'romanization-recall' : t
+}
+
 export function buildSessionQuestions(
   types: Exclude<ExerciseMode, 'mixed'>[],
   pool: VocabEntry[],

@@ -24,7 +24,7 @@ import { useTTS } from '@/hooks/useTTS'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { captureStudySessionCompleted } from '@/lib/posthog-events'
-import { buildSessionQuestions } from '@/lib/study-utils'
+import { buildSessionQuestions, toFallbackType } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
 type Phase = 'picker' | 'session' | 'summary'
@@ -157,9 +157,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
     const pool = entries.toSorted(() => Math.random() - 0.5)
 
     if (preloadedEntries) {
-      const fallbackTypes = types.map(t =>
-        (t === 'cloze' || t === 'translation') ? 'romanization-recall' : t,
-      ) as Exclude<ExerciseMode, 'mixed'>[]
+      const fallbackTypes = types.map(toFallbackType)
       setQuestions(buildSessionQuestions(fallbackTypes, pool, [], [], []))
       setCurrent(0)
       setResults([])
@@ -177,9 +175,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
     }
     catch {
       toast.error(t('study.aiGenerationFailed'))
-      const fallbackTypes = types.map(t =>
-        (t === 'cloze' || t === 'translation' || t === 'pronunciation') ? 'romanization-recall' : t,
-      ) as Exclude<ExerciseMode, 'mixed'>[]
+      const fallbackTypes = types.map(toFallbackType)
       setQuestions(buildSessionQuestions(fallbackTypes, pool, [], [], []))
       setCurrent(0)
       setResults([])
