@@ -166,7 +166,6 @@ export function CreateLesson() {
 
   const canGenerate = sttProvider !== null
     && (tab === 'youtube' ? !!youtubeUrl.trim() : !!file)
-    && (trialMode || (sttProvider === 'azure' ? !!keys?.azureSpeechKey : !!keys?.deepgramApiKey))
 
   if (queued) {
     return (
