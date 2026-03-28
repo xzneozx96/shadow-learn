@@ -2,7 +2,8 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 
-// Minimal MediaRecorder mock
+// Minimal MediaRecorder mock.
+// Must be a regular function (not arrow) so it can be called with `new`.
 function makeRecorderMock() {
   let onstop: (() => void) | null = null
   let ondataavailable: ((e: { data: Blob }) => void) | null = null
@@ -11,12 +12,8 @@ function makeRecorderMock() {
     stop: vi.fn().mockImplementation(() => { onstop?.() }),
     ondataavailable: null as any,
     onstop: null as any,
-    get _onstop() { return onstop },
-    set _onstop(fn) { onstop = fn },
-    get _ondataavailable() { return ondataavailable },
-    set _ondataavailable(fn) { ondataavailable = fn },
   }
-  // Proxy so setting recorder.onstop updates our internal ref
+  // Proxy so setting recorder.onstop/ondataavailable updates our internal refs
   return new Proxy(recorder, {
     set(target: any, key, value) {
       if (key === 'onstop') {
@@ -30,12 +27,34 @@ function makeRecorderMock() {
       target[key] = value
       return true
     },
+    get(target: any, key) {
+      if (key === 'ondataavailable')
+        return ondataavailable
+      if (key === 'onstop')
+        return onstop
+      return target[key]
+    },
   })
 }
 
 function makeStreamMock() {
   const track = { stop: vi.fn() }
   return { getTracks: vi.fn(() => [track]), _track: track }
+}
+
+function stubMediaDevices(stream: ReturnType<typeof makeStreamMock>) {
+  Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+    value: { getUserMedia: vi.fn().mockResolvedValue(stream) },
+    configurable: true,
+    writable: true,
+  })
+}
+
+// vi.fn().mockImplementation(arrowFn) breaks `new MediaRecorder()` because
+// arrow functions can't be constructors. Use a regular function stub instead.
+function stubMediaRecorder(recorder: ReturnType<typeof makeRecorderMock>) {
+  // eslint-disable-next-line prefer-arrow-callback
+  vi.stubGlobal('MediaRecorder', function MockMediaRecorder() { return recorder })
 }
 
 beforeEach(() => {
@@ -60,10 +79,8 @@ describe('useAudioRecorder', () => {
   it('transitions idle → recording on startRecording', async () => {
     const stream = makeStreamMock()
     const recorder = makeRecorderMock()
-    vi.stubGlobal('navigator', {
-      mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
-    })
-    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(() => { return recorder }))
+    stubMediaDevices(stream)
+    stubMediaRecorder(recorder)
 
     const { result } = renderHook(() => useAudioRecorder())
     await act(async () => {
@@ -78,10 +95,8 @@ describe('useAudioRecorder', () => {
   it('transitions recording → processing → stopped on stopRecording', async () => {
     const stream = makeStreamMock()
     const recorder = makeRecorderMock()
-    vi.stubGlobal('navigator', {
-      mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
-    })
-    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(() => { return recorder }))
+    stubMediaDevices(stream)
+    stubMediaRecorder(recorder)
 
     const { result } = renderHook(() => useAudioRecorder())
     await act(async () => {
@@ -105,12 +120,10 @@ describe('useAudioRecorder', () => {
   it('discards blob and resets to idle when recording is shorter than minDurationMs', async () => {
     const stream = makeStreamMock()
     const recorder = makeRecorderMock()
-    vi.stubGlobal('navigator', {
-      mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
-    })
-    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(() => { return recorder }))
+    stubMediaDevices(stream)
+    stubMediaRecorder(recorder)
 
-    // Use real Date.now but control timing by patching it
+    // Control timing by patching Date.now
     let now = 0
     vi.spyOn(Date, 'now').mockImplementation(() => now)
 
@@ -151,10 +164,9 @@ describe('useAudioRecorder', () => {
       },
       set ondataavailable(_fn: any) {},
     }
-    vi.stubGlobal('navigator', {
-      mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
-    })
-    vi.stubGlobal('MediaRecorder', vi.fn(() => recorder))
+    stubMediaDevices(stream)
+    // eslint-disable-next-line prefer-arrow-callback
+    vi.stubGlobal('MediaRecorder', function MockMediaRecorder() { return recorder })
 
     const { result } = renderHook(() => useAudioRecorder())
     await act(async () => {
@@ -177,10 +189,8 @@ describe('useAudioRecorder', () => {
   it('reset() clears blob and revokes object URL', async () => {
     const stream = makeStreamMock()
     const recorder = makeRecorderMock()
-    vi.stubGlobal('navigator', {
-      mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
-    })
-    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(() => { return recorder }))
+    stubMediaDevices(stream)
+    stubMediaRecorder(recorder)
 
     const { result } = renderHook(() => useAudioRecorder())
     await act(async () => {
