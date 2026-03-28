@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth } from '@/contexts/AuthContext'
-import { initDB, upsertExerciseStat } from '@/db'
+import { initDB } from '@/db'
 import { useTracking } from '@/hooks/useTracking'
 import 'fake-indexeddb/auto'
 

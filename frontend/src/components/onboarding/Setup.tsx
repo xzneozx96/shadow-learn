@@ -37,10 +37,6 @@ export function Setup() {
     e.preventDefault()
     setError(null)
 
-    if (!openrouterApiKey.trim()) {
-      setError(t('auth.error.openrouterRequired'))
-      return
-    }
     if (sttProvider === 'deepgram' && !deepgramApiKey.trim()) {
       setError(t('auth.error.deepgramRequired'))
       return
@@ -70,7 +66,7 @@ export function Setup() {
       setLoading(true)
       await setup(
         {
-          openrouterApiKey: openrouterApiKey.trim(),
+          openrouterApiKey: openrouterApiKey.trim() || undefined,
           minimaxApiKey: minimaxApiKey.trim() || undefined,
           deepgramApiKey: deepgramApiKey.trim() || undefined,
           azureSpeechKey: azureSpeechKey.trim() || undefined,
@@ -90,8 +86,7 @@ export function Setup() {
   }
 
   const formReady
-    = !!openrouterApiKey.trim()
-      && pin.length >= 4
+    = pin.length >= 4
       && pin === pinConfirm
       && (sttProvider !== 'deepgram' || !!deepgramApiKey.trim())
       && (provider !== 'azure' || (!!azureSpeechKey.trim() && !!azureSpeechRegion.trim()))
@@ -133,7 +128,7 @@ export function Setup() {
                   <Input
                     id="openai"
                     type="password"
-                    placeholder="sk-..."
+                    placeholder="Optional — uses server key if blank"
                     value={openrouterApiKey}
                     onChange={e => setOpenrouterApiKey(e.target.value)}
                   />

@@ -63,7 +63,7 @@ describe('useAudioRecorder', () => {
     vi.stubGlobal('navigator', {
       mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     })
-    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(function () { return recorder }))
+    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(() => { return recorder }))
 
     const { result } = renderHook(() => useAudioRecorder())
     await act(async () => {
@@ -81,7 +81,7 @@ describe('useAudioRecorder', () => {
     vi.stubGlobal('navigator', {
       mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     })
-    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(function () { return recorder }))
+    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(() => { return recorder }))
 
     const { result } = renderHook(() => useAudioRecorder())
     await act(async () => {
@@ -108,7 +108,7 @@ describe('useAudioRecorder', () => {
     vi.stubGlobal('navigator', {
       mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     })
-    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(function () { return recorder }))
+    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(() => { return recorder }))
 
     // Use real Date.now but control timing by patching it
     let now = 0
@@ -180,7 +180,7 @@ describe('useAudioRecorder', () => {
     vi.stubGlobal('navigator', {
       mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) },
     })
-    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(function () { return recorder }))
+    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(() => { return recorder }))
 
     const { result } = renderHook(() => useAudioRecorder())
     await act(async () => {

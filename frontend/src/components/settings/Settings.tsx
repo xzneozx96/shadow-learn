@@ -68,25 +68,9 @@ export function Settings() {
 
   async function handleSaveKeys() {
     setKeysError(null)
-    if (!editOpenrouterKey.trim()) {
-      setKeysError('OpenRouter API key cannot be empty')
-      return
-    }
-    if (provider === 'azure') {
-      if (!editAzureSpeechKey.trim() || !editAzureSpeechRegion.trim()) {
-        setKeysError('Azure Speech key and region are required')
-        return
-      }
-    }
-    if (provider === 'minimax') {
-      if (!editMinimaxKey.trim()) {
-        setKeysError('MiniMax API key is required')
-        return
-      }
-    }
 
     const newKeys = {
-      openrouterApiKey: editOpenrouterKey.trim(),
+      openrouterApiKey: editOpenrouterKey.trim() || undefined,
       minimaxApiKey: editMinimaxKey.trim() || undefined,
       deepgramApiKey: editDeepgramKey.trim() || undefined,
       azureSpeechKey: editAzureSpeechKey.trim() || undefined,
@@ -211,6 +195,7 @@ export function Settings() {
                 value={editOpenrouterKey}
                 onChange={e => setEditOpenrouterKey(e.target.value)}
                 className="font-mono text-sm"
+                placeholder="Optional — uses server key if blank"
               />
             </div>
 
@@ -228,7 +213,7 @@ export function Settings() {
                     value={editAzureSpeechKey}
                     onChange={e => setEditAzureSpeechKey(e.target.value)}
                     className="font-mono text-sm"
-                    placeholder="Paste your Azure Speech key"
+                    placeholder="Optional — uses server key if blank"
                   />
                 </div>
                 <div className="space-y-2">
@@ -242,7 +227,7 @@ export function Settings() {
                     value={editAzureSpeechRegion}
                     onChange={e => setEditAzureSpeechRegion(e.target.value)}
                     className="font-mono text-sm"
-                    placeholder="e.g. eastus"
+                    placeholder="Optional (e.g. eastus)"
                   />
                 </div>
               </>

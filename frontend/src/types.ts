@@ -53,7 +53,7 @@ export interface AppSettings {
 }
 
 export interface DecryptedKeys {
-  openrouterApiKey: string
+  openrouterApiKey?: string
   minimaxApiKey?: string
   deepgramApiKey?: string
   azureSpeechKey?: string
