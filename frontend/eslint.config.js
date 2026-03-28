@@ -12,4 +12,9 @@ export default antfu(
       'react-refresh/only-export-components': 'off',
     },
   },
+  {
+    rules: {
+      'style/max-statements-per-line': 'off',
+    },
+  },
 )

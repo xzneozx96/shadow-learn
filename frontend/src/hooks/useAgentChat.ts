@@ -339,7 +339,7 @@ export function useAgentChat(
       prevToolSetRef.current = ''
 
       // Detect exercise result messages and count them
-      if ('text' in opts && opts.text) {
+      if (opts != null && 'text' in opts && opts.text) {
         try {
           const parsed = JSON.parse(opts.text)
           if (parsed?.type === 'exercise_result') {
