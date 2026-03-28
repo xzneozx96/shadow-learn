@@ -157,18 +157,34 @@ async def generate_quiz(req: QuizRequest):
         "reasoning": {"effort": "none"},
     }
 
+    last_error: Exception | None = None
     async with httpx.AsyncClient(timeout=90) as client:
-        resp = await client.post(
-            settings.openrouter_chat_url,
-            headers={"Authorization": f"Bearer {api_key}"},
-            json=payload,
-        )
-        resp.raise_for_status()
-    body = resp.json()
-    if "error" in body or "choices" not in body:
-        logger.error("[quiz] generate: unexpected response: %s", body)
-        raise HTTPException(500, f"OpenRouter error: {body.get('error', body)}")
+        for attempt in range(1, 4):
+            resp = await client.post(
+                settings.openrouter_chat_url,
+                headers={"Authorization": f"Bearer {api_key}"},
+                json=payload,
+            )
+            resp.raise_for_status()
+            body = resp.json()
+            if "error" in body or "choices" not in body:
+                logger.error("[quiz] generate: unexpected response: %s", body)
+                raise HTTPException(500, f"OpenRouter error: {body.get('error', body)}")
 
-    content = body["choices"][0]["message"]["content"]
-    data = json.loads(content)
-    return QuizResponse(**data)
+            choice = body["choices"][0]
+            finish_reason = choice.get("finish_reason")
+            content = choice["message"]["content"]
+
+            if finish_reason == "length":
+                logger.warning("[quiz] generate: truncated response on attempt %d (finish_reason=length)", attempt)
+                last_error = ValueError("Response truncated by token limit")
+                continue
+
+            try:
+                data = json.loads(content)
+                return QuizResponse(**data)
+            except (json.JSONDecodeError, Exception) as exc:
+                logger.warning("[quiz] generate: JSON parse error on attempt %d: %s", attempt, exc)
+                last_error = exc
+
+    raise HTTPException(500, f"Failed to generate valid quiz after 3 attempts: {last_error}")
