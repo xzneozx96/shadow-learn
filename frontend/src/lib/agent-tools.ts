@@ -24,6 +24,7 @@ import {
 } from '@/db'
 import { recallMemory, saveMemory } from '@/lib/agent-memory'
 import { API_BASE } from '@/lib/config'
+import pedagogicalGuidelinesContent from '@/lib/skills/pedagogical_guidelines.md?raw'
 import { updateSpacedRepetition } from '@/lib/spacedRepetition'
 import { getSegmentTokens } from '@/lib/study-utils'
 
@@ -798,14 +799,5 @@ export async function executeRenderVocabCard(
 }
 
 export async function executeGetPedagogicalGuidelines() {
-  try {
-    const res = await fetch('/fluent/pedagogical_guidelines.md')
-    if (!res.ok) {
-      throw new Error(`Failed to load guidelines: ${res.statusText}`)
-    }
-    return { content: await res.text() }
-  }
-  catch (err: any) {
-    return { error: `Guidelines load error: ${err.message}` }
-  }
+  return { content: pedagogicalGuidelinesContent }
 }
