@@ -1,5 +1,6 @@
 import type { LessonMeta, Segment, VocabEntry, Word } from '@/types'
 import { createContext, use, useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { deleteErrorPattern, deleteSpacedRepetitionItem } from '@/db'
 
@@ -34,8 +35,10 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
 
   const save = useCallback(
     async (word: Word, segment: Segment, lesson: LessonMeta, activeLang: string) => {
-      if (!db)
+      if (!db) {
+        toast.error('Could not save — database unavailable')
         return
+      }
       const entry: VocabEntry = {
         id: crypto.randomUUID(),
         word: word.word,
@@ -50,8 +53,14 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
         sourceLanguage: lesson.sourceLanguage ?? 'zh-CN',
         createdAt: new Date().toISOString(),
       }
-      await db.put('vocabulary', entry)
-      setEntries(prev => [...prev, entry])
+      try {
+        await db.put('vocabulary', entry)
+        setEntries(prev => [...prev, entry])
+      }
+      catch {
+        toast.error('Failed to save word')
+        throw new Error('Failed to save word')
+      }
     },
     [db],
   )
@@ -60,10 +69,16 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
     async (id: string) => {
       if (!db)
         return
-      await db.delete('vocabulary', id)
-      await deleteSpacedRepetitionItem(db, id)
-      await deleteErrorPattern(db, id)
-      setEntries(prev => prev.filter(e => e.id !== id))
+      try {
+        await db.delete('vocabulary', id)
+        await deleteSpacedRepetitionItem(db, id)
+        await deleteErrorPattern(db, id)
+        setEntries(prev => prev.filter(e => e.id !== id))
+      }
+      catch {
+        toast.error('Failed to remove word')
+        throw new Error('Failed to remove word')
+      }
     },
     [db],
   )

@@ -1,4 +1,4 @@
-import type { LessonMeta, Segment, VocabEntry, Word } from '@/types'
+import type { LessonMeta, Segment, Word } from '@/types'
 import { Check, Copy, Languages, Loader2, Search, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -10,7 +10,6 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useTTS } from '@/hooks/useTTS'
 import { cn } from '@/lib/utils'
-import { RemoveVocabDialog } from './RemoveVocabDialog'
 import { SegmentText } from './SegmentText'
 
 interface TranscriptPanelProps {
@@ -35,7 +34,6 @@ export function TranscriptPanel({
   const { playTTS, loadingText } = useTTS(db, keys, trialMode)
   const { entries, save, remove, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
-  const [pendingRemove, setPendingRemove] = useState<VocabEntry | null>(null)
   const [activeLang, setActiveLang] = useState(
     lesson.translationLanguages[0] ?? 'en',
   )
@@ -77,8 +75,13 @@ export function TranscriptPanel({
   // Stable callbacks so memo(SegmentText) is not invalidated on every render
   const handleSaveWord = useCallback(
     async (word: Word, seg: Segment) => {
-      await save(word, seg, lesson, activeLang)
-      toast.success(t('lesson.savedToWorkbook'))
+      try {
+        await save(word, seg, lesson, activeLang)
+        toast.success(t('lesson.savedToWorkbook'))
+      }
+      catch {
+        // VocabularyContext already showed the error toast
+      }
     },
     [save, lesson, activeLang, t],
   )
@@ -89,20 +92,19 @@ export function TranscriptPanel({
   )
 
   const handleRemoveWord = useCallback(
-    (word: Word) => {
+    async (word: Word) => {
       const entry = entries.find(e => e.word === word.word && e.sourceLessonId === lesson.id)
-      if (entry)
-        setPendingRemove(entry)
+      if (!entry)
+        return
+      try {
+        await remove(entry.id)
+        toast.success(t('lesson.removedFromWorkbook'))
+      }
+      catch {
+        // VocabularyContext already showed the error toast
+      }
     },
-    [entries, lesson.id],
-  )
-
-  const handleConfirmRemove = useCallback(
-    (entry: VocabEntry) => {
-      remove(entry.id)
-      toast.success(t('lesson.removedFromWorkbook'))
-    },
-    [remove, t],
+    [entries, lesson.id, remove, t],
   )
 
   // Event delegation for keyboard activation — one handler instead of N closures.
@@ -269,11 +271,6 @@ export function TranscriptPanel({
         </div>
       </ScrollArea>
 
-      <RemoveVocabDialog
-        entry={pendingRemove}
-        onClose={() => setPendingRemove(null)}
-        onConfirm={handleConfirmRemove}
-      />
     </div>
   )
 }

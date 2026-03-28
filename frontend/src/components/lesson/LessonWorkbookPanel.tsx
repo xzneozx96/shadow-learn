@@ -30,9 +30,14 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const [pendingRemove, setPendingRemove] = useState<VocabEntry | null>(null)
 
   const handleConfirmRemove = useCallback(
-    (entry: VocabEntry) => {
-      remove(entry.id)
-      toast.success(t('lesson.removedFromWorkbook'))
+    async (entry: VocabEntry) => {
+      try {
+        await remove(entry.id)
+        toast.success(t('lesson.removedFromWorkbook'))
+      }
+      catch {
+        // VocabularyContext already showed the error toast
+      }
     },
     [remove, t],
   )

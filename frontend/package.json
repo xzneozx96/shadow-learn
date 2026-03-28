@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.158",
@@ -42,6 +45,8 @@
     "@antfu/eslint-config": "^7.7.2",
     "@eslint-react/eslint-plugin": "^2.13.0",
     "@eslint/js": "^9.39.4",
+    "@faker-js/faker": "^10.4.0",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

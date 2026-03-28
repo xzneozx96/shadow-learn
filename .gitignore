@@ -56,6 +56,13 @@ dist/
 _bmad/
 _bmad-output/
 
+# QA agent output (local reports)
+_qa-output/
+
+# Playwright test artifacts
+frontend/test-results/
+.playwright-mcp/
+
 # AI agent research (local notes)
 ai-agent-research/
 

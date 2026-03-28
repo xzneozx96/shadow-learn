@@ -523,7 +523,7 @@ export const TRANSLATIONS = {
     'study.correct': 'Chính xác!',
     'study.incorrect': 'Chưa chính xác',
     'study.showAnswer': 'Xem đáp án',
-    'study.backToWorkbook': 'Quay về sổ tập',
+    'study.backToWorkbook': 'Quay về sổ từ vựng',
     'study.sessionComplete': 'Hoàn thành bài luyện tập!',
     'study.score': 'Điểm số',
     'study.accuracy': 'Độ chính xác',
