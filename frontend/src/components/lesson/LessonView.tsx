@@ -138,8 +138,7 @@ function LessonViewContent() {
   }, [])
 
   const speakingAvailable
-    = Boolean(keys?.azureSpeechKey && keys?.azureSpeechRegion)
-      && typeof MediaRecorder !== 'undefined'
+    = typeof MediaRecorder !== 'undefined'
       && getLanguageCaps(meta?.sourceLanguage).azurePronunciationLocale !== null
 
   const [searchParams] = useSearchParams()

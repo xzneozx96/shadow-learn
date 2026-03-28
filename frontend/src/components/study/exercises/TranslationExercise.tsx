@@ -107,7 +107,7 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
 }
 
 export function TranslationExercise({ sentence, direction, progress = '', onNext, caps }: Props) {
-  const { keys, trialMode } = useAuth()
+  const { keys } = useAuth()
   const { t } = useI18n()
   const scoreLabel = useScoreLabel()
   const [value, setValue] = useState('')
@@ -133,7 +133,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
     : t('study.translation.placeholder.toLanguage').replace('{language}', caps.languageName)
 
   async function handleSubmit() {
-    if (!value.trim() || (!trialMode && !keys?.openrouterApiKey))
+    if (!value.trim())
       return
     setLoading(true)
     try {

@@ -136,8 +136,8 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
   }, [confirmLeave])
 
   const azurePronunciationLocale = caps.azurePronunciationLocale
-  const hasAzure = azurePronunciationLocale !== null && (trialMode || Boolean(keys?.azureSpeechKey))
-  const hasOpenRouter = trialMode || Boolean(keys?.openrouterApiKey)
+  const hasAzure = azurePronunciationLocale !== null
+  const hasOpenRouter = true
 
   function handleModeSelect(newMode: ExerciseMode) {
     setMode(newMode)

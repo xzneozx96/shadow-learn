@@ -69,14 +69,7 @@ export function Setup() {
     }
   }
 
-  const hasAnyKey = !!(
-    openrouterApiKey.trim()
-    || deepgramApiKey.trim()
-    || minimaxApiKey.trim()
-    || azureSpeechKey.trim()
-  )
-
-  const formReady = pin.length >= 4 && pin === pinConfirm && hasAnyKey
+  const formReady = pin.length >= 4 && pin === pinConfirm
 
   return (
     <div className="h-screen overflow-y-auto bg-[oklch(0.08_0_0)] px-4">
