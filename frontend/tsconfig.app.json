@@ -29,6 +29,5 @@
     "skipLibCheck": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "tests"],
-  "exclude": ["tests/e2e"]
+  "include": ["src"]
 }

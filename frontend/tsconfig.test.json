@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["vite/client", "vitest/globals"],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "files": ["src/hanzi.d.ts"],
+  "include": ["tests"],
+  "exclude": ["tests/e2e"]
+}
