@@ -33,6 +33,8 @@ beforeEach(() => {
   globalThis.fetch = vi.fn()
   globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
   globalThis.URL.revokeObjectURL = vi.fn()
+  // jsdom's HTMLMediaElement.play() returns undefined; stub it to return a resolved Promise
+  // so the hook's audio.play().catch(() => {}) doesn't throw a TypeError
 })
 
 describe('useTTS', () => {
@@ -66,34 +68,40 @@ describe('useTTS', () => {
     expect(toast.error).not.toHaveBeenCalled()
   })
 
-  it('shows Azure error toast when azure_speech_key is missing and provider is azure', async () => {
+  it('still calls the API when azure key is missing (backend uses system default)', async () => {
     mockProvider('azure')
     const keysWithoutAzure = { openrouterApiKey: 'sk-test' }
-    const { result } = renderHook(() => useTTS(mockDb, keysWithoutAzure as any))
+    vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
+    const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
 
+    const { result } = renderHook(() => useTTS(mockDb, keysWithoutAzure as any))
     await waitFor(() => {}) // let provider settle
 
     await act(async () => {
       await result.current.playTTS('你好')
     })
 
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Azure'))
-    expect(getTTSCache).not.toHaveBeenCalled()
+    expect(globalThis.fetch).toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
   })
 
-  it('shows MiniMax error toast when minimaxApiKey is missing and provider is minimax', async () => {
+  it('still calls the API when minimax key is missing (backend uses system default)', async () => {
     mockProvider('minimax')
     const keysWithoutMinimax = { openrouterApiKey: 'sk-test' }
-    const { result } = renderHook(() => useTTS(mockDb, keysWithoutMinimax as any))
+    vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
+    const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
 
+    const { result } = renderHook(() => useTTS(mockDb, keysWithoutMinimax as any))
     await waitFor(() => {}) // let provider settle
 
     await act(async () => {
       await result.current.playTTS('你好')
     })
 
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('MiniMax'))
-    expect(getTTSCache).not.toHaveBeenCalled()
+    expect(globalThis.fetch).toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
   })
 
   it('plays from cache without calling fetch for audio (azure provider)', async () => {

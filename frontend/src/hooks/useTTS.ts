@@ -16,7 +16,6 @@ interface UseTTSReturn {
 export function useTTS(
   db: ShadowLearnDB | null,
   keys: DecryptedKeys | null,
-  trialMode: boolean = false,
 ): UseTTSReturn {
   const [loadingText, setLoadingText] = useState<string | null>(null)
   // providerRef always holds the latest value — avoids stale closure in playTTS
@@ -25,7 +24,6 @@ export function useTTS(
   const urlRef = useRef<string | null>(null)
   const dbRef = useRef(db)
   const keysRef = useRef(keys)
-  const trialModeRef = useRef(trialMode)
 
   // Keep refs in sync with props
   useEffect(() => {
@@ -34,9 +32,6 @@ export function useTTS(
   useEffect(() => {
     keysRef.current = keys
   }, [keys])
-  useEffect(() => {
-    trialModeRef.current = trialMode
-  }, [trialMode])
 
   // Fetch the active provider once on mount
   useEffect(() => {
@@ -55,22 +50,6 @@ export function useTTS(
       return
 
     const currentKeys = keysRef.current
-
-    // Key validation per provider — skip in trial mode (backend provides fallback keys)
-    if (!trialModeRef.current) {
-      if (currentProvider === 'azure') {
-        if (!currentKeys?.azureSpeechKey || !currentKeys?.azureSpeechRegion) {
-          toast.error('Add your Azure Speech key in Settings to use pronunciation')
-          return
-        }
-      }
-      else if (currentProvider === 'minimax') {
-        if (!currentKeys?.minimaxApiKey) {
-          toast.error('Add your MiniMax API key in Settings to use pronunciation')
-          return
-        }
-      }
-    }
 
     // Stop any currently playing audio
     if (audioRef.current) {
@@ -130,7 +109,7 @@ export function useTTS(
         URL.revokeObjectURL(url)
         urlRef.current = null
       })
-      audio.play().catch(() => {})
+      audio.play()?.catch(() => {})
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Pronunciation failed'
