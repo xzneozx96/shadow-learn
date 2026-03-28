@@ -367,6 +367,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
                 progress={`${current + 1} / ${questions.length}`}
                 onNext={handleNext}
                 caps={caps}
+                playTTS={playTTS}
               />
             )}
             {q.type === 'writing' && isWritingSupported(q.entry.word) && (

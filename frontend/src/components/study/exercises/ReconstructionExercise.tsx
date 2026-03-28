@@ -4,9 +4,11 @@ import type { VocabEntry } from '@/types'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
+import { HintButton } from '@/components/study/exercises/HintButton'
 import { Button } from '@/components/ui/button'
 import { LanguageInput } from '@/components/ui/LanguageInput'
 import { useI18n } from '@/contexts/I18nContext'
+import { useHint } from '@/hooks/useHint'
 import { charDiff, getActiveChips, scoreReconstruction, shuffleArray } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
@@ -16,21 +18,36 @@ interface Props {
   caps: LanguageCapabilities
   progress?: string
   onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
+  playTTS?: (text: string) => Promise<void>
 }
 
-export function ReconstructionExercise({ entry, words, caps, progress = '', onNext }: Props) {
+export function ReconstructionExercise({ entry, words, caps, progress = '', onNext, playTTS }: Props) {
   const { t } = useI18n()
   const chips = useMemo(() => shuffleArray(words), [words])
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
+  const hint = useHint(playTTS ? 1 : 0)
   const active = getActiveChips(chips, value)
   const score = checked ? scoreReconstruction(value, entry.sourceSegmentText) : null
   const correct = score === 100
   const diff = checked ? charDiff(value, entry.sourceSegmentText) : null
 
+  function handleHint() {
+    hint.revealNext()
+    playTTS?.(entry.sourceSegmentText)
+  }
+
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
       <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
+      {playTTS && (
+        <HintButton
+          level={hint.level}
+          totalLevels={1}
+          exhausted={hint.exhausted}
+          onHint={handleHint}
+        />
+      )}
       {!checked
         ? <Button size="sm" onClick={() => setChecked(true)}>{t('study.checkButton')}</Button>
         : (
@@ -41,7 +58,7 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
                 const mistakes: MistakeExample[] = !correct
                   ? [{ userAnswer: value.trim(), correctAnswer: entry.sourceSegmentText.trim(), date: today }]
                   : []
-                onNext(score ?? 0, { mistakes: mistakes.length > 0 ? mistakes : undefined })
+                onNext(Math.round((score ?? 0) * hint.hintScore), { mistakes: mistakes.length > 0 ? mistakes : undefined })
               }}
             >
               {t('study.nextButton')}
