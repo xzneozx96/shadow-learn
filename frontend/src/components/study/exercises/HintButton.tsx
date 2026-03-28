@@ -23,7 +23,7 @@ export function HintButton({ level, totalLevels, exhausted, onHint, className, i
       aria-label={level > 0 ? `${t('study.hint')} ${level}/${totalLevels}` : t('study.hint')}
       className={cn(
         iconOnly ? 'size-5' : 'gap-1.5',
-        iconOnly && level > 0 && 'text-primary',
+        'text-yellow-500',
         className,
       )}
     >
