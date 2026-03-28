@@ -2,7 +2,7 @@
 """Tests for TTS router endpoints."""
 
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
@@ -57,11 +57,14 @@ async def test_tts_azure_returns_400_when_keys_missing(mock_tts_provider):
     app.state.tts_provider_name = "azure"
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/api/tts",
-            json={"text": "你好"},
-        )
+    with patch("app.routers.tts.settings") as mock_settings:
+        mock_settings.azure_speech_key = ""
+        mock_settings.azure_speech_region = ""
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/tts",
+                json={"text": "你好"},
+            )
 
     assert response.status_code == 400
     assert "Azure" in response.json()["detail"]
@@ -91,11 +94,13 @@ async def test_tts_minimax_returns_400_when_key_missing(mock_tts_provider):
     app.state.tts_provider_name = "minimax"
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/api/tts",
-            json={"text": "你好"},
-        )
+    with patch("app.routers.tts.settings") as mock_settings:
+        mock_settings.minimax_api_key = ""
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/tts",
+                json={"text": "你好"},
+            )
 
     assert response.status_code == 400
     assert "MiniMax" in response.json()["detail"]

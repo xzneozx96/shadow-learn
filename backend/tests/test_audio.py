@@ -47,12 +47,12 @@ async def test_extract_audio_from_upload_calls_ffmpeg():
 
 
 def test_ydl_extra_opts_empty_when_no_config():
-    """Returns empty dict when no yt-dlp settings are configured."""
+    """Returns only js_runtimes when no yt-dlp settings are configured."""
     with patch("app.services.audio.settings") as mock_settings:
         mock_settings.ytdlp_cookies_file = ""
         mock_settings.ytdlp_proxy = ""
         mock_settings.ytdlp_bgutil_url = ""
-        assert _ydl_extra_opts() == {}
+        assert _ydl_extra_opts() == {"js_runtimes": {"node": {}}}
 
 
 def test_ydl_extra_opts_includes_cookies_when_file_exists(tmp_path):
@@ -73,7 +73,7 @@ def test_ydl_extra_opts_skips_cookies_when_file_missing():
         mock_settings.ytdlp_cookies_file = "/nonexistent/cookies.txt"
         mock_settings.ytdlp_proxy = ""
         mock_settings.ytdlp_bgutil_url = ""
-        assert _ydl_extra_opts() == {}
+        assert _ydl_extra_opts() == {"js_runtimes": {"node": {}}}
 
 
 def test_ydl_extra_opts_includes_proxy():
@@ -83,7 +83,7 @@ def test_ydl_extra_opts_includes_proxy():
         mock_settings.ytdlp_proxy = "http://proxy:8080"
         mock_settings.ytdlp_bgutil_url = ""
         result = _ydl_extra_opts()
-        assert result == {"proxy": "http://proxy:8080"}
+        assert result == {"proxy": "http://proxy:8080", "js_runtimes": {"node": {}}}
 
 
 def test_ydl_extra_opts_includes_bgutil_extractor_args():
@@ -99,6 +99,7 @@ def test_ydl_extra_opts_includes_bgutil_extractor_args():
                     "base_url": ["http://bgutil:4416"],
                 },
             },
+            "js_runtimes": {"node": {}},
         }
 
 
