@@ -20,11 +20,12 @@ export function HintButton({ level, totalLevels, exhausted, onHint, className }:
       disabled={exhausted}
       onClick={onHint}
       className={cn('gap-1.5', className)}
+      aria-label={level > 0 ? `${t('study.hint')} ${level}/${totalLevels}` : t('study.hint')}
     >
       <Lightbulb className="size-3.5" />
       {t('study.hint')}
       {level > 0 && (
-        <span className="bg-muted text-muted-foreground rounded-sm px-1 text-xs font-mono">
+        <span className="bg-muted text-muted-foreground rounded-sm px-1 text-xs font-mono" aria-hidden="true">
           {level}
           /
           {totalLevels}
