@@ -257,28 +257,11 @@ describe('agent-tools executors', () => {
   })
 
   describe('executeGetPedagogicalGuidelines', () => {
-    it('returns content on successful fetch', async () => {
-      const mockText = '# Guidelines\nTest Content'
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        text: () => Promise.resolve(mockText),
-      } as any)
-
+    it('returns content from static import', async () => {
       const result = await executeGetPedagogicalGuidelines()
 
-      expect(result).toEqual({ content: mockText })
-      expect(globalThis.fetch).toHaveBeenCalledWith('/fluent/pedagogical_guidelines.md')
-    })
-
-    it('returns error on failed fetch', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Not Found',
-      } as any)
-
-      const result = await executeGetPedagogicalGuidelines()
-
-      expect(result).toEqual({ error: 'Guidelines load error: Failed to load guidelines: Not Found' })
+      expect(result).toHaveProperty('content')
+      expect(typeof (result as { content: string }).content).toBe('string')
     })
   })
 })
