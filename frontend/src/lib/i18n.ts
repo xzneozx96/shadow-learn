@@ -532,7 +532,7 @@ export const TRANSLATIONS = {
     'study.mode.translation': 'Dịch thuật',
     'study.mode.dictation': 'Chính tả',
     'study.mode.romanization': 'Phiên âm',
-    'study.mode.reconstruction': 'Sắp xếp lắp ghép câu',
+    'study.mode.reconstruction': 'Sắp xếp lại câu',
     'study.mode.cloze': 'Điền vào chỗ trống',
     'study.mode.pronunciation': 'Phát âm',
     'study.mode.writing': 'Tập viết chữ',
