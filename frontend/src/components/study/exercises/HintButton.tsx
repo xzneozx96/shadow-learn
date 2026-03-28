@@ -9,22 +9,27 @@ interface HintButtonProps {
   exhausted: boolean
   onHint: () => void
   className?: string
+  iconOnly?: boolean
 }
 
-export function HintButton({ level, totalLevels, exhausted, onHint, className }: HintButtonProps) {
+export function HintButton({ level, totalLevels, exhausted, onHint, className, iconOnly = false }: HintButtonProps) {
   const { t } = useI18n()
   return (
     <Button
       variant="ghost"
-      size="sm"
+      size={iconOnly ? 'icon' : 'sm'}
       disabled={exhausted}
       onClick={onHint}
-      className={cn('gap-1.5', className)}
       aria-label={level > 0 ? `${t('study.hint')} ${level}/${totalLevels}` : t('study.hint')}
+      className={cn(
+        iconOnly ? 'size-5' : 'gap-1.5',
+        iconOnly && level > 0 && 'text-primary',
+        className,
+      )}
     >
-      <Lightbulb className="size-3.5" />
-      {t('study.hint')}
-      {level > 0 && (
+      <Lightbulb className={iconOnly ? 'size-3' : 'size-3.5'} />
+      {!iconOnly && t('study.hint')}
+      {!iconOnly && level > 0 && (
         <span className="bg-muted text-muted-foreground rounded-sm px-1 text-xs font-mono" aria-hidden="true">
           {level}
           /
