@@ -4,12 +4,16 @@ import { Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
+import { HintButton } from '@/components/study/exercises/HintButton'
 import { Button } from '@/components/ui/button'
 import { LanguageInput } from '@/components/ui/LanguageInput'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useHint } from '@/hooks/useHint'
 import { API_BASE } from '@/lib/config'
 import { cn } from '@/lib/utils'
+
+const WHITESPACE_RE = /\s+/
 
 interface Sentence {
   text: string
@@ -110,6 +114,16 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<EvaluateResult | null>(null)
 
+  const hint = useHint(1)
+
+  const wordBankItems: { word: string, pinyin: string }[] = (() => {
+    const words = sentence.text.split(WHITESPACE_RE).filter(Boolean)
+    const pinyins = (sentence.romanization ?? '').split(WHITESPACE_RE).filter(Boolean)
+    if (words.length === pinyins.length)
+      return words.map((w, i) => ({ word: w, pinyin: pinyins[i] }))
+    return [{ word: sentence.text, pinyin: sentence.romanization ?? '' }]
+  })()
+
   const source = direction === 'zh-to-en' ? sentence.text : sentence.english
   const reference = direction === 'zh-to-en' ? sentence.english : sentence.text
   const sourceLang = direction === 'zh-to-en' ? caps.languageName.toLowerCase() : 'english'
@@ -200,7 +214,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
             </div>
           )}
 
-          <Button className="w-full" onClick={() => onNext(result.overall_score)}>
+          <Button className="w-full" onClick={() => onNext(Math.round(result.overall_score * hint.hintScore))}>
             {t('study.nextButton')}
           </Button>
         </div>
@@ -224,6 +238,20 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           )}
         </div>
 
+        {hint.level > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {wordBankItems.map(item => (
+              <div
+                key={item.word}
+                className="flex flex-col items-center px-2.5 py-1.5 rounded-lg border border-border/60 bg-muted/20 text-center"
+              >
+                <span className="text-base">{item.word}</span>
+                <span className="text-xs text-muted-foreground">{item.pinyin}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <LanguageInput
           langInputMode={direction === 'en-to-zh' ? caps.inputMode : 'standard'}
           value={value}
@@ -237,6 +265,12 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
         />
 
         <div className="flex items-center justify-center gap-3">
+          <HintButton
+            level={hint.level}
+            totalLevels={1}
+            exhausted={hint.exhausted}
+            onHint={hint.revealNext}
+          />
           <Button
             variant="ghost"
             size="sm"
