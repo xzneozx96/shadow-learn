@@ -59,7 +59,7 @@ interface BlankInputProps {
 }
 
 function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onChange, langInputMode, onRegisterHintScore }: BlankInputProps) {
-  const hint = useHint(entry ? 3 : 0)
+  const hint = useHint(entry ? 2 : 0)
 
   useEffect(() => {
     onRegisterHintScore(blankIndex, hint.hintScore)
@@ -68,10 +68,8 @@ function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onCha
   const romanization = entry?.romanization ?? ''
   const hintContent = entry && hint.level > 0
     ? hint.level === 1
-      ? { label: 'syllables', text: romanization }
-      : hint.level === 2
-        ? { label: 'pinyin', text: romanization.replace(WHITESPACE_RE, '') }
-        : { label: 'meaning', text: `${romanization.replace(WHITESPACE_RE, '')} · ${entry.meaning}` }
+      ? { label: 'pinyin', text: romanization.replace(WHITESPACE_RE, '') }
+      : { label: 'meaning', text: `${romanization.replace(WHITESPACE_RE, '')} · ${entry.meaning}` }
     : null
 
   return (
@@ -97,7 +95,7 @@ function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onCha
         {!checked && entry && (
           <HintButton
             level={hint.level}
-            totalLevels={3}
+            totalLevels={2}
             exhausted={hint.exhausted}
             onHint={hint.revealNext}
             className="h-6 px-1.5 text-xs"
