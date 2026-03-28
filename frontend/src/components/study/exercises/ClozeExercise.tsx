@@ -1,7 +1,7 @@
 import type { MistakeExample } from '@/db'
 import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { VocabEntry } from '@/types'
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { HintButton } from '@/components/study/exercises/HintButton'
@@ -59,10 +59,10 @@ interface BlankInputProps {
 
 function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onChange, langInputMode, onRegisterHintScore }: BlankInputProps) {
   const hint = useHint(entry ? 3 : 0)
-  const correct = value.trim() === blank
 
-  // Register updated hintScore on every render so parent can read it at submit
-  onRegisterHintScore(blankIndex, hint.hintScore)
+  useEffect(() => {
+    onRegisterHintScore(blankIndex, hint.hintScore)
+  }, [blankIndex, hint.hintScore, onRegisterHintScore])
 
   const hintLabel = entry && hint.level > 0
     ? hint.level < 3
@@ -79,7 +79,7 @@ function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onCha
           className={cn(
             'w-14 text-center text-sm border-0 border-b bg-transparent px-1 rounded-none focus-visible:ring-0',
             checked
-              ? correct
+              ? value.trim() === blank
                 ? 'border-emerald-500/50 text-emerald-400'
                 : 'border-destructive/50 text-destructive'
               : 'border-foreground/40',
@@ -124,9 +124,9 @@ export function ClozeExercise({ question, entries, caps, progress = '', onNext }
     return entries.find(e => e.word === blank)
   }
 
-  function registerHintScore(blankIndex: number, score: number) {
+  const registerHintScore = useCallback((blankIndex: number, score: number) => {
     hintScoresRef.current[blankIndex] = score
-  }
+  }, [])
 
   function handleNext() {
     const today = new Date().toISOString().split('T')[0]
