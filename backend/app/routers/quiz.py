@@ -74,7 +74,7 @@ _CLOZE_JSON_SCHEMA = {
 _PRONUNCIATION_JSON_SCHEMA = {
     "type": "json_schema",
     "json_schema": {
-        "name": "pronunciation_response",
+        "name": "pronunciation_exercises",
         "strict": True,
         "schema": {
             "type": "object",
@@ -86,11 +86,12 @@ _PRONUNCIATION_JSON_SCHEMA = {
                         "properties": {
                             "sentence": {"type": "string"},
                             "translation": {"type": "string"},
+                            "romanization": {"type": "string"},
                         },
-                        "required": ["sentence", "translation"],
+                        "required": ["sentence", "translation", "romanization"],
                         "additionalProperties": False,
                     },
-                }
+                },
             },
             "required": ["exercises"],
             "additionalProperties": False,
@@ -119,8 +120,9 @@ def _build_pronunciation_prompt(words: list[WordInput], count: int, lang_cfg: di
         f"using these vocabulary words:\n{word_list}\n\n"
         "Rules:\n"
         "- Each sentence should incorporate at least one vocabulary word.\n"
-        "- Include an English translation for each sentence.\n\n"
-        'Return JSON: {"exercises": [{"sentence": "<str>", "translation": "<str>"}]}'
+        "- Include an English translation for each sentence.\n"
+        "- Include a romanization (e.g. pinyin with tone marks for Chinese) for each sentence.\n\n"
+        'Return JSON: {"exercises": [{"sentence": "<str>", "translation": "<str>", "romanization": "<str>"}]}'
     )
 
 

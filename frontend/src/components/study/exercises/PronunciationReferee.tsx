@@ -1,14 +1,16 @@
 import { Loader2, Pause, Play, Volume2 } from 'lucide-react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
+import { HintButton } from '@/components/study/exercises/HintButton'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
+import { useHint } from '@/hooks/useHint'
 import { usePronunciationAssessment } from '@/hooks/usePronunciationAssessment'
 import { useTTS } from '@/hooks/useTTS'
 import { cn } from '@/lib/utils'
 
-interface PronunciationSentence { sentence: string, translation: string }
+interface PronunciationSentence { sentence: string, translation: string, romanization?: string }
 
 interface Props {
   sentence: PronunciationSentence
@@ -54,6 +56,8 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
   const verdict = useVerdict()
   const { playTTS, loadingText } = useTTS(db, keys, trialMode)
   const isTTSLoading = loadingText === sentence.sentence
+  const hint = useHint(sentence.romanization ? 1 : 0)
+  const showPinyin = hint.level > 0
   const {
     recordingState,
     blob,
@@ -74,6 +78,14 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
     : (
         <div className="flex items-center justify-center gap-3 p-3">
           <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
+          {sentence.romanization && (
+            <HintButton
+              level={hint.level}
+              totalLevels={1}
+              exhausted={hint.exhausted}
+              onHint={hint.revealNext}
+            />
+          )}
           <Button
             size="sm"
             disabled={!canSubmit}
@@ -101,6 +113,11 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
     >
       {/* Sentence display */}
       <div className="relative rounded-lg border border-border bg-muted/20 p-4 text-center mb-4">
+        {showPinyin && sentence.romanization && (
+          <p className="text-sm text-muted-foreground text-center mb-1 tracking-wide">
+            {sentence.romanization}
+          </p>
+        )}
         <div className="text-xl font-bold tracking-widest text-foreground">
           {sentence.sentence}
         </div>
@@ -237,7 +254,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
             </Button>
             <Button
               className="flex-1"
-              onClick={() => onNext(Math.round(result.overall.accuracy))}
+              onClick={() => onNext(Math.round(result.overall.accuracy * hint.hintScore))}
             >
               {t('study.pronunciation.nextButton')}
             </Button>

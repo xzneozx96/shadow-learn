@@ -6,7 +6,7 @@ export interface SessionQuestion {
   type: Exclude<ExerciseMode, 'mixed'>
   entry: VocabEntry
   clozeData?: { story: string, blanks: string[] }
-  pronunciationData?: { sentence: string, translation: string }
+  pronunciationData?: { sentence: string, translation: string, romanization?: string }
   reconstructionTokens?: string[]
   translationData?: {
     sentence: { text: string, romanization: string, english: string }
@@ -23,7 +23,7 @@ export function isClozeExercise(x: unknown): x is { story: string, blanks: strin
   )
 }
 
-export function isPronExercise(x: unknown): x is { sentence: string, translation: string } {
+export function isPronExercise(x: unknown): x is { sentence: string, translation: string, romanization?: string } {
   return (
     typeof x === 'object' && x !== null
     && typeof (x as any).sentence === 'string' && (x as any).sentence.trim() !== ''
