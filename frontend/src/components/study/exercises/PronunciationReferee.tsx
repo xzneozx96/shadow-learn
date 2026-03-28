@@ -123,16 +123,18 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
         </div>
         <div className="text-sm text-muted-foreground mt-1.5">{sentence.translation}</div>
         {result && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             aria-label="Play reference audio"
             onClick={() => void playTTS(sentence.sentence)}
             disabled={isTTSLoading}
-            className="absolute top-2 right-2 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
+            className="absolute top-2 right-2 text-muted-foreground"
           >
             {isTTSLoading
               ? <Loader2 className="size-4 animate-spin" />
               : <Volume2 className="size-4" />}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -144,7 +146,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
               variant="destructive"
               className={cn(
                 'flex-1',
-                recordingState === 'recording' && 'shadow-[0_0_0_3px_oklch(0.65_0.18_25/0.2)]',
+                recordingState === 'recording' && 'ring-2 ring-destructive/30 ring-offset-1 ring-offset-background',
               )}
               onClick={recordingState === 'recording' ? stopRecording : () => void startRecording()}
             >
@@ -160,7 +162,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
             </Button>
           </div>
           {attempt > 0 && (
-            <p className="text-sm text-muted-foreground/50 text-center mb-2">
+            <p className="text-sm text-muted-foreground/60 text-center mb-2">
               {t('study.pronunciation.attempt')}
               {' '}
               {attempt}
@@ -217,7 +219,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
                 <span className={cn('w-10 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
                   {w.word}
                 </span>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/60">
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-border/60">
                   <div
                     className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
                     style={{ width: `${w.accuracy}%` }}
