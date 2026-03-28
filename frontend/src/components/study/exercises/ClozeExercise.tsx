@@ -25,6 +25,7 @@ interface Props {
 }
 
 const BLANK_REGEX = /\{\{([^}]+)\}\}/g
+const WHITESPACE_RE = /\s+/g
 
 function parseStory(story: string): { text: string, blank: string | null }[] {
   const parts: { text: string, blank: string | null }[] = []
@@ -64,10 +65,13 @@ function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onCha
     onRegisterHintScore(blankIndex, hint.hintScore)
   }, [blankIndex, hint.hintScore, onRegisterHintScore])
 
-  const hintLabel = entry && hint.level > 0
-    ? hint.level < 3
-      ? (entry.romanization ?? '')
-      : `${entry.romanization ?? ''} · ${entry.meaning}`
+  const romanization = entry?.romanization ?? ''
+  const hintContent = entry && hint.level > 0
+    ? hint.level === 1
+      ? { label: 'syllables', text: romanization }
+      : hint.level === 2
+        ? { label: 'pinyin', text: romanization.replace(WHITESPACE_RE, '') }
+        : { label: 'meaning', text: `${romanization.replace(WHITESPACE_RE, '')} · ${entry.meaning}` }
     : null
 
   return (
@@ -100,8 +104,11 @@ function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onCha
           />
         )}
       </span>
-      {hintLabel && (
-        <span className="text-xs text-muted-foreground mt-0.5">{hintLabel}</span>
+      {hintContent && (
+        <span className="mt-1 inline-flex items-center gap-1 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5">
+          <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">{hintContent.label}</span>
+          <span className="text-xs text-foreground/80 font-medium tracking-wide">{hintContent.text}</span>
+        </span>
       )}
     </span>
   )
