@@ -1,24 +1,28 @@
-# backend/app/services/_retry.py
 """Reusable retry decorators for external HTTP calls.
 
 Usage
 -----
-Add one decorator to any async function that calls an external service — no
-other changes needed anywhere:
+Define a nested ``_call()`` inside the service function, decorate it, then
+await it.  Captured variables (api_key, payload, …) are read-only across
+retries, so closure capture is safe:
 
     from app.services._retry import openrouter_retry, RetryableError
 
-    @openrouter_retry(logger)
-    async def _call_openrouter(client, payload):
-        resp = await client.post(...)
-        resp.raise_for_status()
-        choice = resp.json()["choices"][0]
-        if choice.get("finish_reason") == "length":
-            raise RetryableError("response truncated by token limit")
-        try:
-            return json.loads(choice["message"]["content"])
-        except json.JSONDecodeError as exc:
-            raise RetryableError(f"malformed JSON: {exc}") from exc
+    async def call_openrouter(api_key: str, payload: dict) -> dict:
+        @openrouter_retry(logger)
+        async def _call() -> dict:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(url, headers={...}, json=payload)
+            resp.raise_for_status()
+            choice = resp.json()["choices"][0]
+            if choice.get("finish_reason") == "length":
+                raise RetryableError("response truncated by token limit")
+            try:
+                return json.loads(choice["message"]["content"])
+            except json.JSONDecodeError as exc:
+                raise RetryableError(f"malformed JSON: {exc}") from exc
+
+        return await _call()
 """
 
 from __future__ import annotations

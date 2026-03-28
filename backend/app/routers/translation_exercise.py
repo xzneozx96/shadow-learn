@@ -3,7 +3,7 @@ import logging
 import time
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.config import settings
@@ -162,7 +162,7 @@ async def generate_sentences(req: GenerateRequest):
         body = resp.json()
         if "error" in body or "choices" not in body:
             logger.error("[translation] generate: unexpected response: %s", body)
-            raise ValueError(f"OpenRouter error: {body.get('error', body)}")
+            raise HTTPException(500, f"OpenRouter error: {body.get('error', body)}")
         try:
             return json.loads(body["choices"][0]["message"]["content"])
         except json.JSONDecodeError as exc:
@@ -247,7 +247,7 @@ async def evaluate_translation(req: EvaluateRequest):
         body = resp.json()
         if "error" in body or "choices" not in body:
             logger.error("[translation] evaluate: unexpected response: %s", body)
-            raise ValueError(f"OpenRouter error: {body.get('error', body)}")
+            raise HTTPException(500, f"OpenRouter error: {body.get('error', body)}")
         try:
             return json.loads(body["choices"][0]["message"]["content"])
         except json.JSONDecodeError as exc:

@@ -35,17 +35,12 @@ function distributeExercises(
   count: number,
   hasAzure: boolean,
   hasWriting: boolean,
-  hasOpenRouter: boolean,
 ): Exclude<ExerciseMode, 'mixed'>[] {
-  const available: Exclude<ExerciseMode, 'mixed'>[] = ['dictation', 'romanization-recall', 'reconstruction']
+  const available: Exclude<ExerciseMode, 'mixed'>[] = ['dictation', 'romanization-recall', 'reconstruction', 'cloze', 'translation']
   if (hasAzure)
     available.push('pronunciation')
   if (hasWriting)
     available.push('writing')
-  if (hasOpenRouter) {
-    available.push('cloze')
-    available.push('translation')
-  }
 
   if (mode !== 'mixed') {
     return Array.from<Exclude<ExerciseMode, 'mixed'>>({ length: count }).fill(mode as Exclude<ExerciseMode, 'mixed'>)
@@ -137,7 +132,6 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
 
   const azurePronunciationLocale = caps.azurePronunciationLocale
   const hasAzure = azurePronunciationLocale !== null
-  const hasOpenRouter = true
 
   function handleModeSelect(newMode: ExerciseMode) {
     setMode(newMode)
@@ -152,7 +146,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
     abortRef.current = controller
 
     const hasWriting = entries.some(e => isWritingSupported(e.word))
-    const types = distributeExercises(entries, mode, count, hasAzure, hasWriting, hasOpenRouter)
+    const types = distributeExercises(entries, mode, count, hasAzure, hasWriting)
 
     const pool = entries.toSorted(() => Math.random() - 0.5)
 

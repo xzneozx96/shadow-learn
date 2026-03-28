@@ -124,9 +124,9 @@ async def _extract_batch_with_retry(
         },
     }
 
-    async with semaphore:
-        @openrouter_retry(logger)
-        async def _call() -> dict[int, list[dict]]:
+    @openrouter_retry(logger)
+    async def _call() -> dict[int, list[dict]]:
+        async with semaphore:
             async with httpx.AsyncClient(timeout=180.0) as client:
                 response = await client.post(
                     settings.openrouter_chat_url,
@@ -172,16 +172,16 @@ async def _extract_batch_with_retry(
                     f"Vocab batch {seg_ids}: failed to parse response — {e}"
                 ) from e
 
-        try:
-            return await _call()
-        except VocabularyExtractionError:
-            raise
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            raise VocabularyExtractionError(
-                f"Vocab batch {seg_ids}: unexpected error — {e}"
-            ) from e
+    try:
+        return await _call()
+    except VocabularyExtractionError:
+        raise
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        raise VocabularyExtractionError(
+            f"Vocab batch {seg_ids}: unexpected error — {e}"
+        ) from e
 
 
 async def extract_vocabulary(
