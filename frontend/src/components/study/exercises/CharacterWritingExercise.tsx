@@ -45,7 +45,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
   const radicals = useMemo(() => {
     try {
       const result = hanzi.decompose(currentChar, 1)
-      return (result?.components as string[] | undefined)?.filter(c => c !== currentChar) ?? []
+      return result?.components?.filter(c => c !== currentChar) ?? []
     }
     catch {
       return []
@@ -71,11 +71,13 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
   }
 
   function advance() {
+    const finalScore = Math.round((anyHintUsedRef.current ? 80 : 100) * radicalHint.hintScore)
+    radicalHint.reset()
     setCharIndex((idx) => {
       const next = idx + 1
       if (next >= characters.length) {
         // Use setTimeout to call onNext outside the setState cycle
-        setTimeout(onNext, 0, Math.round((anyHintUsedRef.current ? 80 : 100) * radicalHint.hintScore))
+        setTimeout(onNext, 0, finalScore)
         return idx
       }
       return next

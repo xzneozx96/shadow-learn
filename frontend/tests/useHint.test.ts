@@ -42,4 +42,16 @@ describe('useHint', () => {
     act(() => result.current.revealNext())
     expect(result.current.level).toBe(0)
   })
+
+  it('reset() returns level to 0 and hintScore to 1.0', () => {
+    const { result } = renderHook(() => useHint(3))
+    act(() => result.current.revealNext())
+    act(() => result.current.revealNext())
+    expect(result.current.level).toBe(2)
+    expect(result.current.hintScore).toBeCloseTo(1 / 3)
+    act(() => result.current.reset())
+    expect(result.current.level).toBe(0)
+    expect(result.current.hintScore).toBe(1)
+    expect(result.current.exhausted).toBe(false)
+  })
 })

@@ -5,6 +5,7 @@ export interface UseHintReturn {
   revealNext: () => void
   hintScore: number
   exhausted: boolean
+  reset: () => void
 }
 
 export function useHint(totalLevels: number): UseHintReturn {
@@ -15,5 +16,6 @@ export function useHint(totalLevels: number): UseHintReturn {
     revealNext: () => setLevel(l => Math.min(l + 1, totalLevels)),
     hintScore: totalLevels === 0 ? 1 : (totalLevels - level) / totalLevels,
     exhausted,
+    reset: () => setLevel(0),
   }
 }
