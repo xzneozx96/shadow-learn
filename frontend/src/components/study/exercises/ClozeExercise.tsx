@@ -66,15 +66,18 @@ function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onCha
   }, [blankIndex, hint.hintScore, onRegisterHintScore])
 
   const romanization = entry?.romanization ?? ''
-  const hintContent = entry && hint.level > 0
+  const furigana = entry && hint.level > 0
     ? hint.level === 1
-      ? { label: 'pinyin', text: romanization.replace(WHITESPACE_RE, '') }
-      : { label: 'meaning', text: `${romanization.replace(WHITESPACE_RE, '')} · ${entry.meaning}` }
+      ? romanization.replace(WHITESPACE_RE, '')
+      : `${romanization.replace(WHITESPACE_RE, '')} · ${entry.meaning}`
     : null
 
   return (
     <span className="inline-flex flex-col items-center mx-1 align-bottom">
-      <span className="inline-flex items-center gap-1">
+      <span className={cn('text-xs leading-none mb-0.5 tracking-wide', furigana ? 'text-primary/70' : 'invisible')}>
+        {furigana ?? '·'}
+      </span>
+      <span className="inline-flex items-center gap-0.5">
         <LanguageInput
           langInputMode={langInputMode}
           wrapperClassName="inline-block w-14"
@@ -98,16 +101,10 @@ function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onCha
             totalLevels={2}
             exhausted={hint.exhausted}
             onHint={hint.revealNext}
-            className="h-6 px-1.5 text-xs"
+            iconOnly
           />
         )}
       </span>
-      {hintContent && (
-        <span className="mt-1 inline-flex items-center gap-1 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5">
-          <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">{hintContent.label}</span>
-          <span className="text-xs text-foreground/80 font-medium tracking-wide">{hintContent.text}</span>
-        </span>
-      )}
     </span>
   )
 }
