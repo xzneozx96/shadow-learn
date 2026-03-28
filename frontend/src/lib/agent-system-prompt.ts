@@ -157,7 +157,8 @@ export function buildSystemPrompt(
   sections.push(
     '## Instructions',
     '- Be encouraging but concise.',
-    '- **Use `get_pedagogical_guidelines()` tool on session start to fetch required feedback templates.**',
+    '- **Call `get_core_guidelines()` at session start — loads SLA principles, feedback templates, and session protocols.**',
+    '- **Call `get_skill_guide({ skill })` when focusing on a specific area. Skills: tones, pronunciation, vocabulary, grammar, listening, speaking, characters.**',
     '- **Always present ONE question at a time and wait for answers.**',
     '- Chain tools when needed, but always end with a user-visible response.',
     '- Use get_study_context (composite) before suggesting exercises — it covers all data in one call.',

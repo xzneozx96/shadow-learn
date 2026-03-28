@@ -20,8 +20,9 @@ import { appendAgentLog, getChatMessages, getDueItems, getExerciseAccuracy, getL
 import { getMemorySummary } from '@/lib/agent-memory'
 import { buildSystemPrompt } from '@/lib/agent-system-prompt'
 import {
-  executeGetPedagogicalGuidelines,
+  executeGetCoreGuidelines,
   executeGetProgressSummary,
+  executeGetSkillGuide,
   executeGetStudyContext,
   executeGetVocabulary,
   executeLogMistake,
@@ -281,8 +282,11 @@ export function useAgentChat(
               toolCall.input as { word: string },
             )
             break
-          case 'get_pedagogical_guidelines':
-            result = await executeGetPedagogicalGuidelines()
+          case 'get_core_guidelines':
+            result = await executeGetCoreGuidelines()
+            break
+          case 'get_skill_guide':
+            result = await executeGetSkillGuide(toolCall.input as { skill: string })
             break
           case 'navigate_to_segment':
             dispatchAction({ type: 'navigate_to_segment', payload: toolCall.input as Record<string, unknown> })

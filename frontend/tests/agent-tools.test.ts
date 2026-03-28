@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  executeGetPedagogicalGuidelines,
+  executeGetCoreGuidelines,
+  executeGetSkillGuide,
   executeRenderCharacterWritingExercise,
   executeRenderClozeExercise,
   executeRenderDictationExercise,
@@ -256,12 +257,41 @@ describe('agent-tools executors', () => {
     })
   })
 
-  describe('executeGetPedagogicalGuidelines', () => {
-    it('returns content from static import', async () => {
-      const result = await executeGetPedagogicalGuidelines()
-
+  describe('executeGetCoreGuidelines', () => {
+    it('returns content string', async () => {
+      const result = await executeGetCoreGuidelines()
       expect(result).toHaveProperty('content')
-      expect(typeof (result as { content: string }).content).toBe('string')
+      expect(typeof result.content).toBe('string')
+      expect(result.content.length).toBeGreaterThan(0)
+    })
+
+    it('content is markdown, not HTML', async () => {
+      const result = await executeGetCoreGuidelines()
+      expect(result.content).not.toContain('<!DOCTYPE html>')
+      expect(result.content).toContain('#')
+    })
+  })
+
+  describe('executeGetSkillGuide', () => {
+    const VALID_SKILLS = ['tones', 'pronunciation', 'vocabulary', 'grammar', 'listening', 'speaking', 'characters'] as const
+
+    it.each(VALID_SKILLS)('returns content for skill "%s"', async (skill) => {
+      const result = await executeGetSkillGuide({ skill })
+      expect(result).toHaveProperty('content')
+      expect(typeof (result as any).content).toBe('string')
+      expect((result as any).content.length).toBeGreaterThan(0)
+    })
+
+    it('returns error for unknown skill', async () => {
+      const result = await executeGetSkillGuide({ skill: 'invalid-skill' })
+      expect(result).toHaveProperty('error')
+    })
+
+    it('each skill returns distinct content', async () => {
+      const results = await Promise.all(VALID_SKILLS.map(s => executeGetSkillGuide({ skill: s })))
+      const contents = results.map(r => (r as any).content)
+      const unique = new Set(contents)
+      expect(unique.size).toBe(VALID_SKILLS.length)
     })
   })
 })

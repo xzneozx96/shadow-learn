@@ -24,7 +24,14 @@ import {
 } from '@/db'
 import { recallMemory, saveMemory } from '@/lib/agent-memory'
 import { API_BASE } from '@/lib/config'
-import pedagogicalGuidelinesContent from '@/lib/skills/pedagogical_guidelines.md?raw'
+import coreGuidelinesContent from '@/lib/skills/core_guidelines.md?raw'
+import skillCharactersContent from '@/lib/skills/skill_characters.md?raw'
+import skillGrammarContent from '@/lib/skills/skill_grammar.md?raw'
+import skillListeningContent from '@/lib/skills/skill_listening.md?raw'
+import skillPronunciationContent from '@/lib/skills/skill_pronunciation.md?raw'
+import skillSpeakingContent from '@/lib/skills/skill_speaking.md?raw'
+import skillTonesContent from '@/lib/skills/skill_tones.md?raw'
+import skillVocabularyContent from '@/lib/skills/skill_vocabulary.md?raw'
 import { updateSpacedRepetition } from '@/lib/spacedRepetition'
 import { getSegmentTokens } from '@/lib/study-utils'
 
@@ -289,12 +296,30 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
       },
     },
   },
-  get_pedagogical_guidelines: {
+  get_core_guidelines: {
     type: 'function',
     function: {
-      name: 'get_pedagogical_guidelines',
-      description: 'Get pedagogical rules, feedback formatting templates, and supporting exercise guidelines to follow during the session.',
+      name: 'get_core_guidelines',
+      description: 'Get core SLA principles, Vietnamese learner profile, feedback templates, exercise selection logic, error types, and session protocols. Call once at session start.',
       parameters: { type: 'object', properties: {} },
+    },
+  },
+  get_skill_guide: {
+    type: 'function',
+    function: {
+      name: 'get_skill_guide',
+      description: 'Get detailed teaching methods for a specific skill area. Call when the session focuses on that skill.',
+      parameters: {
+        type: 'object',
+        properties: {
+          skill: {
+            type: 'string',
+            enum: ['tones', 'pronunciation', 'vocabulary', 'grammar', 'listening', 'speaking', 'characters'],
+            description: 'The skill area to retrieve',
+          },
+        },
+        required: ['skill'],
+      },
     },
   },
   navigate_to_segment: {
@@ -798,6 +823,23 @@ export async function executeRenderVocabCard(
   return { entry: compactVocab(entry) }
 }
 
-export async function executeGetPedagogicalGuidelines() {
-  return { content: pedagogicalGuidelinesContent }
+const SKILL_CONTENT_MAP: Record<string, string> = {
+  tones: skillTonesContent,
+  pronunciation: skillPronunciationContent,
+  vocabulary: skillVocabularyContent,
+  grammar: skillGrammarContent,
+  listening: skillListeningContent,
+  speaking: skillSpeakingContent,
+  characters: skillCharactersContent,
+}
+
+export async function executeGetCoreGuidelines() {
+  return { content: coreGuidelinesContent }
+}
+
+export async function executeGetSkillGuide(args: { skill: string }) {
+  const content = SKILL_CONTENT_MAP[args.skill]
+  if (!content)
+    return { error: `Unknown skill: ${args.skill}` }
+  return { content }
 }
