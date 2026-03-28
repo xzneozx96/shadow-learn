@@ -3,6 +3,7 @@ import type { VocabEntry } from '@/types'
 import { useCallback, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { API_BASE } from '@/lib/config'
+import { isClozeExercise, isPronExercise, isTranslationSentence } from '@/lib/study-utils'
 
 interface ClozeExerciseData { story: string, blanks: string[] }
 interface PronExerciseData { sentence: string, translation: string }
@@ -67,8 +68,8 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
           signal,
         })
         if (r.ok) {
-          const d = await r.json() as { sentences: TranslationSentence[] }
-          sentencesByEntryIdx.set(entryIdx, d.sentences)
+          const d = await r.json() as { sentences: unknown[] }
+          sentencesByEntryIdx.set(entryIdx, (d.sentences ?? []).filter(isTranslationSentence))
         }
       }
       catch {
@@ -131,9 +132,9 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
       }
 
       return {
-        clozeExercises: (clozeResp.exercises ?? []) as ClozeExerciseData[],
-        pronExercises: (pronResp.exercises ?? []) as PronExerciseData[],
-        translationSentences,
+        clozeExercises: (clozeResp.exercises ?? []).filter(isClozeExercise),
+        pronExercises: (pronResp.exercises ?? []).filter(isPronExercise),
+        translationSentences: translationSentences.filter(isTranslationSentence),
       }
     }
     finally {

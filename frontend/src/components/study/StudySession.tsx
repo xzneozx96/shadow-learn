@@ -1,5 +1,6 @@
 import type { ExerciseMode } from '@/components/study/ModePicker'
 import type { MistakeExample } from '@/db'
+import type { SessionQuestion } from '@/lib/study-utils'
 import type { VocabEntry } from '@/types'
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -23,26 +24,10 @@ import { useTTS } from '@/hooks/useTTS'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { captureStudySessionCompleted } from '@/lib/posthog-events'
-import { getSegmentTokens } from '@/lib/study-utils'
+import { buildSessionQuestions } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
 type Phase = 'picker' | 'session' | 'summary'
-
-interface Question {
-  type: Exclude<ExerciseMode, 'mixed'>
-  entry: VocabEntry
-  clozeData?: { story: string, blanks: string[] }
-  pronunciationData?: { sentence: string, translation: string }
-  reconstructionTokens?: string[]
-  translationData?: {
-    sentence: { text: string, romanization: string, english: string }
-    direction: 'en-to-zh' | 'zh-to-en'
-  }
-}
-
-function getReconstructionTokens(entry: VocabEntry): string[] {
-  return getSegmentTokens(entry.sourceSegmentText, entry.sourceLanguage ?? 'zh-CN')
-}
 
 function distributeExercises(
   _entries: VocabEntry[],
@@ -105,7 +90,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
   const [mode, setMode] = useState<ExerciseMode>('mixed')
   const [writingReps, setWritingReps] = useState(1)
   const [count, setCount] = useState(10)
-  const [questions, setQuestions] = useState<Question[]>([])
+  const [questions, setQuestions] = useState<SessionQuestion[]>([])
   const [current, setCurrent] = useState(0)
   const [results, setResults] = useState<{ entry: VocabEntry, correct: boolean, score: number }[]>([])
   // Guard against double-click and track the in-flight controller for cleanup
@@ -175,14 +160,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
       const fallbackTypes = types.map(t =>
         (t === 'cloze' || t === 'translation') ? 'romanization-recall' : t,
       ) as Exclude<ExerciseMode, 'mixed'>[]
-      const qs: Question[] = fallbackTypes.map((type, i) => {
-        const entry = pool[i % pool.length]
-        const q: Question = { type, entry }
-        if (type === 'reconstruction')
-          q.reconstructionTokens = getReconstructionTokens(entry)
-        return q
-      })
-      setQuestions(qs)
+      setQuestions(buildSessionQuestions(fallbackTypes, pool, [], [], []))
       setCurrent(0)
       setResults([])
       setPhase('session')
@@ -192,35 +170,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
 
     try {
       const { clozeExercises, pronExercises, translationSentences } = await generateQuiz(types, pool, controller.signal, entries[0]?.sourceLanguage)
-      let clozeIdx = 0
-      let pronIdx = 0
-      let translationIdx = 0
-
-      const qs: Question[] = []
-      for (let i = 0; i < types.length; i++) {
-        const type = types[i]
-        const entry = pool[i % pool.length]
-
-        if (type === 'translation') {
-          const sentence = translationSentences[translationIdx++]
-          if (!sentence)
-            continue
-          const direction: 'en-to-zh' | 'zh-to-en' = Math.random() < 0.5 ? 'en-to-zh' : 'zh-to-en'
-          qs.push({ type, entry, translationData: { sentence, direction } })
-          continue
-        }
-
-        const q: Question = { type, entry }
-        if (type === 'cloze')
-          q.clozeData = clozeExercises[clozeIdx++]
-        if (type === 'pronunciation')
-          q.pronunciationData = pronExercises[pronIdx++]
-        if (type === 'reconstruction')
-          q.reconstructionTokens = getReconstructionTokens(entry)
-        qs.push(q)
-      }
-
-      setQuestions(qs)
+      setQuestions(buildSessionQuestions(types, pool, clozeExercises, pronExercises, translationSentences))
       setCurrent(0)
       setResults([])
       setPhase('session')
@@ -228,16 +178,9 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
     catch {
       toast.error(t('study.aiGenerationFailed'))
       const fallbackTypes = types.map(t =>
-        (t === 'cloze' || t === 'translation') ? 'romanization-recall' : t,
+        (t === 'cloze' || t === 'translation' || t === 'pronunciation') ? 'romanization-recall' : t,
       ) as Exclude<ExerciseMode, 'mixed'>[]
-      const qs: Question[] = fallbackTypes.map((type, i) => {
-        const entry = pool[i % pool.length]
-        const q: Question = { type, entry }
-        if (type === 'reconstruction')
-          q.reconstructionTokens = getReconstructionTokens(entry)
-        return q
-      })
-      setQuestions(qs)
+      setQuestions(buildSessionQuestions(fallbackTypes, pool, [], [], []))
       setCurrent(0)
       setResults([])
       setPhase('session')
@@ -270,15 +213,6 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
   }
 
   const q = questions[current]
-
-  // Auto-skip writing questions for entries whose characters aren't in CJK range
-  // (setState-during-render pattern — avoids effect setter)
-  const [lastAutoSkipCheck, setLastAutoSkipCheck] = useState(-1)
-  if (phase === 'session' && q && lastAutoSkipCheck !== current) {
-    setLastAutoSkipCheck(current)
-    if (q.type === 'writing' && !isWritingSupported(q.entry.word))
-      handleNext(0, { skipped: true })
-  }
 
   // Sync blocker state → confirmLeave (setState-during-render)
   const [lastBlockerState, setLastBlockerState] = useState(blocker.state)
@@ -386,7 +320,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
         )}
 
         {/* Session */}
-        {phase === 'session' && q && !loading && (
+        {phase === 'session' && q != null && !loading && (
           <>
             {/* <ProgressBar current={current} total={questions.length} /> */}
             {q.type === 'romanization-recall' && (
