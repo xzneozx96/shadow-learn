@@ -114,7 +114,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<EvaluateResult | null>(null)
 
-  const hint = useHint(1)
+  const hint = useHint(direction === 'en-to-zh' ? 1 : 0)
 
   const wordBankItems: { word: string, pinyin: string }[] = (() => {
     const words = sentence.text.split(WHITESPACE_RE).filter(Boolean)
@@ -265,12 +265,14 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
         />
 
         <div className="flex items-center justify-center gap-3">
-          <HintButton
-            level={hint.level}
-            totalLevels={1}
-            exhausted={hint.exhausted}
-            onHint={hint.revealNext}
-          />
+          {direction === 'en-to-zh' && (
+            <HintButton
+              level={hint.level}
+              totalLevels={1}
+              exhausted={hint.exhausted}
+              onHint={hint.revealNext}
+            />
+          )}
           <Button
             variant="ghost"
             size="sm"
