@@ -21,7 +21,7 @@ export function Layout({ children }: LayoutProps) {
           {t('auth.trial.banner')}
         </div>
       )}
-      <nav className="z-50 border-b border-border bg-background px-4 py-3 backdrop-blur-md">
+      <nav className="z-50 border-b border-border bg-background p-4 backdrop-blur-md">
         <div className="container mx-auto flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2 font-bold tracking-tight text-foreground hover:opacity-90 transition-opacity">
             <img src="/favicon.svg" className="size-5" alt="ShadowLearn Logo" />

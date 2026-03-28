@@ -6,6 +6,6 @@
     "noUnusedParameters": false
   },
   "files": ["src/hanzi.d.ts"],
-  "include": ["tests"],
+  "include": ["src", "tests"],
   "exclude": ["tests/e2e"]
 }
