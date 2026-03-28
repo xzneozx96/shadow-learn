@@ -48,7 +48,7 @@ export function buildSessionQuestions(
   types: Exclude<ExerciseMode, 'mixed'>[],
   pool: VocabEntry[],
   clozeExercises: { story: string, blanks: string[] }[],
-  pronExercises: { sentence: string, translation: string }[],
+  pronExercises: { sentence: string, translation: string, romanization?: string }[],
   translationSentences: { text: string, romanization: string, english: string }[],
   getDirection: () => 'en-to-zh' | 'zh-to-en' = () => Math.random() < 0.5 ? 'en-to-zh' : 'zh-to-en',
 ): SessionQuestion[] {

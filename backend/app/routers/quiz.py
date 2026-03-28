@@ -38,6 +38,7 @@ class ClozeExercise(BaseModel):
 class PronunciationExercise(BaseModel):
     sentence: str
     translation: str
+    romanization: str
 
 
 class QuizResponse(BaseModel):

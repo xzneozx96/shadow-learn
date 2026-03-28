@@ -6,7 +6,7 @@ import { API_BASE } from '@/lib/config'
 import { isClozeExercise, isPronExercise, isTranslationSentence } from '@/lib/study-utils'
 
 interface ClozeExerciseData { story: string, blanks: string[] }
-interface PronExerciseData { sentence: string, translation: string }
+interface PronExerciseData { sentence: string, translation: string, romanization?: string }
 interface TranslationSentence { text: string, romanization: string, english: string }
 
 interface UseQuizGenerationReturn {
