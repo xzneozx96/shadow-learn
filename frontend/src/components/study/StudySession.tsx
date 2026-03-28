@@ -69,10 +69,10 @@ interface StudySessionProps {
 
 export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChange }: StudySessionProps) {
   const { entriesByLesson } = useVocabulary()
-  const { db, keys, trialMode } = useAuth()
+  const { db, keys } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult, logSessionComplete } = useTracking()
-  const { playTTS, loadingText } = useTTS(db, keys, trialMode)
+  const { playTTS, loadingText } = useTTS(db, keys)
   const { generateQuiz, loading } = useQuizGeneration()
 
   const entries = preloadedEntries ?? entriesByLesson[lessonId] ?? []

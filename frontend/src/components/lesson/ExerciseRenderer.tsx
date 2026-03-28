@@ -51,8 +51,8 @@ interface ExerciseRendererProps {
 // -------------------------------------------------------------------------- //
 
 export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps) {
-  const { db, keys, trialMode } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys, trialMode)
+  const { db, keys } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys)
 
   const makeOnNext = useCallback(
     (exerciseType: ExerciseType, vocabEntry: VocabEntry | undefined) =>

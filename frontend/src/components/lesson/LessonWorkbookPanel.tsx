@@ -20,8 +20,8 @@ interface LessonWorkbookPanelProps {
 export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const { entriesByLesson, remove } = useVocabulary()
   const { t } = useI18n()
-  const { db, keys, trialMode } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys, trialMode)
+  const { db, keys } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys)
   const navigate = useNavigate()
   const entries = entriesByLesson[lessonId] ?? []
   const count = entries.length
