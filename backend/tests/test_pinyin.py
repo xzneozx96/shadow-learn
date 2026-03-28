@@ -1,4 +1,3 @@
-import pytest
 from app.services.pinyin import generate_pinyin
 
 

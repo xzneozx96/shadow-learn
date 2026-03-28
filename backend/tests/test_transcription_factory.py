@@ -1,5 +1,4 @@
 import pytest
-from unittest.mock import patch
 
 
 def test_factory_returns_deepgram_provider():
