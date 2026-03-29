@@ -74,7 +74,7 @@ function BlankInput({ blankIndex, blank, entry, checked, autoFocus, value, onCha
 
   return (
     <span className="inline-flex flex-col items-center mx-1 align-bottom">
-      <span className={cn('text-xs leading-none mb-0.5 tracking-wide', furigana ? 'text-primary/70' : 'invisible')}>
+      <span className={cn('w-full pl-1 text-xs leading-none mb-0.5 tracking-wide', furigana ? 'text-primary/70' : 'invisible')}>
         {furigana ?? '·'}
       </span>
       <span className="inline-flex items-center gap-0.5">
