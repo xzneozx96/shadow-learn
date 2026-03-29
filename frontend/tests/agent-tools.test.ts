@@ -2,13 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   executeGetCoreGuidelines,
   executeGetSkillGuide,
-  executeRenderCharacterWritingExercise,
-  executeRenderClozeExercise,
-  executeRenderDictationExercise,
-  executeRenderPronunciationExercise,
-  executeRenderReconstructionExercise,
-  executeRenderRomanizationExercise,
-  executeRenderTranslationExercise,
+  executeRenderStudySession,
   ToolInputSchemas,
 } from '@/lib/agent-tools'
 
@@ -17,243 +11,96 @@ describe('agent-tools executors', () => {
     get: vi.fn(),
   } as any
 
-  describe('executeRenderDictationExercise', () => {
-    it('returns dictation result payload on successful fetch', async () => {
-      mockDb.get.mockResolvedValueOnce({ id: 'vocab-1', word: '你好' } as any)
-
-      const result = await executeRenderDictationExercise(mockDb, { itemIds: ['vocab-1'] })
-
-      expect(mockDb.get).toHaveBeenCalledWith('vocabulary', 'vocab-1')
-      expect(result).toEqual({
-        type: 'dictation',
-        props: {
-          items: [{ id: 'vocab-1', word: '你好' }],
-          mode: 'review',
-        },
-      })
-    })
-
-    it('returns error if vocab id not found', async () => {
-      mockDb.get.mockResolvedValueOnce(undefined)
-
-      const result = await executeRenderDictationExercise(mockDb, { itemIds: ['missing-id'] })
-
-      expect(result).toEqual({ error: 'No items available for dictation.' })
-    })
+  beforeEach(() => {
+    mockDb.get.mockReset()
   })
 
-  describe('executeRenderCharacterWritingExercise', () => {
-    it('returns character_writing payload on successful fetch', async () => {
-      mockDb.get.mockResolvedValueOnce({ id: 'vocab-1', word: '你好' } as any)
-
-      const result = await executeRenderCharacterWritingExercise(mockDb, { itemIds: ['vocab-1'] })
-
-      expect(mockDb.get).toHaveBeenCalledWith('vocabulary', 'vocab-1')
-      expect(result).toEqual({
-        type: 'writing',
-        props: { items: [{ id: 'vocab-1', word: '你好' }], mode: 'review' },
-      })
-    })
-
-    it('returns error if vocab id not found', async () => {
-      mockDb.get.mockResolvedValueOnce(undefined)
-      const result = await executeRenderCharacterWritingExercise(mockDb, { itemIds: ['missing-id'] })
-      expect(result).toEqual({ error: 'No items available for character writing.' })
-    })
-  })
-
-  describe('executeRenderRomanizationExercise', () => {
-    it('returns romanization payload on successful fetch', async () => {
-      mockDb.get.mockResolvedValueOnce({ id: 'vocab-2', word: '你好' } as any)
-
-      const result = await executeRenderRomanizationExercise(mockDb, { itemIds: ['vocab-2'] })
-
-      expect(mockDb.get).toHaveBeenCalledWith('vocabulary', 'vocab-2')
-      expect(result).toEqual({
-        type: 'romanization-recall',
-        props: { items: [{ id: 'vocab-2', word: '你好' }], mode: 'review' },
-      })
-    })
-  })
-
-  describe('executeRenderTranslationExercise', () => {
-    const vocabEntry = { id: 'vocab-3', word: '旅游', romanization: 'lǚyóu', meaning: 'travel', usage: '我喜欢旅游', sourceLanguage: 'zh-CN' }
+  describe('executeRenderStudySession', () => {
+    const writingEntry1 = { id: 'vocab-w1', word: '写', sourceLanguage: 'zh-CN' }
+    const writingEntry2 = { id: 'vocab-w2', word: '学', sourceLanguage: 'zh-CN' }
+    const translationEntry1 = { id: 'vocab-t1', word: '旅游', romanization: 'lǚyóu', meaning: 'travel', usage: '我喜欢旅游', sourceLanguage: 'zh-CN' }
+    const translationEntry2 = { id: 'vocab-t2', word: '出发', romanization: 'chūfā', meaning: 'depart', usage: '我们出发吧', sourceLanguage: 'zh-CN' }
+    const pronEntry1 = { id: 'vocab-p1', word: '学校', romanization: 'xuéxiào', meaning: 'school', usage: '我去学校', sourceLanguage: 'zh-CN' }
+    const pronEntry2 = { id: 'vocab-p2', word: '老师', romanization: 'lǎoshī', meaning: 'teacher', usage: '老师很好', sourceLanguage: 'zh-CN' }
 
     afterEach(() => {
       vi.restoreAllMocks()
     })
 
-    it('calls /api/translation/generate and returns AI-generated sentence', async () => {
-      mockDb.get.mockResolvedValueOnce(vocabEntry as any)
-      const sentence = { text: '我们计划去旅游', romanization: 'wǒmen jìhuà qù lǚyóu', english: 'We plan to travel' }
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ sentences: [sentence] }),
-      } as any)
+    it('returns study_session with questions for writing type (no API calls)', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(writingEntry1 as any)
+        .mockResolvedValueOnce(writingEntry2 as any)
 
-      const result = await executeRenderTranslationExercise(mockDb, { itemIds: ['vocab-3'] }, 'test-key') as any
+      const result = await executeRenderStudySession(mockDb, {
+        itemIds: ['vocab-w1', 'vocab-w2'],
+        exerciseTypes: ['writing'],
+      }, 'test-key') as any
 
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/translation/generate'),
-        expect.objectContaining({
-          method: 'POST',
-          body: expect.stringContaining('"sentence_count":1'),
-        }),
-      )
-      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
-      expect(body.word).toBe('旅游')
-      expect(body.openrouter_api_key).toBe('test-key')
-      expect(result.type).toBe('translation')
-      expect(result.props.sentence).toEqual(sentence)
-      expect(result.props.items).toEqual([vocabEntry])
-      expect(['en-to-zh', 'zh-to-en']).toContain(result.props.direction)
+      expect(result.type).toBe('study_session')
+      expect(result.props.questions).toHaveLength(2)
+      expect(result.props.questions[0].type).toBe('writing')
+      expect(result.props.questions[0].entry).toEqual(writingEntry1)
+      expect(result.props.questions[1].type).toBe('writing')
+      expect(result.props.questions[1].entry).toEqual(writingEntry2)
     })
 
-    it('returns error on API failure', async () => {
-      mockDb.get.mockResolvedValueOnce(vocabEntry as any)
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 500 } as any)
+    it('calls translation API once per entry for translation type', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(translationEntry1 as any)
+        .mockResolvedValueOnce(translationEntry2 as any)
+      const sentence1 = { text: '我们去旅游', romanization: 'wǒmen qù lǚyóu', english: 'We go travelling' }
+      const sentence2 = { text: '我们出发了', romanization: 'wǒmen chūfā le', english: 'We departed' }
+      globalThis.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [sentence1] }) } as any)
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [sentence2] }) } as any)
 
-      const result = await executeRenderTranslationExercise(mockDb, { itemIds: ['vocab-3'] }, 'test-key')
+      const result = await executeRenderStudySession(mockDb, {
+        itemIds: ['vocab-t1', 'vocab-t2'],
+        exerciseTypes: ['translation'],
+      }, 'test-key') as any
 
-      expect(result).toEqual({ error: 'Translation generation failed (500)' })
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+      expect(result.type).toBe('study_session')
+      expect(result.props.questions).toHaveLength(2)
+      expect(result.props.questions[0].type).toBe('translation')
+      expect(result.props.questions[0].translationData.sentence).toEqual(sentence1)
+      expect(result.props.questions[1].type).toBe('translation')
+      expect(result.props.questions[1].translationData.sentence).toEqual(sentence2)
     })
 
-    it('returns error when API returns empty sentences', async () => {
-      mockDb.get.mockResolvedValueOnce(vocabEntry as any)
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ sentences: [] }),
-      } as any)
+    it('calls pronunciation API once per entry for pronunciation type', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(pronEntry1 as any)
+        .mockResolvedValueOnce(pronEntry2 as any)
+      const ex1 = { sentence: '我每天去学校', translation: 'I go to school every day' }
+      const ex2 = { sentence: '老师教我们', translation: 'The teacher teaches us' }
+      globalThis.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: [ex1] }) } as any)
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: [ex2] }) } as any)
 
-      const result = await executeRenderTranslationExercise(mockDb, { itemIds: ['vocab-3'] }, 'test-key')
+      const result = await executeRenderStudySession(mockDb, {
+        itemIds: ['vocab-p1', 'vocab-p2'],
+        exerciseTypes: ['pronunciation'],
+      }, 'test-key') as any
 
-      expect(result).toEqual({ error: 'No sentence generated.' })
-    })
-  })
-
-  describe('executeRenderPronunciationExercise', () => {
-    const vocabEntry = { id: 'vocab-4', word: '学校', romanization: 'xuéxiào', meaning: 'school', usage: '我去学校', sourceLanguage: 'zh-CN' }
-
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
-    it('calls /api/quiz/generate with pronunciation_sentence and returns result', async () => {
-      mockDb.get.mockResolvedValueOnce(vocabEntry as any)
-      const exercise = { sentence: '我每天去学校上课', translation: 'I go to school every day' }
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ exercises: [exercise] }),
-      } as any)
-
-      const result = await executeRenderPronunciationExercise(mockDb, { itemIds: ['vocab-4'] }, 'test-key') as any
-
-      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
-      expect(body.exercise_type).toBe('pronunciation_sentence')
-      expect(body.count).toBe(1)
-      expect(body.words[0].word).toBe('学校')
-      expect(result.type).toBe('pronunciation')
-      expect(result.props.sentence).toEqual(exercise)
-      expect(result.props.items).toEqual([vocabEntry])
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+      expect(result.type).toBe('study_session')
+      expect(result.props.questions).toHaveLength(2)
+      expect(result.props.questions[0].type).toBe('pronunciation')
+      expect(result.props.questions[0].pronunciationData.sentence).toBe(ex1.sentence)
+      expect(result.props.questions[1].pronunciationData.sentence).toBe(ex2.sentence)
     })
 
-    it('returns error on API failure', async () => {
-      mockDb.get.mockResolvedValueOnce(vocabEntry as any)
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 503 } as any)
+    it('returns error when no items found', async () => {
+      mockDb.get.mockResolvedValue(undefined)
 
-      const result = await executeRenderPronunciationExercise(mockDb, { itemIds: ['vocab-4'] }, 'test-key')
+      const result = await executeRenderStudySession(mockDb, {
+        itemIds: ['missing-1'],
+        exerciseTypes: ['writing'],
+      }, 'test-key')
 
-      expect(result).toEqual({ error: 'Pronunciation generation failed (503)' })
-    })
-
-    it('returns error when API returns empty exercises', async () => {
-      mockDb.get.mockResolvedValueOnce(vocabEntry as any)
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ exercises: [] }),
-      } as any)
-
-      const result = await executeRenderPronunciationExercise(mockDb, { itemIds: ['vocab-4'] }, 'test-key')
-
-      expect(result).toEqual({ error: 'No pronunciation sentence generated.' })
-    })
-  })
-
-  describe('executeRenderClozeExercise', () => {
-    const vocabEntry = { id: 'vocab-5', word: '天气', romanization: 'tiānqì', meaning: 'weather', usage: '今天天气很好', sourceLanguage: 'zh-CN' }
-
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
-    it('calls /api/quiz/generate with cloze and returns result', async () => {
-      mockDb.get.mockResolvedValueOnce(vocabEntry as any)
-      const exercise = { story: '今天{{天气}}很好', blanks: ['天气'] }
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ exercises: [exercise] }),
-      } as any)
-
-      const result = await executeRenderClozeExercise(mockDb, { itemIds: ['vocab-5'] }, 'test-key') as any
-
-      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
-      expect(body.exercise_type).toBe('cloze')
-      expect(body.story_count).toBe(1)
-      expect(body.words[0].word).toBe('天气')
-      expect(result.type).toBe('cloze')
-      expect(result.props.question).toEqual(exercise)
-      expect(result.props.items).toEqual([vocabEntry])
-    })
-
-    it('returns error on API failure', async () => {
-      mockDb.get.mockResolvedValueOnce(vocabEntry as any)
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 422 } as any)
-
-      const result = await executeRenderClozeExercise(mockDb, { itemIds: ['vocab-5'] }, 'test-key')
-
-      expect(result).toEqual({ error: 'Cloze generation failed (422)' })
-    })
-
-    it('returns error when API returns empty exercises', async () => {
-      mockDb.get.mockResolvedValueOnce(vocabEntry as any)
-      globalThis.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ exercises: [] }),
-      } as any)
-
-      const result = await executeRenderClozeExercise(mockDb, { itemIds: ['vocab-5'] }, 'test-key')
-
-      expect(result).toEqual({ error: 'No cloze story generated.' })
-    })
-  })
-
-  describe('executeRenderReconstructionExercise', () => {
-    it('derives words from sourceSegmentText, not from args', async () => {
-      mockDb.get.mockResolvedValueOnce({
-        id: 'vocab-1',
-        word: '但是',
-        sourceSegmentText: '但是我没时间',
-        sourceLanguage: 'zh-CN',
-      } as any)
-
-      const result = await executeRenderReconstructionExercise(mockDb, { itemId: 'vocab-1' })
-
-      expect(mockDb.get).toHaveBeenCalledWith('vocabulary', 'vocab-1')
-      expect(result).toEqual({
-        type: 'reconstruction',
-        props: {
-          items: [{ id: 'vocab-1', word: '但是', sourceSegmentText: '但是我没时间', sourceLanguage: 'zh-CN' }],
-          words: ['但', '是', '我', '没', '时', '间'],
-        },
-      })
-    })
-
-    it('returns error if vocab id not found', async () => {
-      mockDb.get.mockResolvedValueOnce(undefined)
-
-      const result = await executeRenderReconstructionExercise(mockDb, { itemId: 'missing-id' })
-
-      expect(result).toEqual({ error: 'Item not found for reconstruction.' })
+      expect(result).toEqual({ error: 'No vocabulary items found.' })
     })
   })
 
@@ -297,48 +144,35 @@ describe('agent-tools executors', () => {
 })
 
 describe('toolInputSchemas — input validation', () => {
-  it('render_cloze_exercise rejects empty itemIds', () => {
-    const result = ToolInputSchemas.render_cloze_exercise.safeParse({ itemIds: [] })
+  it('render_study_session rejects invalid exerciseType', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: ['abc'],
+      exerciseTypes: ['not-a-real-type'],
+    })
     expect(result.success).toBe(false)
   })
 
-  it('render_cloze_exercise accepts valid input', () => {
-    const result = ToolInputSchemas.render_cloze_exercise.safeParse({ itemIds: ['vocab-1'] })
-    expect(result.success).toBe(true)
-  })
-
-  it('render_reconstruction_exercise rejects missing itemId', () => {
-    const result = ToolInputSchemas.render_reconstruction_exercise.safeParse({})
-    expect(result.success).toBe(false)
-  })
-
-  it('render_translation_exercise accepts optional sourceLanguage', () => {
-    const result = ToolInputSchemas.render_translation_exercise.safeParse({
-      itemIds: ['vocab-1'],
-      sourceLanguage: 'zh-CN',
+  it('render_study_session accepts valid input', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: ['abc', 'def'],
+      exerciseTypes: ['dictation', 'writing'],
     })
     expect(result.success).toBe(true)
   })
-})
 
-describe('executeRenderClozeExercise — output guard (standalone)', () => {
-  const mockDb = {
-    get: vi.fn(),
-  } as any
-
-  afterEach(() => {
-    vi.restoreAllMocks()
+  it('render_study_session rejects empty itemIds', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: [],
+      exerciseTypes: ['dictation'],
+    })
+    expect(result.success).toBe(false)
   })
 
-  it('returns error when cloze story is missing {{word}} placeholder', async () => {
-    mockDb.get.mockResolvedValue({ id: 'vocab-1', word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: '你好！', sourceLanguage: 'zh-CN' } as any)
-    // Mock fetch to return a story without {{word}}
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ exercises: [{ story: 'A story with no blank.', blanks: ['你好'] }] }),
-    } as any)
-    const result = await executeRenderClozeExercise(mockDb, { itemIds: ['vocab-1'] }, '')
-    expect(result).toHaveProperty('error')
-    expect((result as any).error).toContain('{{word}}')
+  it('render_study_session rejects empty exerciseTypes', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: ['abc'],
+      exerciseTypes: [],
+    })
+    expect(result.success).toBe(false)
   })
 })

@@ -255,7 +255,12 @@ export function CompanionPanel({
   const { entriesByLesson } = useVocabulary()
   const count = (entriesByLesson[lessonId] ?? []).length
 
-  const { messages, isLoading, sendMessage, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
+  const { messages, isLoading, sendMessage: sendMessageRaw, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
+
+  const sendMessage: SendMessage = (opts) => {
+    isAtBottomRef.current = true
+    sendMessageRaw(opts)
+  }
 
   const uniqueMessages = useMemo(() => {
     const seen = new Set<string>()

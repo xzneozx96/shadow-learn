@@ -27,14 +27,8 @@ import {
   executeGetVocabulary,
   executeLogMistake,
   executeRecallMemory,
-  executeRenderCharacterWritingExercise,
-  executeRenderClozeExercise,
-  executeRenderDictationExercise,
   executeRenderProgressChart,
-  executeRenderPronunciationExercise,
-  executeRenderReconstructionExercise,
-  executeRenderRomanizationExercise,
-  executeRenderTranslationExercise,
+  executeRenderStudySession,
   executeRenderVocabCard,
   executeSaveMemory,
   executeUpdateLearnerProfile,
@@ -249,26 +243,8 @@ export function useAgentChat(
           case 'update_learner_profile':
             result = await executeUpdateLearnerProfile(currentDb, toolCall.input as Record<string, unknown>)
             break
-          case 'render_dictation_exercise':
-            result = await executeRenderDictationExercise(currentDb, toolCall.input as { itemIds: string[] })
-            break
-          case 'render_character_writing_exercise':
-            result = await executeRenderCharacterWritingExercise(currentDb, toolCall.input as { itemIds: string[] })
-            break
-          case 'render_romanization_exercise':
-            result = await executeRenderRomanizationExercise(currentDb, toolCall.input as { itemIds: string[] })
-            break
-          case 'render_translation_exercise':
-            result = await executeRenderTranslationExercise(currentDb, toolCall.input as { itemIds: string[], sourceLanguage?: string }, openrouterApiKey)
-            break
-          case 'render_pronunciation_exercise':
-            result = await executeRenderPronunciationExercise(currentDb, toolCall.input as { itemIds: string[], sourceLanguage?: string }, openrouterApiKey)
-            break
-          case 'render_cloze_exercise':
-            result = await executeRenderClozeExercise(currentDb, toolCall.input as { itemIds: string[], sourceLanguage?: string }, openrouterApiKey)
-            break
-          case 'render_reconstruction_exercise':
-            result = await executeRenderReconstructionExercise(currentDb, toolCall.input as { itemId: string })
+          case 'render_study_session':
+            result = await executeRenderStudySession(currentDb, ToolInputSchemas.render_study_session.parse(toolCall.input), openrouterApiKey)
             break
           case 'render_progress_chart':
             result = await executeRenderProgressChart(

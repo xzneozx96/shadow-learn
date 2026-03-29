@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-
 // Import after mocks
+import type { SessionQuestion } from '@/lib/study-utils'
+import { fireEvent, render, screen } from '@testing-library/react'
+
+import { describe, expect, it, vi } from 'vitest'
 import { StudySession } from '@/components/study/StudySession'
 
 vi.mock('@/contexts/I18nContext', () => ({
@@ -60,5 +61,13 @@ describe('studySession', () => {
     render(<StudySession lessonId="lesson_1" onClose={onClose} />)
     fireEvent.click(screen.getByRole('button', { name: /close/i }))
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('skips picker and shows session immediately when prebuiltQuestions are provided', () => {
+    const entry = { id: 'v1', word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: '', sourceLanguage: 'zh-CN' } as any
+    const questions: SessionQuestion[] = [{ type: 'dictation', entry }]
+    render(<StudySession onClose={vi.fn()} prebuiltQuestions={questions} />)
+    // ModePicker should NOT render (no Start button)
+    expect(screen.queryByRole('button', { name: /start/i })).toBeNull()
   })
 })

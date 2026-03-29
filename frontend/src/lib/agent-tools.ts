@@ -6,7 +6,9 @@
  * - `execute(db, args)`: runs in the browser via onToolCall
  */
 
+import type { ExerciseMode } from '@/components/study/ModePicker'
 import type { ShadowLearnDB } from '@/db'
+import type { SessionQuestion } from '@/lib/study-utils'
 import type { VocabEntry } from '@/types'
 import { z } from 'zod'
 import {
@@ -33,7 +35,7 @@ import skillSpeakingContent from '@/lib/skills/skill_speaking.md?raw'
 import skillTonesContent from '@/lib/skills/skill_tones.md?raw'
 import skillVocabularyContent from '@/lib/skills/skill_vocabulary.md?raw'
 import { updateSpacedRepetition } from '@/lib/spacedRepetition'
-import { getSegmentTokens } from '@/lib/study-utils'
+import { buildSessionQuestions, getSegmentTokens } from '@/lib/study-utils'
 
 // -------------------------------------------------------------------------- //
 // Tool definitions (JSON schema for LLM)
@@ -162,107 +164,25 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     },
   },
 
-  render_dictation_exercise: {
+  render_study_session: {
     type: 'function',
     function: {
-      name: 'render_dictation_exercise',
-      description: 'Render a dictation exercise (user listens and types text).',
+      name: 'render_study_session',
+      description: 'Start an interactive study session with one or more exercise types for specified vocabulary items. The user completes the exercises one by one; results are reported when done. Prefer this over individual render_*_exercise tools when practicing multiple items or types.',
       parameters: {
         type: 'object',
         properties: {
           itemIds: { type: 'array', items: { type: 'string' }, description: 'Vocabulary item IDs from get_vocabulary results' },
+          exerciseTypes: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['writing', 'dictation', 'romanization-recall', 'translation', 'pronunciation', 'cloze', 'reconstruction'],
+            },
+            description: 'Exercise types to include. Each type is applied to every item.',
+          },
         },
-        required: ['itemIds'],
-      },
-    },
-  },
-
-  render_character_writing_exercise: {
-    type: 'function',
-    function: {
-      name: 'render_character_writing_exercise',
-      description: 'Render a character writing exercise (user draws characters).',
-      parameters: {
-        type: 'object',
-        properties: {
-          itemIds: { type: 'array', items: { type: 'string' }, description: 'Vocabulary item IDs from get_vocabulary results' },
-        },
-        required: ['itemIds'],
-      },
-    },
-  },
-
-  render_romanization_exercise: {
-    type: 'function',
-    function: {
-      name: 'render_romanization_exercise',
-      description: 'Render a romanization recall exercise (user types pinyin/romanization).',
-      parameters: {
-        type: 'object',
-        properties: {
-          itemIds: { type: 'array', items: { type: 'string' }, description: 'Vocabulary item IDs from get_vocabulary results' },
-        },
-        required: ['itemIds'],
-      },
-    },
-  },
-
-  render_translation_exercise: {
-    type: 'function',
-    function: {
-      name: 'render_translation_exercise',
-      description: 'Render a translation exercise (user translates to/from target language).',
-      parameters: {
-        type: 'object',
-        properties: {
-          itemIds: { type: 'array', items: { type: 'string' }, description: 'Vocabulary item IDs from get_vocabulary results' },
-        },
-        required: ['itemIds'],
-      },
-    },
-  },
-
-  render_pronunciation_exercise: {
-    type: 'function',
-    function: {
-      name: 'render_pronunciation_exercise',
-      description: 'Render an interactive pronunciation exercise. Generates a practice sentence from the given vocabulary.',
-      parameters: {
-        type: 'object',
-        properties: {
-          itemIds: { type: 'array', items: { type: 'string' }, description: 'Vocabulary item IDs from get_vocabulary results' },
-        },
-        required: ['itemIds'],
-      },
-    },
-  },
-
-  render_cloze_exercise: {
-    type: 'function',
-    function: {
-      name: 'render_cloze_exercise',
-      description: 'Render a fill-in-the-blanks story exercise. A story with blanks is generated automatically from the vocabulary.',
-      parameters: {
-        type: 'object',
-        properties: {
-          itemIds: { type: 'array', items: { type: 'string' }, description: 'Vocabulary item IDs from get_vocabulary results (up to 5)' },
-        },
-        required: ['itemIds'],
-      },
-    },
-  },
-
-  render_reconstruction_exercise: {
-    type: 'function',
-    function: {
-      name: 'render_reconstruction_exercise',
-      description: 'Render a sentence reconstruction exercise. The sentence chips are derived automatically from the vocabulary entry\'s source segment — just provide the vocab item ID.',
-      parameters: {
-        type: 'object',
-        properties: {
-          itemId: { type: 'string', description: 'Vocabulary item ID from get_vocabulary results' },
-        },
-        required: ['itemId'],
+        required: ['itemIds', 'exerciseTypes'],
       },
     },
   },
@@ -391,34 +311,22 @@ export function getToolDefinitionsArray(): object[] {
 // Input validation schemas (Zod)
 // -------------------------------------------------------------------------- //
 
-const CLOZE_PLACEHOLDER_RE = /\{\{.+?\}\}/
-
 export const ToolInputSchemas = {
-  render_cloze_exercise: z.object({
+  render_study_session: z.object({
     itemIds: z.array(z.string()).min(1),
-    sourceLanguage: z.string().optional(),
-  }),
-  render_reconstruction_exercise: z.object({
-    itemId: z.string(),
-  }),
-  render_translation_exercise: z.object({
-    itemIds: z.array(z.string()).min(1),
-    sourceLanguage: z.string().optional(),
-  }),
-  render_pronunciation_exercise: z.object({
-    itemIds: z.array(z.string()).min(1),
-    sourceLanguage: z.string().optional(),
-  }),
-  render_dictation_exercise: z.object({
-    itemIds: z.array(z.string()).min(1),
-  }),
-  render_character_writing_exercise: z.object({
-    itemIds: z.array(z.string()).min(1),
-  }),
-  render_romanization_exercise: z.object({
-    itemIds: z.array(z.string()).min(1),
+    exerciseTypes: z.array(z.enum([
+      'writing',
+      'dictation',
+      'romanization-recall',
+      'translation',
+      'pronunciation',
+      'cloze',
+      'reconstruction',
+    ])).min(1),
   }),
 } satisfies Partial<Record<string, z.ZodSchema>>
+
+type RenderStudySessionArgs = z.infer<typeof ToolInputSchemas['render_study_session']>
 
 // -------------------------------------------------------------------------- //
 // Execute functions (called client-side via onToolCall)
@@ -613,176 +521,106 @@ async function fetchVocabEntries(db: ShadowLearnDB, itemIds: string[]): Promise<
   return fetched.filter((e): e is VocabEntry => e !== undefined)
 }
 
-export async function executeRenderDictationExercise(db: ShadowLearnDB, args: { itemIds: string[] }) {
-  const entries = await fetchVocabEntries(db, args.itemIds)
-  if (entries.length === 0) {
-    return { error: 'No items available for dictation.' }
-  }
-  return { type: 'dictation', props: { items: entries, mode: 'review' } }
-}
-
-export async function executeRenderCharacterWritingExercise(db: ShadowLearnDB, args: { itemIds: string[] }) {
-  const entries = await fetchVocabEntries(db, args.itemIds)
-  if (entries.length === 0) {
-    return { error: 'No items available for character writing.' }
-  }
-  return { type: 'writing', props: { items: entries, mode: 'review' } }
-}
-
-export async function executeRenderRomanizationExercise(db: ShadowLearnDB, args: { itemIds: string[] }) {
-  const entries = await fetchVocabEntries(db, args.itemIds)
-  if (entries.length === 0) {
-    return { error: 'No items available for romanization.' }
-  }
-  return { type: 'romanization-recall', props: { items: entries, mode: 'review' } }
-}
-
-export async function executeRenderTranslationExercise(
+export async function executeRenderStudySession(
   db: ShadowLearnDB,
-  args: { itemIds: string[], sourceLanguage?: string },
+  args: RenderStudySessionArgs,
   openrouterApiKey: string,
-) {
+): Promise<{ type: 'study_session', props: { questions: SessionQuestion[] } } | { error: string }> {
   const entries = await fetchVocabEntries(db, args.itemIds)
   if (entries.length === 0)
-    return { error: 'No items available for translation.' }
+    return { error: 'No vocabulary items found.' }
 
-  const entry = entries[0]
-  try {
-    const resp = await fetch(`${API_BASE}/api/translation/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        openrouter_api_key: openrouterApiKey,
-        word: entry.word,
-        romanization: entry.romanization,
-        meaning: entry.meaning,
-        usage: entry.usage ?? '',
-        sentence_count: 1,
-        source_language: args.sourceLanguage ?? entry.sourceLanguage ?? 'zh-CN',
-      }),
-    })
-    if (!resp.ok)
-      return { error: `Translation generation failed (${resp.status})` }
+  const uniqueTypes = [...new Set(args.exerciseTypes)]
+  const sourceLanguage = entries[0].sourceLanguage ?? 'zh-CN'
 
-    const data = await resp.json() as { sentences: { text: string, romanization: string, english: string }[] }
-    const sentence = data.sentences[0]
-    if (!sentence)
-      return { error: 'No sentence generated.' }
-    if (!('text' in sentence) || !sentence.text)
-      return { error: 'Translation sentence missing text field' }
+  const translationSentences: { text: string, romanization: string, english: string }[] = []
+  const pronExercises: { sentence: string, translation: string }[] = []
+  const clozeExercises: { story: string, blanks: string[] }[] = []
 
-    const direction: 'en-to-zh' | 'zh-to-en' = Math.random() < 0.5 ? 'en-to-zh' : 'zh-to-en'
-    return { type: 'translation', props: { items: entries, sentence, direction } }
-  }
-  catch (err: any) {
-    return { error: `Translation generation error: ${err.message}` }
-  }
-}
-
-export async function executeRenderPronunciationExercise(
-  db: ShadowLearnDB,
-  args: { itemIds: string[], sourceLanguage?: string },
-  openrouterApiKey: string,
-) {
-  const entries = await fetchVocabEntries(db, args.itemIds)
-  if (entries.length === 0)
-    return { error: 'No items available for pronunciation.' }
-
-  const words = entries.map(e => ({
-    word: e.word,
-    romanization: e.romanization,
-    meaning: e.meaning,
-    usage: e.usage ?? '',
-  }))
-
-  try {
-    const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        openrouter_api_key: openrouterApiKey,
-        words,
-        exercise_type: 'pronunciation_sentence',
-        count: 1,
-        source_language: args.sourceLanguage ?? entries[0].sourceLanguage ?? 'zh-CN',
-      }),
-    })
-    if (!resp.ok)
-      return { error: `Pronunciation generation failed (${resp.status})` }
-
-    const data = await resp.json() as { exercises: { sentence: string, translation: string }[] }
-    const exercise = data.exercises[0]
-    if (!exercise)
-      return { error: 'No pronunciation sentence generated.' }
-
-    return { type: 'pronunciation', props: { sentence: exercise, items: entries } }
-  }
-  catch (err: any) {
-    return { error: `Pronunciation generation error: ${err.message}` }
-  }
-}
-
-export async function executeRenderClozeExercise(
-  db: ShadowLearnDB,
-  args: { itemIds: string[], sourceLanguage?: string },
-  openrouterApiKey: string,
-) {
-  const entries = await fetchVocabEntries(db, args.itemIds)
-  if (entries.length === 0)
-    return { error: 'No items available for cloze.' }
-
-  const words = entries.slice(0, 5).map(e => ({
-    word: e.word,
-    romanization: e.romanization,
-    meaning: e.meaning,
-    usage: e.usage ?? '',
-  }))
-
-  try {
-    const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        openrouter_api_key: openrouterApiKey,
-        words,
-        exercise_type: 'cloze',
-        story_count: 1,
-        source_language: args.sourceLanguage ?? entries[0].sourceLanguage ?? 'zh-CN',
-      }),
-    })
-    if (!resp.ok)
-      return { error: `Cloze generation failed (${resp.status})` }
-
-    const data = await resp.json() as { exercises: { story: string, blanks: string[] }[] }
-    const exercise = data.exercises[0]
-    if (!exercise)
-      return { error: 'No cloze story generated.' }
-
-    // Output guard: verify story has {{word}} placeholders (e.g. {{天气}})
-    if (!CLOZE_PLACEHOLDER_RE.test(exercise.story)) {
-      return { type: 'cloze', props: {}, error: 'Cloze story missing {{word}} placeholder — LLM generated invalid story' }
+  await Promise.all(uniqueTypes.map(async (type) => {
+    if (type === 'translation') {
+      const results = await Promise.all(
+        entries.map(async (entry) => {
+          const resp = await fetch(`${API_BASE}/api/translation/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              openrouter_api_key: openrouterApiKey,
+              word: entry.word,
+              romanization: entry.romanization,
+              meaning: entry.meaning,
+              usage: entry.usage ?? '',
+              sentence_count: 1,
+              source_language: sourceLanguage,
+            }),
+          })
+          if (!resp.ok)
+            return null
+          const data = await resp.json() as { sentences: { text: string, romanization: string, english: string }[] }
+          const s = data.sentences[0]
+          return (s && s.text) ? s : null
+        }),
+      )
+      results.forEach(s => s && translationSentences.push(s))
     }
-    return { type: 'cloze', props: { question: exercise, items: entries } }
-  }
-  catch (err: any) {
-    return { error: `Cloze generation error: ${err.message}` }
-  }
-}
+    else if (type === 'pronunciation') {
+      const results = await Promise.all(
+        entries.map(async (entry) => {
+          const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              openrouter_api_key: openrouterApiKey,
+              words: [{ word: entry.word, romanization: entry.romanization, meaning: entry.meaning, usage: entry.usage ?? '' }],
+              exercise_type: 'pronunciation_sentence',
+              count: 1,
+              source_language: sourceLanguage,
+            }),
+          })
+          if (!resp.ok)
+            return null
+          const data = await resp.json() as { exercises: { sentence: string, translation: string }[] }
+          const ex = data.exercises[0]
+          return (ex && ex.sentence) ? ex : null
+        }),
+      )
+      results.forEach(ex => ex && pronExercises.push(ex))
+    }
+    else if (type === 'cloze') {
+      const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          openrouter_api_key: openrouterApiKey,
+          words: entries.slice(0, 5).map(e => ({ word: e.word, romanization: e.romanization, meaning: e.meaning, usage: e.usage ?? '' })),
+          exercise_type: 'cloze',
+          story_count: 1,
+          source_language: sourceLanguage,
+        }),
+      })
+      if (resp.ok) {
+        const data = await resp.json() as { exercises: { story: string, blanks: string[] }[] }
+        const ex = data.exercises[0]
+        if (ex)
+          clozeExercises.push(ex)
+      }
+    }
+  }))
 
-export async function executeRenderReconstructionExercise(
-  db: ShadowLearnDB,
-  args: { itemId: string, words?: string[] },
-) {
-  const entries = await fetchVocabEntries(db, [args.itemId])
-  if (entries.length === 0) {
-    return { error: 'Item not found for reconstruction.' }
+  // Build types array: one per item per type (cloze: one total)
+  const types: Exclude<ExerciseMode, 'mixed'>[] = []
+  for (const type of uniqueTypes) {
+    if (type === 'cloze') {
+      if (clozeExercises.length > 0)
+        types.push('cloze')
+    }
+    else {
+      entries.forEach(() => types.push(type))
+    }
   }
-  const entry = entries[0]
-  const words = getSegmentTokens(entry.sourceSegmentText, entry.sourceLanguage)
-  if (words.length === 0) {
-    return { error: 'Source segment has no tokens for reconstruction.' }
-  }
-  return { type: 'reconstruction', props: { items: entries, words } }
+
+  const questions = buildSessionQuestions(types, entries, clozeExercises, pronExercises, translationSentences)
+  return { type: 'study_session', props: { questions } }
 }
 
 export async function executeRenderProgressChart(

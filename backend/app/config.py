@@ -8,9 +8,10 @@ class Settings(BaseSettings):
     allowed_video_formats: list[str] = ["mp4", "mkv", "webm", "mov"]
     translation_batch_size: int = 30
     translation_max_retries: int = 2
+    openrouter_base_url: str = "https://mkp-api.fptcloud.com/v1"
     openrouter_chat_url: str = "https://openrouter.ai/api/v1/chat/completions"
-    openrouter_structured_model: str = "openai/gpt-oss-120b" # "openai/gpt-4o-mini"
-    openrouter_agent_model: str = "deepseek/deepseek-v3.2"
+    openrouter_structured_model: str = "qwen/qwen3.5-flash-02-23" # "openai/gpt-4o-mini"
+    openrouter_agent_model: str = "SaoLa4-medium"
     openrouter_fallback_models: list[str] = []
     # env: SHADOWLEARN_OPENROUTER_FALLBACK_MODELS
     # Set as JSON array: '["google/gemini-2.0-flash-001","anthropic/claude-haiku-4-5"]'
@@ -23,6 +24,7 @@ class Settings(BaseSettings):
 
     # Fallback API keys for free trial — all optional; unset means trial unavailable
     openrouter_api_key: str | None = None       # env: SHADOWLEARN_OPENROUTER_API_KEY
+    fpt_ai_api_key: str | None = None         # env: SHADOWLEARN_FPT_AI_API_KEY
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION

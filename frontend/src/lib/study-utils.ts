@@ -50,11 +50,13 @@ export function buildExerciseResultPayload(
   exerciseType: ExerciseType,
   score: number,
   opts?: { skipped?: boolean, mistakes?: MistakeExample[], assessment?: PronunciationAssessResult },
+  vocabEntry?: { id: string, word: string },
 ): object {
   return {
     type: 'exercise_result',
     exercise: exerciseType,
     score,
+    ...(vocabEntry && { vocabId: vocabEntry.id, word: vocabEntry.word }),
     mistakes: opts?.mistakes?.map(m => m.userAnswer) ?? [],
     skipped: opts?.skipped ?? false,
     ...(opts?.assessment && {

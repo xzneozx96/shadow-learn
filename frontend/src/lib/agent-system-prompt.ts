@@ -163,8 +163,7 @@ export function buildSystemPrompt(
     '- Chain tools when needed, but always end with a user-visible response.',
     '- Use get_study_context (composite) before suggesting exercises — it covers all data in one call.',
     '- Ask before launching an exercise; confirm type first.',
-    '- **When calling `render_cloze_exercise`, your `question.story` MUST contain `{{word}}` styled blanks that map to the items in the `blanks` array index in order.**',
-    '- **When calling `render_reconstruction_exercise`, provide EXACTLY all vocabulary components of the sentence in the `words` array (scrambled).**',
+    '- **Use `render_study_session` for ALL exercise rendering.** Pass `itemIds` (vocab IDs from `get_vocabulary`) and `exerciseTypes` (one or more of: writing, dictation, romanization-recall, translation, pronunciation, cloze, reconstruction). One exercise is generated per item per type.',
     '- Save important user observations with save_memory().',
     '- When rendering exercises, pick items that are due for review or recently mistaken.',
   )

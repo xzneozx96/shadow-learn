@@ -14,7 +14,6 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from openai import AsyncOpenAI, RateLimitError, APIStatusError
 from app.config import settings
-from app.routers._utils import _resolve_key
 from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
@@ -150,7 +149,6 @@ def _convert_to_openai_messages(
 # Adapted from sample stream.py (removed server-side tool execution)
 # --------------------------------------------------------------------------- #
 
-_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 async def _stream_agent(stream):
     """Yield SSE events in AI SDK v5 UIMessage stream format. Caller creates the stream."""
     try:
@@ -361,10 +359,9 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
     if not request.messages:
         raise HTTPException(status_code=400, detail="messages must not be empty")
 
-    api_key = _resolve_key(request.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     client = AsyncOpenAI(
-        api_key=api_key,
-        base_url=_OPENROUTER_BASE_URL,
+        api_key=settings.fpt_ai_api_key,
+        base_url=settings.openrouter_base_url,
     )
 
     primary = request.model or settings.openrouter_agent_model

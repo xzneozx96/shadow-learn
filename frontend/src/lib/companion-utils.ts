@@ -38,13 +38,7 @@ export const SILENT_TOOLS = new Set([
 
 // Exercise render tools
 export const EXERCISE_TOOLS = new Set([
-  'render_dictation_exercise',
-  'render_character_writing_exercise',
-  'render_romanization_exercise',
-  'render_translation_exercise',
-  'render_pronunciation_exercise',
-  'render_cloze_exercise',
-  'render_reconstruction_exercise',
+  'render_study_session',
 ])
 
 export function isToolPart(p: MessagePart): p is MessagePart & ToolPartShape {

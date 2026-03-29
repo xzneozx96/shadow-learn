@@ -324,4 +324,28 @@ describe('buildExerciseResultPayload', () => {
     expect(payload).not.toHaveProperty('breakdown')
     expect(payload).not.toHaveProperty('mispronounced_words')
   })
+
+  it('includes vocabId and word when vocabEntry is provided', () => {
+    const vocabEntry = { id: 'vocab-abc-123', word: '真' }
+    const payload = buildExerciseResultPayload('writing', 100, {}, vocabEntry) as any
+    expect(payload.vocabId).toBe('vocab-abc-123')
+    expect(payload.word).toBe('真')
+  })
+
+  it('omits vocabId and word when vocabEntry is not provided', () => {
+    const payload = buildExerciseResultPayload('writing', 100, {}) as any
+    expect(payload).not.toHaveProperty('vocabId')
+    expect(payload).not.toHaveProperty('word')
+  })
+
+  it('includes vocabId and word alongside other base fields (base fields)', () => {
+    const vocabEntry = { id: 'vocab-xyz', word: '朋友' }
+    const payload = buildExerciseResultPayload('writing', 80, { mistakes: [{ userAnswer: 'x', correctAnswer: '朋', context: '', date: '' }] }, vocabEntry) as any
+    expect(payload.type).toBe('exercise_result')
+    expect(payload.exercise).toBe('writing')
+    expect(payload.score).toBe(80)
+    expect(payload.vocabId).toBe('vocab-xyz')
+    expect(payload.word).toBe('朋友')
+    expect(payload.mistakes).toEqual(['x'])
+  })
 })

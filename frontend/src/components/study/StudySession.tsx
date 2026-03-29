@@ -29,6 +29,14 @@ import { cn } from '@/lib/utils'
 
 type Phase = 'picker' | 'session' | 'summary'
 
+export interface SessionResult {
+  entry: VocabEntry
+  exerciseType: Exclude<ExerciseMode, 'mixed'>
+  score: number
+  correct: boolean
+  mistakes?: MistakeExample[]
+}
+
 function distributeExercises(
   _entries: VocabEntry[],
   mode: ExerciseMode,
@@ -61,13 +69,15 @@ function distributeExercises(
 }
 
 interface StudySessionProps {
-  lessonId: string
+  lessonId?: string
   onClose: () => void
   preloadedEntries?: VocabEntry[]
+  prebuiltQuestions?: SessionQuestion[]
+  onSessionComplete?: (results: SessionResult[]) => void
   onActiveChange?: (active: boolean) => void
 }
 
-export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChange }: StudySessionProps) {
+export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQuestions, onSessionComplete, onActiveChange }: StudySessionProps) {
   const { entriesByLesson } = useVocabulary()
   const { db, keys } = useAuth()
   const { t } = useI18n()
@@ -75,7 +85,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
   const { playTTS, loadingText } = useTTS(db, keys)
   const { generateQuiz, loading } = useQuizGeneration()
 
-  const entries = preloadedEntries ?? entriesByLesson[lessonId] ?? []
+  const entries = preloadedEntries ?? (lessonId ? entriesByLesson[lessonId] : undefined) ?? []
   const lessonTitle = preloadedEntries
     ? t('study.reviewSession')
     : (entries[0]?.sourceLessonTitle ?? t('study.unknownLesson'))
@@ -87,7 +97,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
   const [count, setCount] = useState(10)
   const [questions, setQuestions] = useState<SessionQuestion[]>([])
   const [current, setCurrent] = useState(0)
-  const [results, setResults] = useState<{ entry: VocabEntry, correct: boolean, score: number }[]>([])
+  const [results, setResults] = useState<SessionResult[]>([])
   // Guard against double-click and track the in-flight controller for cleanup
   const abortRef = useRef<AbortController | null>(null)
 
@@ -107,6 +117,15 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
       ctrl.current?.abort()
     }
   }, [])
+
+  useEffect(() => {
+    if (!prebuiltQuestions || prebuiltQuestions.length === 0)
+      return
+    setQuestions(prebuiltQuestions)
+    setCurrent(0)
+    setResults([])
+    setPhase('session')
+  }, [prebuiltQuestions])
 
   useEffect(() => {
     if (phase !== 'session')
@@ -184,22 +203,33 @@ export function StudySession({ lessonId, onClose, preloadedEntries, onActiveChan
     const q = questions[current]
     const isLast = current + 1 >= questions.length
 
-    if (q && !opts?.skipped) {
+    const newResult: SessionResult | null = (q && !opts?.skipped)
+      ? { entry: q.entry, exerciseType: q.type, score, correct: score >= 60, mistakes: opts?.mistakes }
+      : null
+
+    if (newResult) {
       void logExerciseResult({ vocabEntry: q.entry, score, exerciseType: q.type, mistakes: opts?.mistakes })
-      setResults(r => [...r, { entry: q.entry, score, correct: score >= 60 }])
+      setResults(r => [...r, newResult])
       if (isLast) {
         void logSessionComplete()
-        // results state is batched — compute final count from current iteration data
         const finalCorrect = results.filter(r => r.correct).length + (score >= 60 ? 1 : 0)
         const total = questions.length
-        captureStudySessionCompleted({ lesson_id: lessonId, mode, score: finalCorrect, total, perfect: finalCorrect === total })
+        captureStudySessionCompleted({ lesson_id: lessonId ?? '', mode, score: finalCorrect, total, perfect: finalCorrect === total })
       }
     }
 
-    if (isLast)
-      setPhase('summary')
-    else
+    if (isLast) {
+      if (onSessionComplete) {
+        const allResults = newResult ? [...results, newResult] : results
+        onSessionComplete(allResults)
+      }
+      else {
+        setPhase('summary')
+      }
+    }
+    else {
       setCurrent(c => c + 1)
+    }
   }
 
   const q = questions[current]

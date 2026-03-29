@@ -1,29 +1,13 @@
 /**
- * ExerciseRenderer — maps render_exercise tool results to exercise components.
+ * ExerciseRenderer — maps render_study_session tool results to the StudySession component.
  *
- * Receives the tool output descriptor { type, props } and renders the
- * corresponding exercise component with an onNext adapter that:
- *   1. Tracks progress deterministically (SR, progressStats, mastery, mistakes)
- *   2. Sends the result back to the agent chat so the LLM can respond
+ * The AI Companion uses render_study_session exclusively for exercises. This component
+ * receives the tool output descriptor { type: 'study_session', props: { questions } } and
+ * renders StudySession with prebuiltQuestions, which handles all queue management correctly.
  */
 
-import type { MistakeExample } from '@/db'
-import type { ExerciseType } from '@/hooks/useTracking'
-import type { LanguageCapabilities } from '@/lib/language-caps'
-import type { PronunciationAssessResult, VocabEntry } from '@/types'
-import { useCallback } from 'react'
-import { CharacterWritingExercise } from '@/components/study/exercises/CharacterWritingExercise'
-import { ClozeExercise } from '@/components/study/exercises/ClozeExercise'
-import { DictationExercise } from '@/components/study/exercises/DictationExercise'
-import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
-import { ReconstructionExercise } from '@/components/study/exercises/ReconstructionExercise'
-import { RomanizationRecallExercise } from '@/components/study/exercises/RomanizationRecallExercise'
-import { TranslationExercise } from '@/components/study/exercises/TranslationExercise'
-import { useAuth } from '@/contexts/AuthContext'
-import { logExerciseCompletion } from '@/hooks/useTracking'
-import { useTTS } from '@/hooks/useTTS'
-import { getLanguageCaps } from '@/lib/language-caps'
-import { buildExerciseResultPayload } from '@/lib/study-utils'
+import type { SessionQuestion } from '@/lib/study-utils'
+import { StudySession } from '@/components/study/StudySession'
 
 // -------------------------------------------------------------------------- //
 // Types
@@ -32,12 +16,7 @@ import { buildExerciseResultPayload } from '@/lib/study-utils'
 export interface ExerciseRenderResult {
   type: string
   props: {
-    items?: VocabEntry[]
-    sentence?: { sentence: string, translation: string } | { text: string, romanization: string, english: string }
-    direction?: 'en-to-zh' | 'zh-to-en'
-    question?: { story: string, blanks: string[] }
-    words?: string[]
-    mode?: string
+    questions?: SessionQuestion[]
   }
   error?: string
 }
@@ -52,28 +31,6 @@ interface ExerciseRendererProps {
 // -------------------------------------------------------------------------- //
 
 export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps) {
-  const { db, keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys)
-
-  const makeOnNext = useCallback(
-    (exerciseType: ExerciseType, vocabEntry: VocabEntry | undefined) =>
-      (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[], assessment?: PronunciationAssessResult }) => {
-        // 1. Track progress deterministically (skip if no db or skipped)
-        if (db && vocabEntry && !opts?.skipped) {
-          void logExerciseCompletion(db, {
-            vocabEntry,
-            exerciseType,
-            score,
-            mistakes: opts?.mistakes,
-          })
-        }
-
-        // 2. Send result to agent chat for LLM feedback
-        sendMessage({ text: JSON.stringify(buildExerciseResultPayload(exerciseType, score, opts)) })
-      },
-    [db, sendMessage],
-  )
-
   if (result.error) {
     return (
       <div className="rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -84,106 +41,34 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
 
   const { type, props } = result
 
-  // For single-item exercises, pick the first item
-  const entry = props.items?.[0]
-  const caps: LanguageCapabilities = getLanguageCaps(entry?.sourceLanguage)
-
   switch (type) {
-    case 'dictation':
-      if (!entry)
-        return <ExerciseError msg="No vocabulary items for dictation" />
+    case 'study_session': {
+      const questions = props.questions ?? []
+      if (questions.length === 0)
+        return <ExerciseError msg="No exercises to run" />
       return (
-        <DictationExercise
-          entry={entry}
-          onNext={makeOnNext('dictation', entry)}
-          playTTS={playTTS}
-          loadingText={loadingText}
-          caps={caps}
-        />
-      )
-
-    case 'writing':
-      if (!entry)
-        return <ExerciseError msg="No vocabulary items for character writing" />
-      return (
-        <CharacterWritingExercise
-          entry={entry}
-          onNext={makeOnNext('writing', entry)}
-          caps={caps}
-          writingReps={1}
-        />
-      )
-
-    case 'romanization-recall':
-      if (!entry)
-        return <ExerciseError msg="No vocabulary items for romanization recall" />
-      return (
-        <RomanizationRecallExercise
-          entry={entry}
-          onNext={makeOnNext('romanization-recall', entry)}
-          playTTS={playTTS}
-          caps={caps}
-        />
-      )
-
-    case 'translation': {
-      if (!entry)
-        return <ExerciseError msg="No vocabulary items for translation" />
-      const sentence = props.sentence as { text: string, romanization: string, english: string } | undefined
-      if (!sentence || !('text' in sentence))
-        return <ExerciseError msg="No sentence data for translation" />
-      const direction = props.direction ?? 'zh-to-en'
-      return (
-        <TranslationExercise
-          sentence={sentence}
-          direction={direction}
-          onNext={makeOnNext('translation', entry)}
-          caps={caps}
+        <StudySession
+          onClose={() => {}}
+          prebuiltQuestions={questions}
+          onSessionComplete={(sessionResults) => {
+            sendMessage({
+              text: JSON.stringify({
+                type: 'study_session_complete',
+                results: sessionResults.map(r => ({
+                  type: 'exercise_result',
+                  exercise: r.exerciseType,
+                  vocabId: r.entry.id,
+                  word: r.entry.word,
+                  score: r.score,
+                  correct: r.correct,
+                  mistakes: r.mistakes?.map(m => m.userAnswer) ?? [],
+                })),
+              }),
+            })
+          }}
         />
       )
     }
-
-    case 'pronunciation': {
-      if (!entry)
-        return <ExerciseError msg="No vocabulary items for pronunciation" />
-      const pronSentence = props.sentence as { sentence: string, translation: string } | undefined
-      if (!pronSentence || !('sentence' in pronSentence))
-        return <ExerciseError msg="No sentence for pronunciation" />
-      const pronLocale = caps.azurePronunciationLocale
-      if (!pronLocale)
-        return <ExerciseError msg="Pronunciation assessment is not supported for this lesson's language" />
-      return (
-        <PronunciationReferee
-          sentence={pronSentence}
-          language={pronLocale}
-          onNext={makeOnNext('pronunciation', entry)}
-        />
-      )
-    }
-
-    case 'cloze':
-      if (!props.question || !props.items)
-        return <ExerciseError msg="Missing content for cloze exercise" />
-      return (
-        <ClozeExercise
-          question={props.question}
-          entries={props.items}
-          caps={caps}
-          onNext={makeOnNext('cloze', entry)}
-        />
-      )
-
-    case 'reconstruction':
-      if (!entry || !props.words)
-        return <ExerciseError msg="Missing content for reconstruction exercise" />
-      return (
-        <ReconstructionExercise
-          entry={entry}
-          words={props.words}
-          caps={caps}
-          onNext={makeOnNext('reconstruction', entry)}
-        />
-      )
 
     default:
       return (
