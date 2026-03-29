@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSessionQuestions, isClozeExercise, isPronExercise, isTranslationSentence, toFallbackType } from '@/lib/study-utils'
+import { buildExerciseResultPayload, buildSessionQuestions, isClozeExercise, isPronExercise, isTranslationSentence, toFallbackType } from '@/lib/study-utils'
 
 function entry(id: string) {
   return {
@@ -273,5 +273,55 @@ describe('toFallbackType', () => {
     expect(toFallbackType('romanization-recall')).toBe('romanization-recall')
     expect(toFallbackType('reconstruction')).toBe('reconstruction')
     expect(toFallbackType('writing')).toBe('writing')
+  })
+})
+
+// -------------------------------------------------------------------------- //
+// buildExerciseResultPayload
+// -------------------------------------------------------------------------- //
+
+const fullAssessment = {
+  overall: { accuracy: 65, fluency: 50, completeness: 35, prosody: 35 },
+  words: [
+    { word: '我', accuracy: 85, error_type: null, error_detail: null },
+    { word: '中文', accuracy: 51, error_type: 'Mispronunciation' as const, error_detail: null },
+    { word: '读', accuracy: 26, error_type: 'Mispronunciation' as const, error_detail: null },
+  ],
+}
+
+describe('buildExerciseResultPayload', () => {
+  it('returns base fields for a non-pronunciation exercise', () => {
+    const payload = buildExerciseResultPayload('cloze', 80, {})
+    expect(payload).toEqual({ type: 'exercise_result', exercise: 'cloze', score: 80, mistakes: [], skipped: false })
+    expect(payload).not.toHaveProperty('breakdown')
+    expect(payload).not.toHaveProperty('mispronounced_words')
+  })
+
+  it('includes breakdown and mispronounced_words when assessment is provided', () => {
+    const payload = buildExerciseResultPayload('pronunciation', 65, { assessment: fullAssessment }) as any
+    expect(payload.score).toBe(65)
+    expect(payload.breakdown).toEqual({ fluency: 50, completeness: 35, prosody: 35 })
+    expect(payload.mispronounced_words).toEqual([
+      { word: '中文', error: 'Mispronunciation' },
+      { word: '读', error: 'Mispronunciation' },
+    ])
+  })
+
+  it('sets mispronounced_words to [] when all words are correct', () => {
+    const cleanAssessment = {
+      overall: { accuracy: 95, fluency: 90, completeness: 100, prosody: 88 },
+      words: [
+        { word: '你好', accuracy: 95, error_type: null, error_detail: null },
+      ],
+    }
+    const payload = buildExerciseResultPayload('pronunciation', 95, { assessment: cleanAssessment }) as any
+    expect(payload.mispronounced_words).toEqual([])
+  })
+
+  it('omits assessment fields when exercise is skipped', () => {
+    const payload = buildExerciseResultPayload('pronunciation', 0, { skipped: true }) as any
+    expect(payload.skipped).toBe(true)
+    expect(payload).not.toHaveProperty('breakdown')
+    expect(payload).not.toHaveProperty('mispronounced_words')
   })
 })

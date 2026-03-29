@@ -10,7 +10,7 @@
 import type { MistakeExample } from '@/db'
 import type { ExerciseType } from '@/hooks/useTracking'
 import type { LanguageCapabilities } from '@/lib/language-caps'
-import type { VocabEntry } from '@/types'
+import type { PronunciationAssessResult, VocabEntry } from '@/types'
 import { useCallback } from 'react'
 import { CharacterWritingExercise } from '@/components/study/exercises/CharacterWritingExercise'
 import { ClozeExercise } from '@/components/study/exercises/ClozeExercise'
@@ -23,6 +23,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { logExerciseCompletion } from '@/hooks/useTracking'
 import { useTTS } from '@/hooks/useTTS'
 import { getLanguageCaps } from '@/lib/language-caps'
+import { buildExerciseResultPayload } from '@/lib/study-utils'
 
 // -------------------------------------------------------------------------- //
 // Types
@@ -56,7 +57,7 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
 
   const makeOnNext = useCallback(
     (exerciseType: ExerciseType, vocabEntry: VocabEntry | undefined) =>
-      (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => {
+      (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[], assessment?: PronunciationAssessResult }) => {
         // 1. Track progress deterministically (skip if no db or skipped)
         if (db && vocabEntry && !opts?.skipped) {
           void logExerciseCompletion(db, {
@@ -68,15 +69,7 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
         }
 
         // 2. Send result to agent chat for LLM feedback
-        sendMessage({
-          text: JSON.stringify({
-            type: 'exercise_result',
-            exercise: exerciseType,
-            score,
-            mistakes: opts?.mistakes?.map(m => m.userAnswer) ?? [],
-            skipped: opts?.skipped ?? false,
-          }),
-        })
+        sendMessage({ text: JSON.stringify(buildExerciseResultPayload(exerciseType, score, opts)) })
       },
     [db, sendMessage],
   )

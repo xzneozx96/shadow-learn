@@ -1,5 +1,7 @@
 import type { ExerciseMode } from '@/components/study/ModePicker'
-import type { VocabEntry } from '@/types'
+import type { MistakeExample } from '@/db'
+import type { ExerciseType } from '@/hooks/useTracking'
+import type { PronunciationAssessResult, VocabEntry } from '@/types'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 
 export interface SessionQuestion {
@@ -42,6 +44,30 @@ export function isTranslationSentence(x: unknown): x is { text: string, romaniza
 
 export function toFallbackType(t: Exclude<ExerciseMode, 'mixed'>): Exclude<ExerciseMode, 'mixed'> {
   return (t === 'cloze' || t === 'translation' || t === 'pronunciation') ? 'romanization-recall' : t
+}
+
+export function buildExerciseResultPayload(
+  exerciseType: ExerciseType,
+  score: number,
+  opts?: { skipped?: boolean, mistakes?: MistakeExample[], assessment?: PronunciationAssessResult },
+): object {
+  return {
+    type: 'exercise_result',
+    exercise: exerciseType,
+    score,
+    mistakes: opts?.mistakes?.map(m => m.userAnswer) ?? [],
+    skipped: opts?.skipped ?? false,
+    ...(opts?.assessment && {
+      breakdown: {
+        fluency: opts.assessment.overall.fluency,
+        completeness: opts.assessment.overall.completeness,
+        prosody: opts.assessment.overall.prosody,
+      },
+      mispronounced_words: opts.assessment.words
+        .filter(w => w.error_type !== null)
+        .map(w => ({ word: w.word, error: w.error_type })),
+    }),
+  }
 }
 
 export function buildSessionQuestions(

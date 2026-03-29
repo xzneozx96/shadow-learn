@@ -1,3 +1,4 @@
+import type { PronunciationAssessResult } from '@/types'
 import { Loader2, Pause, Play, Volume2 } from 'lucide-react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { HintButton } from '@/components/study/exercises/HintButton'
@@ -16,7 +17,7 @@ interface Props {
   sentence: PronunciationSentence
   language: string
   progress?: string
-  onNext: (score: number, opts?: { skipped?: boolean }) => void
+  onNext: (score: number, opts?: { skipped?: boolean, assessment?: PronunciationAssessResult }) => void
 }
 
 function scoreColor(n: number) {
@@ -256,7 +257,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
             </Button>
             <Button
               className="flex-1"
-              onClick={() => onNext(Math.round(result.overall.accuracy * hint.hintScore))}
+              onClick={() => onNext(Math.round(result.overall.accuracy * hint.hintScore), { assessment: result })}
             >
               {t('study.pronunciation.nextButton')}
             </Button>
