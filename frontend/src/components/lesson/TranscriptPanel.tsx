@@ -1,5 +1,5 @@
 import type { LessonMeta, Segment, Word } from '@/types'
-import { Check, Copy, Languages, Loader2, Search, Volume2 } from 'lucide-react'
+import { Check, Copy, Languages, Search, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -107,31 +107,6 @@ export function TranscriptPanel({
     [entries, lesson.id, remove, t],
   )
 
-  // Event delegation for keyboard activation — one handler instead of N closures.
-  // Guard: only fire if the focused element IS the segment div itself, not a child widget
-  // (buttons, inputs). Without this guard, pressing Enter on a Copy/TTS button would also
-  // trigger onSegmentClick in addition to the button's own click handler.
-  const handleListKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key !== 'Enter' && e.key !== ' ')
-        return
-      // Prevent Space from scrolling the panel (default browser behaviour on role="button")
-      if (e.key === ' ')
-        e.preventDefault()
-      const segmentEl = (e.target as HTMLElement).closest('[data-segment-id]')
-      // Only act when the segment container itself is the focused element
-      if (!segmentEl || segmentEl !== e.target)
-        return
-      const segId = (segmentEl as HTMLElement).dataset.segmentId
-      if (!segId)
-        return
-      const seg = filteredSegments.find(s => s.id === segId)
-      if (seg)
-        onSegmentClick(seg)
-    },
-    [filteredSegments, onSegmentClick],
-  )
-
   const hasMultipleLangs = lesson.translationLanguages.length > 1
 
   function handleCopy(e: React.MouseEvent, segment: Segment) {
@@ -184,17 +159,13 @@ export function TranscriptPanel({
 
       {/* Segment list — single onKeyDown via event delegation */}
       <ScrollArea className="h-0 flex-1">
-        <div className="divide-y divide-border/50" onKeyDown={handleListKeyDown}>
+        <div className="divide-y divide-border/50">
           {filteredSegments.map(segment => (
             <div
               key={segment.id}
               ref={activeSegment?.id === segment.id ? activeRef : undefined}
-              role="button"
-              tabIndex={0}
-              data-segment-id={segment.id}
-              onClick={() => onSegmentClick(segment)}
               className={cn(
-                'cursor-pointer p-3 transition-colors hover:elegant-card',
+                'p-3 transition-colors',
                 activeSegment?.id === segment.id
                 && 'border-l-2 border-l-primary bg-primary/10',
               )}
@@ -229,15 +200,13 @@ export function TranscriptPanel({
                     variant="ghost"
                     size="icon-xs"
                     className="size-8 text-muted-foreground hover:text-foreground"
-                    aria-label={loadingText === segment.text ? 'Loading pronunciation' : 'Play sentence pronunciation'}
+                    aria-label="Play from here"
                     onClick={(e) => {
                       e.stopPropagation()
-                      playTTS(segment.text)
+                      onSegmentClick(segment)
                     }}
                   >
-                    {loadingText === segment.text
-                      ? <Loader2 className="size-5 animate-spin" />
-                      : <Volume2 className="size-5" />}
+                    <Volume2 className="size-5" />
                   </Button>
                   <Button
                     variant="ghost"

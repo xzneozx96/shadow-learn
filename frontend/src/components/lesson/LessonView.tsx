@@ -181,10 +181,10 @@ function LessonViewContent() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Left column: video stacked on transcript */}
-      <div className="flex flex-col h-full w-[55%] overflow-hidden border-r border-border">
-        {/* Video Panel — 40% height */}
-        <div className="h-1/2 shrink-0 overflow-hidden border-b border-border">
+      {/* Left section: video and transcript/shadowing */}
+      <div className="flex flex-col 2xl:flex-row h-full w-[60%] 2xl:w-3/4 overflow-hidden border-r border-border">
+        {/* Video Panel — 50% height on small, 50% width on 2xl */}
+        <div className="h-1/2 2xl:h-full w-full 2xl:w-1/2 shrink-0 overflow-hidden border-b 2xl:border-b-0 2xl:border-r border-border">
           <VideoPanel
             lesson={meta}
             segments={segments}

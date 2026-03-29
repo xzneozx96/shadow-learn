@@ -1,6 +1,6 @@
 import type { Segment, Word, WordTiming } from '@/types'
 import { Bookmark, Copy, Loader2, Volume2 } from 'lucide-react'
-import { memo, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -35,7 +35,7 @@ export const SegmentText = memo(({
   showRomanization = true,
 }: SegmentTextProps) => {
   const { t } = useI18n()
-  const { subscribeTime, getTime } = usePlayer()
+  const { player, subscribeTime, getTime } = usePlayer()
 
   // Build spans once per text/words change
   const spans = buildWordSpans(text, words)
@@ -114,6 +114,33 @@ export const SegmentText = memo(({
     return subscribeTime(applyKaraoke)
   }, [subscribeTime, getTime])
 
+  // Track playing state via player events so we know whether to resume on popup close
+  const isPlayingRef = useRef(false)
+  const pausedForPopoverRef = useRef(false)
+
+  useEffect(() => {
+    if (!player)
+      return
+    const unsubPlay = player.onPlay(() => { isPlayingRef.current = true })
+    const unsubPause = player.onPause(() => { isPlayingRef.current = false })
+    return () => { unsubPlay(); unsubPause() }
+  }, [player])
+
+  const handlePopoverOpenChange = useCallback((open: boolean) => {
+    if (open) {
+      if (isPlayingRef.current) {
+        player?.pause()
+        pausedForPopoverRef.current = true
+      }
+    }
+    else {
+      if (pausedForPopoverRef.current) {
+        player?.play()
+        pausedForPopoverRef.current = false
+      }
+    }
+  }, [player])
+
   return (
     <span className="text-lg">
       {spans.map((span, spanIdx) => {
@@ -136,7 +163,7 @@ export const SegmentText = memo(({
         }
 
         return (
-          <Popover key={spanStart}>
+          <Popover key={spanStart} onOpenChange={handlePopoverOpenChange}>
             <PopoverTrigger
               className="inline-flex flex-col items-center cursor-pointer rounded-sm px-1 transition-colors hover:bg-white/10"
               onClick={e => e.stopPropagation()}

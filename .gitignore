@@ -68,3 +68,6 @@ ai-agent-research/
 
 # Temp / resolved conflict files
 *.resolved
+
+# Remember plugin (Claude Code session logs)
+.remember/
