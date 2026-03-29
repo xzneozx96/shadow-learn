@@ -35,7 +35,7 @@ import skillSpeakingContent from '@/lib/skills/skill_speaking.md?raw'
 import skillTonesContent from '@/lib/skills/skill_tones.md?raw'
 import skillVocabularyContent from '@/lib/skills/skill_vocabulary.md?raw'
 import { updateSpacedRepetition } from '@/lib/spacedRepetition'
-import { buildSessionQuestions, getSegmentTokens } from '@/lib/study-utils'
+import { buildSessionQuestions } from '@/lib/study-utils'
 
 // -------------------------------------------------------------------------- //
 // Tool definitions (JSON schema for LLM)
@@ -181,6 +181,18 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
             },
             description: 'Exercise types to include. Each type is applied to every item.',
           },
+          storyCount: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 10,
+            description: 'For cloze type only: number of fill-in-the-blank stories to generate. Each story uses all the target words as blanks. Default 1. Extract from user request — e.g. "5 cloze exercises" → storyCount: 5.',
+          },
+          sentencesPerWord: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 5,
+            description: 'For translation/pronunciation types only: number of sentences to generate per word. Default 1. Extract from user request — e.g. "6 translation exercises for 2 words" → sentencesPerWord: 3.',
+          },
         },
         required: ['itemIds', 'exerciseTypes'],
       },
@@ -323,6 +335,10 @@ export const ToolInputSchemas = {
       'cloze',
       'reconstruction',
     ])).min(1),
+    /** Number of cloze stories to generate (cloze type only). Defaults to 1. Max 10. */
+    storyCount: z.number().int().min(1).max(10).optional(),
+    /** Number of sentences to generate per word for translation/pronunciation types. Defaults to 1. Max 5. */
+    sentencesPerWord: z.number().int().min(1).max(5).optional(),
   }),
 } satisfies Partial<Record<string, z.ZodSchema>>
 
@@ -532,6 +548,7 @@ export async function executeRenderStudySession(
 
   const uniqueTypes = [...new Set(args.exerciseTypes)]
   const sourceLanguage = entries[0].sourceLanguage ?? 'zh-CN'
+  const sentencesPerWord = args.sentencesPerWord ?? 1
 
   const translationSentences: { text: string, romanization: string, english: string }[] = []
   const pronExercises: { sentence: string, translation: string }[] = []
@@ -550,18 +567,17 @@ export async function executeRenderStudySession(
               romanization: entry.romanization,
               meaning: entry.meaning,
               usage: entry.usage ?? '',
-              sentence_count: 1,
+              sentence_count: sentencesPerWord,
               source_language: sourceLanguage,
             }),
           })
           if (!resp.ok)
-            return null
+            return []
           const data = await resp.json() as { sentences: { text: string, romanization: string, english: string }[] }
-          const s = data.sentences[0]
-          return (s && s.text) ? s : null
+          return data.sentences.filter(s => s && s.text)
         }),
       )
-      results.forEach(s => s && translationSentences.push(s))
+      results.forEach(sentences => sentences.forEach(s => translationSentences.push(s)))
     }
     else if (type === 'pronunciation') {
       const results = await Promise.all(
@@ -573,18 +589,17 @@ export async function executeRenderStudySession(
               openrouter_api_key: openrouterApiKey,
               words: [{ word: entry.word, romanization: entry.romanization, meaning: entry.meaning, usage: entry.usage ?? '' }],
               exercise_type: 'pronunciation_sentence',
-              count: 1,
+              count: sentencesPerWord,
               source_language: sourceLanguage,
             }),
           })
           if (!resp.ok)
-            return null
+            return []
           const data = await resp.json() as { exercises: { sentence: string, translation: string }[] }
-          const ex = data.exercises[0]
-          return (ex && ex.sentence) ? ex : null
+          return data.exercises.filter(ex => ex && ex.sentence)
         }),
       )
-      results.forEach(ex => ex && pronExercises.push(ex))
+      results.forEach(exercises => exercises.forEach(ex => pronExercises.push(ex)))
     }
     else if (type === 'cloze') {
       const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
@@ -594,25 +609,29 @@ export async function executeRenderStudySession(
           openrouter_api_key: openrouterApiKey,
           words: entries.slice(0, 5).map(e => ({ word: e.word, romanization: e.romanization, meaning: e.meaning, usage: e.usage ?? '' })),
           exercise_type: 'cloze',
-          story_count: 1,
+          story_count: args.storyCount ?? 1,
           source_language: sourceLanguage,
         }),
       })
       if (resp.ok) {
         const data = await resp.json() as { exercises: { story: string, blanks: string[] }[] }
-        const ex = data.exercises[0]
-        if (ex)
-          clozeExercises.push(ex)
+        data.exercises.forEach(ex => ex && clozeExercises.push(ex))
       }
     }
   }))
 
-  // Build types array: one per item per type (cloze: one total)
+  // Build types array — one slot per generated exercise:
+  // cloze: one per story, translation: one per sentence, pronunciation: one per sentence, others: one per entry
   const types: Exclude<ExerciseMode, 'mixed'>[] = []
   for (const type of uniqueTypes) {
     if (type === 'cloze') {
-      if (clozeExercises.length > 0)
-        types.push('cloze')
+      clozeExercises.forEach(() => types.push('cloze'))
+    }
+    else if (type === 'translation') {
+      translationSentences.forEach(() => types.push('translation'))
+    }
+    else if (type === 'pronunciation') {
+      pronExercises.forEach(() => types.push('pronunciation'))
     }
     else {
       entries.forEach(() => types.push(type))

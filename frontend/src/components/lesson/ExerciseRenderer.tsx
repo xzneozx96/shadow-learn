@@ -61,7 +61,11 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
                   word: r.entry.word,
                   score: r.score,
                   correct: r.correct,
-                  mistakes: r.mistakes?.map(m => m.userAnswer) ?? [],
+                  mistakes: r.mistakes?.map(m => ({
+                    userAnswer: m.userAnswer,
+                    correctAnswer: m.correctAnswer,
+                    ...(m.context && { context: m.context }),
+                  })) ?? [],
                 })),
               }),
             })

@@ -92,6 +92,48 @@ describe('agent-tools executors', () => {
       expect(result.props.questions[1].pronunciationData.sentence).toBe(ex2.sentence)
     })
 
+    it('passes sentencesPerWord to translation API and returns one question per sentence', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(translationEntry1 as any)
+      const s1 = { text: '我们去旅游', romanization: 'wǒmen qù lǚyóu', english: 'We go travelling' }
+      const s2 = { text: '旅游很好玩', romanization: 'lǚyóu hěn hǎowán', english: 'Travelling is fun' }
+      globalThis.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [s1, s2] }) } as any)
+
+      const result = await executeRenderStudySession(mockDb, {
+        itemIds: ['vocab-t1'],
+        exerciseTypes: ['translation'],
+        sentencesPerWord: 2,
+      }, 'test-key') as any
+
+      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
+      expect(body.sentence_count).toBe(2)
+      expect(result.props.questions).toHaveLength(2)
+      expect(result.props.questions[0].translationData.sentence).toEqual(s1)
+      expect(result.props.questions[1].translationData.sentence).toEqual(s2)
+    })
+
+    it('passes sentencesPerWord to pronunciation API and returns one question per sentence', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(pronEntry1 as any)
+      const ex1 = { sentence: '我每天去学校', translation: 'I go to school every day' }
+      const ex2 = { sentence: '学校很大', translation: 'The school is big' }
+      globalThis.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: [ex1, ex2] }) } as any)
+
+      const result = await executeRenderStudySession(mockDb, {
+        itemIds: ['vocab-p1'],
+        exerciseTypes: ['pronunciation'],
+        sentencesPerWord: 2,
+      }, 'test-key') as any
+
+      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
+      expect(body.count).toBe(2)
+      expect(result.props.questions).toHaveLength(2)
+      expect(result.props.questions[0].pronunciationData.sentence).toBe(ex1.sentence)
+      expect(result.props.questions[1].pronunciationData.sentence).toBe(ex2.sentence)
+    })
+
     it('returns error when no items found', async () => {
       mockDb.get.mockResolvedValue(undefined)
 
@@ -141,6 +183,59 @@ describe('agent-tools executors', () => {
       expect(unique.size).toBe(VALID_SKILLS.length)
     })
   })
+
+  describe('executeRenderStudySession — cloze storyCount', () => {
+    const clozeEntry1 = { id: 'vocab-c1', word: '练习', romanization: 'liànxí', meaning: 'practice', usage: '多练习', sourceLanguage: 'zh-CN' }
+    const clozeEntry2 = { id: 'vocab-c2', word: '时间', romanization: 'shíjiān', meaning: 'time', usage: '没有时间', sourceLanguage: 'zh-CN' }
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('defaults to 1 cloze question when storyCount is omitted', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(clozeEntry1 as any)
+        .mockResolvedValueOnce(clozeEntry2 as any)
+      const story = { story: '我每天_练习_中文', blanks: ['练习'] }
+      globalThis.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ exercises: [story] }),
+      } as any)
+
+      const result = await executeRenderStudySession(mockDb, {
+        itemIds: ['vocab-c1', 'vocab-c2'],
+        exerciseTypes: ['cloze'],
+      }, 'test-key') as any
+
+      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
+      expect(body.story_count).toBe(1)
+      expect(result.props.questions).toHaveLength(1)
+    })
+
+    it('passes storyCount to API and returns one question per story', async () => {
+      mockDb.get
+        .mockResolvedValueOnce(clozeEntry1 as any)
+        .mockResolvedValueOnce(clozeEntry2 as any)
+      const story1 = { story: '我每天_练习_中文', blanks: ['练习'] }
+      const story2 = { story: '他没有_时间_学习', blanks: ['时间'] }
+      globalThis.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ exercises: [story1, story2] }),
+      } as any)
+
+      const result = await executeRenderStudySession(mockDb, {
+        itemIds: ['vocab-c1', 'vocab-c2'],
+        exerciseTypes: ['cloze'],
+        storyCount: 2,
+      }, 'test-key') as any
+
+      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
+      expect(body.story_count).toBe(2)
+      expect(result.props.questions).toHaveLength(2)
+      expect(result.props.questions[0].clozeData).toEqual(story1)
+      expect(result.props.questions[1].clozeData).toEqual(story2)
+    })
+  })
 })
 
 describe('toolInputSchemas — input validation', () => {
@@ -172,6 +267,60 @@ describe('toolInputSchemas — input validation', () => {
     const result = ToolInputSchemas.render_study_session.safeParse({
       itemIds: ['abc'],
       exerciseTypes: [],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('render_study_session accepts storyCount within range', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: ['abc'],
+      exerciseTypes: ['cloze'],
+      storyCount: 5,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('render_study_session rejects storyCount of 0', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: ['abc'],
+      exerciseTypes: ['cloze'],
+      storyCount: 0,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('render_study_session rejects storyCount above max', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: ['abc'],
+      exerciseTypes: ['cloze'],
+      storyCount: 11,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('render_study_session accepts sentencesPerWord within range', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: ['abc'],
+      exerciseTypes: ['translation'],
+      sentencesPerWord: 3,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('render_study_session rejects sentencesPerWord of 0', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: ['abc'],
+      exerciseTypes: ['translation'],
+      sentencesPerWord: 0,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('render_study_session rejects sentencesPerWord above max', () => {
+    const result = ToolInputSchemas.render_study_session.safeParse({
+      itemIds: ['abc'],
+      exerciseTypes: ['translation'],
+      sentencesPerWord: 6,
     })
     expect(result.success).toBe(false)
   })

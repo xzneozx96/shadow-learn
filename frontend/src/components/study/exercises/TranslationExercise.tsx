@@ -1,4 +1,5 @@
 // frontend/src/components/study/exercises/TranslationExercise.tsx
+import type { MistakeExample } from '@/db'
 import type { LanguageCapabilities } from '@/lib/language-caps'
 import { Sparkles } from 'lucide-react'
 import { useState } from 'react'
@@ -38,7 +39,7 @@ interface Props {
   sentence: Sentence
   direction: 'en-to-zh' | 'zh-to-en'
   progress?: string
-  onNext: (score: number, opts?: { skipped?: boolean }) => void
+  onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
   caps: LanguageCapabilities
 }
 
@@ -214,7 +215,16 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
             </div>
           )}
 
-          <Button className="w-full" onClick={() => onNext(Math.round(result.overall_score * hint.hintScore))}>
+          <Button
+            className="w-full"
+            onClick={() => {
+              const today = new Date().toISOString().split('T')[0]
+              const mistakes: MistakeExample[] = result.overall_score < 100
+                ? [{ userAnswer: value.trim(), correctAnswer: reference, context: source, date: today }]
+                : []
+              onNext(Math.round(result.overall_score * hint.hintScore), { mistakes: mistakes.length > 0 ? mistakes : undefined })
+            }}
+          >
             {t('study.nextButton')}
           </Button>
         </div>
