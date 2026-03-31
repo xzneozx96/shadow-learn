@@ -49,6 +49,9 @@ vi.mock('@/lib/posthog', () => ({
   posthog: { capture: vi.fn(), captureException: vi.fn() },
 }))
 
+const entry = { id: 'v1', word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: '', sourceLanguage: 'zh-CN' } as any
+const questions: SessionQuestion[] = [{ type: 'dictation', entry }]
+
 describe('studySession', () => {
   it('renders ModePicker on initial mount', () => {
     render(<StudySession lessonId="lesson_1" onClose={vi.fn()} />)
@@ -64,10 +67,24 @@ describe('studySession', () => {
   })
 
   it('skips picker and shows session immediately when prebuiltQuestions are provided', () => {
-    const entry = { id: 'v1', word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: '', sourceLanguage: 'zh-CN' } as any
-    const questions: SessionQuestion[] = [{ type: 'dictation', entry }]
     render(<StudySession onClose={vi.fn()} prebuiltQuestions={questions} />)
     // ModePicker should NOT render (no Start button)
     expect(screen.queryByRole('button', { name: /start/i })).toBeNull()
+  })
+
+  describe('disableLeaveGuard', () => {
+    it('shows confirm dialog when X is clicked during session (default behavior)', () => {
+      render(<StudySession onClose={vi.fn()} prebuiltQuestions={questions} />)
+      fireEvent.click(screen.getByRole('button', { name: /close/i }))
+      expect(screen.getByRole('dialog', { name: /confirm leave/i })).toBeTruthy()
+    })
+
+    it('calls onClose immediately when X is clicked during session with disableLeaveGuard', () => {
+      const onClose = vi.fn()
+      render(<StudySession onClose={onClose} prebuiltQuestions={questions} disableLeaveGuard />)
+      fireEvent.click(screen.getByRole('button', { name: /close/i }))
+      expect(onClose).toHaveBeenCalledOnce()
+      expect(screen.queryByRole('dialog', { name: /confirm leave/i })).toBeNull()
+    })
   })
 })

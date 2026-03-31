@@ -75,9 +75,10 @@ interface StudySessionProps {
   prebuiltQuestions?: SessionQuestion[]
   onSessionComplete?: (results: SessionResult[]) => void
   onActiveChange?: (active: boolean) => void
+  disableLeaveGuard?: boolean
 }
 
-export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQuestions, onSessionComplete, onActiveChange }: StudySessionProps) {
+export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQuestions, onSessionComplete, onActiveChange, disableLeaveGuard = false }: StudySessionProps) {
   const { entriesByLesson } = useVocabulary()
   const { db, keys } = useAuth()
   const { t } = useI18n()
@@ -106,7 +107,8 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      phase === 'session'
+      !disableLeaveGuard
+      && phase === 'session'
       && !confirmedRef.current
       && currentLocation.pathname !== nextLocation.pathname,
   )
@@ -128,14 +130,14 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
   }, [prebuiltQuestions])
 
   useEffect(() => {
-    if (phase !== 'session')
+    if (phase !== 'session' || disableLeaveGuard)
       return
     function handleBeforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault()
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [phase])
+  }, [phase, disableLeaveGuard])
 
   useEffect(() => {
     if (!confirmLeave)
@@ -274,7 +276,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
       <button
         type="button"
         aria-label="Close"
-        onClick={() => phase === 'session' ? setConfirmLeave(true) : onClose()}
+        onClick={() => phase === 'session' && !disableLeaveGuard ? setConfirmLeave(true) : onClose()}
         className="absolute right-4 top-4 z-10 rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
       >
         <X className="size-5" />

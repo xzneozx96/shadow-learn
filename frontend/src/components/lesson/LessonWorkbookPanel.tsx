@@ -61,6 +61,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
             lessonId={lessonId}
             onClose={() => setStudyOpen(false)}
             onActiveChange={setSessionActive}
+            disableLeaveGuard
           />
         </DialogContent>
       </Dialog>

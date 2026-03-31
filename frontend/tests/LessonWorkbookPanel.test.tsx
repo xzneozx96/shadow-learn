@@ -35,13 +35,19 @@ vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: () => mockVocab,
 }))
 
+// Capture props passed to StudySession for assertion
+let capturedStudySessionProps: Record<string, unknown> = {}
+
 // Mock StudySession so we don't need to stub all its dependencies
 vi.mock('@/components/study/StudySession', () => ({
-  StudySession: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="study-session">
-      <button type="button" aria-label="Close" onClick={onClose}>Close</button>
-    </div>
-  ),
+  StudySession: (props: { onClose: () => void, disableLeaveGuard?: boolean }) => {
+    capturedStudySessionProps = props as Record<string, unknown>
+    return (
+      <div data-testid="study-session">
+        <button type="button" aria-label="Close" onClick={props.onClose}>Close</button>
+      </div>
+    )
+  },
 }))
 
 const mockEntries: VocabEntry[] = [
@@ -79,6 +85,7 @@ describe('lessonWorkbookPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockVocab = { entriesByLesson: {} }
+    capturedStudySessionProps = {}
   })
 
   it('shows empty-state message when no words saved', () => {
@@ -151,5 +158,12 @@ describe('lessonWorkbookPanel', () => {
     // Simulate onClose being called from within StudySession
     fireEvent.click(screen.getByRole('button', { name: /close/i }))
     expect(screen.queryByTestId('study-session')).toBeNull()
+  })
+
+  it('passes disableLeaveGuard to StudySession', () => {
+    mockVocab = { entriesByLesson: { lesson_1: mockEntries } }
+    render(<LessonWorkbookPanel lessonId="lesson_1" />)
+    fireEvent.click(screen.getByRole('button', { name: /study this lesson/i }))
+    expect(capturedStudySessionProps.disableLeaveGuard).toBe(true)
   })
 })
