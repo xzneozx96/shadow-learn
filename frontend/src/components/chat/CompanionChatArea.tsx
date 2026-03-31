@@ -77,6 +77,9 @@ export function CompanionChatArea({
   const prevFirstIdRef = useRef<string | undefined>(undefined)
   const isAtBottomRef = useRef(true)
 
+  // Text-only resend path — used by MessageItem for quick-reply and resend actions.
+  // Unlike handlePromptSubmit below, this path never carries file attachments because
+  // resend/quick-reply actions always replay plain text messages.
   const sendMessage: SendMessage = (opts) => {
     isAtBottomRef.current = true
     onSend({ text: opts.text })
@@ -182,6 +185,8 @@ export function CompanionChatArea({
     container.scrollTop = container.scrollHeight
   }, [messages, isLoading, uniqueMessages])
 
+  // User-initiated send path — called by PromptInput's onSubmit. Carries the full
+  // payload including any file attachments the user selected via the attach button.
   const handlePromptSubmit = (message: { text: string, files: FileUIPart[] }) => {
     const trimmed = message.text.trim()
     const hasFiles = message.files.length > 0
