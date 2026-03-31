@@ -49,7 +49,6 @@ export function CompanionChatArea({
 }: CompanionChatAreaProps) {
   const { t } = useI18n()
   const chatStatus: ChatStatus = isLoading ? 'streaming' : 'ready'
-  const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const topSentinelRef = useRef<HTMLDivElement>(null)
   const scrollFromBottomRef = useRef<number | null>(null)
@@ -146,9 +145,8 @@ export function CompanionChatArea({
   }, [messages])
 
   // Auto-scroll to bottom only when new messages arrive, not when older ones are prepended.
-  // Uses scrollTop on the container (not scrollIntoView) to avoid scrolling parent ancestors,
-  // and wraps in rAF so the browser has finished layout — important for contentVisibility: 'auto'.
-  useEffect(() => {
+  // Uses useLayoutEffect (before paint) + direct scrollTop so the user never sees un-scrolled state.
+  useLayoutEffect(() => {
     const firstId = uniqueMessages[0]?.id
     const wasPrepend = firstId !== prevFirstIdRef.current && prevFirstIdRef.current !== undefined
     prevFirstIdRef.current = firstId
@@ -159,9 +157,7 @@ export function CompanionChatArea({
     const container = scrollRef.current
     if (!container)
       return
-    requestAnimationFrame(() => {
-      container.scrollTop = container.scrollHeight
-    })
+    container.scrollTop = container.scrollHeight
   }, [messages, isLoading, uniqueMessages])
 
   const handlePromptSubmit = (message: { text: string }) => {
@@ -193,7 +189,7 @@ export function CompanionChatArea({
             </div>
           )}
           {uniqueMessages.map((msg: UIMessage) => (
-            <div key={msg.id} style={{ contentVisibility: 'auto', containIntrinsicSize: '0 60px' }}>
+            <div key={msg.id}>
               <MessageItem msg={msg} sendMessage={sendMessage} activeWideIds={activeWideIds} />
             </div>
           ))}
@@ -211,7 +207,7 @@ export function CompanionChatArea({
           )}
         </div>
 
-        <div ref={bottomRef} className="h-px" />
+        <div className="h-px" />
       </div>
 
       <div className="border-t border-border p-3">

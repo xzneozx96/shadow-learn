@@ -180,7 +180,7 @@ function LessonViewContent() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-full overflow-hidden bg-background">
       {/* Left section: video and transcript/shadowing */}
       <div className="flex flex-col 2xl:flex-row h-full w-[60%] 2xl:w-3/4 overflow-hidden border-r border-border">
         {/* Video Panel — 50% height on small, 50% width on 2xl */}
