@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     openrouter_base_url: str = "https://mkp-api.fptcloud.com/v1"
     openrouter_chat_url: str = "https://openrouter.ai/api/v1/chat/completions"
     openrouter_structured_model: str = "qwen/qwen3.5-flash-02-23" # "openai/gpt-4o-mini"
-    openrouter_agent_model: str = "SaoLa4-medium"
+    openrouter_agent_model: str = "Nemotron-3-Super-120B-A12B"
     openrouter_vision_model: str = ""  # env: SHADOWLEARN_OPENROUTER_VISION_MODEL
     # When set, requests that contain image attachments are routed to this model instead of
     # openrouter_agent_model. Must support vision inputs (e.g. "google/gemini-2.0-flash-001").

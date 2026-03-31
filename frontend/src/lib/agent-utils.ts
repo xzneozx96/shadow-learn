@@ -6,7 +6,7 @@
 
 // Number of messages to load into useChat state on mount, and per loadMore() batch.
 // Also used to cap the LLM context window via normalizeMessagesForBackend.
-export const PAGE_SIZE = 15
+export const PAGE_SIZE = 5
 
 export function normalizeMessagesForBackend(messages: any[], limit: number = PAGE_SIZE) {
   const normalized: any[] = []
