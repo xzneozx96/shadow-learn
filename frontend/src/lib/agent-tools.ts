@@ -319,6 +319,25 @@ export function getToolDefinitionsArray(): object[] {
   return Object.values(TOOL_DEFINITIONS)
 }
 
+const GLOBAL_TOOLS = new Set([
+  'recall_memory',
+  'save_memory',
+  'get_vocabulary',
+  'get_progress_summary',
+  'update_learner_profile',
+  'get_core_guidelines',
+  'get_skill_guide',
+])
+
+/**
+ * Returns tool definitions for the global companion — a subset excluding lesson-specific tools.
+ */
+export function getGlobalToolDefinitionsArray(): object[] {
+  return Object.entries(TOOL_DEFINITIONS)
+    .filter(([key]) => GLOBAL_TOOLS.has(key))
+    .map(([, def]) => def)
+}
+
 // -------------------------------------------------------------------------- //
 // Input validation schemas (Zod)
 // -------------------------------------------------------------------------- //

@@ -3,6 +3,7 @@ import {
   executeGetCoreGuidelines,
   executeGetSkillGuide,
   executeRenderStudySession,
+  getGlobalToolDefinitionsArray,
   ToolInputSchemas,
 } from '@/lib/agent-tools'
 
@@ -323,5 +324,36 @@ describe('toolInputSchemas — input validation', () => {
       sentencesPerWord: 6,
     })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('getGlobalToolDefinitionsArray', () => {
+  it('returns only global tools', () => {
+    const tools = getGlobalToolDefinitionsArray()
+    const names = tools.map((t: any) => t.function.name)
+
+    expect(names).toContain('recall_memory')
+    expect(names).toContain('save_memory')
+    expect(names).toContain('get_vocabulary')
+    expect(names).toContain('get_progress_summary')
+    expect(names).toContain('update_learner_profile')
+    expect(names).toContain('get_core_guidelines')
+    expect(names).toContain('get_skill_guide')
+
+    // Lesson-only tools must NOT be included
+    expect(names).not.toContain('get_study_context')
+    expect(names).not.toContain('render_study_session')
+    expect(names).not.toContain('navigate_to_segment')
+    expect(names).not.toContain('start_shadowing')
+    expect(names).not.toContain('switch_tab')
+    expect(names).not.toContain('play_segment_audio')
+    expect(names).not.toContain('log_mistake')
+    expect(names).not.toContain('update_sr_item')
+    expect(names).not.toContain('render_progress_chart')
+    expect(names).not.toContain('render_vocab_card')
+  })
+
+  it('returns exactly 7 tools', () => {
+    expect(getGlobalToolDefinitionsArray()).toHaveLength(7)
   })
 })
