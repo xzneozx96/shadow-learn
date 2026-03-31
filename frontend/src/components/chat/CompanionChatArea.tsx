@@ -29,11 +29,11 @@ import { MessageItem, StreamingDots } from './ChatMessageItem'
 import { ContextChipBar } from './ContextChipBar'
 
 /** Attach-image button — must be rendered inside a <PromptInput> so the context is available. */
-function AttachImageButton() {
+function AttachImageButton({ label }: { label: string }) {
   const attachments = usePromptInputAttachments()
   return (
     <PromptInputButton
-      aria-label="Attach image"
+      aria-label={label}
       onClick={attachments.openFileDialog}
     >
       <ImageIcon className="size-4" />
@@ -193,13 +193,13 @@ export function CompanionChatArea({
 
   const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept' }) => {
     if (err.code === 'accept') {
-      toast.error('Only JPG, PNG, and WEBP images are supported.')
+      toast.error(t('companion.imageUnsupportedType'))
     }
     else if (err.code === 'max_file_size') {
-      toast.error('Image must be 5 MB or smaller.')
+      toast.error(t('companion.imageTooLarge'))
     }
     else {
-      toast.error('Only one image can be attached at a time.')
+      toast.error(t('companion.imageTooMany'))
     }
   }
 
@@ -265,7 +265,7 @@ export function CompanionChatArea({
           </PromptInputBody>
           <PromptInputFooter>
             <PromptInputTools>
-              <AttachImageButton />
+              <AttachImageButton label={t('companion.attachImage')} />
             </PromptInputTools>
             <PromptInputSubmit status={chatStatus} />
           </PromptInputFooter>

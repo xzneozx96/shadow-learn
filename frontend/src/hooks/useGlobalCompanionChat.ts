@@ -16,6 +16,7 @@ import { DefaultChatTransport } from 'ai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { getChatMessages, getLearnerProfile, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
 import { buildGlobalSystemPrompt } from '@/lib/agent-system-prompt'
@@ -43,6 +44,7 @@ const VISION_ERROR_REGEX = /image|vision|multimodal|unsupported.*file|file.*unsu
 
 export function useGlobalCompanionChat() {
   const { db, keys } = useAuth()
+  const { t } = useI18n()
   const systemPromptRef = useRef<string>('')
   const dbRef = useRef<ShadowLearnDB | null>(null)
   dbRef.current = db
@@ -161,7 +163,7 @@ export function useGlobalCompanionChat() {
       const msg = err.message || 'Unknown error'
       const isVisionError = VISION_ERROR_REGEX.test(msg)
       toast.error(isVisionError
-        ? 'The model could not process the image. Try a different image or remove it.'
+        ? t('companion.imageVisionError')
         : `Connection error: ${msg}`)
     },
   })
