@@ -5,7 +5,7 @@
 import type { AgentMemory, LearnerProfile, ProgressStats } from '@/db'
 import type { Segment } from '@/types'
 import { describe, expect, it } from 'vitest'
-import { buildSystemPrompt, formatProgressSummary } from '@/lib/agent-system-prompt'
+import { buildGlobalSystemPrompt, buildSystemPrompt, formatProgressSummary } from '@/lib/agent-system-prompt'
 
 const mockProfile: LearnerProfile = {
   name: 'Ross',
@@ -197,6 +197,43 @@ describe('buildSystemPrompt — Session Snapshot', () => {
     const snapshotIdx = prompt.indexOf('## Session Snapshot')
     const instructionsIdx = prompt.indexOf('## Instructions')
     expect(snapshotIdx).toBeLessThan(instructionsIdx)
+  })
+})
+
+describe('buildGlobalSystemPrompt', () => {
+  it('includes app-guide role', () => {
+    const prompt = buildGlobalSystemPrompt(undefined, [])
+    expect(prompt).toContain('Zober')
+    expect(prompt).toContain('ShadowLearn')
+  })
+
+  it('includes learner profile when provided', () => {
+    const profile = {
+      name: 'Test',
+      nativeLanguage: 'en',
+      targetLanguage: 'zh-CN',
+      currentLevel: 'Intermediate',
+      dailyGoalMinutes: 30,
+      currentStreakDays: 5,
+      totalSessions: 10,
+      createdAt: new Date().toISOString(),
+    } as unknown as LearnerProfile
+    const prompt = buildGlobalSystemPrompt(profile, [])
+    expect(prompt).toContain('Intermediate')
+    expect(prompt).toContain('zh-CN')
+  })
+
+  it('includes memory summary when provided', () => {
+    const memories: AgentMemory[] = [{ id: '1', content: 'Prefers formal tone', tags: [], importance: 1, createdAt: Date.now(), lastAccessedAt: Date.now() }]
+    const prompt = buildGlobalSystemPrompt(undefined, memories)
+    expect(prompt).toContain('Prefers formal tone')
+  })
+
+  it('does NOT include lesson context or exercise instructions', () => {
+    const prompt = buildGlobalSystemPrompt(undefined, [])
+    expect(prompt).not.toContain('render_study_session')
+    expect(prompt).not.toContain('Exercise Rendering')
+    expect(prompt).not.toContain('Current Lesson')
   })
 })
 

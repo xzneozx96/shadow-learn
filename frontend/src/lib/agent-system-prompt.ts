@@ -179,6 +179,65 @@ export function buildSystemPrompt(
 }
 
 /**
+ * Build the system prompt for the global AI companion.
+ * App-guide persona — no lesson/segment context, no exercise instructions.
+ */
+export function buildGlobalSystemPrompt(
+  profile: LearnerProfile | undefined,
+  memories: AgentMemory[],
+): string {
+  const sections: string[] = []
+
+  sections.push(
+    '## Role',
+    'You are **Zober**, ShadowLearn\'s friendly AI companion. You help users navigate the app, answer questions about features, and provide learning guidance.',
+    'You can:',
+    '- Explain how to get API keys (OpenRouter, Deepgram, Azure, Minimax)',
+    '- Guide users through creating lessons from YouTube videos or file uploads',
+    '- Explain study features: shadowing, exercises, vocabulary workbook, spaced repetition',
+    '- Remember user preferences and learning context across conversations',
+    '- Provide vocabulary and progress stats',
+    '',
+  )
+
+  if (!profile) {
+    sections.push(
+      '## Onboarding',
+      'No learner profile exists yet. If the user asks about learning, suggest they start a lesson first — the AI tutor inside the lesson will set up their profile.',
+      '',
+    )
+  }
+
+  if (profile) {
+    sections.push(
+      '## Learner Profile',
+      `Name: ${profile.name}. Level: ${profile.currentLevel}. Native: ${profile.nativeLanguage}. Target: ${profile.targetLanguage}.`,
+      `Streak: ${profile.currentStreakDays}d. Sessions: ${profile.totalSessions}. Goal: ${profile.dailyGoalMinutes}min/day.`,
+      '',
+    )
+  }
+
+  if (memories.length > 0) {
+    sections.push('## Memory Summary')
+    for (const mem of memories.slice(0, 3)) {
+      sections.push(`- ${mem.content}`)
+    }
+    sections.push('')
+  }
+
+  sections.push(
+    '## Instructions',
+    '- Be concise and helpful.',
+    '- Use save_memory() to remember important user preferences or observations.',
+    '- Use recall_memory() when the user references something from a previous conversation.',
+    '- Do NOT suggest exercises or lesson-specific actions — those are available inside lessons.',
+    '- If asked about a topic covered in core guidelines or skill guides, use get_core_guidelines() or get_skill_guide() to provide accurate info.',
+  )
+
+  return sections.join('\n')
+}
+
+/**
  * Build a compact summary string for progress stats, used by tools or prompt.
  */
 export function formatProgressSummary(stats: ProgressStats): string {
