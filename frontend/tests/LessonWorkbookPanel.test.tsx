@@ -160,10 +160,10 @@ describe('lessonWorkbookPanel', () => {
     expect(screen.queryByTestId('study-session')).toBeNull()
   })
 
-  it('passes disableLeaveGuard to StudySession', () => {
+  it('does not pass disableLeaveGuard to StudySession (guard kept on workbook panel)', () => {
     mockVocab = { entriesByLesson: { lesson_1: mockEntries } }
     render(<LessonWorkbookPanel lessonId="lesson_1" />)
     fireEvent.click(screen.getByRole('button', { name: /study this lesson/i }))
-    expect(capturedStudySessionProps.disableLeaveGuard).toBe(true)
+    expect(capturedStudySessionProps.disableLeaveGuard).toBeFalsy()
   })
 })
