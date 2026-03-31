@@ -19,6 +19,19 @@ vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: vi.fn(() => ({ entriesByLesson: {} })),
 }))
 
+// Mock GlobalCompanionContext used by the rewritten CompanionPanel
+vi.mock('@/contexts/GlobalCompanionContext', () => ({
+  useGlobalCompanionContext: vi.fn(() => ({
+    chips: [],
+    removeChip: vi.fn(),
+    clearChips: vi.fn(),
+    isGlobalPanelOpen: false,
+    addChip: vi.fn(),
+    openPanel: vi.fn(),
+    closePanel: vi.fn(),
+  })),
+}))
+
 // Mock useAgentChat so CompanionPanel renders without hitting real IDB/API
 vi.mock('@/hooks/useAgentChat', () => ({
   useAgentChat: vi.fn(() => ({
