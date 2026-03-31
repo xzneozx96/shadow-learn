@@ -1,11 +1,18 @@
 import type { UIMessage } from '@ai-sdk/react'
+import type { ChatStatus } from 'ai'
 import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
-import { Send } from 'lucide-react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputHeader,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+} from '@/components/ai-elements/prompt-input'
 import { useI18n } from '@/contexts/I18nContext'
 import {
   EXERCISE_TOOLS,
@@ -41,7 +48,7 @@ export function CompanionChatArea({
   placeholder,
 }: CompanionChatAreaProps) {
   const { t } = useI18n()
-  const [input, setInput] = useState('')
+  const chatStatus: ChatStatus = isLoading ? 'streaming' : 'ready'
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const topSentinelRef = useRef<HTMLDivElement>(null)
@@ -150,20 +157,12 @@ export function CompanionChatArea({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading, uniqueMessages])
 
-  const handleSend = () => {
-    const trimmed = input.trim()
+  const handlePromptSubmit = (message: { text: string }) => {
+    const trimmed = message.text.trim()
     if (!trimmed || isLoading)
       return
     isAtBottomRef.current = true
     sendMessage({ text: trimmed })
-    setInput('')
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
   }
 
   return (
@@ -208,25 +207,23 @@ export function CompanionChatArea({
         <div ref={bottomRef} className="h-px" />
       </div>
 
-      <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />
-
-      <div className="flex items-center gap-2 border-t border-border p-3 h-16">
-        <Textarea
-          placeholder={placeholder ?? t('lesson.askAboutSegment')}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          className="min-h-8 resize-none"
-        />
-        <Button
-          size="icon"
-          aria-label="Send message"
-          onClick={handleSend}
-          disabled={!input.trim() || isLoading}
-        >
-          <Send className="size-4" />
-        </Button>
+      <div className="border-t border-border p-3">
+        <PromptInput onSubmit={handlePromptSubmit}>
+          {chips.length > 0
+            ? (
+                <PromptInputHeader>
+                  <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />
+                </PromptInputHeader>
+              )
+            : null}
+          <PromptInputBody>
+            <PromptInputTextarea placeholder={placeholder ?? t('lesson.askAboutSegment')} />
+          </PromptInputBody>
+          <PromptInputFooter>
+            <PromptInputTools />
+            <PromptInputSubmit status={chatStatus} />
+          </PromptInputFooter>
+        </PromptInput>
       </div>
     </>
   )

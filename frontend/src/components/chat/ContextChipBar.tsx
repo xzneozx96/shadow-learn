@@ -20,7 +20,7 @@ export function ContextChipBar({ chips, onRemoveChip }: ContextChipBarProps) {
     return null
 
   return (
-    <div className="flex flex-wrap gap-1.5 px-3 pt-2">
+    <div className="flex flex-wrap gap-1.5">
       {chips.map(chip => (
         <span
           key={chip.id}

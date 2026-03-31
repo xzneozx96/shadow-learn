@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useI18n } from '@/contexts/I18nContext'
 
 interface SelectionMenuProps {
   rect: DOMRect
@@ -9,6 +10,7 @@ interface SelectionMenuProps {
 }
 
 export function SelectionMenu({ rect, onAddChip, onDismiss }: SelectionMenuProps) {
+  const { t } = useI18n()
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -33,10 +35,10 @@ export function SelectionMenu({ rect, onAddChip, onDismiss }: SelectionMenuProps
       <button
         type="button"
         onClick={onAddChip}
-        className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-background px-2.5 py-1 text-xs font-medium text-primary shadow-lg hover:bg-primary/10 transition-colors"
+        className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-background px-3 py-1.5 text-sm font-medium text-primary shadow-lg hover:bg-primary/10 transition-colors"
       >
-        <Sparkles className="size-3" />
-        Ask AI Companion
+        <Sparkles className="size-4" />
+        {t('companion.selectionMenu')}
       </button>
     </div>,
     document.body,
