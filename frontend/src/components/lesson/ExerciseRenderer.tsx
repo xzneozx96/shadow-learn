@@ -50,6 +50,7 @@ export function ExerciseRenderer({ result, sendMessage }: ExerciseRendererProps)
         <StudySession
           onClose={() => {}}
           prebuiltQuestions={questions}
+          disableLeaveGuard
           onSessionComplete={(sessionResults) => {
             sendMessage({
               text: JSON.stringify({

@@ -237,6 +237,7 @@ export function WorkbookPage() {
             preloadedEntries={dueItems}
             onClose={() => setReviewOpen(false)}
             onActiveChange={setSessionActive}
+            disableLeaveGuard
           />
         </DialogContent>
       </Dialog>
