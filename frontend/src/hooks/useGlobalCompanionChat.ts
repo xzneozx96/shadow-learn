@@ -168,7 +168,13 @@ export function useGlobalCompanionChat() {
     },
   })
 
-  // Wrap sendMessage to reset the tool re-submit guard on each new user turn
+  /**
+   * Sends a message and resets the tool re-submit guard for the new user turn.
+   *
+   * @param opts - Message payload accepted by the AI SDK's sendMessage.
+   *   Supports `text` for the message body and optionally `files?: FileUIPart[]`
+   *   for image attachments forwarded from the user's PromptInput selection.
+   */
   const sendMessageWithReset = useCallback(
     (opts: Parameters<typeof sendMessage>[0]) => {
       activeRef.current = true
