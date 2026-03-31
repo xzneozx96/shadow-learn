@@ -10,6 +10,7 @@ import { Unlock } from '@/components/onboarding/Unlock'
 import { Settings } from '@/components/settings/Settings'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { GlobalCompanionProvider } from '@/contexts/GlobalCompanionContext'
 import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
@@ -21,8 +22,10 @@ import { WorkbookPage } from '@/pages/WorkbookPage'
 function AppLayout() {
   return (
     <PlayerProvider>
-      <Outlet />
-      <FeedbackButton />
+      <GlobalCompanionProvider>
+        <Outlet />
+        <FeedbackButton />
+      </GlobalCompanionProvider>
     </PlayerProvider>
   )
 }
