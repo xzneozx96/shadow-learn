@@ -145,7 +145,9 @@ export function CompanionChatArea({
     }
   }, [messages])
 
-  // Auto-scroll to bottom only when new messages arrive, not when older ones are prepended
+  // Auto-scroll to bottom only when new messages arrive, not when older ones are prepended.
+  // Uses scrollTop on the container (not scrollIntoView) to avoid scrolling parent ancestors,
+  // and wraps in rAF so the browser has finished layout — important for contentVisibility: 'auto'.
   useEffect(() => {
     const firstId = uniqueMessages[0]?.id
     const wasPrepend = firstId !== prevFirstIdRef.current && prevFirstIdRef.current !== undefined
@@ -154,7 +156,12 @@ export function CompanionChatArea({
       return
     if (!isAtBottomRef.current)
       return
-    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
+    const container = scrollRef.current
+    if (!container)
+      return
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight
+    })
   }, [messages, isLoading, uniqueMessages])
 
   const handlePromptSubmit = (message: { text: string }) => {
