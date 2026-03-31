@@ -361,6 +361,17 @@ def _patch_headers(response: StreamingResponse) -> StreamingResponse:
 
 _RETRYABLE_STATUS_CODES = {429, 502, 503}
 
+
+def _messages_contain_image(messages: list[ClientMessage]) -> bool:
+    """Return True if any message part is a file/image attachment."""
+    return any(
+        part.type == "file"
+        for message in messages
+        if message.parts
+        for part in message.parts
+    )
+
+
 @router.post("/agent")
 async def agent_chat(request: AgentRequest) -> StreamingResponse:
     """Stream agent response in AI SDK v5 UIMessage format."""
@@ -373,7 +384,14 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
         base_url=settings.openrouter_base_url,
     )
 
-    primary = request.model or settings.openrouter_agent_model
+    has_images = _messages_contain_image(request.messages)
+    vision_model = settings.openrouter_vision_model
+
+    if has_images and vision_model:
+        logger.info(f"[agent_chat] Image detected — routing to vision model: {vision_model}")
+        primary = vision_model
+    else:
+        primary = request.model or settings.openrouter_agent_model
     cascade = [primary, *settings.openrouter_fallback_models]
     # Deduplicate preserving order
     seen: set[str] = set()
@@ -383,7 +401,7 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
 
     create_kwargs: dict[str, Any] = {
         "stream": True,
-        "extra_body": {"reasoning": {"effort": "low"}},
+        "extra_body": {"reasoning": {"effort": "none"}},
         "messages": openai_messages,
     }
     if request.tools:

@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     openrouter_chat_url: str = "https://openrouter.ai/api/v1/chat/completions"
     openrouter_structured_model: str = "qwen/qwen3.5-flash-02-23" # "openai/gpt-4o-mini"
     openrouter_agent_model: str = "SaoLa4-medium"
+    openrouter_vision_model: str = ""  # env: SHADOWLEARN_OPENROUTER_VISION_MODEL
+    # When set, requests that contain image attachments are routed to this model instead of
+    # openrouter_agent_model. Must support vision inputs (e.g. "google/gemini-2.0-flash-001").
+    # Leave empty to use openrouter_agent_model for all requests (vision may fail silently).
     openrouter_fallback_models: list[str] = []
     # env: SHADOWLEARN_OPENROUTER_FALLBACK_MODELS
     # Set as JSON array: '["google/gemini-2.0-flash-001","anthropic/claude-haiku-4-5"]'
