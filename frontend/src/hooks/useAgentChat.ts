@@ -36,84 +36,8 @@ import {
   getToolDefinitionsArray,
   ToolInputSchemas,
 } from '@/lib/agent-tools'
+import { normalizeMessagesForBackend, PAGE_SIZE } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
-
-// -------------------------------------------------------------------------- //
-// Helpers
-// -------------------------------------------------------------------------- //
-
-function normalizeMessagesForBackend(messages: any[], limit: number = 15) {
-  const normalized: any[] = []
-
-  for (const current of messages) {
-    // Skip empty user messages (tool re-submit artifacts from sendMessage({ text: '' }))
-    // AI SDK v5 UIMessage has no `content` field — text lives in parts[].text
-    if (current.role === 'user') {
-      const textPart = (current.parts ?? []).find((p: any) => p.type === 'text')
-      if (!textPart?.text?.trim())
-        continue
-    }
-
-    if (normalized.length === 0) {
-      normalized.push(current)
-      continue
-    }
-
-    const last = normalized.at(-1)
-
-    if (last.role === current.role && current.role !== 'tool') {
-      if (current.role === 'user') {
-        const lastText = (last.parts ?? []).find((p: any) => p.type === 'text')?.text ?? ''
-        const currentText = (current.parts ?? []).find((p: any) => p.type === 'text')?.text ?? ''
-
-        if (lastText.trim() === currentText.trim()) {
-          continue // Skip identical user messages
-        }
-      }
-
-      if (current.role === 'assistant') {
-        const lastHasToolParts = (last.parts ?? []).some((p: any) => p.type?.startsWith('tool-'))
-        const curHasToolParts = (current.parts ?? []).some((p: any) => p.type?.startsWith('tool-'))
-
-        // When both consecutive assistants have tool parts (happens because empty
-        // re-submit user messages between them were stripped above), merge all parts
-        // into one message so the LLM sees its full tool-call history and doesn't
-        // repeat the same call.
-        if (lastHasToolParts && curHasToolParts) {
-          normalized[normalized.length - 1] = {
-            ...last,
-            parts: [...(last.parts ?? []), ...(current.parts ?? [])],
-          }
-          continue
-        }
-
-        // If last assistant had tool parts but no text, prefer current which has text
-        const lastHasText = (last.parts ?? []).some((p: any) => p.type === 'text' && p.text?.trim())
-        const curHasText = (current.parts ?? []).some((p: any) => p.type === 'text' && p.text?.trim())
-        if (curHasText && !lastHasText) {
-          normalized[normalized.length - 1] = current
-        }
-        continue
-      }
-    }
-
-    normalized.push(current)
-  }
-
-  if (normalized.length <= limit)
-    return normalized
-  let startIndex = normalized.length - limit
-
-  while (startIndex > 0 && normalized[startIndex]?.role === 'tool') {
-    startIndex--
-  }
-
-  return normalized.slice(startIndex)
-}
-
-// Number of messages to load into useChat state on mount, and per loadMore() batch.
-// Also used to cap the LLM context window via normalizeMessagesForBackend.
-const PAGE_SIZE = 15
 
 // -------------------------------------------------------------------------- //
 // Hook
