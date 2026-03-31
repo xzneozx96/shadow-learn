@@ -3,7 +3,7 @@ import type { ChatStatus, FileUIPart } from 'ai'
 import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
-import { ImageIcon } from 'lucide-react'
+import { ImageIcon, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import {
@@ -38,6 +38,34 @@ function AttachImageButton({ label }: { label: string }) {
     >
       <ImageIcon className="size-4" />
     </PromptInputButton>
+  )
+}
+
+/** Thumbnail strip for attached images — must be inside a <PromptInput>. */
+function AttachmentPreviewBar() {
+  const { files, remove } = usePromptInputAttachments()
+  if (files.length === 0)
+    return null
+  return (
+    <div className="flex flex-wrap gap-2 px-1 pb-1">
+      {files.map(f => (
+        <div key={f.id} className="relative size-14 shrink-0">
+          <img
+            src={f.url}
+            alt={f.filename ?? 'Attached image'}
+            className="size-full rounded-md object-cover border border-border"
+          />
+          <button
+            type="button"
+            aria-label="Remove image"
+            onClick={() => remove(f.id)}
+            className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow"
+          >
+            <X className="size-2.5" />
+          </button>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -258,13 +286,10 @@ export function CompanionChatArea({
           onError={handleAttachError}
           onSubmit={handlePromptSubmit}
         >
-          {chips.length > 0
-            ? (
-                <PromptInputHeader>
-                  <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />
-                </PromptInputHeader>
-              )
-            : null}
+          <PromptInputHeader>
+            {chips.length > 0 && <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />}
+            <AttachmentPreviewBar />
+          </PromptInputHeader>
           <PromptInputBody>
             <PromptInputTextarea placeholder={placeholder ?? t('lesson.askAboutSegment')} />
           </PromptInputBody>
