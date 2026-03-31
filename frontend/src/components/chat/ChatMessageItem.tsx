@@ -140,6 +140,22 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
       return <p key={partKey} className="whitespace-pre-wrap">{part.text}</p>
     }
 
+    if (part.type === 'file') {
+      const filePart = part as { type: 'file', url?: string, mediaType?: string, filename?: string }
+      if (filePart.url && filePart.mediaType?.startsWith('image/')) {
+        const imgKey = `file-${part.type}-${filePart.url.slice(-8)}`
+        return (
+          <img
+            key={imgKey}
+            src={filePart.url}
+            alt={filePart.filename ?? 'Attached image'}
+            className="max-h-48 max-w-full rounded-md object-contain"
+          />
+        )
+      }
+      return null
+    }
+
     return null
   })
 }

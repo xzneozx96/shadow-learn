@@ -53,7 +53,7 @@ class AgentRequest(BaseModel):
 
 # --------------------------------------------------------------------------- #
 # Message conversion: AI SDK v5 UIMessage parts → OpenAI API format
-# Adapted from sample prompt.py (simplified: no attachments, no images)
+# Adapted from sample prompt.py — supports text, image attachments, and tool calls
 # --------------------------------------------------------------------------- #
 
 def _convert_to_openai_messages(
@@ -71,6 +71,15 @@ def _convert_to_openai_messages(
             for part in message.parts:
                 if part.type == "text":
                     message_parts.append({"type": "text", "text": part.text or ""})
+
+                elif part.type == "file":
+                    # Image attachment — forward as OpenAI vision image_url part
+                    url = getattr(part, "url", None)
+                    if url:
+                        message_parts.append({
+                            "type": "image_url",
+                            "image_url": {"url": url},
+                        })
 
                 elif part.type.startswith("tool-"):
                     tool_call_id = part.toolCallId
