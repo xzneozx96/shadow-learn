@@ -50,10 +50,18 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
       parameters: {
         type: 'object',
         properties: {
-          lessonId: { type: 'string', description: 'Current lesson ID' },
+          lessonId: { type: 'string', description: 'Current lesson ID (optional — omit when calling from the global companion)' },
         },
-        required: ['lessonId'],
       },
+    },
+  },
+
+  get_user_manual: {
+    type: 'function',
+    function: {
+      name: 'get_user_manual',
+      description: 'Fetch the app user manual / help guide. Call this when the user asks how to use the app, how a feature works, or asks for help.',
+      parameters: { type: 'object', properties: {} },
     },
   },
 
@@ -323,10 +331,12 @@ const GLOBAL_TOOLS = new Set([
   'recall_memory',
   'save_memory',
   'get_vocabulary',
+  'get_study_context',
   'get_progress_summary',
   'update_learner_profile',
   'get_core_guidelines',
   'get_skill_guide',
+  'get_user_manual',
   'render_progress_chart',
   'render_vocab_card',
 ])
@@ -371,7 +381,7 @@ type RenderStudySessionArgs = z.infer<typeof ToolInputSchemas['render_study_sess
 
 export async function executeGetStudyContext(
   db: ShadowLearnDB,
-  args: { lessonId: string },
+  args: { lessonId?: string },
 ) {
   const today = new Date().toISOString().split('T')[0]
   const [dueItems, recentMistakes, masteryScores, progressStats] = await Promise.all([
@@ -381,8 +391,7 @@ export async function executeGetStudyContext(
     getProgressStats(db),
   ])
 
-  // Also get lesson-specific vocab for context
-  const lessonVocab = await getVocabEntriesByLesson(db, args.lessonId)
+  const lessonVocab = args.lessonId ? await getVocabEntriesByLesson(db, args.lessonId) : []
 
   const allStatKeys = await db.getAllKeys('exercise-stats') as string[]
   const allStats = await Promise.all(allStatKeys.map(k => db.get('exercise-stats', k)))
@@ -720,4 +729,17 @@ export async function executeGetSkillGuide(args: { skill: string }) {
   if (!content)
     return { error: `Unknown skill: ${args.skill}` }
   return { content }
+}
+
+export async function executeGetUserManual() {
+  try {
+    const resp = await fetch('/docs/USER_MANUAL.txt')
+    if (!resp.ok)
+      return { error: 'Could not load user manual.' }
+    const text = await resp.text()
+    return { content: text }
+  }
+  catch {
+    return { error: 'Could not load user manual.' }
+  }
 }

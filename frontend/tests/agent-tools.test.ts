@@ -2,10 +2,24 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   executeGetCoreGuidelines,
   executeGetSkillGuide,
+  executeGetStudyContext,
+  executeGetUserManual,
   executeRenderStudySession,
   getGlobalToolDefinitionsArray,
   ToolInputSchemas,
 } from '@/lib/agent-tools'
+
+vi.mock('@/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/db')>()
+  return {
+    ...actual,
+    getDueItems: vi.fn().mockResolvedValue([]),
+    getRecentMistakes: vi.fn().mockResolvedValue([]),
+    getMasteryData: vi.fn().mockResolvedValue(null),
+    getProgressStats: vi.fn().mockResolvedValue(null),
+    getVocabEntriesByLesson: vi.fn().mockResolvedValue([]),
+  }
+})
 
 describe('agent-tools executors', () => {
   const mockDb = {
@@ -328,20 +342,27 @@ describe('toolInputSchemas — input validation', () => {
 })
 
 describe('getGlobalToolDefinitionsArray', () => {
-  it('returns only global tools', () => {
+  it('includes all expected global tools', () => {
     const tools = getGlobalToolDefinitionsArray()
     const names = tools.map((t: any) => t.function.name)
 
     expect(names).toContain('recall_memory')
     expect(names).toContain('save_memory')
     expect(names).toContain('get_vocabulary')
+    expect(names).toContain('get_study_context')
     expect(names).toContain('get_progress_summary')
     expect(names).toContain('update_learner_profile')
     expect(names).toContain('get_core_guidelines')
     expect(names).toContain('get_skill_guide')
+    expect(names).toContain('get_user_manual')
+    expect(names).toContain('render_progress_chart')
+    expect(names).toContain('render_vocab_card')
+  })
 
-    // Lesson-only tools must NOT be included
-    expect(names).not.toContain('get_study_context')
+  it('excludes lesson-only tools', () => {
+    const tools = getGlobalToolDefinitionsArray()
+    const names = tools.map((t: any) => t.function.name)
+
     expect(names).not.toContain('render_study_session')
     expect(names).not.toContain('navigate_to_segment')
     expect(names).not.toContain('start_shadowing')
@@ -349,11 +370,83 @@ describe('getGlobalToolDefinitionsArray', () => {
     expect(names).not.toContain('play_segment_audio')
     expect(names).not.toContain('log_mistake')
     expect(names).not.toContain('update_sr_item')
-    expect(names).not.toContain('render_progress_chart')
-    expect(names).not.toContain('render_vocab_card')
   })
 
-  it('returns exactly 7 tools', () => {
-    expect(getGlobalToolDefinitionsArray()).toHaveLength(7)
+  it('returns exactly 11 tools', () => {
+    expect(getGlobalToolDefinitionsArray()).toHaveLength(11)
+  })
+})
+
+describe('executeGetUserManual', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns content on success', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      text: () => Promise.resolve('# User Manual\n\nWelcome to ShadowLearn.'),
+    } as any)
+
+    const result = await executeGetUserManual() as any
+
+    expect(result).toHaveProperty('content')
+    expect(result.content).toContain('User Manual')
+    expect(globalThis.fetch).toHaveBeenCalledWith('/docs/USER_MANUAL.txt')
+  })
+
+  it('returns error when fetch fails (non-ok response)', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({ ok: false } as any)
+
+    const result = await executeGetUserManual() as any
+
+    expect(result).toHaveProperty('error')
+  })
+
+  it('returns error when fetch throws', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error('network error'))
+
+    const result = await executeGetUserManual() as any
+
+    expect(result).toHaveProperty('error')
+  })
+})
+
+describe('executeGetStudyContext', () => {
+  const mockDb = {
+    getAllKeys: vi.fn(),
+    get: vi.fn(),
+  } as any
+
+  beforeEach(() => {
+    mockDb.getAllKeys.mockResolvedValue([])
+    mockDb.get.mockResolvedValue(undefined)
+    vi.clearAllMocks()
+    mockDb.getAllKeys.mockResolvedValue([])
+    mockDb.get.mockResolvedValue(undefined)
+  })
+
+  it('works without lessonId and skips getVocabEntriesByLesson', async () => {
+    const { getVocabEntriesByLesson } = await import('@/db')
+    const result = await executeGetStudyContext(mockDb, {}) as any
+
+    expect(result).toHaveProperty('dueItems')
+    expect(result).toHaveProperty('recentMistakes')
+    expect(result.lessonVocabCount).toBe(0)
+    expect(getVocabEntriesByLesson).not.toHaveBeenCalled()
+  })
+
+  it('calls getVocabEntriesByLesson when lessonId is provided', async () => {
+    const { getVocabEntriesByLesson } = await import('@/db')
+    await executeGetStudyContext(mockDb, { lessonId: 'lesson-123' })
+
+    expect(getVocabEntriesByLesson).toHaveBeenCalledWith(mockDb, 'lesson-123')
+  })
+
+  it('get_study_context tool definition does not require lessonId', () => {
+    const tools = getGlobalToolDefinitionsArray()
+    const def = tools.find((t: any) => t.function.name === 'get_study_context') as any
+    expect(def).toBeDefined()
+    expect(def.function.parameters.required).toBeUndefined()
   })
 })

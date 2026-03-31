@@ -4,7 +4,7 @@
  * Similar structure to useAgentChat but simplified:
  * - Uses '__global' as the chat key (not a lessonId)
  * - Uses buildGlobalSystemPrompt (no lesson/segment context)
- * - Uses getGlobalToolDefinitionsArray (9 tools, not 16+)
+ * - Uses getGlobalToolDefinitionsArray (subset of all tools, not lesson-specific ones)
  * - Simplified tool re-submit: cap at 3 rounds, no same-tool loop detection
  * - No AgentActionsContext dispatch, no telemetry
  */
@@ -23,6 +23,8 @@ import {
   executeGetCoreGuidelines,
   executeGetProgressSummary,
   executeGetSkillGuide,
+  executeGetStudyContext,
+  executeGetUserManual,
   executeGetVocabulary,
   executeRecallMemory,
   executeRenderProgressChart,
@@ -124,6 +126,12 @@ export function useGlobalCompanionChat() {
             break
           case 'render_vocab_card':
             result = await executeRenderVocabCard(currentDb, toolCall.input as { word: string })
+            break
+          case 'get_study_context':
+            result = await executeGetStudyContext(currentDb, toolCall.input as { lessonId?: string })
+            break
+          case 'get_user_manual':
+            result = await executeGetUserManual()
             break
           case 'get_core_guidelines':
             result = await executeGetCoreGuidelines()

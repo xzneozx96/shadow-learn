@@ -154,7 +154,7 @@ export function CompanionChatArea({
       return
     if (!isAtBottomRef.current)
       return
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
   }, [messages, isLoading, uniqueMessages])
 
   const handlePromptSubmit = (message: { text: string }) => {

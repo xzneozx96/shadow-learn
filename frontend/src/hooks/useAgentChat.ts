@@ -134,7 +134,7 @@ export function useAgentChat(
       try {
         switch (toolCall.toolName) {
           case 'get_study_context':
-            result = await executeGetStudyContext(currentDb, toolCall.input as { lessonId: string })
+            result = await executeGetStudyContext(currentDb, toolCall.input as { lessonId?: string })
             break
           case 'get_vocabulary':
             result = await executeGetVocabulary(currentDb, toolCall.input as { lessonId?: string })
