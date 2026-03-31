@@ -327,6 +327,8 @@ const GLOBAL_TOOLS = new Set([
   'update_learner_profile',
   'get_core_guidelines',
   'get_skill_guide',
+  'render_progress_chart',
+  'render_vocab_card',
 ])
 
 /**

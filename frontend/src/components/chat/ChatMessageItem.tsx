@@ -130,7 +130,7 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
       const partKey = `text-${i}`
       if (msg.role === 'assistant') {
         return (
-          <div key={partKey} className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50">
+          <div key={partKey} className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 [&_table]:block [&_table]:overflow-x-auto [&_table]:whitespace-nowrap">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {part.text}
             </ReactMarkdown>

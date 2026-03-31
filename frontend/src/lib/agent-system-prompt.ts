@@ -219,7 +219,7 @@ export function buildGlobalSystemPrompt(
 
   if (memories.length > 0) {
     sections.push('## Memory Summary')
-    for (const mem of memories.slice(0, 3)) {
+    for (const mem of memories.slice(0, 5)) {
       sections.push(`- ${mem.content}`)
     }
     sections.push('')
@@ -229,7 +229,7 @@ export function buildGlobalSystemPrompt(
     '## Instructions',
     '- Be concise and helpful.',
     '- Use save_memory() to remember important user preferences or observations.',
-    '- Use recall_memory() when the user references something from a previous conversation.',
+    '- **Call `recall_memory()` proactively when the user asks about their goals, preferences, history, or learning context** — do not rely solely on the Memory Summary above.',
     '- Do NOT suggest exercises or lesson-specific actions — those are available inside lessons.',
     '- If asked about a topic covered in core guidelines or skill guides, use get_core_guidelines() or get_skill_guide() to provide accurate info.',
   )

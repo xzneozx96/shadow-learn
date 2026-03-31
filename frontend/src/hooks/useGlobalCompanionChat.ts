@@ -4,7 +4,7 @@
  * Similar structure to useAgentChat but simplified:
  * - Uses '__global' as the chat key (not a lessonId)
  * - Uses buildGlobalSystemPrompt (no lesson/segment context)
- * - Uses getGlobalToolDefinitionsArray (7 tools, not 16+)
+ * - Uses getGlobalToolDefinitionsArray (9 tools, not 16+)
  * - Simplified tool re-submit: cap at 3 rounds, no same-tool loop detection
  * - No AgentActionsContext dispatch, no telemetry
  */
@@ -25,6 +25,8 @@ import {
   executeGetSkillGuide,
   executeGetVocabulary,
   executeRecallMemory,
+  executeRenderProgressChart,
+  executeRenderVocabCard,
   executeSaveMemory,
   executeUpdateLearnerProfile,
   getGlobalToolDefinitionsArray,
@@ -41,6 +43,7 @@ export function useGlobalCompanionChat() {
   const systemPromptRef = useRef<string>('')
   const dbRef = useRef<ShadowLearnDB | null>(null)
   dbRef.current = db
+  const [promptVersion, setPromptVersion] = useState(0)
 
   // Tool re-submit tracking
   const activeRef = useRef(false)
@@ -110,9 +113,17 @@ export function useGlobalCompanionChat() {
               toolCall.input as { content: string, tags?: string[], importance?: 1 | 2 | 3 },
               CHAT_KEY,
             )
+            setPromptVersion(v => v + 1)
             break
           case 'update_learner_profile':
             result = await executeUpdateLearnerProfile(currentDb, toolCall.input as Record<string, unknown>)
+            setPromptVersion(v => v + 1)
+            break
+          case 'render_progress_chart':
+            result = await executeRenderProgressChart(currentDb, toolCall.input as { metric: 'accuracy' | 'mastery' })
+            break
+          case 'render_vocab_card':
+            result = await executeRenderVocabCard(currentDb, toolCall.input as { word: string })
             break
           case 'get_core_guidelines':
             result = await executeGetCoreGuidelines()
@@ -162,7 +173,7 @@ export function useGlobalCompanionChat() {
     async function build() {
       const [profile, memories] = await Promise.all([
         getLearnerProfile(db!),
-        getMemorySummary(db!),
+        getMemorySummary(db!, 5),
       ])
       if (cancelled)
         return
@@ -174,7 +185,7 @@ export function useGlobalCompanionChat() {
     return () => {
       cancelled = true
     }
-  }, [db])
+  }, [db, promptVersion])
 
   // Load saved chat history on mount
   useEffect(() => {
