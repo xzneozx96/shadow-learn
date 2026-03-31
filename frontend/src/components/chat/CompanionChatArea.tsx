@@ -1,17 +1,21 @@
 import type { UIMessage } from '@ai-sdk/react'
-import type { ChatStatus } from 'ai'
+import type { ChatStatus, FileUIPart } from 'ai'
 import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
+import { ImageIcon } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { toast } from 'sonner'
 import {
   PromptInput,
   PromptInputBody,
+  PromptInputButton,
   PromptInputFooter,
   PromptInputHeader,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
+  usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
 import { useI18n } from '@/contexts/I18nContext'
 import {
@@ -24,6 +28,24 @@ import {
 import { MessageItem, StreamingDots } from './ChatMessageItem'
 import { ContextChipBar } from './ContextChipBar'
 
+/** Attach-image button — must be rendered inside a <PromptInput> so the context is available. */
+function AttachImageButton() {
+  const attachments = usePromptInputAttachments()
+  return (
+    <PromptInputButton
+      aria-label="Attach image"
+      onClick={attachments.openFileDialog}
+    >
+      <ImageIcon className="size-4" />
+    </PromptInputButton>
+  )
+}
+
+export interface SendPayload {
+  text: string
+  files?: FileUIPart[]
+}
+
 interface CompanionChatAreaProps {
   messages: UIMessage[]
   isLoading: boolean
@@ -31,7 +53,7 @@ interface CompanionChatAreaProps {
   onLoadMore: () => void
   chips: ContextChip[]
   onRemoveChip: (id: string) => void
-  onSend: (text: string) => void
+  onSend: (payload: SendPayload) => void
   headerSlot?: ReactNode
   placeholder?: string
 }
@@ -57,7 +79,7 @@ export function CompanionChatArea({
 
   const sendMessage: SendMessage = (opts) => {
     isAtBottomRef.current = true
-    onSend(opts.text)
+    onSend({ text: opts.text })
   }
 
   const uniqueMessages = useMemo(() => {
@@ -160,12 +182,25 @@ export function CompanionChatArea({
     container.scrollTop = container.scrollHeight
   }, [messages, isLoading, uniqueMessages])
 
-  const handlePromptSubmit = (message: { text: string }) => {
+  const handlePromptSubmit = (message: { text: string, files: FileUIPart[] }) => {
     const trimmed = message.text.trim()
-    if (!trimmed || isLoading)
+    const hasFiles = message.files.length > 0
+    if ((!trimmed && !hasFiles) || isLoading)
       return
     isAtBottomRef.current = true
-    sendMessage({ text: trimmed })
+    onSend({ text: trimmed, files: hasFiles ? message.files : undefined })
+  }
+
+  const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept' }) => {
+    if (err.code === 'accept') {
+      toast.error('Only JPG, PNG, and WEBP images are supported.')
+    }
+    else if (err.code === 'max_file_size') {
+      toast.error('Image must be 5 MB or smaller.')
+    }
+    else {
+      toast.error('Only one image can be attached at a time.')
+    }
   }
 
   return (
@@ -211,7 +246,13 @@ export function CompanionChatArea({
       </div>
 
       <div className="border-t border-border p-3">
-        <PromptInput onSubmit={handlePromptSubmit}>
+        <PromptInput
+          accept="image/jpeg,image/png,image/webp"
+          maxFileSize={5 * 1024 * 1024}
+          maxFiles={1}
+          onError={handleAttachError}
+          onSubmit={handlePromptSubmit}
+        >
           {chips.length > 0
             ? (
                 <PromptInputHeader>
@@ -223,7 +264,9 @@ export function CompanionChatArea({
             <PromptInputTextarea placeholder={placeholder ?? t('lesson.askAboutSegment')} />
           </PromptInputBody>
           <PromptInputFooter>
-            <PromptInputTools />
+            <PromptInputTools>
+              <AttachImageButton />
+            </PromptInputTools>
             <PromptInputSubmit status={chatStatus} />
           </PromptInputFooter>
         </PromptInput>

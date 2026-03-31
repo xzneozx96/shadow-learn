@@ -39,6 +39,8 @@ import {
 import { normalizeMessagesForBackend, PAGE_SIZE } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
 
+const VISION_ERROR_REGEX = /image|vision|multimodal|unsupported.*file|file.*unsupported/i
+
 // -------------------------------------------------------------------------- //
 // Hook
 // -------------------------------------------------------------------------- //
@@ -226,7 +228,11 @@ export function useAgentChat(
     onError(err) {
       errorCountRef.current += 1
       console.error('Agent chat error:', err)
-      toast.error(`Connection error: ${err.message || 'Unknown error'}`)
+      const msg = err.message || 'Unknown error'
+      const isVisionError = VISION_ERROR_REGEX.test(msg)
+      toast.error(isVisionError
+        ? 'The model could not process the image. Try a different image or remove it.'
+        : `Connection error: ${msg}`)
     },
   })
 

@@ -10,10 +10,10 @@ export function GlobalCompanionPanel() {
   const { chips, removeChip, clearChips, closePanel } = useGlobalCompanionContext()
   const { messages, isLoading, sendMessage, loadMore, hasMore } = useGlobalCompanionChat()
 
-  function handleSend(text: string) {
+  function handleSend({ text, files }: { text: string, files?: import('ai').FileUIPart[] }) {
     const context = chips.map(c => `> ${c.text}`).join('\n')
     const composed = chips.length > 0 ? `Context:\n${context}\n\n${text}` : text
-    sendMessage({ text: composed })
+    sendMessage({ text: composed, files })
     clearChips()
   }
 

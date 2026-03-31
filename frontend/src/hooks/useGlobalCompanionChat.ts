@@ -39,6 +39,7 @@ import { API_BASE } from '@/lib/config'
 
 const CHAT_KEY = '__global'
 const MAX_TOOL_ROUNDS = 3
+const VISION_ERROR_REGEX = /image|vision|multimodal|unsupported.*file|file.*unsupported/i
 
 export function useGlobalCompanionChat() {
   const { db, keys } = useAuth()
@@ -157,7 +158,11 @@ export function useGlobalCompanionChat() {
     },
     onError(err) {
       console.error('Global companion chat error:', err)
-      toast.error(`Connection error: ${err.message || 'Unknown error'}`)
+      const msg = err.message || 'Unknown error'
+      const isVisionError = VISION_ERROR_REGEX.test(msg)
+      toast.error(isVisionError
+        ? 'The model could not process the image. Try a different image or remove it.'
+        : `Connection error: ${msg}`)
     },
   })
 

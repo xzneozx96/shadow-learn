@@ -14,7 +14,8 @@ export function normalizeMessagesForBackend(messages: any[], limit: number = PAG
   for (const current of messages) {
     if (current.role === 'user') {
       const textPart = (current.parts ?? []).find((p: any) => p.type === 'text')
-      if (!textPart?.text?.trim())
+      const hasImagePart = (current.parts ?? []).some((p: any) => p.type === 'file')
+      if (!textPart?.text?.trim() && !hasImagePart)
         continue
     }
 
