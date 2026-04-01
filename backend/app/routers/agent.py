@@ -69,8 +69,8 @@ def _convert_to_openai_messages(
 
         if message.parts:
             for part in message.parts:
-                if part.type == "text":
-                    message_parts.append({"type": "text", "text": part.text or ""})
+                if part.type == "text" and part.text:
+                    message_parts.append({"type": "text", "text": part.text})
 
                 elif part.type == "file":
                     # Image attachment — forward as OpenAI vision image_url part
@@ -114,15 +114,17 @@ def _convert_to_openai_messages(
                                 }
                             )
 
-                        if (
-                            part.state == "output-available"
-                            and part.output is not None
-                        ):
+                        if part.state == "output-available":
+                            content = (
+                                json.dumps(part.output)
+                                if part.output is not None
+                                else "Tool returned no output."
+                            )
                             tool_result_messages.append(
                                 {
                                     "role": "tool",
                                     "tool_call_id": tool_call_id,
-                                    "content": json.dumps(part.output),
+                                    "content": content,
                                 }
                             )
 
@@ -310,6 +312,17 @@ async def _stream_agent(stream):
                             "toolName": name,
                             "input": raw,
                             "errorText": str(e),
+                        }
+                    )
+                    # Still emit tool-input-available so onToolCall fires and
+                    # addToolResult can provide a result, preventing an orphaned
+                    # tool_call on re-submit (which causes a 400 from OpenRouter).
+                    yield fmt(
+                        {
+                            "type": "tool-input-available",
+                            "toolCallId": tcid,
+                            "toolName": name,
+                            "input": {"error": f"Invalid tool arguments — JSON parse failed: {e}"},
                         }
                     )
                     continue
