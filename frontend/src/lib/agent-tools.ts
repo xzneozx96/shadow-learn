@@ -46,7 +46,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'get_study_context',
-      description: 'Get composite study context: due review items, recent mistakes, mastery scores, and session stats. Call this before suggesting exercises.',
+      description: 'Get composite study context for deciding what to practice next: due spaced-repetition items, recent mistake patterns, per-skill mastery scores, and current session stats. Call this before suggesting or launching any exercise. Do NOT call this for charts or historical trends — use get_progress_summary for that. Returns an object with dueItems, recentMistakes, masteryScores, and sessionStats.',
       parameters: {
         type: 'object',
         properties: {
@@ -60,7 +60,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'get_user_manual',
-      description: 'Fetch the app user manual / help guide. Call this when the user asks how to use the app, how a feature works, or asks for help.',
+      description: 'Fetch the app user manual and help guide. Call this when the user asks how to use the app, how a feature works, or asks for help with anything app-related. Do not call for language learning questions — only for questions about ShadowLearn itself. Returns a markdown string with feature explanations and usage instructions.',
       parameters: { type: 'object', properties: {} },
     },
   },
@@ -69,7 +69,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'get_vocabulary',
-      description: 'Get vocabulary entries, optionally scoped to a lesson.',
+      description: 'Get vocabulary entries from the learner\'s workbook, optionally scoped to a specific lesson. Call this when you need word IDs for render_study_session, want to show the user their vocabulary list, or need to look up a word\'s spaced-repetition status. Do not re-call if you already fetched vocabulary earlier in this session — the data does not change mid-session. Returns an array of vocab entries each with id, word, pinyin, definition, and SR metadata.',
       parameters: {
         type: 'object',
         properties: {
@@ -83,7 +83,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'get_progress_summary',
-      description: 'Get overall progress stats: accuracy trend, skill breakdown, session count.',
+      description: 'Get overall learning progress statistics: accuracy trend over time, per-skill score breakdown, and total session count. Call this when the user asks about their history, progress, or wants to see a stats overview. Do NOT use this to decide what to study next — use get_study_context for that. Returns aggregate stats suitable for display in a chart or summary.',
       parameters: { type: 'object', properties: {} },
     },
   },
@@ -92,7 +92,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'recall_memory',
-      description: 'Search long-term memory for facts about the user. Use keyword queries.',
+      description: 'Search long-term memory for previously saved facts about the user — preferences, goals, known difficulties, personal context. Call this when the user references something that might have been noted before, or when personalizing a response. Use specific keyword queries; broad queries return noise. Returns an array of matching memory entries with content, tags, and importance level.',
       parameters: {
         type: 'object',
         properties: {
@@ -108,7 +108,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'save_memory',
-      description: 'Save an important observation about the user to long-term memory.',
+      description: 'Save an important observation about the user to long-term memory for recall in future sessions. Call this when you learn something durable and worth remembering: a learning goal, a known difficulty, a preference, or a significant milestone. Do not save transient facts or exercise results — use update_sr_item and log_mistake for those. The content should be a self-contained plain-text sentence that will be meaningful when read in isolation later.',
       parameters: {
         type: 'object',
         properties: {
@@ -125,7 +125,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'update_sr_item',
-      description: 'Update a spaced repetition item after an exercise result.',
+      description: 'Update a spaced repetition item\'s schedule after an exercise result, advancing or resetting the review interval accordingly. Call this after every exercise where the user\'s performance is known. The itemId must be the id field from SR items returned by get_study_context or get_vocabulary — do not guess or construct IDs. result must be one of: \'correct\', \'incorrect\', or \'partial\'.',
       parameters: {
         type: 'object',
         properties: {
@@ -141,7 +141,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'log_mistake',
-      description: 'Log a mistake the user made. Upserts an error pattern: increments frequency if existing.',
+      description: 'Log a mistake the user made, upserting an error pattern — increments frequency if the pattern already exists, creates it if new. Call this when you observe a clear error during practice or shadowing. The errorType must be one of: tone, character, pronunciation, grammar, vocabulary, listening, reading — do not use free-form values. Returns the updated error pattern entry.',
       parameters: {
         type: 'object',
         properties: {
@@ -158,7 +158,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'update_learner_profile',
-      description: 'Create or update learner profile. Use during onboarding to create the initial profile, or later to update fields.',
+      description: 'Create or update the learner\'s profile with personal and learning preference fields. Call during onboarding to create the initial profile, or when the user provides updated information about their level, goals, or preferences. Must include at least one field — do not call with an empty object. Fields: name, currentLevel (Beginner/Elementary/Intermediate/Advanced), dailyGoalMinutes, nativeLanguage, targetLanguage.',
       parameters: {
         type: 'object',
         properties: {
@@ -176,7 +176,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'render_study_session',
-      description: 'Start an interactive study session with one or more exercise types for specified vocabulary items. The user completes the exercises one by one; results are reported when done. Prefer this over individual render_*_exercise tools when practicing multiple items or types.',
+      description: 'Start an interactive study session with one or more exercise types applied to specified vocabulary items. Call this when the user wants to practice vocabulary — it handles all exercise types in sequence. itemIds must be id values from get_vocabulary results. For cloze exercises include storyCount (1–10, default 1); for translation or pronunciation exercises include sentencesPerWord (1–5, default 1). Examples: { itemIds: ["id1","id2"], exerciseTypes: ["writing"] } — basic writing drill; { itemIds: ["id1","id2"], exerciseTypes: ["cloze"], storyCount: 3 } — 3 fill-in-the-blank stories; { itemIds: ["id1"], exerciseTypes: ["translation","pronunciation"], sentencesPerWord: 2 } — 2 sentences per word for both types.',
       parameters: {
         type: 'object',
         properties: {
@@ -211,7 +211,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'render_progress_chart',
-      description: 'Render a progress chart: accuracy trend or skill mastery overview.',
+      description: 'Render an inline progress chart in the chat. Call when the user wants to visualize their learning trends. Use metric \'accuracy\' for a time-series chart of exercise accuracy over recent sessions; use \'mastery\' for a bar chart showing current mastery level per skill area. Do not call get_progress_summary first — this tool fetches its own data. Returns a rendered chart component.',
       parameters: {
         type: 'object',
         properties: {
@@ -226,7 +226,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'render_vocab_card',
-      description: 'Render an inline vocabulary card for a specific word.',
+      description: 'Render an inline vocabulary card for a specific Chinese word. Call when the user asks about a word\'s meaning, pronunciation, or stroke order, or when introducing new vocabulary. The word parameter accepts Chinese characters (e.g. "你好") — do not pass pinyin or English. Returns a card with characters, pinyin, tone marks, definition, and example usage.',
       parameters: {
         type: 'object',
         properties: {
@@ -240,7 +240,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'get_core_guidelines',
-      description: 'Get core SLA principles, Vietnamese learner profile, feedback templates, exercise selection logic, error types, and session protocols. Call once at session start.',
+      description: 'Get core teaching principles, learner profile conventions, feedback templates, exercise selection logic, error classification, and session protocols for this app. Call once at the start of a session before giving substantive feedback or launching exercises. Do not call again in the same session — the guidelines do not change. Returns a markdown document with structured teaching guidance.',
       parameters: { type: 'object', properties: {} },
     },
   },
@@ -248,7 +248,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'get_skill_guide',
-      description: 'Get detailed teaching methods for a specific skill area. Call when the session focuses on that skill.',
+      description: 'Get detailed teaching methods, common errors, and coaching strategies for a specific skill area. Call when the session focuses on that skill or the user asks for help with it. Do not call for general questions — reserve for skill-specific coaching (tones, pronunciation, vocabulary, grammar, listening, speaking, characters). Returns a markdown guide with methods, pitfalls, and example interventions for the chosen skill.',
       parameters: {
         type: 'object',
         properties: {
@@ -266,7 +266,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'navigate_to_segment',
-      description: 'Seek the video to a specific segment by zero-based index.',
+      description: 'Seek the video player to a specific segment, moving the playback position and highlighting that line in the transcript. Call when the user wants to jump to a particular moment in the lesson video, or when you want to direct their attention to a specific line for review. Use play_segment_audio instead if the user only wants to hear a line without changing the video position. segmentIndex is zero-based and must come from the lesson\'s segment list visible in the transcript.',
       parameters: {
         type: 'object',
         properties: {
@@ -280,7 +280,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'start_shadowing',
-      description: 'Launch shadowing mode, optionally starting from a specific segment.',
+      description: 'Launch shadowing mode for the current lesson — a listen-then-speak practice flow where the user listens to each segment, then records themselves repeating it, then sees the transcript revealed. Call when the user wants to practice speaking and pronunciation by mimicking native audio. Optionally pass segmentIndex to start from a specific line; omit to start from the currently active segment. Returns immediately — shadowing mode opens in the UI.',
       parameters: {
         type: 'object',
         properties: {
@@ -294,7 +294,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'switch_tab',
-      description: 'Switch the lesson panel to a different tab.',
+      description: 'Switch the lesson panel to a different tab. Call when the user\'s request is best served by a different view: \'transcript\' to read/follow along with the lesson text, \'workbook\' to review vocabulary, \'study\' to launch structured exercises, \'companion\' to return to the AI chat. Do not switch tabs without a clear reason — only when the destination tab directly serves the user\'s current intent. Returns immediately once the tab switches.',
       parameters: {
         type: 'object',
         properties: {
@@ -308,7 +308,7 @@ export const TOOL_DEFINITIONS: Record<string, object> = {
     type: 'function',
     function: {
       name: 'play_segment_audio',
-      description: 'Play TTS audio for a specific segment.',
+      description: 'Play TTS audio for a specific segment without moving the video playback position. Call when the user wants to hear how a line sounds without disrupting where they are in the video. Use navigate_to_segment instead if the user wants to jump to and watch from that point in the video. segmentIndex is zero-based and must come from the lesson\'s segment list visible in the transcript.',
       parameters: {
         type: 'object',
         properties: {
