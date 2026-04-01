@@ -36,7 +36,7 @@ function AttachImageButton({ label }: { label: string }) {
       aria-label={label}
       onClick={attachments.openFileDialog}
     >
-      <ImageIcon className="size-4" />
+      <ImageIcon className="size-5" />
     </PromptInputButton>
   )
 }
@@ -100,6 +100,7 @@ export function CompanionChatArea({
   const { t } = useI18n()
   const chatStatus: ChatStatus = isLoading ? 'streaming' : 'ready'
   const scrollRef = useRef<HTMLDivElement>(null)
+  const inputAreaRef = useRef<HTMLDivElement>(null)
   const topSentinelRef = useRef<HTMLDivElement>(null)
   const scrollFromBottomRef = useRef<number | null>(null)
   const prevFirstIdRef = useRef<string | undefined>(undefined)
@@ -150,6 +151,14 @@ export function CompanionChatArea({
     prevWideIdsRef.current = next
     return next
   }, [uniqueMessages])
+
+  // Auto-focus the textarea when a chip is added
+  useEffect(() => {
+    if (chips.length > 0) {
+      const textarea = inputAreaRef.current?.querySelector('textarea')
+      textarea?.focus()
+    }
+  }, [chips.length])
 
   // Track scroll position to know if user is near the bottom
   useEffect(() => {
@@ -278,7 +287,7 @@ export function CompanionChatArea({
         <div className="h-px" />
       </div>
 
-      <div className="border-t border-border p-3">
+      <div ref={inputAreaRef} className="border-t border-border p-3">
         <PromptInput
           accept="image/jpeg,image/png,image/webp"
           maxFileSize={5 * 1024 * 1024}

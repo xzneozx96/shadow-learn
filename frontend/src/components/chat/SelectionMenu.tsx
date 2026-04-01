@@ -2,6 +2,7 @@ import { Sparkles } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from '@/contexts/I18nContext'
+import { Button } from '../ui/button'
 
 interface SelectionMenuProps {
   rect: DOMRect
@@ -32,14 +33,14 @@ export function SelectionMenu({ rect, onAddChip, onDismiss }: SelectionMenuProps
       className="fixed z-9999 -translate-x-1/2 animate-in fade-in zoom-in-95 duration-100"
       style={{ top: `${top}px`, left: `${left}px` }}
     >
-      <button
+      <Button
         type="button"
         onClick={onAddChip}
-        className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-background px-3 py-1.5 text-sm font-medium text-primary shadow-lg hover:bg-primary/10 transition-colors"
+        className="border border-primary/60 bg-background text-primary shadow-lg hover:bg-card transition-colors"
       >
         <Sparkles className="size-4" />
         {t('companion.selectionMenu')}
-      </button>
+      </Button>
     </div>,
     document.body,
   )

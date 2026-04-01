@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- renderMessageParts is tightly coupled with MessageItem */
 import type { UIMessage } from '@ai-sdk/react'
 import type { ExerciseRenderResult } from '../lesson/ExerciseRenderer'
+import { FileText } from 'lucide-react'
 import { memo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -17,6 +18,18 @@ import {
   VocabCardRenderer,
 } from '../lesson/AgentRenderers'
 import { ExerciseRenderer } from '../lesson/ExerciseRenderer'
+
+const CONTEXT_CHIPS_REGEX = /^Context:\n((?:> [^\n]*\n)+)\n([\s\S]*)$/
+const BLOCKQUOTE_PREFIX_REGEX = /^> /
+
+/** Parse a "Context:\n> line1\n> line2\n\nbody" prefix into chip texts + remaining body. */
+function parseContextChips(text: string): { chips: string[], body: string } {
+  const match = text.match(CONTEXT_CHIPS_REGEX)
+  if (!match)
+    return { chips: [], body: text }
+  const chips = match[1].split('\n').filter(Boolean).map(l => l.replace(BLOCKQUOTE_PREFIX_REGEX, ''))
+  return { chips, body: match[2] }
+}
 
 export type SendMessage = (opts: { text: string }) => void
 
@@ -149,7 +162,7 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
             key={imgKey}
             src={filePart.url}
             alt={filePart.filename ?? 'Attached image'}
-            className="max-h-48 max-w-full rounded-md object-contain"
+            className="max-h-48 max-w-full rounded-md object-contain mb-2"
           />
         )
       }
@@ -163,10 +176,35 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
 export const MessageItem = memo(
   ({ msg, sendMessage, activeWideIds }: { msg: UIMessage, sendMessage: SendMessage, activeWideIds: ReadonlySet<string> }) => {
     if (msg.role !== 'assistant') {
+      // Parse context chips from user messages for visual rendering
+      const textPart = msg.parts.find((p): p is { type: 'text', text: string } => p.type === 'text' && 'text' in p)
+      const { chips: contextChips, body } = textPart ? parseContextChips(textPart.text) : { chips: [], body: '' }
+      const hasChips = contextChips.length > 0
+
       return (
         <div className="flex justify-end">
           <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
-            {renderMessageParts(msg, sendMessage, activeWideIds)}
+            {hasChips && (
+              <div className="flex flex-wrap gap-1 mb-1.5">
+                {contextChips.map((chip, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 rounded-sm bg-card/15 px-1.5 py-0.5 text-xs text-primary-foreground/90"
+                  >
+                    <FileText className="size-3 shrink-0" />
+                    <span className="truncate max-w-[180px]">{chip}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+            {hasChips
+              ? (
+                  <>
+                    {body && <p className="whitespace-pre-wrap">{body}</p>}
+                    {renderMessageParts({ ...msg, parts: msg.parts.filter(p => p.type !== 'text') } as UIMessage, sendMessage, activeWideIds)}
+                  </>
+                )
+              : renderMessageParts(msg, sendMessage, activeWideIds)}
           </div>
         </div>
       )
