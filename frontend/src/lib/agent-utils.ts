@@ -8,6 +8,35 @@
 // Also used to cap the LLM context window via normalizeMessagesForBackend.
 export const PAGE_SIZE = 5
 
+function guaranteeToolResultPairing(messages: any[]): any[] {
+  return messages.map((msg) => {
+    if (msg.role !== 'assistant')
+      return msg
+    const parts = msg.parts ?? []
+    const hasOrphan = parts.some(
+      (p: any) =>
+        p.type?.startsWith('tool-')
+        && p.state !== 'output-available'
+        && p.state !== 'output-error',
+    )
+    if (!hasOrphan)
+      return msg
+    return {
+      ...msg,
+      parts: parts.map((p: any) => {
+        if (
+          p.type?.startsWith('tool-')
+          && p.state !== 'output-available'
+          && p.state !== 'output-error'
+        ) {
+          return { ...p, state: 'output-error', output: { error: 'Tool call did not complete' } }
+        }
+        return p
+      }),
+    }
+  })
+}
+
 export function normalizeMessagesForBackend(messages: any[], limit: number = PAGE_SIZE) {
   const normalized: any[] = []
 
@@ -60,13 +89,15 @@ export function normalizeMessagesForBackend(messages: any[], limit: number = PAG
     normalized.push(current)
   }
 
-  if (normalized.length <= limit)
-    return normalized
-  let startIndex = normalized.length - limit
+  // Step 4: guarantee every tool-invocation part has a completed state
+  const guaranteed = guaranteeToolResultPairing(normalized)
+  if (guaranteed.length <= limit)
+    return guaranteed
+  let startIndex = guaranteed.length - limit
 
-  while (startIndex > 0 && normalized[startIndex]?.role === 'tool') {
+  while (startIndex > 0 && guaranteed[startIndex]?.role === 'tool') {
     startIndex--
   }
 
-  return normalized.slice(startIndex)
+  return guaranteed.slice(startIndex)
 }
