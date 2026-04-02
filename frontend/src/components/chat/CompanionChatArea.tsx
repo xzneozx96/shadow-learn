@@ -105,6 +105,11 @@ export function CompanionChatArea({
   const scrollFromBottomRef = useRef<number | null>(null)
   const prevFirstIdRef = useRef<string | undefined>(undefined)
   const isAtBottomRef = useRef(true)
+  // Gates IntersectionObserver until the initial scroll-to-bottom is verified.
+  // useDeferredValue + StrictMode replays the deferred transition, transiently
+  // resetting scrollTop to 0. Without this gate the observer sees the sentinel
+  // in view during the reset and triggers a loadMore cascade.
+  const scrollVerifiedRef = useRef(false)
 
   // Text-only resend path — used by MessageItem for quick-reply and resend actions.
   // Unlike handlePromptSubmit below, this path never carries file attachments because
@@ -192,7 +197,7 @@ export function CompanionChatArea({
       return
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasMoreRef.current) {
+        if (entry.isIntersecting && hasMoreRef.current && scrollVerifiedRef.current) {
           scrollFromBottomRef.current = container.scrollHeight - container.scrollTop
           onLoadMoreRef.current()
         }
@@ -228,6 +233,28 @@ export function CompanionChatArea({
       return
     container.scrollTop = container.scrollHeight
   }, [deferredMessages, isLoading, uniqueMessages])
+
+  // Safety net: verify scroll position after StrictMode settles.
+  // useDeferredValue + StrictMode replays the deferred transition, which can
+  // transiently reset scrollTop to 0 AFTER the useLayoutEffect has scrolled.
+  // useEffect fires after all StrictMode re-invocations; rAF fires before
+  // the next paint, so the correction is invisible (at most one frame).
+  useEffect(() => {
+    if (scrollVerifiedRef.current || uniqueMessages.length === 0)
+      return
+    const container = scrollRef.current
+    if (!container)
+      return
+    const raf = requestAnimationFrame(() => {
+      const dist = container.scrollHeight - container.scrollTop - container.clientHeight
+      if (dist > 80) {
+        container.scrollTop = container.scrollHeight
+        isAtBottomRef.current = true
+      }
+      scrollVerifiedRef.current = true
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [uniqueMessages])
 
   // User-initiated send path — called by PromptInput's onSubmit. Carries the full
   // payload including any file attachments the user selected via the attach button.
