@@ -24,7 +24,7 @@ import { useTTS } from '@/hooks/useTTS'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { captureStudySessionCompleted } from '@/lib/posthog-events'
-import { buildSessionQuestions, toFallbackType } from '@/lib/study-utils'
+import { buildSessionQuestions, buildStudyPool, toFallbackType } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
 type Phase = 'picker' | 'session' | 'summary'
@@ -169,7 +169,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
     const hasWriting = entries.some(e => isWritingSupported(e.word))
     const types = distributeExercises(entries, mode, count, hasAzure, hasWriting)
 
-    const pool = entries.toSorted(() => Math.random() - 0.5)
+    const pool = buildStudyPool(entries, !!preloadedEntries)
 
     if (preloadedEntries) {
       const fallbackTypes = types.map(toFallbackType)

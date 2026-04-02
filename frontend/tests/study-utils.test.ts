@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildExerciseResultPayload, buildSessionQuestions, isClozeExercise, isPronExercise, isTranslationSentence, toFallbackType } from '@/lib/study-utils'
+import { buildExerciseResultPayload, buildSessionQuestions, buildStudyPool, isClozeExercise, isPronExercise, isTranslationSentence, toFallbackType } from '@/lib/study-utils'
 
 function entry(id: string) {
   return {
@@ -29,6 +29,29 @@ function pron(n: number) {
 function translation(n: number) {
   return { text: `词${n}的句子`, romanization: `cí${n} de jùzi`, english: `sentence for word ${n}` }
 }
+
+describe('buildStudyPool', () => {
+  it('sorts entries newest-first for regular study sessions', () => {
+    const entries = [
+      { ...entry('a'), createdAt: '2024-01-01T00:00:00Z' },
+      { ...entry('b'), createdAt: '2024-03-01T00:00:00Z' },
+      { ...entry('c'), createdAt: '2024-02-01T00:00:00Z' },
+    ]
+    const pool = buildStudyPool(entries, false)
+    expect(pool.map(e => e.id)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('returns all entries for review sessions without sorting by date', () => {
+    const entries = [
+      { ...entry('a'), createdAt: '2024-03-01T00:00:00Z' },
+      { ...entry('b'), createdAt: '2024-01-01T00:00:00Z' },
+      { ...entry('c'), createdAt: '2024-02-01T00:00:00Z' },
+    ]
+    const pool = buildStudyPool(entries, true)
+    expect(pool).toHaveLength(3)
+    expect(pool.map(e => e.id).sort()).toEqual(['a', 'b', 'c'])
+  })
+})
 
 describe('isClozeExercise', () => {
   it('accepts a valid cloze object', () => {
