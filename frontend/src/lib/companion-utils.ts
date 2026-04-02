@@ -1,4 +1,5 @@
 import type { UIMessage } from 'ai'
+import { WIDE_TOOLS } from '@/lib/tools/index'
 
 /**
  * AI SDK v5 tool parts have runtime type `tool-{name}` with `toolName`,
@@ -18,28 +19,7 @@ interface ToolPartShape {
 
 type MessagePart = UIMessage['parts'][number]
 
-// Silent tools — rendered as compact ToolCallCards (not hidden)
-export const SILENT_TOOLS = new Set([
-  'get_study_context',
-  'get_vocabulary',
-  'get_progress_summary',
-  'recall_memory',
-  'get_core_guidelines',
-  'get_skill_guide',
-  'save_memory',
-  'update_sr_item',
-  'log_mistake',
-  'update_learner_profile',
-  'navigate_to_segment',
-  'start_shadowing',
-  'switch_tab',
-  'play_segment_audio',
-])
-
-// Exercise render tools
-export const EXERCISE_TOOLS = new Set([
-  'render_study_session',
-])
+export { EXERCISE_TOOLS, SILENT_TOOLS, WIDE_TOOLS } from '@/lib/tools/index'
 
 export function isToolPart(p: MessagePart): p is MessagePart & ToolPartShape {
   return typeof p.type === 'string' && p.type.startsWith('tool-')
@@ -61,12 +41,7 @@ export function isWidePart(p: MessagePart): boolean {
   if (!isToolPart(p))
     return false
   const name = getToolName(p)
-  return (
-    p.state === 'output-available'
-    && (EXERCISE_TOOLS.has(name)
-      || name === 'render_progress_chart'
-      || name === 'render_vocab_card')
-  )
+  return p.state === 'output-available' && WIDE_TOOLS.has(name)
 }
 
 /**

@@ -134,14 +134,20 @@ export function useAgentChat(
       if (isError) {
         toast.error(`Tool [${toolCall.toolName}] failed: ${(output as any).error ?? 'Unknown error'}`)
         errorCountRef.current += 1
+        addToolResult({
+          tool: toolCall.toolName,
+          toolCallId: toolCall.toolCallId,
+          state: 'output-error',
+          errorText: (output as any).error ?? 'Unknown error',
+        })
       }
-
-      addToolResult({
-        tool: toolCall.toolName,
-        toolCallId: toolCall.toolCallId,
-        output,
-        isError,
-      })
+      else {
+        addToolResult({
+          tool: toolCall.toolName,
+          toolCallId: toolCall.toolCallId,
+          output,
+        })
+      }
     },
     onError(err) {
       errorCountRef.current += 1
