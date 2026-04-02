@@ -5,9 +5,9 @@ import {
   executeGetStudyContext,
   executeGetUserManual,
   executeRenderStudySession,
-  getGlobalToolDefinitionsArray,
   ToolInputSchemas,
 } from '@/lib/agent-tools'
+import { getActiveToolPool, getToolDefinitions } from '@/lib/tools/index'
 
 vi.mock('@/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/db')>()
@@ -341,10 +341,10 @@ describe('toolInputSchemas — input validation', () => {
   })
 })
 
-describe('getGlobalToolDefinitionsArray', () => {
-  it('includes all expected global tools', () => {
-    const tools = getGlobalToolDefinitionsArray()
-    const names = tools.map((t: any) => t.function.name)
+describe('getActiveToolPool', () => {
+  it('includes all expected non-deferred tools', () => {
+    const pool = getActiveToolPool('test-key')
+    const names = pool.map(t => t.name)
 
     expect(names).toContain('recall_memory')
     expect(names).toContain('save_memory')
@@ -352,28 +352,34 @@ describe('getGlobalToolDefinitionsArray', () => {
     expect(names).toContain('get_study_context')
     expect(names).toContain('get_progress_summary')
     expect(names).toContain('update_learner_profile')
-    expect(names).toContain('get_core_guidelines')
-    expect(names).toContain('get_skill_guide')
-    expect(names).toContain('get_user_manual')
     expect(names).toContain('render_progress_chart')
     expect(names).toContain('render_vocab_card')
   })
 
-  it('excludes lesson-only tools', () => {
-    const tools = getGlobalToolDefinitionsArray()
-    const names = tools.map((t: any) => t.function.name)
+  it('includes lesson-specific tools', () => {
+    const pool = getActiveToolPool('test-key')
+    const names = pool.map(t => t.name)
 
-    expect(names).not.toContain('render_study_session')
-    expect(names).not.toContain('navigate_to_segment')
-    expect(names).not.toContain('start_shadowing')
-    expect(names).not.toContain('switch_tab')
-    expect(names).not.toContain('play_segment_audio')
-    expect(names).not.toContain('log_mistake')
-    expect(names).not.toContain('update_sr_item')
+    expect(names).toContain('render_study_session')
+    expect(names).toContain('navigate_to_segment')
+    expect(names).toContain('start_shadowing')
+    expect(names).toContain('switch_tab')
+    expect(names).toContain('play_segment_audio')
+    expect(names).toContain('log_mistake')
+    expect(names).toContain('update_sr_item')
   })
 
-  it('returns exactly 11 tools', () => {
-    expect(getGlobalToolDefinitionsArray()).toHaveLength(11)
+  it('excludes deferred tools by default', () => {
+    const pool = getActiveToolPool('test-key')
+    const names = pool.map(t => t.name)
+
+    expect(names).not.toContain('get_core_guidelines')
+    expect(names).not.toContain('get_skill_guide')
+    expect(names).not.toContain('get_user_manual')
+  })
+
+  it('returns exactly 15 tools (all non-deferred)', () => {
+    expect(getActiveToolPool('test-key')).toHaveLength(15)
   })
 })
 
@@ -444,7 +450,8 @@ describe('executeGetStudyContext', () => {
   })
 
   it('get_study_context tool definition does not require lessonId', () => {
-    const tools = getGlobalToolDefinitionsArray()
+    const pool = getActiveToolPool('test-key')
+    const tools = getToolDefinitions(pool)
     const def = tools.find((t: any) => t.function.name === 'get_study_context') as any
     expect(def).toBeDefined()
     expect(def.function.parameters.required).toBeUndefined()

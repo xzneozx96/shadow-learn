@@ -19,26 +19,11 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { appendAgentLog, getChatMessages, getDueItems, getExerciseAccuracy, getLearnerProfile, getLessonMeta, getRecentMistakes, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
-import { buildSystemPrompt } from '@/lib/agent-system-prompt'
-import {
-  executeGetCoreGuidelines,
-  executeGetProgressSummary,
-  executeGetSkillGuide,
-  executeGetStudyContext,
-  executeGetVocabulary,
-  executeLogMistake,
-  executeRecallMemory,
-  executeRenderProgressChart,
-  executeRenderStudySession,
-  executeRenderVocabCard,
-  executeSaveMemory,
-  executeUpdateLearnerProfile,
-  executeUpdateSrItem,
-  getToolDefinitionsArray,
-  ToolInputSchemas,
-} from '@/lib/agent-tools'
+import { buildSystemPrompt, clearSystemPromptCache } from '@/lib/agent-system-prompt'
 import { normalizeMessagesForBackend, PAGE_SIZE } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
+import { ToolExecutor } from '@/lib/tools/executor'
+import { getActiveToolPool, getToolDefinitions } from '@/lib/tools/index'
 
 const VISION_ERROR_REGEX = /image|vision|multimodal|unsupported.*file|file.*unsupported/i
 
@@ -92,6 +77,30 @@ export function useAgentChat(
     loadedOffsetRef.current = 0
   }
 
+  const toolPool = useMemo(
+    () => getActiveToolPool(keys?.openrouterApiKey ?? ''),
+    [keys?.openrouterApiKey],
+  )
+
+  const executor = useMemo(
+    () => new ToolExecutor(toolPool),
+    [toolPool],
+  )
+
+  const abortControllerRef = useRef(new AbortController())
+
+  const toolContext = useMemo(() => {
+    if (!db)
+      return null
+    return {
+      idb: db,
+      lessonId,
+      agentActions: { dispatch: dispatchAction },
+      toast: (msg: string) => toast.error(msg),
+      abortController: abortControllerRef.current,
+    }
+  }, [db, lessonId, dispatchAction])
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -101,11 +110,11 @@ export function useAgentChat(
             messages: normalizeMessagesForBackend(messages, PAGE_SIZE),
             system_prompt: systemPromptRef.current,
             openrouter_api_key: keys?.openrouterApiKey ?? '',
-            tools: getToolDefinitionsArray(),
+            tools: getToolDefinitions(toolPool),
           },
         }),
       }),
-    [keys?.openrouterApiKey],
+    [keys?.openrouterApiKey, toolPool],
   )
 
   const { messages, setMessages, sendMessage, addToolResult, status, error } = useChat({
@@ -114,117 +123,24 @@ export function useAgentChat(
 
     async onToolCall({ toolCall }) {
       toolCallCountRef.current += 1
-      const currentDb = dbRef.current
-      if (!currentDb)
+      if (!db || !toolContext)
         return
 
-      // Validate tool input schema if one exists
-      const schema = ToolInputSchemas[toolCall.toolName as keyof typeof ToolInputSchemas]
-      if (schema) {
-        const parsed = schema.safeParse(toolCall.input)
-        if (!parsed.success) {
-          addToolResult({
-            tool: toolCall.toolName,
-            toolCallId: toolCall.toolCallId,
-            output: { error: `Invalid tool input: ${parsed.error.message}` },
-          })
-          return
-        }
-      }
+      const { output, isError } = await executor.execute(
+        { toolCallId: toolCall.toolCallId, toolName: toolCall.toolName, args: toolCall.input },
+        toolContext,
+      )
 
-      const openrouterApiKey = keys?.openrouterApiKey ?? ''
-      let result: unknown
-
-      try {
-        switch (toolCall.toolName) {
-          case 'get_study_context':
-            result = await executeGetStudyContext(currentDb, toolCall.input as { lessonId?: string })
-            break
-          case 'get_vocabulary':
-            result = await executeGetVocabulary(currentDb, toolCall.input as { lessonId?: string })
-            break
-          case 'get_progress_summary':
-            result = await executeGetProgressSummary(currentDb)
-            break
-          case 'recall_memory':
-            result = await executeRecallMemory(currentDb, toolCall.input as { query: string, tags?: string[] })
-            break
-          case 'save_memory':
-            result = await executeSaveMemory(
-              currentDb,
-              toolCall.input as { content: string, tags?: string[], importance?: 1 | 2 | 3 },
-              lessonId,
-            )
-            break
-          case 'update_sr_item':
-            result = await executeUpdateSrItem(
-              currentDb,
-              toolCall.input as { itemId: string, result: 'correct' | 'incorrect' | 'partial' },
-            )
-            break
-          case 'log_mistake':
-            result = await executeLogMistake(
-              currentDb,
-              toolCall.input as { word: string, context: string, errorType: string },
-            )
-            break
-          case 'update_learner_profile':
-            result = await executeUpdateLearnerProfile(currentDb, toolCall.input as Record<string, unknown>)
-            break
-          case 'render_study_session':
-            result = await executeRenderStudySession(currentDb, ToolInputSchemas.render_study_session.parse(toolCall.input), openrouterApiKey)
-            break
-          case 'render_progress_chart':
-            result = await executeRenderProgressChart(
-              currentDb,
-              toolCall.input as { metric: 'accuracy' | 'mastery' },
-            )
-            break
-          case 'render_vocab_card':
-            result = await executeRenderVocabCard(
-              currentDb,
-              toolCall.input as { word: string },
-            )
-            break
-          case 'get_core_guidelines':
-            result = await executeGetCoreGuidelines()
-            break
-          case 'get_skill_guide':
-            result = await executeGetSkillGuide(toolCall.input as { skill: string })
-            break
-          case 'navigate_to_segment':
-            dispatchAction({ type: 'navigate_to_segment', payload: toolCall.input as Record<string, unknown> })
-            result = { ok: true }
-            break
-          case 'start_shadowing':
-            dispatchAction({ type: 'start_shadowing', payload: toolCall.input as Record<string, unknown> })
-            result = { ok: true }
-            break
-          case 'switch_tab':
-            dispatchAction({ type: 'switch_tab', payload: toolCall.input as Record<string, unknown> })
-            result = { ok: true }
-            break
-          case 'play_segment_audio':
-            dispatchAction({ type: 'play_segment_audio', payload: toolCall.input as Record<string, unknown> })
-            result = { ok: true }
-            break
-          default:
-            result = { error: `Unknown tool: ${toolCall.toolName}` }
-        }
-      }
-      catch (err: any) {
-        console.error(`Tool execution error or hang [${toolCall.toolName}]:`, err)
-        toast.error(`Tool [${toolCall.toolName}] failed: ${err.message || 'Unknown error'}`)
-        result = { error: err.message || 'Execution failed' }
+      if (isError) {
+        toast.error(`Tool [${toolCall.toolName}] failed: ${(output as any).error ?? 'Unknown error'}`)
         errorCountRef.current += 1
       }
 
-      // Use addToolResult to provide the result to the SDK
-      // Don't await — avoids potential deadlocks per AI SDK v5 docs
       addToolResult({
         tool: toolCall.toolName,
         toolCallId: toolCall.toolCallId,
-        output: result,
+        output,
+        isError,
       })
     },
     onError(err) {
@@ -270,6 +186,11 @@ export function useAgentChat(
     [sendMessage],
   )
 
+  // Clear system prompt cache on lessonId change
+  useEffect(() => {
+    clearSystemPromptCache()
+  }, [lessonId])
+
   // Build system prompt when lesson context or segment changes
   useEffect(() => {
     if (!db)
@@ -299,17 +220,17 @@ export function useAgentChat(
         vocabularyDueCount: dueItems.length,
       }
 
-      systemPromptRef.current = buildSystemPrompt(
+      systemPromptRef.current = buildSystemPrompt({
         profile,
         lessonTitle,
         lessonId,
         activeSegment,
         memories,
-        lessonMeta?.sourceLanguage,
-        lessonMeta?.translationLanguages?.[0],
+        sourceLanguage: lessonMeta?.sourceLanguage,
+        translationLanguage: lessonMeta?.translationLanguages?.[0],
         appState,
         accuracy,
-      )
+      })
     }
 
     void build()

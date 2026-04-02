@@ -6,12 +6,14 @@ import { memo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
-  EXERCISE_TOOLS,
   getToolName,
   isToolPart,
   isWidePart,
-  SILENT_TOOLS,
 } from '@/lib/companion-utils'
+import {
+  EXERCISE_TOOLS,
+  SILENT_TOOLS,
+} from '@/lib/tools/index'
 import {
   ProgressChartRenderer,
   ToolCallCard,
