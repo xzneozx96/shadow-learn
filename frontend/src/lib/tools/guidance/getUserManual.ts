@@ -9,7 +9,6 @@ export const getUserManualTool = buildTool({
   name: 'get_user_manual',
   description: 'Fetches the ShadowLearn app user manual. Call only when the user asks how to use the app itself — not for language learning questions.',
   inputSchema: z.object({}),
-  isDeferred: () => true,
   searchHint: 'user manual help guide app features',
   execute: async () => executeGetUserManual(),
 })

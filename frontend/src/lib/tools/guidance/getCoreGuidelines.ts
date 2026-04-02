@@ -4,9 +4,8 @@ import { buildTool } from '@/lib/tools/types'
 
 export const getCoreGuidelinesTool = buildTool({
   name: 'get_core_guidelines',
-  description: 'Fetches teaching principles, feedback templates, and session protocols. Call at the start of each session.',
+  description: 'Get core teaching principles, learner profile conventions, feedback templates, exercise selection logic, error classification, and session protocols for this app. Call once at the start of a session before giving substantive feedback or launching exercises. Do not call again in the same session — the guidelines do not change. Returns a markdown document with structured teaching guidance.',
   inputSchema: z.object({}),
-  isDeferred: () => true,
   searchHint: 'core guidelines teaching principles session protocol',
   execute: async () => executeGetCoreGuidelines(),
 })

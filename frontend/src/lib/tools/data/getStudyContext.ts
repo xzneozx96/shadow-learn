@@ -4,13 +4,13 @@ import { buildTool } from '@/lib/tools/types'
 
 export const getStudyContextTool = buildTool({
   name: 'get_study_context',
-  description: 'Fetches a composite snapshot of the learner\'s current state: due vocabulary items, recent mistakes, mastery data, and session statistics. Call this before starting any study session or when you need a complete picture of what to work on.',
+  description: 'Get composite study context for deciding what to practice next: due spaced-repetition items, recent mistake patterns, per-skill mastery scores, and current session stats. Call this before suggesting or launching any exercise. Do NOT call this for charts or historical trends — use get_progress_summary for that. Returns an object with dueItems, recentMistakes, masteryScores, and sessionStats.',
   inputSchema: z.object({
-    lessonId: z.string().optional(),
+    lessonId: z.string().describe('Current lesson ID (optional — omit when calling from the global companion)').optional(),
   }),
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
-  maxResultSizeChars: 6000,
+  maxResultSizeChars: 10_000,
   searchHint: 'study context due items mistakes mastery',
   execute: async (input, context) => executeGetStudyContext(context.idb, input),
 })

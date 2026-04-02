@@ -4,14 +4,14 @@ import { buildTool } from '@/lib/tools/types'
 
 export const recallMemoryTool = buildTool({
   name: 'recall_memory',
-  description: 'Searches long-term memories saved from previous sessions. Use when the user references past preferences, struggles, or goals.',
+  description: 'Search long-term memory for previously saved facts about the user — preferences, goals, known difficulties, personal context. Call this when the user references something that might have been noted before, or when personalizing a response. Use specific keyword queries; broad queries return noise. Returns an array of matching memory entries with content, tags, and importance level.',
   inputSchema: z.object({
-    query: z.string(),
-    tags: z.array(z.string()).optional(),
+    query: z.string().describe('Keyword search query'),
+    tags: z.array(z.string()).describe('Optional tags to filter by').optional(),
   }),
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
-  maxResultSizeChars: 3000,
+  maxResultSizeChars: 10_000,
   searchHint: 'memory recall search past preferences',
   execute: async (input, context) => executeRecallMemory(context.idb, input),
 })

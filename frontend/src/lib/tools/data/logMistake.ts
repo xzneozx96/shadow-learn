@@ -4,11 +4,11 @@ import { buildTool } from '@/lib/tools/types'
 
 export const logMistakeTool = buildTool({
   name: 'log_mistake',
-  description: 'Records an error pattern for a specific word to inform future practice prioritisation.',
+  description: 'Log a mistake the user made, upserting an error pattern — increments frequency if the pattern already exists, creates it if new. Call this when you observe a clear error during practice or shadowing. The errorType must be one of: tone, character, pronunciation, grammar, vocabulary, listening, reading — do not use free-form values.',
   inputSchema: z.object({
-    word: z.string(),
-    context: z.string(),
-    errorType: z.string(),
+    word: z.string().describe('The word/pattern that was mistaken'),
+    context: z.string().describe('Context of the mistake'),
+    errorType: z.string().describe('Type of error: tone, character, pronunciation, grammar, vocabulary, listening, reading'),
   }),
   execute: async (input, context) => executeLogMistake(context.idb, input),
 })
