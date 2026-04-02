@@ -64,7 +64,7 @@ export function getToolDefinitions(pool: AgentTool[]) {
     function: {
       name: tool.name,
       description: tool.description,
-      parameters: z.toJSONSchema(tool.inputSchema, { reused: 'inline' }),
+      parameters: z.toJSONSchema(tool.inputSchema, { target: 'openApi3' }),
     },
   }))
 }
@@ -89,6 +89,7 @@ export const SILENT_TOOLS = new Set([
   'start_shadowing',
   'switch_tab',
   'play_segment_audio',
+  'get_user_manual',
 ])
 
 // Exercise render tools

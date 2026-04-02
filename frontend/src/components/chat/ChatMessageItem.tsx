@@ -21,6 +21,14 @@ import {
 } from '../lesson/AgentRenderers'
 import { ExerciseRenderer } from '../lesson/ExerciseRenderer'
 
+// Memoized so that already-streamed text parts are not re-parsed by ReactMarkdown
+// on every new token. Only the part whose text actually changed re-renders.
+const MemoMarkdown = memo(({ text }: { text: string }) => (
+  <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 [&_table]:block [&_table]:overflow-x-auto [&_table]:whitespace-nowrap">
+    <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+  </div>
+))
+
 const CONTEXT_CHIPS_REGEX = /^Context:\n((?:> [^\n]*\n)+)\n([\s\S]*)$/
 const BLOCKQUOTE_PREFIX_REGEX = /^> /
 
@@ -144,13 +152,7 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
     if (part.type === 'text') {
       const partKey = `text-${i}`
       if (msg.role === 'assistant') {
-        return (
-          <div key={partKey} className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 [&_table]:block [&_table]:overflow-x-auto [&_table]:whitespace-nowrap">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {part.text}
-            </ReactMarkdown>
-          </div>
-        )
+        return <MemoMarkdown key={partKey} text={part.text} />
       }
       return <p key={partKey} className="whitespace-pre-wrap">{part.text}</p>
     }

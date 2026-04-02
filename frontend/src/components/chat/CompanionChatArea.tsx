@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
 import { ImageIcon, X } from 'lucide-react'
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import {
   PromptInput,
@@ -114,9 +114,14 @@ export function CompanionChatArea({
     onSend({ text: opts.text })
   }
 
+  // Defer message list rendering so that typing (urgent) is never blocked by
+  // streaming token updates (non-urgent). React will interrupt deferred renders
+  // when the user types and resume them afterward.
+  const deferredMessages = useDeferredValue(messages)
+
   const uniqueMessages = useMemo(() => {
     const seen = new Set<string>()
-    return messages.filter((m) => {
+    return deferredMessages.filter((m) => {
       if (!hasVisibleContent(m))
         return false
       if (seen.has(m.id))
@@ -124,7 +129,7 @@ export function CompanionChatArea({
       seen.add(m.id)
       return true
     })
-  }, [messages])
+  }, [deferredMessages])
 
   // For each "wide" tool type (exercises, charts, vocab cards), only the LAST
   // occurrence across all messages renders as a full widget. Earlier occurrences
@@ -198,13 +203,15 @@ export function CompanionChatArea({
     return () => observer.disconnect()
   }, [])
 
-  // Restore scroll position after older messages are prepended (prevents viewport jump)
+  // Restore scroll position after older messages are prepended (prevents viewport jump).
+  // Must depend on deferredMessages (not live messages) because the DOM is rendered from
+  // the deferred value — restoring before the deferred render would be a no-op.
   useLayoutEffect(() => {
     if (scrollFromBottomRef.current !== null && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight - scrollFromBottomRef.current
       scrollFromBottomRef.current = null
     }
-  }, [messages])
+  }, [deferredMessages])
 
   // Auto-scroll to bottom only when new messages arrive, not when older ones are prepended.
   // Uses useLayoutEffect (before paint) + direct scrollTop so the user never sees un-scrolled state.
@@ -220,18 +227,18 @@ export function CompanionChatArea({
     if (!container)
       return
     container.scrollTop = container.scrollHeight
-  }, [messages, isLoading, uniqueMessages])
+  }, [deferredMessages, isLoading, uniqueMessages])
 
   // User-initiated send path — called by PromptInput's onSubmit. Carries the full
   // payload including any file attachments the user selected via the attach button.
-  const handlePromptSubmit = (message: { text: string, files: FileUIPart[] }) => {
+  const handlePromptSubmit = useCallback((message: { text: string, files: FileUIPart[] }) => {
     const trimmed = message.text.trim()
     const hasFiles = message.files.length > 0
     if ((!trimmed && !hasFiles) || isLoading)
       return
     isAtBottomRef.current = true
     onSend({ text: trimmed, files: hasFiles ? message.files : undefined })
-  }
+  }, [isLoading, onSend])
 
   const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept' }) => {
     if (err.code === 'accept') {
@@ -262,7 +269,7 @@ export function CompanionChatArea({
           <div ref={topSentinelRef} />
           {hasMore && (
             <div className="flex justify-center py-1">
-              <span className="text-xs text-muted-foreground">↑ Scroll for older messages</span>
+              <span className="text-xs text-muted-foreground">{t('companion.scrollForOlder')}</span>
             </div>
           )}
           {uniqueMessages.map((msg: UIMessage) => (
