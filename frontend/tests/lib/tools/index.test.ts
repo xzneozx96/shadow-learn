@@ -23,25 +23,17 @@ describe('getAllBaseTools', () => {
 })
 
 describe('getActiveToolPool', () => {
-  it('excludes deferred tools by default', () => {
+  it('includes guidance tools (none are deferred)', () => {
     const pool = getActiveToolPool('test-key')
-    const names = pool.map(t => t.name)
-    expect(names).not.toContain('get_core_guidelines')
-    expect(names).not.toContain('get_skill_guide')
-    expect(names).not.toContain('get_user_manual')
-  })
-
-  it('includes deferred tools when includeDeferred is true', () => {
-    const pool = getActiveToolPool('test-key', { includeDeferred: true })
     const names = pool.map(t => t.name)
     expect(names).toContain('get_core_guidelines')
     expect(names).toContain('get_skill_guide')
     expect(names).toContain('get_user_manual')
   })
 
-  it('includes all non-deferred tools by default (15 tools)', () => {
+  it('returns all 18 tools by default', () => {
     const pool = getActiveToolPool('test-key')
-    expect(pool).toHaveLength(15) // 18 total - 3 deferred guidance tools
+    expect(pool).toHaveLength(18)
   })
 })
 
