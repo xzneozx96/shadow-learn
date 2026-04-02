@@ -9,7 +9,7 @@ export interface SessionContext {
   memories?: AgentMemory[]
   sourceLanguage?: string
   translationLanguage?: string
-  today?: string
+  currentTime?: string
   appState?: {
     currentTab: string
     sessionDurationMinutes: number
@@ -67,7 +67,7 @@ function buildDynamicSections(context: SessionContext): string {
 
   const sections: string[] = []
 
-  sections.push(`Today: ${context.today ?? new Date().toISOString().split('T')[0]}`)
+  sections.push(`Current Time: ${context.currentTime ?? new Date().toString()}`)
   sections.push('')
 
   // Derive languages from lesson metadata when profile is missing
@@ -233,6 +233,7 @@ export function buildSystemPrompt(context: SessionContext): string {
 export function buildGlobalSystemPrompt(
   profile: LearnerProfile | undefined,
   memories: AgentMemory[],
+  currentTime?: string,
 ): string {
   const sections: string[] = []
 
@@ -248,7 +249,7 @@ export function buildGlobalSystemPrompt(
     '',
   )
 
-  sections.push(`Today: ${new Date().toISOString().split('T')[0]}`)
+  sections.push(`Current Time: ${currentTime ?? new Date().toString()}`)
   sections.push('')
 
   if (!profile) {

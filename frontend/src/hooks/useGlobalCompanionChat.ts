@@ -11,6 +11,7 @@
  */
 
 import type { UIMessage } from '@ai-sdk/react'
+import type { AgentMemory, LearnerProfile } from '@/db'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -32,8 +33,9 @@ const VISION_ERROR_REGEX = /image|vision|multimodal|unsupported.*file|file.*unsu
 export function useGlobalCompanionChat() {
   const { db, keys } = useAuth()
   const { t } = useI18n()
-  const systemPromptRef = useRef<string>('')
   const [promptVersion, setPromptVersion] = useState(0)
+  const profileRef = useRef<LearnerProfile | undefined>(undefined)
+  const memoriesRef = useRef<AgentMemory[]>([])
 
   // Tool re-submit tracking
   const activeRef = useRef(false)
@@ -80,7 +82,11 @@ export function useGlobalCompanionChat() {
           return {
             body: {
               messages: normalizeMessagesForBackend(fullHistory),
-              system_prompt: systemPromptRef.current,
+              system_prompt: buildGlobalSystemPrompt(
+                profileRef.current,
+                memoriesRef.current,
+                new Date().toString(),
+              ),
               openrouter_api_key: keys?.openrouterApiKey ?? '',
               tools: getToolDefinitions(toolPool),
             },
@@ -164,7 +170,8 @@ export function useGlobalCompanionChat() {
       if (cancelled)
         return
 
-      systemPromptRef.current = buildGlobalSystemPrompt(profile, memories)
+      profileRef.current = profile
+      memoriesRef.current = memories
     }
 
     void build()
