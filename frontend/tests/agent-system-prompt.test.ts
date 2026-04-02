@@ -121,7 +121,7 @@ describe('buildSystemPrompt', () => {
       profile: mockProfile,
       activeSegment: null,
       memories: [],
-      today: '2026-04-02',
+      currentTime: '2026-04-02',
     })
     expect(prompt).toContain('Today: 2026-04-02')
   })
