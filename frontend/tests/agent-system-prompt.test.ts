@@ -116,6 +116,45 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('## Instructions')
   })
 
+  it('includes today date when provided', () => {
+    const prompt = buildSystemPrompt({
+      profile: mockProfile,
+      activeSegment: null,
+      memories: [],
+      today: '2026-04-02',
+    })
+    expect(prompt).toContain('Today: 2026-04-02')
+  })
+
+  it('falls back to current date when today not provided', () => {
+    const prompt = buildSystemPrompt({
+      profile: mockProfile,
+      activeSegment: null,
+      memories: [],
+    })
+    expect(prompt).toMatch(/Today: \d{4}-\d{2}-\d{2}/)
+  })
+
+  it('includes expanded style guidance', () => {
+    const prompt = buildSystemPrompt({
+      profile: mockProfile,
+      activeSegment: null,
+      memories: [],
+    })
+    expect(prompt).toContain('Lead with the answer or action')
+    expect(prompt).toContain('one sentence when possible')
+  })
+
+  it('includes tool-use anti-pattern warnings', () => {
+    const prompt = buildSystemPrompt({
+      profile: mockProfile,
+      activeSegment: null,
+      memories: [],
+    })
+    expect(prompt).toContain('Do not re-call')
+    expect(prompt).toContain('speculative data fetching')
+  })
+
   it('does not include the old restrictive single-tool-call instruction', () => {
     const prompt = buildSystemPrompt({ profile: mockProfile, activeSegment: null, memories: [] })
     expect(prompt).not.toContain('After calling tools and receiving results, respond to the user immediately')
@@ -215,6 +254,21 @@ describe('buildGlobalSystemPrompt', () => {
     const memories: AgentMemory[] = [{ id: '1', content: 'Prefers formal tone', tags: [], importance: 1, createdAt: Date.now(), lastAccessedAt: Date.now() }]
     const prompt = buildGlobalSystemPrompt(undefined, memories)
     expect(prompt).toContain('Prefers formal tone')
+  })
+
+  it('includes today date', () => {
+    const prompt = buildGlobalSystemPrompt(undefined, [])
+    expect(prompt).toMatch(/Today: \d{4}-\d{2}-\d{2}/)
+  })
+
+  it('includes expanded style guidance', () => {
+    const prompt = buildGlobalSystemPrompt(undefined, [])
+    expect(prompt).toContain('Lead with the answer or action')
+  })
+
+  it('includes tool anti-pattern warning', () => {
+    const prompt = buildGlobalSystemPrompt(undefined, [])
+    expect(prompt).toContain('Do not re-call')
   })
 
   it('does NOT include lesson context or exercise instructions', () => {

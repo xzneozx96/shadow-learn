@@ -8,7 +8,7 @@
  */
 
 import type { UIMessage } from '@ai-sdk/react'
-import type { ShadowLearnDB } from '@/db'
+import type { AgentMemory, LearnerProfile, ShadowLearnDB } from '@/db'
 import type { Segment } from '@/types'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
@@ -27,6 +27,20 @@ import { getActiveToolPool, getToolDefinitions } from '@/lib/tools/index'
 
 const VISION_ERROR_REGEX = /image|vision|multimodal|unsupported.*file|file.*unsupported/i
 
+// IDB-fetched context stored in a ref; prompt built per-send in prepareSendMessagesRequest
+interface PromptContext {
+  profile: LearnerProfile | null | undefined
+  memories: AgentMemory[]
+  accuracy: Record<string, { accuracy: number, attempts: number }>
+  sourceLanguage?: string
+  translationLanguage?: string
+  recentMistakeWords: string[]
+  vocabularyDueCount: number
+  lessonTitle?: string
+  lessonId: string
+  activeSegment: Segment | null
+}
+
 // -------------------------------------------------------------------------- //
 // Hook
 // -------------------------------------------------------------------------- //
@@ -38,7 +52,7 @@ export function useAgentChat(
 ) {
   const { db, keys } = useAuth()
   const { t } = useI18n()
-  const systemPromptRef = useRef<string>('')
+  const promptContextRef = useRef<PromptContext | null>(null)
   const dbRef = useRef<ShadowLearnDB | null>(null)
   dbRef.current = db
   const { dispatchAction } = useAgentActions()
@@ -105,14 +119,30 @@ export function useAgentChat(
     () =>
       new DefaultChatTransport({
         api: `${API_BASE}/api/agent`,
-        prepareSendMessagesRequest: ({ messages }) => ({
-          body: {
-            messages: normalizeMessagesForBackend(messages, PAGE_SIZE),
-            system_prompt: systemPromptRef.current,
-            openrouter_api_key: keys?.openrouterApiKey ?? '',
-            tools: getToolDefinitions(toolPool),
-          },
-        }),
+        prepareSendMessagesRequest: ({ messages }) => {
+          const ctx = promptContextRef.current
+          const systemPrompt = ctx
+            ? buildSystemPrompt({
+                ...ctx,
+                today: new Date().toISOString().split('T')[0],
+                appState: {
+                  currentTab: currentTabRef.current,
+                  sessionDurationMinutes: Math.floor((Date.now() - sessionStartRef.current) / 60_000),
+                  exercisesThisSession: exercisesThisSessionRef.current,
+                  recentMistakeWords: ctx.recentMistakeWords,
+                  vocabularyDueCount: ctx.vocabularyDueCount,
+                },
+              })
+            : ''
+          return {
+            body: {
+              messages: normalizeMessagesForBackend(messages, PAGE_SIZE),
+              system_prompt: systemPrompt,
+              openrouter_api_key: keys?.openrouterApiKey ?? '',
+              tools: getToolDefinitions(toolPool),
+            },
+          }
+        },
       }),
     [keys?.openrouterApiKey, toolPool],
   )
@@ -197,13 +227,13 @@ export function useAgentChat(
     clearSystemPromptCache()
   }, [lessonId])
 
-  // Build system prompt when lesson context or segment changes
+  // Fetch IDB context for prompt building — prompt itself is built per-send in prepareSendMessagesRequest
   useEffect(() => {
     if (!db)
       return
     let cancelled = false
 
-    async function build() {
+    async function fetchContext() {
       const today = new Date().toISOString().split('T')[0]
       const [profile, memories, lessonMeta, dueItems, recentMistakes, accuracy] = await Promise.all([
         getLearnerProfile(db!),
@@ -218,28 +248,21 @@ export function useAgentChat(
 
       exerciseAccuracyRef.current = accuracy
 
-      const appState = {
-        currentTab: currentTabRef.current,
-        sessionDurationMinutes: Math.floor((Date.now() - sessionStartRef.current) / 60_000),
-        exercisesThisSession: exercisesThisSessionRef.current,
+      promptContextRef.current = {
+        profile,
+        memories,
+        accuracy,
+        sourceLanguage: lessonMeta?.sourceLanguage,
+        translationLanguage: lessonMeta?.translationLanguages?.[0],
         recentMistakeWords: recentMistakes.map(e => e.patternId).slice(0, 5),
         vocabularyDueCount: dueItems.length,
-      }
-
-      systemPromptRef.current = buildSystemPrompt({
-        profile,
         lessonTitle,
         lessonId,
         activeSegment,
-        memories,
-        sourceLanguage: lessonMeta?.sourceLanguage,
-        translationLanguage: lessonMeta?.translationLanguages?.[0],
-        appState,
-        accuracy,
-      })
+      }
     }
 
-    void build()
+    void fetchContext()
     return () => {
       cancelled = true
     }

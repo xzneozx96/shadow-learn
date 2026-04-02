@@ -15,7 +15,7 @@ describe('buildTool factory', () => {
     expect(tool.isReadOnly({})).toBe(false)
     expect(tool.isEnabled()).toBe(true)
     expect(tool.isDeferred()).toBe(false)
-    expect(tool.maxResultSizeChars).toBe(8000)
+    expect(tool.maxResultSizeChars).toBe(10_000)
     expect(tool.searchHint).toBe('')
   })
 

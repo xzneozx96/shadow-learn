@@ -9,6 +9,7 @@ export interface SessionContext {
   memories?: AgentMemory[]
   sourceLanguage?: string
   translationLanguage?: string
+  today?: string
   appState?: {
     currentTab: string
     sessionDurationMinutes: number
@@ -65,6 +66,9 @@ function buildDynamicSections(context: SessionContext): string {
   } = context
 
   const sections: string[] = []
+
+  sections.push(`Today: ${context.today ?? new Date().toISOString().split('T')[0]}`)
+  sections.push('')
 
   // Derive languages from lesson metadata when profile is missing
   const derivedTargetLang = profile?.targetLanguage ?? sourceLanguage
@@ -184,12 +188,15 @@ function buildDynamicSections(context: SessionContext): string {
   // Instructions
   sections.push(
     '## Instructions',
-    '- Be encouraging but concise.',
+    '- Be encouraging but concise. Lead with the answer or action, not the reasoning.',
+    '- Skip filler and preamble. Use one sentence when possible.',
     '- **Call `get_core_guidelines()` at session start — loads SLA principles, feedback templates, and session protocols.**',
     '- **Call `get_skill_guide({ skill })` when focusing on a specific area. Skills: tones, pronunciation, vocabulary, grammar, listening, speaking, characters.**',
     '- Chain tools when needed, but always end with a user-visible response.',
     '- Use get_study_context (composite) before suggesting exercises — it covers all data in one call.',
     '- Save important user observations with save_memory().',
+    '- Do not re-call `get_core_guidelines` or `get_skill_guide` if already loaded this session — the context editing pipeline stubs repeated results.',
+    '- Do not call `get_vocabulary` without a specific purpose — avoid speculative data fetching.',
     '',
     '## Exercise Rendering — STRICT RULES',
     '- **NEVER write exercise questions as plain text in the chat.** Exercises MUST always be rendered via `render_study_session`.',
@@ -241,6 +248,9 @@ export function buildGlobalSystemPrompt(
     '',
   )
 
+  sections.push(`Today: ${new Date().toISOString().split('T')[0]}`)
+  sections.push('')
+
   if (!profile) {
     sections.push(
       '## Onboarding',
@@ -268,11 +278,13 @@ export function buildGlobalSystemPrompt(
 
   sections.push(
     '## Instructions',
-    '- Be concise and helpful.',
+    '- Be concise and helpful. Lead with the answer or action, not the reasoning.',
+    '- Skip filler and preamble. Use one sentence when possible.',
     '- Use save_memory() to remember important user preferences or observations.',
     '- **Call `recall_memory()` proactively when the user asks about their goals, preferences, history, or learning context** — do not rely solely on the Memory Summary above.',
     '- Do NOT suggest exercises or lesson-specific actions — those are available inside lessons.',
     '- If asked about a topic covered in core guidelines or skill guides, use get_core_guidelines() or get_skill_guide() to provide accurate info.',
+    '- Do not re-call `get_core_guidelines` or `get_skill_guide` if already loaded this session.',
   )
 
   return sections.join('\n')
