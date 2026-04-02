@@ -58,6 +58,28 @@ export function getActiveToolPool(
   })
 }
 
+// Tools available in the global companion (no lesson context)
+const GLOBAL_TOOL_NAMES = new Set([
+  'recall_memory',
+  'save_memory',
+  'get_vocabulary',
+  'get_study_context',
+  'get_progress_summary',
+  'update_learner_profile',
+  'get_core_guidelines',
+  'get_skill_guide',
+  'get_user_manual',
+  'render_progress_chart',
+  'render_vocab_card',
+])
+
+export function getGlobalToolPool(): AgentTool[] {
+  // Global tools don't need openrouterApiKey (no render_study_session)
+  return getAllBaseTools('').filter(tool =>
+    GLOBAL_TOOL_NAMES.has(tool.name) && tool.isEnabled(),
+  )
+}
+
 export function getToolDefinitions(pool: AgentTool[]) {
   return pool.map(tool => ({
     type: 'function' as const,

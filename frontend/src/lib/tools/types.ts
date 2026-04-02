@@ -10,13 +10,21 @@ export interface AgentTool<TInput = unknown, TOutput = unknown> {
   readonly name: string
   readonly description: string
   readonly inputSchema: z.ZodType<TInput>
-  isConcurrencySafe: (input: TInput) => boolean
-  isReadOnly: (input: TInput) => boolean
-  isEnabled: () => boolean
-  isDeferred: () => boolean
+  // Method declarations are bivariant in TypeScript (unlike property arrow functions which are
+  // strictly contravariant). This allows AgentTool<ConcreteInput> to be assigned to
+  // AgentTool<unknown> so tools can be stored in a heterogeneous AgentTool[] pool.
+  // eslint-disable-next-line ts/method-signature-style
+  isConcurrencySafe(input: TInput): boolean
+  // eslint-disable-next-line ts/method-signature-style
+  isReadOnly(input: TInput): boolean
+  // eslint-disable-next-line ts/method-signature-style
+  isEnabled(): boolean
+  // eslint-disable-next-line ts/method-signature-style
+  isDeferred(): boolean
   maxResultSizeChars: number
   searchHint: string
-  execute: (input: TInput, context: ToolContext) => Promise<TOutput>
+  // eslint-disable-next-line ts/method-signature-style
+  execute(input: TInput, context: ToolContext): Promise<TOutput>
 }
 
 // Context passed to every tool.execute() — all hook-level dependencies centralised here.
@@ -34,7 +42,7 @@ const TOOL_DEFAULTS = {
   isReadOnly: (_input?: unknown) => false,
   isEnabled: () => true,
   isDeferred: () => false,
-  maxResultSizeChars: 8000,
+  maxResultSizeChars: 10_000,
   searchHint: '',
 } as const
 

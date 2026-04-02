@@ -4,13 +4,13 @@
  * Similar structure to useAgentChat but simplified:
  * - Uses '__global' as the chat key (not a lessonId)
  * - Uses buildGlobalSystemPrompt (no lesson/segment context)
- * - Uses getGlobalToolDefinitionsArray (subset of all tools, not lesson-specific ones)
+ * - Uses getGlobalToolPool (subset of all tools, not lesson-specific ones)
+ * - Delegates tool execution to ToolExecutor (same pattern as useAgentChat)
  * - Simplified tool re-submit: cap at 3 rounds, no same-tool loop detection
  * - No AgentActionsContext dispatch, no telemetry
  */
 
 import type { UIMessage } from '@ai-sdk/react'
-import type { ShadowLearnDB } from '@/db'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -20,23 +20,10 @@ import { useI18n } from '@/contexts/I18nContext'
 import { getChatMessages, getLearnerProfile, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
 import { buildGlobalSystemPrompt } from '@/lib/agent-system-prompt'
-import {
-  executeGetCoreGuidelines,
-  executeGetProgressSummary,
-  executeGetSkillGuide,
-  executeGetStudyContext,
-  executeGetUserManual,
-  executeGetVocabulary,
-  executeRecallMemory,
-  executeRenderProgressChart,
-  executeRenderVocabCard,
-  executeSaveMemory,
-  executeUpdateLearnerProfile,
-  getGlobalToolDefinitionsArray,
-  ToolInputSchemas,
-} from '@/lib/agent-tools'
 import { normalizeMessagesForBackend, PAGE_SIZE } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
+import { ToolExecutor } from '@/lib/tools/executor'
+import { getGlobalToolPool, getToolDefinitions } from '@/lib/tools/index'
 
 const CHAT_KEY = '__global'
 const MAX_TOOL_ROUNDS = 3
@@ -46,8 +33,6 @@ export function useGlobalCompanionChat() {
   const { db, keys } = useAuth()
   const { t } = useI18n()
   const systemPromptRef = useRef<string>('')
-  const dbRef = useRef<ShadowLearnDB | null>(null)
-  dbRef.current = db
   const [promptVersion, setPromptVersion] = useState(0)
 
   // Tool re-submit tracking
@@ -60,6 +45,25 @@ export function useGlobalCompanionChat() {
   const loadedOffsetRef = useRef(0)
   const [hasMore, setHasMore] = useState(false)
 
+  // Tool pool and executor (mirrors useAgentChat pattern)
+  const toolPool = useMemo(() => getGlobalToolPool(), [])
+  const executor = useMemo(() => new ToolExecutor(toolPool), [toolPool])
+  const abortControllerRef = useRef(new AbortController())
+
+  const toolContext = useMemo(() => {
+    if (!db)
+      return null
+    return {
+      idb: db,
+      lessonId: null,
+      agentActions: { dispatch: () => {} },
+      toast: (msg: string) => toast.error(msg),
+      abortController: abortControllerRef.current,
+    }
+  }, [db])
+
+  const PROMPT_AFFECTING_TOOLS = useMemo(() => new Set(['save_memory', 'update_learner_profile']), [])
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -69,11 +73,11 @@ export function useGlobalCompanionChat() {
             messages: normalizeMessagesForBackend(messages, PAGE_SIZE),
             system_prompt: systemPromptRef.current,
             openrouter_api_key: keys?.openrouterApiKey ?? '',
-            tools: getGlobalToolDefinitionsArray(),
+            tools: getToolDefinitions(toolPool),
           },
         }),
       }),
-    [keys?.openrouterApiKey],
+    [keys?.openrouterApiKey, toolPool],
   )
 
   const { messages, setMessages, sendMessage, addToolResult, status, error } = useChat({
@@ -81,82 +85,32 @@ export function useGlobalCompanionChat() {
     transport,
 
     async onToolCall({ toolCall }) {
-      const currentDb = dbRef.current
-      if (!currentDb)
+      if (!db || !toolContext)
         return
 
-      // Validate tool input schema if one exists
-      const schema = ToolInputSchemas[toolCall.toolName as keyof typeof ToolInputSchemas]
-      if (schema) {
-        const parsed = schema.safeParse(toolCall.input)
-        if (!parsed.success) {
-          addToolResult({
-            tool: toolCall.toolName,
-            toolCallId: toolCall.toolCallId,
-            output: { error: `Invalid tool input: ${parsed.error.message}` },
-          })
-          return
-        }
-      }
+      const { output, isError } = await executor.execute(
+        { toolCallId: toolCall.toolCallId, toolName: toolCall.toolName, args: toolCall.input },
+        toolContext,
+      )
 
-      let result: unknown
-
-      try {
-        switch (toolCall.toolName) {
-          case 'get_vocabulary':
-            result = await executeGetVocabulary(currentDb, toolCall.input as { lessonId?: string })
-            break
-          case 'get_progress_summary':
-            result = await executeGetProgressSummary(currentDb)
-            break
-          case 'recall_memory':
-            result = await executeRecallMemory(currentDb, toolCall.input as { query: string, tags?: string[] })
-            break
-          case 'save_memory':
-            result = await executeSaveMemory(
-              currentDb,
-              toolCall.input as { content: string, tags?: string[], importance?: 1 | 2 | 3 },
-              CHAT_KEY,
-            )
-            setPromptVersion(v => v + 1)
-            break
-          case 'update_learner_profile':
-            result = await executeUpdateLearnerProfile(currentDb, toolCall.input as Record<string, unknown>)
-            setPromptVersion(v => v + 1)
-            break
-          case 'render_progress_chart':
-            result = await executeRenderProgressChart(currentDb, toolCall.input as { metric: 'accuracy' | 'mastery' })
-            break
-          case 'render_vocab_card':
-            result = await executeRenderVocabCard(currentDb, toolCall.input as { word: string })
-            break
-          case 'get_study_context':
-            result = await executeGetStudyContext(currentDb, toolCall.input as { lessonId?: string })
-            break
-          case 'get_user_manual':
-            result = await executeGetUserManual()
-            break
-          case 'get_core_guidelines':
-            result = await executeGetCoreGuidelines()
-            break
-          case 'get_skill_guide':
-            result = await executeGetSkillGuide(toolCall.input as { skill: string })
-            break
-          default:
-            result = { error: `Unknown tool: ${toolCall.toolName}` }
-        }
+      if (isError) {
+        toast.error(`Tool [${toolCall.toolName}] failed: ${(output as any).error ?? 'Unknown error'}`)
+        addToolResult({
+          tool: toolCall.toolName,
+          toolCallId: toolCall.toolCallId,
+          state: 'output-error',
+          errorText: (output as any).error ?? 'Unknown error',
+        })
       }
-      catch (err: any) {
-        console.error(`Tool execution error [${toolCall.toolName}]:`, err)
-        toast.error(`Tool [${toolCall.toolName}] failed: ${err.message || 'Unknown error'}`)
-        result = { error: err.message || 'Execution failed' }
+      else {
+        addToolResult({
+          tool: toolCall.toolName,
+          toolCallId: toolCall.toolCallId,
+          output,
+        })
+        if (PROMPT_AFFECTING_TOOLS.has(toolCall.toolName))
+          setPromptVersion(v => v + 1)
       }
-
-      addToolResult({
-        tool: toolCall.toolName,
-        toolCallId: toolCall.toolCallId,
-        output: result,
-      })
     },
     onError(err) {
       console.error('Global companion chat error:', err)
@@ -276,7 +230,7 @@ export function useGlobalCompanionChat() {
       return
 
     const allOutputReady = toolParts.every(
-      (p: any) => p.state === 'output-available',
+      (p: any) => p.state === 'output-available' || p.state === 'output-error',
     )
     if (!allOutputReady)
       return
