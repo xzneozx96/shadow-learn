@@ -38,6 +38,26 @@ function toolName(p: ToolPart): string {
   return p.toolName || p.type.replace('tool-', '') || ''
 }
 
+// ── Token estimation ──
+// Rough approximation: ~4 chars per token. Good enough for budget decisions.
+
+export function estimateTokens(messages: any[]): number {
+  if (messages.length === 0)
+    return 0
+  let chars = 0
+  for (const msg of messages) {
+    for (const part of (msg.parts ?? [])) {
+      if (part.type === 'text')
+        chars += (part.text ?? '').length
+      else if (part.output != null)
+        chars += typeof part.output === 'string' ? part.output.length : JSON.stringify(part.output).length
+      chars += 20 // per-part overhead (role, type, toolName)
+    }
+    chars += 30 // per-message overhead
+  }
+  return Math.ceil(chars / 4)
+}
+
 // ── Step 1: Drop user messages with no content ──
 
 function dropEmptyUserMessages(messages: UIMessage[]): UIMessage[] {
@@ -258,22 +278,68 @@ function deduplicateDataToolResults(messages: UIMessage[]): UIMessage[] {
   })
 }
 
-// ── Step 7: Sliding window limit ──
+// ── Step 7: Token-budget-aware compaction ──
+// Replaces the old hard sliding window. Strategy:
+// 1. If total tokens fit the budget → return as-is
+// 2. Stub ALL tool result content in older messages (outside verbatim tail)
+// 3. If still over budget → drop oldest messages
+// 4. Never start on a tool-role message
 
-function applyWindowLimit(messages: UIMessage[], limit: number): UIMessage[] {
-  if (messages.length <= limit)
+export const TOKEN_BUDGET = 8_000
+export const VERBATIM_TAIL = 6
+
+export function compactForTokenBudget(
+  messages: any[],
+  budget: number = TOKEN_BUDGET,
+  verbatimTail: number = VERBATIM_TAIL,
+): any[] {
+  if (messages.length === 0 || estimateTokens(messages) <= budget)
     return messages
-  let start = messages.length - limit
-  // Don't start mid-conversation on an assistant message with orphaned tool results
-  while (start > 0 && messages[start]?.role === 'assistant') {
-    start--
-  }
-  return messages.slice(start)
+
+  const splitAt = Math.max(0, messages.length - verbatimTail)
+  const tail = messages.slice(splitAt)
+  const older = messages.slice(0, splitAt)
+
+  // Stub tool result content in older messages
+  const compacted = older.map((msg) => {
+    if (msg.role !== 'assistant')
+      return msg
+    const parts: any[] = msg.parts ?? []
+    const hasToolResults = parts.some((p: any) =>
+      isToolPart(p) && (p.state === 'output-available' || p.state === 'output-error'),
+    )
+    if (!hasToolResults)
+      return msg
+    return {
+      ...msg,
+      parts: parts.map((p: any) => {
+        if (!isToolPart(p))
+          return p
+        if (p.state === 'output-available')
+          return { ...p, output: `[${toolName(p)} result omitted]` }
+        if (p.state === 'output-error')
+          return { ...p, output: '[error omitted]' }
+        return p
+      }),
+    }
+  })
+
+  let result = [...compacted, ...tail]
+
+  // Drop oldest if still over budget
+  while (result.length > verbatimTail && estimateTokens(result) > budget)
+    result = result.slice(1)
+
+  // Don't start on a tool-role message
+  while (result.length > 0 && result[0]?.role === 'tool')
+    result = result.slice(1)
+
+  return result
 }
 
 // ── Public API ──
 
-export function normalizeMessagesForBackend(messages: UIMessage[], limit: number = PAGE_SIZE): UIMessage[] {
+export function normalizeMessagesForBackend(messages: any[]) {
   let result = messages
   result = dropEmptyUserMessages(result)
   result = coalesceMessages(result)
@@ -281,6 +347,6 @@ export function normalizeMessagesForBackend(messages: UIMessage[], limit: number
   result = summarizeRenderOutputs(result)
   result = compressStaleGuidance(result)
   result = deduplicateDataToolResults(result)
-  result = applyWindowLimit(result, limit)
+  result = compactForTokenBudget(result)
   return result
 }

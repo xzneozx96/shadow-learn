@@ -120,6 +120,16 @@ export function useAgentChat(
       new DefaultChatTransport({
         api: `${API_BASE}/api/agent`,
         prepareSendMessagesRequest: ({ messages }) => {
+          // Reconstruct full history: IDB prefix + current React state
+          const unloaded = allStoredRef.current.slice(0, loadedOffsetRef.current)
+          const seen = new Set<string>()
+          const fullHistory = [...unloaded, ...messages].filter((m) => {
+            if (seen.has(m.id))
+              return false
+            seen.add(m.id)
+            return true
+          })
+
           const ctx = promptContextRef.current
           const systemPrompt = ctx
             ? buildSystemPrompt({
@@ -136,7 +146,7 @@ export function useAgentChat(
             : ''
           return {
             body: {
-              messages: normalizeMessagesForBackend(messages, PAGE_SIZE),
+              messages: normalizeMessagesForBackend(fullHistory),
               system_prompt: systemPrompt,
               openrouter_api_key: keys?.openrouterApiKey ?? '',
               tools: getToolDefinitions(toolPool),

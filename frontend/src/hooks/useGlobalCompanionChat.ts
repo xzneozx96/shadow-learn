@@ -68,14 +68,24 @@ export function useGlobalCompanionChat() {
     () =>
       new DefaultChatTransport({
         api: `${API_BASE}/api/agent`,
-        prepareSendMessagesRequest: ({ messages }) => ({
-          body: {
-            messages: normalizeMessagesForBackend(messages, PAGE_SIZE),
-            system_prompt: systemPromptRef.current,
-            openrouter_api_key: keys?.openrouterApiKey ?? '',
-            tools: getToolDefinitions(toolPool),
-          },
-        }),
+        prepareSendMessagesRequest: ({ messages }) => {
+          const unloaded = allStoredRef.current.slice(0, loadedOffsetRef.current)
+          const seen = new Set<string>()
+          const fullHistory = [...unloaded, ...messages].filter((m) => {
+            if (seen.has(m.id))
+              return false
+            seen.add(m.id)
+            return true
+          })
+          return {
+            body: {
+              messages: normalizeMessagesForBackend(fullHistory),
+              system_prompt: systemPromptRef.current,
+              openrouter_api_key: keys?.openrouterApiKey ?? '',
+              tools: getToolDefinitions(toolPool),
+            },
+          }
+        },
       }),
     [keys?.openrouterApiKey, toolPool],
   )
