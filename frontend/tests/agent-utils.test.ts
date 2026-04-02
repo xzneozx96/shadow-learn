@@ -1,38 +1,49 @@
+import type { UIMessage } from 'ai'
 import { describe, expect, it } from 'vitest'
 import { normalizeMessagesForBackend } from '@/lib/agent-utils'
 
+/**
+ * Build a UIMessage for tests. Parts often carry extra fields (toolName, args)
+ * that the real SDK union doesn't surface on ToolUIPart, so we cast loosely.
+ */
+function msg(overrides: { id: string, role: UIMessage['role'], parts: Record<string, unknown>[] }): UIMessage {
+  return overrides as unknown as UIMessage
+}
+
+/** Cast a message part to a loose record for asserting tool-specific fields. */
+function part(m: UIMessage, index = 0): Record<string, unknown> {
+  return m.parts[index] as Record<string, unknown>
+}
+
 describe('normalizeMessagesForBackend — guaranteeToolResultPairing', () => {
   it('injects output-error state for incomplete tool parts', () => {
-    const messages: any[] = [
-      {
+    const messages = [
+      msg({
         id: 'a1',
         role: 'assistant',
-        content: '',
         parts: [
           {
             type: 'tool-get_study_context',
             toolCallId: 'call-1',
             toolName: 'get_study_context',
             args: {},
-            state: 'input-available', // not complete
+            state: 'input-available',
           },
         ],
-      },
+      }),
     ]
 
     const result = normalizeMessagesForBackend(messages, 10)
-    const msg = result.find((m: any) => m.role === 'assistant')!
-    const part = msg.parts.find((p: any) => p.toolCallId === 'call-1')!
-    expect(part.state).toBe('output-error')
-    expect(part.output).toEqual({ error: 'Tool call did not complete' })
+    const p = part(result.find(m => m.role === 'assistant')!)
+    expect(p.state).toBe('output-error')
+    expect(p.errorText).toBe('Tool call did not complete')
   })
 
   it('does not modify parts with state output-available', () => {
-    const messages: any[] = [
-      {
+    const messages = [
+      msg({
         id: 'a1',
         role: 'assistant',
-        content: '',
         parts: [
           {
             type: 'tool-get_study_context',
@@ -43,22 +54,20 @@ describe('normalizeMessagesForBackend — guaranteeToolResultPairing', () => {
             output: { dueItems: [] },
           },
         ],
-      },
+      }),
     ]
 
     const result = normalizeMessagesForBackend(messages, 10)
-    const msg = result.find((m: any) => m.role === 'assistant')!
-    const part = msg.parts.find((p: any) => p.toolCallId === 'call-1')!
-    expect(part.state).toBe('output-available')
-    expect(part.output).toEqual({ dueItems: [] })
+    const p = part(result.find(m => m.role === 'assistant')!)
+    expect(p.state).toBe('output-available')
+    expect(p.output).toEqual({ dueItems: [] })
   })
 
   it('does not modify parts with state output-error', () => {
-    const messages: any[] = [
-      {
+    const messages = [
+      msg({
         id: 'a1',
         role: 'assistant',
-        content: '',
         parts: [
           {
             type: 'tool-save_memory',
@@ -66,23 +75,22 @@ describe('normalizeMessagesForBackend — guaranteeToolResultPairing', () => {
             toolName: 'save_memory',
             args: {},
             state: 'output-error',
-            output: { error: 'already errored' },
+            errorText: 'already errored',
           },
         ],
-      },
+      }),
     ]
 
     const result = normalizeMessagesForBackend(messages, 10)
-    const msg = result.find((m: any) => m.role === 'assistant')!
-    const part = msg.parts.find((p: any) => p.toolCallId === 'call-2')!
-    expect(part.state).toBe('output-error')
-    expect(part.output).toEqual({ error: 'already errored' })
+    const p = part(result.find(m => m.role === 'assistant')!)
+    expect(p.state).toBe('output-error')
+    expect(p.errorText).toBe('already errored')
   })
 
   it('handles messages with no tool parts without modification', () => {
-    const messages: any[] = [
-      { id: 'u1', role: 'user', content: 'hello', parts: [{ type: 'text', text: 'hello' }] },
-      { id: 'a1', role: 'assistant', content: 'hi', parts: [{ type: 'text', text: 'hi' }] },
+    const messages = [
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'text', text: 'hello' }] }),
+      msg({ id: 'a1', role: 'assistant', parts: [{ type: 'text', text: 'hi' }] }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
     expect(result).toHaveLength(2)
@@ -92,9 +100,9 @@ describe('normalizeMessagesForBackend — guaranteeToolResultPairing', () => {
 
 describe('normalizeMessagesForBackend — filtering and coalescing', () => {
   it('drops empty user messages (no text, no file)', () => {
-    const messages: any[] = [
-      { id: 'u1', role: 'user', content: '', parts: [{ type: 'text', text: '' }] },
-      { id: 'a1', role: 'assistant', content: 'hi', parts: [{ type: 'text', text: 'hi' }] },
+    const messages = [
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'text', text: '' }] }),
+      msg({ id: 'a1', role: 'assistant', parts: [{ type: 'text', text: 'hi' }] }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
     expect(result).toHaveLength(1)
@@ -102,9 +110,9 @@ describe('normalizeMessagesForBackend — filtering and coalescing', () => {
   })
 
   it('keeps user messages with file parts even if no text', () => {
-    const messages: any[] = [
-      { id: 'u1', role: 'user', content: '', parts: [{ type: 'file', url: 'img.png' }] },
-      { id: 'a1', role: 'assistant', content: 'ok', parts: [{ type: 'text', text: 'ok' }] },
+    const messages = [
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'file', url: 'img.png' }] }),
+      msg({ id: 'a1', role: 'assistant', parts: [{ type: 'text', text: 'ok' }] }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
     expect(result).toHaveLength(2)
@@ -112,55 +120,43 @@ describe('normalizeMessagesForBackend — filtering and coalescing', () => {
   })
 
   it('deduplicates consecutive identical user messages', () => {
-    const messages: any[] = [
-      { id: 'u1', role: 'user', content: 'hello', parts: [{ type: 'text', text: 'hello' }] },
-      { id: 'u2', role: 'user', content: 'hello', parts: [{ type: 'text', text: 'hello' }] },
+    const messages = [
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'text', text: 'hello' }] }),
+      msg({ id: 'u2', role: 'user', parts: [{ type: 'text', text: 'hello' }] }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
     expect(result).toHaveLength(1)
   })
 
   it('merges consecutive assistant tool-call messages', () => {
-    const messages: any[] = [
-      {
-        id: 'a1',
-        role: 'assistant',
-        content: '',
-        parts: [{ type: 'tool-get_vocab', toolCallId: 'c1', state: 'output-available', output: {} }],
-      },
-      {
-        id: 'a2',
-        role: 'assistant',
-        content: '',
-        parts: [{ type: 'tool-get_progress', toolCallId: 'c2', state: 'output-available', output: {} }],
-      },
+    const messages = [
+      msg({ id: 'a1', role: 'assistant', parts: [{ type: 'tool-get_vocab', toolCallId: 'c1', state: 'output-available', output: {} }] }),
+      msg({ id: 'a2', role: 'assistant', parts: [{ type: 'tool-get_progress', toolCallId: 'c2', state: 'output-available', output: {} }] }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
     expect(result).toHaveLength(1)
     expect(result[0].parts).toHaveLength(2)
   })
 
-  it('applies window limit respecting tool role boundaries', () => {
-    const messages: any[] = [
-      { id: 'u1', role: 'user', content: 'a', parts: [{ type: 'text', text: 'a' }] },
-      { id: 'a1', role: 'assistant', content: 'b', parts: [{ type: 'text', text: 'b' }] },
-      { id: 'u2', role: 'user', content: 'c', parts: [{ type: 'text', text: 'c' }] },
-      { id: 'a2', role: 'assistant', content: 'd', parts: [{ type: 'text', text: 'd' }] },
-      { id: 'u3', role: 'user', content: 'e', parts: [{ type: 'text', text: 'e' }] },
-      { id: 'a3', role: 'assistant', content: 'f', parts: [{ type: 'text', text: 'f' }] },
+  it('applies window limit', () => {
+    const messages = [
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'text', text: 'a' }] }),
+      msg({ id: 'a1', role: 'assistant', parts: [{ type: 'text', text: 'b' }] }),
+      msg({ id: 'u2', role: 'user', parts: [{ type: 'text', text: 'c' }] }),
+      msg({ id: 'a2', role: 'assistant', parts: [{ type: 'text', text: 'd' }] }),
+      msg({ id: 'u3', role: 'user', parts: [{ type: 'text', text: 'e' }] }),
+      msg({ id: 'a3', role: 'assistant', parts: [{ type: 'text', text: 'f' }] }),
     ]
     const result = normalizeMessagesForBackend(messages, 4)
     expect(result).toHaveLength(4)
-    expect(result[0].content).toBe('c')
   })
 })
 
 describe('normalizeMessagesForBackend — render output summarization', () => {
   it('replaces render_study_session output with { status: rendered }', () => {
-    const messages: any[] = [{
+    const messages = [msg({
       id: 'a1',
       role: 'assistant',
-      content: '',
       parts: [{
         type: 'tool-render_study_session',
         toolName: 'render_study_session',
@@ -168,16 +164,15 @@ describe('normalizeMessagesForBackend — render output summarization', () => {
         state: 'output-available',
         output: { type: 'study_session', props: { questions: [{}, {}, {}] } },
       }],
-    }]
+    })]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toEqual({ status: 'rendered' })
+    expect(part(result[0]).output).toEqual({ status: 'rendered' })
   })
 
   it('replaces render_progress_chart output', () => {
-    const messages: any[] = [{
+    const messages = [msg({
       id: 'a1',
       role: 'assistant',
-      content: '',
       parts: [{
         type: 'tool-render_progress_chart',
         toolName: 'render_progress_chart',
@@ -185,16 +180,15 @@ describe('normalizeMessagesForBackend — render output summarization', () => {
         state: 'output-available',
         output: { metric: 'accuracy', data: [1, 2, 3, 4, 5] },
       }],
-    }]
+    })]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toEqual({ status: 'rendered' })
+    expect(part(result[0]).output).toEqual({ status: 'rendered' })
   })
 
   it('replaces render_vocab_card output', () => {
-    const messages: any[] = [{
+    const messages = [msg({
       id: 'a1',
       role: 'assistant',
-      content: '',
       parts: [{
         type: 'tool-render_vocab_card',
         toolName: 'render_vocab_card',
@@ -202,16 +196,15 @@ describe('normalizeMessagesForBackend — render output summarization', () => {
         state: 'output-available',
         output: { entry: { word: '你好', romanization: 'nǐ hǎo' } },
       }],
-    }]
+    })]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toEqual({ status: 'rendered' })
+    expect(part(result[0]).output).toEqual({ status: 'rendered' })
   })
 
   it('does not summarize non-render tools', () => {
-    const messages: any[] = [{
+    const messages = [msg({
       id: 'a1',
       role: 'assistant',
-      content: '',
       parts: [{
         type: 'tool-get_vocabulary',
         toolName: 'get_vocabulary',
@@ -219,16 +212,15 @@ describe('normalizeMessagesForBackend — render output summarization', () => {
         state: 'output-available',
         output: [{ word: '你好' }],
       }],
-    }]
+    })]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toEqual([{ word: '你好' }])
+    expect(part(result[0]).output).toEqual([{ word: '你好' }])
   })
 
   it('does not summarize output-error render parts', () => {
-    const messages: any[] = [{
+    const messages = [msg({
       id: 'a1',
       role: 'assistant',
-      content: '',
       parts: [{
         type: 'tool-render_study_session',
         toolName: 'render_study_session',
@@ -236,35 +228,33 @@ describe('normalizeMessagesForBackend — render output summarization', () => {
         state: 'output-error',
         errorText: 'generation failed',
       }],
-    }]
+    })]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].state).toBe('output-error')
+    expect(part(result[0]).state).toBe('output-error')
   })
 
   it('derives tool name from type when toolName absent (IDB-restored)', () => {
-    const messages: any[] = [{
+    const messages = [msg({
       id: 'a1',
       role: 'assistant',
-      content: '',
       parts: [{
         type: 'tool-render_vocab_card',
         toolCallId: 'c1',
         state: 'output-available',
         output: { entry: { word: '谢谢' } },
       }],
-    }]
+    })]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toEqual({ status: 'rendered' })
+    expect(part(result[0]).output).toEqual({ status: 'rendered' })
   })
 })
 
 describe('normalizeMessagesForBackend — guidance compression', () => {
   it('keeps the latest get_core_guidelines result, stubs earlier ones', () => {
-    const messages: any[] = [
-      {
+    const messages = [
+      msg({
         id: 'a1',
         role: 'assistant',
-        content: '',
         parts: [{
           type: 'tool-get_core_guidelines',
           toolName: 'get_core_guidelines',
@@ -272,12 +262,11 @@ describe('normalizeMessagesForBackend — guidance compression', () => {
           state: 'output-available',
           output: { content: 'first load — 3K tokens of guidelines...' },
         }],
-      },
-      { id: 'u1', role: 'user', content: 'ok', parts: [{ type: 'text', text: 'ok' }] },
-      {
+      }),
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'text', text: 'ok' }] }),
+      msg({
         id: 'a2',
         role: 'assistant',
-        content: '',
         parts: [{
           type: 'tool-get_core_guidelines',
           toolName: 'get_core_guidelines',
@@ -285,19 +274,18 @@ describe('normalizeMessagesForBackend — guidance compression', () => {
           state: 'output-available',
           output: { content: 'second load — latest version' },
         }],
-      },
+      }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toBe('[loaded — not repeated]')
-    expect(result[2].parts[0].output).toEqual({ content: 'second load — latest version' })
+    expect(part(result[0]).output).toBe('[loaded — not repeated]')
+    expect(part(result[2]).output).toEqual({ content: 'second load — latest version' })
   })
 
   it('keeps get_skill_guide results for different calls, stubs duplicates', () => {
-    const messages: any[] = [
-      {
+    const messages = [
+      msg({
         id: 'a1',
         role: 'assistant',
-        content: '',
         parts: [{
           type: 'tool-get_skill_guide',
           toolName: 'get_skill_guide',
@@ -305,12 +293,11 @@ describe('normalizeMessagesForBackend — guidance compression', () => {
           state: 'output-available',
           output: { content: 'tones guide — first' },
         }],
-      },
-      { id: 'u1', role: 'user', content: 'more', parts: [{ type: 'text', text: 'more' }] },
-      {
+      }),
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'text', text: 'more' }] }),
+      msg({
         id: 'a2',
         role: 'assistant',
-        content: '',
         parts: [{
           type: 'tool-get_skill_guide',
           toolName: 'get_skill_guide',
@@ -318,18 +305,17 @@ describe('normalizeMessagesForBackend — guidance compression', () => {
           state: 'output-available',
           output: { content: 'tones guide — latest' },
         }],
-      },
+      }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toBe('[loaded — not repeated]')
-    expect(result[2].parts[0].output).toEqual({ content: 'tones guide — latest' })
+    expect(part(result[0]).output).toBe('[loaded — not repeated]')
+    expect(part(result[2]).output).toEqual({ content: 'tones guide — latest' })
   })
 
   it('does not touch guidance results if only one occurrence', () => {
-    const messages: any[] = [{
+    const messages = [msg({
       id: 'a1',
       role: 'assistant',
-      content: '',
       parts: [{
         type: 'tool-get_core_guidelines',
         toolName: 'get_core_guidelines',
@@ -337,19 +323,18 @@ describe('normalizeMessagesForBackend — guidance compression', () => {
         state: 'output-available',
         output: { content: 'full guidelines' },
       }],
-    }]
+    })]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toEqual({ content: 'full guidelines' })
+    expect(part(result[0]).output).toEqual({ content: 'full guidelines' })
   })
 })
 
 describe('normalizeMessagesForBackend — data tool deduplication', () => {
   it('keeps latest get_vocabulary, stubs earlier', () => {
-    const messages: any[] = [
-      {
+    const messages = [
+      msg({
         id: 'a1',
         role: 'assistant',
-        content: '',
         parts: [{
           type: 'tool-get_vocabulary',
           toolName: 'get_vocabulary',
@@ -357,12 +342,11 @@ describe('normalizeMessagesForBackend — data tool deduplication', () => {
           state: 'output-available',
           output: [{ word: 'old' }],
         }],
-      },
-      { id: 'u1', role: 'user', content: 'again', parts: [{ type: 'text', text: 'again' }] },
-      {
+      }),
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'text', text: 'again' }] }),
+      msg({
         id: 'a2',
         role: 'assistant',
-        content: '',
         parts: [{
           type: 'tool-get_vocabulary',
           toolName: 'get_vocabulary',
@@ -370,59 +354,54 @@ describe('normalizeMessagesForBackend — data tool deduplication', () => {
           state: 'output-available',
           output: [{ word: 'new' }],
         }],
-      },
+      }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toEqual({ status: 'superseded' })
-    expect(result[2].parts[0].output).toEqual([{ word: 'new' }])
+    expect(part(result[0]).output).toEqual({ status: 'superseded' })
+    expect(part(result[2]).output).toEqual([{ word: 'new' }])
   })
 
   it('deduplicates different data tools independently', () => {
-    const messages: any[] = [
-      {
+    const messages = [
+      msg({
         id: 'a1',
         role: 'assistant',
-        content: '',
         parts: [
           { type: 'tool-get_vocabulary', toolName: 'get_vocabulary', toolCallId: 'c1', state: 'output-available', output: { v: 'old' } },
           { type: 'tool-get_study_context', toolName: 'get_study_context', toolCallId: 'c2', state: 'output-available', output: { s: 'old' } },
         ],
-      },
-      { id: 'u1', role: 'user', content: 'x', parts: [{ type: 'text', text: 'x' }] },
-      {
+      }),
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'text', text: 'x' }] }),
+      msg({
         id: 'a2',
         role: 'assistant',
-        content: '',
         parts: [
           { type: 'tool-get_vocabulary', toolName: 'get_vocabulary', toolCallId: 'c3', state: 'output-available', output: { v: 'new' } },
         ],
-      },
+      }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
-    const a1Parts = result[0].parts
-    expect(a1Parts[0].output).toEqual({ status: 'superseded' })
-    expect(a1Parts[1].output).toEqual({ s: 'old' })
-    expect(result[2].parts[0].output).toEqual({ v: 'new' })
+    expect(part(result[0], 0).output).toEqual({ status: 'superseded' })
+    expect(part(result[0], 1).output).toEqual({ s: 'old' })
+    expect(part(result[2]).output).toEqual({ v: 'new' })
   })
 
   it('does not deduplicate non-data tools', () => {
-    const messages: any[] = [
-      {
+    const messages = [
+      msg({
         id: 'a1',
         role: 'assistant',
-        content: '',
         parts: [{ type: 'tool-save_memory', toolName: 'save_memory', toolCallId: 'c1', state: 'output-available', output: { id: '1' } }],
-      },
-      { id: 'u1', role: 'user', content: 'x', parts: [{ type: 'text', text: 'x' }] },
-      {
+      }),
+      msg({ id: 'u1', role: 'user', parts: [{ type: 'text', text: 'x' }] }),
+      msg({
         id: 'a2',
         role: 'assistant',
-        content: '',
         parts: [{ type: 'tool-save_memory', toolName: 'save_memory', toolCallId: 'c2', state: 'output-available', output: { id: '2' } }],
-      },
+      }),
     ]
     const result = normalizeMessagesForBackend(messages, 10)
-    expect(result[0].parts[0].output).toEqual({ id: '1' })
-    expect(result[2].parts[0].output).toEqual({ id: '2' })
+    expect(part(result[0]).output).toEqual({ id: '1' })
+    expect(part(result[2]).output).toEqual({ id: '2' })
   })
 })

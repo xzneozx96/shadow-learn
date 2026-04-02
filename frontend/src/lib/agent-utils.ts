@@ -1,4 +1,5 @@
 // frontend/src/lib/agent-utils.ts
+import type { UIMessage } from 'ai'
 import { WIDE_TOOLS } from '@/lib/tools/index'
 
 export const PAGE_SIZE = 15
@@ -12,33 +13,47 @@ const DATA_TOOLS = new Set([
   'recall_memory',
 ])
 
+// ── Types ──
+
+type MessagePart = UIMessage['parts'][number]
+
+// ToolUIPart's mapped generic is unwieldy for the read/write transforms
+// in this pipeline. This captures the common shape we actually use.
+interface ToolPart {
+  type: string
+  toolName?: string
+  toolCallId: string
+  state: 'input-streaming' | 'input-available' | 'output-available' | 'output-error'
+  output?: unknown
+  errorText?: string
+}
+
 // ── Helpers ──
 
-function isToolPart(p: any): boolean {
+function isToolPart(p: MessagePart): p is MessagePart & ToolPart {
   return typeof p.type === 'string' && p.type.startsWith('tool-')
 }
 
-function toolName(p: any): string {
-  return p.toolName || p.type?.replace('tool-', '') || ''
+function toolName(p: ToolPart): string {
+  return p.toolName || p.type.replace('tool-', '') || ''
 }
 
 // ── Step 1: Drop user messages with no content ──
 
-function dropEmptyUserMessages(messages: any[]): any[] {
+function dropEmptyUserMessages(messages: UIMessage[]): UIMessage[] {
   return messages.filter((msg) => {
     if (msg.role !== 'user')
       return true
-    const parts: any[] = msg.parts ?? []
-    const hasText = parts.some((p: any) => p.type === 'text' && p.text?.trim())
-    const hasFile = parts.some((p: any) => p.type === 'file')
+    const hasText = msg.parts.some(p => p.type === 'text' && p.text?.trim())
+    const hasFile = msg.parts.some(p => p.type === 'file')
     return hasText || hasFile
   })
 }
 
 // ── Step 2: Coalesce consecutive same-role messages ──
 
-function coalesceMessages(messages: any[]): any[] {
-  const result: any[] = []
+function coalesceMessages(messages: UIMessage[]): UIMessage[] {
+  const result: UIMessage[] = []
 
   for (const current of messages) {
     if (result.length === 0) {
@@ -46,16 +61,16 @@ function coalesceMessages(messages: any[]): any[] {
       continue
     }
 
-    const last = result.at(-1)
-    if (last.role !== current.role || current.role === 'tool') {
+    const last = result.at(-1)!
+    if (last.role !== current.role) {
       result.push(current)
       continue
     }
 
     // Consecutive user: drop if identical text
     if (current.role === 'user') {
-      const lastText = (last.parts ?? []).find((p: any) => p.type === 'text')?.text ?? ''
-      const curText = (current.parts ?? []).find((p: any) => p.type === 'text')?.text ?? ''
+      const lastText = last.parts.find(p => p.type === 'text')?.text ?? ''
+      const curText = current.parts.find(p => p.type === 'text')?.text ?? ''
       if (lastText.trim() !== curText.trim())
         result.push(current)
       continue
@@ -63,17 +78,17 @@ function coalesceMessages(messages: any[]): any[] {
 
     // Consecutive assistant: merge tool parts or prefer text-having
     if (current.role === 'assistant') {
-      const lastHasTools = (last.parts ?? []).some((p: any) => isToolPart(p))
-      const curHasTools = (current.parts ?? []).some((p: any) => isToolPart(p))
+      const lastHasTools = last.parts.some(p => isToolPart(p))
+      const curHasTools = current.parts.some(p => isToolPart(p))
       if (lastHasTools && curHasTools) {
         result[result.length - 1] = {
           ...last,
-          parts: [...(last.parts ?? []), ...(current.parts ?? [])],
+          parts: [...last.parts, ...current.parts],
         }
         continue
       }
-      const lastHasText = (last.parts ?? []).some((p: any) => p.type === 'text' && p.text?.trim())
-      const curHasText = (current.parts ?? []).some((p: any) => p.type === 'text' && p.text?.trim())
+      const lastHasText = last.parts.some(p => p.type === 'text' && p.text?.trim())
+      const curHasText = current.parts.some(p => p.type === 'text' && p.text?.trim())
       if (curHasText && !lastHasText) {
         result[result.length - 1] = current
       }
@@ -90,24 +105,22 @@ function coalesceMessages(messages: any[]): any[] {
 // Defense layer: catches orphaned tool calls from interrupted streams,
 // IDB-restored history, or rapid sends that skip execution.
 
-function guaranteeToolResultPairing(messages: any[]): any[] {
+function guaranteeToolResultPairing(messages: UIMessage[]): UIMessage[] {
   return messages.map((msg) => {
     if (msg.role !== 'assistant')
       return msg
-    const parts: any[] = msg.parts ?? []
-    if (!parts.some((p: any) =>
+    if (!msg.parts.some(p =>
       isToolPart(p) && p.state !== 'output-available' && p.state !== 'output-error',
     )) {
       return msg
     }
     return {
       ...msg,
-      parts: parts.map((p: any) => {
-        if (isToolPart(p) && p.state !== 'output-available' && p.state !== 'output-error') {
-          return { ...p, state: 'output-error', output: { error: 'Tool call did not complete' } }
-        }
-        return p
-      }),
+      parts: msg.parts.map(p =>
+        isToolPart(p) && p.state !== 'output-available' && p.state !== 'output-error'
+          ? { ...p, state: 'output-error' as const, output: undefined, errorText: 'Tool call did not complete' }
+          : p,
+      ),
     }
   })
 }
@@ -116,23 +129,22 @@ function guaranteeToolResultPairing(messages: any[]): any[] {
 // Render tools (WIDE_TOOLS) produce large JSON consumed by React components.
 // The LLM only needs to know "it rendered" — the full output stays in React state.
 
-function summarizeRenderOutputs(messages: any[]): any[] {
+function summarizeRenderOutputs(messages: UIMessage[]): UIMessage[] {
   return messages.map((msg) => {
     if (msg.role !== 'assistant')
       return msg
-    const parts: any[] = msg.parts ?? []
-    if (!parts.some((p: any) =>
+    if (!msg.parts.some(p =>
       isToolPart(p) && p.state === 'output-available' && WIDE_TOOLS.has(toolName(p)),
     )) {
       return msg
     }
     return {
       ...msg,
-      parts: parts.map((p: any) => {
-        if (isToolPart(p) && p.state === 'output-available' && WIDE_TOOLS.has(toolName(p)))
-          return { ...p, output: { status: 'rendered' } }
-        return p
-      }),
+      parts: msg.parts.map(p =>
+        isToolPart(p) && p.state === 'output-available' && WIDE_TOOLS.has(toolName(p))
+          ? { ...p, output: { status: 'rendered' } }
+          : p,
+      ),
     }
   })
 }
@@ -142,7 +154,7 @@ function summarizeRenderOutputs(messages: any[]): any[] {
 // After the first occurrence, the LLM has internalized the content. Replace older
 // occurrences with a stub so the context window doesn't pay for them repeatedly.
 
-function compressStaleGuidance(messages: any[]): any[] {
+function compressStaleGuidance(messages: UIMessage[]): UIMessage[] {
   const seen = new Set<string>()
   // Walk backwards: the LAST occurrence of each guidance tool is the one we keep.
   const keepKeys = new Set<string>()
@@ -151,9 +163,8 @@ function compressStaleGuidance(messages: any[]): any[] {
     const msg = messages[m]
     if (msg.role !== 'assistant')
       continue
-    const parts: any[] = msg.parts ?? []
-    for (let p = parts.length - 1; p >= 0; p--) {
-      const part = parts[p]
+    for (let p = msg.parts.length - 1; p >= 0; p--) {
+      const part = msg.parts[p]
       if (!isToolPart(part) || part.state !== 'output-available')
         continue
       const name = toolName(part)
@@ -172,8 +183,7 @@ function compressStaleGuidance(messages: any[]): any[] {
   return messages.map((msg, m) => {
     if (msg.role !== 'assistant')
       return msg
-    const parts: any[] = msg.parts ?? []
-    const hasStale = parts.some((p: any, pi: number) =>
+    const hasStale = msg.parts.some((p, pi) =>
       isToolPart(p) && p.state === 'output-available'
       && GUIDANCE_TOOLS.has(toolName(p)) && !keepKeys.has(`${m}:${pi}`),
     )
@@ -181,7 +191,7 @@ function compressStaleGuidance(messages: any[]): any[] {
       return msg
     return {
       ...msg,
-      parts: parts.map((p: any, pi: number) => {
+      parts: msg.parts.map((p, pi) => {
         if (!isToolPart(p) || p.state !== 'output-available')
           return p
         if (!GUIDANCE_TOOLS.has(toolName(p)))
@@ -199,7 +209,7 @@ function compressStaleGuidance(messages: any[]): any[] {
 // times in a session. Only the latest result is actionable — earlier results
 // are stale. Keep the last occurrence, stub all prior ones.
 
-function deduplicateDataToolResults(messages: any[]): any[] {
+function deduplicateDataToolResults(messages: UIMessage[]): UIMessage[] {
   const seen = new Set<string>()
   const keepKeys = new Set<string>()
 
@@ -207,9 +217,8 @@ function deduplicateDataToolResults(messages: any[]): any[] {
     const msg = messages[m]
     if (msg.role !== 'assistant')
       continue
-    const parts: any[] = msg.parts ?? []
-    for (let p = parts.length - 1; p >= 0; p--) {
-      const part = parts[p]
+    for (let p = msg.parts.length - 1; p >= 0; p--) {
+      const part = msg.parts[p]
       if (!isToolPart(part) || part.state !== 'output-available')
         continue
       const name = toolName(part)
@@ -228,8 +237,7 @@ function deduplicateDataToolResults(messages: any[]): any[] {
   return messages.map((msg, m) => {
     if (msg.role !== 'assistant')
       return msg
-    const parts: any[] = msg.parts ?? []
-    const hasStale = parts.some((p: any, pi: number) =>
+    const hasStale = msg.parts.some((p, pi) =>
       isToolPart(p) && p.state === 'output-available'
       && DATA_TOOLS.has(toolName(p)) && !keepKeys.has(`${m}:${pi}`),
     )
@@ -237,7 +245,7 @@ function deduplicateDataToolResults(messages: any[]): any[] {
       return msg
     return {
       ...msg,
-      parts: parts.map((p: any, pi: number) => {
+      parts: msg.parts.map((p, pi) => {
         if (!isToolPart(p) || p.state !== 'output-available')
           return p
         if (!DATA_TOOLS.has(toolName(p)))
@@ -252,12 +260,12 @@ function deduplicateDataToolResults(messages: any[]): any[] {
 
 // ── Step 7: Sliding window limit ──
 
-function applyWindowLimit(messages: any[], limit: number): any[] {
+function applyWindowLimit(messages: UIMessage[], limit: number): UIMessage[] {
   if (messages.length <= limit)
     return messages
   let start = messages.length - limit
-  // Don't start mid-conversation on a tool-role message
-  while (start > 0 && messages[start]?.role === 'tool') {
+  // Don't start mid-conversation on an assistant message with orphaned tool results
+  while (start > 0 && messages[start]?.role === 'assistant') {
     start--
   }
   return messages.slice(start)
@@ -265,7 +273,7 @@ function applyWindowLimit(messages: any[], limit: number): any[] {
 
 // ── Public API ──
 
-export function normalizeMessagesForBackend(messages: any[], limit: number = PAGE_SIZE) {
+export function normalizeMessagesForBackend(messages: UIMessage[], limit: number = PAGE_SIZE): UIMessage[] {
   let result = messages
   result = dropEmptyUserMessages(result)
   result = coalesceMessages(result)
