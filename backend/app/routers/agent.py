@@ -128,6 +128,16 @@ def _convert_to_openai_messages(
                                 }
                             )
 
+                        elif part.state == "output-error":
+                            error_text = getattr(part, "errorText", None) or "Tool execution failed"
+                            tool_result_messages.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": tool_call_id,
+                                    "content": json.dumps({"error": error_text}),
+                                }
+                            )
+
         elif message.content is not None:
             message_parts.append({"type": "text", "text": message.content})
 

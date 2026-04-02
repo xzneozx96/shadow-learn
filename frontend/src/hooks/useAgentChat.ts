@@ -337,7 +337,7 @@ export function useAgentChat(
       return
 
     const allOutputReady = toolParts.every(
-      (p: any) => p.state === 'output-available',
+      (p: any) => p.state === 'output-available' || p.state === 'output-error',
     )
     if (!allOutputReady)
       return
