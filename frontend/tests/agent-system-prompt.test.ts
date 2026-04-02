@@ -5,7 +5,7 @@
 import type { AgentMemory, LearnerProfile, ProgressStats } from '@/db'
 import type { Segment } from '@/types'
 import { describe, expect, it } from 'vitest'
-import { buildGlobalSystemPrompt, buildSystemPrompt, formatProgressSummary } from '@/lib/agent-system-prompt'
+import { buildGlobalSystemPrompt, buildSystemPrompt, clearSystemPromptCache, formatProgressSummary } from '@/lib/agent-system-prompt'
 
 const mockProfile: LearnerProfile = {
   name: 'Ross',
@@ -51,13 +51,13 @@ const mockMemories: AgentMemory[] = [
 
 describe('buildSystemPrompt', () => {
   it('includes role section', () => {
-    const prompt = buildSystemPrompt(undefined, undefined, undefined, null, [])
+    const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: [] })
     expect(prompt).toContain('## Role')
     expect(prompt).toContain('You are **Zober**')
   })
 
   it('includes learner profile when provided', () => {
-    const prompt = buildSystemPrompt(mockProfile, undefined, undefined, null, [])
+    const prompt = buildSystemPrompt({ profile: mockProfile, activeSegment: null, memories: [] })
     expect(prompt).toContain('## Learner Profile')
     expect(prompt).toContain('intermediate')
     expect(prompt).toContain('Streak: 5d')
@@ -65,12 +65,12 @@ describe('buildSystemPrompt', () => {
   })
 
   it('omits learner profile when undefined', () => {
-    const prompt = buildSystemPrompt(undefined, undefined, undefined, null, [])
+    const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: [] })
     expect(prompt).not.toContain('## Learner Profile')
   })
 
   it('includes lesson context with id and title when provided', () => {
-    const prompt = buildSystemPrompt(undefined, 'My Lesson', 'lesson-abc', mockSegment, [])
+    const prompt = buildSystemPrompt({ profile: undefined, lessonTitle: 'My Lesson', lessonId: 'lesson-abc', activeSegment: mockSegment, memories: [] })
     expect(prompt).toContain('## Current Lesson')
     expect(prompt).toContain('ID: lesson-abc')
     expect(prompt).toContain('My Lesson')
@@ -79,12 +79,12 @@ describe('buildSystemPrompt', () => {
   })
 
   it('omits lesson context when neither title, id, nor segment', () => {
-    const prompt = buildSystemPrompt(undefined, undefined, undefined, null, [])
+    const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: [] })
     expect(prompt).not.toContain('## Current Lesson')
   })
 
   it('includes memory summary when memories provided', () => {
-    const prompt = buildSystemPrompt(undefined, undefined, undefined, null, mockMemories)
+    const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: mockMemories })
     expect(prompt).toContain('## Memory Summary')
     expect(prompt).toContain('tone 3 sandhi')
     expect(prompt).toContain('dictation exercises')
@@ -96,18 +96,18 @@ describe('buildSystemPrompt', () => {
       { id: 'mem-3', content: 'Memory three', tags: [], importance: 1, createdAt: Date.now(), lastAccessedAt: Date.now() },
       { id: 'mem-4', content: 'Memory four', tags: [], importance: 1, createdAt: Date.now(), lastAccessedAt: Date.now() },
     ]
-    const prompt = buildSystemPrompt(undefined, undefined, undefined, null, fourMemories)
+    const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: fourMemories })
     expect(prompt).not.toContain('Memory four')
   })
 
   it('always includes instructions', () => {
-    const prompt = buildSystemPrompt(undefined, undefined, undefined, null, [])
+    const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: [] })
     expect(prompt).toContain('## Instructions')
     expect(prompt).toContain('save_memory')
   })
 
   it('produces all sections for full input', () => {
-    const prompt = buildSystemPrompt(mockProfile, 'Lesson Title', 'lesson-xyz', mockSegment, mockMemories)
+    const prompt = buildSystemPrompt({ profile: mockProfile, lessonTitle: 'Lesson Title', lessonId: 'lesson-xyz', activeSegment: mockSegment, memories: mockMemories })
     expect(prompt).toContain('## Role')
     expect(prompt).toContain('## Learner Profile')
     expect(prompt).toContain('## Current Lesson')
@@ -117,13 +117,13 @@ describe('buildSystemPrompt', () => {
   })
 
   it('does not include the old restrictive single-tool-call instruction', () => {
-    const prompt = buildSystemPrompt(mockProfile, undefined, undefined, null, [])
+    const prompt = buildSystemPrompt({ profile: mockProfile, activeSegment: null, memories: [] })
     expect(prompt).not.toContain('After calling tools and receiving results, respond to the user immediately')
     expect(prompt).not.toContain('Call at most 1-2 tools per user message')
   })
 
   it('includes the chain-tools instruction', () => {
-    const prompt = buildSystemPrompt(mockProfile, undefined, undefined, null, [])
+    const prompt = buildSystemPrompt({ profile: mockProfile, activeSegment: null, memories: [] })
     expect(prompt).toContain('Chain tools when needed')
   })
 })
@@ -143,17 +143,13 @@ describe('buildSystemPrompt — Session Snapshot', () => {
   }
 
   it('includes ## Session Snapshot when appState provided', () => {
-    const prompt = buildSystemPrompt(
-      mockProfile,
-      undefined,
-      undefined,
-      null,
-      [],
-      undefined,
-      undefined,
+    const prompt = buildSystemPrompt({
+      profile: mockProfile,
+      activeSegment: null,
+      memories: [],
       appState,
-      exerciseAccuracy,
-    )
+      accuracy: exerciseAccuracy,
+    })
     expect(prompt).toContain('## Session Snapshot')
     expect(prompt).toContain('12min')
     expect(prompt).toContain('Exercises done: 3')
@@ -164,36 +160,28 @@ describe('buildSystemPrompt — Session Snapshot', () => {
   })
 
   it('omits ## Session Snapshot when appState not provided', () => {
-    const prompt = buildSystemPrompt(mockProfile, undefined, undefined, null, [])
+    const prompt = buildSystemPrompt({ profile: mockProfile, activeSegment: null, memories: [] })
     expect(prompt).not.toContain('## Session Snapshot')
   })
 
   it('omits Recent mistakes line when recentMistakeWords is empty', () => {
     const emptyState = { ...appState, recentMistakeWords: [] }
-    const prompt = buildSystemPrompt(
-      mockProfile,
-      undefined,
-      undefined,
-      null,
-      [],
-      undefined,
-      undefined,
-      emptyState,
-    )
+    const prompt = buildSystemPrompt({
+      profile: mockProfile,
+      activeSegment: null,
+      memories: [],
+      appState: emptyState,
+    })
     expect(prompt).not.toContain('Recent mistakes:')
   })
 
   it('## Session Snapshot appears before ## Instructions', () => {
-    const prompt = buildSystemPrompt(
-      mockProfile,
-      undefined,
-      undefined,
-      null,
-      [],
-      undefined,
-      undefined,
+    const prompt = buildSystemPrompt({
+      profile: mockProfile,
+      activeSegment: null,
+      memories: [],
       appState,
-    )
+    })
     const snapshotIdx = prompt.indexOf('## Session Snapshot')
     const instructionsIdx = prompt.indexOf('## Instructions')
     expect(snapshotIdx).toBeLessThan(instructionsIdx)
@@ -260,5 +248,22 @@ describe('formatProgressSummary', () => {
     expect(result).toContain('Sessions: 10')
     expect(result).toContain('40 correct')
     expect(result).toContain('120min')
+  })
+})
+
+describe('static prompt cache', () => {
+  it('clearSystemPromptCache() does not throw and allows rebuild', () => {
+    clearSystemPromptCache()
+    const result = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: [] })
+    expect(typeof result).toBe('string')
+    expect(result.length).toBeGreaterThan(50)
+  })
+
+  it('returns same static portion across two calls', () => {
+    const ctx = { profile: undefined as any, activeSegment: null, memories: [] }
+    const first = buildSystemPrompt(ctx)
+    const second = buildSystemPrompt(ctx)
+    // Static portion (before ---) should be identical
+    expect(first.split('---')[0]).toBe(second.split('---')[0])
   })
 })

@@ -1,34 +1,36 @@
 import type { AgentMemory, LearnerProfile, ProgressStats } from '@/db'
 import type { Segment } from '@/types'
 
-/**
- * Build the system prompt for the agentic AI tutor.
- * Pure function — no side effects. Target: ≤280 tokens.
- */
-export function buildSystemPrompt(
-  profile: LearnerProfile | undefined,
-  lessonTitle: string | undefined,
-  lessonId: string | undefined,
-  activeSegment: Segment | null,
-  memories: AgentMemory[],
-  /** BCP-47 source language of the lesson, e.g. "zh-CN" */
-  lessonSourceLanguage?: string,
-  /** First translation language chosen by the user, e.g. "en", "vi" */
-  lessonTranslationLanguage?: string,
+export interface SessionContext {
+  profile?: LearnerProfile | null
+  lessonTitle?: string
+  lessonId?: string
+  activeSegment?: Segment | null
+  memories?: AgentMemory[]
+  sourceLanguage?: string
+  translationLanguage?: string
   appState?: {
     currentTab: string
     sessionDurationMinutes: number
     exercisesThisSession: number
     recentMistakeWords: string[]
     vocabularyDueCount: number
-  },
-  exerciseAccuracy?: Record<string, { accuracy: number, attempts: number }>,
-): string {
-  const sections: string[] = []
+  }
+  accuracy?: Record<string, { accuracy: number, attempts: number }>
+}
 
-  // Derive languages from lesson metadata when profile is missing
-  const derivedTargetLang = profile?.targetLanguage ?? lessonSourceLanguage
-  const derivedNativeLang = profile?.nativeLanguage ?? lessonTranslationLanguage
+let _staticPromptCache: string | null = null
+
+export function clearSystemPromptCache(): void {
+  _staticPromptCache = null
+}
+
+/**
+ * Static sections — parts that do not depend on any SessionContext field.
+ * Role description only — the rest of the prompt is dynamic.
+ */
+function buildStaticSections(): string {
+  const sections: string[] = []
 
   // Role + Identity
   sections.push(
@@ -41,6 +43,32 @@ export function buildSystemPrompt(
     '- Access user data and launch exercises using your tools.',
     '',
   )
+
+  return sections.join('\n')
+}
+
+/**
+ * Dynamic sections — parts that depend on SessionContext fields.
+ * Onboarding rules, profile, lesson context, memories, session snapshot.
+ */
+function buildDynamicSections(context: SessionContext): string {
+  const {
+    profile,
+    lessonTitle,
+    lessonId,
+    activeSegment,
+    memories = [],
+    sourceLanguage,
+    translationLanguage,
+    appState,
+    accuracy: exerciseAccuracy,
+  } = context
+
+  const sections: string[] = []
+
+  // Derive languages from lesson metadata when profile is missing
+  const derivedTargetLang = profile?.targetLanguage ?? sourceLanguage
+  const derivedNativeLang = profile?.nativeLanguage ?? translationLanguage
 
   // Onboarding — no profile yet
   if (!profile) {
@@ -176,6 +204,19 @@ export function buildSystemPrompt(
   )
 
   return sections.join('\n')
+}
+
+/**
+ * Build the system prompt for the agentic AI tutor.
+ * Pure function — no side effects. Target: ≤280 tokens.
+ * Static sections are memoised across calls; dynamic sections are rebuilt each time.
+ */
+export function buildSystemPrompt(context: SessionContext): string {
+  if (!_staticPromptCache) {
+    _staticPromptCache = buildStaticSections()
+  }
+  const dynamic = buildDynamicSections(context)
+  return `${_staticPromptCache}\n\n---\n\n${dynamic}`
 }
 
 /**
