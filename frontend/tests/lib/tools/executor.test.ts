@@ -225,4 +225,22 @@ describe('truncateIfOversized', () => {
     const result = truncateIfOversized(content, tool)
     expect(result).not.toContain('line3 end')
   })
+
+  it('execute() returns truncated string output (not an error) for oversized results', async () => {
+    const bigResultTool = buildTool({
+      name: 'big_result',
+      description: 'returns a large payload',
+      inputSchema: z.object({}),
+      maxResultSizeChars: 50,
+      execute: async () => ({ data: 'x'.repeat(500) }),
+    })
+    const executor = new ToolExecutor([bigResultTool])
+    const result = await executor.execute(
+      { toolCallId: '1', toolName: 'big_result', args: {} },
+      makeTestContext(),
+    )
+    expect(result.isError).toBe(false)
+    expect(typeof result.output).toBe('string')
+    expect(result.output as string).toMatch(/\[Result truncated/)
+  })
 })

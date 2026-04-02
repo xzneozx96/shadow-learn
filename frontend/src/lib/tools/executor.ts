@@ -30,7 +30,7 @@ export function truncateIfOversized(result: string, tool: AgentTool): string {
 // Safe tools start immediately if no unsafe tools are running.
 // Unsafe tools wait for ALL in-flight tools to complete first.
 export class ToolExecutor {
-  private pool: AgentTool[]
+  private readonly pool: ReadonlyArray<AgentTool>
   private executing = new Map<string, { promise: Promise<void>, isSafe: boolean }>()
 
   constructor(pool: AgentTool[]) {
@@ -85,7 +85,10 @@ export class ToolExecutor {
       const serialised = typeof rawOutput === 'string'
         ? rawOutput
         : JSON.stringify(rawOutput)
-      const output = JSON.parse(truncateIfOversized(serialised, tool))
+      const maybeTruncated = truncateIfOversized(serialised, tool)
+      // If truncation fired, the string is no longer valid JSON — return as-is.
+      // If no truncation, return the original value to preserve object types.
+      const output: unknown = maybeTruncated !== serialised ? maybeTruncated : rawOutput
       return { output, isError: false }
     }
     catch (e) {
