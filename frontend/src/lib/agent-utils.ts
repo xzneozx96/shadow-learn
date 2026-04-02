@@ -1,7 +1,7 @@
 // frontend/src/lib/agent-utils.ts
 import { WIDE_TOOLS } from '@/lib/tools/index'
 
-export const PAGE_SIZE = 5
+export const PAGE_SIZE = 15
 
 // Tool names for context editing steps
 const GUIDANCE_TOOLS = new Set(['get_core_guidelines', 'get_skill_guide'])
