@@ -30,26 +30,26 @@ interface ToolPart {
 
 // ── Helpers ──
 
-function isToolPart(p: MessagePart): p is MessagePart & ToolPart {
+export function isToolPart(p: MessagePart): p is MessagePart & ToolPart {
   return typeof p.type === 'string' && p.type.startsWith('tool-')
 }
 
-function toolName(p: ToolPart): string {
+export function toolName(p: ToolPart): string {
   return p.toolName || p.type.replace('tool-', '') || ''
 }
 
 // ── Token estimation ──
 // Rough approximation: ~4 chars per token. Good enough for budget decisions.
 
-export function estimateTokens(messages: any[]): number {
+export function estimateTokens(messages: UIMessage[]): number {
   if (messages.length === 0)
     return 0
   let chars = 0
   for (const msg of messages) {
-    for (const part of (msg.parts ?? [])) {
+    for (const part of msg.parts) {
       if (part.type === 'text')
         chars += (part.text ?? '').length
-      else if (part.output != null)
+      else if (isToolPart(part) && part.output != null)
         chars += typeof part.output === 'string' ? part.output.length : JSON.stringify(part.output).length
       chars += 20 // per-part overhead (role, type, toolName)
     }
@@ -285,14 +285,14 @@ function deduplicateDataToolResults(messages: UIMessage[]): UIMessage[] {
 // 3. If still over budget → drop oldest messages
 // 4. Never start on a tool-role message
 
-export const TOKEN_BUDGET = 8_000
+export const TOKEN_BUDGET = 64_000
 export const VERBATIM_TAIL = 6
 
 export function compactForTokenBudget(
-  messages: any[],
+  messages: UIMessage[],
   budget: number = TOKEN_BUDGET,
   verbatimTail: number = VERBATIM_TAIL,
-): any[] {
+): UIMessage[] {
   if (messages.length === 0 || estimateTokens(messages) <= budget)
     return messages
 
@@ -304,21 +304,18 @@ export function compactForTokenBudget(
   const compacted = older.map((msg) => {
     if (msg.role !== 'assistant')
       return msg
-    const parts: any[] = msg.parts ?? []
-    const hasToolResults = parts.some((p: any) =>
+    if (!msg.parts.some(p =>
       isToolPart(p) && (p.state === 'output-available' || p.state === 'output-error'),
-    )
-    if (!hasToolResults)
+    )) {
       return msg
+    }
     return {
       ...msg,
-      parts: parts.map((p: any) => {
+      parts: msg.parts.map((p) => {
         if (!isToolPart(p))
           return p
         if (p.state === 'output-available')
           return { ...p, output: `[${toolName(p)} result omitted]` }
-        if (p.state === 'output-error')
-          return { ...p, output: '[error omitted]' }
         return p
       }),
     }
@@ -330,16 +327,12 @@ export function compactForTokenBudget(
   while (result.length > verbatimTail && estimateTokens(result) > budget)
     result = result.slice(1)
 
-  // Don't start on a tool-role message
-  while (result.length > 0 && result[0]?.role === 'tool')
-    result = result.slice(1)
-
   return result
 }
 
 // ── Public API ──
 
-export function normalizeMessagesForBackend(messages: any[]) {
+export function normalizeMessagesForBackend(messages: UIMessage[]): UIMessage[] {
   let result = messages
   result = dropEmptyUserMessages(result)
   result = coalesceMessages(result)

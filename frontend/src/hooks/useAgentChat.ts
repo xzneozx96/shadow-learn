@@ -20,7 +20,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { appendAgentLog, getChatMessages, getDueItems, getExerciseAccuracy, getLearnerProfile, getLessonMeta, getRecentMistakes, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
 import { buildSystemPrompt, clearSystemPromptCache } from '@/lib/agent-system-prompt'
-import { normalizeMessagesForBackend, PAGE_SIZE } from '@/lib/agent-utils'
+import { isToolPart, normalizeMessagesForBackend, PAGE_SIZE, toolName } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
 import { ToolExecutor } from '@/lib/tools/executor'
 import { getActiveToolPool, getToolDefinitions } from '@/lib/tools/index'
@@ -172,13 +172,14 @@ export function useAgentChat(
       )
 
       if (isError) {
-        toast.error(`Tool [${toolCall.toolName}] failed: ${(output as any).error ?? 'Unknown error'}`)
+        const errMsg = String((output as Record<string, unknown>).error ?? 'Unknown error')
+        toast.error(`Tool [${toolCall.toolName}] failed: ${errMsg}`)
         errorCountRef.current += 1
         addToolResult({
           tool: toolCall.toolName,
           toolCallId: toolCall.toolCallId,
           state: 'output-error',
-          errorText: (output as any).error ?? 'Unknown error',
+          errorText: errMsg,
         })
       }
       else {
@@ -363,14 +364,12 @@ export function useAgentChat(
       return
 
     // Check if the last assistant message has tool parts that are all complete
-    const toolParts = (lastMsg.parts ?? []).filter((p: any) =>
-      p.type?.startsWith('tool-'),
-    )
+    const toolParts = lastMsg.parts.filter(isToolPart)
     if (toolParts.length === 0)
       return
 
     const allOutputReady = toolParts.every(
-      (p: any) => p.state === 'output-available' || p.state === 'output-error',
+      p => p.state === 'output-available' || p.state === 'output-error',
     )
     if (!allOutputReady)
       return
@@ -386,7 +385,7 @@ export function useAgentChat(
     // in consecutive rounds (e.g. render_character_writing_exercise twice in
     // a row), it's stuck in a loop — stop re-submitting.
     const currentToolSet = toolParts
-      .map((p: any) => p.toolName ?? p.type?.replace('tool-', '') ?? '')
+      .map(p => toolName(p))
       .filter(Boolean)
       .sort()
       .join(',')

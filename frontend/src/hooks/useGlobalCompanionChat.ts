@@ -20,7 +20,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { getChatMessages, getLearnerProfile, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
 import { buildGlobalSystemPrompt } from '@/lib/agent-system-prompt'
-import { normalizeMessagesForBackend, PAGE_SIZE } from '@/lib/agent-utils'
+import { isToolPart, normalizeMessagesForBackend, PAGE_SIZE } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
 import { ToolExecutor } from '@/lib/tools/executor'
 import { getGlobalToolPool, getToolDefinitions } from '@/lib/tools/index'
@@ -104,12 +104,13 @@ export function useGlobalCompanionChat() {
       )
 
       if (isError) {
-        toast.error(`Tool [${toolCall.toolName}] failed: ${(output as any).error ?? 'Unknown error'}`)
+        const errMsg = String((output as Record<string, unknown>).error ?? 'Unknown error')
+        toast.error(`Tool [${toolCall.toolName}] failed: ${errMsg}`)
         addToolResult({
           tool: toolCall.toolName,
           toolCallId: toolCall.toolCallId,
           state: 'output-error',
-          errorText: (output as any).error ?? 'Unknown error',
+          errorText: errMsg,
         })
       }
       else {
@@ -233,14 +234,12 @@ export function useGlobalCompanionChat() {
     if (!lastMsg || lastMsg.role !== 'assistant')
       return
 
-    const toolParts = (lastMsg.parts ?? []).filter((p: any) =>
-      p.type?.startsWith('tool-'),
-    )
+    const toolParts = lastMsg.parts.filter(isToolPart)
     if (toolParts.length === 0)
       return
 
     const allOutputReady = toolParts.every(
-      (p: any) => p.state === 'output-available' || p.state === 'output-error',
+      p => p.state === 'output-available' || p.state === 'output-error',
     )
     if (!allOutputReady)
       return
