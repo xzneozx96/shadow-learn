@@ -67,7 +67,7 @@ function buildDynamicSections(context: SessionContext): string {
 
   const sections: string[] = []
 
-  sections.push(`Current Time: ${context.currentTime ?? new Date().toString()}`)
+  sections.push(`Current Time: ${context.currentTime ?? new Date().toLocaleString()}`)
   sections.push('')
 
   // Derive languages from lesson metadata when profile is missing
@@ -249,7 +249,7 @@ export function buildGlobalSystemPrompt(
     '',
   )
 
-  sections.push(`Current Time: ${currentTime ?? new Date().toString()}`)
+  sections.push(`Current Time: ${currentTime ?? new Date().toLocaleString()}`)
   sections.push('')
 
   if (!profile) {

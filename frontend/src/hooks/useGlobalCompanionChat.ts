@@ -85,7 +85,7 @@ export function useGlobalCompanionChat() {
               system_prompt: buildGlobalSystemPrompt(
                 profileRef.current,
                 memoriesRef.current,
-                new Date().toString(),
+                new Date().toLocaleString(),
               ),
               openrouter_api_key: keys?.openrouterApiKey ?? '',
               tools: getToolDefinitions(toolPool),

@@ -134,7 +134,7 @@ export function useAgentChat(
           const systemPrompt = ctx
             ? buildSystemPrompt({
                 ...ctx,
-                currentTime: new Date().toString(),
+                currentTime: new Date().toLocaleString(),
                 appState: {
                   currentTab: currentTabRef.current,
                   sessionDurationMinutes: Math.floor((Date.now() - sessionStartRef.current) / 60_000),
