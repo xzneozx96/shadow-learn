@@ -1,6 +1,6 @@
 import type { Segment } from '@/types'
 import { Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
 import { ShadowingPanel } from '@/components/shadowing/ShadowingPanel'
@@ -14,7 +14,7 @@ import { usePlayer } from '@/contexts/PlayerContext'
 import { getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
 import { useLesson } from '@/hooks/useLesson'
-import { useTTS } from '@/hooks/useTTS'
+import { useTimeEffect } from '@/hooks/useTimeEffect'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { CompanionPanel } from './CompanionPanel'
 import { TranscriptPanel } from './TranscriptPanel'
@@ -35,12 +35,29 @@ function LessonViewContent() {
   const [pickerSegment, setPickerSegment] = useState<Segment | null>(null)
   const [companionTab, setCompanionTab] = useState('ai')
 
+  const hasRestoredRef = useRef(false)
+  const progressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingSegmentIdRef = useRef<string | null>(null)
+  // Keep refs current so the unmount cleanup sees up-to-date values
+  const dbRef = useRef(db)
+  dbRef.current = db
+  const metaRef = useRef(meta)
+  metaRef.current = meta
+
   const pickerStartIdx = pickerSegment
     ? segments.findIndex(s => s.id === pickerSegment.id)
     : -1
   const totalRemaining = pickerStartIdx >= 0 ? segments.length - pickerStartIdx : 0
 
-  const { playTTS } = useTTS(db, keys)
+  // End time for agent-triggered single-segment playback; null when inactive
+  const playSegmentStopAtRef = useRef<number | null>(null)
+  useTimeEffect((t) => {
+    if (playSegmentStopAtRef.current !== null && t >= playSegmentStopAtRef.current) {
+      playSegmentStopAtRef.current = null
+      player?.pause()
+    }
+  }, null)
+
   const { pendingAction, clearAction } = useAgentActions()
 
   // Handle agent-dispatched UI actions
@@ -76,14 +93,16 @@ function LessonViewContent() {
       }
       case 'play_segment_audio': {
         const idx = pendingAction.payload?.segmentIndex as number | undefined
-        if (idx !== undefined && segments[idx]) {
-          void playTTS(segments[idx].text)
+        if (idx !== undefined && segments[idx] && player) {
+          playSegmentStopAtRef.current = segments[idx].end
+          player.seekTo(segments[idx].start)
+          player.play()
         }
         break
       }
     }
     clearAction()
-  }, [pendingAction, clearAction, segments, player, activeSegment, playTTS])
+  }, [pendingAction, clearAction, segments, player, activeSegment])
 
   // Load media blob (video for uploads, audio for YouTube lessons)
   useEffect(() => {
@@ -104,10 +123,31 @@ function LessonViewContent() {
   }, [player])
 
   const handleProgressUpdate = useCallback((segmentId: string) => {
-    if (!db || !meta)
+    if (!dbRef.current || !metaRef.current)
       return
-    saveLessonMeta(db, { ...meta, progressSegmentId: segmentId })
-  }, [db, meta])
+    pendingSegmentIdRef.current = segmentId
+    if (progressDebounceRef.current)
+      clearTimeout(progressDebounceRef.current)
+    progressDebounceRef.current = setTimeout(() => {
+      if (dbRef.current && metaRef.current) {
+        saveLessonMeta(dbRef.current, { ...metaRef.current, progressSegmentId: segmentId })
+      }
+      pendingSegmentIdRef.current = null
+    }, 500)
+  }, []) // stable — reads live values through refs
+
+  // Flush pending progress write immediately on unmount.
+  // Handles SPA navigation away from the lesson within the 500ms debounce window.
+  // Does NOT protect against hard tab close or browser crash — those kill the process before cleanup runs.
+  // Empty deps intentional — reads live values through refs.
+  useEffect(() => {
+    return () => {
+      if (progressDebounceRef.current && pendingSegmentIdRef.current && dbRef.current && metaRef.current) {
+        clearTimeout(progressDebounceRef.current)
+        void saveLessonMeta(dbRef.current, { ...metaRef.current, progressSegmentId: pendingSegmentIdRef.current })
+      }
+    }
+  }, [])
 
   const handleRename = useCallback(async (newTitle: string) => {
     if (!meta)
@@ -157,6 +197,26 @@ function LessonViewContent() {
     document.querySelector(`[data-segment-id="${deepLinkSegmentId}"]`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [segments, deepLinkSegmentId, player])
+
+  // Restore progress: seek to saved segment when player + segments + meta are all ready.
+  // hasRestoredRef prevents re-seeking on subsequent re-renders within the same mount.
+  useEffect(() => {
+    if (hasRestoredRef.current || deepLinkSegmentId || !player || !db || !meta || segments.length === 0)
+      return
+    if (!meta.progressSegmentId) {
+      hasRestoredRef.current = true
+      return
+    }
+    const target = segments.find(s => s.id === meta.progressSegmentId)
+    if (!target) {
+      // EC2: orphaned segment ID — clear it from IDB and start at beginning
+      saveLessonMeta(db, { ...meta, progressSegmentId: null })
+      hasRestoredRef.current = true
+      return
+    }
+    player.seekTo(target.start)
+    hasRestoredRef.current = true
+  }, [player, meta, segments, db, deepLinkSegmentId])
 
   // Loading state
   if (loading) {
@@ -255,9 +315,10 @@ function LessonViewContent() {
 }
 
 export function LessonView() {
+  const { id } = useParams<{ id: string }>()
   return (
     <AgentActionsProvider>
-      <LessonViewContent />
+      <LessonViewContent key={id} />
     </AgentActionsProvider>
   )
 }
