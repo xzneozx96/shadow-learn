@@ -13,7 +13,7 @@ interface PlayerState {
   player: VideoPlayer | null
   playbackRate: number
   volume: number
-  setPlayer: (player: VideoPlayer) => void
+  setPlayer: (player: VideoPlayer | null) => void
   setPlaybackRate: (rate: number) => void
   setVolume: (v: number) => void
   subscribeTime: (cb: (t: number) => void) => () => void
@@ -47,7 +47,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [player])
 
-  const setPlayer = useCallback((newPlayer: VideoPlayer) => {
+  const setPlayer = useCallback((newPlayer: VideoPlayer | null) => {
+    if (!newPlayer) {
+      timeRef.current = 0
+    }
     setPlayer_(newPlayer)
   }, [])
 

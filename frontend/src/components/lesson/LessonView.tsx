@@ -123,7 +123,7 @@ function LessonViewContent() {
   }, [player])
 
   const handleProgressUpdate = useCallback((segmentId: string) => {
-    if (!dbRef.current || !metaRef.current)
+    if (!dbRef.current || !metaRef.current || !hasRestoredRef.current)
       return
     pendingSegmentIdRef.current = segmentId
     if (progressDebounceRef.current)
@@ -194,6 +194,7 @@ function LessonViewContent() {
     if (player) {
       player.seekTo(target.start)
     }
+    hasRestoredRef.current = true
     document.querySelector(`[data-segment-id="${deepLinkSegmentId}"]`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [segments, deepLinkSegmentId, player])

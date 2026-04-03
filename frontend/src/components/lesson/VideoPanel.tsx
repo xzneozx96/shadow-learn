@@ -138,6 +138,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
     return () => {
       destroyed = true
       h5Player.destroy()
+      setPlayer(null)
       URL.revokeObjectURL(objectUrl)
     }
   }, [videoBlob, setPlayer])
