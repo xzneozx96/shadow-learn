@@ -234,11 +234,45 @@ export function CompanionChatArea({
     container.scrollTop = container.scrollHeight
   }, [deferredMessages, isLoading, uniqueMessages])
 
+  // Save/restore scroll position across tab visibility changes.
+  // base-ui hides inactive panels with display:none, which:
+  //   (a) resets scrollTop to 0 when the element re-appears
+  //   (b) triggers the IntersectionObserver (sentinel suddenly in-view),
+  //       causing a spurious loadMore on every tab-switch-back.
+  // Saving before hide and restoring after show prevents both problems.
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container)
+      return
+    let savedScrollTop: number | null = null
+    let prevHeight = 0
+    const observer = new ResizeObserver((entries) => {
+      const newHeight = entries[0]?.contentRect.height ?? 0
+      if (prevHeight > 0 && newHeight === 0) {
+        // Becoming hidden — save current scroll position
+        savedScrollTop = container.scrollTop
+      }
+      else if (newHeight > 0 && savedScrollTop !== null) {
+        // Returning from hidden — restore position before IntersectionObserver fires
+        container.scrollTop = savedScrollTop
+        savedScrollTop = null
+      }
+      prevHeight = newHeight
+    })
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
+
   // Safety net: verify scroll position after StrictMode settles.
   // useDeferredValue + StrictMode replays the deferred transition, which can
   // transiently reset scrollTop to 0 AFTER the useLayoutEffect has scrolled.
   // useEffect fires after all StrictMode re-invocations; rAF fires before
   // the next paint, so the correction is invisible (at most one frame).
+  //
+  // Also handles the case where the initial page of messages fits the container
+  // without overflow: scrollTop is capped at 0 (no scrollable area), so the
+  // IntersectionObserver never fires a state-change and loadMore is never
+  // triggered. We detect this and fire it manually so the viewport fills.
   useEffect(() => {
     if (scrollVerifiedRef.current || uniqueMessages.length === 0)
       return
@@ -252,6 +286,12 @@ export function CompanionChatArea({
         isAtBottomRef.current = true
       }
       scrollVerifiedRef.current = true
+      // Content fits without overflow — sentinel was visible at mount and
+      // IntersectionObserver won't re-fire (no state change). Trigger manually.
+      if (dist <= 0 && hasMoreRef.current) {
+        scrollFromBottomRef.current = container.scrollHeight - container.scrollTop
+        onLoadMoreRef.current()
+      }
     })
     return () => cancelAnimationFrame(raf)
   }, [uniqueMessages])
