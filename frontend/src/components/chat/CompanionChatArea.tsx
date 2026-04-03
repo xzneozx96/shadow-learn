@@ -3,9 +3,10 @@ import type { ChatStatus, FileUIPart } from 'ai'
 import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
-import { ImageIcon, X } from 'lucide-react'
+import { ArrowDownIcon, ImageIcon, X } from 'lucide-react'
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
+import { useStickToBottom } from 'use-stick-to-bottom'
 import {
   PromptInput,
   PromptInputBody,
@@ -17,6 +18,7 @@ import {
   PromptInputTools,
   usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
+import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import {
   EXERCISE_TOOLS,
@@ -89,8 +91,8 @@ interface CompanionChatAreaProps {
 export function CompanionChatArea({
   messages,
   isLoading,
-  hasMore,
-  onLoadMore,
+  hasMore: _hasMore,
+  onLoadMore: _onLoadMore,
   chips,
   onRemoveChip,
   onSend,
@@ -99,23 +101,19 @@ export function CompanionChatArea({
 }: CompanionChatAreaProps) {
   const { t } = useI18n()
   const chatStatus: ChatStatus = isLoading ? 'streaming' : 'ready'
-  const scrollRef = useRef<HTMLDivElement>(null)
   const inputAreaRef = useRef<HTMLDivElement>(null)
-  const topSentinelRef = useRef<HTMLDivElement>(null)
-  const scrollFromBottomRef = useRef<number | null>(null)
-  const prevFirstIdRef = useRef<string | undefined>(undefined)
-  const isAtBottomRef = useRef(true)
-  // Gates IntersectionObserver until the initial scroll-to-bottom is verified.
-  // useDeferredValue + StrictMode replays the deferred transition, transiently
-  // resetting scrollTop to 0. Without this gate the observer sees the sentinel
-  // in view during the reset and triggers a loadMore cascade.
-  const scrollVerifiedRef = useRef(false)
+  // TODO: PAGINATION DISABLED — testing use-stick-to-bottom with full history
+
+  const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
+    initial: 'smooth',
+    resize: 'smooth',
+  })
 
   // Text-only resend path — used by MessageItem for quick-reply and resend actions.
   // Unlike handlePromptSubmit below, this path never carries file attachments because
   // resend/quick-reply actions always replay plain text messages.
   const sendMessage: SendMessage = (opts) => {
-    isAtBottomRef.current = true
+    scrollToBottom()
     onSend({ text: opts.text })
   }
 
@@ -170,131 +168,120 @@ export function CompanionChatArea({
     }
   }, [chips.length])
 
-  // Track scroll position to know if user is near the bottom
-  useEffect(() => {
-    const container = scrollRef.current
-    if (!container)
-      return
-    const onScroll = () => {
-      const dist = container.scrollHeight - container.scrollTop - container.clientHeight
-      isAtBottomRef.current = dist < 80
-    }
-    container.addEventListener('scroll', onScroll, { passive: true })
-    return () => container.removeEventListener('scroll', onScroll)
-  }, [])
+  const topSentinelRef = useRef<HTMLDivElement>(null)
 
-  // IntersectionObserver: load older messages when top sentinel is visible
-  // Uses event-handler-refs pattern so observer is created once and never recreated
-  const hasMoreRef = useRef(hasMore)
-  hasMoreRef.current = hasMore
-  const onLoadMoreRef = useRef(onLoadMore)
-  onLoadMoreRef.current = onLoadMore
+  const hasMoreRef = useRef(_hasMore)
+  hasMoreRef.current = _hasMore
+  const onLoadMoreRef = useRef(_onLoadMore)
+  onLoadMoreRef.current = _onLoadMore
 
+  // 1. Trigger Load More via IntersectionObserver on the top sentinel
   useEffect(() => {
     const sentinel = topSentinelRef.current
-    const container = scrollRef.current
-    if (!sentinel || !container)
+    const scrollEl = scrollRef.current
+    if (!sentinel || !scrollEl) {
       return
+    }
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasMoreRef.current && scrollVerifiedRef.current) {
-          scrollFromBottomRef.current = container.scrollHeight - container.scrollTop
+        if (entry.isIntersecting && hasMoreRef.current) {
           onLoadMoreRef.current()
         }
       },
-      { root: container, threshold: 0 },
+      { root: scrollEl, rootMargin: '200px', threshold: 0 },
     )
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [])
+  }, [scrollRef, _hasMore])
 
-  // Restore scroll position after older messages are prepended (prevents viewport jump).
-  // Must depend on deferredMessages (not live messages) because the DOM is rendered from
-  // the deferred value — restoring before the deferred render would be a no-op.
-  useLayoutEffect(() => {
-    if (scrollFromBottomRef.current !== null && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight - scrollFromBottomRef.current
-      scrollFromBottomRef.current = null
-    }
-  }, [deferredMessages])
+  // 2. Prevent scroll-jumping when older messages are prepended
+  const prevScrollHeightRef = useRef<number>(0)
+  const prevScrollTopRef = useRef<number>(0)
+  const prevFirstMessageIdRef = useRef<string | null>(null)
 
-  // Auto-scroll to bottom only when new messages arrive, not when older ones are prepended.
-  // Uses useLayoutEffect (before paint) + direct scrollTop so the user never sees un-scrolled state.
-  useLayoutEffect(() => {
-    const firstId = uniqueMessages[0]?.id
-    const wasPrepend = firstId !== prevFirstIdRef.current && prevFirstIdRef.current !== undefined
-    prevFirstIdRef.current = firstId
-    if (wasPrepend)
-      return
-    if (!isAtBottomRef.current)
-      return
-    const container = scrollRef.current
-    if (!container)
-      return
-    container.scrollTop = container.scrollHeight
-  }, [deferredMessages, isLoading, uniqueMessages])
-
-  // Save/restore scroll position across tab visibility changes.
-  // base-ui hides inactive panels with display:none, which:
-  //   (a) resets scrollTop to 0 when the element re-appears
-  //   (b) triggers the IntersectionObserver (sentinel suddenly in-view),
-  //       causing a spurious loadMore on every tab-switch-back.
-  // Saving before hide and restoring after show prevents both problems.
   useEffect(() => {
-    const container = scrollRef.current
-    if (!container)
+    const scrollEl = scrollRef.current
+    if (!scrollEl) {
       return
+    }
+    const handleScroll = () => {
+      prevScrollTopRef.current = scrollEl.scrollTop
+    }
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true })
+    return () => scrollEl.removeEventListener('scroll', handleScroll)
+  }, [scrollRef])
+
+  useLayoutEffect(() => {
+    const scrollEl = scrollRef.current
+    if (!scrollEl) {
+      return
+    }
+
+    const currentFirstMessageId = uniqueMessages[0]?.id
+
+    // If the first message ID changed and we had a previous one, it means we prepended items
+    if (
+      prevFirstMessageIdRef.current
+      && currentFirstMessageId
+      && prevFirstMessageIdRef.current !== currentFirstMessageId
+      && prevScrollHeightRef.current > 0
+    ) {
+      const oldFirstMessageIndex = uniqueMessages.findIndex(m => m.id === prevFirstMessageIdRef.current)
+
+      if (oldFirstMessageIndex > 0) { // Old oldest message is still here, but pushed down
+        const heightDifference = scrollEl.scrollHeight - prevScrollHeightRef.current
+        if (heightDifference > 0) {
+          scrollEl.scrollTop = prevScrollTopRef.current + heightDifference
+          prevScrollTopRef.current = scrollEl.scrollTop
+        }
+      }
+    }
+
+    prevFirstMessageIdRef.current = currentFirstMessageId
+    prevScrollHeightRef.current = scrollEl.scrollHeight
+  }, [uniqueMessages, scrollRef])
+
+  // 3. Maintain scroll position when container is hidden (display: none)
+  useEffect(() => {
+    const scrollEl = scrollRef.current
+    if (!scrollEl) {
+      return
+    }
     let savedScrollTop: number | null = null
     let prevHeight = 0
     const observer = new ResizeObserver((entries) => {
       const newHeight = entries[0]?.contentRect.height ?? 0
       if (prevHeight > 0 && newHeight === 0) {
-        // Becoming hidden — save current scroll position
-        savedScrollTop = container.scrollTop
+        savedScrollTop = scrollEl.scrollTop
       }
       else if (newHeight > 0 && savedScrollTop !== null) {
-        // Returning from hidden — restore position before IntersectionObserver fires
-        container.scrollTop = savedScrollTop
+        scrollEl.scrollTop = savedScrollTop
         savedScrollTop = null
       }
       prevHeight = newHeight
     })
-    observer.observe(container)
+    observer.observe(scrollEl)
     return () => observer.disconnect()
-  }, [])
+  }, [scrollRef])
 
-  // Safety net: verify scroll position after StrictMode settles.
-  // useDeferredValue + StrictMode replays the deferred transition, which can
-  // transiently reset scrollTop to 0 AFTER the useLayoutEffect has scrolled.
-  // useEffect fires after all StrictMode re-invocations; rAF fires before
-  // the next paint, so the correction is invisible (at most one frame).
-  //
-  // Also handles the case where the initial page of messages fits the container
-  // without overflow: scrollTop is capped at 0 (no scrollable area), so the
-  // IntersectionObserver never fires a state-change and loadMore is never
-  // triggered. We detect this and fire it manually so the viewport fills.
+  // 4. Fallback for initial load if messages don't fill the screen
+  const initialLoadCheckedRef = useRef(false)
   useEffect(() => {
-    if (scrollVerifiedRef.current || uniqueMessages.length === 0)
+    if (initialLoadCheckedRef.current || uniqueMessages.length === 0) {
       return
-    const container = scrollRef.current
-    if (!container)
+    }
+    const scrollEl = scrollRef.current
+    if (!scrollEl) {
       return
+    }
     const raf = requestAnimationFrame(() => {
-      const dist = container.scrollHeight - container.scrollTop - container.clientHeight
-      if (dist > 80) {
-        container.scrollTop = container.scrollHeight
-        isAtBottomRef.current = true
-      }
-      scrollVerifiedRef.current = true
-      // Content fits without overflow — sentinel was visible at mount and
-      // IntersectionObserver won't re-fire (no state change). Trigger manually.
-      if (dist <= 0 && hasMoreRef.current) {
-        scrollFromBottomRef.current = container.scrollHeight - container.scrollTop
+      if (scrollEl.scrollHeight <= scrollEl.clientHeight && hasMoreRef.current) {
         onLoadMoreRef.current()
       }
+      initialLoadCheckedRef.current = true
     })
     return () => cancelAnimationFrame(raf)
-  }, [uniqueMessages])
+  }, [uniqueMessages.length, scrollRef])
 
   // User-initiated send path — called by PromptInput's onSubmit. Carries the full
   // payload including any file attachments the user selected via the attach button.
@@ -303,9 +290,9 @@ export function CompanionChatArea({
     const hasFiles = message.files.length > 0
     if ((!trimmed && !hasFiles) || isLoading)
       return
-    isAtBottomRef.current = true
+    scrollToBottom()
     onSend({ text: trimmed, files: hasFiles ? message.files : undefined })
-  }, [isLoading, onSend])
+  }, [isLoading, onSend, scrollToBottom])
 
   const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept' }) => {
     if (err.code === 'accept') {
@@ -323,7 +310,10 @@ export function CompanionChatArea({
     <>
       {headerSlot}
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
+      >
         {messages.length === 0 && !isLoading && (
           <div className="flex h-full items-center justify-center py-12">
             <p className="text-center text-sm text-muted-foreground">
@@ -332,13 +322,11 @@ export function CompanionChatArea({
           </div>
         )}
 
-        <div className="space-y-3">
-          <div ref={topSentinelRef} />
-          {hasMore && (
-            <div className="flex justify-center py-1">
-              <span className="text-xs text-muted-foreground">{t('companion.scrollForOlder')}</span>
-            </div>
+        <div ref={contentRef} className="space-y-3">
+          {_hasMore && (
+            <div ref={topSentinelRef} className="h-px w-full" aria-hidden="true" />
           )}
+
           {uniqueMessages.map((msg: UIMessage) => (
             <div key={msg.id}>
               <MessageItem msg={msg} sendMessage={sendMessage} activeWideIds={activeWideIds} />
@@ -359,6 +347,18 @@ export function CompanionChatArea({
         </div>
 
         <div className="h-px" />
+
+        {!isAtBottom && (
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={() => scrollToBottom()}
+            className="sticky bottom-4 left-1/2 -translate-x-1/2 rounded-full"
+          >
+            <ArrowDownIcon className="size-4" />
+          </Button>
+        )}
       </div>
 
       <div ref={inputAreaRef} className="border-t border-border p-3">
