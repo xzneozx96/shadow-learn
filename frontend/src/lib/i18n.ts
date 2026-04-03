@@ -671,7 +671,7 @@ export const TRANSLATIONS = {
     'shadowing.playingSegment': 'Đang phát âm thanh bài học…',
     'shadowing.replay': '↺ Nghe lại audio',
     'shadowing.skip': 'bỏ qua →',
-    'shadowing.speakWhatYouHeard': 'Hãy nói lại những gì bạn nghe được nhé',
+    'shadowing.speakWhatYouHeard': 'Nói lại những gì bạn nghe được',
     'shadowing.rerecord': '↺ Ghi âm lại',
     'shadowing.submit': 'Nộp bài',
     'shadowing.typeWhatYouHeard': 'Gõ những gì bạn đã nghe được',
