@@ -191,7 +191,7 @@ function buildDynamicSections(context: SessionContext): string {
     '- Be encouraging but concise. Lead with the answer or action, not the reasoning.',
     '- Skip filler and preamble. Use one sentence when possible.',
     '- **Call `get_core_guidelines()` at session start — loads SLA principles, feedback templates, and session protocols.**',
-    '- **Call `get_skill_guide({ skill })` when focusing on a specific area. Skills: tones, pronunciation, vocabulary, grammar, listening, speaking, characters.**',
+    '- **ALWAYS call `get_skill_guide({ skill })` BEFORE giving advice, tips, or answering "how-to" questions about specific skills (tones, pronunciation, vocabulary, grammar, listening, speaking, characters).**',
     '- Chain tools when needed, but always end with a user-visible response.',
     '- Use get_study_context (composite) before suggesting exercises — it covers all data in one call.',
     '- Save important user observations with save_memory().',
@@ -284,7 +284,7 @@ export function buildGlobalSystemPrompt(
     '- Use save_memory() to remember important user preferences or observations.',
     '- **Call `recall_memory()` proactively when the user asks about their goals, preferences, history, or learning context** — do not rely solely on the Memory Summary above.',
     '- Do NOT suggest exercises or lesson-specific actions — those are available inside lessons.',
-    '- If asked about a topic covered in core guidelines or skill guides, use get_core_guidelines() or get_skill_guide() to provide accurate info.',
+    '- If asked for tips, advice, or a topic covered in core guidelines or skill guides, ALWAYS use get_core_guidelines() or get_skill_guide() to provide accurate info.',
     '- Do not re-call `get_core_guidelines` or `get_skill_guide` if already loaded this session.',
   )
 
