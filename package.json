@@ -2,6 +2,8 @@
   "name": "shadowing-companion",
   "private": true,
   "scripts": {
+    "dev:fe": "cd frontend && pnpm dev",
+    "dev:be": "cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -386,10 +386,10 @@ _RETRYABLE_STATUS_CODES = {429, 502, 503}
 
 
 def _messages_contain_image(messages: list[ClientMessage]) -> bool:
-    """Return True if any message part is a file/image attachment."""
+    """Return True if any message part is a file/image attachment in the last 5 messages."""
     return any(
         part.type == "file"
-        for message in messages
+        for message in messages[-5:]
         if message.parts
         for part in message.parts
     )
