@@ -26,8 +26,8 @@ def validate_youtube_url(url: str) -> str:
 
 def validate_upload_file(filename: str, size_bytes: int) -> None:
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    if ext not in settings.allowed_video_formats:
-        allowed = ", ".join(settings.allowed_video_formats)
+    if ext not in settings.allowed_media_formats:
+        allowed = ", ".join(settings.allowed_media_formats)
         raise ValidationError(f"Unsupported format '.{ext}'. Accepted formats: {allowed}")
     if size_bytes > settings.max_upload_size_bytes:
         max_gb = settings.max_upload_size_bytes / (1024**3)

@@ -129,7 +129,7 @@ def test_segments_from_utterances_skips_empty():
     segments = _segments_from_utterances(utterances, language="zh-CN")
     assert len(segments) == 1
     assert segments[0]["text"] == "你好"
-    assert segments[0]["id"] == 1  # utterance-positional: empty utterance at index 0 was skipped
+    assert segments[0]["id"] == 0  # Re-sequenced starting at 0
 
 
 def test_segments_from_utterances_multiple():

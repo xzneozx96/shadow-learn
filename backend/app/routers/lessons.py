@@ -127,8 +127,10 @@ async def _process_youtube_lesson(
         duration = await get_youtube_duration(video_id)
         if duration > settings.max_video_duration_seconds:
             max_mins = settings.max_video_duration_seconds / 60
+            err_msg = f"Video exceeds the {max_mins:.0f}-minute duration limit."
+            logger.warning("[pipeline] %s: %s", job_id, err_msg)
             jobs[job_id].status = "error"
-            jobs[job_id].error = f"Video exceeds the {max_mins:.0f}-minute duration limit."
+            jobs[job_id].error = err_msg
             return
 
         jobs[job_id].step = "video_download"
@@ -149,6 +151,8 @@ async def _process_youtube_lesson(
         if azure_region:
             keys["azure_speech_region"] = azure_region
         segments = await stt_provider.transcribe(audio_path, keys, request.source_language)
+        if not segments:
+            raise ValueError("No speech detected in the video. Please try a different video.")
         # Audio no longer needed after transcription
         audio_path.unlink(missing_ok=True)
         audio_path = None
@@ -173,9 +177,13 @@ async def _process_youtube_lesson(
         )
 
     except Exception as exc:
-        logger.exception("YouTube lesson pipeline failed: %s", exc)
+        error_str = str(exc)
+        if "ffmpeg" in error_str.lower():
+            error_str = "Media processing failed (FFmpeg error). The file might be corrupted or in an unsupported codec."
+        
+        logger.exception("[pipeline] YouTube lesson failed for job %s: %s", job_id, error_str)
         jobs[job_id].status = "error"
-        jobs[job_id].error = str(exc)
+        jobs[job_id].error = error_str
     finally:
         if audio_path and audio_path.exists():
             audio_path.unlink(missing_ok=True)
@@ -221,6 +229,7 @@ async def _process_upload_lesson(
         try:
             validate_upload_file(filename, total_bytes)
         except ValidationError as exc:
+            logger.warning("[pipeline] %s: validation failed: %s", job_id, exc.message)
             jobs[job_id].status = "error"
             jobs[job_id].error = exc.message
             return
@@ -230,8 +239,10 @@ async def _process_upload_lesson(
         logger.info("[pipeline] duration_check: %.1fs", duration)
         if duration > settings.max_video_duration_seconds:
             max_mins = settings.max_video_duration_seconds / 60
+            err_msg = f"Video exceeds the {max_mins:.0f}-minute duration limit."
+            logger.warning("[pipeline] %s: %s", job_id, err_msg)
             jobs[job_id].status = "error"
-            jobs[job_id].error = f"Video exceeds the {max_mins:.0f}-minute duration limit."
+            jobs[job_id].error = err_msg
             return
 
         jobs[job_id].step = "audio_extraction"
@@ -254,6 +265,8 @@ async def _process_upload_lesson(
         if stt_provider is None:
             raise RuntimeError("No STT provider configured")
         segments = await stt_provider.transcribe(audio_path, keys, source_language)
+        if not segments:
+            raise ValueError("No speech detected in the media file. Please try a different file.")
         logger.info("[pipeline] transcription: done in %.1fs, %d segments", time.monotonic() - t0, len(segments))
 
         openrouter_key = _resolve_key(
@@ -272,9 +285,13 @@ async def _process_upload_lesson(
         )
 
     except Exception as exc:
-        logger.exception("Upload lesson pipeline failed: %s", exc)
+        error_str = str(exc)
+        if "ffmpeg" in error_str.lower():
+            error_str = "Media processing failed (FFmpeg error). The file might be corrupted or in an unsupported codec."
+        
+        logger.exception("[pipeline] Upload lesson failed for job %s: %s", job_id, error_str)
         jobs[job_id].status = "error"
-        jobs[job_id].error = str(exc)
+        jobs[job_id].error = error_str
     finally:
         if video_path and video_path.exists():
             video_path.unlink(missing_ok=True)

@@ -5,7 +5,10 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     max_video_duration_seconds: int = 1200  # 20 minutes
     max_upload_size_bytes: int = 2_147_483_648  # 2 GB
-    allowed_video_formats: list[str] = ["mp4", "mkv", "webm", "mov"]
+    allowed_media_formats: list[str] = [
+        "mp4", "mkv", "webm", "mov",  # Video
+        "wav", "mp3", "m4a", "aac", "flac", "ogg", "opus"  # Audio
+    ]
     translation_batch_size: int = 30
     translation_max_retries: int = 2
     openrouter_base_url: str = "https://mkp-api.fptcloud.com/v1"

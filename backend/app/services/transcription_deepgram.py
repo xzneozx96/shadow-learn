@@ -1,4 +1,4 @@
-"""Deepgram nova-2 STT provider."""
+"""Deepgram nova-3 STT provider."""
 
 import asyncio
 import logging
@@ -15,6 +15,7 @@ from app.services.transcription_provider import (
     _WordTiming,
     _group_words_into_segments,
 )
+from app.services.subtitle_segmenter import SubtitleSegmenter
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ _DEEPGRAM_PARAMS = {
     "punctuate": "true",
     "utterances": "true",
     "smart_format": "true",
-    "model": "nova-2",
+    "model": "nova-3",
 }
 
 
@@ -82,13 +83,11 @@ def _normalize_deepgram_words(words: list[_DeepgramWord]) -> list[_Word]:
 
 
 def _segments_from_utterances(utterances: list[_DeepgramUtterance], language: str) -> list[_Segment]:
+    segmenter = SubtitleSegmenter()
     segments: list[_Segment] = []
-    for i, utt in enumerate(utterances):
-        text = utt["transcript"]
-        if language.startswith("zh"):
-            text = text.replace(" ", "")
-        if not text:
-            continue
+    segment_id = 0
+
+    for utt in utterances:
         word_timings: list[_WordTiming] = [
             {
                 "text": w.get("punctuated_word") or w["word"],
@@ -97,20 +96,47 @@ def _segments_from_utterances(utterances: list[_DeepgramUtterance], language: st
             }
             for w in utt.get("words", [])
         ]
-        segments.append({
-            "id": i,
-            "start": utt["start"],
-            "end": utt["end"],
-            "text": text,
-            "word_timings": word_timings,
-        })
+
+        _is_cjk = language.startswith("zh") or language.startswith("ja")
+
+        if not word_timings:
+            text = utt["transcript"]
+            if _is_cjk:
+                text = text.replace(" ", "")
+            if not text.strip():
+                continue
+            word_timings = [
+                {"text": text, "start": utt["start"], "end": utt["end"]}
+            ]
+
+        chunks = segmenter.segment_words(word_timings, language)
+
+        for chunk in chunks:
+            if not chunk:
+                continue
+
+            text = " ".join(w["text"] for w in chunk)
+            if _is_cjk:
+                text = text.replace(" ", "")
+            if not text.strip():
+                continue
+
+            segments.append({
+                "id": segment_id,
+                "start": chunk[0]["start"],
+                "end": chunk[-1]["end"],
+                "text": text,
+                "word_timings": chunk,
+            })
+            segment_id += 1
+
     return segments
 
 
 async def transcribe_audio_deepgram(audio_path: Path, api_key: str, language: str) -> list[_Segment]:
-    """Transcribe audio using Deepgram nova-2. Used internally by DeepgramSTTProvider."""
+    """Transcribe audio using Deepgram nova-3. Used internally by DeepgramSTTProvider."""
     file_size = audio_path.stat().st_size
-    logger.info("Transcribing %s (%.1f MB) with Deepgram nova-2", audio_path.name, file_size / 1024 / 1024)
+    logger.info("Transcribing %s (%.1f MB) with Deepgram nova-3", audio_path.name, file_size / 1024 / 1024)
 
     if file_size == 0:
         raise ValueError(f"Audio file is empty (0 bytes): {audio_path.name}")
@@ -170,7 +196,7 @@ async def transcribe_audio_deepgram(audio_path: Path, api_key: str, language: st
 
 
 class DeepgramSTTProvider:
-    """STTProvider implementation backed by Deepgram nova-2."""
+    """STTProvider implementation backed by Deepgram nova-3."""
 
     async def transcribe(self, audio_path: Path, keys: TranscriptionKeys, language: str) -> list[_Segment]:
         api_key = keys.get("deepgram_api_key", "")
