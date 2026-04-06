@@ -16,13 +16,11 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { getProgressStats, getRecentMistakes } from '@/db'
 import { useTracking } from '@/hooks/useTracking'
-import { useTTS } from '@/hooks/useTTS'
 
 export function WorkbookPage() {
   const { t } = useI18n()
   const { entries, entriesByLesson, removeGroup } = useVocabulary()
-  const { db, keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys)
+  const { db } = useAuth()
   const { getDueItemsList } = useTracking()
 
   // Workbook State
@@ -173,9 +171,7 @@ export function WorkbookPage() {
                     lessonId={id}
                     lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
                     entries={filteredByLesson[id]}
-                    onPlay={playTTS}
                     onDeleteGroup={removeGroup}
-                    loadingWord={loadingText}
                   />
                 ))}
             </div>

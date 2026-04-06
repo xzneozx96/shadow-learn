@@ -31,7 +31,7 @@ export function TranscriptPanel({
 }: TranscriptPanelProps) {
   const { t } = useI18n()
   const { db, keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys)
+  const { playTTS, loadingText } = useTTS(db, keys, lesson.sourceLanguage ?? 'zh-CN')
   const { entries, save, remove, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
   const [activeLang, setActiveLang] = useState(

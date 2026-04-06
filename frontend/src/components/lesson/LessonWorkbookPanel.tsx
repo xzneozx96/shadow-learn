@@ -21,9 +21,9 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const { entriesByLesson, remove } = useVocabulary()
   const { t } = useI18n()
   const { db, keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys)
   const navigate = useNavigate()
   const entries = entriesByLesson[lessonId] ?? []
+  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN')
   const count = entries.length
   const [studyOpen, setStudyOpen] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)

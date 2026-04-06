@@ -11,7 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useTTS } from '@/hooks/useTTS'
 import { cn } from '@/lib/utils'
 import { WordCard } from './WordCard'
 
@@ -19,15 +21,15 @@ interface LessonGroupProps {
   lessonId: string
   lessonTitle: string
   entries: VocabEntry[]
-  onPlay?: (word: string) => void
   onDeleteGroup?: (lessonId: string) => void
-  loadingWord?: string | null
 }
 
 const PREVIEW_COUNT = 5
 
-export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGroup, loadingWord }: LessonGroupProps) {
+export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: LessonGroupProps) {
   const { t } = useI18n()
+  const { db, keys } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN')
   const [expanded, setExpanded] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const navigate = useNavigate()
@@ -83,7 +85,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onPlay, onDeleteGr
             style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '1px' }}
           >
             {displayed.map(entry => (
-              <WordCard key={entry.id} entry={entry} onPlay={onPlay ? () => onPlay(entry.word) : undefined} isLoading={loadingWord === entry.word} />
+              <WordCard key={entry.id} entry={entry} onPlay={() => void playTTS(entry.word)} isLoading={loadingText === entry.word} />
             ))}
           </div>
           {entries.length > PREVIEW_COUNT && (
