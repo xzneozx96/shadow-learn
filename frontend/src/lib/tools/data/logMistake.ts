@@ -8,7 +8,7 @@ export const logMistakeTool = buildTool({
   inputSchema: z.object({
     word: z.string().describe('The word/pattern that was mistaken'),
     context: z.string().describe('Context of the mistake'),
-    errorType: z.string().describe('Type of error: tone, character, pronunciation, grammar, vocabulary, listening, reading'),
+    errorType: z.enum(['tone', 'character', 'pronunciation', 'grammar', 'vocabulary', 'listening', 'reading']).describe('Category of the mistake'),
   }),
   execute: async (input, context) => executeLogMistake(context.idb, input),
 })
