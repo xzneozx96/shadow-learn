@@ -126,7 +126,7 @@ async def test_minimax_provider_uses_japanese_voice_for_japanese():
         provider = MinimaxTTSProvider()
         await provider.synthesize("こんにちは", {"minimax_api_key": "key"}, language="ja")
 
-    assert captured["voice_id"] == "moss_audio_f0c5494c-7c25-11f0-8d70-a2abf1fbea61"
+    assert captured["voice_id"] == "Japanese_GracefulMaiden"
 
 
 @pytest.mark.asyncio
