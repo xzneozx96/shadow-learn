@@ -3,6 +3,7 @@ import { createContext, use, useCallback, useEffect, useMemo, useState } from 'r
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { deleteErrorPattern, deleteSpacedRepetitionItem } from '@/db'
+import { captureVocabularyWordSaved } from '@/lib/posthog-events'
 
 interface VocabularyContextValue {
   entries: VocabEntry[]
@@ -56,6 +57,7 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
       try {
         await db.put('vocabulary', entry)
         setEntries(prev => [...prev, entry])
+        captureVocabularyWordSaved({ source_language: entry.sourceLanguage })
       }
       catch {
         toast.error('Failed to save word')

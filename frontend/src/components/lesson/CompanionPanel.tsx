@@ -6,6 +6,7 @@ import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useAgentChat } from '@/hooks/useAgentChat'
+import { captureCompanionMessageSent } from '@/lib/posthog-events'
 import { CompanionChatArea } from '../chat/CompanionChatArea'
 import { LessonWorkbookPanel } from './LessonWorkbookPanel'
 
@@ -38,6 +39,7 @@ export function CompanionPanel({
   function handleSend({ text, files }: { text: string, files?: import('ai').FileUIPart[] }) {
     const context = chips.map(c => `> ${c.text}`).join('\n')
     const composed = chips.length > 0 ? `Context:\n${context}\n\n${text}` : text
+    captureCompanionMessageSent({ with_context: chips.length > 0, file_count: files?.length ?? 0 })
     sendMessageRaw({ text: composed, files })
     clearChips()
   }

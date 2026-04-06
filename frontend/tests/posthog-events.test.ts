@@ -2,10 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { posthog } from '@/lib/posthog'
 import {
   captureAuthEvent,
+  captureCompanionMessageSent,
+  captureExerciseCompleted,
   captureLessonCreated,
   captureLessonGenerationFailed,
   captureLessonJobFailed,
+  captureShadowingSessionCompleted,
+  captureShadowingSessionStarted,
   captureStudySessionCompleted,
+  captureStudySessionStarted,
+  captureVocabularyWordSaved,
 } from '@/lib/posthog-events'
 
 vi.mock('@/lib/posthog', () => ({
@@ -57,5 +63,35 @@ describe('posthog event schemas', () => {
     expect(posthog.capture).toHaveBeenCalledWith('app_unlocked')
     captureAuthEvent('trial_started')
     expect(posthog.capture).toHaveBeenCalledWith('trial_started')
+  })
+
+  it('captureCompanionMessageSent sends companion_message_sent with context and file count', () => {
+    captureCompanionMessageSent({ with_context: true, file_count: 2 })
+    expect(posthog.capture).toHaveBeenCalledWith('companion_message_sent', { with_context: true, file_count: 2 })
+  })
+
+  it('captureStudySessionStarted sends study_session_started with lesson, mode, and count', () => {
+    captureStudySessionStarted({ lesson_id: 'l1', mode: 'mixed', count: 10 })
+    expect(posthog.capture).toHaveBeenCalledWith('study_session_started', { lesson_id: 'l1', mode: 'mixed', count: 10 })
+  })
+
+  it('captureExerciseCompleted sends exercise_completed with type, correct, and score', () => {
+    captureExerciseCompleted({ exercise_type: 'cloze', correct: true, score: 80 })
+    expect(posthog.capture).toHaveBeenCalledWith('exercise_completed', { exercise_type: 'cloze', correct: true, score: 80 })
+  })
+
+  it('captureShadowingSessionStarted sends shadowing_session_started with mode and segment count', () => {
+    captureShadowingSessionStarted({ mode: 'dictation', segment_count: 15 })
+    expect(posthog.capture).toHaveBeenCalledWith('shadowing_session_started', { mode: 'dictation', segment_count: 15 })
+  })
+
+  it('captureShadowingSessionCompleted sends shadowing_session_completed with mode, attempted, and total', () => {
+    captureShadowingSessionCompleted({ mode: 'speaking', attempted: 10, total: 15 })
+    expect(posthog.capture).toHaveBeenCalledWith('shadowing_session_completed', { mode: 'speaking', attempted: 10, total: 15 })
+  })
+
+  it('captureVocabularyWordSaved sends vocabulary_word_saved with source language', () => {
+    captureVocabularyWordSaved({ source_language: 'zh-CN' })
+    expect(posthog.capture).toHaveBeenCalledWith('vocabulary_word_saved', { source_language: 'zh-CN' })
   })
 })

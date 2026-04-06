@@ -1,6 +1,6 @@
 import type { SegmentResult } from '@/lib/shadowing-utils'
 import type { LessonMeta, Segment } from '@/types'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { useI18n } from '@/contexts/I18nContext'
 import { getLanguageCaps } from '@/lib/language-caps'
+import { captureShadowingSessionCompleted, captureShadowingSessionStarted } from '@/lib/posthog-events'
 import { computeSessionSummary, isAutoSkipSegment } from '@/lib/shadowing-utils'
 import { ShadowingDictationPhase } from './ShadowingDictationPhase'
 import { ShadowingListenPhase } from './ShadowingListenPhase'
@@ -44,6 +45,19 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
 
   // showSummary is pure derived state
   const showSummary = segmentIndex >= segments.length
+
+  useEffect(() => {
+    captureShadowingSessionStarted({ mode, segment_count: segments.length })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!showSummary)
+      return
+    const summary = computeSessionSummary(results, segments.length)
+    captureShadowingSessionCompleted({ mode, attempted: summary.attempted, total: summary.total })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSummary])
 
   // Auto-skip: setState-during-render pattern — avoids effect setter
   const [lastAutoSkipCheck, setLastAutoSkipCheck] = useState(-1)

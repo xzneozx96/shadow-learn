@@ -23,7 +23,7 @@ import { useTracking } from '@/hooks/useTracking'
 import { useTTS } from '@/hooks/useTTS'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
-import { captureStudySessionCompleted } from '@/lib/posthog-events'
+import { captureExerciseCompleted, captureStudySessionCompleted, captureStudySessionStarted } from '@/lib/posthog-events'
 import { buildSessionQuestions, buildStudyPool, distributeExercises, toFallbackType } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
@@ -92,6 +92,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
   useEffect(() => {
     if (!prebuiltQuestions || prebuiltQuestions.length === 0)
       return
+    captureStudySessionStarted({ lesson_id: lessonId ?? '', mode: 'ai_generated', count: prebuiltQuestions.length })
     setQuestions(prebuiltQuestions)
     setCurrent(0)
     setResults([])
@@ -138,6 +139,8 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
     const hasWriting = entries.some(e => isWritingSupported(e.word))
     const types = distributeExercises(mode, count, hasAzure, hasWriting, caps)
 
+    captureStudySessionStarted({ lesson_id: lessonId ?? '', mode, count })
+
     const pool = buildStudyPool(entries, !!preloadedEntries)
 
     if (preloadedEntries) {
@@ -180,6 +183,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
 
     if (newResult) {
       void logExerciseResult({ vocabEntry: q.entry, score, exerciseType: q.type, mistakes: opts?.mistakes })
+      captureExerciseCompleted({ exercise_type: q.type, correct: score >= 60, score })
       setResults(r => [...r, newResult])
       if (isLast) {
         void logSessionComplete()
