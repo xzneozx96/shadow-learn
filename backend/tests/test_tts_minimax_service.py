@@ -98,3 +98,61 @@ async def test_synthesize_speech_retries_on_429_then_succeeds():
 
     assert result == fake_audio
     assert mock_client.post.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_minimax_provider_uses_japanese_voice_for_japanese():
+    """MinimaxTTSProvider picks a Japanese_* voice when language starts with 'ja'."""
+    captured = {}
+
+    async def fake_post(url, *, json, headers):
+        captured["voice_id"] = json["voice_setting"]["voice_id"]
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "data": {"audio": (b"\xff\xfb" * 5).hex()},
+            "base_resp": {"status_code": 0, "status_msg": "success"},
+        }
+        return mock_response
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = fake_post
+
+    with patch("app.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
+        from app.services.tts_minimax import MinimaxTTSProvider
+        provider = MinimaxTTSProvider()
+        await provider.synthesize("こんにちは", {"minimax_api_key": "key"}, language="ja")
+
+    assert "Japanese" in captured["voice_id"]
+
+
+@pytest.mark.asyncio
+async def test_minimax_provider_uses_chinese_voice_for_chinese():
+    """MinimaxTTSProvider uses the default Chinese voice when language starts with 'zh'."""
+    captured = {}
+
+    async def fake_post(url, *, json, headers):
+        captured["voice_id"] = json["voice_setting"]["voice_id"]
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "data": {"audio": (b"\xff\xfb" * 5).hex()},
+            "base_resp": {"status_code": 0, "status_msg": "success"},
+        }
+        return mock_response
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = fake_post
+
+    with patch("app.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
+        from app.services.tts_minimax import MinimaxTTSProvider
+        provider = MinimaxTTSProvider()
+        await provider.synthesize("你好", {"minimax_api_key": "key"}, language="zh-CN")
+
+    assert "Japanese" not in captured["voice_id"]
