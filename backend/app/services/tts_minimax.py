@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Voice IDs per language prefix. Chinese uses the legacy ID; Japanese and English use a dedicated voice.
 _VOICE_MAP: dict[str, str] = {
-    "zh": "Chinese (Mandarin)_Warm_HeartedGirl",
+    "zh": "Arrogant_Miss",
     "ja": "Japanese_GracefulMaiden",
     "en": "English_captivating_female1",
 }
