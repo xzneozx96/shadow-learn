@@ -1,5 +1,7 @@
 import HanziWriter from 'hanzi-writer'
 import { useEffect, useRef } from 'react'
+import { isKana } from '@/lib/hanzi-writer-chars'
+import { kanaCharDataLoader } from '@/lib/kana-char-data-loader'
 
 interface Props {
   character: string
@@ -18,6 +20,8 @@ export function HanziWriterCanvas({ character, writerRef, onComplete, showOutlin
     if (!container)
       return
 
+    const isKanaChar = [...character].every(ch => isKana(ch))
+
     const writer = HanziWriter.create(container, character, {
       width: 200,
       height: 200,
@@ -27,6 +31,7 @@ export function HanziWriterCanvas({ character, writerRef, onComplete, showOutlin
       outlineColor: '#3f3f46',
       drawingColor: '#60a5fa',
       drawingWidth: 4,
+      ...(isKanaChar ? { charDataLoader: kanaCharDataLoader } : {}),
     })
 
     internalWriterRef.current = writer
@@ -38,7 +43,7 @@ export function HanziWriterCanvas({ character, writerRef, onComplete, showOutlin
       onComplete: () => {
         onComplete(hintUsedRef.current)
       },
-      leniency: 1,
+      leniency: isKanaChar ? 1.2 : 1,
       // After 3 missed strokes, hanzi-writer animates the hint automatically.
       showHintAfterMisses: 3,
       onMistake: (strokeData) => {
