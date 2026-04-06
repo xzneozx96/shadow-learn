@@ -11,16 +11,28 @@ from app.services.tts_provider import TTSKeys
 
 logger = logging.getLogger(__name__)
 
-_VOICE = "zh-CN-XiaoxiaoMultilingualNeural"
 _OUTPUT_FORMAT = "audio-16khz-128kbitrate-mono-mp3"
 _MAX_TEXT_LENGTH = 2_000  # Azure REST API SSML limit is ~3,000 chars; 2,000 gives safe headroom
 
+# Maps BCP-47 language prefixes to Azure Neural voice names and SSML locales.
+_VOICE_MAP: dict[str, str] = {
+    "zh": "zh-CN-XiaoxiaoMultilingualNeural",
+    "ja": "ja-JP-NanamiNeural",
+}
+_LOCALE_MAP: dict[str, str] = {
+    "zh": "zh-CN",
+    "ja": "ja-JP",
+}
 
-def _build_ssml(text: str) -> str:
+
+def _build_ssml(text: str, language: str = "zh") -> str:
+    lang_prefix = language.split("-")[0]
+    voice = _VOICE_MAP.get(lang_prefix, _VOICE_MAP["zh"])
+    locale = _LOCALE_MAP.get(lang_prefix, _LOCALE_MAP["zh"])
     escaped = html.escape(text)
     return (
-        f"<speak version='1.0' xml:lang='zh-CN'>"
-        f"<voice xml:lang='zh-CN' name='{_VOICE}'>{escaped}</voice>"
+        f"<speak version='1.0' xml:lang='{locale}'>"
+        f"<voice xml:lang='{locale}' name='{voice}'>{escaped}</voice>"
         f"</speak>"
     )
 
@@ -28,7 +40,7 @@ def _build_ssml(text: str) -> str:
 class AzureTTSProvider:
     """TTSProvider implementation backed by Azure Cognitive Services TTS REST API."""
 
-    async def synthesize(self, text: str, keys: TTSKeys) -> bytes:
+    async def synthesize(self, text: str, keys: TTSKeys, language: str = "zh") -> bytes:
         """Synthesize text to MP3 using Azure TTS.
 
         Args:
@@ -51,7 +63,7 @@ class AzureTTSProvider:
         region = keys.get("azure_speech_region", "")
         url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1"
 
-        ssml = _build_ssml(text)
+        ssml = _build_ssml(text, language)
         headers = {
             "Ocp-Apim-Subscription-Key": key,
             "Content-Type": "application/ssml+xml",

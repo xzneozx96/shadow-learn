@@ -10,10 +10,15 @@ from app.services.tts_provider import TTSKeys
 
 logger = logging.getLogger(__name__)
 
-_VOICE_ID = "hunyin_6"  # Chinese male voice; adjust if Minimax changes IDs
+# Voice IDs per language prefix. Chinese uses the legacy ID; Japanese uses a dedicated voice.
+_VOICE_MAP: dict[str, str] = {
+    "zh": "hunyin_6",
+    "ja": "Japanese_KindLady",
+}
+_DEFAULT_VOICE = _VOICE_MAP["zh"]
 
 
-async def synthesize_speech(text: str, api_key: str) -> bytes:
+async def synthesize_speech(text: str, api_key: str, voice_id: str = _DEFAULT_VOICE) -> bytes:
     """Call Minimax TTS API and return raw MP3 bytes.
 
     Args:
@@ -37,7 +42,7 @@ async def synthesize_speech(text: str, api_key: str) -> bytes:
         "model": "speech-2.6-turbo",
         "text": text,
         "voice_setting": {
-            "voice_id": _VOICE_ID,
+            "voice_id": voice_id,
             "speed": 0.8,
         },
         "audio_setting": {
@@ -75,6 +80,8 @@ async def synthesize_speech(text: str, api_key: str) -> bytes:
 class MinimaxTTSProvider:
     """TTSProvider implementation backed by Minimax speech-2.6-turbo."""
 
-    async def synthesize(self, text: str, keys: TTSKeys) -> bytes:
+    async def synthesize(self, text: str, keys: TTSKeys, language: str = "zh") -> bytes:
+        lang_prefix = language.split("-")[0]
+        voice_id = _VOICE_MAP.get(lang_prefix, _DEFAULT_VOICE)
         api_key = keys.get("minimax_api_key", "")
-        return await synthesize_speech(text, api_key)
+        return await synthesize_speech(text, api_key, voice_id)

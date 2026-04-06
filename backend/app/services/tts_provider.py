@@ -10,7 +10,7 @@ class TTSKeys(TypedDict, total=False):
 
 
 class TTSProvider(Protocol):
-    async def synthesize(self, text: str, keys: TTSKeys) -> bytes:
+    async def synthesize(self, text: str, keys: TTSKeys, language: str = "zh") -> bytes:
         """Synthesize text to MP3 bytes.
 
         Args:

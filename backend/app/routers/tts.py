@@ -51,7 +51,7 @@ async def text_to_speech(body: TTSRequest, request: Request) -> Response:
 
     # Step 3: synthesize
     try:
-        audio_bytes = await request.app.state.tts_provider.synthesize(body.text, keys)
+        audio_bytes = await request.app.state.tts_provider.synthesize(body.text, keys, body.source_language)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
