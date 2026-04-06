@@ -56,7 +56,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     inputMode: 'standard',
     dictationPlaceholder: 'テキストを入力…',
     languageName: 'Japanese',
-    azurePronunciationLocale: null, // ja-JP not confirmed supported
+    azurePronunciationLocale: 'ja-JP',
   },
   'ko': {
     romanizationSystem: 'none',
