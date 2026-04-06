@@ -100,7 +100,7 @@ class AzureSTTProvider:
         for idx, phrase in enumerate(phrases):
             words_raw = phrase.get("words", [])
             text = phrase.get("text", "")
-            if language.startswith("zh"):
+            if language.startswith("zh") or language.startswith("ja"):
                 text = text.replace(" ", "")
 
             if words_raw:

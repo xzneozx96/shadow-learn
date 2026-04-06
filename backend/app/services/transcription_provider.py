@@ -59,7 +59,7 @@ class STTProvider(Protocol):
 def _finalize_segment(words: list[_Word], index: int, language: str) -> _Segment:
     """Create a segment dict from a list of word dicts."""
     text = " ".join(w["text"] for w in words)
-    if language.startswith("zh"):
+    if language.startswith("zh") or language.startswith("ja"):
         text = text.replace(" ", "")
     return {
         "id": index,
