@@ -1,6 +1,26 @@
+import type { ShadowLearnDB } from '@/db'
 import { z } from 'zod'
-import { executeRenderProgressChart } from '@/lib/agent-tools'
+import { getProgressStats } from '@/db'
 import { buildTool } from '@/lib/tools/types'
+
+export async function executeRenderProgressChart(
+  db: ShadowLearnDB,
+  args: { metric: 'accuracy' | 'mastery' },
+) {
+  const stats = await getProgressStats(db)
+
+  if (args.metric === 'accuracy') {
+    return {
+      metric: 'accuracy',
+      data: stats?.accuracyTrend ?? [],
+    }
+  }
+
+  return {
+    metric: 'mastery',
+    data: stats?.skillProgress ?? null,
+  }
+}
 
 export const renderProgressChartTool = buildTool({
   name: 'render_progress_chart',

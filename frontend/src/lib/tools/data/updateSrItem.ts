@@ -1,6 +1,22 @@
+import type { ShadowLearnDB } from '@/db'
 import { z } from 'zod'
-import { executeUpdateSrItem } from '@/lib/agent-tools'
+import { getSpacedRepetitionItem, saveSpacedRepetitionItem } from '@/db'
+import { updateSpacedRepetition } from '@/lib/spacedRepetition'
 import { buildTool } from '@/lib/tools/types'
+
+export async function executeUpdateSrItem(
+  db: ShadowLearnDB,
+  args: { itemId: string, result: 'correct' | 'incorrect' | 'partial' },
+) {
+  const item = await getSpacedRepetitionItem(db, args.itemId)
+  if (!item)
+    return { error: `Item ${args.itemId} not found` }
+
+  const scoreMap = { correct: 100, partial: 50, incorrect: 0 }
+  const updated = updateSpacedRepetition(item, scoreMap[args.result])
+  await saveSpacedRepetitionItem(db, updated)
+  return { nextReview: updated.dueDate, masteryLevel: updated.masteryLevel }
+}
 
 export const updateSrItemTool = buildTool({
   name: 'update_sr_item',
@@ -9,5 +25,5 @@ export const updateSrItemTool = buildTool({
     itemId: z.string().describe('Spaced repetition item ID'),
     result: z.enum(['correct', 'incorrect', 'partial']).describe('Exercise result'),
   }),
-  execute: async (input, context) => executeUpdateSrItem(context.idb, input),
+  execute: async (input, context) => executeUpdateSrItem(context.idb, input as { itemId: string, result: 'correct' | 'incorrect' | 'partial' }),
 })

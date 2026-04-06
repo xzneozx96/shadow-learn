@@ -1,6 +1,22 @@
+import type { ShadowLearnDB } from '@/db'
 import { z } from 'zod'
-import { executeGetProgressSummary } from '@/lib/agent-tools'
+import { getProgressStats } from '@/db'
 import { buildTool } from '@/lib/tools/types'
+
+export async function executeGetProgressSummary(db: ShadowLearnDB) {
+  const stats = await getProgressStats(db)
+  if (!stats)
+    return { message: 'No progress data yet.' }
+  return {
+    accuracyRate: stats.accuracyRate,
+    totalSessions: stats.totalSessions,
+    totalExercises: stats.totalExercises,
+    totalCorrect: stats.totalCorrect,
+    totalStudyMinutes: stats.totalStudyMinutes,
+    accuracyTrend: stats.accuracyTrend.slice(-7),
+    skillProgress: stats.skillProgress,
+  }
+}
 
 export const getProgressSummaryTool = buildTool({
   name: 'get_progress_summary',

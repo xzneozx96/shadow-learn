@@ -1,13 +1,10 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  executeGetCoreGuidelines,
-  executeGetSkillGuide,
-  executeGetStudyContext,
-  executeGetUserManual,
-  executeRenderStudySession,
-  ToolInputSchemas,
-} from '@/lib/agent-tools'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { executeGetStudyContext } from '@/lib/tools/data/getStudyContext'
+import { executeGetCoreGuidelines } from '@/lib/tools/guidance/getCoreGuidelines'
+import { executeGetSkillGuide } from '@/lib/tools/guidance/getSkillGuide'
+import { executeGetUserManual } from '@/lib/tools/guidance/getUserManual'
 import { getActiveToolPool, getToolDefinitions } from '@/lib/tools/index'
+import { executeRenderStudySession, makeRenderStudySessionTool } from '@/lib/tools/render/renderStudySession'
 
 vi.mock('@/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/db')>()
@@ -253,9 +250,11 @@ describe('agent-tools executors', () => {
   })
 })
 
-describe('toolInputSchemas — input validation', () => {
+describe('tool input validation', () => {
+  const schema = makeRenderStudySessionTool('').inputSchema
+
   it('render_study_session rejects invalid exerciseType', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: ['abc'],
       exerciseTypes: ['not-a-real-type'],
     })
@@ -263,7 +262,7 @@ describe('toolInputSchemas — input validation', () => {
   })
 
   it('render_study_session accepts valid input', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: ['abc', 'def'],
       exerciseTypes: ['dictation', 'writing'],
     })
@@ -271,7 +270,7 @@ describe('toolInputSchemas — input validation', () => {
   })
 
   it('render_study_session rejects empty itemIds', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: [],
       exerciseTypes: ['dictation'],
     })
@@ -279,7 +278,7 @@ describe('toolInputSchemas — input validation', () => {
   })
 
   it('render_study_session rejects empty exerciseTypes', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: ['abc'],
       exerciseTypes: [],
     })
@@ -287,7 +286,7 @@ describe('toolInputSchemas — input validation', () => {
   })
 
   it('render_study_session accepts storyCount within range', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: ['abc'],
       exerciseTypes: ['cloze'],
       storyCount: 5,
@@ -296,7 +295,7 @@ describe('toolInputSchemas — input validation', () => {
   })
 
   it('render_study_session rejects storyCount of 0', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: ['abc'],
       exerciseTypes: ['cloze'],
       storyCount: 0,
@@ -305,7 +304,7 @@ describe('toolInputSchemas — input validation', () => {
   })
 
   it('render_study_session rejects storyCount above max', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: ['abc'],
       exerciseTypes: ['cloze'],
       storyCount: 11,
@@ -314,7 +313,7 @@ describe('toolInputSchemas — input validation', () => {
   })
 
   it('render_study_session accepts sentencesPerWord within range', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: ['abc'],
       exerciseTypes: ['translation'],
       sentencesPerWord: 3,
@@ -323,7 +322,7 @@ describe('toolInputSchemas — input validation', () => {
   })
 
   it('render_study_session rejects sentencesPerWord of 0', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: ['abc'],
       exerciseTypes: ['translation'],
       sentencesPerWord: 0,
@@ -332,7 +331,7 @@ describe('toolInputSchemas — input validation', () => {
   })
 
   it('render_study_session rejects sentencesPerWord above max', () => {
-    const result = ToolInputSchemas.render_study_session.safeParse({
+    const result = schema.safeParse({
       itemIds: ['abc'],
       exerciseTypes: ['translation'],
       sentencesPerWord: 6,

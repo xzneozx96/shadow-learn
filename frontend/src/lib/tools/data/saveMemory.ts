@@ -1,6 +1,20 @@
+import type { ShadowLearnDB } from '@/db'
 import { z } from 'zod'
-import { executeSaveMemory } from '@/lib/agent-tools'
+import { saveMemory } from '@/lib/agent-memory'
 import { buildTool } from '@/lib/tools/types'
+
+export async function executeSaveMemory(
+  db: ShadowLearnDB,
+  args: { content: string, tags?: string[], importance?: 1 | 2 | 3 },
+  lessonId?: string,
+) {
+  return saveMemory(db, {
+    content: args.content,
+    tags: args.tags ?? [],
+    importance: args.importance ?? 2,
+    lessonId,
+  })
+}
 
 export const saveMemoryTool = buildTool({
   name: 'save_memory',

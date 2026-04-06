@@ -1,6 +1,20 @@
+import type { ShadowLearnDB } from '@/db'
 import { z } from 'zod'
-import { executeRecallMemory } from '@/lib/agent-tools'
+import { recallMemory } from '@/lib/agent-memory'
 import { buildTool } from '@/lib/tools/types'
+
+export async function executeRecallMemory(
+  db: ShadowLearnDB,
+  args: { query: string, tags?: string[] },
+) {
+  const memories = await recallMemory(db, args.query, args.tags)
+  return memories.slice(0, 10).map(m => ({
+    id: m.id,
+    content: m.content,
+    tags: m.tags,
+    importance: m.importance,
+  }))
+}
 
 export const recallMemoryTool = buildTool({
   name: 'recall_memory',

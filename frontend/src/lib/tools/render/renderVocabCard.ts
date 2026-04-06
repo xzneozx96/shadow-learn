@@ -1,6 +1,27 @@
+import type { ShadowLearnDB } from '@/db'
+import type { VocabEntry } from '@/types'
 import { z } from 'zod'
-import { executeRenderVocabCard } from '@/lib/agent-tools'
+import { compactVocab } from '@/lib/agent-utils'
 import { buildTool } from '@/lib/tools/types'
+
+export async function executeRenderVocabCard(
+  db: ShadowLearnDB,
+  args: { word: string },
+) {
+  // No word index — use cursor to avoid loading entire store into memory
+  const tx = db.transaction('vocabulary', 'readonly')
+  let entry: VocabEntry | undefined
+  for await (const cursor of tx.store) {
+    if (cursor.value.word === args.word) {
+      entry = cursor.value
+      break
+    }
+  }
+  if (!entry) {
+    return { error: `Vocabulary entry for "${args.word}" not found.` }
+  }
+  return { entry: compactVocab(entry) }
+}
 
 export const renderVocabCardTool = buildTool({
   name: 'render_vocab_card',

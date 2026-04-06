@@ -17,12 +17,12 @@ export function truncateIfOversized(result: string, tool: AgentTool): string {
   const threshold = tool.maxResultSizeChars
   if (result.length <= threshold)
     return result
-  // Trim at the last newline within the first 1500 chars to avoid mid-line cuts
-  const raw = result.slice(0, 1500)
+  // Trim at the last newline within the first 3000 chars to avoid mid-line cuts
+  const raw = result.slice(0, 3000)
   const preview = raw.includes('\n') ? raw.split('\n').slice(0, -1).join('\n') : raw
   return (
     `[Result truncated: ${result.length} chars exceeded limit of ${threshold}. `
-    + `Showing first 1500 chars]\n\n${preview}\n...`
+    + `Showing first 3000 chars]\n\n${preview}\n...`
   )
 }
 

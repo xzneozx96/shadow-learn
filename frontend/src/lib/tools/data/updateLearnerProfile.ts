@@ -1,7 +1,31 @@
+import type { ShadowLearnDB } from '@/db'
 import { z } from 'zod'
+import { getLearnerProfile, saveLearnerProfile } from '@/db'
 import { clearSystemPromptCache } from '@/lib/agent-system-prompt'
-import { executeUpdateLearnerProfile } from '@/lib/agent-tools'
 import { buildTool } from '@/lib/tools/types'
+
+export async function executeUpdateLearnerProfile(
+  db: ShadowLearnDB,
+  args: Partial<{ name: string, currentLevel: string, dailyGoalMinutes: number, nativeLanguage: string, targetLanguage: string }>,
+) {
+  const existing = await getLearnerProfile(db)
+  const profile = existing ?? {
+    name: '',
+    nativeLanguage: '',
+    targetLanguage: '',
+    currentLevel: 'Beginner',
+    dailyGoalMinutes: 30,
+    currentStreakDays: 0,
+    totalSessions: 0,
+    totalStudyMinutes: 0,
+    lastStudyDate: null,
+    profileCreated: new Date().toISOString(),
+  }
+
+  const updated = { ...profile, ...args }
+  await saveLearnerProfile(db, updated)
+  return { ok: true, created: !existing }
+}
 
 export const updateLearnerProfileTool = buildTool({
   name: 'update_learner_profile',

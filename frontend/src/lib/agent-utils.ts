@@ -391,6 +391,10 @@ export function compactForTokenBudget(
 
 // ── Public API ──
 
+export function compactVocab(e: { id: string, word: string, romanization?: string, meaning: string, usage?: string }) {
+  return { id: e.id, word: e.word, romanization: e.romanization, meaning: e.meaning, usage: e.usage }
+}
+
 /**
  * ── The Context Compaction Pipeline ──
  *

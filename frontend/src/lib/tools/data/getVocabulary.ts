@@ -1,6 +1,20 @@
+import type { ShadowLearnDB } from '@/db'
 import { z } from 'zod'
-import { executeGetVocabulary } from '@/lib/agent-tools'
+import { getVocabEntriesByLesson } from '@/db'
+import { compactVocab } from '@/lib/agent-utils'
 import { buildTool } from '@/lib/tools/types'
+
+export async function executeGetVocabulary(
+  db: ShadowLearnDB,
+  args: { lessonId?: string },
+) {
+  if (args.lessonId) {
+    const entries = await getVocabEntriesByLesson(db, args.lessonId)
+    return entries.map(compactVocab)
+  }
+  const all = await db.getAll('vocabulary')
+  return all.slice(0, 50).map(compactVocab)
+}
 
 export const getVocabularyTool = buildTool({
   name: 'get_vocabulary',

@@ -404,7 +404,7 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
 
     client = AsyncOpenAI(
         api_key=settings.fpt_ai_api_key,
-        base_url=settings.openrouter_base_url,
+        base_url=settings.fpt_ai_base_url,
     )
 
     has_images = _messages_contain_image(request.messages)

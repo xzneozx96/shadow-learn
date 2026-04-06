@@ -11,7 +11,8 @@ class Settings(BaseSettings):
     ]
     translation_batch_size: int = 30
     translation_max_retries: int = 2
-    openrouter_base_url: str = "https://mkp-api.fptcloud.com/v1"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    fpt_ai_base_url: str = "https://mkp-api.fptcloud.com/v1"
     openrouter_chat_url: str = "https://openrouter.ai/api/v1/chat/completions"
     openrouter_structured_model: str = "qwen/qwen3.5-flash-02-23" # "openai/gpt-4o-mini"
     openrouter_agent_model: str = "Nemotron-3-Super-120B-A12B"

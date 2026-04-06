@@ -14,25 +14,31 @@ import { cn } from '@/lib/utils'
 // -------------------------------------------------------------------------- //
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  // Data & Database Tools
   get_study_context: 'Study Context',
   get_vocabulary: 'Vocabulary',
   get_progress_summary: 'Progress Summary',
-  get_core_guidelines: 'Teaching Guidelines',
-  get_skill_guide: 'Skill Guide',
   recall_memory: 'Memory Search',
   save_memory: 'Save Memory',
   update_sr_item: 'Review Schedule',
   log_mistake: 'Log Mistake',
   update_learner_profile: 'Learner Profile',
-  render_dictation_exercise: 'Dictation Exercise',
-  render_character_writing_exercise: 'Writing Exercise',
-  render_romanization_exercise: 'Romanization Exercise',
-  render_translation_exercise: 'Translation Exercise',
-  render_pronunciation_exercise: 'Pronunciation Exercise',
-  render_cloze_exercise: 'Cloze Exercise',
-  render_reconstruction_exercise: 'Reconstruction Exercise',
+
+  // Guidance Tools
+  get_core_guidelines: 'Teaching Guidelines',
+  get_skill_guide: 'Skill Guide',
+  get_user_manual: 'User Manual',
+
+  // Render components Tools
+  render_study_session: 'Study Session',
   render_progress_chart: 'Progress Chart',
   render_vocab_card: 'Vocab Card',
+
+  // Video Player Tools
+  navigate_to_segment: 'Navigate to Segment',
+  play_segment_audio: 'Play Segment Audio',
+  start_shadowing: 'Start Shadowing',
+  switch_tab: 'Switch Tab',
 }
 
 // -------------------------------------------------------------------------- //
