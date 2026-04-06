@@ -116,7 +116,7 @@ describe('useTTS', () => {
       await result.current.playTTS('你好')
     })
 
-    expect(getTTSCache).toHaveBeenCalledWith(mockDb, '你好')
+    expect(getTTSCache).toHaveBeenCalledWith(mockDb, '你好', 'zh-CN')
     expect(globalThis.fetch).not.toHaveBeenCalled()
     expect(saveTTSCache).not.toHaveBeenCalled()
   })
@@ -136,9 +136,9 @@ describe('useTTS', () => {
 
     expect(globalThis.fetch).toHaveBeenCalledWith('/api/tts', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ text: '你好', azure_speech_key: 'az-key', azure_speech_region: 'eastus' }),
+      body: JSON.stringify({ text: '你好', source_language: 'zh-CN', azure_speech_key: 'az-key', azure_speech_region: 'eastus' }),
     }))
-    expect(saveTTSCache).toHaveBeenCalledWith(mockDb, '你好', fakeBlob)
+    expect(saveTTSCache).toHaveBeenCalledWith(mockDb, '你好', fakeBlob, 'zh-CN')
   })
 
   it('fetches from API with MiniMax key on cache miss', async () => {
@@ -156,7 +156,7 @@ describe('useTTS', () => {
 
     expect(globalThis.fetch).toHaveBeenCalledWith('/api/tts', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ text: '你好', minimax_api_key: 'mm-test' }),
+      body: JSON.stringify({ text: '你好', source_language: 'zh-CN', minimax_api_key: 'mm-test' }),
     }))
   })
 

@@ -16,6 +16,7 @@ interface UseTTSReturn {
 export function useTTS(
   db: ShadowLearnDB | null,
   keys: DecryptedKeys | null,
+  language: string = 'zh-CN',
 ): UseTTSReturn {
   const [loadingText, setLoadingText] = useState<string | null>(null)
   // providerRef always holds the latest value — avoids stale closure in playTTS
@@ -24,6 +25,7 @@ export function useTTS(
   const urlRef = useRef<string | null>(null)
   const dbRef = useRef(db)
   const keysRef = useRef(keys)
+  const languageRef = useRef(language)
 
   // Keep refs in sync with props
   useEffect(() => {
@@ -32,6 +34,9 @@ export function useTTS(
   useEffect(() => {
     keysRef.current = keys
   }, [keys])
+  useEffect(() => {
+    languageRef.current = language
+  }, [language])
 
   // Fetch the active provider once on mount
   useEffect(() => {
@@ -64,17 +69,18 @@ export function useTTS(
     setLoadingText(text)
 
     const currentDb = dbRef.current
+    const currentLanguage = languageRef.current
 
     try {
       let blob: Blob | undefined
 
       if (currentDb) {
-        blob = await getTTSCache(currentDb, text)
+        blob = await getTTSCache(currentDb, text, currentLanguage)
       }
 
       if (!blob) {
         // Build request body based on active provider
-        const body: Record<string, string> = { text }
+        const body: Record<string, string> = { text, source_language: currentLanguage }
         if (currentProvider === 'azure') {
           body.azure_speech_key = currentKeys?.azureSpeechKey ?? ''
           body.azure_speech_region = currentKeys?.azureSpeechRegion ?? ''
@@ -96,7 +102,7 @@ export function useTTS(
         blob = await response.blob()
 
         if (currentDb) {
-          await saveTTSCache(currentDb, text, blob)
+          await saveTTSCache(currentDb, text, blob, currentLanguage)
         }
       }
 

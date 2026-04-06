@@ -1,5 +1,6 @@
 export const LANGUAGES = [
   { value: 'en', label: 'English' },
+  { value: 'ja', label: '日本語' },
   { value: 'vi', label: 'Tiếng Việt' },
   { value: 'zh-CN', label: '中文' },
 ]

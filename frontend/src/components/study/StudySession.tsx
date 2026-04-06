@@ -83,7 +83,6 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
   const { db, keys } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult, logSessionComplete } = useTracking()
-  const { playTTS, loadingText } = useTTS(db, keys)
   const { generateQuiz, loading } = useQuizGeneration()
 
   const entries = preloadedEntries ?? (lessonId ? entriesByLesson[lessonId] : undefined) ?? []
@@ -91,6 +90,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
     ? t('study.reviewSession')
     : (entries[0]?.sourceLessonTitle ?? t('study.unknownLesson'))
   const caps = getLanguageCaps(entries[0]?.sourceLanguage)
+  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN')
 
   const [phase, setPhase] = useState<Phase>('picker')
   const [mode, setMode] = useState<ExerciseMode>('mixed')

@@ -321,13 +321,17 @@ export async function deleteFullLesson(db: ShadowLearnDB, lessonId: string): Pro
   ])
 }
 
-// TTS audio cache (keyed by text, value is MP3 Blob)
-export async function getTTSCache(db: ShadowLearnDB, text: string): Promise<Blob | undefined> {
-  return db.get('tts-cache', text)
+// TTS audio cache (keyed by "language::text" to avoid cross-language collisions)
+function _ttsCacheKey(text: string, language: string): string {
+  return `${language}::${text}`
 }
 
-export async function saveTTSCache(db: ShadowLearnDB, text: string, blob: Blob): Promise<void> {
-  await db.put('tts-cache', blob, text)
+export async function getTTSCache(db: ShadowLearnDB, text: string, language: string): Promise<Blob | undefined> {
+  return db.get('tts-cache', _ttsCacheKey(text, language))
+}
+
+export async function saveTTSCache(db: ShadowLearnDB, text: string, blob: Blob, language: string): Promise<void> {
+  await db.put('tts-cache', blob, _ttsCacheKey(text, language))
 }
 
 // Vocabulary store
