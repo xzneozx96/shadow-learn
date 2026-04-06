@@ -225,6 +225,29 @@ async def test_azure_synthesize_raises_on_network_error():
                 await provider.synthesize("你好", {"azure_speech_key": "key", "azure_speech_region": "eastus"})
 
 
+def test_build_ssml_defaults_to_chinese_voice():
+    """_build_ssml with no language uses zh-CN voice."""
+    from app.services.tts_azure import _build_ssml
+    ssml = _build_ssml("你好")
+    assert "zh-CN" in ssml
+    assert "XiaoxiaoMultilingualNeural" in ssml
+
+
+def test_build_ssml_japanese_voice():
+    """_build_ssml with language='ja' uses Japanese voice and locale."""
+    from app.services.tts_azure import _build_ssml
+    ssml = _build_ssml("こんにちは", "ja")
+    assert "ja-JP" in ssml
+    assert "NanamiNeural" in ssml
+
+
+def test_build_ssml_unknown_language_falls_back_to_chinese():
+    """_build_ssml with unknown language prefix falls back to zh-CN."""
+    from app.services.tts_azure import _build_ssml
+    ssml = _build_ssml("text", "xx-UNKNOWN")
+    assert "zh-CN" in ssml
+
+
 @pytest.mark.asyncio
 async def test_azure_synthesize_raises_on_5xx():
     """Provider raises RuntimeError on 5xx server error after retries."""
