@@ -28,7 +28,7 @@ export function CompanionPanel({
   const { entriesByLesson } = useVocabulary()
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
-  const { messages, isLoading, sendMessage: sendMessageRaw, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
+  const { messages, isLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
 
   useEffect(() => {
     if (chips.length > 0)
@@ -71,6 +71,7 @@ export function CompanionPanel({
           chips={chips}
           onRemoveChip={removeChip}
           onSend={handleSend}
+          onStop={stop}
           headerSlot={headerSlot}
         />
       </TabsContent>

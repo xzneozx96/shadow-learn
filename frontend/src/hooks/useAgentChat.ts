@@ -157,7 +157,7 @@ export function useAgentChat(
     [keys?.openrouterApiKey, toolPool],
   )
 
-  const { messages, setMessages, sendMessage, addToolResult, status, error } = useChat({
+  const { messages, setMessages, sendMessage, addToolResult, stop, status, error } = useChat({
     id: `agent-${lessonId}`,
     transport,
 
@@ -415,6 +415,7 @@ export function useAgentChat(
     isLoading,
     status,
     sendMessage: sendMessageWithReset,
+    stop,
     loadMore,
     hasMore,
     error,

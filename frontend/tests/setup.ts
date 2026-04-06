@@ -10,6 +10,14 @@ window.HTMLElement.prototype.scrollIntoView = function () {}
 globalThis.URL.createObjectURL = (_blob: Blob) => 'data:image/png;base64,fake'
 globalThis.URL.revokeObjectURL = () => {}
 
+// jsdom does not implement ResizeObserver.
+class MockResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver = MockResizeObserver as any
+
 // jsdom's structuredClone does not properly handle Blob objects (loses .type and content).
 // Patch it to use Node's native implementation which correctly clones Blobs via structured clone.
 const nativeStructuredClone = globalThis.structuredClone

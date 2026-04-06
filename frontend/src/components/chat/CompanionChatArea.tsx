@@ -84,6 +84,7 @@ interface CompanionChatAreaProps {
   chips: ContextChip[]
   onRemoveChip: (id: string) => void
   onSend: (payload: SendPayload) => void
+  onStop?: () => void
   headerSlot?: ReactNode
   placeholder?: string
 }
@@ -96,6 +97,7 @@ export function CompanionChatArea({
   chips,
   onRemoveChip,
   onSend,
+  onStop,
   headerSlot,
   placeholder,
 }: CompanionChatAreaProps) {
@@ -380,7 +382,7 @@ export function CompanionChatArea({
             <PromptInputTools>
               <AttachImageButton label={t('companion.attachImage')} />
             </PromptInputTools>
-            <PromptInputSubmit status={chatStatus} />
+            <PromptInputSubmit status={chatStatus} onStop={onStop} />
           </PromptInputFooter>
         </PromptInput>
       </div>

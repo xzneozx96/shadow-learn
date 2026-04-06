@@ -8,7 +8,7 @@ import { CompanionChatArea } from './CompanionChatArea'
 export function GlobalCompanionPanel() {
   const { t } = useI18n()
   const { chips, removeChip, clearChips, closePanel } = useGlobalCompanionContext()
-  const { messages, isLoading, sendMessage, loadMore, hasMore } = useGlobalCompanionChat()
+  const { messages, isLoading, sendMessage, stop, loadMore, hasMore } = useGlobalCompanionChat()
 
   function handleSend({ text, files }: { text: string, files?: import('ai').FileUIPart[] }) {
     const context = chips.map(c => `> ${c.text}`).join('\n')
@@ -34,6 +34,7 @@ export function GlobalCompanionPanel() {
         chips={chips}
         onRemoveChip={removeChip}
         onSend={handleSend}
+        onStop={stop}
         placeholder={t('companion.placeholder')}
       />
     </div>
