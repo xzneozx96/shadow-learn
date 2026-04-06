@@ -23,7 +23,7 @@ import { buildSystemPrompt, clearSystemPromptCache } from '@/lib/agent-system-pr
 import { isToolPart, normalizeMessagesForBackend, PAGE_SIZE, toolName } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
 import { ToolExecutor } from '@/lib/tools/executor'
-import { getActiveToolPool, getToolDefinitions } from '@/lib/tools/index'
+import { getActiveToolPool, getAllBaseTools, getDeferredToolNames, getToolDefinitions } from '@/lib/tools/index'
 
 const VISION_ERROR_REGEX = /image|vision|multimodal|unsupported.*file|file.*unsupported/i
 
@@ -96,9 +96,11 @@ export function useAgentChat(
     [keys?.openrouterApiKey],
   )
 
+  // Executor must use getAllBaseTools (full pool) to execute deferred tools
+  // after they're loaded via tool_search. toolPool is for API (filtered).
   const executor = useMemo(
-    () => new ToolExecutor(toolPool),
-    [toolPool],
+    () => new ToolExecutor(getAllBaseTools(keys?.openrouterApiKey ?? '')),
+    [keys?.openrouterApiKey],
   )
 
   const abortControllerRef = useRef(new AbortController())
@@ -142,6 +144,7 @@ export function useAgentChat(
                   recentMistakeWords: ctx.recentMistakeWords,
                   vocabularyDueCount: ctx.vocabularyDueCount,
                 },
+                deferredToolNames: getDeferredToolNames(keys?.openrouterApiKey ?? ''),
               })
             : ''
           return {

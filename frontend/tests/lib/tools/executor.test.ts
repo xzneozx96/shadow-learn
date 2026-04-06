@@ -210,7 +210,7 @@ describe('truncateIfOversized', () => {
     const longContent = 'x'.repeat(100)
     const result = truncateIfOversized(longContent, smallTool)
     expect(result).toMatch(/\[Result truncated: 100 chars exceeded limit of 20/)
-    expect(result).toMatch(/Showing first 1500 chars\]/)
+    expect(result).toMatch(/Showing first 3000 chars\]/)
   })
 
   it('trims preview at newline boundary', () => {

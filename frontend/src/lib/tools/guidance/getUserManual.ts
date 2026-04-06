@@ -20,5 +20,6 @@ export const getUserManualTool = buildTool({
   inputSchema: z.object({}),
   maxResultSizeChars: 20_000,
   searchHint: 'user manual help guide app features',
+  isDeferred: () => true,
   execute: executeGetUserManual,
 })

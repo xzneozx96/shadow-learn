@@ -349,36 +349,43 @@ describe('getActiveToolPool', () => {
     expect(names).toContain('save_memory')
     expect(names).toContain('get_vocabulary')
     expect(names).toContain('get_study_context')
-    expect(names).toContain('get_progress_summary')
-    expect(names).toContain('update_learner_profile')
-    expect(names).toContain('render_progress_chart')
-    expect(names).toContain('render_vocab_card')
-  })
-
-  it('includes lesson-specific tools', () => {
-    const pool = getActiveToolPool('test-key')
-    const names = pool.map(t => t.name)
-
-    expect(names).toContain('render_study_session')
     expect(names).toContain('navigate_to_segment')
     expect(names).toContain('start_shadowing')
-    expect(names).toContain('switch_tab')
     expect(names).toContain('play_segment_audio')
     expect(names).toContain('log_mistake')
     expect(names).toContain('update_sr_item')
   })
 
-  it('includes guidance tools (none are deferred)', () => {
+  it('excludes deferred tools by default (render, data, guidance)', () => {
     const pool = getActiveToolPool('test-key')
     const names = pool.map(t => t.name)
 
+    expect(names).not.toContain('render_study_session')
+    expect(names).not.toContain('render_progress_chart')
+    expect(names).not.toContain('render_vocab_card')
+    expect(names).not.toContain('get_progress_summary')
+    expect(names).not.toContain('update_learner_profile')
+    expect(names).not.toContain('get_core_guidelines')
+    expect(names).not.toContain('get_skill_guide')
+    expect(names).not.toContain('get_user_manual')
+  })
+
+  it('includes deferred tools when includeDeferred=true', () => {
+    const pool = getActiveToolPool('test-key', { includeDeferred: true })
+    const names = pool.map(t => t.name)
+
+    expect(names).toContain('render_study_session')
+    expect(names).toContain('render_progress_chart')
+    expect(names).toContain('render_vocab_card')
+    expect(names).toContain('get_progress_summary')
+    expect(names).toContain('update_learner_profile')
     expect(names).toContain('get_core_guidelines')
     expect(names).toContain('get_skill_guide')
     expect(names).toContain('get_user_manual')
   })
 
-  it('returns all 18 tools', () => {
-    expect(getActiveToolPool('test-key')).toHaveLength(18)
+  it('returns 10 non-deferred tools by default (18 total - 8 deferred)', () => {
+    expect(getActiveToolPool('test-key')).toHaveLength(10)
   })
 })
 

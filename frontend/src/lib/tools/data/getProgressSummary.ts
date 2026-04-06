@@ -24,6 +24,7 @@ export const getProgressSummaryTool = buildTool({
   inputSchema: z.object({}),
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
+  isDeferred: () => true,
   maxResultSizeChars: 10_000,
   searchHint: 'progress stats accuracy history trends',
   execute: async (_input, context) => executeGetProgressSummary(context.idb),

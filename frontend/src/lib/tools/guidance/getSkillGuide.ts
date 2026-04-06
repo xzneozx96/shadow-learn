@@ -32,5 +32,6 @@ export const getSkillGuideTool = buildTool({
     skill: z.enum(['tones', 'pronunciation', 'vocabulary', 'grammar', 'listening', 'speaking', 'characters']).describe('The skill area to retrieve'),
   }),
   searchHint: 'skill guide coaching tones pronunciation grammar',
+  isDeferred: () => true,
   execute: executeGetSkillGuide,
 })

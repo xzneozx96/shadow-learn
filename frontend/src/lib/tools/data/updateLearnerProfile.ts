@@ -37,6 +37,7 @@ export const updateLearnerProfileTool = buildTool({
     nativeLanguage: z.string().optional(),
     targetLanguage: z.string().optional(),
   }),
+  isDeferred: () => true,
   execute: async (input, context) => {
     const result = await executeUpdateLearnerProfile(context.idb, input)
     clearSystemPromptCache()

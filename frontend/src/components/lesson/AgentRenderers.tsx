@@ -7,39 +7,8 @@
 import type { DailyAccuracy } from '@/db'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from '@/components/ai-elements/tool'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
-
-// -------------------------------------------------------------------------- //
-// Tool display names — short human-readable labels
-// -------------------------------------------------------------------------- //
-
-const TOOL_DISPLAY_NAMES: Record<string, string> = {
-  // Data & Database Tools
-  get_study_context: 'Study Context',
-  get_vocabulary: 'Vocabulary',
-  get_progress_summary: 'Progress Summary',
-  recall_memory: 'Memory Search',
-  save_memory: 'Save Memory',
-  update_sr_item: 'Review Schedule',
-  log_mistake: 'Log Mistake',
-  update_learner_profile: 'Learner Profile',
-
-  // Guidance Tools
-  get_core_guidelines: 'Teaching Guidelines',
-  get_skill_guide: 'Skill Guide',
-  get_user_manual: 'User Manual',
-
-  // Render components Tools
-  render_study_session: 'Study Session',
-  render_progress_chart: 'Progress Chart',
-  render_vocab_card: 'Vocab Card',
-
-  // Video Player Tools
-  navigate_to_segment: 'Navigate to Segment',
-  play_segment_audio: 'Play Segment Audio',
-  start_shadowing: 'Start Shadowing',
-  switch_tab: 'Switch Tab',
-}
 
 // -------------------------------------------------------------------------- //
 // ToolCallCard — AI Elements Tool wrapper for all tool states
@@ -60,7 +29,10 @@ export function ToolCallCard({
   input?: unknown
   output?: unknown
 }) {
-  const title = TOOL_DISPLAY_NAMES[toolName] ?? toolName
+  const { t } = useI18n()
+  const key = `tool.${toolName}`
+  const translated = t(key as Parameters<typeof t>[0])
+  const title = translated === key ? toolName : translated
   const effectiveState = isError ? 'output-error' as const : state
   const hasContent = input != null || output != null || (isError && errorMessage)
 

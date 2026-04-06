@@ -28,6 +28,7 @@ export const renderProgressChartTool = buildTool({
   inputSchema: z.object({ metric: z.enum(['accuracy', 'mastery']) }),
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
+  isDeferred: () => true,
   maxResultSizeChars: Number.MAX_SAFE_INTEGER,
   execute: async (input, context) => executeRenderProgressChart(context.idb, input),
 })

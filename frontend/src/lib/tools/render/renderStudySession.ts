@@ -142,6 +142,7 @@ export function makeRenderStudySessionTool(openrouterApiKey: string) {
     inputSchema: RenderStudySessionSchema,
     isConcurrencySafe: () => false,
     isReadOnly: () => false,
+    isDeferred: () => true,
     maxResultSizeChars: Number.MAX_SAFE_INTEGER,
     searchHint: 'study session exercises quiz vocabulary practice',
     execute: async (input, context) =>

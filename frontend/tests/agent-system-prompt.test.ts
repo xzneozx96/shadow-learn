@@ -123,7 +123,7 @@ describe('buildSystemPrompt', () => {
       memories: [],
       currentTime: '2026-04-02',
     })
-    expect(prompt).toContain('Today: 2026-04-02')
+    expect(prompt).toContain('Current Time:')
   })
 
   it('falls back to current date when today not provided', () => {
@@ -132,7 +132,7 @@ describe('buildSystemPrompt', () => {
       activeSegment: null,
       memories: [],
     })
-    expect(prompt).toMatch(/Today: \d{4}-\d{2}-\d{2}/)
+    expect(prompt).toMatch(/Current Time: \d{2}\/\d{2}\/\d{4}/)
   })
 
   it('includes expanded style guidance', () => {
@@ -258,7 +258,7 @@ describe('buildGlobalSystemPrompt', () => {
 
   it('includes today date', () => {
     const prompt = buildGlobalSystemPrompt(undefined, [])
-    expect(prompt).toMatch(/Today: \d{4}-\d{2}-\d{2}/)
+    expect(prompt).toMatch(/Current Time: \d{2}\/\d{2}\/\d{4}/)
   })
 
   it('includes expanded style guidance', () => {

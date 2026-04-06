@@ -12,6 +12,15 @@ vi.mock('@/contexts/I18nContext', async () => {
   }
 })
 
+vi.mock('@/contexts/GlobalCompanionContext', () => ({
+  useGlobalCompanionContext: () => ({
+    messages: [],
+    input: '',
+    isLoading: false,
+    sendMessage: vi.fn(),
+  }),
+}))
+
 // Minimal auth context mock
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({

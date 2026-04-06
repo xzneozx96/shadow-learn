@@ -5,7 +5,6 @@ import { z } from 'zod'
 import { navigateToSegmentTool } from '@/lib/tools/action/navigateToSegment'
 import { playSegmentAudioTool } from '@/lib/tools/action/playSegmentAudio'
 import { startShadowingTool } from '@/lib/tools/action/startShadowing'
-import { switchTabTool } from '@/lib/tools/action/switchTab'
 import { getProgressSummaryTool } from '@/lib/tools/data/getProgressSummary'
 import { getStudyContextTool } from '@/lib/tools/data/getStudyContext'
 import { getVocabularyTool } from '@/lib/tools/data/getVocabulary'
@@ -20,10 +19,12 @@ import { getUserManualTool } from '@/lib/tools/guidance/getUserManual'
 import { renderProgressChartTool } from '@/lib/tools/render/renderProgressChart'
 import { makeRenderStudySessionTool } from '@/lib/tools/render/renderStudySession'
 import { renderVocabCardTool } from '@/lib/tools/render/renderVocabCard'
+import { toolSearchTool } from './system/ToolSearchTool'
 
 // openrouterApiKey is bound here (partial application for renderStudySession)
 export function getAllBaseTools(openrouterApiKey: string): AgentTool[] {
   return [
+    toolSearchTool, // ALWAYS first - never deferred
     getStudyContextTool,
     getVocabularyTool,
     getProgressSummaryTool,
@@ -37,12 +38,18 @@ export function getAllBaseTools(openrouterApiKey: string): AgentTool[] {
     renderVocabCardTool,
     navigateToSegmentTool,
     startShadowingTool,
-    switchTabTool,
     playSegmentAudioTool,
     getCoreGuidelinesTool,
     getSkillGuideTool,
     getUserManualTool,
   ]
+}
+
+// NEW: Get deferred tool names for system prompt
+export function getDeferredToolNames(openrouterApiKey: string): string[] {
+  return getAllBaseTools(openrouterApiKey)
+    .filter(tool => tool.isDeferred())
+    .map(tool => tool.name)
 }
 
 export function getActiveToolPool(
@@ -109,7 +116,6 @@ export const SILENT_TOOLS = new Set([
   'update_learner_profile',
   'navigate_to_segment',
   'start_shadowing',
-  'switch_tab',
   'play_segment_audio',
   'get_user_manual',
 ])

@@ -11,9 +11,14 @@ import {
 } from '@/lib/tools/index'
 
 describe('getAllBaseTools', () => {
-  it('returns exactly 18 tools', () => {
+  it('returns exactly 18 tools (17 + tool_search)', () => {
     const tools = getAllBaseTools('test-key')
     expect(tools).toHaveLength(18)
+  })
+
+  it('includes tool_search as first tool', () => {
+    const tools = getAllBaseTools('test-key')
+    expect(tools[0]?.name).toBe('tool_search')
   })
 
   it('includes get_user_manual (previously missing from switch)', () => {
@@ -23,16 +28,39 @@ describe('getAllBaseTools', () => {
 })
 
 describe('getActiveToolPool', () => {
-  it('includes guidance tools (none are deferred)', () => {
+  it('excludes deferred tools by default', () => {
     const pool = getActiveToolPool('test-key')
     const names = pool.map(t => t.name)
-    expect(names).toContain('get_core_guidelines')
-    expect(names).toContain('get_skill_guide')
-    expect(names).toContain('get_user_manual')
+    // Deferred tools should NOT be in the active pool
+    expect(names).not.toContain('get_core_guidelines')
+    expect(names).not.toContain('get_skill_guide')
+    expect(names).not.toContain('get_user_manual')
+    expect(names).not.toContain('render_study_session')
+    expect(names).not.toContain('render_progress_chart')
+    expect(names).not.toContain('render_vocab_card')
+    expect(names).not.toContain('get_progress_summary')
+    expect(names).not.toContain('update_learner_profile')
   })
 
-  it('returns all 18 tools by default', () => {
+  it('includes always-available tools', () => {
     const pool = getActiveToolPool('test-key')
+    const names = pool.map(t => t.name)
+    // Always-available tools should be in the pool
+    expect(names).toContain('tool_search')
+    expect(names).toContain('get_study_context')
+    expect(names).toContain('get_vocabulary')
+    expect(names).toContain('save_memory')
+    expect(names).toContain('recall_memory')
+  })
+
+  it('returns 10 tools by default (18 total - 8 deferred)', () => {
+    const pool = getActiveToolPool('test-key')
+    // 18 - 8 deferred = 10
+    expect(pool).toHaveLength(10)
+  })
+
+  it('returns all 18 tools when includeDeferred=true', () => {
+    const pool = getActiveToolPool('test-key', { includeDeferred: true })
     expect(pool).toHaveLength(18)
   })
 })

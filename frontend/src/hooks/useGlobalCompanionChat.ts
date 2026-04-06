@@ -24,7 +24,7 @@ import { buildGlobalSystemPrompt } from '@/lib/agent-system-prompt'
 import { isToolPart, normalizeMessagesForBackend, PAGE_SIZE } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
 import { ToolExecutor } from '@/lib/tools/executor'
-import { getGlobalToolPool, getToolDefinitions } from '@/lib/tools/index'
+import { getAllBaseTools, getGlobalToolPool, getToolDefinitions } from '@/lib/tools/index'
 
 const CHAT_KEY = '__global'
 const MAX_TOOL_ROUNDS = 3
@@ -47,9 +47,13 @@ export function useGlobalCompanionChat() {
   const loadedOffsetRef = useRef(0)
   const [hasMore, setHasMore] = useState(false)
 
-  // Tool pool and executor (mirrors useAgentChat pattern)
+  // Tool pool for API (filtered) and executor (full pool for execution)
+  // Executor must use getAllBaseTools to execute deferred tools after tool_search loads them
   const toolPool = useMemo(() => getGlobalToolPool(), [])
-  const executor = useMemo(() => new ToolExecutor(toolPool), [toolPool])
+  const executor = useMemo(
+    () => new ToolExecutor(getAllBaseTools('')),
+    [],
+  )
   const abortControllerRef = useRef(new AbortController())
 
   const toolContext = useMemo(() => {

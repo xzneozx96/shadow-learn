@@ -29,6 +29,7 @@ export const renderVocabCardTool = buildTool({
   inputSchema: z.object({ word: z.string() }),
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
+  isDeferred: () => true,
   maxResultSizeChars: Number.MAX_SAFE_INTEGER,
   execute: async (input, context) => executeRenderVocabCard(context.idb, input),
 })

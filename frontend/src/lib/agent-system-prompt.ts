@@ -18,6 +18,7 @@ export interface SessionContext {
     vocabularyDueCount: number
   }
   accuracy?: Record<string, { accuracy: number, attempts: number }>
+  deferredToolNames?: string[] // NEW: for tool_search feature
 }
 
 let _staticPromptCache: string | null = null
@@ -209,6 +210,20 @@ function buildDynamicSections(context: SessionContext): string {
     '  - Other types (writing, dictation, romanization-recall, reconstruction): one exercise per item — use more `itemIds` for more exercises.',
     '- Pick items that are due for review or recently mistaken.',
   )
+
+  // NEW: Deferred Tools section (for tool_search feature)
+  if (context.deferredToolNames && context.deferredToolNames.length > 0) {
+    sections.push(
+      '',
+      '## Deferred Tools',
+      '',
+      '<available-deferred-tools>',
+      ...context.deferredToolNames.map(name => `  ${name}`),
+      '</available-deferred-tools>',
+      '',
+      'Call `tool_search` to load schemas for any deferred tool above.',
+    )
+  }
 
   return sections.join('\n')
 }
