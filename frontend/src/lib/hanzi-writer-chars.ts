@@ -11,13 +11,13 @@
 const CJK_START = 0x4E00
 const CJK_END = 0x9FFF
 
-// Hiragana block: U+3040–U+309F
-const HIRAGANA_START = 0x3040
-const HIRAGANA_END = 0x309F
+// Drawable hiragana: U+3041 (ぁ) – U+3096 (ゖ) — matches AnimCJK kana-stroke-data.json
+const HIRAGANA_START = 0x3041
+const HIRAGANA_END = 0x3096
 
-// Katakana block: U+30A0–U+30FF
-const KATAKANA_START = 0x30A0
-const KATAKANA_END = 0x30FF
+// Drawable katakana: U+30A1 (ァ) – U+30FC (ー) — matches AnimCJK kana-stroke-data.json
+const KATAKANA_START = 0x30A1
+const KATAKANA_END = 0x30FC
 
 /**
  * Returns true if the character belongs to the hiragana or katakana block.

@@ -20,7 +20,8 @@ export function HanziWriterCanvas({ character, writerRef, onComplete, showOutlin
     if (!container)
       return
 
-    const isKanaChar = [...character].every(ch => isKana(ch))
+    // character is always a single char (passed one-at-a-time by CharacterWritingExercise)
+    const isKanaChar = isKana(character)
 
     const writer = HanziWriter.create(container, character, {
       width: 200,
@@ -47,7 +48,7 @@ export function HanziWriterCanvas({ character, writerRef, onComplete, showOutlin
       // After 3 missed strokes, hanzi-writer animates the hint automatically.
       showHintAfterMisses: 3,
       onMistake: (strokeData) => {
-        if ((strokeData as any).mistakesOnStroke >= 3) {
+        if (strokeData.mistakesOnStroke >= 3) {
           hintUsedRef.current = true
         }
       },
