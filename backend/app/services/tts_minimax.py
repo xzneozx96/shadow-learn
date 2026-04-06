@@ -10,10 +10,11 @@ from app.services.tts_provider import TTSKeys
 
 logger = logging.getLogger(__name__)
 
-# Voice IDs per language prefix. Chinese uses the legacy ID; Japanese uses a dedicated voice.
+# Voice IDs per language prefix. Chinese uses the legacy ID; Japanese and English use a dedicated voice.
 _VOICE_MAP: dict[str, str] = {
-    "zh": "hunyin_6",
-    "ja": "Japanese_KindLady",
+    "zh": "Chinese (Mandarin)_Warm_HeartedGirl",
+    "ja": "moss_audio_f0c5494c-7c25-11f0-8d70-a2abf1fbea61",
+    "en": "English_captivating_female1",
 }
 _DEFAULT_VOICE = _VOICE_MAP["zh"]
 

@@ -61,8 +61,8 @@ describe('agent-tools executors', () => {
       mockDb.get
         .mockResolvedValueOnce(translationEntry1 as any)
         .mockResolvedValueOnce(translationEntry2 as any)
-      const sentence1 = { text: '我们去旅游', romanization: 'wǒmen qù lǚyóu', english: 'We go travelling' }
-      const sentence2 = { text: '我们出发了', romanization: 'wǒmen chūfā le', english: 'We departed' }
+      const sentence1 = { text: '我们去旅游', romanization: 'wǒmen qù lǚyóu', translation: 'We go travelling' }
+      const sentence2 = { text: '我们出发了', romanization: 'wǒmen chūfā le', translation: 'We departed' }
       globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [sentence1] }) } as any)
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [sentence2] }) } as any)
@@ -107,8 +107,8 @@ describe('agent-tools executors', () => {
     it('passes sentencesPerWord to translation API and returns one question per sentence', async () => {
       mockDb.get
         .mockResolvedValueOnce(translationEntry1 as any)
-      const s1 = { text: '我们去旅游', romanization: 'wǒmen qù lǚyóu', english: 'We go travelling' }
-      const s2 = { text: '旅游很好玩', romanization: 'lǚyóu hěn hǎowán', english: 'Travelling is fun' }
+      const s1 = { text: '我们去旅游', romanization: 'wǒmen qù lǚyóu', translation: 'We go travelling' }
+      const s2 = { text: '旅游很好玩', romanization: 'lǚyóu hěn hǎowán', translation: 'Travelling is fun' }
       globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [s1, s2] }) } as any)
 
@@ -371,7 +371,7 @@ describe('getActiveToolPool', () => {
   })
 
   it('includes deferred tools when includeDeferred=true', () => {
-    const pool = getActiveToolPool('test-key', { includeDeferred: true })
+    const pool = getActiveToolPool('test-key', 'en', { includeDeferred: true })
     const names = pool.map(t => t.name)
 
     expect(names).toContain('render_study_session')

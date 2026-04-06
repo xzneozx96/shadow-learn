@@ -8,7 +8,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
-_GENERATE_OK_BODY = {"sentences": [{"text": "今天很好。", "romanization": "jīntiān hěn hǎo", "english": "Today is great."}]}
+_GENERATE_OK_BODY = {"sentences": [{"text": "今天很好。", "romanization": "jīntiān hěn hǎo", "translation": "Today is great."}]}
 _EVALUATE_OK_BODY = {
     "overall_score": 80,
     "accuracy": {"score": 85, "comment": "Good."},
@@ -58,9 +58,9 @@ async def test_generate_accepts_valid_payload(respx_mock):
                     "message": {
                         "content": json.dumps({
                             "sentences": [
-                                {"text": "今天天气很好。", "romanization": "jīntiān tiānqì hěn hǎo", "english": "The weather is nice today."},
-                                {"text": "我今天很忙。", "romanization": "wǒ jīntiān hěn máng", "english": "I am very busy today."},
-                                {"text": "今天是星期一。", "romanization": "jīntiān shì xīngqīyī", "english": "Today is Monday."},
+                                {"text": "今天天气很好。", "romanization": "jīntiān tiānqì hěn hǎo", "translation": "The weather is nice today."},
+                                {"text": "我今天很忙。", "romanization": "wǒ jīntiān hěn máng", "translation": "I am very busy today."},
+                                {"text": "今天是星期一。", "romanization": "jīntiān shì xīngqīyī", "translation": "Today is Monday."},
                             ]
                         })
                     }
@@ -85,7 +85,7 @@ async def test_generate_accepts_valid_payload(respx_mock):
         data = response.json()
         assert len(data["sentences"]) == 3
         assert "text" in data["sentences"][0]
-        assert "english" in data["sentences"][0]
+        assert "translation" in data["sentences"][0]
 
 
 @pytest.mark.asyncio
@@ -143,7 +143,7 @@ async def test_generate_uses_json_schema(respx_mock):
         captured["payload"] = _json.loads(request.content)
         return _httpx.Response(
             200,
-            json={"choices": [{"message": {"content": _json.dumps({"sentences": [{"text": "今天。", "romanization": "jīntiān", "english": "Today."}]})}}]},
+            json={"choices": [{"message": {"content": _json.dumps({"sentences": [{"text": "今天。", "romanization": "jīntiān", "translation": "Today."}]})}}]},
         )
 
     respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(side_effect=capture_post)

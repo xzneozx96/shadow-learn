@@ -6,6 +6,7 @@ export interface LanguageCapabilities {
   romanizationLabel: string // shown in exercise title: "Pinyin Recall", "IPA Recall"
   romanizationPlaceholder: string // input hint in RomanizationRecallExercise
   hasCharacterWriting: boolean // show/hide CharacterWritingExercise
+  hasTranslation: boolean // gated off when source language IS the UI language (translating to itself is meaningless)
   inputMode: InputMode // drives LanguageInput: ChineseInput vs plain Input
   dictationPlaceholder: string // placeholder in DictationExercise + ShadowingDictationPhase
   languageName: string // "Chinese", "English" — informational
@@ -23,6 +24,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     romanizationLabel: 'Pinyin',
     romanizationPlaceholder: 'e.g. nǐ hǎo or ni3 hao3',
     hasCharacterWriting: true,
+    hasTranslation: true,
     inputMode: 'ime-chinese',
     dictationPlaceholder: '输入汉字…',
     languageName: 'Chinese',
@@ -33,26 +35,29 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     romanizationLabel: 'Pinyin',
     romanizationPlaceholder: 'e.g. nǐ hǎo or ni3 hao3',
     hasCharacterWriting: true,
+    hasTranslation: true,
     inputMode: 'ime-chinese',
     dictationPlaceholder: '輸入漢字…',
     languageName: 'Chinese (Traditional)',
     azurePronunciationLocale: null, // zh-TW not confirmed supported
   },
   'en': {
-    romanizationSystem: 'ipa',
-    romanizationLabel: 'IPA',
-    romanizationPlaceholder: 'e.g. /həˈloʊ/ or həˈloʊ',
+    romanizationSystem: 'none',
+    romanizationLabel: '',
+    romanizationPlaceholder: '',
     hasCharacterWriting: false,
+    hasTranslation: true,
     inputMode: 'standard',
     dictationPlaceholder: 'Type what you heard…',
     languageName: 'English',
     azurePronunciationLocale: 'en-US',
   },
   'ja': {
-    romanizationSystem: 'romaji',
-    romanizationLabel: 'Romaji',
-    romanizationPlaceholder: 'e.g. konnichiwa',
+    romanizationSystem: 'none',
+    romanizationLabel: '',
+    romanizationPlaceholder: '',
     hasCharacterWriting: true,
+    hasTranslation: true,
     inputMode: 'standard',
     dictationPlaceholder: 'テキストを入力…',
     languageName: 'Japanese',
@@ -63,6 +68,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     romanizationLabel: '',
     romanizationPlaceholder: '',
     hasCharacterWriting: false,
+    hasTranslation: true,
     inputMode: 'standard',
     dictationPlaceholder: 'Type what you heard…',
     languageName: 'Korean',
@@ -73,6 +79,7 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     romanizationLabel: '',
     romanizationPlaceholder: '',
     hasCharacterWriting: false,
+    hasTranslation: true,
     inputMode: 'standard',
     dictationPlaceholder: 'Type what you heard…',
     languageName: 'Vietnamese',

@@ -2,12 +2,13 @@ import type { ExerciseMode } from '@/components/study/ModePicker'
 import type { VocabEntry } from '@/types'
 import { useCallback, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { API_BASE } from '@/lib/config'
 import { isClozeExercise, isPronExercise, isTranslationSentence } from '@/lib/study-utils'
 
 interface ClozeExerciseData { story: string, blanks: string[] }
 interface PronExerciseData { sentence: string, translation: string, romanization?: string }
-interface TranslationSentence { text: string, romanization: string, english: string }
+interface TranslationSentence { text: string, romanization: string, translation: string }
 
 interface UseQuizGenerationReturn {
   generateQuiz: (
@@ -25,6 +26,7 @@ interface UseQuizGenerationReturn {
 
 export function useQuizGeneration(): UseQuizGenerationReturn {
   const { keys } = useAuth()
+  const { locale } = useI18n()
   const [loading, setLoading] = useState(false)
 
   const generateQuiz = useCallback(async (
@@ -64,6 +66,7 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
             usage: entry.usage ?? '',
             sentence_count: count,
             source_language: sourceLanguage,
+            ui_language: locale,
           }),
           signal,
         })
@@ -140,7 +143,7 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
     finally {
       setLoading(false)
     }
-  }, [keys])
+  }, [keys, locale])
 
   return { generateQuiz, loading }
 }

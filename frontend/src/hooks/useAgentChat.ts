@@ -51,7 +51,7 @@ export function useAgentChat(
   lessonTitle?: string,
 ) {
   const { db, keys } = useAuth()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const promptContextRef = useRef<PromptContext | null>(null)
   const dbRef = useRef<ShadowLearnDB | null>(null)
   dbRef.current = db
@@ -92,15 +92,15 @@ export function useAgentChat(
   }
 
   const toolPool = useMemo(
-    () => getActiveToolPool(keys?.openrouterApiKey ?? ''),
-    [keys?.openrouterApiKey],
+    () => getActiveToolPool(keys?.openrouterApiKey ?? '', locale),
+    [keys?.openrouterApiKey, locale],
   )
 
   // Executor must use getAllBaseTools (full pool) to execute deferred tools
   // after they're loaded via tool_search. toolPool is for API (filtered).
   const executor = useMemo(
-    () => new ToolExecutor(getAllBaseTools(keys?.openrouterApiKey ?? '')),
-    [keys?.openrouterApiKey],
+    () => new ToolExecutor(getAllBaseTools(keys?.openrouterApiKey ?? '', locale)),
+    [keys?.openrouterApiKey, locale],
   )
 
   const abortControllerRef = useRef(new AbortController())
@@ -144,7 +144,7 @@ export function useAgentChat(
                   recentMistakeWords: ctx.recentMistakeWords,
                   vocabularyDueCount: ctx.vocabularyDueCount,
                 },
-                deferredToolNames: getDeferredToolNames(keys?.openrouterApiKey ?? ''),
+                deferredToolNames: getDeferredToolNames(keys?.openrouterApiKey ?? '', locale),
               })
             : ''
           return {
@@ -157,7 +157,7 @@ export function useAgentChat(
           }
         },
       }),
-    [keys?.openrouterApiKey, toolPool],
+    [keys?.openrouterApiKey, locale, toolPool],
   )
 
   const { messages, setMessages, sendMessage, addToolResult, stop, status, error } = useChat({

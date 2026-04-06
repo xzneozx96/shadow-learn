@@ -1,5 +1,6 @@
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import { describe, expect, it } from 'vitest'
-import { buildExerciseResultPayload, buildSessionQuestions, buildStudyPool, isClozeExercise, isPronExercise, isTranslationSentence, toFallbackType } from '@/lib/study-utils'
+import { buildExerciseResultPayload, buildSessionQuestions, buildStudyPool, distributeExercises, isClozeExercise, isPronExercise, isTranslationSentence, toFallbackType } from '@/lib/study-utils'
 
 function entry(id: string) {
   return {
@@ -27,7 +28,7 @@ function pron(n: number) {
   return { sentence: `句子${n}`, translation: `sentence ${n}` }
 }
 function translation(n: number) {
-  return { text: `词${n}的句子`, romanization: `cí${n} de jùzi`, english: `sentence for word ${n}` }
+  return { text: `词${n}的句子`, romanization: `cí${n} de jùzi`, translation: `sentence for word ${n}` }
 }
 
 describe('buildStudyPool', () => {
@@ -108,19 +109,19 @@ describe('isPronExercise', () => {
 
 describe('isTranslationSentence', () => {
   it('accepts a valid translation sentence', () => {
-    expect(isTranslationSentence({ text: '我学习', romanization: 'wǒ xuéxí', english: 'I study' })).toBe(true)
+    expect(isTranslationSentence({ text: '我学习', romanization: 'wǒ xuéxí', translation: 'I study' })).toBe(true)
   })
 
   it('accepts empty romanization (not all languages have it)', () => {
-    expect(isTranslationSentence({ text: '我学习', romanization: '', english: 'I study' })).toBe(true)
+    expect(isTranslationSentence({ text: '我学习', romanization: '', translation: 'I study' })).toBe(true)
   })
 
   it('rejects when text is empty', () => {
-    expect(isTranslationSentence({ text: '', romanization: 'wǒ', english: 'I study' })).toBe(false)
+    expect(isTranslationSentence({ text: '', romanization: 'wǒ', translation: 'I study' })).toBe(false)
   })
 
   it('rejects when english is empty', () => {
-    expect(isTranslationSentence({ text: '我学习', romanization: 'wǒ', english: '' })).toBe(false)
+    expect(isTranslationSentence({ text: '我学习', romanization: 'wǒ', translation: '' })).toBe(false)
   })
 
   it('rejects null, undefined, and non-objects', () => {
@@ -275,6 +276,77 @@ describe('buildSessionQuestions — mixed', () => {
     expect(qs[0].type).toBe('dictation')
     expect(qs[1].type).toBe('romanization-recall')
     expect(qs[2].type).toBe('reconstruction')
+  })
+})
+
+// -------------------------------------------------------------------------- //
+// distributeExercises
+// -------------------------------------------------------------------------- //
+
+function makeCaps(overrides: Partial<LanguageCapabilities>): LanguageCapabilities {
+  return {
+    romanizationSystem: 'pinyin',
+    romanizationLabel: 'Pinyin',
+    romanizationPlaceholder: '',
+    hasCharacterWriting: false,
+    hasTranslation: true,
+    inputMode: 'standard',
+    dictationPlaceholder: '',
+    languageName: 'Test',
+    azurePronunciationLocale: null,
+    ...overrides,
+  }
+}
+
+describe('distributeExercises', () => {
+  it('never includes translation when hasTranslation is false', () => {
+    const caps = makeCaps({ hasTranslation: false })
+    const types = distributeExercises('mixed', 50, false, false, caps)
+    expect(types).not.toContain('translation')
+  })
+
+  it('can include translation when hasTranslation is true', () => {
+    const caps = makeCaps({ hasTranslation: true, romanizationSystem: 'none' })
+    // Request enough to guarantee translation appears (at least as many as available types)
+    const types = distributeExercises('mixed', 10, false, false, caps)
+    expect(types).toContain('translation')
+  })
+
+  it('never includes romanization-recall when romanizationSystem is none', () => {
+    const caps = makeCaps({ romanizationSystem: 'none' })
+    const types = distributeExercises('mixed', 50, false, false, caps)
+    expect(types).not.toContain('romanization-recall')
+  })
+
+  it('can include romanization-recall when romanizationSystem is set', () => {
+    const caps = makeCaps({ romanizationSystem: 'pinyin' })
+    const types = distributeExercises('mixed', 10, false, false, caps)
+    expect(types).toContain('romanization-recall')
+  })
+
+  it('never includes pronunciation when hasAzure is false', () => {
+    const caps = makeCaps({})
+    const types = distributeExercises('mixed', 50, false, false, caps)
+    expect(types).not.toContain('pronunciation')
+  })
+
+  it('can include pronunciation when hasAzure is true', () => {
+    const caps = makeCaps({})
+    const types = distributeExercises('mixed', 10, true, false, caps)
+    expect(types).toContain('pronunciation')
+  })
+
+  it('returns exactly count items in non-mixed mode', () => {
+    const caps = makeCaps({})
+    const types = distributeExercises('dictation', 7, false, false, caps)
+    expect(types).toHaveLength(7)
+    expect(types.every(t => t === 'dictation')).toBe(true)
+  })
+
+  it('returns exactly count items in mixed mode', () => {
+    const caps = makeCaps({})
+    const types = distributeExercises('mixed', 5, false, false, caps)
+    expect(types).toHaveLength(5)
   })
 })
 

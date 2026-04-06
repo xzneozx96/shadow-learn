@@ -24,7 +24,7 @@ import { useTTS } from '@/hooks/useTTS'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { captureStudySessionCompleted } from '@/lib/posthog-events'
-import { buildSessionQuestions, buildStudyPool, toFallbackType } from '@/lib/study-utils'
+import { buildSessionQuestions, buildStudyPool, distributeExercises, toFallbackType } from '@/lib/study-utils'
 import { cn } from '@/lib/utils'
 
 type Phase = 'picker' | 'session' | 'summary'
@@ -35,37 +35,6 @@ export interface SessionResult {
   score: number
   correct: boolean
   mistakes?: MistakeExample[]
-}
-
-function distributeExercises(
-  _entries: VocabEntry[],
-  mode: ExerciseMode,
-  count: number,
-  hasAzure: boolean,
-  hasWriting: boolean,
-): Exclude<ExerciseMode, 'mixed'>[] {
-  const available: Exclude<ExerciseMode, 'mixed'>[] = ['dictation', 'romanization-recall', 'reconstruction', 'cloze', 'translation']
-  if (hasAzure)
-    available.push('pronunciation')
-  if (hasWriting)
-    available.push('writing')
-
-  if (mode !== 'mixed') {
-    return Array.from<Exclude<ExerciseMode, 'mixed'>>({ length: count }).fill(mode as Exclude<ExerciseMode, 'mixed'>)
-  }
-
-  const result: Exclude<ExerciseMode, 'mixed'>[] = []
-  if (count >= available.length) {
-    result.push(...available)
-  }
-  while (result.length < count) {
-    result.push(available[Math.floor(Math.random() * available.length)])
-  }
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[result[i], result[j]] = [result[j], result[i]]
-  }
-  return result.slice(0, count)
 }
 
 interface StudySessionProps {
@@ -167,12 +136,12 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
     abortRef.current = controller
 
     const hasWriting = entries.some(e => isWritingSupported(e.word))
-    const types = distributeExercises(entries, mode, count, hasAzure, hasWriting)
+    const types = distributeExercises(mode, count, hasAzure, hasWriting, caps)
 
     const pool = buildStudyPool(entries, !!preloadedEntries)
 
     if (preloadedEntries) {
-      const fallbackTypes = types.map(toFallbackType)
+      const fallbackTypes = types.map(t => toFallbackType(t, caps.romanizationSystem !== 'none'))
       setQuestions(buildSessionQuestions(fallbackTypes, pool, [], [], []))
       setCurrent(0)
       setResults([])
@@ -190,7 +159,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
     }
     catch {
       toast.error(t('study.aiGenerationFailed'))
-      const fallbackTypes = types.map(toFallbackType)
+      const fallbackTypes = types.map(t => toFallbackType(t, caps.romanizationSystem !== 'none'))
       setQuestions(buildSessionQuestions(fallbackTypes, pool, [], [], []))
       setCurrent(0)
       setResults([])

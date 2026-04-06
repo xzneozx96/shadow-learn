@@ -1,6 +1,7 @@
 import type { ExerciseMode } from '@/components/study/ModePicker'
 import type { MistakeExample } from '@/db'
 import type { ExerciseType } from '@/hooks/useTracking'
+import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { PronunciationAssessResult, VocabEntry } from '@/types'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 
@@ -11,7 +12,7 @@ export interface SessionQuestion {
   pronunciationData?: { sentence: string, translation: string, romanization?: string }
   reconstructionTokens?: string[]
   translationData?: {
-    sentence: { text: string, romanization: string, english: string }
+    sentence: { text: string, romanization: string, translation: string }
     direction: 'en-to-zh' | 'zh-to-en'
   }
 }
@@ -33,17 +34,22 @@ export function isPronExercise(x: unknown): x is { sentence: string, translation
   )
 }
 
-export function isTranslationSentence(x: unknown): x is { text: string, romanization: string, english: string } {
+export function isTranslationSentence(x: unknown): x is { text: string, romanization: string, translation: string } {
   return (
     typeof x === 'object' && x !== null
     && typeof (x as any).text === 'string' && (x as any).text.trim() !== ''
     && typeof (x as any).romanization === 'string'
-    && typeof (x as any).english === 'string' && (x as any).english.trim() !== ''
+    && typeof (x as any).translation === 'string' && (x as any).translation.trim() !== ''
   )
 }
 
-export function toFallbackType(t: Exclude<ExerciseMode, 'mixed'>): Exclude<ExerciseMode, 'mixed'> {
-  return (t === 'cloze' || t === 'translation' || t === 'pronunciation') ? 'romanization-recall' : t
+export function toFallbackType(
+  t: Exclude<ExerciseMode, 'mixed'>,
+  hasRomanization: boolean = true,
+): Exclude<ExerciseMode, 'mixed'> {
+  if (t === 'cloze' || t === 'translation' || t === 'pronunciation')
+    return hasRomanization ? 'romanization-recall' : 'dictation'
+  return t
 }
 
 export function buildExerciseResultPayload(
@@ -77,7 +83,7 @@ export function buildSessionQuestions(
   pool: VocabEntry[],
   clozeExercises: { story: string, blanks: string[] }[],
   pronExercises: { sentence: string, translation: string, romanization?: string }[],
-  translationSentences: { text: string, romanization: string, english: string }[],
+  translationSentences: { text: string, romanization: string, translation: string }[],
   getDirection: () => 'en-to-zh' | 'zh-to-en' = () => Math.random() < 0.5 ? 'en-to-zh' : 'zh-to-en',
 ): SessionQuestion[] {
   let clozeIdx = 0
@@ -175,4 +181,39 @@ export function scoreReconstruction(typed: string, expected: string): number {
     return t.length === 0 ? 100 : 0
   const correct = e.split('').filter((ch, i) => t[i] === ch).length
   return Math.round((correct / e.length) * 100)
+}
+
+export function distributeExercises(
+  mode: ExerciseMode,
+  count: number,
+  hasAzure: boolean,
+  hasWriting: boolean,
+  caps: LanguageCapabilities,
+): Exclude<ExerciseMode, 'mixed'>[] {
+  const available: Exclude<ExerciseMode, 'mixed'>[] = ['dictation', 'reconstruction', 'cloze']
+  if (caps.romanizationSystem !== 'none')
+    available.push('romanization-recall')
+  if (caps.hasTranslation)
+    available.push('translation')
+  if (hasAzure)
+    available.push('pronunciation')
+  if (hasWriting)
+    available.push('writing')
+
+  if (mode !== 'mixed') {
+    return Array.from<Exclude<ExerciseMode, 'mixed'>>({ length: count }).fill(mode as Exclude<ExerciseMode, 'mixed'>)
+  }
+
+  const result: Exclude<ExerciseMode, 'mixed'>[] = []
+  if (count >= available.length) {
+    result.push(...available)
+  }
+  while (result.length < count) {
+    result.push(available[Math.floor(Math.random() * available.length)])
+  }
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[result[i], result[j]] = [result[j], result[i]]
+  }
+  return result.slice(0, count)
 }

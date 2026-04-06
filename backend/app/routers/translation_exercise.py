@@ -23,12 +23,13 @@ class GenerateRequest(BaseModel):
     usage: str = ""
     sentence_count: int = 3
     source_language: str = "zh-CN"
+    ui_language: str = "en"  # user's native/UI language; determines the target for the 'translation' field
 
 
 class SentencePair(BaseModel):
     text: str
     romanization: str = ""
-    english: str
+    translation: str
 
 
 class GenerateResponse(BaseModel):
@@ -50,9 +51,9 @@ _GENERATE_RESPONSE_FORMAT = {
                         "properties": {
                             "text": {"type": "string"},
                             "romanization": {"type": "string"},
-                            "english": {"type": "string"},
+                            "translation": {"type": "string"},
                         },
-                        "required": ["text", "romanization", "english"],
+                        "required": ["text", "romanization", "translation"],
                         "additionalProperties": False,
                     },
                 }
@@ -108,11 +109,18 @@ _EVALUATE_RESPONSE_FORMAT = {
 }
 
 
+_UI_LANGUAGE_NAMES: dict[str, str] = {
+    "en": "English",
+    "vi": "Vietnamese",
+}
+
+
 def _build_generate_prompt(req: GenerateRequest) -> str:
     lang_cfg = get_language_config(req.source_language)
     language_name = lang_cfg["language_name"]
     romanization_label = lang_cfg["romanization_label"]
     romanization_description = lang_cfg["romanization_description"]
+    native_language = _UI_LANGUAGE_NAMES.get(req.ui_language, "English")
     usage_line = f"\nExample usage from lesson: {req.usage}" if req.usage else ""
     romanization_rule = (
         f"- Provide {romanization_description} for each sentence in the 'romanization' field.\n"
@@ -125,10 +133,10 @@ def _build_generate_prompt(req: GenerateRequest) -> str:
         "Rules:\n"
         "- Each sentence must naturally include the target word.\n"
         "- Keep sentences simple and clear.\n"
-        "- Provide an accurate English translation for each sentence.\n"
+        f"- Provide an accurate {native_language} translation for each sentence in the 'translation' field.\n"
         f"{romanization_rule}"
         "- Vary the sentence structures across examples.\n\n"
-        'Return JSON: {"sentences": [{"text": "<str>", "romanization": "<str>", "english": "<str>"}]}'
+        'Return JSON: {"sentences": [{"text": "<str>", "romanization": "<str>", "translation": "<str>"}]}'
     )
 
 

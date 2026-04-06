@@ -21,8 +21,8 @@ import { makeRenderStudySessionTool } from '@/lib/tools/render/renderStudySessio
 import { renderVocabCardTool } from '@/lib/tools/render/renderVocabCard'
 import { toolSearchTool } from './system/ToolSearchTool'
 
-// openrouterApiKey is bound here (partial application for renderStudySession)
-export function getAllBaseTools(openrouterApiKey: string): AgentTool[] {
+// openrouterApiKey and uiLanguage are bound here (partial application for renderStudySession)
+export function getAllBaseTools(openrouterApiKey: string, uiLanguage: string = 'en'): AgentTool[] {
   return [
     toolSearchTool, // ALWAYS first - never deferred
     getStudyContextTool,
@@ -33,7 +33,7 @@ export function getAllBaseTools(openrouterApiKey: string): AgentTool[] {
     updateSrItemTool,
     logMistakeTool,
     updateLearnerProfileTool,
-    makeRenderStudySessionTool(openrouterApiKey),
+    makeRenderStudySessionTool(openrouterApiKey, uiLanguage),
     renderProgressChartTool,
     renderVocabCardTool,
     navigateToSegmentTool,
@@ -46,17 +46,18 @@ export function getAllBaseTools(openrouterApiKey: string): AgentTool[] {
 }
 
 // NEW: Get deferred tool names for system prompt
-export function getDeferredToolNames(openrouterApiKey: string): string[] {
-  return getAllBaseTools(openrouterApiKey)
+export function getDeferredToolNames(openrouterApiKey: string, uiLanguage: string = 'en'): string[] {
+  return getAllBaseTools(openrouterApiKey, uiLanguage)
     .filter(tool => tool.isDeferred())
     .map(tool => tool.name)
 }
 
 export function getActiveToolPool(
   openrouterApiKey: string,
+  uiLanguage: string = 'en',
   opts?: { includeDeferred?: boolean },
 ): AgentTool[] {
-  return getAllBaseTools(openrouterApiKey).filter((tool) => {
+  return getAllBaseTools(openrouterApiKey, uiLanguage).filter((tool) => {
     if (!tool.isEnabled())
       return false
     if (tool.isDeferred() && !opts?.includeDeferred)

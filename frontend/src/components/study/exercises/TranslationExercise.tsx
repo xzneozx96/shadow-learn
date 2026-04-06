@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useHint } from '@/hooks/useHint'
 import { API_BASE } from '@/lib/config'
+import { getLanguageCaps } from '@/lib/language-caps'
 import { cn } from '@/lib/utils'
 
 const WHITESPACE_RE = /\s+/
@@ -19,7 +20,7 @@ const WHITESPACE_RE = /\s+/
 interface Sentence {
   text: string
   romanization: string
-  english: string
+  translation: string
 }
 
 interface CategoryFeedback {
@@ -109,7 +110,8 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
 
 export function TranslationExercise({ sentence, direction, progress = '', onNext, caps }: Props) {
   const { keys } = useAuth()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const nativeCaps = getLanguageCaps(locale)
   const scoreLabel = useScoreLabel()
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
@@ -125,12 +127,13 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
     return [{ word: sentence.text, pinyin: sentence.romanization ?? '' }]
   })()
 
-  const source = direction === 'zh-to-en' ? sentence.text : sentence.english
-  const reference = direction === 'zh-to-en' ? sentence.english : sentence.text
-  const sourceLang = direction === 'zh-to-en' ? caps.languageName.toLowerCase() : 'english'
-  const targetLang = direction === 'zh-to-en' ? 'english' : caps.languageName.toLowerCase()
+  const nativeLang = nativeCaps.languageName
+  const source = direction === 'zh-to-en' ? sentence.text : sentence.translation
+  const reference = direction === 'zh-to-en' ? sentence.translation : sentence.text
+  const sourceLang = direction === 'zh-to-en' ? caps.languageName.toLowerCase() : nativeLang.toLowerCase()
+  const targetLang = direction === 'zh-to-en' ? nativeLang.toLowerCase() : caps.languageName.toLowerCase()
   const placeholder = direction === 'zh-to-en'
-    ? t('study.translation.placeholder.toEnglish')
+    ? t('study.translation.placeholder.toEnglish').replace('English', nativeLang)
     : t('study.translation.placeholder.toLanguage').replace('{language}', caps.languageName)
 
   async function handleSubmit() {
@@ -239,7 +242,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">
             {t('study.translateTo')}
             {' '}
-            {targetLang === 'english' ? 'English' : caps.languageName}
+            {direction === 'zh-to-en' ? nativeLang : caps.languageName}
             :
           </p>
           <p className="text-2xl font-medium leading-snug">{source}</p>
