@@ -371,7 +371,7 @@ describe('getActiveToolPool', () => {
   })
 
   it('includes deferred tools when includeDeferred=true', () => {
-    const pool = getActiveToolPool('test-key', 'en', { includeDeferred: true })
+    const pool = getActiveToolPool('test-key', { uiLanguage: 'en', includeDeferred: true })
     const names = pool.map(t => t.name)
 
     expect(names).toContain('render_study_session')

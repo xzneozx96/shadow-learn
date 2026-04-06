@@ -92,7 +92,7 @@ export function useAgentChat(
   }
 
   const toolPool = useMemo(
-    () => getActiveToolPool(keys?.openrouterApiKey ?? '', locale),
+    () => getActiveToolPool(keys?.openrouterApiKey ?? '', { uiLanguage: locale }),
     [keys?.openrouterApiKey, locale],
   )
 

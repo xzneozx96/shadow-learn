@@ -54,10 +54,9 @@ export function getDeferredToolNames(openrouterApiKey: string, uiLanguage: strin
 
 export function getActiveToolPool(
   openrouterApiKey: string,
-  uiLanguage: string = 'en',
-  opts?: { includeDeferred?: boolean },
+  opts?: { uiLanguage?: string, includeDeferred?: boolean },
 ): AgentTool[] {
-  return getAllBaseTools(openrouterApiKey, uiLanguage).filter((tool) => {
+  return getAllBaseTools(openrouterApiKey, opts?.uiLanguage ?? 'en').filter((tool) => {
     if (!tool.isEnabled())
       return false
     if (tool.isDeferred() && !opts?.includeDeferred)
