@@ -18,6 +18,13 @@ class MockResizeObserver {
 }
 globalThis.ResizeObserver = MockResizeObserver as any
 
+// jsdom does not implement the Web Animations API (Element.getAnimations).
+// @base-ui/react's ScrollArea calls viewport.getAnimations() inside a timeout,
+// which throws an unhandled error in the test runner.
+if (!Element.prototype.getAnimations) {
+  Element.prototype.getAnimations = () => []
+}
+
 // jsdom's structuredClone does not properly handle Blob objects (loses .type and content).
 // Patch it to use Node's native implementation which correctly clones Blobs via structured clone.
 const nativeStructuredClone = globalThis.structuredClone

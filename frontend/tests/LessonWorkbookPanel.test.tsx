@@ -1,5 +1,5 @@
 import type { VocabEntry } from '@/types'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Import after mocks are hoisted
@@ -151,13 +151,15 @@ describe('lessonWorkbookPanel', () => {
     expect(screen.getByTestId('study-session')).toBeTruthy()
   })
 
-  it('closes study session overlay when StudySession calls onClose', () => {
+  it('closes study session overlay when StudySession calls onClose', async () => {
     mockVocab = { entriesByLesson: { lesson_1: mockEntries } }
     render(<LessonWorkbookPanel lessonId="lesson_1" />)
     fireEvent.click(screen.getByRole('button', { name: /study this lesson/i }))
-    // Simulate onClose being called from within StudySession
+    // Simulate onClose being called from within StudySession.
+    // @base-ui Dialog waits for exit animations via getAnimations() — even with
+    // the jsdom mock returning [], unmount is a microtask, so we need waitFor.
     fireEvent.click(screen.getByRole('button', { name: /close/i }))
-    expect(screen.queryByTestId('study-session')).toBeNull()
+    await waitFor(() => expect(screen.queryByTestId('study-session')).toBeNull())
   })
 
   it('does not pass disableLeaveGuard to StudySession (guard kept on workbook panel)', () => {
