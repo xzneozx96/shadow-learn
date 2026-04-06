@@ -18,6 +18,16 @@ class ChineseRomanizationProvider:
         return generate_pinyin(word)
 
 
+class JapaneseRomanizationProvider:
+    def romanize_text(self, text: str) -> str:
+        from app.services.romaji import generate_romaji
+        return generate_romaji(text)
+
+    def romanize_word(self, word: str) -> str:
+        from app.services.romaji import generate_romaji
+        return generate_romaji(word)
+
+
 class EnglishRomanizationProvider:
     def romanize_text(self, text: str) -> str:
         import eng_to_ipa  # type: ignore[import]
@@ -40,6 +50,8 @@ def get_romanization_provider(source_language: str) -> RomanizationProvider:
     """Return the appropriate romanization provider for source_language."""
     if source_language.startswith("zh"):
         return ChineseRomanizationProvider()
+    if source_language.startswith("ja"):
+        return JapaneseRomanizationProvider()
     if source_language.startswith("en"):
         return EnglishRomanizationProvider()
     return NullRomanizationProvider()
