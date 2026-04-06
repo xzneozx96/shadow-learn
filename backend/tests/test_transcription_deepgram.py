@@ -467,3 +467,23 @@ async def test_transcribe_retries_on_503(tmp_path):
 
     assert len(segments) == 1
     assert mock_client.post.call_count == 2
+
+
+def test_finalize_segment_japanese_strips_spaces():
+    """_finalize_segment removes word-boundary spaces for Japanese text."""
+    words = [
+        {"text": "日本", "start": 0.0, "end": 0.5},
+        {"text": "語", "start": 0.5, "end": 0.8},
+    ]
+    seg = _finalize_segment(words, 0, language="ja-JP")
+    assert seg["text"] == "日本語"
+
+
+def test_group_words_japanese_strips_spaces():
+    """_group_words_into_segments removes spaces between words for Japanese."""
+    words = [
+        {"text": "東", "start": 0.0, "end": 0.3},
+        {"text": "京。", "start": 0.3, "end": 0.6},
+    ]
+    segments = _group_words_into_segments(words, language="ja-JP")
+    assert segments[0]["text"] == "東京。"
