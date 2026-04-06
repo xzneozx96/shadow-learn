@@ -44,7 +44,7 @@ class AzureTTSProvider:
         """Synthesize text to MP3 using Azure TTS.
 
         Args:
-            text: Chinese text to synthesize (1–2,000 characters).
+            text: Text to synthesize (1–2,000 characters).
             keys: Must contain 'azure_speech_key' and 'azure_speech_region'.
 
         Returns:

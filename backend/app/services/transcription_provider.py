@@ -97,7 +97,7 @@ def _group_words_into_segments(words: list[_Word], language: str) -> list[_Segme
                 current_words.append(word)
 
         current_text = " ".join(w["text"] for w in current_words)
-        if language.startswith("zh"):
+        if language.startswith("zh") or language.startswith("ja"):
             current_text = current_text.replace(" ", "")
 
         if text.rstrip() and text[-1] in _SENTENCE_ENDINGS:
