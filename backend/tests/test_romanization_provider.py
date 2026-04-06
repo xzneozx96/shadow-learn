@@ -37,6 +37,26 @@ def test_get_romanization_provider_fallback_to_null():
     assert isinstance(get_romanization_provider("vi"), NullRomanizationProvider)
 
 
+def test_japanese_provider_returns_nonempty_string():
+    from app.services.romanization_provider import JapaneseRomanizationProvider
+    p = JapaneseRomanizationProvider()
+    result = p.romanize_text("日本語")
+    assert isinstance(result, str) and result
+
+
+def test_japanese_provider_romanize_word():
+    from app.services.romanization_provider import JapaneseRomanizationProvider
+    p = JapaneseRomanizationProvider()
+    result = p.romanize_word("東京")
+    assert isinstance(result, str) and result
+
+
+def test_get_romanization_provider_japanese():
+    from app.services.romanization_provider import JapaneseRomanizationProvider
+    assert isinstance(get_romanization_provider("ja"), JapaneseRomanizationProvider)
+    assert isinstance(get_romanization_provider("ja-JP"), JapaneseRomanizationProvider)
+
+
 def test_get_language_config_fallback():
     from app.services.language_config import get_language_config
     cfg = get_language_config("zh-CN")
