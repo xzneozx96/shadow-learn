@@ -49,7 +49,8 @@ export function parseRawEntries(modules: Record<string, string>): ChangelogEntry
       ? rawDate.toISOString().slice(0, 10)
       : String(rawDate)
 
-    const highlights: ChangelogHighlight[] = (data.highlights ?? []).map(
+    const rawHighlights = Array.isArray(data.highlights) ? data.highlights : []
+    const highlights: ChangelogHighlight[] = rawHighlights.map(
       (h: { tag: ChangelogTag, text: string }) => ({ tag: h.tag, text: h.text }),
     )
 
