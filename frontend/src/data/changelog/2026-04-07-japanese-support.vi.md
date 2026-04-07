@@ -4,7 +4,7 @@ title: "日本語、解禁。Japanese Is Here!"
 date: "2026-04-07"
 highlights:
   - tag: new
-    text: Thành thạo tiếng Nhật toàn diện - tạo bài học tiếng Nhật với đầy đủ bài tập học
+    text: Thành thạo tiếng Nhật toàn diện - tạo bài học tiếng Nhật với đầy đủ bài tập
   - tag: improved
     text: Ghi nhớ thông minh — AI hiểu sâu hơn về ngữ cảnh cuộc trò chuyện dài
   - tag: improved
