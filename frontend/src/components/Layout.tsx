@@ -40,18 +40,18 @@ export function Layout({ children }: LayoutProps) {
                 {t('companion.askButton')}
               </Button>
               <Button
-                variant={location.pathname === '/docs' ? 'default' : 'outline'}
-                size="sm"
-                render={<Link to="/docs" />}
-              >
-                {t('nav.documentation')}
-              </Button>
-              <Button
                 variant={location.pathname.startsWith('/vocabulary') ? 'default' : 'outline'}
                 size="sm"
                 render={<Link to="/vocabulary" />}
               >
                 {t('nav.workbook')}
+              </Button>
+              <Button
+                variant={location.pathname === '/docs' ? 'default' : 'outline'}
+                size="sm"
+                render={<Link to="/docs" />}
+              >
+                {t('nav.documentation')}
               </Button>
               <div className="relative">
                 <Button

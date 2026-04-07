@@ -1,4 +1,5 @@
-import type { ChangelogEntry, ChangelogTag } from '@/lib/changelog'
+import type { ChangelogEntry } from '@/lib/changelog'
+import { Sparkles, Wrench, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -10,12 +11,20 @@ import { getChangelog, getLatestAnnouncementId } from '@/lib/changelog'
 import { captureWhatsNewChangelogOpened } from '@/lib/posthog-events'
 import { hasUnseenAnnouncement, markAnnouncementSeen } from '@/lib/whats-new'
 
-// Tailwind classes for tag badges — matches WhatsNewDialog
-const TAG_CLASSES: Record<ChangelogTag, string> = {
-  new: 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/20',
-  improved: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
-  fixed: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20',
-}
+const TAG_UI = {
+  new: {
+    icon: Sparkles,
+    badge: 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30',
+  },
+  improved: {
+    icon: Zap,
+    badge: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-500/30',
+  },
+  fixed: {
+    icon: Wrench,
+    badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30',
+  },
+} as const
 
 // Maps app Locale to Intl locale string
 const INTL_LOCALE = { en: 'en-US', vi: 'vi-VN' } as const
@@ -42,35 +51,25 @@ function SidebarEntry({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left px-3 py-2.5 border-l-2 transition-colors ${
+      className={`w-full text-left p-3.5 mb-1.5 rounded-xl transition-all duration-200 border ${
         isActive
-          ? 'bg-accent border-primary'
-          : 'border-transparent hover:bg-accent/50'
+          ? 'bg-primary/5 border-primary/20 shadow-sm'
+          : 'border-transparent hover:bg-muted/60'
       }`}
     >
-      <div className="flex items-center gap-1.5 mb-0.5">
-        <span className={`text-[11px] font-medium ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-          {formatDate(entry.date, intlLocale, { month: 'short', year: 'numeric' })}
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className={`text-[11px] font-semibold tracking-wide uppercase ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+          {formatDate(entry.date, intlLocale, { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
         {isNew && (
-          <Badge className="h-auto px-1 py-px text-[9px] font-bold bg-primary/15 text-primary border-primary/20">
+          <Badge className="h-auto px-1.5 py-0.5 text-[9px] font-bold bg-primary/15 text-primary border-primary/20 uppercase tracking-wider">
             NEW
           </Badge>
         )}
       </div>
-      <p className={`text-xs font-medium leading-snug ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+      <p className={`text-[14px] font-medium leading-snug ${isActive ? 'text-foreground' : 'text-foreground/80'}`}>
         {entry.title}
       </p>
-      <div className="flex gap-1 mt-1.5">
-        {entry.tags.map(tag => (
-          <span
-            key={tag}
-            className={`inline-block size-1.5 rounded-full ${
-              tag === 'new' ? 'bg-green-500' : tag === 'improved' ? 'bg-indigo-400' : 'bg-amber-500'
-            }`}
-          />
-        ))}
-      </div>
     </button>
   )
 }
@@ -129,8 +128,8 @@ export function ChangelogPage() {
     <Layout>
       <div className="flex h-[calc(100vh-65px)]">
         {/* Sidebar */}
-        <ScrollArea className="w-52 shrink-0 border-r border-border">
-          <div className="py-2">
+        <ScrollArea className="w-96 shrink-0 border-r border-border bg-background">
+          <div className="p-4">
             {entries.map(entry => (
               <SidebarEntry
                 key={entry.id}
@@ -147,48 +146,59 @@ export function ChangelogPage() {
         {/* Content */}
         <div ref={contentRef} className="flex-1 overflow-y-auto">
           {selectedEntry && (
-            <div className="max-w-2xl px-8 py-8">
+            <div className="prose prose-invert prose-base max-w-4xl mx-auto py-12">
               {/* Header */}
-              <h1 className="text-2xl font-bold tracking-tight text-foreground mb-1">
-                {selectedEntry.title}
-              </h1>
-              <p className="text-sm text-muted-foreground mb-3">
-                {formatDate(selectedEntry.date, intlLocale, { month: 'long', day: 'numeric', year: 'numeric' })}
-              </p>
-              <div className="flex gap-1.5 mb-6">
-                {selectedEntry.tags.map(tag => (
-                  <Badge
-                    key={tag}
-                    className={`h-auto px-1.5 py-0.5 text-[10px] font-bold border ${TAG_CLASSES[tag]}`}
-                  >
-                    {t(`whatsNew.tag.${tag}` as Parameters<typeof t>[0])}
-                  </Badge>
-                ))}
+              <div className="mb-10">
+                <p className="text-sm font-medium text-primary mb-4 tabular-nums tracking-wide uppercase">
+                  {formatDate(selectedEntry.date, intlLocale, { month: 'long', day: 'numeric', year: 'numeric' })}
+                </p>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-6 leading-tight">
+                  {selectedEntry.title}
+                </h1>
+                <div className="flex flex-wrap gap-2">
+                  {selectedEntry.tags.map((tag) => {
+                    const ui = TAG_UI[tag as keyof typeof TAG_UI]
+                    const Icon = ui.icon
+                    return (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className={`h-auto flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold border uppercase tracking-wider ${ui.badge}`}
+                      >
+                        <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
+                        {t(`whatsNew.tag.${tag}` as Parameters<typeof t>[0])}
+                      </Badge>
+                    )
+                  })}
+                </div>
               </div>
 
               {/* Video */}
               {selectedEntry.video && (
                 <video
                   controls
-                  className="w-full rounded-lg mb-6 bg-muted"
+                  className="w-full rounded-xl mb-10 bg-muted shadow-sm border border-border/50"
                   src={selectedEntry.video}
                 />
               )}
 
               {/* Markdown body */}
-              <div className="text-sm text-muted-foreground leading-relaxed space-y-4">
+              <div className="prose-custom text-base text-foreground/90 leading-relaxed">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
                     strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-                    a: ({ href, children }) => <a href={href} className="text-primary underline">{children}</a>,
-                    img: ({ src, alt }) => <img src={src} alt={alt ?? ''} className="rounded-lg w-full my-4" />,
-                    h2: ({ children }) => <h2 className="text-lg font-semibold text-foreground mt-6 mb-2">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-base font-semibold text-foreground mt-4 mb-2">{children}</h3>,
-                    ul: ({ children }) => <ul className="list-disc pl-5 space-y-1">{children}</ul>,
-                    ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1">{children}</ol>,
-                    code: ({ children }) => <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
-                    blockquote: ({ children }) => <blockquote className="border-l-2 border-border pl-4 italic">{children}</blockquote>,
+                    a: ({ href, children }) => <a href={href} className="text-primary hover:text-primary/80 font-medium underline underline-offset-4 transition-colors">{children}</a>,
+                    img: ({ src, alt }) => <img src={src} alt={alt ?? ''} className="rounded-xl w-full my-10 border border-border/50 shadow-sm" />,
+                    h2: ({ children }) => <h2 className="text-2xl font-bold text-foreground tracking-tight mt-12 mb-6">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-xl font-semibold text-foreground tracking-tight mt-8 mb-4">{children}</h3>,
+                    p: ({ children }) => <p className="mb-6 last:mb-0 leading-8">{children}</p>,
+                    ul: ({ children }) => <ul className="list-outside list-disc pl-5 mb-6 space-y-3">{children}</ul>,
+                    li: ({ children }) => <li className="pl-1 leading-normal">{children}</li>,
+                    ol: ({ children }) => <ol className="list-outside list-decimal pl-5 mb-6 space-y-3">{children}</ol>,
+                    pre: ({ children }) => <pre className="block bg-muted/50 p-4 rounded-xl text-sm font-mono overflow-x-auto mb-6 border border-border/50">{children}</pre>,
+                    code: ({ className, children }) => <code className={className ?? 'bg-muted text-foreground px-1.5 py-0.5 rounded-md text-[0.9em] font-mono'}>{children}</code>,
+                    blockquote: ({ children }) => <blockquote className="border-l-4 border-primary/40 bg-muted/30 pl-6 pr-4 py-3 rounded-r-lg italic my-8 text-foreground/80">{children}</blockquote>,
                   }}
                 >
                   {selectedEntry.body}
