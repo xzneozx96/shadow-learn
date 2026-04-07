@@ -1,10 +1,11 @@
-import { Settings, Sparkles } from 'lucide-react'
+import { Newspaper, Settings, Sparkles } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useHasUnseenAnnouncement } from '@/lib/whats-new'
 import { ScrollArea } from './ui/scroll-area'
 
 interface LayoutProps {
@@ -16,6 +17,7 @@ export function Layout({ children }: LayoutProps) {
   const { t } = useI18n()
   const { trialMode } = useAuth()
   const { isGlobalPanelOpen, openPanel } = useGlobalCompanionContext()
+  const hasUnseen = useHasUnseenAnnouncement()
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -51,6 +53,22 @@ export function Layout({ children }: LayoutProps) {
               >
                 {t('nav.workbook')}
               </Button>
+              <div className="relative">
+                <Button
+                  variant={location.pathname === '/changelog' ? 'default' : 'outline'}
+                  size="sm"
+                  render={<Link to="/changelog" />}
+                  className="gap-1.5"
+                >
+                  <Newspaper className="size-3.5" />
+                  {t('whatsNew.navLabel')}
+                </Button>
+                {hasUnseen && (
+                  <span className="pointer-events-none absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    1
+                  </span>
+                )}
+              </div>
               <Button variant="outline" size="icon" render={<Link to="/settings" />}>
                 <Settings className="size-4" />
               </Button>
