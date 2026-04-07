@@ -830,6 +830,17 @@ export const TRANSLATIONS = {
     'tool.start_shadowing': 'Thuật Phân thân',
     'tool.switch_tab': 'Dịch chuyển Càn khôn',
 
+    // What's New
+    'whatsNew.navLabel': 'Tính năng mới',
+    'whatsNew.modalTitle': 'Có gì mới',
+    'whatsNew.dismiss': 'Đóng',
+    'whatsNew.seeChangelog': 'Xem đầy đủ →',
+    'whatsNew.updatesSuffix': 'cập nhật kể từ lần truy cập gần nhất',
+    'whatsNew.tag.new': 'MỚI',
+    'whatsNew.tag.improved': 'CẢI TIẾN',
+    'whatsNew.tag.fixed': 'SỬA LỖI',
+    'whatsNew.noEntries': 'Chưa có thông báo nào.',
+
     // Common
     'common.save': 'Lưu',
     'common.cancel': 'Hủy bỏ',
