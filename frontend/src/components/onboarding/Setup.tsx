@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { getAppConfig } from '@/lib/config'
+import { INTERFACE_LANGUAGES } from '@/lib/constants'
 
 export function Setup() {
   const { setup, startTrial } = useAuth()
-  const { t } = useI18n()
+  const { locale, setLocale, t } = useI18n()
 
   const [provider, setProvider] = useState<string | null>(null)
   const [sttProvider, setSttProvider] = useState<string>('deepgram')
@@ -72,8 +73,26 @@ export function Setup() {
   const formReady = pin.length >= 4 && pin === pinConfirm
 
   return (
-    <div className="h-screen overflow-y-auto bg-[oklch(0.08_0_0)] px-4">
-      <div className="min-h-full flex items-center justify-center py-10">
+    <div className="h-screen overflow-y-auto px-4">
+      <div className="flex justify-center pt-10">
+        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1">
+          {INTERFACE_LANGUAGES.map(lang => (
+            <button
+              key={lang.value}
+              type="button"
+              onClick={() => setLocale(lang.value)}
+              className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                locale === lang.value
+                  ? 'bg-white/15 text-white'
+                  : 'text-white/40 hover:text-white/70'
+              }`}
+            >
+              {lang.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center justify-center py-6 mt-10">
         <div className="flex w-full max-w-md flex-col gap-3">
           {freeTrialAvailable && (
             <Card className="mb-5 bg-white/6 text-white/90">
@@ -84,7 +103,7 @@ export function Setup() {
                     {t('auth.trial.hint')}
                   </p>
                 </div>
-                <Button type="button" variant="outline" onClick={startTrial} className="w-full mt-3">
+                <Button type="button" variant="default" onClick={startTrial} className="w-full mt-3">
                   {t('auth.trial.button')}
                 </Button>
               </CardContent>

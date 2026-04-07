@@ -20,7 +20,7 @@ export function Settings() {
 
   const [provider, setProvider] = useState<string | null>(null)
   const [sttProvider, setSttProvider] = useState<string>('deepgram')
-  const [language, setLanguage] = useState('en')
+  const [language, setLanguage] = useState<string>(locale)
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [pinError, setPinError] = useState<string | null>(null)
@@ -50,10 +50,10 @@ export function Settings() {
       return
     getSettings(db).then((s) => {
       if (s) {
-        setLanguage(s.translationLanguage)
+        setLanguage(s.translationLanguage || locale)
       }
     })
-  }, [db])
+  }, [db, locale])
 
   // Sync edit fields when keys load (setState-during-render pattern — avoids effect setter)
   const [prevKeys, setPrevKeys] = useState(keys)

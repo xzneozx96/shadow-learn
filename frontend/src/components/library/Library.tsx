@@ -111,7 +111,7 @@ export function Library() {
 
   return (
     <Layout>
-      <div className="py-20">
+      <div className="py-20 px-4">
         {/* Section header */}
         <div className="mb-20 flex flex-col items-center justify-center gap-8">
           <h2 className="text-4xl sm:text-5xl text-center font-bold tracking-wide leading-tight">
