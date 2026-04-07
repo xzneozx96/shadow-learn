@@ -15,6 +15,7 @@ import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
 import { VocabularyProvider } from '@/contexts/VocabularyContext'
+import { ChangelogPage } from '@/pages/ChangelogPage'
 import { DocumentationPage } from '@/pages/DocumentationPage'
 import { StudySessionPage } from '@/pages/StudySessionPage'
 import { WorkbookPage } from '@/pages/WorkbookPage'
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Library /> },
       { path: '/create', element: <CreateLesson /> },
+      { path: '/changelog', element: <ChangelogPage /> },
       { path: '/docs', element: <DocumentationPage /> },
       { path: '/lesson/:id', element: <LessonView /> },
       { path: '/settings', element: <Settings /> },
