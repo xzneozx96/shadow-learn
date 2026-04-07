@@ -1,5 +1,5 @@
 import type { Locale } from '@/lib/i18n'
-import matter from 'gray-matter'
+import { load } from 'js-yaml'
 
 export type ChangelogTag = 'new' | 'improved' | 'fixed'
 
@@ -19,6 +19,18 @@ export interface ChangelogEntry {
   locale: Locale
 }
 
+const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/
+
+function parseFrontmatter(raw: string): { data: Record<string, unknown>, content: string } {
+  const match = raw.match(FRONTMATTER_RE)
+  if (!match)
+    return { data: {}, content: raw }
+  return {
+    data: (load(match[1]) ?? {}) as Record<string, unknown>,
+    content: match[2],
+  }
+}
+
 /**
  * Parse a Record of { filePath: rawString } into typed ChangelogEntry[].
  * Exported for unit testing — not meant for direct use in components.
@@ -28,7 +40,7 @@ export function parseRawEntries(modules: Record<string, string>): ChangelogEntry
 
   for (const [path, raw] of Object.entries(modules)) {
     const locale: Locale = path.endsWith('.vi.md') ? 'vi' : 'en'
-    const { data, content } = matter(raw)
+    const { data, content } = parseFrontmatter(raw)
 
     // gray-matter/js-yaml parses unquoted YYYY-MM-DD as a Date object.
     // Normalise to ISO date string regardless of how it was authored.
