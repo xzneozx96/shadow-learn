@@ -406,6 +406,17 @@ export const TRANSLATIONS = {
     'settings.pinTooShort': 'PIN must be at least 4 characters',
     'settings.pinChangeFailed': 'Failed to change PIN',
 
+    // What's New
+    'whatsNew.navLabel': 'What\'s new',
+    'whatsNew.modalTitle': 'What\'s new',
+    'whatsNew.dismiss': 'Dismiss',
+    'whatsNew.seeChangelog': 'See full changelog →',
+    'whatsNew.updatesSuffix': 'updates since your last visit',
+    'whatsNew.tag.new': 'NEW',
+    'whatsNew.tag.improved': 'IMPROVED',
+    'whatsNew.tag.fixed': 'FIXED',
+    'whatsNew.noEntries': 'No announcements yet.',
+
     // Common
     'common.save': 'Save',
     'common.cancel': 'Cancel',

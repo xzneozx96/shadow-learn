@@ -12,6 +12,9 @@ import {
   captureStudySessionCompleted,
   captureStudySessionStarted,
   captureVocabularyWordSaved,
+  captureWhatsNewChangelogOpened,
+  captureWhatsNewModalDismissed,
+  captureWhatsNewModalShown,
 } from '@/lib/posthog-events'
 
 vi.mock('@/lib/posthog', () => ({
@@ -93,5 +96,30 @@ describe('posthog event schemas', () => {
   it('captureVocabularyWordSaved sends vocabulary_word_saved with source language', () => {
     captureVocabularyWordSaved({ source_language: 'zh-CN' })
     expect(posthog.capture).toHaveBeenCalledWith('vocabulary_word_saved', { source_language: 'zh-CN' })
+  })
+
+  it('captureWhatsNewModalShown sends whats_new_modal_shown with announcement_id and locale', () => {
+    captureWhatsNewModalShown({ announcement_id: '2026-04-workbook-srs', locale: 'en' })
+    expect(posthog.capture).toHaveBeenCalledWith('whats_new_modal_shown', {
+      announcement_id: '2026-04-workbook-srs',
+      locale: 'en',
+    })
+  })
+
+  it('captureWhatsNewModalDismissed sends whats_new_modal_dismissed with announcement_id and locale', () => {
+    captureWhatsNewModalDismissed({ announcement_id: '2026-04-workbook-srs', locale: 'vi' })
+    expect(posthog.capture).toHaveBeenCalledWith('whats_new_modal_dismissed', {
+      announcement_id: '2026-04-workbook-srs',
+      locale: 'vi',
+    })
+  })
+
+  it('captureWhatsNewChangelogOpened sends whats_new_changelog_opened with announcement_id, locale, and source', () => {
+    captureWhatsNewChangelogOpened({ announcement_id: '2026-04-workbook-srs', locale: 'en', source: 'modal' })
+    expect(posthog.capture).toHaveBeenCalledWith('whats_new_changelog_opened', {
+      announcement_id: '2026-04-workbook-srs',
+      locale: 'en',
+      source: 'modal',
+    })
   })
 })

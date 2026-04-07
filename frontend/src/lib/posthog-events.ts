@@ -49,3 +49,15 @@ export function captureShadowingSessionCompleted(data: { mode: 'dictation' | 'sp
 export function captureVocabularyWordSaved(data: { source_language: string }) {
   posthog.capture('vocabulary_word_saved', data)
 }
+
+export function captureWhatsNewModalShown(data: { announcement_id: string, locale: string }) {
+  posthog.capture('whats_new_modal_shown', data)
+}
+
+export function captureWhatsNewModalDismissed(data: { announcement_id: string, locale: string }) {
+  posthog.capture('whats_new_modal_dismissed', data)
+}
+
+export function captureWhatsNewChangelogOpened(data: { announcement_id: string, locale: string, source: 'modal' | 'nav' }) {
+  posthog.capture('whats_new_changelog_opened', data)
+}
