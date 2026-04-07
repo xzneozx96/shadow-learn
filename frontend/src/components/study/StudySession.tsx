@@ -143,7 +143,8 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
 
     const pool = buildStudyPool(entries, !!preloadedEntries)
 
-    if (preloadedEntries) {
+    const needsApi = types.some(t => t === 'cloze' || t === 'pronunciation' || t === 'translation')
+    if (preloadedEntries && !needsApi) {
       const fallbackTypes = types.map(t => toFallbackType(t, caps.romanizationSystem !== 'none'))
       setQuestions(buildSessionQuestions(fallbackTypes, pool, [], [], []))
       setCurrent(0)

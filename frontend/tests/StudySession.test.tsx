@@ -1,8 +1,8 @@
 // Import after mocks
 import type { SessionQuestion } from '@/lib/study-utils'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { StudySession } from '@/components/study/StudySession'
 
 vi.mock('@/contexts/I18nContext', () => ({
@@ -29,12 +29,18 @@ vi.mock('@/hooks/useTracking', () => ({
   }),
 }))
 
-vi.mock('react-router-dom', () => ({
-  useBlocker: () => ({ state: 'unblocked', proceed: vi.fn(), reset: vi.fn() }),
-}))
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>()
+  return {
+    ...actual,
+    useBlocker: () => ({ state: 'unblocked', proceed: vi.fn(), reset: vi.fn() }),
+    Link: ({ children, ...props }: any) => <a {...props}>{children}</a>,
+  }
+})
 
+const mockGenerateQuiz = vi.fn().mockResolvedValue({ clozeExercises: [], pronExercises: [], translationSentences: [] })
 vi.mock('@/hooks/useQuizGeneration', () => ({
-  useQuizGeneration: () => ({ generateQuiz: vi.fn(), loading: false }),
+  useQuizGeneration: () => ({ generateQuiz: mockGenerateQuiz, loading: false }),
 }))
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -49,7 +55,7 @@ vi.mock('@/lib/posthog', () => ({
   posthog: { capture: vi.fn(), captureException: vi.fn() },
 }))
 
-const entry = { id: 'v1', word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: '', sourceLanguage: 'zh-CN' } as any
+const entry = { id: 'v1', word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: '', sourceLanguage: 'zh-CN', sourceLessonId: 'l1', sourceLessonTitle: 'Test', sourceSegmentId: 's1', sourceSegmentText: '你好', sourceSegmentTranslation: '', createdAt: '' } as any
 const questions: SessionQuestion[] = [{ type: 'dictation', entry }]
 
 describe('studySession', () => {
@@ -70,6 +76,47 @@ describe('studySession', () => {
     render(<StudySession onClose={vi.fn()} prebuiltQuestions={questions} />)
     // ModePicker should NOT render (no Start button)
     expect(screen.queryByRole('button', { name: /start/i })).toBeNull()
+  })
+
+  describe('preloadedEntries + handleStart', () => {
+    beforeEach(() => {
+      mockGenerateQuiz.mockClear()
+    })
+
+    it('skips generateQuiz when preloadedEntries is set and mode needs no API', async () => {
+      render(<StudySession lessonId="" preloadedEntries={[entry]} onClose={vi.fn()} disableLeaveGuard />)
+      // Explicitly select dictation — a mode that needs no API call (no cloze/pronunciation/translation)
+      fireEvent.click(screen.getByRole('button', { name: /study.mode.dictation/i }))
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /start/i }))
+      })
+      expect(mockGenerateQuiz).not.toHaveBeenCalled()
+      expect(screen.queryByRole('button', { name: /start/i })).toBeNull()
+    })
+
+    it('calls generateQuiz when preloadedEntries is set but mode is pronunciation', async () => {
+      // Regression test: workbook review with pronunciation mode must still invoke the quiz API.
+      // Previously, preloadedEntries triggered an unconditional early return that skipped generateQuiz,
+      // causing pronunciation exercises to silently fall back to romanization-recall.
+      render(
+        <StudySession
+          lessonId=""
+          preloadedEntries={[entry]}
+          onClose={vi.fn()}
+          disableLeaveGuard
+        />,
+      )
+
+      // ModePicker renders mode buttons — explicitly select pronunciation mode
+      fireEvent.click(screen.getByRole('button', { name: /study.mode.pronunciation/i }))
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /start/i }))
+      })
+
+      // generateQuiz MUST have been called — the early return must not have fired
+      expect(mockGenerateQuiz).toHaveBeenCalled()
+    })
   })
 
   describe('disableLeaveGuard', () => {
