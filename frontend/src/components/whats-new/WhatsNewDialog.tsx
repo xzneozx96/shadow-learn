@@ -54,7 +54,13 @@ export function WhatsNewDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v)
+          handleDismiss()
+      }}
+    >
       <DialogContent showCloseButton={false} className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{t('whatsNew.modalTitle')}</DialogTitle>
