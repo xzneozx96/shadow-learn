@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
 import { Input } from '@/components/ui/input'
+import { WhatsNewDialog } from '@/components/whats-new/WhatsNewDialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
@@ -165,6 +166,7 @@ export function Library() {
           ))}
         </div>
       </div>
+      <WhatsNewDialog />
     </Layout>
   )
 }
