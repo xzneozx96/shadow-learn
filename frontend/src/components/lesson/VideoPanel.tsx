@@ -311,8 +311,9 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
           : (
               <video
                 ref={mediaRef as React.RefObject<HTMLVideoElement>}
-                className="size-full object-contain"
+                className="size-full cursor-pointer object-contain"
                 playsInline
+                onClick={togglePlayPause}
               />
             )}
       </div>
