@@ -15,6 +15,7 @@ export function YouTubeTab({ url, onUrlChange }: YouTubeTabProps) {
         placeholder={t('create.youtubeUrlPlaceholder')}
         value={url}
         onChange={e => onUrlChange(e.target.value)}
+        data-testid="create-lesson-youtube-url-input"
       />
     </div>
   )

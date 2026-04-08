@@ -51,6 +51,7 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
           'flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-white/15 p-6 transition-colors',
           dragOver && 'border-emerald-500 bg-emerald-500/10',
         )}
+        data-testid="create-lesson-upload-dropzone"
         onDragOver={(e) => {
           e.preventDefault()
           setDragOver(true)
@@ -64,6 +65,7 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
           type="file"
           accept="video/*,audio/*"
           className="hidden"
+          data-testid="create-lesson-file-input"
           onChange={(e) => {
             const f = e.target.files?.[0]
             if (f)
@@ -93,7 +95,7 @@ export function UploadTab({ file, onFileChange }: UploadTabProps) {
             )}
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive" data-testid="create-lesson-upload-error">{error}</p>}
     </div>
   )
 }

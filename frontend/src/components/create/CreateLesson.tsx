@@ -172,13 +172,13 @@ export function CreateLesson() {
       <Layout>
         <div className="mx-auto max-w-2xl p-4">
           <Card>
-            <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-              <p className="text-sm text-white/65">
+            <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center" data-testid="create-lesson-queued-confirmation">
+              <p className="text-sm text-white/65" data-testid="create-lesson-queued-message">
                 {t('create.queued')}
               </p>
               <div className="flex gap-2">
-                <Button onClick={() => navigate('/')}>{t('create.goToLibrary')}</Button>
-                <Button variant="outline" onClick={() => setQueued(false)}>{t('create.queueAnother')}</Button>
+                <Button onClick={() => navigate('/')} data-testid="create-lesson-go-to-library-button">{t('create.goToLibrary')}</Button>
+                <Button variant="outline" onClick={() => setQueued(false)} data-testid="create-lesson-queue-another-button">{t('create.queueAnother')}</Button>
               </div>
             </CardContent>
           </Card>
@@ -195,10 +195,10 @@ export function CreateLesson() {
             <CardTitle>{t('create.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <Tabs value={tab} onValueChange={v => setTab(v as string)}>
+            <Tabs value={tab} onValueChange={v => setTab(v as string)} data-testid="create-lesson-tabs">
               <TabsList>
-                <TabsTrigger value="youtube">{t('create.youtube')}</TabsTrigger>
-                <TabsTrigger value="upload">{t('create.upload')}</TabsTrigger>
+                <TabsTrigger value="youtube" data-testid="create-lesson-youtube-tab">{t('create.youtube')}</TabsTrigger>
+                <TabsTrigger value="upload" data-testid="create-lesson-upload-tab">{t('create.upload')}</TabsTrigger>
               </TabsList>
               <TabsContent value="youtube">
                 <YouTubeTab url={youtubeUrl} onUrlChange={setYoutubeUrl} />
@@ -211,7 +211,7 @@ export function CreateLesson() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-white/65">{t('create.videoLanguage')}</label>
               <Select value={sourceLanguage} onValueChange={v => v !== null && setSourceLanguage(v)} items={LANGUAGES}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" data-testid="create-lesson-source-language-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -225,7 +225,7 @@ export function CreateLesson() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-white/65">{t('create.translationLanguage')}</label>
               <Select value={language} onValueChange={v => v !== null && setLanguage(v)} items={LANGUAGES}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" data-testid="create-lesson-translation-language-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -240,12 +240,13 @@ export function CreateLesson() {
               disabled={!canGenerate || submitting}
               onClick={handleGenerate}
               className="w-full"
+              data-testid="create-lesson-generate-button"
             >
               <Sparkles className="size-4" />
               {submitting ? t('create.starting') : t('create.generate')}
             </Button>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-destructive" data-testid="create-lesson-form-error">{error}</p>}
           </CardContent>
         </Card>
       </div>

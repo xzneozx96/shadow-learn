@@ -34,19 +34,19 @@ export function ProcessingStatus({ steps, onRetry }: ProcessingStatusProps) {
   const hasError = steps.some(s => s.status === 'error')
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid="create-lesson-processing-status">
       {steps.map(step => (
-        <div key={step.id} className="flex items-center gap-3">
+        <div key={step.id} className="flex items-center gap-3" data-testid={`create-lesson-processing-step-${step.id}`}>
           <StepIcon status={step.status} />
           <span className="text-sm text-white/65">{step.label}</span>
           {step.status === 'error' && step.error && (
-            <span className="text-sm text-destructive">{step.error}</span>
+            <span className="text-sm text-destructive" data-testid={`create-lesson-processing-step-${step.id}-error`}>{step.error}</span>
           )}
         </div>
       ))}
 
       {hasError && onRetry && (
-        <Button variant="outline" size="sm" onClick={onRetry}>
+        <Button variant="outline" size="sm" onClick={onRetry} data-testid="create-lesson-processing-retry-button">
           {t('create.processing.retry')}
         </Button>
       )}
