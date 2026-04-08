@@ -89,6 +89,8 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
   return (
     <div
+      data-testid={`lesson-card-${lesson.id}`}
+      data-status={status}
       className={cn(
         'group relative flex h-full min-h-[180px] flex-col overflow-hidden rounded-xl transition-all duration-200',
         'elegant-card border border-border hover:border-b-primary',
@@ -172,18 +174,19 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
       {/* Status indicator */}
       {isProcessing && (
-        <div className="px-4 pb-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+        <div data-testid="lesson-card-processing" className="px-4 pb-2 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Loader2 className="size-3 animate-spin" />
-          <span className="truncate">{lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}</span>
+          <span data-testid="lesson-card-processing-step" className="truncate">{lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}</span>
         </div>
       )}
       {isError && (
-        <div className="px-4 pb-2 flex flex-wrap items-center gap-1.5">
-          <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-sm font-medium text-destructive">
+        <div data-testid="lesson-card-error" className="px-4 pb-2 flex flex-wrap items-center gap-1.5">
+          <span data-testid="lesson-card-error-badge" className="rounded bg-destructive/15 px-1.5 py-0.5 text-sm font-medium text-destructive">
             {t('library.failed')}
           </span>
           {lesson.source === 'youtube' && onRetry && (
             <button
+              data-testid="lesson-card-retry-button"
               onClick={(e) => {
                 e.preventDefault()
                 onRetry(lesson)

@@ -12,7 +12,14 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:create-lesson": "playwright test --grep @create-lesson",
+    "test:e2e:smoke": "playwright test --grep @smoke",
+    "test:e2e:create-lesson:smoke": "playwright test tests/e2e/create-lesson/ --grep @smoke",
+    "test:e2e:create-lesson:regression": "playwright test tests/e2e/create-lesson/ --grep @regression",
+    "test:e2e:create-lesson:youtube": "playwright test tests/e2e/create-lesson/ --grep @youtube",
+    "test:e2e:create-lesson:upload": "playwright test tests/e2e/create-lesson/ --grep @upload",
+    "test:e2e:integration": "playwright test tests/e2e/create-lesson/create-lesson-integration.spec.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.158",
