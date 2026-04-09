@@ -6,6 +6,7 @@ Tool execution happens client-side; this route only streams LLM output.
 
 import json
 import logging
+import re
 import traceback
 import uuid
 from typing import Any
@@ -170,6 +171,51 @@ def _convert_to_openai_messages(
 # Adapted from sample stream.py (removed server-side tool execution)
 # --------------------------------------------------------------------------- #
 
+_TOKEN_WRAPPED_RE = re.compile(r'"<\|\\"\|"?([^"]*?)<\|\\"\|"')
+_BARE_TOKEN_RE = re.compile(r'<\|[^|\s]*\|>?')
+
+
+def _sanitize_tool_arguments(raw: str) -> str:
+    """Strip LLM tokenizer special-token artifacts that corrupt JSON.
+
+    The FPT AI model wraps JSON string values with ``<|\"|`` tokens.  Two
+    variants appear in practice:
+
+    Case A – plain string (e.g. exerciseTypes):
+        ``"<|\"|cloze<|\"|"``  →  token uses JSON-escaped quote (``\\"``)
+        so it hides inside the JSON string.  Stripping leaves ``"cloze"``.
+
+    Case B – UUID with extra bare quote (e.g. itemIds):
+        ``"<|\"|"UUID<|\"|"``  →  the unescaped ``"`` after the first token
+        terminates the JSON string early.  Simple stripping leaves ``""UUID"``
+        which is still invalid.
+
+    Strategy:
+    1. Replace full ``"<|\\"|"?CONTENT<|\\"|"`` patterns → ``"CONTENT"``.
+    2. Strip remaining bare ``<|…|>?`` tokens.
+    3. Validate with ``json.loads``; return *raw* on failure so the caller's
+       existing error-handling path logs the original string.
+    """
+    cleaned = _TOKEN_WRAPPED_RE.sub(r'"\1"', raw)
+    cleaned = _BARE_TOKEN_RE.sub('', cleaned)
+
+    if cleaned == raw:
+        return raw
+
+    # Validate — if our regexes produced broken JSON, return raw so the
+    # caller's error path logs the untouched string for debugging.
+    try:
+        json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        logger.warning(
+            "[_sanitize_tool_arguments] Sanitized result is still invalid JSON; "
+            "falling back to raw. sanitized=%r",
+            cleaned,
+        )
+        return raw
+    return cleaned
+
+
 async def _stream_agent(stream):
     """Yield SSE events in AI SDK v5 UIMessage stream format. Caller creates the stream."""
     try:
@@ -310,11 +356,17 @@ async def _stream_agent(stream):
                     )
 
                 raw = state["arguments"]
+                sanitized = _sanitize_tool_arguments(raw)
+                if sanitized != raw:
+                    logger.warning(
+                        f"[_stream_agent] Stripped tokenizer artifacts from {name} args; "
+                        f"original={raw!r} sanitized={sanitized!r}"
+                    )
                 try:
-                    parsed = json.loads(raw) if raw else {}
+                    parsed = json.loads(sanitized) if sanitized else {}
                     logger.info(f"[_stream_agent] Tool Call Parsed: {name} ID={tcid} Args={parsed}")
                 except Exception as e:
-                    logger.error(f"[_stream_agent] Invalid JSON in tool arguments for {name}: {raw} - Error: {e}")
+                    logger.error(f"[_stream_agent] Invalid JSON in tool arguments for {name}: {sanitized!r} - Error: {e}")
                     yield fmt(
                         {
                             "type": "tool-input-error",
