@@ -67,6 +67,8 @@ export function useAgentChat(
   // Tracks the sorted tool-name set from the previous re-submit round.
   // If the LLM calls the exact same tools in consecutive rounds, it's looping.
   const prevToolSetRef = useRef<string>('')
+  // Tracks whether we already sent the "tool loop exhausted" recovery message
+  const exhaustionSentForRef = useRef<string | null>(null)
 
   const sessionStartRef = useRef<number>(Date.now())
   const exercisesThisSessionRef = useRef<number>(0)
@@ -147,12 +149,22 @@ export function useAgentChat(
                 deferredToolNames: getDeferredToolNames(keys?.openrouterApiKey ?? '', locale),
               })
             : ''
+          // When tool loop is exhausted, append recovery instruction and strip
+          // tools so the LLM is forced to respond in text only.
+          const isExhausted = exhaustionSentForRef.current !== null
+          const finalPrompt = isExhausted
+            ? `${systemPrompt}\n\n[IMPORTANT: The tool execution loop has been exhausted. `
+            + `Do NOT call any tools. Respond in plain text only. `
+            + `Briefly explain that something went wrong with the action you were trying to perform, `
+            + `apologize for the inconvenience, and suggest the user try again or ask if they need help with something else.]`
+            : systemPrompt
+
           return {
             body: {
               messages: normalizeMessagesForBackend(fullHistory),
-              system_prompt: systemPrompt,
+              system_prompt: finalPrompt,
               openrouter_api_key: keys?.openrouterApiKey ?? '',
-              tools: getToolDefinitions(toolPool),
+              tools: isExhausted ? [] : getToolDefinitions(toolPool),
             },
           }
         },
@@ -217,6 +229,7 @@ export function useAgentChat(
       resubmittedForRef.current = null
       toolRoundsRef.current = 0
       prevToolSetRef.current = ''
+      exhaustionSentForRef.current = null
 
       // Detect exercise result messages and count them
       if (opts != null && 'text' in opts && opts.text) {
@@ -380,9 +393,6 @@ export function useAgentChat(
     // Already re-submitted for this exact message
     if (resubmittedForRef.current === lastMsg.id)
       return
-    // Safety cap to prevent infinite tool loops
-    if (toolRoundsRef.current >= MAX_TOOL_ROUNDS)
-      return
 
     // Detect same-tool loop: if the LLM called the exact same set of tools
     // in consecutive rounds (e.g. render_character_writing_exercise twice in
@@ -392,8 +402,24 @@ export function useAgentChat(
       .filter(Boolean)
       .sort()
       .join(',')
-    if (currentToolSet && currentToolSet === prevToolSetRef.current)
+    const isSameToolLoop = !!(currentToolSet && currentToolSet === prevToolSetRef.current)
+    const isMaxRoundsExceeded = toolRoundsRef.current >= MAX_TOOL_ROUNDS
+
+    // When the tool loop is exhausted (max rounds or same-tool loop), send one
+    // final recovery re-submit instructing the LLM to respond in text only.
+    // This prevents the silent-stop UX where the user sees tool cards but no
+    // explanation. Inspired by Claude Code's `max_turns_reached` pattern.
+    if (isSameToolLoop || isMaxRoundsExceeded) {
+      if (exhaustionSentForRef.current === null) {
+        exhaustionSentForRef.current = lastMsg.id
+        resubmittedForRef.current = lastMsg.id
+        // Send empty text (invisible in UI). The prepareSendMessagesRequest
+        // callback reads exhaustionSentForRef and appends a recovery instruction
+        // to the system prompt + strips tools, forcing a text-only response.
+        sendMessage({ text: '' })
+      }
       return
+    }
     prevToolSetRef.current = currentToolSet
 
     resubmittedForRef.current = lastMsg.id

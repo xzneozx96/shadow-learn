@@ -27,7 +27,7 @@ import { ToolExecutor } from '@/lib/tools/executor'
 import { getAllBaseTools, getGlobalToolPool, getToolDefinitions } from '@/lib/tools/index'
 
 const CHAT_KEY = '__global'
-const MAX_TOOL_ROUNDS = 3
+const MAX_TOOL_ROUNDS = 5
 const VISION_ERROR_REGEX = /image|vision|multimodal|unsupported.*file|file.*unsupported/i
 
 export function useGlobalCompanionChat() {
