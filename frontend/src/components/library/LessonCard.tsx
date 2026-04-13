@@ -33,15 +33,53 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function ProgressRing({ pct }: { pct: number }) {
+  const size = 36
+  const stroke = 3
+  const r = (size - stroke) / 2
+  const circ = 2 * Math.PI * r
+  const offset = circ - (pct / 100) * circ
+  const cx = size / 2
+  const cy = size / 2
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={stroke} className="stroke-border" />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        strokeWidth={stroke}
+        strokeDasharray={circ}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${cx} ${cy})`}
+        className="stroke-blue-500 transition-all duration-500"
+      />
+      <text
+        x="50%"
+        y="52%"
+        dominantBaseline="middle"
+        textAnchor="middle"
+        className="fill-muted-foreground"
+        style={{ fontSize: 10 }}
+      >
+        {pct}
+        %
+      </text>
+    </svg>
+  )
+}
+
 export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardProps) {
   const { t } = useI18n()
   const status = lesson.status ?? 'complete'
   const isProcessing = status === 'processing'
   const isError = status === 'error'
 
-  // const progress = lesson.progressSegmentId && lesson.segmentCount
-  //   ? Math.min(100, Math.round((Number.parseInt(lesson.progressSegmentId, 10) / lesson.segmentCount) * 100))
-  //   : 0
+  const progress = lesson.progressSegmentId && lesson.segmentCount
+    ? Math.min(100, Math.round((Number.parseInt(lesson.progressSegmentId, 10) / lesson.segmentCount) * 100))
+    : 0
 
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
@@ -202,7 +240,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         </div>
       )}
 
-      {/* Footer: date + meta */}
+      {/* Footer: date + meta + progress ring */}
       <div className="px-4 pb-3 pt-1 flex items-center gap-2 text-sm text-muted-foreground">
         <span>{formatDate(lesson.lastOpenedAt)}</span>
         {!isProcessing && lesson.duration != null && (
@@ -213,6 +251,11 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
               {formatDuration(lesson.duration)}
             </span>
           </>
+        )}
+        {!isProcessing && !isError && progress > 0 && (
+          <div className="ml-auto z-20" title={`${progress}% complete`}>
+            <ProgressRing pct={progress} />
+          </div>
         )}
       </div>
 
