@@ -1,6 +1,6 @@
 import type { Segment, Word, WordTiming } from '@/types'
 import { Bookmark, Copy, Loader2, Volume2 } from 'lucide-react'
-import { memo, useCallback, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -20,6 +20,8 @@ interface SegmentTextProps {
   isSaved?: (word: string) => boolean
   segment?: Segment
   showRomanization?: boolean
+  enableKaraoke?: boolean
+  forceSpoken?: boolean
 }
 
 export const SegmentText = memo(({
@@ -33,24 +35,34 @@ export const SegmentText = memo(({
   isSaved,
   segment,
   showRomanization = true,
+  enableKaraoke = true,
+  forceSpoken = false,
 }: SegmentTextProps) => {
   const { t } = useI18n()
   const { player, subscribeTime, getTime } = usePlayer()
 
   // Build spans once per text/words change
-  const spans = buildWordSpans(text, words)
+  const spans = useMemo(() => buildWordSpans(text, words), [text, words])
+  const karaokeEnabled = enableKaraoke && !!wordTimings?.length
+  const fullySpoken = !karaokeEnabled && forceSpoken
 
   // Precompute absolute char offsets for each span
-  const spanStarts: number[] = []
-  let offset = 0
-  for (const span of spans) {
-    spanStarts.push(offset)
-    offset += span.text.length
-  }
+  const spanStarts = useMemo(() => {
+    const starts: number[] = []
+    let offset = 0
+    for (const span of spans) {
+      starts.push(offset)
+      offset += span.text.length
+    }
+    return starts
+  }, [spans])
 
   // Compute posMap synchronously during render so it's available before any useEffect fires.
   // Store in a ref so the subscription callback always reads the latest without being in deps.
-  const posMap = wordTimings?.length ? buildPositionMap(text, wordTimings) : null
+  const posMap = useMemo(
+    () => (karaokeEnabled ? buildPositionMap(text, wordTimings!) : null),
+    [karaokeEnabled, text, wordTimings],
+  )
   const posMapRef = useRef(posMap)
   posMapRef.current = posMap
 
@@ -65,13 +77,13 @@ export const SegmentText = memo(({
   const totalChars = text.length
   const charSpanRef = useRef<(HTMLSpanElement | null)[]>([])
   // Ensure array is sized correctly when text changes
-  if (charSpanRef.current.length !== totalChars) {
+  if (karaokeEnabled && charSpanRef.current.length !== totalChars) {
     charSpanRef.current = Array.from({ length: totalChars }).fill(null) as (HTMLSpanElement | null)[]
   }
 
   // One ref slot per span (including non-word spans — those slots stay null)
   const wordPinyinRef = useRef<(HTMLSpanElement | null)[]>([])
-  if (wordPinyinRef.current.length !== spans.length) {
+  if (karaokeEnabled && wordPinyinRef.current.length !== spans.length) {
     wordPinyinRef.current = Array.from({ length: spans.length }).fill(null) as (HTMLSpanElement | null)[]
   }
 
@@ -79,6 +91,8 @@ export const SegmentText = memo(({
   // Run the coloring immediately on mount (with getTime()) to avoid a flash of uncolored chars,
   // then subscribe for ongoing updates.
   useEffect(() => {
+    if (!karaokeEnabled)
+      return
     function applyKaraoke(time: number) {
       const pm = posMapRef.current
       if (!pm)
@@ -112,7 +126,26 @@ export const SegmentText = memo(({
     // Apply current time immediately so chars aren't uncolored on first paint
     applyKaraoke(getTime())
     return subscribeTime(applyKaraoke)
-  }, [subscribeTime, getTime])
+  }, [karaokeEnabled, subscribeTime, getTime])
+
+  // If this segment is no longer karaoke-enabled, clear any stale highlight classes
+  // that may have been applied imperatively while it was active.
+  useEffect(() => {
+    if (karaokeEnabled)
+      return
+    charSpanRef.current.forEach((el) => {
+      if (!el)
+        return
+      el.classList.toggle('text-yellow-400', fullySpoken)
+      el.classList.toggle('text-white', !fullySpoken)
+    })
+    wordPinyinRef.current.forEach((el) => {
+      if (!el)
+        return
+      el.classList.toggle('text-yellow-400', fullySpoken)
+      el.classList.toggle('text-muted-foreground', !fullySpoken)
+    })
+  }, [karaokeEnabled, fullySpoken])
 
   // Track playing state via player events so we know whether to resume on popup close
   const isPlayingRef = useRef(false)
@@ -146,20 +179,26 @@ export const SegmentText = memo(({
       {spans.map((span, spanIdx) => {
         const spanStart = spanStarts[spanIdx]
 
-        const charSpans = span.text.split('').map((char, j) => {
-          const charIdx = spanStart + j
-          return (
-            <span
-              key={charIdx}
-              ref={(el) => { charSpanRef.current[charIdx] = el }}
-            >
-              {char}
-            </span>
-          )
-        })
+        const textNode = karaokeEnabled
+          ? span.text.split('').map((char, j) => {
+              const charIdx = spanStart + j
+              return (
+                <span
+                  key={charIdx}
+                  ref={(el) => { charSpanRef.current[charIdx] = el }}
+                >
+                  {char}
+                </span>
+              )
+            })
+          : span.text
 
         if (!span.word) {
-          return <span key={spanStart}>{charSpans}</span>
+          return (
+            <span key={spanStart} className={cn(fullySpoken && 'text-yellow-400')}>
+              {textNode}
+            </span>
+          )
         }
 
         return (
@@ -170,14 +209,17 @@ export const SegmentText = memo(({
             >
               {showRomanization && span.word.romanization && (
                 <span
-                  className="text-sm text-muted-foreground"
-                  ref={(el) => { wordPinyinRef.current[spanIdx] = el }}
+                  className={cn(
+                    'text-sm',
+                    fullySpoken ? 'text-yellow-400' : 'text-muted-foreground',
+                  )}
+                  ref={karaokeEnabled ? (el) => { wordPinyinRef.current[spanIdx] = el } : undefined}
                 >
                   {span.word.romanization}
                 </span>
               )}
-              <span className="decoration-white/30 decoration-dotted underline-offset-4">
-                {charSpans}
+              <span className={cn('decoration-white/30 decoration-dotted underline-offset-4', fullySpoken && 'text-yellow-400')}>
+                {textNode}
               </span>
             </PopoverTrigger>
             <PopoverContent

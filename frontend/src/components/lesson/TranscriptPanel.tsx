@@ -1,10 +1,9 @@
 import type { LessonMeta, Segment, Word } from '@/types'
 import { Check, Copy, Languages, Search, Volume2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
@@ -21,6 +20,129 @@ interface TranscriptPanelProps {
   onShadowClick?: (segment: Segment) => void
 }
 
+const SEGMENT_BATCH_SIZE = 20
+
+// -----------------------------------------------------------------
+// SegmentRow — memoised so that only the rows whose props actually
+// change re-render.  Parent state like `copiedId` or `activeSegment`
+// only causes the two affected rows (old active + new active) to
+// re-render instead of the entire visible list.
+// -----------------------------------------------------------------
+interface SegmentRowProps {
+  segment: Segment
+  isActive: boolean
+  forceSpoken: boolean
+  // null is part of the DOM ref type in React 19+
+  activeRef: React.RefObject<HTMLDivElement | null>
+  activeLang: string
+  showRomanization: boolean
+  copiedId: string | null
+  playTTS: (text: string) => Promise<void>
+  loadingText: string | null
+  onSaveWord: (word: Word, seg: Segment) => Promise<void>
+  onRemoveWord: (word: Word) => Promise<void>
+  isSaved: (wordText: string) => boolean
+  onSegmentClick: (segment: Segment) => void
+  onCopy: (e: React.MouseEvent, segment: Segment) => void
+  onShadowClick?: (segment: Segment) => void
+}
+
+const SegmentRow = memo(({
+  segment,
+  isActive,
+  forceSpoken,
+  activeRef,
+  activeLang,
+  showRomanization,
+  copiedId,
+  playTTS,
+  loadingText,
+  onSaveWord,
+  onRemoveWord,
+  isSaved,
+  onSegmentClick,
+  onCopy,
+  onShadowClick,
+}: SegmentRowProps) => {
+  return (
+    <div
+      ref={isActive ? activeRef : undefined}
+      className={cn(
+        'p-3 transition-colors',
+        isActive && 'border-l-2 border-l-primary bg-primary/10',
+      )}
+    >
+      <div className="flex items-start gap-4">
+        {/* Text content */}
+        <div className="min-w-0 flex-1 text-justify">
+          <div className="text-foreground">
+            {/* key={segment.id} ensures fresh charSpanRefs when segment changes */}
+            <SegmentText
+              key={segment.id}
+              text={segment.text}
+              words={segment.words}
+              wordTimings={segment.wordTimings}
+              playTTS={playTTS}
+              loadingText={loadingText}
+              segment={segment}
+              onSaveWord={onSaveWord}
+              onRemoveWord={onRemoveWord}
+              isSaved={isSaved}
+              showRomanization={showRomanization}
+              enableKaraoke={isActive}
+              forceSpoken={forceSpoken}
+            />
+          </div>
+          <p className="mt-1 text-muted-foreground">
+            {segment.translations[activeLang] ?? Object.values(segment.translations)[0]}
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            aria-label="Play from here"
+            onClick={(e) => {
+              e.stopPropagation()
+              onSegmentClick(segment)
+            }}
+          >
+            <Volume2 className="size-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            aria-label="Copy transcription"
+            onClick={e => onCopy(e, segment)}
+          >
+            {copiedId === segment.id
+              ? <Check className="size-5 text-green-500" />
+              : <Copy className="size-5" />}
+          </Button>
+          {onShadowClick && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="size-8 text-muted-foreground hover:text-foreground"
+              aria-label="Shadow from this segment"
+              onClick={(e) => {
+                e.stopPropagation()
+                onShadowClick(segment)
+              }}
+            >
+              <span className="text-lg flex items-center justify-center">🎯</span>
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+})
+
 export function TranscriptPanel({
   segments,
   activeSegment,
@@ -32,23 +154,19 @@ export function TranscriptPanel({
   const { t } = useI18n()
   const { db, keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys, lesson.sourceLanguage ?? 'zh-CN')
-  const { entries, save, remove, isSaved } = useVocabulary()
+  const { entriesByLesson, save, remove, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
+  // useDeferredValue keeps the text input responsive — the heavy list
+  // filter only runs after React has committed the urgent input update.
+  const deferredSearch = useDeferredValue(search)
   const [activeLang, setActiveLang] = useState(
     lesson.translationLanguages[0] ?? 'en',
   )
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showRomanization, setShowRomanization] = useState(true)
+  const [visibleCount, setVisibleCount] = useState(SEGMENT_BATCH_SIZE)
   const activeRef = useRef<HTMLDivElement>(null)
-  const prevActiveIdRef = useRef<string | null>(null)
-
-  // Auto-scroll to active segment
-  useEffect(() => {
-    if (activeSegment && activeSegment.id !== prevActiveIdRef.current) {
-      prevActiveIdRef.current = activeSegment.id
-      activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-  }, [activeSegment])
+  const prevScrolledActiveIdRef = useRef<string | null>(null)
 
   // Notify progress update when active segment changes
   useEffect(() => {
@@ -58,9 +176,9 @@ export function TranscriptPanel({
   }, [activeSegment, onProgressUpdate])
 
   const filteredSegments = useMemo(() => {
-    if (!search.trim())
+    if (!deferredSearch.trim())
       return segments
-    const q = search.trim().toLowerCase()
+    const q = deferredSearch.trim().toLowerCase()
     return segments.filter((seg) => {
       if (seg.text.toLowerCase().includes(q))
         return true
@@ -70,7 +188,51 @@ export function TranscriptPanel({
       }
       return false
     })
-  }, [segments, search])
+  }, [segments, deferredSearch])
+
+  useEffect(() => {
+    setVisibleCount(SEGMENT_BATCH_SIZE)
+  }, [filteredSegments])
+
+  // Ensure the active segment is always mounted, even for long lessons where
+  // incremental rendering initially shows only the first batch.
+  useEffect(() => {
+    if (!activeSegment)
+      return
+    const activeIdx = filteredSegments.findIndex(s => s.id === activeSegment.id)
+    if (activeIdx === -1)
+      return
+    const minVisible = Math.ceil((activeIdx + 1) / SEGMENT_BATCH_SIZE) * SEGMENT_BATCH_SIZE
+    setVisibleCount(prev => (prev >= minVisible ? prev : Math.min(minVisible, filteredSegments.length)))
+  }, [activeSegment, filteredSegments])
+
+  const visibleSegments = useMemo(
+    () => filteredSegments.slice(0, visibleCount),
+    [filteredSegments, visibleCount],
+  )
+
+  // Auto-scroll to active segment once it is actually rendered.
+  // This avoids a race where activeSegment changes before incremental
+  // rendering has mounted that row.
+  useEffect(() => {
+    if (!activeSegment)
+      return
+    if (activeSegment.id === prevScrolledActiveIdRef.current)
+      return
+    const isRendered = visibleSegments.some(s => s.id === activeSegment.id)
+    if (!isRendered)
+      return
+    activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    prevScrolledActiveIdRef.current = activeSegment.id
+  }, [activeSegment, visibleSegments])
+
+  const handleListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    if (distanceToBottom > 600)
+      return
+    setVisibleCount(prev => Math.min(prev + SEGMENT_BATCH_SIZE, filteredSegments.length))
+  }, [filteredSegments.length])
 
   // Stable callbacks so memo(SegmentText) is not invalidated on every render
   const handleSaveWord = useCallback(
@@ -91,9 +253,15 @@ export function TranscriptPanel({
     [isSaved, lesson.id],
   )
 
+  // Keep a ref to entriesByLesson so handleRemoveWord is stable (not
+  // recreated whenever any vocabulary entry changes anywhere in the app).
+  const entriesByLessonRef = useRef(entriesByLesson)
+  entriesByLessonRef.current = entriesByLesson
+
   const handleRemoveWord = useCallback(
     async (word: Word) => {
-      const entry = entries.find(e => e.word === word.word && e.sourceLessonId === lesson.id)
+      const lessonEntries = entriesByLessonRef.current[lesson.id] ?? []
+      const entry = lessonEntries.find(e => e.word === word.word)
       if (!entry)
         return
       try {
@@ -104,17 +272,17 @@ export function TranscriptPanel({
         // VocabularyContext already showed the error toast
       }
     },
-    [entries, lesson.id, remove, t],
+    [lesson.id, remove, t],
   )
 
   const hasMultipleLangs = lesson.translationLanguages.length > 1
 
-  function handleCopy(e: React.MouseEvent, segment: Segment) {
+  const handleCopy = useCallback((e: React.MouseEvent, segment: Segment) => {
     e.stopPropagation()
     navigator.clipboard.writeText(segment.text)
     setCopiedId(segment.id)
     setTimeout(setCopiedId, 1500, null)
-  }
+  }, [])
 
   return (
     <div className="flex h-full flex-col bg-background backdrop-blur-md">
@@ -158,87 +326,35 @@ export function TranscriptPanel({
       </div>
 
       {/* Segment list — single onKeyDown via event delegation */}
-      <ScrollArea className="h-0 flex-1">
+      <div className="h-0 flex-1 overflow-y-auto" onScroll={handleListScroll}>
         <div className="divide-y divide-border/50">
-          {filteredSegments.map(segment => (
-            <div
+          {visibleSegments.map(segment => (
+            // Keep completed segments highlighted while avoiding per-tick karaoke work.
+            // activeSegment.start is the current playback cursor segment start.
+            // Any segment ending at/before that start is fully spoken.
+            // (Current active segment uses live karaoke coloring.)
+            // Note: this preserves prior behavior where past segments stay yellow.
+            <SegmentRow
               key={segment.id}
-              ref={activeSegment?.id === segment.id ? activeRef : undefined}
-              className={cn(
-                'p-3 transition-colors',
-                activeSegment?.id === segment.id
-                && 'border-l-2 border-l-primary bg-primary/10',
-              )}
-            >
-              <div className="flex items-start gap-4">
-                {/* Text content */}
-                <div className="min-w-0 flex-1 text-justify">
-                  <div className="text-foreground">
-                    {/* key={segment.id} ensures fresh charSpanRefs when segment changes */}
-                    <SegmentText
-                      key={segment.id}
-                      text={segment.text}
-                      words={segment.words}
-                      wordTimings={segment.wordTimings}
-                      playTTS={playTTS}
-                      loadingText={loadingText}
-                      segment={segment}
-                      onSaveWord={handleSaveWord}
-                      onRemoveWord={handleRemoveWord}
-                      isSaved={handleIsSaved}
-                      showRomanization={showRomanization}
-                    />
-                  </div>
-                  <p className="mt-1 text-muted-foreground">
-                    {segment.translations[activeLang] ?? Object.values(segment.translations)[0]}
-                  </p>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="size-8 text-muted-foreground hover:text-foreground"
-                    aria-label="Play from here"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSegmentClick(segment)
-                    }}
-                  >
-                    <Volume2 className="size-5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="size-8 text-muted-foreground hover:text-foreground"
-                    aria-label="Copy transcription"
-                    onClick={e => handleCopy(e, segment)}
-                  >
-                    {copiedId === segment.id
-                      ? <Check className="size-5 text-green-500" />
-                      : <Copy className="size-5" />}
-                  </Button>
-                  {onShadowClick && (
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="size-8 text-muted-foreground hover:text-foreground"
-                      aria-label="Shadow from this segment"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onShadowClick(segment)
-                      }}
-                    >
-                      <span className="text-lg flex items-center justify-center">🎯</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
+              segment={segment}
+              isActive={activeSegment?.id === segment.id}
+              forceSpoken={!!activeSegment && segment.end <= activeSegment.start && segment.id !== activeSegment.id}
+              activeRef={activeRef}
+              activeLang={activeLang}
+              showRomanization={showRomanization}
+              copiedId={copiedId}
+              playTTS={playTTS}
+              loadingText={loadingText}
+              onSaveWord={handleSaveWord}
+              onRemoveWord={handleRemoveWord}
+              isSaved={handleIsSaved}
+              onSegmentClick={onSegmentClick}
+              onCopy={handleCopy}
+              onShadowClick={onShadowClick}
+            />
           ))}
         </div>
-      </ScrollArea>
+      </div>
 
     </div>
   )
