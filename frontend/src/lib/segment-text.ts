@@ -6,14 +6,20 @@ export interface WordSpan {
 }
 
 export function buildWordSpans(text: string, words: Word[]): WordSpan[] {
-  if (words.length === 0) {
+  // Guard against malformed tokenization output (e.g. empty strings),
+  // which would otherwise cause an infinite loop because startsWith('')
+  // is always true and consumes zero characters.
+  const usableWords = words.filter(w => w.word.length > 0)
+
+  if (usableWords.length === 0) {
     return [{ text, word: null }]
   }
-  const sorted = words.toSorted((a, b) => b.word.length - a.word.length)
+  const sorted = usableWords.toSorted((a, b) => b.word.length - a.word.length)
   const spans: WordSpan[] = []
   let remaining = text
   while (remaining.length > 0) {
     let matched = false
+    const beforeLength = remaining.length
     for (const w of sorted) {
       if (remaining.startsWith(w.word)) {
         spans.push({ text: w.word, word: w })
@@ -21,6 +27,11 @@ export function buildWordSpans(text: string, words: Word[]): WordSpan[] {
         matched = true
         break
       }
+    }
+    // Hard safety net: if a bad token slips through and no progress is made,
+    // consume one character as plain text instead of looping forever.
+    if (matched && remaining.length === beforeLength) {
+      matched = false
     }
     if (!matched) {
       const last = spans.at(-1)

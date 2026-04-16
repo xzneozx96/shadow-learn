@@ -71,3 +71,4 @@ ai-agent-research/
 
 # Remember plugin (Claude Code session logs)
 .remember/
+.gstack/
