@@ -10,20 +10,20 @@ export function SituationPicker({ onSelect }: SituationPickerProps) {
   const { t } = useI18n()
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">{t('speak.selectSituation')}</h2>
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-3">
+      <h2 className="text-base font-semibold">{t('speak.selectSituation')}</h2>
+      <div className="grid grid-cols-2 gap-2">
         {SITUATIONS.map(s => (
           <Card
             key={s.id}
-            className="cursor-pointer hover:ring-2"
+            className="cursor-pointer hover:border-primary/50 hover:bg-accent/50 transition-colors"
             onClick={() => onSelect(s.id)}
           >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">{s.title}</CardTitle>
+            <CardHeader className="p-3">
+              <CardTitle className="text-sm">{s.title}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <span className="text-sm text-muted-foreground">{s.level}</span>
+            <CardContent className="p-3 pt-0">
+              <span className="text-xs text-muted-foreground">{s.level}</span>
             </CardContent>
           </Card>
         ))}

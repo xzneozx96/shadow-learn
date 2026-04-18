@@ -55,14 +55,15 @@ class SessionEndRequest(BaseModel):
 
 def _generate_livekit_token(session_id: str, persona_id: str, google_key: str, situation_id: str) -> str:
     """Generate a LiveKit token with embedded credentials for the agent.
-    
+
     Uses LiveKit AccessToken API to create a token that includes:
+    - RoomAgentDispatch with agent_name for automatic agent dispatch
     - The Google key in metadata (for agent to use)
     - Persona and situation IDs
     - Session ID for tracking
     """
     try:
-        from livekit import AccessToken
+        from livekit import api
     except ImportError:
         logger.warning("livekit package not installed, returning mock token")
         return f"mock-token-{session_id}-{uuid.uuid4().hex[:8]}"
@@ -72,19 +73,33 @@ def _generate_livekit_token(session_id: str, persona_id: str, google_key: str, s
         return f"mock-token-{session_id}-{uuid.uuid4().hex[:8]}"
 
     # Create token with session-scoped permissions
-    token = AccessToken(
+    # Use the fluent builder API from livekit-api package
+    token = api.AccessToken(
         settings.livekit_api_key,
         settings.livekit_api_secret,
-        identity=f"agent-{session_id}",
-        name=f"ShadowLearn-{session_id}",
+    ).with_identity(f"user-{session_id}").with_name(f"ShadowLearn-User-{session_id}").with_metadata(
+        f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key}",
+    ).with_grants(
+        api.VideoGrants(
+            room_join=True,
+            room=f"speak-{session_id}",
+            can_publish=True,
+            can_subscribe=True,
+        ),
     )
-    
-    # Agent can publish and subscribe to audio
-    token.can_edit = True
-    
-    # Embed credentials in token metadata (agent will read this)
-    token.metadata = f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key}"
-    
+
+    # Add agent dispatch configuration so LiveKit knows which agent to start
+    # The agent_name must match a deployed agent in LiveKit Cloud
+    token = token.with_room_config(
+        api.RoomConfiguration(
+            agents=[
+                api.RoomAgentDispatch(
+                    agent_name="shadowlearn-speak",
+                ),
+            ],
+        ),
+    )
+
     # Generate the JWT
     return token.to_jwt()
 

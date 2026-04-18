@@ -1,17 +1,11 @@
+import type { AgentState, Session } from '@livekit/components-react'
 import type { SpeakSession } from '@/db'
+import type { Persona } from '@/lib/speak/personas'
 import { Loader2, Mic, MicOff } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
-import { useLiveKitSession } from '@/hooks/useLiveKitSession'
-
-interface Persona {
-  id: string
-  name: string
-  tagline: string
-  portrait_url: string | null
-}
 
 interface Situation {
   id: string
@@ -23,47 +17,65 @@ interface ConversationSceneProps {
   session: SpeakSession
   persona: Persona
   situation: Situation
-  liveKitUrl: string
-  liveKitToken: string
+  livekitSession: Session
   onEnd: (session: SpeakSession) => void
+}
+
+function mapAgentState(state: AgentState | undefined): 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed' {
+  switch (state) {
+    case 'connecting':
+      return 'connecting'
+    case 'connected':
+    case 'listening':
+    case 'thinking':
+    case 'speaking':
+      return 'connected'
+    case 'disconnected':
+    case 'reconnecting':
+      return 'reconnecting'
+    case 'failed':
+      return 'failed'
+    default:
+      return 'disconnected'
+  }
 }
 
 export function ConversationScene({
   session,
   persona,
   situation,
-  liveKitUrl,
-  liveKitToken,
+  livekitSession,
   onEnd,
 }: ConversationSceneProps) {
   const { t } = useI18n()
   const [duration, setDuration] = useState(0)
   const [micError, setMicError] = useState<string | null>(null)
   const [isOffline, setIsOffline] = useState(false)
+  const [speakingStartedAt, setSpeakingStartedAt] = useState<number | null>(null)
+  const [hasStartedSpeaking, setHasStartedSpeaking] = useState(false)
 
-  const {
-    status,
-    transcript,
-    isSpeaking,
-    isMuted,
-    error,
-    start,
-    end,
-    toggleMute,
-  } = useLiveKitSession({
-    url: liveKitUrl,
-    token: liveKitToken,
-  })
+  // Use the session's isConnected property which handles all active states
+  const isConnected = livekitSession.isConnected
+  const status = mapAgentState(livekitSession.agent?.state)
+  const isSpeaking = livekitSession.agent?.state === 'speaking'
+  const error = livekitSession.error
 
-  // Timer
+  // Check if microphone is enabled via room API
+  const isMicMuted = livekitSession.room
+    ? !livekitSession.room.localParticipant.isMicrophoneEnabled
+    : true
+
+  // Timer - only starts when user actually begins speaking
   useEffect(() => {
+    if (!speakingStartedAt)
+      return
+
     const interval = setInterval(() => {
-      const started = new Date(session.startedAt).getTime()
       const now = Date.now()
-      setDuration(Math.round((now - started) / 1000))
+      setDuration(Math.round((now - speakingStartedAt) / 1000))
     }, 1000)
     return () => clearInterval(interval)
-  }, [session.startedAt])
+  }, [speakingStartedAt])
 
   // Edge case: Network status
   useEffect(() => {
@@ -79,12 +91,17 @@ export function ConversationScene({
     }
   }, [])
 
-  // Auto-connect on mount
+  // Auto-connect on mount with microphone enabled
   useEffect(() => {
-    start()
+    livekitSession.start({
+      tracks: {
+        microphone: { enabled: true, publishOptions: { preConnectBuffer: true } },
+      },
+    })
     return () => {
-      end()
+      livekitSession.end()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Edge case: mic permission
@@ -98,32 +115,58 @@ export function ConversationScene({
     }
   }
 
+  // Handle mic toggle - publish/unpublish microphone track
+  const handleToggleMute = useCallback(async () => {
+    if (micError)
+      return
+
+    if (!hasStartedSpeaking) {
+      setSpeakingStartedAt(Date.now())
+      setHasStartedSpeaking(true)
+    }
+
+    if (livekitSession.room) {
+      // Toggle microphone - this will either publish or unpublish the track
+      livekitSession.room.localParticipant.setMicrophoneEnabled(!isMicMuted)
+    }
+  }, [livekitSession.room, isMicMuted, hasStartedSpeaking, micError])
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
   const handleEnd = async () => {
-    await end()
+    await livekitSession.end()
     onEnd(session)
   }
 
-  const personaImage = persona.portrait_url || '/placeholder-persona.png'
-
-  // Combine session transcript with live transcript
-  const allTranscript = [...session.transcript, ...transcript]
+  // Button is disabled if: not connected
+  const canToggleMic = isConnected
 
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-3">
-          <img
-            src={personaImage}
-            alt={persona.name}
-            className="w-10 h-10 rounded-full object-cover ring-2 ring-primary"
-          />
+          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary">
+            {persona.portrait_url
+              ? (
+                  <img
+                    src={persona.portrait_url}
+                    alt={persona.name}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                )
+              : (
+                  <span className="text-sm font-bold text-primary">{getInitials(persona.name)}</span>
+                )}
+          </div>
           <div>
             <h2 className="font-semibold text-sm">{persona.name}</h2>
             <p className="text-xs text-muted-foreground">{situation.name}</p>
@@ -174,32 +217,25 @@ export function ConversationScene({
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="relative">
           <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full"></div>
-          <img
-            src={personaImage}
-            alt={persona.name}
-            className="relative w-48 h-48 object-cover rounded-full"
-          />
+          <div className="relative w-48 h-48 rounded-full bg-primary/20 flex items-center justify-center">
+            {persona.portrait_url
+              ? (
+                  <img
+                    src={persona.portrait_url}
+                    alt={persona.name}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                )
+              : (
+                  <span className="text-4xl font-bold text-primary">{getInitials(persona.name)}</span>
+                )}
+          </div>
         </div>
       </div>
 
       {/* Transcript area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {allTranscript.map((turn, idx) => (
-          <div
-            key={idx}
-            className={`flex ${turn.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] px-4 py-2 rounded-2xl ${
-                turn.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card border border-border'
-              }`}
-            >
-              <p className="text-sm">{turn.content}</p>
-            </div>
-          </div>
-        ))}
+        {/* TODO: Display transcript from livekitSession when available */}
       </div>
 
       {/* Mic button with edge cases */}
@@ -220,15 +256,15 @@ export function ConversationScene({
                 size="lg"
                 className={`w-20 h-20 rounded-full ${
                   isSpeaking ? 'bg-ring animate-pulse' : ''
-                } ${status !== 'connected' ? 'opacity-50' : ''}`}
-                onClick={toggleMute}
-                disabled={status !== 'connected'}
+                } ${!canToggleMic ? 'opacity-50' : ''}`}
+                onClick={handleToggleMute}
+                disabled={!canToggleMic}
               >
                 {status === 'connecting'
                   ? (
                       <Loader2 className="w-8 h-8 animate-spin" />
                     )
-                  : isMuted
+                  : isMicMuted
                     ? (
                         <MicOff className="w-8 h-8" />
                       )

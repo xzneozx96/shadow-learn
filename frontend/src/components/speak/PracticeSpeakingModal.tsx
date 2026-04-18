@@ -1,7 +1,10 @@
 import type { SpeakSession } from '@/db'
-import { X } from 'lucide-react'
+import type { Persona } from '@/lib/speak/personas'
+import { useSession } from '@livekit/components-react'
+import { TokenSource } from 'livekit-client'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { API_BASE } from '@/lib/config'
@@ -9,13 +12,6 @@ import { ConversationScene } from './ConversationScene'
 import { PersonaPicker } from './PersonaPicker'
 import { SessionRecap } from './SessionRecap'
 import { SituationPicker } from './SituationPicker'
-
-interface Persona {
-  id: string
-  name: string
-  tagline: string
-  portrait_url: string | null
-}
 
 interface SituationData {
   id: string
@@ -30,6 +26,32 @@ interface PracticeSpeakingModalProps {
   onClose: () => void
 }
 
+function SessionWrapper({
+  tokenSource,
+  session,
+  persona,
+  situation,
+  onEnd,
+}: {
+  tokenSource: TokenSource
+  session: SpeakSession
+  persona: Persona
+  situation: SituationData
+  onEnd: (session: SpeakSession) => void
+}) {
+  const livekitSession = useSession(tokenSource, { agentName: 'shadowlearn-speak' })
+
+  return (
+    <ConversationScene
+      session={session}
+      persona={persona}
+      situation={situation}
+      livekitSession={livekitSession}
+      onEnd={onEnd}
+    />
+  )
+}
+
 export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalProps) {
   const { t } = useI18n()
   const { keys } = useAuth()
@@ -39,8 +61,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   const [session, setSession] = useState<SpeakSession | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [liveKitUrl, setLiveKitUrl] = useState<string>('')
-  const [liveKitToken, setLiveKitToken] = useState<string>('')
+  const [tokenSource, setTokenSource] = useState<TokenSource | null>(null)
 
   const hasGoogleKey = !!(keys?.googleRealtimeKey)
 
@@ -51,8 +72,19 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       setPersona(null)
       setSession(null)
       setError(null)
+      setTokenSource(null)
     }
   }, [open])
+
+  const handleClose = useCallback(() => {
+    setStep('situation')
+    setSituation(null)
+    setPersona(null)
+    setSession(null)
+    setError(null)
+    setTokenSource(null)
+    onClose()
+  }, [onClose])
 
   const handleSituationSelect = useCallback((situationId: string) => {
     const sit = { id: situationId, name: situationId, description: '' }
@@ -60,7 +92,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     setStep('persona')
   }, [])
 
-  const handlePersonaSelect = useCallback(async (personaData: { name: string, level: string }) => {
+  const handlePersonaSelect = useCallback(async (selectedPersona: Persona) => {
     if (!situation || !hasGoogleKey || !keys?.googleRealtimeKey) {
       setError(t('auth.error.googleRequired'))
       return
@@ -70,14 +102,12 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     setError(null)
 
     try {
-      // TODO: Connect to LiveKit via WebRTC - using local data for now
-      // Backend returns LiveKit token, room URL for WebRTC connection
       const res = await fetch(`${API_BASE}/api/speak/session-start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           google_key: keys.googleRealtimeKey,
-          persona_id: 'friendly_buddy',
+          persona_id: selectedPersona.id,
           situation_id: situation.id,
           mode: 'free',
         }),
@@ -90,9 +120,12 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
       const data = await res.json()
 
-      // Store LiveKit credentials for voice connection
-      setLiveKitUrl(data.livekit_url)
-      setLiveKitToken(data.livekit_token)
+      // Create a literal TokenSource from the pre-generated token
+      const ts = TokenSource.literal({
+        serverUrl: data.livekit_url,
+        participantToken: data.livekit_token,
+      })
+      setTokenSource(ts)
 
       const newSession: SpeakSession = {
         sessionId: data.session_id,
@@ -108,13 +141,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         modelId: 'gemini-live',
       }
 
-      setPersona({
-        id: 'friendly_buddy',
-        name: personaData.name,
-        tagline: '',
-        portrait_url: null,
-      })
-
+      setPersona(selectedPersona)
       setSession(newSession)
       setStep('active')
     }
@@ -145,26 +172,20 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
   const handleRepeat = useCallback(() => {
     if (situation && persona) {
-      handlePersonaSelect({ name: persona.name, level: 'intermediate' })
+      handlePersonaSelect(persona)
     }
   }, [situation, persona, handlePersonaSelect])
 
   const handleBackHome = useCallback(() => {
-    onClose()
-  }, [onClose])
-
-  if (!open)
-    return null
+    handleClose()
+  }, [handleClose])
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm">
-      <div className="flex flex-col h-full max-w-lg mx-auto">
+    <Dialog open={open} onOpenChange={open => !open && handleClose()}>
+      <DialogContent className="max-w-md p-0 gap-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h2 className="text-lg font-bold">{t('speak.title')}</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="w-5 h-5" />
-          </Button>
+        <div className="px-4 py-3 border-b border-border">
+          <h2 className="text-lg font-bold pr-6">{t('speak.title')}</h2>
         </div>
 
         {/* Error banner */}
@@ -176,11 +197,11 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
         {/* Setup prompt if no keys */}
         {!hasGoogleKey && step === 'situation' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="flex flex-col items-center justify-center p-6 text-center">
             <p className="text-muted-foreground mb-4">
               {t('auth.error.googleRequired')}
             </p>
-            <Button onClick={onClose}>
+            <Button onClick={handleClose}>
               {t('nav.settings')}
             </Button>
           </div>
@@ -188,24 +209,21 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
         {/* Step content */}
         {hasGoogleKey && (
-          <div className="flex-1 overflow-hidden">
+          <div className="p-4">
             {step === 'situation' && (
               <SituationPicker onSelect={handleSituationSelect} />
             )}
 
             {step === 'persona' && situation && (
-              <PersonaPicker
-                onSelect={handlePersonaSelect}
-              />
+              <PersonaPicker onSelect={handlePersonaSelect} />
             )}
 
-            {step === 'active' && session && persona && situation && (
-              <ConversationScene
+            {step === 'active' && session && persona && situation && tokenSource && (
+              <SessionWrapper
+                tokenSource={tokenSource}
                 session={session}
                 persona={persona}
                 situation={situation}
-                liveKitUrl={liveKitUrl}
-                liveKitToken={liveKitToken}
                 onEnd={handleSessionEnd}
               />
             )}
@@ -224,14 +242,14 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
         {/* Loading overlay */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-lg">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
               <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

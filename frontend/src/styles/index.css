@@ -38,6 +38,8 @@
     --sidebar-ring: 203 80% 55%;
     --tag-bg: 222 14% 16%;
     --tag-foreground: 203 60% 65%;
+    --success: 142 76% 46%;
+    --success-foreground: 0 0% 98%;
   }
 }
 
@@ -116,9 +118,11 @@
   --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
   --color-sidebar-accent: hsl(var(--sidebar-accent));
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
-  --color-sidebar-border: hsl(var(--sidebar-border));
-  --color-sidebar-ring: hsl(var(--sidebar-ring));
-}
+    --color-sidebar-border: hsl(var(--sidebar-border));
+    --color-sidebar-ring: hsl(var(--sidebar-ring));
+    --color-success: hsl(var(--success));
+    --color-success-foreground: hsl(var(--success-foreground));
+  }
 
 @layer components {
 
