@@ -30,6 +30,7 @@ export function Settings() {
   const [editOpenrouterKey, setEditOpenrouterKey] = useState(keys?.openrouterApiKey ?? '')
   const [editMinimaxKey, setEditMinimaxKey] = useState(keys?.minimaxApiKey ?? '')
   const [editDeepgramKey, setEditDeepgramKey] = useState(keys?.deepgramApiKey ?? '')
+  const [editGladiaKey, setEditGladiaKey] = useState(keys?.gladiaApiKey ?? '')
   const [editAzureSpeechKey, setEditAzureSpeechKey] = useState(keys?.azureSpeechKey ?? '')
   const [editAzureSpeechRegion, setEditAzureSpeechRegion] = useState(keys?.azureSpeechRegion ?? '')
   const [keysPin, setKeysPin] = useState('')
@@ -62,6 +63,7 @@ export function Settings() {
     setEditOpenrouterKey(keys?.openrouterApiKey ?? '')
     setEditMinimaxKey(keys?.minimaxApiKey ?? '')
     setEditDeepgramKey(keys?.deepgramApiKey ?? '')
+    setEditGladiaKey(keys?.gladiaApiKey ?? '')
     setEditAzureSpeechKey(keys?.azureSpeechKey ?? '')
     setEditAzureSpeechRegion(keys?.azureSpeechRegion ?? '')
   }
@@ -73,6 +75,7 @@ export function Settings() {
       openrouterApiKey: editOpenrouterKey.trim() || undefined,
       minimaxApiKey: editMinimaxKey.trim() || undefined,
       deepgramApiKey: editDeepgramKey.trim() || undefined,
+      gladiaApiKey: editGladiaKey.trim() || undefined,
       azureSpeechKey: editAzureSpeechKey.trim() || undefined,
       azureSpeechRegion: editAzureSpeechRegion.trim() || undefined,
     }
@@ -262,6 +265,22 @@ export function Settings() {
                   type={showKeys ? 'text' : 'password'}
                   value={editDeepgramKey}
                   onChange={e => setEditDeepgramKey(e.target.value)}
+                  className="font-mono text-sm"
+                  placeholder={t('auth.placeholder.optionalKey')}
+                />
+              </div>
+            )}
+            {sttProvider === 'gladia' && (
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  {t('settings.gladiaKey')}
+                  {' '}
+                  <span className="text-white/20">(for video transcription)</span>
+                </label>
+                <Input
+                  type={showKeys ? 'text' : 'password'}
+                  value={editGladiaKey}
+                  onChange={e => setEditGladiaKey(e.target.value)}
                   className="font-mono text-sm"
                   placeholder={t('auth.placeholder.optionalKey')}
                 />

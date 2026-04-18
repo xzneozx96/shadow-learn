@@ -82,7 +82,9 @@ export function Library() {
           openrouter_api_key: keys?.openrouterApiKey ?? '',
           ...(sttProvider === 'azure'
             ? { azure_speech_key: keys?.azureSpeechKey ?? '', azure_speech_region: keys?.azureSpeechRegion ?? '' }
-            : { deepgram_api_key: keys?.deepgramApiKey ?? '' }),
+            : sttProvider === 'gladia'
+              ? { gladia_api_key: keys?.gladiaApiKey ?? '' }
+              : { deepgram_api_key: keys?.deepgramApiKey ?? '' }),
         }),
       })
       if (!res.ok) {

@@ -19,6 +19,7 @@ export function Setup() {
   const [openrouterApiKey, setOpenrouterApiKey] = useState('')
   const [minimaxApiKey, setMinimaxApiKey] = useState('')
   const [deepgramApiKey, setDeepgramApiKey] = useState('')
+  const [gladiaApiKey, setGladiaApiKey] = useState('')
   const [azureSpeechKey, setAzureSpeechKey] = useState('')
   const [azureSpeechRegion, setAzureSpeechRegion] = useState('')
   const [pin, setPin] = useState('')
@@ -54,6 +55,7 @@ export function Setup() {
           openrouterApiKey: openrouterApiKey.trim() || undefined,
           minimaxApiKey: minimaxApiKey.trim() || undefined,
           deepgramApiKey: deepgramApiKey.trim() || undefined,
+          gladiaApiKey: gladiaApiKey.trim() || undefined,
           azureSpeechKey: azureSpeechKey.trim() || undefined,
           azureSpeechRegion: azureSpeechRegion.trim() || undefined,
         },
@@ -149,6 +151,24 @@ export function Setup() {
                     />
                     <p className="text-sm text-muted-foreground">
                       {t('auth.setup.deepgramHint')}
+                    </p>
+                  </div>
+                )}
+
+                {sttProvider === 'gladia' && (
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="gladia" className="text-sm font-medium text-white/65">
+                      {t('auth.gladiaKey')}
+                    </label>
+                    <Input
+                      id="gladia"
+                      type="password"
+                      placeholder={t('auth.placeholder.optionalKey')}
+                      value={gladiaApiKey}
+                      onChange={e => setGladiaApiKey(e.target.value)}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      {t('auth.setup.gladiaHint')}
                     </p>
                   </div>
                 )}

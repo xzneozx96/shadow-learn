@@ -56,6 +56,7 @@ export interface DecryptedKeys {
   openrouterApiKey?: string
   minimaxApiKey?: string
   deepgramApiKey?: string
+  gladiaApiKey?: string
   azureSpeechKey?: string
   azureSpeechRegion?: string
 }
