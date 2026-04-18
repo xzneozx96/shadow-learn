@@ -19,6 +19,25 @@ logger = logging.getLogger(__name__)
 
 _GLADIA_UPLOAD_URL = "https://api.gladia.io/v2/upload"
 _GLADIA_TRANSCRIPTION_URL = "https://api.gladia.io/v2/pre-recorded"
+
+_GLADIA_LANGUAGE_MAP: dict[str, str] = {
+    "zh-CN": "zh",
+    "zh-TW": "zh",
+    "vi-VN": "vi",
+    "ja-JP": "ja",
+    "ko-KR": "ko",
+    "en-US": "en",
+    "en-GB": "en",
+    "fr-FR": "fr",
+    "de-DE": "de",
+    "es-ES": "es",
+    "pt-BR": "pt",
+}
+
+
+def _normalize_language_for_gladia(language: str) -> str:
+    """Convert full locale (zh-CN) to Gladia format (zh)."""
+    return _GLADIA_LANGUAGE_MAP.get(language, language.split("-")[0])
 _GLADIA_RESULT_URL = "https://api.gladia.io/v2/pre-recorded/{job_id}"
 
 _POLL_INTERVAL_SECONDS = 2.0
@@ -127,10 +146,11 @@ async def _upload_audio(audio_path: Path, api_key: str) -> str:
 
 async def _start_transcription(audio_url: str, api_key: str, language: str) -> str:
     """Start pre-recorded transcription job and return job_id."""
+    gladia_lang = _normalize_language_for_gladia(language)
     body = {
         "audio_url": audio_url,
         "language_config": {
-            "languages": [language],
+            "languages": [gladia_lang],
             "code_switching": False,
         },
         "diarization": True,
