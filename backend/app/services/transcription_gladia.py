@@ -19,29 +19,21 @@ logger = logging.getLogger(__name__)
 
 _GLADIA_UPLOAD_URL = "https://api.gladia.io/v2/upload"
 _GLADIA_TRANSCRIPTION_URL = "https://api.gladia.io/v2/pre-recorded"
+_GLADIA_RESULT_URL = "https://api.gladia.io/v2/pre-recorded/{job_id}"
 
 _GLADIA_LANGUAGE_MAP: dict[str, str] = {
     "zh-CN": "zh",
-    "zh-TW": "zh",
-    "vi-VN": "vi",
     "ja-JP": "ja",
     "ko-KR": "ko",
     "en-US": "en",
-    "en-GB": "en",
-    "fr-FR": "fr",
-    "de-DE": "de",
-    "es-ES": "es",
-    "pt-BR": "pt",
 }
 
+_POLL_INTERVAL_SECONDS = 2.0
+_POLL_TIMEOUT_SECONDS = 300.0
 
 def _normalize_language_for_gladia(language: str) -> str:
     """Convert full locale (zh-CN) to Gladia format (zh)."""
     return _GLADIA_LANGUAGE_MAP.get(language, language.split("-")[0])
-_GLADIA_RESULT_URL = "https://api.gladia.io/v2/pre-recorded/{job_id}"
-
-_POLL_INTERVAL_SECONDS = 2.0
-_POLL_TIMEOUT_SECONDS = 300.0
 
 
 class _GladiaWord(TypedDict):
@@ -154,7 +146,10 @@ async def _start_transcription(audio_url: str, api_key: str, language: str) -> s
             "code_switching": False,
         },
         "diarization": True,
-        "punctuation_enhanced": True,
+        "diarization_config": {
+            "enhanced": True
+        },
+        "sentiment_analysis": True,
     }
 
     @http_retry(logger)

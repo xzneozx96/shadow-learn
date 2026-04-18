@@ -30,17 +30,6 @@ const LANGUAGE_CAPS: Record<string, LanguageCapabilities> = {
     languageName: 'Chinese',
     azurePronunciationLocale: 'zh-CN',
   },
-  'zh-TW': {
-    romanizationSystem: 'pinyin',
-    romanizationLabel: 'Pinyin',
-    romanizationPlaceholder: 'e.g. nǐ hǎo or ni3 hao3',
-    hasCharacterWriting: true,
-    hasTranslation: true,
-    inputMode: 'ime-chinese',
-    dictationPlaceholder: '輸入漢字…',
-    languageName: 'Chinese (Traditional)',
-    azurePronunciationLocale: null, // zh-TW not confirmed supported
-  },
   'en': {
     romanizationSystem: 'none',
     romanizationLabel: '',

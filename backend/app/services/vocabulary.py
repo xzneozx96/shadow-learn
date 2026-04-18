@@ -139,14 +139,14 @@ async def _extract_batch_with_retry(
                         "messages": [{"role": "user", "content": prompt}],
                         "response_format": response_format,
                         "temperature": 0.1,
-                        "max_tokens": 64000,
+                        "max_tokens": 65000,
                         "reasoning": {"effort": "none"},
                     },
                 )
             response.raise_for_status()
             body = response.json()
             if "error" in body:
-                raise VocabularyExtractionError(
+                raise RetryableError(
                     f"Vocab batch {seg_ids}: OpenRouter error — {body['error']}"
                 )
             choice = body["choices"][0]
@@ -168,7 +168,7 @@ async def _extract_batch_with_retry(
                 )
                 return {seg.id: [w.model_dump() for w in seg.words] for seg in parsed.segments}
             except Exception as e:
-                raise VocabularyExtractionError(
+                raise RetryableError(
                     f"Vocab batch {seg_ids}: failed to parse response — {e}"
                 ) from e
 
