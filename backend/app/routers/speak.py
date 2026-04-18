@@ -26,7 +26,7 @@ session_cache: dict[str, dict[str, Any]] = {}
 class SessionStartRequest(BaseModel):
     """Request to start a new AI conversation session."""
     
-    openai_key: str = Field(..., min_length=1, description="User's OpenAI API key")
+    google_key: str = Field(..., min_length=1, description="User's Google Gemini API key")
     persona_id: str = Field(..., pattern=r"^[a-z_]+$", description="Persona ID")
     situation_id: str = Field(..., pattern=r"^[a-z_]+$", description="Situation ID")
     mode: str = Field(default="free", pattern=r"^(free|guided)$", description="Session mode")
@@ -53,35 +53,37 @@ class SessionEndRequest(BaseModel):
 # --------------------------------------------------------------------------- #
 
 
-def _generate_livekit_token(session_id: str, persona_id: str, openai_key: str, situation_id: str) -> str:
+def _generate_livekit_token(session_id: str, persona_id: str, google_key: str, situation_id: str) -> str:
     """Generate a LiveKit token with embedded credentials for the agent.
     
     Uses LiveKit AccessToken API to create a token that includes:
-    - The OpenAI key in metadata (for agent to use)
+    - The Google key in metadata (for agent to use)
     - Persona and situation IDs
     - Session ID for tracking
-    
-    The key is embedded in the token (not in a separate store), so it travels 
-    directly with the session and is available to the agent on connect.
     """
     try:
         from livekit import AccessToken
     except ImportError:
-        # Fallback for now - return mock if livekit not installed
+        logger.warning("livekit package not installed, returning mock token")
+        return f"mock-token-{session_id}-{uuid.uuid4().hex[:8]}"
+
+    if not settings.livekit_api_key or not settings.livekit_api_secret:
+        logger.warning("LiveKit credentials not configured, returning mock token")
         return f"mock-token-{session_id}-{uuid.uuid4().hex[:8]}"
 
     # Create token with session-scoped permissions
     token = AccessToken(
+        settings.livekit_api_key,
+        settings.livekit_api_secret,
         identity=f"agent-{session_id}",
         name=f"ShadowLearn-{session_id}",
     )
     
-    # Agent can subscribe to audio
+    # Agent can publish and subscribe to audio
     token.can_edit = True
     
     # Embed credentials in token metadata (agent will read this)
-    # Format: session_id=xxx,persona_id=xxx,situation_id=xxx,openai_key=xxx
-    token.metadata = f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},openai_key={openai_key}"
+    token.metadata = f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key}"
     
     # Generate the JWT
     return token.to_jwt()
@@ -114,12 +116,12 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
     livekit_token = _generate_livekit_token(
         session_id, 
         request.persona_id, 
-        request.openai_key,
+        request.google_key,
         request.situation_id
     )
     
     # LiveKit URL - configure via environment in production
-    livekit_url = settings.livekit_url or "wss://livekit.example.com"
+    livekit_url = settings.livekit_url or "wss://your-project.livekit.cloud"
     
     # Step 4: Cache session metadata ONLY (no API key stored)
     # Key is embedded in token for the agent; we don't need to cache it

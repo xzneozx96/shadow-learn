@@ -1,5 +1,5 @@
 import type { Segment } from '@/types'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
@@ -8,6 +8,7 @@ import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useAgentChat } from '@/hooks/useAgentChat'
 import { captureCompanionMessageSent } from '@/lib/posthog-events'
 import { CompanionChatArea } from '../chat/CompanionChatArea'
+import { PracticeSpeakingModal } from '../speak/PracticeSpeakingModal'
 import { LessonWorkbookPanel } from './LessonWorkbookPanel'
 
 interface CompanionPanelProps {
@@ -30,6 +31,7 @@ export function CompanionPanel({
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
   const { messages, isLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
+  const [speakModalOpen, setSpeakModalOpen] = useState(false)
 
   useEffect(() => {
     if (chips.length > 0)
@@ -78,6 +80,7 @@ export function CompanionPanel({
             onSend={handleSend}
             onStop={stop}
             headerSlot={headerSlot}
+            onSpeakClick={() => setSpeakModalOpen(true)}
           />
         </TabsContent>
 
@@ -85,6 +88,8 @@ export function CompanionPanel({
           <LessonWorkbookPanel lessonId={lessonId} />
         </TabsContent>
       </Tabs>
+
+      <PracticeSpeakingModal open={speakModalOpen} onClose={() => setSpeakModalOpen(false)} />
     </>
   )
 }

@@ -1,13 +1,13 @@
 [project]
 name = "livekit-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "ShadowLearn Voice Agent for Speak with AI"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
-    "livekit>=1.1.5",
-    "livekit-agents>=1.5.4",
-    "livekit-plugins-ai-coustics>=0.2.7",
-    "livekit-plugins-openai>=1.5.4",
-    "python-dotenv>=1.2.2",
+    "livekit-agents>=1.4.0",
+    "livekit-plugins-google>=1.0.0",
+    "livekit-plugins-silero>=1.0.0",
+    "livekit-plugins-noise-cancellation>=0.2.0",
+    "python-dotenv>=1.0.0",
 ]

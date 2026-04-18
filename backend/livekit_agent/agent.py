@@ -2,17 +2,20 @@
 ShadowLearn Voice Agent for Speak with AI feature.
 
 This agent handles real-time voice conversations with students practicing Chinese.
-Uses OpenAI Realtime API with persona-driven character corrections.
+Uses Google Gemini Live API with persona-driven character corrections.
 """
 
+from pathlib import Path
 from dotenv import load_dotenv
 
-from livekit import agents
+# Load env from same directory as this file
+from livekit import agents, rtc
 from livekit.agents import AgentServer, AgentSession, Agent, room_io
-from livekit.plugins import openai as openai_plugin
-from livekit.plugins import ai_coustics
+from livekit.plugins import google
+from livekit.plugins import noise_cancellation
+from livekit.plugins import silero
 
-load_dotenv()  # Loads .env by default
+load_dotenv(Path(__file__).parent / ".env")
 
 
 class ChineseTutorAgent(Agent):
@@ -36,16 +39,16 @@ async def shadowlearn_session(ctx: agents.JobContext):
     # Read session metadata from job
     metadata = ctx.job.metadata or ""
     
-    # Parse metadata: "session_id=xxx,persona_id=xxx,situation_id=xxx,openai_key=xxx"
+    # Parse metadata: "session_id=xxx,persona_id=xxx,situation_id=xxx,google_key=xxx"
     session_info = {}
     for item in metadata.split(","):
         if "=" in item:
             key, value = item.split("=", 1)
             session_info[key] = value
     
-    persona_id = session_info.get("persona_id", "friendly_student")
+    persona_id = session_info.get("persona_id", "friendly_buddy")
     situation_id = session_info.get("situation_id", "casual_chat")
-    openai_key = session_info.get("openai_key", "")
+    google_key = session_info.get("google_key", "")
     
     # Load persona instructions - skip if import fails
     instructions = ""
@@ -61,12 +64,14 @@ async def shadowlearn_session(ctx: agents.JobContext):
 practice conversational Chinese. Be encouraging, patient, and provide gentle 
 corrections when they make mistakes. Keep conversations natural and fun."""
     
-    # Create session with OpenAI Realtime API
+    # Create session with Gemini Live API
     session = AgentSession(
-        llm=openai_plugin.realtime.RealtimeModel(
-            api_key=openai_key,
-            voice="coral"
-        )
+        llm=google.realtime.RealtimeModel(
+            api_key=google_key,
+            model="gemini-2.5-flash",
+            voice="Puck",
+        ),
+        vad=silero.VAD.load(),
     )
 
     await session.start(
@@ -74,9 +79,9 @@ corrections when they make mistakes. Keep conversations natural and fun."""
         agent=ChineseTutorAgent(instructions),
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
-                noise_cancellation=ai_coustics.audio_enhancement(
-                    model=ai_coustics.EnhancerModel.QUAIL_VF_L
-                ),
+                noise_cancellation=lambda params: noise_cancellation.BVC() 
+                if params.participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP 
+                else noise_cancellation.BVC(),
             ),
         ),
     )

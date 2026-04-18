@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     ytdlp_proxy: str = ""  # env: SHADOWLEARN_YTDLP_PROXY; e.g. http://user:pass@brd.superproxy.io:22225
     ytdlp_bgutil_url: str = ""  # env: SHADOWLEARN_YTDLP_BGUTIL_URL; e.g. http://bgutil-provider:4416
 
+    # LiveKit configuration for voice agent
+    livekit_url: str = ""  # env: LIVEKIT_URL; e.g. wss://your-project.livekit.cloud
+    livekit_api_key: str = ""  # env: LIVEKIT_API_KEY
+    livekit_api_secret: str = ""  # env: LIVEKIT_API_SECRET
+
     # Fallback API keys for free trial — all optional; unset means trial unavailable
     openrouter_api_key: str | None = None       # env: SHADOWLEARN_OPENROUTER_API_KEY
     fpt_ai_api_key: str | None = None         # env: SHADOWLEARN_FPT_AI_API_KEY
