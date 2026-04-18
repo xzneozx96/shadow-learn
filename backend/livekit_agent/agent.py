@@ -12,7 +12,7 @@ from livekit.agents import AgentServer, AgentSession, Agent, room_io
 from livekit.plugins import openai as openai_plugin
 from livekit.plugins import ai_coustics
 
-load_dotenv(".env.local")
+load_dotenv()  # Loads .env by default
 
 
 class ChineseTutorAgent(Agent):
