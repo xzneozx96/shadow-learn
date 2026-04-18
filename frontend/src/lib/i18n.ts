@@ -430,6 +430,27 @@ export const TRANSLATIONS = {
     'common.confirm': 'Confirm',
     'common.yes': 'Yes',
     'common.no': 'No',
+
+    // Speak
+    'speak.title': 'Practice Speaking',
+    'speak.selectSituation': 'Choose a situation',
+    'speak.selectSituationDesc': 'Select a scenario to practice Chinese',
+    'speak.selectPersona': 'Pick someone to talk with',
+    'speak.selectPersonaDesc': 'Choose your conversation partner',
+    'speak.createOutline': 'Scene setup',
+    'speak.outlinePlaceholder': 'The scene context will appear here...',
+    'speak.practice': 'Start Practice',
+    'speak.sessionRecap': 'Session complete',
+    'speak.summaryDesc': '{{situation}} with {{persona}}',
+    'speak.duration': 'Duration',
+    'speak.turns': 'Turns',
+    'speak.score': 'Score',
+    'speak.conversationPreview': 'Conversation',
+    'speak.you': 'You',
+    'speak.ai': 'AI',
+    'speak.sessionComplete': 'Nice session!',
+    'speak.repeatSession': 'Talk again',
+    'speak.backHome': 'Back home',
   },
   vi: {
     // Navigation

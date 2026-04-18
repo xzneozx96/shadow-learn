@@ -41,7 +41,6 @@ export function useLiveKitSession(): UseLiveKitSessionReturn {
       const room = new Room({
         adaptiveStream: true,
         dynacast: true,
-        publishDefaultTracks: false,
       })
 
       room.on(RoomEvent.ParticipantConnected, () => {
