@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 
 from livekit import agents
 from livekit.agents import AgentServer, AgentSession, Agent, room_io
-from livekit.plugins import openai, ai_coustics
+from livekit.plugins import openai as openai_plugin
+from livekit.plugins import ai_coustics
 
 load_dotenv(".env.local")
 
@@ -61,7 +62,7 @@ corrections when they make mistakes. Keep conversations natural and fun."""
         # Create session with OpenAI Realtime API (from user's key in token)
         # The API key is embedded in the join token by the backend
         session = AgentSession(
-            llm=openai.realtime.RealtimeModel(
+            llm=openai_plugin.realtime.RealtimeModel(
                 voice="coral"  # OpenAI Realtime voice
             )
         )
