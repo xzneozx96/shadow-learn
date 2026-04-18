@@ -38,7 +38,7 @@ def create_agent_server():
         # Read session metadata from job
         metadata = ctx.job.metadata or ""
         
-        # Parse metadata: "session_id=xxx,persona_id=xxx,situation_id=xxx"
+        # Parse metadata: "session_id=xxx,persona_id=xxx,situation_id=xxx,openai_key=xxx"
         session_info = {}
         for item in metadata.split(","):
             if "=" in item:
@@ -47,12 +47,16 @@ def create_agent_server():
         
         persona_id = session_info.get("persona_id", "friendly_student")
         situation_id = session_info.get("situation_id", "casual_chat")
+        openai_key = session_info.get("openai_key", "")
         
-        # TODO: Load persona instructions from backend API
-        # For now, use default instructions
-        from app.speak.personas import get_persona
-        persona = get_persona(persona_id)
-        instructions = persona.get("system_prompt", "") if persona else ""
+        # Load persona instructions from backend API
+        # For now, use default instructions if import fails
+        try:
+            from app.speak.personas import get_persona
+            persona = get_persona(persona_id)
+            instructions = persona.get("system_prompt", "") if persona else ""
+        except ImportError:
+            instructions = ""
         
         if not instructions:
             instructions = """You are a friendly Chinese tutor helping a student 
@@ -63,6 +67,7 @@ corrections when they make mistakes. Keep conversations natural and fun."""
         # The API key is embedded in the join token by the backend
         session = AgentSession(
             llm=openai_plugin.realtime.RealtimeModel(
+                api_key=openai_key,
                 voice="coral"  # OpenAI Realtime voice
             )
         )

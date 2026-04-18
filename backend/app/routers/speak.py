@@ -80,7 +80,8 @@ def _generate_livekit_token(session_id: str, persona_id: str, openai_key: str, s
     token.can_edit = True
     
     # Embed credentials in token metadata (agent will read this)
-    token.metadata = f"session_id={session_id},persona_id={persona_id},situation_id={situation_id}"
+    # Format: session_id=xxx,persona_id=xxx,situation_id=xxx,openai_key=xxx
+    token.metadata = f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},openai_key={openai_key}"
     
     # Generate the JWT
     return token.to_jwt()
