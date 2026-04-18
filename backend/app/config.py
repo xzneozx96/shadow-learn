@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # Set as JSON array: '["google/gemini-2.0-flash-001","anthropic/claude-haiku-4-5"]'
     minimax_tts_url: str = "https://api.minimax.io/v1/t2a_v2"
     tts_provider: str = "minimax"  # env: SHADOWLEARN_TTS_PROVIDER; values: azure | minimax
-    stt_provider: str = "deepgram"  # env: SHADOWLEARN_STT_PROVIDER; values: deepgram | azure
+    stt_provider: str = "deepgram"  # env: SHADOWLEARN_STT_PROVIDER; values: deepgram | azure | gladia
     ytdlp_cookies_file: str = ""  # env: SHADOWLEARN_YTDLP_COOKIES_FILE; path to Netscape cookies.txt
     ytdlp_proxy: str = ""  # env: SHADOWLEARN_YTDLP_PROXY; e.g. http://user:pass@brd.superproxy.io:22225
     ytdlp_bgutil_url: str = ""  # env: SHADOWLEARN_YTDLP_BGUTIL_URL; e.g. http://bgutil-provider:4416
@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     fpt_ai_api_key: str | None = None         # env: SHADOWLEARN_FPT_AI_API_KEY
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
+    gladia_api_key: str | None = None          # env: SHADOWLEARN_GLADIA_API_KEY
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
 

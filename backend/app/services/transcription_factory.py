@@ -20,7 +20,11 @@ def get_stt_provider(settings: Settings) -> STTProvider:
         from app.services.transcription_azure import AzureSTTProvider
         return AzureSTTProvider()
 
+    if provider == "gladia":
+        from app.services.transcription_gladia import GladiaSTTProvider
+        return GladiaSTTProvider()
+
     raise ValueError(
         f"Unknown STT provider: '{settings.stt_provider}'. "
-        "Set SHADOWLEARN_STT_PROVIDER to 'deepgram' or 'azure'."
+        "Set SHADOWLEARN_STT_PROVIDER to 'deepgram', 'azure', or 'gladia'."
     )

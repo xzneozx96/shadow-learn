@@ -16,6 +16,8 @@ def _compute_free_trial_available(stt_provider: str, tts_provider: str) -> bool:
         return False
     if stt_provider == "azure" and (not settings.azure_speech_key or not settings.azure_speech_region):
         return False
+    if stt_provider == "gladia" and not settings.gladia_api_key:
+        return False
     # TTS key check
     if tts_provider == "azure" and (not settings.azure_speech_key or not settings.azure_speech_region):
         return False

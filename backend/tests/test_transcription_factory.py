@@ -21,6 +21,16 @@ def test_factory_returns_azure_provider():
     assert isinstance(provider, AzureSTTProvider)
 
 
+def test_factory_returns_gladia_provider():
+    from app.services.transcription_factory import get_stt_provider
+    from app.services.transcription_gladia import GladiaSTTProvider
+    from app.config import Settings
+
+    settings = Settings(stt_provider="gladia")
+    provider = get_stt_provider(settings)
+    assert isinstance(provider, GladiaSTTProvider)
+
+
 def test_factory_raises_on_unknown_provider():
     from app.services.transcription_factory import get_stt_provider
     from app.config import Settings
