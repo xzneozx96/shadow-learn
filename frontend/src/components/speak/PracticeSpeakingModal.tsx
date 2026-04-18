@@ -38,6 +38,8 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   const [session, setSession] = useState<SpeakSession | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [liveKitUrl, setLiveKitUrl] = useState<string>('')
+  const [liveKitToken, setLiveKitToken] = useState<string>('')
 
   const hasGoogleKey = !!(keys?.googleRealtimeKey)
 
@@ -86,6 +88,10 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       }
 
       const data = await res.json()
+
+      // Store LiveKit credentials for voice connection
+      setLiveKitUrl(data.livekit_url)
+      setLiveKitToken(data.livekit_token)
 
       const newSession: SpeakSession = {
         sessionId: data.session_id,
@@ -200,6 +206,8 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
                 session={session}
                 persona={persona}
                 situation={situation}
+                liveKitUrl={liveKitUrl}
+                liveKitToken={liveKitToken}
                 onEnd={handleSessionEnd}
               />
             )}
