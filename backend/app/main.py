@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import agent, config, jobs, lessons, pronunciation, quiz, translation_exercise, tts
+from app.routers import agent, config, jobs, lessons, pronunciation, quiz, speak, translation_exercise, tts
 from app.services.tts_factory import get_tts_provider
 from app.services.transcription_factory import get_stt_provider
 
@@ -40,6 +40,7 @@ app.include_router(quiz.router)
 app.include_router(translation_exercise.router)
 app.include_router(pronunciation.router)
 app.include_router(agent.router)
+app.include_router(speak.router)
 
 
 @app.get("/api/health")

@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     gladia_api_key: str | None = None          # env: SHADOWLEARN_GLADIA_API_KEY
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
+    encryption_key: str | None = None          # env: SHADOWLEARN_ENCRYPTION_KEY
 
     model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8"}
 

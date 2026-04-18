@@ -59,6 +59,7 @@ export interface DecryptedKeys {
   gladiaApiKey?: string
   azureSpeechKey?: string
   azureSpeechRegion?: string
+  openaiRealtimeKey?: string
 }
 
 // Azure Pronunciation Assessment types

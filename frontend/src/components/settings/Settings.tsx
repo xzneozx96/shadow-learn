@@ -33,6 +33,7 @@ export function Settings() {
   const [editGladiaKey, setEditGladiaKey] = useState(keys?.gladiaApiKey ?? '')
   const [editAzureSpeechKey, setEditAzureSpeechKey] = useState(keys?.azureSpeechKey ?? '')
   const [editAzureSpeechRegion, setEditAzureSpeechRegion] = useState(keys?.azureSpeechRegion ?? '')
+  const [editOpenAIRealtimeKey, setEditOpenAIRealtimeKey] = useState(keys?.openaiRealtimeKey ?? '')
   const [keysPin, setKeysPin] = useState('')
   const [keysSaved, setKeysSaved] = useState(false)
   const [keysError, setKeysError] = useState<string | null>(null)
@@ -66,6 +67,7 @@ export function Settings() {
     setEditGladiaKey(keys?.gladiaApiKey ?? '')
     setEditAzureSpeechKey(keys?.azureSpeechKey ?? '')
     setEditAzureSpeechRegion(keys?.azureSpeechRegion ?? '')
+    setEditOpenAIRealtimeKey(keys?.openaiRealtimeKey ?? '')
   }
 
   async function handleSaveKeys() {
@@ -78,6 +80,7 @@ export function Settings() {
       gladiaApiKey: editGladiaKey.trim() || undefined,
       azureSpeechKey: editAzureSpeechKey.trim() || undefined,
       azureSpeechRegion: editAzureSpeechRegion.trim() || undefined,
+      openaiRealtimeKey: editOpenAIRealtimeKey.trim() || undefined,
     }
 
     if (trialMode) {
@@ -197,6 +200,20 @@ export function Settings() {
                 type={showKeys ? 'text' : 'password'}
                 value={editOpenrouterKey}
                 onChange={e => setEditOpenrouterKey(e.target.value)}
+                className="font-mono text-sm"
+                placeholder={t('auth.placeholder.optionalKey')}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">
+                OpenAI Realtime Key
+                <span className="text-white/20">(for voice conversation)</span>
+              </label>
+              <Input
+                type={showKeys ? 'text' : 'password'}
+                value={editOpenAIRealtimeKey}
+                onChange={e => setEditOpenAIRealtimeKey(e.target.value)}
                 className="font-mono text-sm"
                 placeholder={t('auth.placeholder.optionalKey')}
               />

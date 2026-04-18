@@ -1,13 +1,17 @@
 import type { Segment } from '@/types'
-import { useEffect } from 'react'
+import { Mic } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/contexts/AuthContext'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useAgentChat } from '@/hooks/useAgentChat'
 import { captureCompanionMessageSent } from '@/lib/posthog-events'
 import { CompanionChatArea } from '../chat/CompanionChatArea'
+import { PracticeSpeakingModal } from '../companion/PracticeSpeakingModal'
 import { LessonWorkbookPanel } from './LessonWorkbookPanel'
 
 interface CompanionPanelProps {
@@ -26,10 +30,12 @@ export function CompanionPanel({
   onTabChange,
 }: CompanionPanelProps) {
   const { t } = useI18n()
+  const { keys } = useAuth()
   const { entriesByLesson } = useVocabulary()
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
   const { messages, isLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
+  const [showSpeakModal, setShowSpeakModal] = useState(false)
 
   useEffect(() => {
     if (chips.length > 0)
@@ -55,32 +61,51 @@ export function CompanionPanel({
     : undefined
 
   return (
-    <Tabs defaultValue="ai" value={activeTab} onValueChange={onTabChange} className="flex h-full flex-col gap-0">
-      <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3 rounded-none h-[65px]!">
-        <TabsTrigger value="ai">{t('lesson.aiCompanion')}</TabsTrigger>
-        <TabsTrigger value="workbook" className="gap-1.5">
-          {t('lesson.workbook')}
-          {count > 0 && <Badge className="px-1.5 py-0 text-xs">{count}</Badge>}
-        </TabsTrigger>
-      </TabsList>
+    <>
+      <Tabs defaultValue="ai" value={activeTab} onValueChange={onTabChange} className="flex h-full flex-col gap-0">
+        <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3 rounded-none h-[65px]!">
+          <div className="flex items-center gap-1">
+            <TabsTrigger value="ai">{t('lesson.aiCompanion')}</TabsTrigger>
+            <TabsTrigger value="workbook" className="gap-1.5">
+              {t('lesson.workbook')}
+              {count > 0 && <Badge className="px-1.5 py-0 text-xs">{count}</Badge>}
+            </TabsTrigger>
+          </div>
+          {keys?.openaiRealtimeKey && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto mr-1 size-8"
+              onClick={() => setShowSpeakModal(true)}
+              aria-label={t('speak.title')}
+            >
+              <Mic className="size-4" />
+            </Button>
+          )}
+        </TabsList>
 
-      <TabsContent value="ai" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <CompanionChatArea
-          messages={messages}
-          isLoading={isLoading}
-          hasMore={hasMore}
-          onLoadMore={loadMore}
-          chips={chips}
-          onRemoveChip={removeChip}
-          onSend={handleSend}
-          onStop={stop}
-          headerSlot={headerSlot}
-        />
-      </TabsContent>
+        <TabsContent value="ai" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <CompanionChatArea
+            messages={messages}
+            isLoading={isLoading}
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            chips={chips}
+            onRemoveChip={removeChip}
+            onSend={handleSend}
+            onStop={stop}
+            headerSlot={headerSlot}
+          />
+        </TabsContent>
 
-      <TabsContent value="workbook" className="min-h-0 flex-1 overflow-hidden">
-        <LessonWorkbookPanel lessonId={lessonId} />
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="workbook" className="min-h-0 flex-1 overflow-hidden">
+          <LessonWorkbookPanel lessonId={lessonId} />
+        </TabsContent>
+      </Tabs>
+
+      {showSpeakModal && (
+        <PracticeSpeakingModal onClose={() => setShowSpeakModal(false)} />
+      )}
+    </>
   )
 }

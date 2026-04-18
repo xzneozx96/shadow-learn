@@ -4,7 +4,7 @@ import type { AppSettings, LessonMeta, Segment, VocabEntry } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 7
+const DB_VERSION = 8
 
 export interface LearnerProfile {
   name: string
@@ -107,6 +107,27 @@ export interface AgentLog {
   exercisesCompleted: number
 }
 
+export interface SpeakSession {
+  sessionId: string
+  lessonId: string
+  startedAt: string
+  endedAt: string | null
+  durationSeconds: number
+  status: 'active' | 'completed' | 'abandoned'
+  transcript: { role: 'user' | 'assistant', content: string, timestamp: string }[]
+  transcriptText: string
+  evaluation: {
+    overallScore: number
+    pronunciationScore: number
+    fluencyScore: number
+    intonationScore: number
+    feedback: string
+    improvements: string[]
+  } | null
+  promptVersion: string
+  modelId: string
+}
+
 interface ShadowLearnSchema extends DBSchema {
   'lessons': { key: string, value: LessonMeta }
   'segments': { key: string, value: Segment[] }
@@ -145,6 +166,11 @@ interface ShadowLearnSchema extends DBSchema {
   'agent-logs': {
     key: number // autoincrement
     value: AgentLog
+  }
+  'speak-sessions': {
+    key: string
+    value: SpeakSession
+    indexes: { 'by-date': string }
   }
 }
 
@@ -220,6 +246,10 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
       if (oldVersion < 7) {
         db.createObjectStore('exercise-stats')
         db.createObjectStore('agent-logs', { keyPath: 'id', autoIncrement: true })
+      }
+      if (oldVersion < 8) {
+        const ssStore = db.createObjectStore('speak-sessions', { keyPath: 'sessionId' })
+        ssStore.createIndex('by-date', 'startedAt', { unique: false })
       }
     },
   })
