@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 from app.services.transcription_gladia import (
     _segments_from_gladia_utterances,
     transcribe_audio_gladia,
@@ -81,45 +82,33 @@ def test_segments_from_gladia_utterances_skips_empty():
 
 
 @pytest.mark.asyncio
-async def test_transcribe_audio_gladia_returns_segments(tmp_path):
-    """transcribe_audio_gladia returns segments from Gladia response."""
+async def test_transcribe_audio_gladia_full_flow(tmp_path):
+    """Full flow: upload -> start -> poll -> segments."""
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"fake audio data")
 
-    mock_json = {
-        "result": {
-            "transcription": {
-                "utterances": [
-                    {
-                        "language": "zh",
-                        "start": 0.0,
-                        "end": 1.0,
-                        "confidence": 0.95,
-                        "channel": 0,
-                        "text": "你好",
-                        "speaker": None,
-                        "words": [
-                            {"word": "你", "start": 0.0, "end": 0.5, "confidence": 0.95},
-                            {"word": "好", "start": 0.5, "end": 1.0, "confidence": 0.95},
-                        ],
-                    }
-                ]
-            }
+    async def mock_upload(path, key):
+        return "https://api.gladia.io/file/test"
+
+    async def mock_start(url, key, lang):
+        return "job-123"
+
+    async def mock_poll(job_id, key):
+        return {
+            "status": "done",
+            "result": {"transcription": {"utterances": [
+                {"language": "zh", "start": 0.0, "end": 1.0, "confidence": 0.95, "channel": 0,
+                 "text": "你好", "speaker": None, "words": [
+                     {"word": "你", "start": 0.0, "end": 0.5, "confidence": 0.95},
+                     {"word": "好", "start": 0.5, "end": 1.0, "confidence": 0.95},
+                 ]}
+            ]}}
         }
-    }
 
-    from unittest.mock import patch, MagicMock, AsyncMock
-
-    with patch("app.services.transcription_gladia.httpx.AsyncClient") as mock_client_cls:
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = mock_json
-        mock_client.post = AsyncMock(return_value=mock_response)
-        mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
-
-        segments = await transcribe_audio_gladia(audio_file, api_key="test_key", language="zh-CN")
+    with patch("app.services.transcription_gladia._upload_audio", mock_upload):
+        with patch("app.services.transcription_gladia._start_transcription", mock_start):
+            with patch("app.services.transcription_gladia._poll_for_result", mock_poll):
+                segments = await transcribe_audio_gladia(audio_file, api_key="test_key", language="zh-CN")
 
     assert len(segments) == 1
     assert segments[0]["text"] == "你好"
@@ -130,10 +119,10 @@ async def test_transcribe_audio_gladia_returns_segments(tmp_path):
 @pytest.mark.asyncio
 async def test_transcribe_audio_gladia_raises_on_api_error(tmp_path):
     """transcribe_audio_gladia raises on API error."""
+    from unittest.mock import MagicMock, AsyncMock
+
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"fake audio data")
-
-    from unittest.mock import patch, MagicMock, AsyncMock
 
     with patch("app.services.transcription_gladia.httpx.AsyncClient") as mock_client_cls:
         mock_client = MagicMock()
@@ -158,3 +147,5 @@ async def test_gladia_provider_requires_api_key(tmp_path):
 
     with pytest.raises(ValueError, match="Gladia API key is required"):
         await provider.transcribe(audio_file, {}, "zh-CN")
+
+
