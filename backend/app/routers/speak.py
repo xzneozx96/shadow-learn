@@ -29,6 +29,7 @@ class SessionStartRequest(BaseModel):
     google_key: str = Field(..., min_length=1, description="User's Google Gemini API key")
     persona_id: str = Field(..., pattern=r"^[a-z_]+$", description="Persona ID")
     system_prompt: str = Field(..., min_length=10, description="System prompt for the AI agent")
+    voice_id: str = Field(default="Puck", description="Voice ID for Gemini Live API")
     situation_id: str = Field(..., pattern=r"^[a-z_]+$", description="Situation ID")
 
 
@@ -59,13 +60,14 @@ def _generate_livekit_token(
     google_key: str,
     situation_id: str,
     system_prompt: str,
+    voice_id: str = "Puck",
 ) -> str:
     """Generate a LiveKit token with embedded credentials for the agent.
 
     Uses LiveKit AccessToken API to create a token that includes:
     - RoomAgentDispatch with agent_name for automatic agent dispatch
     - The Google key in metadata (for agent to use)
-    - Persona, situation IDs, and system_prompt
+    - Persona, situation IDs, system_prompt, and voice_id
     - Session ID for tracking
     """
     try:
@@ -84,7 +86,7 @@ def _generate_livekit_token(
         settings.livekit_api_key,
         settings.livekit_api_secret,
     ).with_identity(f"user-{session_id}").with_name(f"ShadowLearn-User-{session_id}").with_metadata(
-        f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key},system_prompt={quote(system_prompt)}",
+        f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key},system_prompt={quote(system_prompt)},voice_id={quote(voice_id)}",
     ).with_grants(
         api.VideoGrants(
             room_join=True,
@@ -131,6 +133,7 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
         request.google_key,
         request.situation_id,
         request.system_prompt,
+        request.voice_id,
     )
 
     # LiveKit URL - configure via environment in production

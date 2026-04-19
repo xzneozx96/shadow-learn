@@ -125,6 +125,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
           google_key: keys.googleRealtimeKey,
           persona_id: selectedPersona.id,
           system_prompt: selectedPersona.system_prompt,
+          voice_id: selectedPersona.voice_id,
           situation_id: situation.id,
         }),
       })

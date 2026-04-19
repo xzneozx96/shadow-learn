@@ -82,11 +82,16 @@ async def shadowlearn_session(ctx: agents.JobContext):
     if not google_key:
         raise Exception("No Google API key provided")
 
-    # Read system_prompt from metadata (passed from frontend)
+    # Read system_prompt and voice_id from metadata (passed from frontend)
     system_prompt_encoded = session_info.get("system_prompt", "")
     system_prompt = unquote(system_prompt_encoded) if system_prompt_encoded else ""
     if not system_prompt:
         raise Exception("No system_prompt provided")
+
+    voice_id_encoded = session_info.get("voice_id", "")
+    voice_id = unquote(voice_id_encoded) if voice_id_encoded else "Puck"
+
+    logger.info(f"[SESSION] voice_id: {voice_id}")
 
     instructions = system_prompt
 
@@ -96,7 +101,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
         llm=google.realtime.RealtimeModel(
             api_key=google_key,
             model="gemini-2.5-flash-native-audio-preview-12-2025",
-            voice="Zephyr",
+            voice=voice_id,
         ),
         vad=silero.VAD.load(),
         user_away_timeout=15.0,
