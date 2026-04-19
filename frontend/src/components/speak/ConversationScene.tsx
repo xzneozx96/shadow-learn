@@ -100,7 +100,7 @@ function ConversationSceneInner({
 
       {/* Edge case: connection error */}
       {error && (
-        <div className="mx-4 mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded-lg">
+        <div className="mt-8 p-2 bg-destructive/10 border border-destructive/30 rounded-lg">
           <p className="text-xs text-destructive">
             {error || 'Connection failed'}
           </p>
@@ -130,11 +130,13 @@ function ConversationSceneInner({
               />
             )}
 
-        <div className="absolute bottom-0 right-0 left-0 flex justify-center pb-2">
+        <div className="absolute bottom-0 right-0 left-0 flex justify-center pb-2 z-20">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider h-4">
+            {(agentState === 'connecting' || agentState === 'initializing') && t('speak.status.connecting')}
             {agentState === 'listening' && t('speak.status.listening')}
+            {agentState === 'thinking' && t('speak.status.thinking')}
             {agentState === 'speaking' && t('speak.status.speaking')}
-            {(agentState === 'idle' || agentState === 'initializing') && t('speak.status.ready')}
+            {agentState === 'idle' && t('speak.status.ready')}
           </p>
         </div>
       </div>

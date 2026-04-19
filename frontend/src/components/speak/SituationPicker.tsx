@@ -41,7 +41,7 @@ export function SituationPicker({ onSelect }: SituationPickerProps) {
               onClick={() => onSelect(s.id)}
             >
               {/* Level Badge - Top Right */}
-              <span className={`absolute top-3 right-3 text-[10px] uppercase font-bold tracking-wider py-0.5 px-2 rounded-full border z-10 ${getLevelColor(s.level)}`}>
+              <span className={`absolute top-3 right-3 text-xs uppercase font-bold tracking-wider py-0.5 px-2 rounded-full border z-10 ${getLevelColor(s.level)}`}>
                 {s.level}
               </span>
 

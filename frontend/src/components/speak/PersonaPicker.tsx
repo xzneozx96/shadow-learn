@@ -36,7 +36,7 @@ export function PersonaPicker({ onSelect }: PersonaPickerProps) {
               onClick={() => onSelect(p)}
             >
               {/* Level Badge - Top Right */}
-              <span className={`absolute top-3 right-3 text-[10px] uppercase font-bold tracking-wider py-0.5 px-2 rounded-full border z-10 ${getLevelColor(p.level)}`}>
+              <span className={`absolute top-3 right-3 text-xs uppercase font-bold tracking-wider py-0.5 px-2 rounded-full border z-10 ${getLevelColor(p.level)}`}>
                 {p.level}
               </span>
 

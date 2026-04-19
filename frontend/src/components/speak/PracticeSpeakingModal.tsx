@@ -199,9 +199,17 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     resetState()
   }, [resetState])
 
-  return (
-    <Dialog open={open} onOpenChange={open => !open && handleClose()}>
-      <DialogContent className="max-w-2xl! p-0 gap-0 overflow-hidden elegant-card">
+   return (
+     <Dialog open={open} onOpenChange={open => {
+       if (!open && step === 'active') {
+         // Prevent closing modal via outside click when actively speaking
+         return;
+       }
+       if (!open) {
+         handleClose();
+       }
+     }}>
+       <DialogContent className="max-w-2xl! p-0 gap-0 overflow-hidden elegant-card">
         {/* Header */}
         <div className="px-4 py-3 border-b border-border flex items-center gap-2 pr-12">
           {step === 'persona' && (
