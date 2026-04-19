@@ -81,19 +81,12 @@ async def shadowlearn_session(ctx: agents.JobContext):
     if not google_key:
         raise Exception("No Google API key provided")
 
-    # Load persona instructions
-    instructions = ""
-    try:
-        from app.speak.personas import get_persona
-        persona = get_persona(persona_id)
-        instructions = persona.get("system_prompt", "") if persona else ""
-    except ImportError:
-        pass
+    # Read system_prompt from metadata (passed from frontend)
+    system_prompt = session_info.get("system_prompt", "")
+    if not system_prompt:
+        raise Exception("No system_prompt provided")
 
-    if not instructions:
-        instructions = """You are a friendly Chinese tutor helping a student
-practice conversational Chinese. Be encouraging, patient, and provide gentle
-corrections when they make mistakes. Keep conversations natural and fun."""
+    instructions = system_prompt
 
     # Create session with Gemini Live API
     # Turn detection: Use Gemini's built-in VAD + adaptive interruption handling

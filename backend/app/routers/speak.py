@@ -7,7 +7,6 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.speak.personas import get_persona, get_situation, validate_ids
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -25,11 +24,11 @@ session_cache: dict[str, dict[str, Any]] = {}
 
 class SessionStartRequest(BaseModel):
     """Request to start a new AI conversation session."""
-    
+
     google_key: str = Field(..., min_length=1, description="User's Google Gemini API key")
     persona_id: str = Field(..., pattern=r"^[a-z_]+$", description="Persona ID")
+    system_prompt: str = Field(..., min_length=10, description="System prompt for the AI agent")
     situation_id: str = Field(..., pattern=r"^[a-z_]+$", description="Situation ID")
-    mode: str = Field(default="free", pattern=r"^(free|guided)$", description="Session mode")
 
 
 class SessionStartResponse(BaseModel):
@@ -53,13 +52,19 @@ class SessionEndRequest(BaseModel):
 # --------------------------------------------------------------------------- #
 
 
-def _generate_livekit_token(session_id: str, persona_id: str, google_key: str, situation_id: str) -> str:
+def _generate_livekit_token(
+    session_id: str,
+    persona_id: str,
+    google_key: str,
+    situation_id: str,
+    system_prompt: str,
+) -> str:
     """Generate a LiveKit token with embedded credentials for the agent.
 
     Uses LiveKit AccessToken API to create a token that includes:
     - RoomAgentDispatch with agent_name for automatic agent dispatch
     - The Google key in metadata (for agent to use)
-    - Persona and situation IDs
+    - Persona, situation IDs, and system_prompt
     - Session ID for tracking
     """
     try:
@@ -78,7 +83,7 @@ def _generate_livekit_token(session_id: str, persona_id: str, google_key: str, s
         settings.livekit_api_key,
         settings.livekit_api_secret,
     ).with_identity(f"user-{session_id}").with_name(f"ShadowLearn-User-{session_id}").with_metadata(
-        f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key}",
+        f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key},system_prompt={system_prompt}",
     ).with_grants(
         api.VideoGrants(
             room_join=True,
@@ -112,49 +117,39 @@ def _generate_livekit_token(session_id: str, persona_id: str, google_key: str, s
 @router.post("/session-start", response_model=SessionStartResponse)
 async def session_start(request: SessionStartRequest) -> SessionStartResponse:
     """Start a new AI conversation session.
-    
-    Validates persona_id and situation_id, generates session credentials,
-    and caches the session data.
+
+    Generates session credentials using persona data from frontend.
     """
-    # Step 1: Validate persona and situation IDs
-    is_valid, error_msg = validate_ids(request.persona_id, request.situation_id)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=error_msg)
-    
-    persona = get_persona(request.persona_id)
-    situation = get_situation(request.situation_id)
-    
-    # Step 2: Generate session ID
+    # Step 1: Generate session ID
     session_id = f"session-{uuid.uuid4().hex[:12]}"
-    
-    # Step 3: Generate LiveKit token with embedded credentials
+
+    # Step 2: Generate LiveKit token with embedded credentials
     livekit_token = _generate_livekit_token(
-        session_id, 
-        request.persona_id, 
+        session_id,
+        request.persona_id,
         request.google_key,
-        request.situation_id
+        request.situation_id,
+        request.system_prompt,
     )
-    
+
     # LiveKit URL - configure via environment in production
     livekit_url = settings.livekit_url
-    
-    # Step 4: Cache session metadata ONLY (no API key stored)
-    # Key is embedded in token for the agent; we don't need to cache it
+
+    # Step 3: Cache session metadata ONLY (no API key stored)
     session_cache[session_id] = {
         "session_id": session_id,
         "persona_id": request.persona_id,
         "situation_id": request.situation_id,
-        "mode": request.mode,
     }
-    
+
     logger.info(f"[session_start] Session started: {session_id}, persona={request.persona_id}, situation={request.situation_id}")
-    
+
     return SessionStartResponse(
         livekit_url=livekit_url,
         livekit_token=livekit_token,
         session_id=session_id,
-        persona=persona,
-        situation=situation,
+        persona={"id": request.persona_id},
+        situation={"id": request.situation_id},
     )
 
 

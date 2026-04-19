@@ -124,8 +124,8 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         body: JSON.stringify({
           google_key: keys.googleRealtimeKey,
           persona_id: selectedPersona.id,
+          system_prompt: selectedPersona.system_prompt,
           situation_id: situation.id,
-          mode: 'free',
         }),
       })
 
