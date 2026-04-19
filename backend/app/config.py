@@ -31,9 +31,9 @@ class Settings(BaseSettings):
     ytdlp_bgutil_url: str = ""  # env: SHADOWLEARN_YTDLP_BGUTIL_URL; e.g. http://bgutil-provider:4416
 
     # LiveKit configuration for voice agent
-    livekit_url: str = ""  # env: LIVEKIT_URL; e.g. wss://your-project.livekit.cloud
-    livekit_api_key: str = ""  # env: LIVEKIT_API_KEY
-    livekit_api_secret: str = ""  # env: LIVEKIT_API_SECRET
+    livekit_url: str = ""  # env: SHADOWLEARN_LIVEKIT_URL; e.g. wss://your-project.livekit.cloud
+    livekit_api_key: str = ""  # env: SHADOWLEARN_LIVEKIT_API_KEY
+    livekit_api_secret: str = ""  # env: SHADOWLEARN_LIVEKIT_API_SECRET
 
     # Fallback API keys for free trial — all optional; unset means trial unavailable
     openrouter_api_key: str | None = None       # env: SHADOWLEARN_OPENROUTER_API_KEY

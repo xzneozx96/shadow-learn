@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useI18n } from '@/contexts/I18nContext'
-import { SITUATIONS } from '@/lib/speak/situations'
+import { SITUATIONS } from '@/lib/constants'
 
 interface SituationPickerProps {
   onSelect: (situationId: string) => void

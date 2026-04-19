@@ -83,7 +83,7 @@ corrections when they make mistakes. Keep conversations natural and fun."""
         llm=google.realtime.RealtimeModel(
             api_key=google_key,
             model="gemini-2.5-flash-native-audio-preview-12-2025",
-            voice="Puck",
+            voice="Zephyr",
         ),
         vad=silero.VAD.load(),
     )

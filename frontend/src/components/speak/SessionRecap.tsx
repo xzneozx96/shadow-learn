@@ -17,16 +17,16 @@ interface Situation {
 }
 
 interface SessionRecapProps {
-  session: SpeakSession
+  speakSession: SpeakSession
   persona: Persona
   situation: Situation
   onRepeat: () => void
   onBack: () => void
 }
 
-export function SessionRecap({ session, persona, situation, onRepeat, onBack }: SessionRecapProps) {
+export function SessionRecap({ speakSession, persona, situation, onRepeat, onBack }: SessionRecapProps) {
   const { t: tr } = useI18n()
-  const { transcript } = session
+  const { transcript } = speakSession
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -65,7 +65,7 @@ export function SessionRecap({ session, persona, situation, onRepeat, onBack }: 
         <CardContent>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold text-primary">{formatDuration(session.durationSeconds)}</p>
+              <p className="text-2xl font-bold text-primary">{formatDuration(speakSession.durationSeconds)}</p>
               <p className="text-xs text-muted-foreground">{tr('speak.duration')}</p>
             </div>
             <div>
@@ -83,9 +83,9 @@ export function SessionRecap({ session, persona, situation, onRepeat, onBack }: 
       {/* Turn timeline */}
       <div className="flex-1 overflow-y-auto space-y-3">
         <h3 className="font-semibold text-sm">{tr('speak.conversationPreview')}</h3>
-        {transcript.map((turn, idx) => (
+        {transcript.map(turn => (
           <div
-            key={idx}
+            key={turn.timestamp}
             className={`flex ${turn.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
@@ -108,10 +108,10 @@ export function SessionRecap({ session, persona, situation, onRepeat, onBack }: 
 
       {/* Action buttons */}
       <div className="flex gap-3 pt-4">
-        <Button variant="outline" className="flex-1" onClick={onBack}>
+        <Button size="lg" variant="outline" className="flex-1" onClick={onBack}>
           {tr('speak.backHome')}
         </Button>
-        <Button className="flex-1" onClick={onRepeat}>
+        <Button size="lg" className="flex-1" onClick={onRepeat}>
           {tr('speak.repeatSession')}
         </Button>
       </div>

@@ -1,8 +1,10 @@
+import type { TokenSourceLiteral } from 'livekit-client'
 import type { SpeakSession } from '@/db'
-import type { Persona } from '@/lib/speak/personas'
+import type { Persona } from '@/lib/constants'
 import { useSession } from '@livekit/components-react'
 import { TokenSource } from 'livekit-client'
 import { useCallback, useEffect, useState } from 'react'
+import { AgentSessionProvider } from '@/components/agents-ui/agent-session-provider'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
@@ -28,27 +30,36 @@ interface PracticeSpeakingModalProps {
 
 function SessionWrapper({
   tokenSource,
-  session,
+  speakSession,
   persona,
   situation,
   onEnd,
 }: {
-  tokenSource: TokenSource
-  session: SpeakSession
+  tokenSource: TokenSourceLiteral
+  speakSession: SpeakSession
   persona: Persona
   situation: SituationData
-  onEnd: (session: SpeakSession) => void
+  onEnd: (speakSession: SpeakSession) => void
 }) {
   const livekitSession = useSession(tokenSource, { agentName: 'shadowlearn-speak' })
 
+  // Start the session when the component mounts, and end the session when the component unmounts
+  useEffect(() => {
+    livekitSession.start()
+    return () => {
+      livekitSession.end()
+    }
+  }, []) // Empty deps - only run on mount/unmount
+
   return (
-    <ConversationScene
-      session={session}
-      persona={persona}
-      situation={situation}
-      livekitSession={livekitSession}
-      onEnd={onEnd}
-    />
+    <AgentSessionProvider session={livekitSession}>
+      <ConversationScene
+        speakSession={speakSession}
+        persona={persona}
+        situation={situation}
+        onEnd={onEnd}
+      />
+    </AgentSessionProvider>
   )
 }
 
@@ -58,33 +69,38 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   const [step, setStep] = useState<Step>('situation')
   const [situation, setSituation] = useState<SituationData | null>(null)
   const [persona, setPersona] = useState<Persona | null>(null)
-  const [session, setSession] = useState<SpeakSession | null>(null)
+  const [speakSession, setSpeakSession] = useState<SpeakSession | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [tokenSource, setTokenSource] = useState<TokenSource | null>(null)
+  const [tokenSource, setTokenSource] = useState<TokenSourceLiteral | null>(null)
 
   const hasGoogleKey = !!(keys?.googleRealtimeKey)
 
+  // Reset state when modal closes
   useEffect(() => {
     if (!open) {
       setStep('situation')
       setSituation(null)
       setPersona(null)
-      setSession(null)
+      setSpeakSession(null)
       setError(null)
       setTokenSource(null)
     }
   }, [open])
 
-  const handleClose = useCallback(() => {
+  const resetState = useCallback(() => {
     setStep('situation')
     setSituation(null)
     setPersona(null)
-    setSession(null)
+    setSpeakSession(null)
     setError(null)
     setTokenSource(null)
+  }, [])
+
+  const handleClose = useCallback(() => {
+    resetState()
     onClose()
-  }, [onClose])
+  }, [onClose, resetState])
 
   const handleSituationSelect = useCallback((situationId: string) => {
     const sit = { id: situationId, name: situationId, description: '' }
@@ -142,7 +158,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       }
 
       setPersona(selectedPersona)
-      setSession(newSession)
+      setSpeakSession(newSession)
       setStep('active')
     }
     catch (e) {
@@ -166,7 +182,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       status: 'completed',
     }
 
-    setSession(finalSession)
+    setSpeakSession(finalSession)
     setStep('recap')
   }, [])
 
@@ -218,19 +234,20 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
               <PersonaPicker onSelect={handlePersonaSelect} />
             )}
 
-            {step === 'active' && session && persona && situation && tokenSource && (
+            {step === 'active' && speakSession && persona && situation && tokenSource && (
               <SessionWrapper
+                key={speakSession.sessionId}
                 tokenSource={tokenSource}
-                session={session}
+                speakSession={speakSession}
                 persona={persona}
                 situation={situation}
                 onEnd={handleSessionEnd}
               />
             )}
 
-            {step === 'recap' && session && persona && situation && (
+            {step === 'recap' && speakSession && persona && situation && (
               <SessionRecap
-                session={session}
+                speakSession={speakSession}
                 persona={persona}
                 situation={situation}
                 onRepeat={handleRepeat}

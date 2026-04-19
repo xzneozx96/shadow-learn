@@ -1,8 +1,8 @@
-import type { Persona } from '@/lib/speak/personas'
+import type { Persona } from '@/lib/constants'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useI18n } from '@/contexts/I18nContext'
-import { PERSONAS } from '@/lib/speak/personas'
+import { PERSONAS } from '@/lib/constants'
 
 interface PersonaPickerProps {
   onSelect: (persona: Persona) => void

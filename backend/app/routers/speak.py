@@ -136,7 +136,7 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
     )
     
     # LiveKit URL - configure via environment in production
-    livekit_url = settings.livekit_url or "wss://your-project.livekit.cloud"
+    livekit_url = settings.livekit_url
     
     # Step 4: Cache session metadata ONLY (no API key stored)
     # Key is embedded in token for the agent; we don't need to cache it

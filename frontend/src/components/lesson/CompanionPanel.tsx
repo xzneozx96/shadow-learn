@@ -60,13 +60,11 @@ export function CompanionPanel({
     <>
       <Tabs defaultValue="ai" value={activeTab} onValueChange={onTabChange} className="flex h-full flex-col gap-0">
         <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3 rounded-none h-[65px]!">
-          <div className="flex items-center gap-1">
-            <TabsTrigger value="ai">{t('lesson.aiCompanion')}</TabsTrigger>
-            <TabsTrigger value="workbook" className="gap-1.5">
-              {t('lesson.workbook')}
-              {count > 0 && <Badge className="px-1.5 py-0 text-xs">{count}</Badge>}
-            </TabsTrigger>
-          </div>
+          <TabsTrigger value="ai">{t('lesson.aiCompanion')}</TabsTrigger>
+          <TabsTrigger value="workbook" className="gap-1.5">
+            {t('lesson.workbook')}
+            {count > 0 && <Badge className="px-1.5 py-0 text-xs">{count}</Badge>}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="ai" className="flex min-h-0 flex-1 flex-col overflow-hidden">
