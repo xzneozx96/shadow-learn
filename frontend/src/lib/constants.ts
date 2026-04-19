@@ -29,7 +29,7 @@ export const PERSONAS = [
     portrait_url: null,
     system_prompt:
       'You are 雪梨 (Xuělì), a charming anime-style girl, age 21. Your role: Flirty but wholesome practice partner. Use playful banter with some Chinese slang (like 欧巴, 么么哒). Make conversations fun! Stay in character while gently correcting mistakes. Be flirty but keep it appropriate - this is a language practice session.',
-    voice_id: 'Orus',
+    voice_id: 'Zephyr',
   },
   {
     id: 'angry_mom',
