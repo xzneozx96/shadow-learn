@@ -32,6 +32,16 @@ vi.mock('@/contexts/GlobalCompanionContext', () => ({
   })),
 }))
 
+// Mock AuthContext
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: vi.fn(() => ({
+    isUnlocked: true,
+    db: {},
+    keys: {},
+    unlock: vi.fn(),
+  })),
+}))
+
 // Mock useAgentChat so CompanionPanel renders without hitting real IDB/API
 vi.mock('@/hooks/useAgentChat', () => ({
   useAgentChat: vi.fn(() => ({
