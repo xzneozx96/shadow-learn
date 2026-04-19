@@ -60,12 +60,12 @@ export function RemoveVocabDialog({ entry, onClose, onConfirm }: RemoveVocabDial
         <div className="text-sm text-muted-foreground">
           {srItem && srItem.repetitions > 0
             ? (
-                <p>{t('lesson.removeDialog.studiedTimes').replace('{count}', String(srItem.repetitions))}</p>
+                <p>{t('lesson.removeDialog.studiedTimes', { count: srItem.repetitions })}</p>
               )
             : null}
           {mistakes && mistakes.frequency > 0
             ? (
-                <p>{t('lesson.removeDialog.mistakesRecorded').replace('{count}', String(mistakes.frequency))}</p>
+                <p>{t('lesson.removeDialog.mistakesRecorded', { count: mistakes.frequency })}</p>
               )
             : null}
           {(!srItem || srItem.repetitions === 0) && (!mistakes || mistakes.frequency === 0) && (

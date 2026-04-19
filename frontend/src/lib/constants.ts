@@ -56,16 +56,16 @@ export const PERSONAS = [
 export type Persona = typeof PERSONAS[number] & { voice_id: string }
 
 export const SITUATIONS = [
-  { id: 'casual_chat', title: 'Casual Chat', level: 'Beginner' },
-  { id: 'ordering_food', title: 'Ordering Food', level: 'Beginner' },
-  { id: 'asking_directions', title: 'Asking Directions', level: 'Intermediate' },
-  { id: 'shopping', title: 'Shopping', level: 'Intermediate' },
-  { id: 'job_interview', title: 'Job Interview', level: 'Advanced' },
-  { id: 'meeting_parents', title: 'Meeting Parents', level: 'Advanced' },
-  { id: 'hospital', title: 'Hospital Visit', level: 'Intermediate' },
-  { id: 'karaoke', title: 'Karaoke Night', level: 'Beginner' },
-  { id: 'market_haggling', title: 'Market Haggling', level: 'Intermediate' },
-  { id: 'dating_app', title: 'Dating App', level: 'Advanced' },
+  { id: 'casual_chat', title: 'Casual Chat', level: 'Beginner', description: 'Have a relaxed conversation about your day and interests.' },
+  { id: 'ordering_food', title: 'Ordering Food', level: 'Beginner', description: 'Practice your survival skills at a local restaurant.' },
+  { id: 'asking_directions', title: 'Asking Directions', level: 'Intermediate', description: 'Navigate through the city by asking for help.' },
+  { id: 'shopping', title: 'Shopping', level: 'Intermediate', description: 'Browse items, ask for prices, and find what you need.' },
+  { id: 'job_interview', title: 'Job Interview', level: 'Advanced', description: 'Prepare for your career with professional dialogue.' },
+  { id: 'meeting_parents', title: 'Meeting Parents', level: 'Advanced', description: 'Make a great first impression in a formal family setting.' },
+  { id: 'hospital', title: 'Hospital Visit', level: 'Intermediate', description: 'Describe symptoms and understand medical advice.' },
+  { id: 'karaoke', title: 'Karaoke Night', level: 'Beginner', description: 'Relax and socialize after a long day of studying.' },
+  { id: 'market_haggling', title: 'Market Haggling', level: 'Intermediate', description: 'Get the best price with your negotiation skills.' },
+  { id: 'dating_app', title: 'Dating App', level: 'Advanced', description: 'Break the ice and get to know someone new.' },
 ] as const
 
 export type Situation = typeof SITUATIONS[number]

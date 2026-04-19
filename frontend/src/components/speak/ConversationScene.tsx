@@ -5,7 +5,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript'
 import { AgentControlBar } from '@/components/agents-ui/agent-control-bar'
-import { Badge } from '@/components/ui/badge'
+import { useI18n } from '@/contexts/I18nContext'
 
 interface Situation {
   id: string
@@ -43,6 +43,7 @@ function ConversationSceneInner({
 }) {
   const agent = useAgent()
   const { messages: chatMessages } = useSessionMessages()
+  const { t } = useI18n()
 
   const isConnected = agent.isConnected
   const agentState = agent.state
@@ -57,9 +58,9 @@ function ConversationSceneInner({
   const formattedDuration = useMemo(() => formatDuration(duration), [duration])
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="p-6 flex flex-col h-[80vh] bg-background relative overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 pb-8 border-b border-border">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary">
             {persona.portrait_url
@@ -80,17 +81,19 @@ function ConversationSceneInner({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="font-mono">
-            {formattedDuration}
-          </Badge>
+          <div className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-sm font-bold">{formattedDuration}</span>
+          </div>
         </div>
       </div>
 
       {/* Edge case: Network error banner */}
       {isOffline && (
-        <div className="mx-4 mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-          <p className="text-xs text-yellow-500">
-            Network disconnected. Trying to reconnect...
+        <div className="mx-4 mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-center justify-center gap-2 z-20">
+          <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+          <p className="text-xs text-yellow-500 font-medium">
+            {t('speak.network.resetting')}
           </p>
         </div>
       )}
@@ -105,7 +108,7 @@ function ConversationSceneInner({
       )}
 
       {/* Character portrait / Audio Visualizer */}
-      <div className="flex-[0_0_200px] flex items-center justify-center p-4 shrink-0">
+      <div className="flex-[0_0_200px] flex flex-col items-center justify-center p-4 shrink-0 mt-4 relative">
         {persona.portrait_url
           ? (
               <div className="relative">
@@ -126,14 +129,22 @@ function ConversationSceneInner({
                 audioTrack={audioTrack}
               />
             )}
+
+        <div className="absolute bottom-0 right-0 left-0 flex justify-center pb-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider h-4">
+            {agentState === 'listening' && t('speak.status.listening')}
+            {agentState === 'speaking' && t('speak.status.speaking')}
+            {(agentState === 'idle' || agentState === 'initializing') && t('speak.status.ready')}
+          </p>
+        </div>
       </div>
 
       {/* Transcript area */}
-      <div className="flex-1 relative max-h-86">
+      <div className="flex-1 relative min-h-0 px-2 pb-4 w-full">
         <AgentChatTranscript
           agentState={agentState}
           messages={chatMessages}
-          className="h-full"
+          className="h-full z-10"
         />
       </div>
 
@@ -161,7 +172,7 @@ export const ConversationScene = memo(({
   situation,
   onEnd,
 }: ConversationSceneProps) => {
-  const MAX_DURATION = 5 * 60 // 5 minutes in seconds
+  const MAX_DURATION = 1 * 60 // 5 minutes in seconds
   const [duration, setDuration] = useState(MAX_DURATION)
   const [isOffline, setIsOffline] = useState(false)
   const [connectedAt, setConnectedAt] = useState<number | null>(null)

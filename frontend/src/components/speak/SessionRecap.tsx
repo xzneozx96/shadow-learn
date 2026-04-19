@@ -49,12 +49,8 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
       {/* Header */}
       <div className="text-center py-4">
         <h2 className="text-2xl font-bold">{tr('speak.sessionComplete')}</h2>
-        <p className="text-muted-foreground">
-          {situation.name}
-          {' '}
-          with
-          {' '}
-          {persona.name}
+        <p className="text-muted-foreground mt-2 max-w-[280px] mx-auto text-sm leading-relaxed">
+          {tr('speak.sessionSuccess', { situation: situation.name, persona: persona.name })}
         </p>
       </div>
 

@@ -8,7 +8,7 @@ import { getTranslation } from '@/lib/i18n'
 export interface I18nContextValue {
   locale: Locale
   setLocale: (locale: Locale) => Promise<void> // async: writes to IDB
-  t: (key: TranslationKey) => string
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

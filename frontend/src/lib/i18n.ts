@@ -452,7 +452,12 @@ export const TRANSLATIONS = {
     'speak.ai': 'AI',
     'speak.sessionComplete': 'Nice session!',
     'speak.repeatSession': 'Talk again',
-    'speak.backHome': 'Back home',
+    'speak.backHome': 'Select situation',
+    'speak.status.ready': 'Ready',
+    'speak.status.listening': 'Listening',
+    'speak.status.speaking': 'Speaking',
+    'speak.network.resetting': 'Network Resetting...',
+    'speak.sessionSuccess': 'Great job practicing {{situation}} with {{persona}}!',
   },
   vi: {
     // Navigation
@@ -879,6 +884,32 @@ export const TRANSLATIONS = {
     'common.confirm': 'Xác minh',
     'common.yes': 'Đồng ý',
     'common.no': 'Hủy bỏ',
+
+    // Speak
+    'speak.title': 'Luyện nói',
+    'speak.selectSituation': 'Chọn tình huống',
+    'speak.selectSituationDesc': 'Chọn một kịch bản để luyện tập',
+    'speak.selectPersona': 'Chọn người để trò chuyện',
+    'speak.selectPersonaDesc': 'Chọn đối tác trò chuyện của bạn',
+    'speak.createOutline': 'Thiết lập bối cảnh',
+    'speak.outlinePlaceholder': 'Bối cảnh sẽ xuất hiện ở đây...',
+    'speak.practice': 'Bắt đầu luyện tập',
+    'speak.sessionRecap': 'Kết thúc',
+    'speak.summaryDesc': '{{situation}} cùng với {{persona}}',
+    'speak.duration': 'Thời lượng',
+    'speak.turns': 'Lượt nói',
+    'speak.score': 'Điểm số',
+    'speak.conversationPreview': 'Cuộc trò chuyện',
+    'speak.you': 'Bạn',
+    'speak.ai': 'AI',
+    'speak.sessionComplete': 'Hoàn thành!',
+    'speak.repeatSession': 'Bắt đầu lại',
+    'speak.backHome': 'Tình huống khác',
+    'speak.status.ready': 'Sẵn sàng',
+    'speak.status.listening': 'Đang nghe',
+    'speak.status.speaking': 'Đang phản hồi',
+    'speak.network.resetting': 'Đang kết nối lại...',
+    'speak.sessionSuccess': 'Bạn đã hoàn thành tốt bài luyện tập {{situation}} cùng với {{persona}}!',
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -886,8 +917,17 @@ export type TranslationKey = keyof typeof TRANSLATIONS['en']
 
 export function getTranslation(locale: Locale) {
   const fallback: Locale = 'en'
-  return (key: TranslationKey): string => {
+  return (key: TranslationKey, params?: Record<string, string | number>): string => {
     const dict = TRANSLATIONS[locale] as Record<string, string>
-    return dict[key] ?? TRANSLATIONS[fallback][key] ?? key
+    let text = dict[key] ?? TRANSLATIONS[fallback][key] ?? key
+
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        // Handle both {{key}} and {key} patterns
+        text = text.split(`{{${k}}}`).join(String(v)).split(`{${k}}`).join(String(v))
+      })
+    }
+
+    return text
   }
 }

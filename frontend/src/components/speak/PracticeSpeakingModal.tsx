@@ -10,6 +10,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { API_BASE } from '@/lib/config'
+import { SITUATIONS } from '@/lib/constants'
 import { ConversationScene } from './ConversationScene'
 import { PersonaPicker } from './PersonaPicker'
 import { SessionRecap } from './SessionRecap'
@@ -103,7 +104,8 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   }, [onClose, resetState])
 
   const handleSituationSelect = useCallback((situationId: string) => {
-    const sit = { id: situationId, name: situationId, description: '' }
+    const sitDefinition = SITUATIONS.find(s => s.id === situationId)
+    const sit = { id: situationId, name: sitDefinition?.title || situationId, description: sitDefinition?.description || '' }
     setSituation(sit)
     setStep('persona')
   }, [])
@@ -194,14 +196,23 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   }, [situation, persona, handlePersonaSelect])
 
   const handleBackHome = useCallback(() => {
-    handleClose()
-  }, [handleClose])
+    resetState()
+  }, [resetState])
 
   return (
     <Dialog open={open} onOpenChange={open => !open && handleClose()}>
-      <DialogContent className="max-w-md p-0 gap-0">
+      <DialogContent className="max-w-2xl! p-0 gap-0 overflow-hidden elegant-card">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border">
+        <div className="px-4 py-3 border-b border-border flex items-center gap-2 pr-12">
+          {step === 'persona' && (
+            <button
+              onClick={() => setStep('situation')}
+              className="p-1 -ml-1 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Back"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+          )}
           <h2 className="text-lg font-bold pr-6">{t('speak.title')}</h2>
         </div>
 
@@ -226,7 +237,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
         {/* Step content */}
         {hasGoogleKey && (
-          <div className="p-4">
+          <div className={step === 'active' ? '' : 'p-4'}>
             {step === 'situation' && (
               <SituationPicker onSelect={handleSituationSelect} />
             )}
