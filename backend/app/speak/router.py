@@ -127,6 +127,7 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
         request.google_key,
         request.situation_id,
         system_prompt=request.system_prompt,
+        voice_id=request.voice_id,
     )
     
     livekit_url = settings.livekit_url or "wss://your-project.livekit.cloud"
