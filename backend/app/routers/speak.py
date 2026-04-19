@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from urllib.parse import quote
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -83,7 +84,7 @@ def _generate_livekit_token(
         settings.livekit_api_key,
         settings.livekit_api_secret,
     ).with_identity(f"user-{session_id}").with_name(f"ShadowLearn-User-{session_id}").with_metadata(
-        f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key},system_prompt={system_prompt}",
+        f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key},system_prompt={quote(system_prompt)}",
     ).with_grants(
         api.VideoGrants(
             room_join=True,

@@ -8,6 +8,7 @@ Uses Google Gemini Live API with persona-driven character corrections.
 import asyncio
 import logging
 from pathlib import Path
+from urllib.parse import unquote
 from dotenv import load_dotenv
 
 from livekit import agents, rtc
@@ -82,7 +83,8 @@ async def shadowlearn_session(ctx: agents.JobContext):
         raise Exception("No Google API key provided")
 
     # Read system_prompt from metadata (passed from frontend)
-    system_prompt = session_info.get("system_prompt", "")
+    system_prompt_encoded = session_info.get("system_prompt", "")
+    system_prompt = unquote(system_prompt_encoded) if system_prompt_encoded else ""
     if not system_prompt:
         raise Exception("No system_prompt provided")
 
