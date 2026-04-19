@@ -5,16 +5,20 @@ This agent handles real-time voice conversations with students practicing Chines
 Uses Google Gemini Live API with persona-driven character corrections.
 """
 
+import asyncio
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
 from livekit import agents, rtc
-from livekit.agents import AgentServer, AgentSession, Agent, room_io
+from livekit.agents import AgentServer, AgentSession, Agent, room_io, TurnHandlingOptions
 from livekit.plugins import google
 from livekit.plugins import noise_cancellation
 from livekit.plugins import silero
 
 load_dotenv(Path(__file__).parent / ".env")
+
+logger = logging.getLogger("shadowlearn-agent")
 
 
 class ChineseTutorAgent(Agent):
@@ -38,7 +42,6 @@ async def shadowlearn_session(ctx: agents.JobContext):
     user = None
     for i in range(50):  # Wait up to 5 seconds
         for p in ctx.room.remote_participants.values():
-            # Skip agents - look for the human user
             if p.kind != rtc.ParticipantKind.PARTICIPANT_KIND_AGENT:
                 user = p
                 break
@@ -49,13 +52,27 @@ async def shadowlearn_session(ctx: agents.JobContext):
     if not user:
         raise Exception("No user joined the room")
 
+    user_identity = user.identity
+    logger.info(f"[SESSION] User joined: {user_identity}")
+
+    # Fix 5: Poll for attributes with retry (handles race condition)
+    for _ in range(10):
+        if user.attributes.get("persona_id") or user.attributes.get("situation_id"):
+            break
+        await asyncio.sleep(0.1)
+
     # Parse user metadata: "session_id=xxx,persona_id=xxx,situation_id=xxx,google_key=xxx"
     session_info = {}
-    if user.metadata:
-        for item in user.metadata.split(","):
-            if "=" in item:
-                key, value = item.split("=", 1)
-                session_info[key] = value
+    metadata = user.metadata or ""
+    for item in metadata.split(","):
+        if "=" in item:
+            key, value = item.split("=", 1)
+            session_info[key] = value
+
+    # Also check attributes (may arrive after metadata)
+    for key in ("persona_id", "situation_id", "google_key"):
+        if key not in session_info and user.attributes.get(key):
+            session_info[key] = user.attributes[key]
 
     persona_id = session_info.get("persona_id", "friendly_buddy")
     situation_id = session_info.get("situation_id", "casual_chat")
@@ -79,6 +96,7 @@ practice conversational Chinese. Be encouraging, patient, and provide gentle
 corrections when they make mistakes. Keep conversations natural and fun."""
 
     # Create session with Gemini Live API
+    # Turn detection: Use Gemini's built-in VAD + adaptive interruption handling
     session = AgentSession(
         llm=google.realtime.RealtimeModel(
             api_key=google_key,
@@ -86,7 +104,37 @@ corrections when they make mistakes. Keep conversations natural and fun."""
             voice="Zephyr",
         ),
         vad=silero.VAD.load(),
+        user_away_timeout=15.0,
+        turn_handling=TurnHandlingOptions(
+            turn_detection="vad",
+            endpointing={
+                "min_delay": 0.3,
+                "max_delay": 1.2,
+            },
+            interruption={
+                "mode": "adaptive",
+                "enabled": True,
+                "min_duration": 0.2,
+                "resume_false_interruption": True,
+                "false_interruption_timeout": 1.5,
+            },
+        ),
     )
+
+    # Fix 2: Shutdown when participant disconnects
+    def on_participant_disconnected(p: rtc.RemoteParticipant):
+        if p.identity == user_identity:
+            logger.warning(f"[LIFECYCLE] {p.identity} disconnected — shutting down")
+            session.shutdown()
+
+    ctx.room.on("participant_disconnected", on_participant_disconnected)
+
+    # Fix 4: Force room disconnect when session closes
+    @session.on("close")
+    def on_session_close(event):
+        logger.warning(f"[SESSION] closed — reason={event.reason}, error={event.error}")
+        asyncio.create_task(ctx.room.disconnect())
+        ctx.shutdown()
 
     await session.start(
         room=ctx.room,
