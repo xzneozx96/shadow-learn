@@ -3,7 +3,7 @@ import time
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-import app.jobs as jobs_module
+import app.job_store as jobs_module
 from app.main import app
 
 
@@ -24,7 +24,7 @@ async def test_get_job_not_found():
 
 @pytest.mark.asyncio
 async def test_get_job_processing():
-    from app.jobs import Job
+    from app.job_store import Job
 
     jobs_module.jobs["abc"] = Job(
         status="processing", step="transcription", result=None, error=None
@@ -42,7 +42,7 @@ async def test_get_job_processing():
 
 @pytest.mark.asyncio
 async def test_get_job_complete():
-    from app.jobs import Job
+    from app.job_store import Job
 
     result = {"lesson": {"title": "Test", "segments": [], "duration": 60.0}}
     jobs_module.jobs["xyz"] = Job(
@@ -59,7 +59,7 @@ async def test_get_job_complete():
 
 @pytest.mark.asyncio
 async def test_get_job_error():
-    from app.jobs import Job
+    from app.job_store import Job
 
     jobs_module.jobs["err"] = Job(
         status="error", step="transcription", result=None, error="API timeout"
@@ -75,7 +75,7 @@ async def test_get_job_error():
 
 @pytest.mark.asyncio
 async def test_delete_job():
-    from app.jobs import Job
+    from app.job_store import Job
 
     jobs_module.jobs["del"] = Job(
         status="processing", step="transcription", result=None, error=None
@@ -97,7 +97,7 @@ async def test_delete_job_idempotent():
 
 @pytest.mark.asyncio
 async def test_get_job_prunes_expired():
-    from app.jobs import Job
+    from app.job_store import Job
 
     jobs_module.jobs["old"] = Job(
         status="processing",

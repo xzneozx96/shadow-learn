@@ -4,10 +4,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import settings
-from app.routers import agent, config, jobs, lessons, pronunciation, quiz, speak, translation_exercise, tts
-from app.services.tts_factory import get_tts_provider
-from app.services.transcription_factory import get_stt_provider
+from app.settings import settings
+from app.lessons.router import router as lessons_router
+from app.tts.router import router as tts_router
+from app.translation.router import router as translation_router
+from app.pronunciation.router import router as pronunciation_router
+from app.quiz.router import router as quiz_router
+from app.speak.router import router as speak_router
+from app.agent.router import router as agent_router
+from app.background.router import router as jobs_router
+from app.config.router import router as config_router
+from app.tts.services.tts_factory import get_tts_provider
+from app.transcription.services.transcription_factory import get_stt_provider
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,15 +40,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(lessons.router)
-app.include_router(tts.router)
-app.include_router(config.router)
-app.include_router(jobs.router)
-app.include_router(quiz.router)
-app.include_router(translation_exercise.router)
-app.include_router(pronunciation.router)
-app.include_router(agent.router)
-app.include_router(speak.router)
+app.include_router(lessons_router)
+app.include_router(tts_router)
+app.include_router(config_router)
+app.include_router(jobs_router)
+app.include_router(quiz_router)
+app.include_router(translation_router)
+app.include_router(pronunciation_router)
+app.include_router(agent_router)
+app.include_router(speak_router)
 
 
 @app.get("/api/health")

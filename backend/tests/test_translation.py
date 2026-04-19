@@ -2,11 +2,11 @@ import json
 import httpx
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
-from app.services.translation import (
+from app.translation.services.translation import (
     _build_translation_prompt,
     translate_segments,
 )
-from app.config import settings
+from app.settings import settings
 
 
 def test_build_translation_prompt():
@@ -49,7 +49,7 @@ async def test_translate_segments_parses_response():
     mock_response.json.return_value = mock_response_data
     mock_response.raise_for_status = MagicMock()
 
-    with patch("app.services.translation.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.translation.services.translation.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -92,7 +92,7 @@ async def test_translate_segments_parses_structured_output():
     mock_response.json.return_value = mock_response_data
     mock_response.raise_for_status = MagicMock()
 
-    with patch("app.services.translation.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.translation.services.translation.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -141,7 +141,7 @@ async def test_translate_batch_retries_on_429():
         side_effect=httpx.HTTPStatusError("429", request=MagicMock(), response=rate_limit_response)
     )
 
-    with patch("app.services.translation.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.translation.services.translation.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -162,7 +162,7 @@ async def test_translate_batch_retries_on_429():
 @pytest.mark.asyncio
 async def test_translate_batch_retries_on_connect_error():
     """_translate_batch retries on ConnectError and returns translations on subsequent success."""
-    with patch("app.services.translation.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.translation.services.translation.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)

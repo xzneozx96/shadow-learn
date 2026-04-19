@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.services.vocabulary import VocabularyExtractionError, _VOCAB_BATCH_SIZE
+from app.lessons.services.vocabulary import VocabularyExtractionError, _VOCAB_BATCH_SIZE
 
 
 def test_vocabulary_extraction_error_is_exception():
@@ -48,14 +48,14 @@ def _valid_vocab_content(seg_ids: list[int]) -> str:
 @pytest.mark.asyncio
 async def test_extract_batch_with_retry_success():
     """Happy path: single successful request returns parsed vocab."""
-    from app.services.vocabulary import _extract_batch_with_retry
+    from app.lessons.services.vocabulary import _extract_batch_with_retry
 
     segments = [{"id": 0, "text": "你好"}, {"id": 1, "text": "世界"}]
     semaphore = asyncio.Semaphore(1)
     content = _valid_vocab_content([0, 1])
     mock_response = _make_mock_response(200, content)
 
-    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -76,7 +76,7 @@ async def test_extract_batch_with_retry_success():
 @pytest.mark.asyncio
 async def test_extract_batch_with_retry_retries_on_429():
     """Should retry on 429, succeed on second attempt."""
-    from app.services.vocabulary import _extract_batch_with_retry
+    from app.lessons.services.vocabulary import _extract_batch_with_retry
 
     segments = [{"id": 0, "text": "你好"}]
     semaphore = asyncio.Semaphore(1)
@@ -85,7 +85,7 @@ async def test_extract_batch_with_retry_retries_on_429():
     rate_limit_response = _make_mock_response(429)
     ok_response = _make_mock_response(200, content)
 
-    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -102,12 +102,12 @@ async def test_extract_batch_with_retry_retries_on_429():
 @pytest.mark.asyncio
 async def test_extract_batch_with_retry_raises_on_non_429():
     """Non-429 HTTP errors raise VocabularyExtractionError immediately (no retry)."""
-    from app.services.vocabulary import _extract_batch_with_retry, VocabularyExtractionError
+    from app.lessons.services.vocabulary import _extract_batch_with_retry, VocabularyExtractionError
 
     segments = [{"id": 0, "text": "你好"}]
     semaphore = asyncio.Semaphore(1)
 
-    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -123,12 +123,12 @@ async def test_extract_batch_with_retry_raises_on_non_429():
 @pytest.mark.asyncio
 async def test_extract_batch_with_retry_raises_after_exhausted_retries():
     """Should raise VocabularyExtractionError after 5 total 429 failures."""
-    from app.services.vocabulary import _extract_batch_with_retry, VocabularyExtractionError
+    from app.lessons.services.vocabulary import _extract_batch_with_retry, VocabularyExtractionError
 
     segments = [{"id": 0, "text": "你好"}]
     semaphore = asyncio.Semaphore(1)
 
-    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -146,12 +146,12 @@ async def test_extract_batch_with_retry_raises_after_exhausted_retries():
 @pytest.mark.asyncio
 async def test_extract_batch_with_retry_cancelled_error_propagates():
     """CancelledError must not be swallowed by the retry loop."""
-    from app.services.vocabulary import _extract_batch_with_retry
+    from app.lessons.services.vocabulary import _extract_batch_with_retry
 
     segments = [{"id": 0, "text": "你好"}]
     semaphore = asyncio.Semaphore(1)
 
-    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -165,7 +165,7 @@ async def test_extract_batch_with_retry_cancelled_error_propagates():
 @pytest.mark.asyncio
 async def test_extract_vocabulary_returns_all_segments():
     """All 6 segments across 2 batches (batch size 5) are returned in a single call."""
-    from app.services.vocabulary import extract_vocabulary
+    from app.lessons.services.vocabulary import extract_vocabulary
 
     segments = [{"id": i, "text": f"句子{i}"} for i in range(6)]
 
@@ -184,7 +184,7 @@ async def test_extract_vocabulary_returns_all_segments():
         _make_mock_response(200, make_batch_content([5])),
     ]
 
-    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -199,11 +199,11 @@ async def test_extract_vocabulary_returns_all_segments():
 @pytest.mark.asyncio
 async def test_extract_vocabulary_raises_on_batch_failure():
     """If any batch fails after retries, extract_vocabulary raises VocabularyExtractionError."""
-    from app.services.vocabulary import extract_vocabulary, VocabularyExtractionError
+    from app.lessons.services.vocabulary import extract_vocabulary, VocabularyExtractionError
 
     segments = [{"id": i, "text": f"句子{i}"} for i in range(6)]
 
-    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -218,7 +218,7 @@ async def test_extract_vocabulary_raises_on_batch_failure():
 @pytest.mark.asyncio
 async def test_extract_vocabulary_empty_segments():
     """Empty segment list returns empty dict without making any requests."""
-    from app.services.vocabulary import extract_vocabulary
+    from app.lessons.services.vocabulary import extract_vocabulary
 
     result = await extract_vocabulary([], "test_key")
     assert result == {}
@@ -227,7 +227,7 @@ async def test_extract_vocabulary_empty_segments():
 @pytest.mark.asyncio
 async def test_extract_vocabulary_result_order_matches_input():
     """Result keys cover all segment IDs regardless of which batch finishes first."""
-    from app.services.vocabulary import extract_vocabulary
+    from app.lessons.services.vocabulary import extract_vocabulary
 
     segments = [{"id": i, "text": f"句子{i}"} for i in range(10)]
 
@@ -246,7 +246,7 @@ async def test_extract_vocabulary_result_order_matches_input():
         _make_mock_response(200, make_content(list(range(5, 10)))),
     ]
 
-    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -263,7 +263,7 @@ async def test_extract_vocabulary_result_order_matches_input():
 @pytest.mark.asyncio
 async def test_extract_batch_retries_on_502():
     """Should retry on 502 and return result on subsequent success."""
-    from app.services.vocabulary import _extract_batch_with_retry
+    from app.lessons.services.vocabulary import _extract_batch_with_retry
 
     segments = [{"id": 0, "text": "你好"}]
     semaphore = asyncio.Semaphore(1)
@@ -272,7 +272,7 @@ async def test_extract_batch_retries_on_502():
     server_error_response = _make_mock_response(502)
     ok_response = _make_mock_response(200, content)
 
-    with patch("app.services.vocabulary.httpx.AsyncClient") as mock_cls:
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -288,7 +288,7 @@ async def test_extract_batch_retries_on_502():
 
 def test_build_vocab_prompt_english():
     """English prompt should say 'English language teacher' and 'IPA', not 'Chinese'."""
-    from app.services.vocabulary import _build_vocab_prompt
+    from app.lessons.services.vocabulary import _build_vocab_prompt
     segments = [{"id": 0, "text": "Hello world"}]
     prompt = _build_vocab_prompt(segments, source_language="en")
     assert "English" in prompt

@@ -1,5 +1,5 @@
 # backend/tests/test_retry.py
-"""TDD tests for the reusable retry utility (app.services._retry).
+"""TDD tests for the reusable retry utility (app.shared._retry).
 
 All tests patch asyncio.sleep to avoid real delays.
 """
@@ -24,7 +24,7 @@ def _http_error(status_code: int) -> httpx.HTTPStatusError:
 # ---------------------------------------------------------------------------
 
 async def test_openrouter_retry_succeeds_first_attempt():
-    from app.services._retry import openrouter_retry
+    from app.shared._retry import openrouter_retry
 
     calls = 0
 
@@ -44,7 +44,7 @@ async def test_openrouter_retry_succeeds_first_attempt():
 # ---------------------------------------------------------------------------
 
 async def test_openrouter_retry_retries_on_429():
-    from app.services._retry import openrouter_retry
+    from app.shared._retry import openrouter_retry
 
     calls = 0
 
@@ -64,7 +64,7 @@ async def test_openrouter_retry_retries_on_429():
 
 
 async def test_openrouter_retry_retries_on_502():
-    from app.services._retry import openrouter_retry
+    from app.shared._retry import openrouter_retry
 
     calls = 0
 
@@ -88,7 +88,7 @@ async def test_openrouter_retry_retries_on_502():
 # ---------------------------------------------------------------------------
 
 async def test_openrouter_retry_retries_on_connect_error():
-    from app.services._retry import openrouter_retry
+    from app.shared._retry import openrouter_retry
 
     calls = 0
 
@@ -108,7 +108,7 @@ async def test_openrouter_retry_retries_on_connect_error():
 
 
 async def test_openrouter_retry_retries_on_timeout():
-    from app.services._retry import openrouter_retry
+    from app.shared._retry import openrouter_retry
 
     calls = 0
 
@@ -132,7 +132,7 @@ async def test_openrouter_retry_retries_on_timeout():
 # ---------------------------------------------------------------------------
 
 async def test_openrouter_retry_retries_on_retryable_error():
-    from app.services._retry import openrouter_retry, RetryableError
+    from app.shared._retry import openrouter_retry, RetryableError
 
     calls = 0
 
@@ -156,7 +156,7 @@ async def test_openrouter_retry_retries_on_retryable_error():
 # ---------------------------------------------------------------------------
 
 async def test_openrouter_retry_does_not_retry_on_400():
-    from app.services._retry import openrouter_retry
+    from app.shared._retry import openrouter_retry
 
     calls = 0
 
@@ -173,7 +173,7 @@ async def test_openrouter_retry_does_not_retry_on_400():
 
 
 async def test_openrouter_retry_does_not_retry_on_401():
-    from app.services._retry import openrouter_retry
+    from app.shared._retry import openrouter_retry
 
     calls = 0
 
@@ -194,7 +194,7 @@ async def test_openrouter_retry_does_not_retry_on_401():
 # ---------------------------------------------------------------------------
 
 async def test_openrouter_retry_exhausts_max_attempts():
-    from app.services._retry import openrouter_retry
+    from app.shared._retry import openrouter_retry
 
     calls = 0
 
@@ -212,7 +212,7 @@ async def test_openrouter_retry_exhausts_max_attempts():
 
 
 async def test_openrouter_retry_respects_custom_max_attempts():
-    from app.services._retry import openrouter_retry
+    from app.shared._retry import openrouter_retry
 
     calls = 0
 
@@ -234,7 +234,7 @@ async def test_openrouter_retry_respects_custom_max_attempts():
 # ---------------------------------------------------------------------------
 
 async def test_http_retry_does_not_retry_on_retryable_error():
-    from app.services._retry import http_retry, RetryableError
+    from app.shared._retry import http_retry, RetryableError
 
     calls = 0
 
@@ -255,7 +255,7 @@ async def test_http_retry_does_not_retry_on_retryable_error():
 # ---------------------------------------------------------------------------
 
 async def test_http_retry_retries_on_429():
-    from app.services._retry import http_retry
+    from app.shared._retry import http_retry
 
     calls = 0
 

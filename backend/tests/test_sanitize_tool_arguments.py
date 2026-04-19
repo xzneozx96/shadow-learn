@@ -6,7 +6,7 @@ FPT AI model leaked <|\"|  tokens into tool call JSON arguments.
 
 import json
 
-from app.routers.agent import _sanitize_tool_arguments
+from app.agent.router import _sanitize_tool_arguments
 
 
 # ------------------------------------------------------------------ #

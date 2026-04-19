@@ -1,4 +1,4 @@
-from app.services.pinyin import generate_pinyin
+from app.lessons.services.pinyin import generate_pinyin
 
 
 def test_generate_pinyin_basic():

@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import pytest
 
-from app.services.subtitle_segmenter import SubtitleSegmenter
+from app.lessons.services.subtitle_segmenter import SubtitleSegmenter
 
 def test_visual_width_calculation():
     segmenter = SubtitleSegmenter(max_visual_width=42.0)

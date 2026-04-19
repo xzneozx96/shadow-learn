@@ -1,11 +1,11 @@
 import pytest
 import httpx
 from unittest.mock import patch, MagicMock, AsyncMock
-from app.services.transcription_provider import (
+from app.transcription.services.transcription_provider import (
     _finalize_segment,
     _group_words_into_segments,
 )
-from app.services.transcription_deepgram import (
+from app.transcription.services.transcription_deepgram import (
     _segments_from_utterances,
     transcribe_audio_deepgram,
     _normalize_deepgram_words,
@@ -212,7 +212,7 @@ async def test_transcribe_audio_deepgram_uses_utterances(tmp_path):
     mock_response.json.return_value = mock_json
     mock_response.raise_for_status = MagicMock()
 
-    with patch("app.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.transcription.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -268,7 +268,7 @@ async def test_transcribe_audio_deepgram_falls_back_to_words(tmp_path):
     mock_response.json.return_value = mock_json
     mock_response.raise_for_status = MagicMock()
 
-    with patch("app.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.transcription.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -301,7 +301,7 @@ async def test_transcribe_audio_deepgram_raises_on_api_error(tmp_path):
         response=mock_response,
     )
 
-    with patch("app.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.transcription.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -423,7 +423,7 @@ async def test_transcribe_retries_on_429_then_succeeds(tmp_path):
         side_effect=httpx.HTTPStatusError("429", request=MagicMock(), response=rate_limit_response)
     )
 
-    with patch("app.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.transcription.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -455,7 +455,7 @@ async def test_transcribe_retries_on_503(tmp_path):
         side_effect=httpx.HTTPStatusError("503", request=MagicMock(), response=server_error_response)
     )
 
-    with patch("app.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.transcription.services.transcription_deepgram.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)

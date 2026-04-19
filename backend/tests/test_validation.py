@@ -1,5 +1,5 @@
 import pytest
-from app.services.validation import validate_youtube_url, ValidationError
+from app.lessons.services.validation import validate_youtube_url, ValidationError
 
 
 def test_valid_youtube_url():
@@ -30,7 +30,7 @@ def test_youtube_url_with_extra_params():
     assert video_id == "dQw4w9WgXcQ"
 
 
-from app.services.validation import validate_upload_file
+from app.lessons.services.validation import validate_upload_file
 
 def test_valid_upload_file():
     validate_upload_file("video.mp4", 500_000_000)

@@ -1,4 +1,4 @@
-from app.services.romaji import generate_romaji
+from app.lessons.services.romaji import generate_romaji
 
 
 def test_generate_romaji_basic():

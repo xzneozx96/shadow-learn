@@ -57,7 +57,7 @@ async def test_tts_azure_returns_400_when_keys_missing(mock_tts_provider):
     app.state.tts_provider_name = "azure"
 
     transport = ASGITransport(app=app)
-    with patch("app.routers.tts.settings") as mock_settings:
+    with patch("app.tts.router.settings") as mock_settings:
         mock_settings.azure_speech_key = ""
         mock_settings.azure_speech_region = ""
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -94,7 +94,7 @@ async def test_tts_minimax_returns_400_when_key_missing(mock_tts_provider):
     app.state.tts_provider_name = "minimax"
 
     transport = ASGITransport(app=app)
-    with patch("app.routers.tts.settings") as mock_settings:
+    with patch("app.tts.router.settings") as mock_settings:
         mock_settings.minimax_api_key = ""
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
@@ -139,7 +139,7 @@ async def test_tts_rejects_oversized_text(mock_tts_provider):
 @pytest.mark.asyncio
 async def test_tts_uses_server_fallback_key_when_request_key_empty(mock_tts_provider):
     from app.main import app
-    from app.config import settings
+    from app.settings import settings
 
     mock_tts_provider.synthesize = AsyncMock(return_value=b"audio")
     app.state.tts_provider_name = "azure"

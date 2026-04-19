@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-import app.jobs as jobs_module
+import app.job_store as jobs_module
 from app.main import app
 
 
@@ -77,8 +77,8 @@ async def test_generate_lesson_youtube_returns_job_id():
     from unittest.mock import AsyncMock, patch
 
     with (
-        patch("app.routers.lessons.validate_youtube_url", return_value="abc123"),
-        patch("app.routers.lessons._process_youtube_lesson", new=AsyncMock()),
+        patch("app.lessons.router.validate_youtube_url", return_value="abc123"),
+        patch("app.lessons.router._process_youtube_lesson", new=AsyncMock()),
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -121,7 +121,7 @@ async def test_generate_lesson_upload_accepts_azure_form_fields():
     """generate-upload accepts azure_speech_key and azure_speech_region as form fields."""
     from unittest.mock import AsyncMock, patch
 
-    with patch("app.routers.lessons._process_upload_lesson", new=AsyncMock()):
+    with patch("app.lessons.router._process_upload_lesson", new=AsyncMock()):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
@@ -141,7 +141,7 @@ async def test_generate_lesson_upload_accepts_azure_form_fields():
 @pytest.mark.asyncio
 async def test_get_video_serves_and_deletes_file(tmp_path):
     """GET /api/lessons/video/{filename} streams the file and deletes it."""
-    import app.routers.lessons as lessons_module
+    import app.lessons.router as lessons_module
 
     video_file = tmp_path / "test.mp4"
     video_file.write_bytes(b"fake video content")
@@ -171,9 +171,9 @@ async def test_get_video_returns_404_for_missing_file():
 @pytest.mark.asyncio
 async def test_shared_pipeline_assembles_text_and_romanization_keys():
     """Assembled segment dicts must use 'text'/'romanization', not 'chinese'/'pinyin'."""
-    from app.routers.lessons import _shared_pipeline
-    import app.jobs as jobs_module
-    from app.jobs import Job
+    from app.lessons.router import _shared_pipeline
+    import app.job_store as jobs_module
+    from app.job_store import Job
     from unittest.mock import MagicMock
 
     job_id = "test-field-rename"
@@ -185,9 +185,9 @@ async def test_shared_pipeline_assembles_text_and_romanization_keys():
     mock_romanizer.romanize_text.return_value = ""
 
     with (
-        patch("app.routers.lessons.translate_segments", new=AsyncMock(return_value=raw_segments)),
-        patch("app.routers.lessons.extract_vocabulary", new=AsyncMock(return_value={})),
-        patch("app.routers.lessons.get_romanization_provider", return_value=mock_romanizer),
+        patch("app.lessons.router.translate_segments", new=AsyncMock(return_value=raw_segments)),
+        patch("app.lessons.router.extract_vocabulary", new=AsyncMock(return_value={})),
+        patch("app.lessons.router.get_romanization_provider", return_value=mock_romanizer),
     ):
         await _shared_pipeline(
             job_id, raw_segments, ["es"], "key", "title", "upload", None, 60.0,
@@ -208,7 +208,7 @@ async def test_generate_lesson_upload_returns_job_id():
     """Valid upload request returns a job_id immediately."""
     from unittest.mock import AsyncMock, patch
 
-    with patch("app.routers.lessons._process_upload_lesson", new=AsyncMock()):
+    with patch("app.lessons.router._process_upload_lesson", new=AsyncMock()):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(

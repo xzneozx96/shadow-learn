@@ -7,7 +7,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.routers.agent import (
+from app.agent.router import (
     ClientMessage,
     ClientMessagePart,
     _convert_to_openai_messages,
@@ -187,7 +187,7 @@ async def test_agent_streams_with_correct_headers():
 
     mock_stream = AsyncIteratorMock([mock_chunk])
 
-    with patch("app.routers.agent.AsyncOpenAI") as MockAsyncOpenAI:
+    with patch("app.agent.router.AsyncOpenAI") as MockAsyncOpenAI:
         mock_client = MagicMock()
         mock_client.chat.completions.create = AsyncMock(return_value=mock_stream)
         MockAsyncOpenAI.return_value = mock_client
@@ -259,7 +259,7 @@ async def test_agent_passes_tools_to_openai():
     mock_chunk.choices = [mock_choice]
     mock_chunk.usage = None
 
-    with patch("app.routers.agent.AsyncOpenAI") as MockAsyncOpenAI:
+    with patch("app.agent.router.AsyncOpenAI") as MockAsyncOpenAI:
         mock_client = MagicMock()
         mock_client.chat.completions.create = AsyncMock(return_value=AsyncIteratorMock([mock_chunk]))
         MockAsyncOpenAI.return_value = mock_client
