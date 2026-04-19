@@ -161,7 +161,7 @@ export const ConversationScene = memo(({
   situation,
   onEnd,
 }: ConversationSceneProps) => {
-  const MAX_DURATION = 1 * 60 // 5 minutes in seconds
+  const MAX_DURATION = 5 * 60 // 5 minutes in seconds
   const [duration, setDuration] = useState(MAX_DURATION)
   const [isOffline, setIsOffline] = useState(false)
   const [connectedAt, setConnectedAt] = useState<number | null>(null)

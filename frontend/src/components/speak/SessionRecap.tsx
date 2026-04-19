@@ -53,6 +53,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
           {situation.name}
           {' '}
           with
+          {' '}
           {persona.name}
         </p>
       </div>
