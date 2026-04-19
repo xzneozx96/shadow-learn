@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from urllib.parse import quote
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -28,6 +29,8 @@ class SessionStartRequest(BaseModel):
     google_key: str = Field(..., min_length=1, description="User's Google Gemini API key")
     persona_id: str = Field(..., pattern=r"^[a-z_]+$", description="Persona ID")
     situation_id: str = Field(..., pattern=r"^[a-z_]+$", description="Situation ID")
+    system_prompt: str = Field(..., min_length=10, description="System prompt for the AI agent")
+    voice_id: str = Field(default="Puck", description="Voice ID for Gemini Live API")
     mode: str = Field(default="free", pattern=r"^(free|guided)$", description="Session mode")
 
 
@@ -50,10 +53,24 @@ class SessionEndRequest(BaseModel):
 # --------------------------------------------------------------------------- #
 
 
-def _generate_livekit_token(session_id: str, persona_id: str, google_key: str, situation_id: str) -> str:
-    """Generate a LiveKit token with embedded credentials for the agent."""
+def _generate_livekit_token(
+    session_id: str,
+    persona_id: str,
+    google_key: str,
+    situation_id: str,
+    system_prompt: str = "",
+    voice_id: str = "Puck",
+) -> str:
+    """Generate a LiveKit token with embedded credentials for the agent.
+
+    Uses LiveKit AccessToken API to create a token that includes:
+    - RoomAgentDispatch with agent_name for automatic agent dispatch
+    - The Google key in metadata (for agent to use)
+    - Persona, situation IDs, system_prompt, and voice_id
+    - Session ID for tracking
+    """
     try:
-        from livekit import AccessToken
+        from livekit import api
     except ImportError:
         logger.warning("livekit package not installed, returning mock token")
         return f"mock-token-{session_id}-{uuid.uuid4().hex[:8]}"
@@ -62,16 +79,35 @@ def _generate_livekit_token(session_id: str, persona_id: str, google_key: str, s
         logger.warning("LiveKit credentials not configured, returning mock token")
         return f"mock-token-{session_id}-{uuid.uuid4().hex[:8]}"
 
-    token = AccessToken(
+    # Create token with session-scoped permissions
+    # Use the fluent builder API from livekit-api package
+    token = api.AccessToken(
         settings.livekit_api_key,
         settings.livekit_api_secret,
-        identity=f"agent-{session_id}",
-        name=f"ShadowLearn-{session_id}",
+    ).with_identity(f"user-{session_id}").with_name(f"ShadowLearn-User-{session_id}").with_metadata(
+        f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key},system_prompt={quote(system_prompt)},voice_id={quote(voice_id)}",
+    ).with_grants(
+        api.VideoGrants(
+            room_join=True,
+            room=f"speak-{session_id}",
+            can_publish=True,
+            can_subscribe=True,
+        ),
     )
-    
-    token.can_edit = True
-    token.metadata = f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key}"
-    
+
+    # Add agent dispatch configuration so LiveKit knows which agent to start
+    # The agent_name must match a deployed agent in LiveKit Cloud
+    token = token.with_room_config(
+        api.RoomConfiguration(
+            agents=[
+                api.RoomAgentDispatch(
+                    agent_name="shadowlearn-speak",
+                ),
+            ],
+        ),
+    )
+
+    # Generate the JWT
     return token.to_jwt()
 
 
@@ -89,7 +125,8 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
         session_id, 
         request.persona_id, 
         request.google_key,
-        request.situation_id
+        request.situation_id,
+        system_prompt=request.system_prompt,
     )
     
     livekit_url = settings.livekit_url or "wss://your-project.livekit.cloud"
