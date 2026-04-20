@@ -22,20 +22,20 @@ function formatDuration(seconds: number) {
 function GrammarCorrectionCard({ feedback }: { feedback: GrammarFeedback }) {
   return (
     <div className="mt-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-500">
+      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-500">
         <CheckCircle2 size={12} />
         <span>Grammar feedback</span>
       </div>
       <div className="space-y-2">
         {feedback.issues.map(issue => (
-          <div key={issue.original} className="flex flex-col gap-1 p-2 rounded-md bg-background/60 border border-border/40">
+          <div key={`${issue.original}::${issue.correction}::${issue.explanation}`} className="flex flex-col gap-1 p-2 rounded-md bg-background/60 border border-border/40">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground line-through decoration-amber-500/60">{issue.original}</span>
               <span className="text-amber-500 font-bold text-xs">→</span>
               <span className="text-xs text-foreground font-bold">{issue.correction}</span>
             </div>
             {issue.explanation && (
-              <p className="text-[11px] text-amber-200/80 leading-relaxed">
+              <p className="text-[xs text-amber-200/80 leading-relaxed">
                 {issue.explanation}
               </p>
             )}
@@ -108,9 +108,6 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
                           : 'bg-card border text-foreground'
                       }`}
                     >
-                      <p className="font-bold text-[10px] uppercase tracking-widest opacity-70 mb-1">
-                        {turn.role === 'user' ? tr('speak.you') : persona.name}
-                      </p>
                       <p>{turn.content}</p>
                     </div>
                     {turnFeedback && <GrammarCorrectionCard feedback={turnFeedback} />}

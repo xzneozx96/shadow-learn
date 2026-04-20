@@ -10,7 +10,7 @@ import { AgentControlBar } from '@/components/agents-ui/agent-control-bar'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
-const MAX_DURATION_SECONDS = 1 * 60
+const MAX_DURATION_SECONDS = 3 * 60
 
 const CONTROL_BAR_CONTROLS = {
   leave: true,
@@ -111,7 +111,7 @@ function FeedbackPanel({ feedback }: { feedback: GrammarFeedback | null }) {
                 <div className="space-y-4">
                   <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('speak.feedbackPanel.corrections')}</h4>
                   {feedback.issues.map(issue => (
-                    <div key={issue.original} className="group relative">
+                    <div key={`${issue.original}::${issue.correction}::${issue.explanation}`} className="group relative">
                       <div className="flex flex-col gap-2 p-3 bg-background/50 rounded-xl border border-border/50 shadow-sm">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm text-muted-foreground line-through decoration-amber-500/50">{issue.original}</span>
@@ -186,9 +186,11 @@ function ConversationSceneInner({
     onEnd(speakSession)
   }, [onEnd, speakSession, chatMessages, onTranscriptUpdate])
 
+  // Timer expiry must flush the transcript the same way an explicit END CALL
+  // does — otherwise the recap renders with an empty transcript (0 turns).
   const handleTimerExpire = useCallback(() => {
-    onEnd(speakSession)
-  }, [onEnd, speakSession])
+    void handleEnd()
+  }, [handleEnd])
 
   const portraitInitials = useMemo(() => getInitials(persona.name), [persona.name])
 
