@@ -1,5 +1,3 @@
-'use client'
-
 import type { UIMessage } from 'ai'
 import type { ComponentProps } from 'react'
 import { ArrowDownIcon, DownloadIcon } from 'lucide-react'
@@ -32,7 +30,7 @@ export function ConversationContent({
 }: ConversationContentProps) {
   return (
     <StickToBottom.Content
-      className={cn('flex flex-col gap-8 p-4', className)}
+      className={cn('flex flex-col gap-3 p-4', className)}
       {...props}
     />
   )
@@ -128,7 +126,7 @@ function defaultFormatMessage(message: UIMessage): string {
   return `**${roleLabel}:** ${getMessageText(message)}`
 }
 
-export function messagesToMarkdown(messages: UIMessage[], formatMessage: (
+function messagesToMarkdown(messages: UIMessage[], formatMessage: (
   message: UIMessage,
   index: number,
 ) => string = defaultFormatMessage): string {

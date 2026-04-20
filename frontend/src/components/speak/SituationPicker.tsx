@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react'
 import { Briefcase, DollarSign, Heart, Hospital, MapPin, MessageCircle, Mic, ShoppingCart, Users, Utensils } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
 import { SITUATIONS } from '@/lib/constants'
@@ -7,7 +8,7 @@ interface SituationPickerProps {
   onSelect: (situationId: string) => void
 }
 
-const SITUATION_ICONS: Record<string, any> = {
+const SITUATION_ICONS: Record<string, LucideIcon> = {
   casual_chat: MessageCircle,
   ordering_food: Utensils,
   asking_directions: MapPin,
@@ -30,14 +31,15 @@ export function SituationPicker({ onSelect }: SituationPickerProps) {
         <p className="text-sm text-muted-foreground">{t('speak.selectSituationDesc')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
         {SITUATIONS.map((s) => {
           const Icon = SITUATION_ICONS[s.id] || MessageCircle
 
           return (
-            <div
+            <button
+              type="button"
               key={s.id}
-              className="elegant-card p-4 cursor-pointer group flex flex-col items-start gap-4 h-full relative"
+              className="elegant-card p-4 cursor-pointer group flex flex-col items-start gap-4 h-full relative text-left"
               onClick={() => onSelect(s.id)}
             >
               {/* Level Badge - Top Right */}
@@ -56,7 +58,7 @@ export function SituationPicker({ onSelect }: SituationPickerProps) {
                   {s.description}
                 </p>
               </div>
-            </div>
+            </button>
           )
         })}
       </div>

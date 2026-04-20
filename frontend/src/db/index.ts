@@ -1,10 +1,10 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
-import type { AppSettings, LessonMeta, Segment, VocabEntry } from '../types'
+import type { AppSettings, GrammarFeedback, LessonMeta, Segment, VocabEntry } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 8
+const DB_VERSION = 9
 
 export interface LearnerProfile {
   name: string
@@ -114,7 +114,7 @@ export interface SpeakSession {
   endedAt: string | null
   durationSeconds: number
   status: 'active' | 'completed' | 'abandoned'
-  transcript: { role: 'user' | 'assistant', content: string, timestamp: string }[]
+  transcript: SpeakTurn[]
   transcriptText: string
   evaluation: {
     overallScore: number
@@ -124,8 +124,19 @@ export interface SpeakSession {
     feedback: string
     improvements: string[]
   } | null
+  // Grammar feedback keyed by SpeakTurn.id. Optional so v8 rows read cleanly.
+  feedbacks?: Record<string, GrammarFeedback>
   promptVersion: string
   modelId: string
+}
+
+export interface SpeakTurn {
+  // Stable turn ID (sourced from LiveKit ReceivedMessage.id during a live session).
+  // Optional on the type so v8 rows without IDs remain readable.
+  id?: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
 }
 
 interface ShadowLearnSchema extends DBSchema {
@@ -250,6 +261,11 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
       if (oldVersion < 8) {
         const ssStore = db.createObjectStore('speak-sessions', { keyPath: 'sessionId' })
         ssStore.createIndex('by-date', 'startedAt', { unique: false })
+      }
+      if (oldVersion < 9) {
+        // Additive schema change: transcript turns gain optional `id`, session
+        // gains optional `feedbacks` map. Defaults applied at read sites; no row
+        // rewrite needed. Version bump forces older tabs to close their handle.
       }
     },
   })

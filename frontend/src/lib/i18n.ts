@@ -460,6 +460,15 @@ export const TRANSLATIONS = {
     'speak.status.speaking': 'Speaking',
     'speak.network.resetting': 'Network Resetting...',
     'speak.sessionSuccess': 'Great job practicing {{situation}} with {{persona}}!',
+    'speak.feedbackPanel.grammarIntelligence': 'Grammar Intelligence',
+    'speak.feedbackPanel.noActiveFeedback': 'No active feedback',
+    'speak.feedbackPanel.noActiveFeedbackDesc': 'Speak to start your practice. Real-time suggestions and corrections will appear here.',
+    'speak.feedbackPanel.yourSpokenText': 'Your spoken text',
+    'speak.feedbackPanel.corrections': 'Corrections',
+    'speak.feedbackPanel.advancedFeedback': 'Advanced feedback',
+    'speak.feedbackPanel.nextLineSuggestion': 'Next line suggestion',
+    'speak.controls.endCall': 'END CALL',
+    'speak.controls.end': 'END',
   },
   vi: {
     // Navigation
@@ -914,6 +923,15 @@ export const TRANSLATIONS = {
     'speak.status.speaking': 'Đang phản hồi',
     'speak.network.resetting': 'Đang kết nối lại...',
     'speak.sessionSuccess': 'Bạn đã hoàn thành tốt bài luyện tập {{situation}} cùng với {{persona}}!',
+    'speak.feedbackPanel.grammarIntelligence': 'Phản hồi ngữ pháp',
+    'speak.feedbackPanel.noActiveFeedback': 'Chưa có phản hồi',
+    'speak.feedbackPanel.noActiveFeedbackDesc': 'Hãy bắt đầu nói để luyện tập. Gợi ý và chỉnh sửa sẽ xuất hiện ở đây.',
+    'speak.feedbackPanel.yourSpokenText': 'Câu bạn vừa nói',
+    'speak.feedbackPanel.corrections': 'Chỉnh sửa',
+    'speak.feedbackPanel.advancedFeedback': 'Phản hồi chi tiết',
+    'speak.feedbackPanel.nextLineSuggestion': 'Gợi ý câu tiếp theo',
+    'speak.controls.endCall': 'KẾT THÚC',
+    'speak.controls.end': 'KẾT THÚC',
   },
 } satisfies Record<Locale, Record<string, string>>
 

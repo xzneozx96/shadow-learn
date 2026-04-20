@@ -99,3 +99,28 @@ export interface VocabEntry {
   sourceLanguage: string
   createdAt: string
 }
+
+// Speak feature types
+
+export interface GrammarFeedback {
+  type: 'grammar'
+  transcript: string
+  issues: Array<{
+    original: string
+    correction: string
+    explanation: string
+  }>
+}
+
+export interface NextLineSuggestion {
+  type: 'next-line'
+  suggestion: string
+  pinyin: string
+  translation: string
+}
+
+export interface SpeakSituation {
+  id: string
+  name: string
+  description: string
+}

@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react'
 import type { Persona } from '@/lib/constants'
 import { AlertCircle, Heart, Sparkles, User } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
@@ -8,7 +9,7 @@ interface PersonaPickerProps {
   onSelect: (persona: Persona) => void
 }
 
-const PERSONA_ICONS: Record<string, any> = {
+const PERSONA_ICONS: Record<string, LucideIcon> = {
   friendly_buddy: User,
   anime_crushing: Heart,
   angry_mom: AlertCircle,
@@ -30,9 +31,10 @@ export function PersonaPicker({ onSelect }: PersonaPickerProps) {
           const Icon = PERSONA_ICONS[p.id] || User
 
           return (
-            <div
+            <button
+              type="button"
               key={p.id}
-              className="elegant-card p-4 cursor-pointer group flex flex-col items-start gap-4 h-full relative"
+              className="elegant-card p-4 cursor-pointer group flex flex-col items-start gap-4 h-full relative text-left"
               onClick={() => onSelect(p)}
             >
               {/* Level Badge - Top Right */}
@@ -53,7 +55,7 @@ export function PersonaPicker({ onSelect }: PersonaPickerProps) {
                   {p.tagline}
                 </p>
               </div>
-            </div>
+            </button>
           )
         })}
       </div>

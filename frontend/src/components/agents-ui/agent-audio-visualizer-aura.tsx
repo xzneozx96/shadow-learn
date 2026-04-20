@@ -289,41 +289,29 @@ function AuraShader({
 }: AuraShaderProps & ComponentProps<'div'>) {
   const rgbColor = useMemo(() => hexToRgb(color), [color])
 
+  const uniforms = useMemo(() => ({
+    uSpeed: { type: '1f' as const, value: speed },
+    uBlur: { type: '1f' as const, value: blur },
+    uScale: { type: '1f' as const, value: scale },
+    uShape: { type: '1f' as const, value: shape },
+    uFrequency: { type: '1f' as const, value: frequency },
+    uAmplitude: { type: '1f' as const, value: amplitude },
+    uBloom: { type: '1f' as const, value: 0.0 },
+    uMix: { type: '1f' as const, value: brightness },
+    uSpacing: { type: '1f' as const, value: 0.5 },
+    uColorShift: { type: '1f' as const, value: colorShift },
+    uVariance: { type: '1f' as const, value: 0.1 },
+    uSmoothing: { type: '1f' as const, value: 1.0 },
+    uMode: { type: '1f' as const, value: themeMode === 'light' ? 1.0 : 0.0 },
+    uColor: { type: '3fv' as const, value: rgbColor ?? [0, 0.7, 1] },
+  }), [speed, blur, scale, shape, frequency, amplitude, brightness, colorShift, themeMode, rgbColor])
+
   return (
     <div ref={ref} className={className} {...props}>
       <ReactShaderToy
         fs={shaderSource}
         devicePixelRatio={globalThis.devicePixelRatio ?? 1}
-        uniforms={{
-          // Aurora wave speed
-          uSpeed: { type: '1f', value: speed },
-          // Edge blur/softness
-          uBlur: { type: '1f', value: blur },
-          // Shape scale
-          uScale: { type: '1f', value: scale },
-          // Shape type: 1=circle, 2=line
-          uShape: { type: '1f', value: shape },
-          // Wave frequency and complexity
-          uFrequency: { type: '1f', value: frequency },
-          // Turbulence amplitude
-          uAmplitude: { type: '1f', value: amplitude },
-          // Light intensity (bloom)
-          uBloom: { type: '1f', value: 0.0 },
-          // Brightness of the aurora (0-1)
-          uMix: { type: '1f', value: brightness },
-          // Color variation across layers (0-1)
-          uSpacing: { type: '1f', value: 0.5 },
-          // Color palette offset - shifts colors along the gradient (0-1)
-          uColorShift: { type: '1f', value: colorShift },
-          // Color variation across layers (0-1)
-          uVariance: { type: '1f', value: 0.1 },
-          // Smoothing of the aurora (0-1)
-          uSmoothing: { type: '1f', value: 1.0 },
-          // Display mode: 0=dark background, 1=light background
-          uMode: { type: '1f', value: themeMode === 'light' ? 1.0 : 0.0 },
-          // Color
-          uColor: { type: '3fv', value: rgbColor ?? [0, 0.7, 1] },
-        }}
+        uniforms={uniforms}
         onError={(error) => {
           console.error('Shader error:', error)
         }}

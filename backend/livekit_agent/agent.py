@@ -2,46 +2,56 @@
 ShadowLearn Voice Agent for Speak with AI feature.
 
 This agent handles real-time voice conversations with students practicing Chinese.
-Uses Google Gemini Live API with persona-driven character corrections.
-"""
+Uses a multi-agent architecture:
+- PersonaAgent: Main voice agent that speaks in character
+- ObserverAgent: Parallel agent that monitors grammar/suggestions
 
+Based on the Doheny Surf Desk pattern.
+"""
 import asyncio
 import logging
+import os
 from pathlib import Path
 from urllib.parse import unquote
 from dotenv import load_dotenv
 
 from livekit import agents, rtc
-from livekit.agents import AgentServer, AgentSession, Agent, room_io, TurnHandlingOptions
-from livekit.plugins import google
+from livekit.agents import AgentServer, AgentSession, room_io, TurnHandlingOptions
+from livekit.agents.voice import Agent
+from livekit.plugins import google, openai
 from livekit.plugins import noise_cancellation
 from livekit.plugins import silero
+
+from userdata import SpeakSessionData
+from agents import PersonaAgent, start_observer
 
 load_dotenv(Path(__file__).parent / ".env")
 
 logger = logging.getLogger("shadowlearn-agent")
 
 
-class ChineseTutorAgent(Agent):
-    """AI agent that helps Chinese learners practice speaking through roleplay."""
-
-    def __init__(self, instructions: str) -> None:
-        super().__init__(
-            instructions=instructions,
-        )
-
-
+# Initialize the LiveKit agent server
 server = AgentServer()
 
 
 @server.rtc_session(agent_name="shadowlearn-speak")
 async def shadowlearn_session(ctx: agents.JobContext):
-    # Connect to the room first so we can access participant info
-    await ctx.connect()
+    """Main session handler for Speak with AI voice practice.
 
-    # Wait for the user to join and read their metadata
+    This function:
+    1. Connects to the LiveKit room
+    2. Extracts user metadata (persona, situation, API keys)
+    3. Creates AgentSession with main PersonaAgent
+    4. Starts ObserverAgent in parallel
+    5. Handles lifecycle (connect, disconnect, errors)
+    """
+    # Connect to the room
+    await ctx.connect()
+    logger.info(f"[SESSION] Room connected: {ctx.room.name}")
+
+    # Wait for user to join
     user = None
-    for i in range(50):  # Wait up to 5 seconds
+    for _ in range(50):
         for p in ctx.room.remote_participants.values():
             if p.kind != rtc.ParticipantKind.PARTICIPANT_KIND_AGENT:
                 user = p
@@ -56,13 +66,13 @@ async def shadowlearn_session(ctx: agents.JobContext):
     user_identity = user.identity
     logger.info(f"[SESSION] User joined: {user_identity}")
 
-    # Fix 5: Poll for attributes with retry (handles race condition)
+    # Wait for attributes
     for _ in range(10):
         if user.attributes.get("persona_id") or user.attributes.get("situation_id"):
             break
         await asyncio.sleep(0.1)
 
-    # Parse user metadata: "session_id=xxx,persona_id=xxx,situation_id=xxx,google_key=xxx"
+    # Parse user metadata
     session_info = {}
     metadata = user.metadata or ""
     for item in metadata.split(","):
@@ -70,40 +80,64 @@ async def shadowlearn_session(ctx: agents.JobContext):
             key, value = item.split("=", 1)
             session_info[key] = value
 
-    # Also check attributes (may arrive after metadata)
-    for key in ("persona_id", "situation_id", "google_key"):
+    # Check attributes
+    for key in ("persona_id", "situation_id", "google_key", "openai_key"):
         if key not in session_info and user.attributes.get(key):
             session_info[key] = user.attributes[key]
 
+    # Extract configuration
     persona_id = session_info.get("persona_id", "friendly_buddy")
     situation_id = session_info.get("situation_id", "casual_chat")
-    google_key = session_info.get("google_key", "")
 
-    if not google_key:
-        raise Exception("No Google API key provided")
+    # Get API keys - prefer OpenAI for observer, fallback to Google for main
+    google_key = session_info.get("google_key", os.getenv("GOOGLE_API_KEY", ""))
+    openai_key = session_info.get("openai_key", os.getenv("OPENAI_API_KEY", ""))
 
-    # Read system_prompt and voice_id from metadata (passed from frontend)
+    if not google_key and not openai_key:
+        raise Exception("No API key provided (google_key or openai_key)")
+
+    # System prompt and voice
     system_prompt_encoded = session_info.get("system_prompt", "")
     system_prompt = unquote(system_prompt_encoded) if system_prompt_encoded else ""
+
     if not system_prompt:
         raise Exception("No system_prompt provided")
 
     voice_id_encoded = session_info.get("voice_id", "")
     voice_id = unquote(voice_id_encoded) if voice_id_encoded else "Puck"
 
-    logger.info(f"[SESSION] voice_id: {voice_id}")
+    logger.info(f"[SESSION] Config: persona={persona_id}, situation={situation_id}, voice={voice_id}")
 
-    instructions = system_prompt
+    # Create session userdata
+    userdata = SpeakSessionData(
+        persona_id=persona_id,
+        situation_id=situation_id,
+        system_prompt=system_prompt,
+        voice_id=voice_id,
+    )
 
-    # Create session with Gemini Live API
-    # Turn detection: Use Gemini's built-in VAD + adaptive interruption handling
-    session = AgentSession(
-        llm=google.realtime.RealtimeModel(
+    # Create AgentSession
+    # Note: Using Google Gemini Realtime for main voice
+    # Could alternatively use OpenAI Realtime
+    if google_key:
+        llm = google.realtime.RealtimeModel(
             api_key=google_key,
             model="gemini-2.5-flash-native-audio-preview-12-2025",
             voice=voice_id,
-        ),
+        )
+    else:
+        # Fallback: Use OpenAI Realtime
+        # Note: This requires OpenAI Realtime-capable model
+        llm = openai.realtime.RealtimeModel(
+            api_key=openai_key,
+            model="gpt-4o-realtime-preview",
+            voice="verse",
+        )
+
+    session = AgentSession[SpeakSessionData](
+        userdata=userdata,
         vad=silero.VAD.load(),
+        llm=llm,
         user_away_timeout=15.0,
         turn_handling=TurnHandlingOptions(
             turn_detection="vad",
@@ -121,7 +155,20 @@ async def shadowlearn_session(ctx: agents.JobContext):
         ),
     )
 
-    # Fix 2: Shutdown when participant disconnects
+    # Start Observer agent in parallel
+    # Use separate LLM for observer (can be different model)
+    observer_llm = google.LLM(
+        model="gemini-2.5-flash-lite",
+        api_key=google_key or os.getenv("GOOGLE_API_KEY", ""),
+    )
+
+    # Start Observer agent (pronunciation removed - not feasible with OpenAI Realtime)
+    await start_observer(
+        session=session,
+        llm=observer_llm,
+    )
+
+    # Handle disconnect
     def on_participant_disconnected(p: rtc.RemoteParticipant):
         if p.identity == user_identity:
             logger.warning(f"[LIFECYCLE] {p.identity} disconnected — shutting down")
@@ -129,16 +176,17 @@ async def shadowlearn_session(ctx: agents.JobContext):
 
     ctx.room.on("participant_disconnected", on_participant_disconnected)
 
-    # Fix 4: Force room disconnect when session closes
+    # Handle session close
     @session.on("close")
     def on_session_close(event):
         logger.warning(f"[SESSION] closed — reason={event.reason}, error={event.error}")
         asyncio.create_task(ctx.room.disconnect())
         ctx.shutdown()
 
+    # Start session with PersonaAgent
     await session.start(
         room=ctx.room,
-        agent=ChineseTutorAgent(instructions),
+        agent=PersonaAgent(instructions=system_prompt),
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
                 noise_cancellation=lambda params: noise_cancellation.BVC()
@@ -148,8 +196,9 @@ async def shadowlearn_session(ctx: agents.JobContext):
         ),
     )
 
+    # Generate initial greeting
     await session.generate_reply(
-        instructions=f"Start a conversation in Chinese for the situation: {situation_id}. Greet the user warmly."
+        instructions=f"Start a conversation in Chinese for the situation: {situation_id}. Greet the user warmly and naturally begin the roleplay."
     )
 
 

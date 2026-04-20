@@ -53,7 +53,7 @@ export const PERSONAS = [
   },
 ] as const
 
-export type Persona = typeof PERSONAS[number] & { voice_id: string }
+export type Persona = typeof PERSONAS[number]
 
 export const SITUATIONS = [
   { id: 'casual_chat', title: 'Casual Chat', level: 'Beginner', description: 'Have a relaxed conversation about your day and interests.' },

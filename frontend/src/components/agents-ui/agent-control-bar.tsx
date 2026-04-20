@@ -13,6 +13,7 @@ import { AgentTrackToggle } from '@/components/agents-ui/agent-track-toggle'
 import { agentTrackToggleVariants } from '@/components/agents-ui/agent-track-toggle-variants'
 import { Button } from '@/components/ui/button'
 import { Toggle } from '@/components/ui/toggle'
+import { useI18n } from '@/contexts/I18nContext'
 import {
   useInputControls,
 
@@ -150,6 +151,7 @@ export function AgentControlBar({
   className,
   ...props
 }: AgentControlBarProps & ComponentProps<'div'>) {
+  const { t } = useI18n()
   const publishPermissions = usePublishPermissions()
   const [isChatOpenUncontrolled, setIsChatOpenUncontrolled] = useState(isChatOpen)
   const {
@@ -171,12 +173,8 @@ export function AgentControlBar({
     chat: controls?.chat ?? publishPermissions.data,
   }
 
-  const isEmpty = Object.values(visibleControls).every(value => !value)
-
-  if (isEmpty) {
-    console.warn('AgentControlBar: `visibleControls` contains only false values.')
+  if (Object.values(visibleControls).every(value => !value))
     return null
-  }
 
   return (
     <div
@@ -272,8 +270,8 @@ export function AgentControlBar({
               && 'bg-destructive/10 dark:bg-destructive/10 text-destructive hover:bg-destructive/20 dark:hover:bg-destructive/20 focus:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/4 rounded-full font-mono text-xs font-bold tracking-wider',
             )}
           >
-            <span className="hidden md:inline">END CALL</span>
-            <span className="inline md:hidden">END</span>
+            <span className="hidden md:inline">{t('speak.controls.endCall')}</span>
+            <span className="inline md:hidden">{t('speak.controls.end')}</span>
           </AgentDisconnectButton>
         )}
       </div>

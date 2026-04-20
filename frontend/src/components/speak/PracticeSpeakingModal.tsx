@@ -1,26 +1,23 @@
 import type { TokenSourceLiteral } from 'livekit-client'
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
-import { useSession } from '@livekit/components-react'
+import type { GrammarFeedback, NextLineSuggestion, SpeakSituation } from '@/types'
+import { useRoomContext, useSession, useSessionMessages } from '@livekit/components-react'
 import { TokenSource } from 'livekit-client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AgentSessionProvider } from '@/components/agents-ui/agent-session-provider'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useSpeakSession } from '@/hooks/useSpeakSession'
 import { API_BASE } from '@/lib/config'
 import { SITUATIONS } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 import { ConversationScene } from './ConversationScene'
 import { PersonaPicker } from './PersonaPicker'
 import { SessionRecap } from './SessionRecap'
 import { SituationPicker } from './SituationPicker'
-
-interface SituationData {
-  id: string
-  name: string
-  description: string
-}
 
 type Step = 'situation' | 'persona' | 'active' | 'recap'
 
@@ -29,36 +26,151 @@ interface PracticeSpeakingModalProps {
   onClose: () => void
 }
 
+// Hoisted empty default so the identity is stable across renders — prevents
+// ConversationScene's feedbackHistory prop from changing every render.
+const EMPTY_FEEDBACKS: Record<string, GrammarFeedback> = {}
+
+interface SessionInnerProps {
+  speakSession: SpeakSession
+  persona: Persona
+  situation: SpeakSituation
+  onEnd: (speakSession: SpeakSession) => void
+  onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
+  onFeedbackUpdate?: (turnId: string, feedback: GrammarFeedback) => Promise<void>
+}
+
+// Renders inside AgentSessionProvider — session hooks are available here
+function SessionInner({
+  speakSession,
+  persona,
+  situation,
+  onEnd,
+  onTranscriptUpdate,
+  onFeedbackUpdate,
+}: SessionInnerProps) {
+  const room = useRoomContext()
+  const { messages: chatMessages } = useSessionMessages()
+  const [nextLineSuggestion, setNextLineSuggestion] = useState<NextLineSuggestion | null>(null)
+  const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null)
+
+  const messagesRef = useRef(chatMessages)
+  useEffect(() => {
+    messagesRef.current = chatMessages
+  }, [chatMessages])
+
+  // Keep the latest onFeedbackUpdate in a ref so the RPC-registration effect
+  // doesn't re-register on every render.
+  const onFeedbackUpdateRef = useRef(onFeedbackUpdate)
+  useEffect(() => {
+    onFeedbackUpdateRef.current = onFeedbackUpdate
+  }, [onFeedbackUpdate])
+
+  useEffect(() => {
+    if (!room)
+      return
+
+    room.registerRpcMethod('grammar_feedback', async (data) => {
+      try {
+        const feedback = JSON.parse(data.payload) as GrammarFeedback
+
+        const fbText = feedback.transcript.toLowerCase().trim()
+        const match = [...messagesRef.current].reverse().find((m) => {
+          if (!m.from?.isLocal)
+            return false
+          const msgText = m.message?.toLowerCase().trim()
+          if (!msgText)
+            return false
+          return msgText === fbText || fbText.includes(msgText)
+        })
+        if (match) {
+          setSelectedMsgId(match.id)
+          await onFeedbackUpdateRef.current?.(match.id, feedback)
+        }
+
+        return JSON.stringify({ success: true })
+      }
+      catch (e) {
+        console.error('Failed to parse grammar feedback:', e)
+        return JSON.stringify({ success: false, error: String(e) })
+      }
+    })
+
+    room.registerRpcMethod('next_line_suggestion', async (data) => {
+      try {
+        setNextLineSuggestion(JSON.parse(data.payload) as NextLineSuggestion)
+        return JSON.stringify({ success: true })
+      }
+      catch (e) {
+        console.error('Failed to parse next line suggestion:', e)
+        return JSON.stringify({ success: false, error: String(e) })
+      }
+    })
+
+    return () => {
+      room.unregisterRpcMethod('grammar_feedback')
+      room.unregisterRpcMethod('next_line_suggestion')
+    }
+  }, [room])
+
+  const feedbackHistory = speakSession.feedbacks ?? EMPTY_FEEDBACKS
+
+  return (
+    <ConversationScene
+      speakSession={speakSession}
+      persona={persona}
+      situation={situation}
+      onEnd={onEnd}
+      nextLineSuggestion={nextLineSuggestion}
+      feedbackHistory={feedbackHistory}
+      selectedMsgId={selectedMsgId}
+      onSelectFeedback={setSelectedMsgId}
+      onTranscriptUpdate={onTranscriptUpdate}
+    />
+  )
+}
+
+// Thin shell: owns session lifecycle and provides the session context
 function SessionWrapper({
   tokenSource,
   speakSession,
   persona,
   situation,
   onEnd,
+  onTranscriptUpdate,
+  onFeedbackUpdate,
 }: {
   tokenSource: TokenSourceLiteral
   speakSession: SpeakSession
   persona: Persona
-  situation: SituationData
+  situation: SpeakSituation
   onEnd: (speakSession: SpeakSession) => void
+  onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
+  onFeedbackUpdate?: (turnId: string, feedback: GrammarFeedback) => Promise<void>
 }) {
   const livekitSession = useSession(tokenSource, { agentName: 'shadowlearn-speak' })
 
-  // Start the session when the component mounts, and end the session when the component unmounts
+  // Mount-only: start the LiveKit session once, end on unmount.
+  // Parent component keys <SessionWrapper> by currentSession.sessionId, so a
+  // new session naturally remounts this. Including livekitSession in deps
+  // would fire end()/start() on every parent re-render (e.g. every feedback
+  // RPC) and tear down the room mid-conversation.
   useEffect(() => {
     livekitSession.start()
     return () => {
       livekitSession.end()
     }
-  }, []) // Empty deps - only run on mount/unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <AgentSessionProvider session={livekitSession}>
-      <ConversationScene
+      <SessionInner
         speakSession={speakSession}
         persona={persona}
         situation={situation}
         onEnd={onEnd}
+        onTranscriptUpdate={onTranscriptUpdate}
+        onFeedbackUpdate={onFeedbackUpdate}
       />
     </AgentSessionProvider>
   )
@@ -67,36 +179,45 @@ function SessionWrapper({
 export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalProps) {
   const { t } = useI18n()
   const { keys } = useAuth()
+  const { currentSession, startSession, endSession, clearSession, updateTranscript, updateFeedback } = useSpeakSession()
   const [step, setStep] = useState<Step>('situation')
-  const [situation, setSituation] = useState<SituationData | null>(null)
+  const [situation, setSituation] = useState<SpeakSituation | null>(null)
   const [persona, setPersona] = useState<Persona | null>(null)
-  const [speakSession, setSpeakSession] = useState<SpeakSession | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tokenSource, setTokenSource] = useState<TokenSourceLiteral | null>(null)
 
   const hasGoogleKey = !!(keys?.googleRealtimeKey)
 
-  // Reset state when modal closes
-  useEffect(() => {
+  const handleAbandonedSession = useCallback(async () => {
+    if (currentSession && step === 'active') {
+      await endSession('abandoned')
+    }
+  }, [currentSession, step, endSession])
+
+  // Reset state on close transition — React guide: "adjusting state when a prop changes"
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (!open) {
+      void handleAbandonedSession()
       setStep('situation')
       setSituation(null)
       setPersona(null)
-      setSpeakSession(null)
       setError(null)
       setTokenSource(null)
     }
-  }, [open])
+  }
 
-  const resetState = useCallback(() => {
+  const resetState = useCallback(async () => {
+    await handleAbandonedSession()
+    clearSession()
     setStep('situation')
     setSituation(null)
     setPersona(null)
-    setSpeakSession(null)
     setError(null)
     setTokenSource(null)
-  }, [])
+  }, [handleAbandonedSession, clearSession])
 
   const handleClose = useCallback(() => {
     resetState()
@@ -139,29 +260,20 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
       const data = await res.json()
 
-      // Create a literal TokenSource from the pre-generated token
       const ts = TokenSource.literal({
         serverUrl: data.livekit_url,
         participantToken: data.livekit_token,
       })
       setTokenSource(ts)
 
-      const newSession: SpeakSession = {
+      await startSession({
         sessionId: data.session_id,
         lessonId: situation.id,
-        startedAt: new Date().toISOString(),
-        endedAt: null,
-        durationSeconds: 0,
-        status: 'active',
-        transcript: [],
-        transcriptText: '',
-        evaluation: null,
         promptVersion: '1.0',
         modelId: 'gemini-live',
-      }
+      })
 
       setPersona(selectedPersona)
-      setSpeakSession(newSession)
       setStep('active')
     }
     catch (e) {
@@ -170,24 +282,12 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     finally {
       setLoading(false)
     }
-  }, [situation, hasGoogleKey, keys, t])
+  }, [situation, hasGoogleKey, keys, t, startSession])
 
-  const handleSessionEnd = useCallback(async (sessionData: SpeakSession) => {
-    const endedAt = new Date().toISOString()
-    const started = new Date(sessionData.startedAt).getTime()
-    const ended = new Date(endedAt).getTime()
-    const durationSeconds = Math.round((ended - started) / 1000)
-
-    const finalSession: SpeakSession = {
-      ...sessionData,
-      endedAt,
-      durationSeconds,
-      status: 'completed',
-    }
-
-    setSpeakSession(finalSession)
+  const handleSessionEnd = useCallback(async (_sessionData: SpeakSession) => {
+    await endSession('completed')
     setStep('recap')
-  }, [])
+  }, [endSession])
 
   const handleRepeat = useCallback(() => {
     if (situation && persona) {
@@ -199,17 +299,22 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     resetState()
   }, [resetState])
 
-   return (
-     <Dialog open={open} onOpenChange={open => {
-       if (!open && step === 'active') {
-         // Prevent closing modal via outside click when actively speaking
-         return;
-       }
-       if (!open) {
-         handleClose();
-       }
-     }}>
-       <DialogContent className="max-w-2xl! p-0 gap-0 overflow-hidden elegant-card">
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (!open && step === 'active') {
+          return
+        }
+        if (!open) {
+          handleClose()
+        }
+      }}
+    >
+      <DialogContent className={cn(
+        'p-0 gap-0 overflow-hidden elegant-card transition-all duration-500 ease-in-out max-w-4xl! min-w-[700px]',
+      )}
+      >
         {/* Header */}
         <div className="px-4 py-3 border-b border-border flex items-center gap-2 pr-12">
           {step === 'persona' && (
@@ -254,20 +359,22 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
               <PersonaPicker onSelect={handlePersonaSelect} />
             )}
 
-            {step === 'active' && speakSession && persona && situation && tokenSource && (
+            {step === 'active' && currentSession && persona && situation && tokenSource && (
               <SessionWrapper
-                key={speakSession.sessionId}
+                key={currentSession.sessionId}
                 tokenSource={tokenSource}
-                speakSession={speakSession}
+                speakSession={currentSession}
                 persona={persona}
                 situation={situation}
                 onEnd={handleSessionEnd}
+                onTranscriptUpdate={updateTranscript}
+                onFeedbackUpdate={updateFeedback}
               />
             )}
 
-            {step === 'recap' && speakSession && persona && situation && (
+            {step === 'recap' && currentSession && persona && situation && (
               <SessionRecap
-                speakSession={speakSession}
+                speakSession={currentSession}
                 persona={persona}
                 situation={situation}
                 onRepeat={handleRepeat}

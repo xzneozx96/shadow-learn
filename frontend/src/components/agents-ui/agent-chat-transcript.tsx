@@ -1,5 +1,7 @@
 import type { AgentState, ReceivedMessage } from '@livekit/components-react'
 import type { ComponentProps } from 'react'
+import type { GrammarFeedback } from '@/types'
+import { CheckCircle2 } from 'lucide-react'
 import { AnimatePresence } from 'motion/react'
 import { AgentChatIndicator } from '@/components/agents-ui/agent-chat-indicator'
 import {
@@ -7,45 +9,24 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation'
-import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message'
+import { cn } from '@/lib/utils'
 
-/**
- * Props for the AgentChatTranscript component.
- */
+const LOCALE = typeof navigator !== 'undefined' ? navigator.language : 'en-US'
+const EMPTY_FEEDBACKS: Record<string, GrammarFeedback> = {}
+
 export interface AgentChatTranscriptProps extends ComponentProps<'div'> {
-  /**
-   * The current state of the agent. When 'thinking', displays a loading indicator.
-   */
   agentState?: AgentState
-  /**
-   * Array of messages to display in the transcript.
-   * @defaultValue []
-   */
   messages?: ReceivedMessage[]
-  /**
-   * Additional CSS class names to apply to the conversation container.
-   */
+  feedbacks?: Record<string, GrammarFeedback>
+  onSelectFeedback?: (id: string) => void
   className?: string
 }
 
-/**
- * A chat transcript component that displays a conversation between the user and agent.
- * Shows messages with timestamps and origin indicators, plus a thinking indicator
- * when the agent is processing.
- *
- * @extends ComponentProps<'div'>
- *
- * @example
- * ```tsx
- * <AgentChatTranscript
- *   agentState={agentState}
- *   messages={chatMessages}
- * />
- * ```
- */
 export function AgentChatTranscript({
   agentState,
   messages = [],
+  feedbacks = EMPTY_FEEDBACKS,
+  onSelectFeedback,
   className,
   ...props
 }: AgentChatTranscriptProps) {
@@ -62,16 +43,39 @@ export function AgentChatTranscript({
               messages.map((receivedMessage) => {
                 const { id, timestamp, from, message } = receivedMessage
                 const time = new Date(timestamp)
-                const messageOrigin = from?.isLocal ? 'user' : 'assistant'
-                const locale = typeof navigator !== 'undefined' ? navigator.language : 'en-US'
-                const title = time.toLocaleTimeString(locale, { timeStyle: 'full' })
+                const isUser = from?.isLocal ?? false
+                const title = time.toLocaleTimeString(LOCALE, { timeStyle: 'full' })
+                const hasFeedback = !!feedbacks[id]
 
                 return (
-                  <Message key={id} title={title} from={messageOrigin}>
-                    <MessageContent>
-                      <MessageResponse>{message}</MessageResponse>
-                    </MessageContent>
-                  </Message>
+                  <div
+                    key={id}
+                    title={title}
+                    className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}
+                  >
+                    {isUser
+                      ? (
+                          <div className="flex items-end gap-2 max-w-[85%]">
+                            {hasFeedback && (
+                              <button
+                                onClick={() => onSelectFeedback?.(id)}
+                                className="shrink-0 p-1.5 rounded-full bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 transition-all border border-amber-500/30 shadow-sm"
+                                aria-label="View feedback"
+                              >
+                                <CheckCircle2 size={14} strokeWidth={3} />
+                              </button>
+                            )}
+                            <div className="rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
+                              {message}
+                            </div>
+                          </div>
+                        )
+                      : (
+                          <div className="max-w-[85%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
+                            {message}
+                          </div>
+                        )}
+                  </div>
                 )
               })
             )}

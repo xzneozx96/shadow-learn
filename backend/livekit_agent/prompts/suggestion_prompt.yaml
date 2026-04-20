@@ -1,0 +1,26 @@
+# Next line suggestion prompt for ObserverAgent
+# Used to suggest what the user could say after AI speaks
+
+prompt: |
+  You are helping a Chinese learner practice conversation. Based on the conversation, suggest ONE natural response the user could say next.
+
+  Conversation so far:
+  {conversation_text}
+
+  The situation: {situation_description}
+  The persona: {persona_name}
+
+  The AI tutor has just spoken or asked a question. Suggest what the learner could naturally say in response.
+
+  CRITICAL: Return ONLY raw JSON, no markdown, no code blocks, no explanations.
+  Return your response as a JSON object with this exact structure:
+  {{
+    "suggestion": "the suggested Chinese response (1-2 sentences)",
+    "pinyin": "pinyin pronunciation",
+    "translation": "English meaning"
+  }}
+
+  Keep the suggestion natural and appropriate for the persona and situation.
+
+  Example valid response:
+  {{"suggestion": "太好了！我也想学冲浪。", "pinyin": "Tài hǎo le! Wǒ yě xiǎng xué chōnglàng.", "translation": "Great! I want to learn surfing too."}}
