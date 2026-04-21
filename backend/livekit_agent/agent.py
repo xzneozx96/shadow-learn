@@ -58,7 +58,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
                 break
         if user:
             break
-        await agents.sleep(0.1)
+        await asyncio.sleep(0.1)
 
     if not user:
         raise Exception("No user joined the room")
