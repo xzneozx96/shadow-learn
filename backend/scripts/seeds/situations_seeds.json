@@ -1,0 +1,69 @@
+{
+  "situations": [
+    {
+      "id": "ordering_food",
+      "display": {
+        "title": "Ordering Food",
+        "description": "Practice your survival skills at a local restaurant.",
+        "icon": "🍜"
+      },
+      "seed": {
+        "ai_role_neutral": "server at a casual restaurant",
+        "user_goal_neutral": "Order food, ask about preparation, get the bill",
+        "scene_dynamics": "Customer entering a busy restaurant, scanning menu, ordering and asking questions."
+      }
+    },
+    {
+      "id": "asking_directions",
+      "display": {
+        "title": "Asking Directions",
+        "description": "Navigate through the city by asking for help.",
+        "icon": "🧭"
+      },
+      "seed": {
+        "ai_role_neutral": "local passerby on a street",
+        "user_goal_neutral": "Find a specific landmark and confirm the route",
+        "scene_dynamics": "Tourist stops a local on a busy street to ask for directions."
+      }
+    },
+    {
+      "id": "shopping",
+      "display": {
+        "title": "Shopping",
+        "description": "Browse items, ask for prices, and find what you need.",
+        "icon": "🛍️"
+      },
+      "seed": {
+        "ai_role_neutral": "shop assistant in a clothing store",
+        "user_goal_neutral": "Try something on, ask about sizes/prices, decide whether to buy",
+        "scene_dynamics": "Customer browsing a small boutique, interacting with an attentive staff member."
+      }
+    },
+    {
+      "id": "job_interview",
+      "display": {
+        "title": "Job Interview",
+        "description": "Prepare for your career with professional dialogue.",
+        "icon": "💼"
+      },
+      "seed": {
+        "ai_role_neutral": "hiring manager",
+        "user_goal_neutral": "Answer interview questions, ask about the role, leave a good impression",
+        "scene_dynamics": "Formal interview in an office. Manager asks standard interview questions."
+      }
+    },
+    {
+      "id": "casual_chat",
+      "display": {
+        "title": "Casual Chat",
+        "description": "Have a relaxed conversation about your day and interests.",
+        "icon": "💬"
+      },
+      "seed": {
+        "ai_role_neutral": "a friendly acquaintance meeting for coffee",
+        "user_goal_neutral": "Catch up, share news, discuss interests",
+        "scene_dynamics": "Two people at a cafe table, relaxed catching-up chat."
+      }
+    }
+  ]
+}
