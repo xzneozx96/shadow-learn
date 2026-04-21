@@ -10,6 +10,14 @@ prompt: |
   Learner's latest turn to evaluate:
   {user_turn}
 
+  This is SPOKEN language transcribed to text by speech recognition. Do NOT flag:
+  - Capitalization (e.g. lowercase "i", missing capital at sentence start)
+  - Punctuation (missing commas, periods, etc.)
+  These are writing conventions that do not exist in speech.
+
+  Only flag spoken grammar errors — wrong word order, incorrect particles, wrong verb
+  form, missing required words — things the learner actually said incorrectly.
+
   Evaluate this turn against the learner's {proficiency_label} level. Only flag errors
   meaningful at this level — ignore stylistic choices and constructions above their level
   that they correctly used. Do not flag constructions below their level as errors.

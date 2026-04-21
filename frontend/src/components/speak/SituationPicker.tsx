@@ -59,7 +59,7 @@ export function SituationPicker({ targetLanguage, onSelect, onRequestCustom }: S
         <button
           type="button"
           onClick={onRequestCustom}
-          className="elegant-card p-4 cursor-pointer group flex flex-col items-center justify-center gap-2 h-full border-dashed text-center"
+          className="elegant-card p-4 cursor-pointer group flex flex-col items-center justify-center gap-2 h-full border text-center"
         >
           <span aria-hidden="true" className="text-2xl">✨</span>
           <span className="font-medium text-foreground">{t('speak.createOwn.title')}</span>

@@ -74,6 +74,17 @@ def build_system_prompt(
             f"Opening line: {situation.opening_line}"
         ),
         "",
+        "# Inline Correction",
+        (
+            "Occasionally a [CORRECTION CUE] block will be appended to these instructions "
+            f"by the session monitor. When you see one, on your very next turn:\n"
+            f"- Echo or reuse the corrected phrase naturally as {situation.ai_role} would "
+            f"in the scene — do not announce a correction, do not say 'grammar', do not break character.\n"
+            "- If weaving it in would feel forced or off-topic, skip it entirely. "
+            "Conversation flow is the priority.\n"
+            "- Never repeat a correction you already made in the last two turns."
+        ),
+        "",
         "# Staying in Character",
         (
             f"Remain fully in persona for the entire session. Speak only {language_name}. "

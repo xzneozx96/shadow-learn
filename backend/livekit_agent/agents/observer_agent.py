@@ -59,12 +59,17 @@ class ObserverAgent:
 
         # Conversation tracking
         self.conversation_history: list[dict] = []
-        self.hints_sent: list[str] = []
         self.last_eval_transcript_count = 0
 
         # Evaluation settings
         self.eval_threshold = 1  # Evaluate every user turn
         self._evaluating = False
+
+        # Correction rate-limiting
+        self._base_instructions: str = ""  # captured on first injection
+        self._turn_count: int = 0
+        self._last_correction_turn: int = -3  # start ready to correct
+        self._correction_cooldown: int = 3  # min turns between corrections
 
         self._setup_listeners()
 
@@ -115,6 +120,7 @@ class ObserverAgent:
 
     def _handle_user_turn(self, transcript: str) -> None:
         """Handle user turn - trigger grammar evaluation."""
+        self._turn_count += 1
         total_segments = len(self.conversation_history)
         new_segments = total_segments - self.last_eval_transcript_count
 
@@ -155,15 +161,16 @@ class ObserverAgent:
             if isinstance(grammar_result, Exception):
                 logger.error(f"Grammar evaluation failed: {grammar_result}")
             elif grammar_result:
-                # Stream to frontend
+                # Always stream to frontend (feedback panel)
                 await self._stream_feedback({
                     "type": "grammar",
                     "transcript": user_transcript,
                     "issues": grammar_result.get("issues", []),
                 })
 
-                # Inject hint to main agent if there are issues
-                if grammar_result.get("issues"):
+                # Inject correction into main agent only if cooldown has passed
+                turns_since_last = self._turn_count - self._last_correction_turn
+                if grammar_result.get("issues") and turns_since_last >= self._correction_cooldown:
                     await self._inject_correction_hint(grammar_result)
 
         except Exception as e:
@@ -386,35 +393,29 @@ class ObserverAgent:
             return
 
         first_issue = issues[0]
-        persona_id = getattr(self.session.userdata, "persona_id", "") or "your character"
-        target_language = getattr(self.session.userdata, "target_language", "") or "the target language"
         original = first_issue.get("original", "")
         correction = first_issue.get("correction", "")
         explanation = first_issue.get("explanation", "")
 
-        hint = (
-            f"[LANGUAGE COACH NOTE — you are still {persona_id}, stay in character, "
-            f"continue speaking {target_language}]\n"
-            f"The learner just said: \"{original}\"\n"
-            f"A more natural form: \"{correction}\"\n"
-            f"Why: {explanation}\n\n"
-            f"On your next natural turn, weave this correction into dialogue as "
-            f"{persona_id} would react. Do NOT switch to English, do NOT announce "
-            f"'grammar correction', do NOT list issues. Stay in scene, in character, "
-            f"in {target_language}."
+        # Cache base instructions once so repeated injections don't stack
+        if not self._base_instructions:
+            self._base_instructions = current_agent.instructions
+
+        cue = (
+            f"[CORRECTION CUE]\n"
+            f'Learner said: "{original}"\n'
+            f'More natural: "{correction}"\n'
+            f"Why: {explanation}\n"
+            f"[END CUE]"
         )
-
-        logger.info(f"[OBSERVER] Injecting hint: {hint[:80]}...")
-
-        # Copy context and add hint
-        ctx_copy = current_agent.chat_ctx.copy()
-        ctx_copy.add_message(role="system", content=hint)
+        logger.info(f"[OBSERVER] Injecting correction cue: {cue[:80]}...")
 
         try:
-            await current_agent.update_chat_ctx(ctx_copy)
-            logger.info("[OBSERVER] Hint injected successfully")
+            await current_agent.update_instructions(f"{self._base_instructions}\n\n{cue}")
+            self._last_correction_turn = self._turn_count
+            logger.info("[OBSERVER] Correction cue injected via update_instructions()")
         except Exception as e:
-            logger.error(f"Failed to inject hint: {e}")
+            logger.error(f"Failed to inject correction cue: {e}")
 
     async def _stream_feedback(self, data: dict) -> None:
         """Stream feedback data to frontend via RPC.

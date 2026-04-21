@@ -60,7 +60,7 @@ export const PERSONAS = [
   },
   {
     id: 'strict_parent',
-    name: { en: 'Tiger Mom', vi: 'Mẹ "Hổ"' },
+    name: { en: 'Angry Mom', vi: 'Phụ huynh mẫu mực' },
     tagline: { en: 'No studying, no snacks! Focus! 🥖', vi: 'Học không hay là ăn gậy? Tùy con chọn! 🥖' },
     portrait_url: null as string | null,
     voice_ids: {
