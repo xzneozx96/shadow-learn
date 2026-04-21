@@ -274,20 +274,23 @@ class ObserverAgent:
                 situation_description = config.scene_context
                 user_goal = config.user_goal
                 target_vocab = ", ".join(config.target_vocab) if config.target_vocab else ""
+                interface_language = config.interface_language or "en"
             else:
                 situation_description = userdata.situation_id or "casual chat"
                 user_goal = ""
                 target_vocab = ""
+                interface_language = "en"
             persona_id = userdata.persona_id or "friendly buddy"
-            language = getattr(userdata, "target_language", "zh-CN")
+            target_language = getattr(userdata, "target_language", "zh-CN")
             level = getattr(userdata, "proficiency_level", "intermediate")
         except Exception:
             situation_description = "casual chat"
             user_goal = ""
             target_vocab = ""
             persona_id = "friendly buddy"
-            language = "zh-CN"
+            target_language = "zh-CN"
             level = "intermediate"
+            interface_language = "en"
 
         context = {
             "conversation_text": conversation_text,
@@ -295,7 +298,8 @@ class ObserverAgent:
             "user_goal": user_goal,
             "target_vocab": target_vocab,
             "persona_name": persona_id,
-            "language": language,
+            "target_language": target_language,
+            "interface_language": interface_language,
             "level": level,
         }
 
@@ -333,7 +337,7 @@ class ObserverAgent:
             await self._stream_feedback({
                 "type": "next-line",
                 "suggestion": result.get("suggestion", ""),
-                "pinyin": result.get("pinyin", ""),
+                "romanization": result.get("romanization", ""),
                 "translation": result.get("translation", ""),
             })
 
@@ -346,7 +350,8 @@ class ObserverAgent:
                     await self._stream_feedback({
                         "type": "next-line",
                         "suggestion": result.get("suggestion", ""),
-                        "pinyin": result.get("pinyin", ""),
+                        "romanization": result.get("romanization", ""),
+                        "translation": result.get("translation", ""),
                     })
                 except json.JSONDecodeError:
                     pass

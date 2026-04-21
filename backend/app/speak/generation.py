@@ -200,7 +200,7 @@ async def _call_llm(prompt: str, google_key: str) -> dict[str, Any]:
     async def _call() -> dict[str, Any]:
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
-            "gemini-2.5-flash-lite:generateContent"
+            "gemini-3.1-flash-lite-preview:generateContent"
         )
         headers = {
             "x-goog-api-key": google_key,

@@ -314,7 +314,7 @@ function ConversationSceneInner({
                   {nextLineSuggestion.suggestion}
                 </div>
                 <div className="text-sm text-emerald-500/90 font-medium">
-                  {nextLineSuggestion.pinyin}
+                  {nextLineSuggestion.romanization}
                 </div>
                 <div className="text-sm text-muted-foreground/70 italic line-clamp-1">
                   {nextLineSuggestion.translation}

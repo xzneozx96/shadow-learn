@@ -115,7 +115,7 @@ export interface GrammarFeedback {
 export interface NextLineSuggestion {
   type: 'next-line'
   suggestion: string
-  pinyin: string
+  romanization: string
   translation: string
 }
 

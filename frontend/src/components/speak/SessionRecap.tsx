@@ -73,21 +73,25 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="elegant-card p-4 flex flex-col items-center justify-center gap-2 text-center">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary mb-1">
-              <Clock className="w-5 h-5" />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="elegant-card p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-primary/10 text-primary shrink-0">
+              <Clock className="w-6 h-6" />
             </div>
-            <p className="text-lg font-bold leading-none">{formatDuration(speakSession.durationSeconds)}</p>
-            <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">{tr('speak.duration')}</p>
+            <div className="flex flex-col items-start min-w-0">
+              <p className="text-xl font-bold leading-none mb-1.5">{formatDuration(speakSession.durationSeconds)}</p>
+              <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground/70">{tr('speak.duration')}</p>
+            </div>
           </div>
 
-          <div className="elegant-card p-4 flex flex-col items-center justify-center gap-2 text-center">
-            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 mb-1">
-              <MessageSquare className="w-5 h-5" />
+          <div className="elegant-card p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
+              <MessageSquare className="w-6 h-6" />
             </div>
-            <p className="text-lg font-bold leading-none">{userTurns}</p>
-            <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">{tr('speak.turns')}</p>
+            <div className="flex flex-col items-start min-w-0">
+              <p className="text-xl font-bold leading-none mb-1.5">{userTurns}</p>
+              <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground/70">{tr('speak.turns')}</p>
+            </div>
           </div>
         </div>
 

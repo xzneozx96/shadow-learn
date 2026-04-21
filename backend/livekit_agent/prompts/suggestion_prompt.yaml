@@ -2,7 +2,7 @@
 # Used to suggest what the user could say after AI speaks
 
 prompt: |
-  You help a learner practicing {language} at {level} level.
+  You help a learner practicing {target_language} at {level} level.
 
   Scene: {situation_description}
   User's goal in this scene: {user_goal}
@@ -17,7 +17,13 @@ prompt: |
 
   Respond in JSON (no markdown):
   {{
-    "suggestion": "<user's next line in {language}>",
-    "pinyin": "<romanization if applicable, empty string otherwise>",
-    "translation": "<English translation>"
+    "suggestion": "<user's next line in {target_language}>",
+    "romanization": "<pinyin if Chinese, romaji if Japanese, empty otherwise>",
+    "translation": "<translation in {interface_language}>"
   }}
+
+  IMPORTANT:
+  - If {target_language} starts with "zh": use Pinyin (e.g., "nǐ hǎo")
+  - If {target_language} is "ja": use Romaji (e.g., "konnichiwa")
+  - For all other languages: use empty string for romanization
+  - ALWAYS provide a translation in {interface_language}, never leave it empty
