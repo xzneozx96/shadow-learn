@@ -26,6 +26,7 @@ class LessonRequest(BaseModel):
     deepgram_api_key: str | None = None
     azure_speech_key: str | None = None
     azure_speech_region: str | None = None
+    gladia_api_key: str | None = None
     source_language: str = "zh-CN"
 
 
