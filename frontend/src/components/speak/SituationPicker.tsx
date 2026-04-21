@@ -54,7 +54,7 @@ export function SituationPicker({ targetLanguage, onSelect, onRequestCustom }: S
         <p className="text-sm text-muted-foreground">{t('speak.selectSituationDesc')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
         {/* Create your own card — always first */}
         <button
           type="button"

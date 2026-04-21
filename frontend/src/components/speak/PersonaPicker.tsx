@@ -48,9 +48,9 @@ export function PersonaPicker({ targetLanguage, onSelect }: PersonaPickerProps) 
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 overflow-hidden mb-1">
-                  <h3 className="font-bold text-sm text-foreground truncate">{p.name}</h3>
+                  <h3 className="font-bold text-foreground truncate">{p.name}</h3>
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                   {p.tagline}
                 </p>
               </div>

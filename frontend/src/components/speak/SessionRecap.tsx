@@ -20,11 +20,16 @@ function formatDuration(seconds: number) {
 }
 
 function GrammarCorrectionCard({ feedback }: { feedback: GrammarFeedback }) {
+  const { t: tr } = useI18n()
+
+  if (!feedback.issues.length)
+    return null
+
   return (
     <div className="mt-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2">
       <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-500">
         <CheckCircle2 size={12} />
-        <span>Grammar feedback</span>
+        <span>{tr('speak.feedbackPanel.grammarIntelligence')}</span>
       </div>
       <div className="space-y-2">
         {feedback.issues.map(issue => (
@@ -62,28 +67,10 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
           </div>
           <div className="space-y-1">
             <h2 className="text-2xl font-black tracking-tight text-foreground">{tr('speak.sessionComplete')}</h2>
-            <p className="text-muted-foreground max-w-[300px] text-sm leading-relaxed">
-              {tr('speak.sessionSuccess', { situation: situation.name, persona: persona.name })}
+            <p className="text-muted-foreground max-w-90 leading-relaxed">
+              {tr('speak.sessionSuccess', { situation: situation.name, persona: persona.name, level: speakSession.levelLabel || speakSession.proficiencyLevel })}
             </p>
           </div>
-        </div>
-
-        {/* Session context */}
-        <div className="elegant-card p-4 space-y-2 text-sm">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground shrink-0">{tr('speak.recap.situation')}</span>
-            <span className="font-medium text-foreground text-right">{speakSession.situationTitle || situation.name}</span>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground shrink-0">{tr('speak.recap.level')}</span>
-            <span className="font-medium text-foreground text-right">{speakSession.levelLabel || speakSession.proficiencyLevel}</span>
-          </div>
-          {speakSession.userGoal && (
-            <div className="flex items-start justify-between gap-3">
-              <span className="text-muted-foreground shrink-0">{tr('speak.recap.goal')}</span>
-              <span className="text-foreground text-right leading-snug">{speakSession.userGoal}</span>
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">

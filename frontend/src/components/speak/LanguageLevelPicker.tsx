@@ -76,9 +76,9 @@ export function LanguageLevelPicker({
               aria-pressed={level === lvl.id}
             >
               <span className="text-xl" aria-hidden="true">{lvl.icon}</span>
-              <div>
+              <div className="mt-2">
                 <div className="font-medium text-foreground">{t(`speak.level.${lvl.id}.title`)}</div>
-                <div className="text-sm text-muted-foreground">{t(`speak.level.${lvl.id}.subtitle`)}</div>
+                <div className="text-sm text-muted-foreground mt-1">{t(`speak.level.${lvl.id}.subtitle`)}</div>
               </div>
             </button>
           ))}
