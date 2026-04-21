@@ -47,6 +47,25 @@ _custom_cache: dict[str, tuple["SituationConfig", float]] = {}
 
 
 @dataclass(frozen=True)
+class VocabItem:
+    """A target-vocabulary entry: the term (target language) plus a short
+    meaning written in the learner's interface language."""
+
+    term: str
+    meaning: str
+
+    def to_json_dict(self) -> dict[str, str]:
+        return {"term": self.term, "meaning": self.meaning}
+
+    @classmethod
+    def from_json_dict(cls, data: Any) -> "VocabItem":
+        # Accept legacy plain-string vocab for cache survivability.
+        if isinstance(data, str):
+            return cls(term=data, meaning="")
+        return cls(term=data["term"], meaning=data.get("meaning", ""))
+
+
+@dataclass(frozen=True)
 class SituationConfig:
     """Resolved situation record consumed by the agent."""
 
@@ -55,10 +74,17 @@ class SituationConfig:
     ai_role: str
     scene_context: str
     opening_line: str
-    user_goal: str
-    target_vocab: list[str] = field(default_factory=list)
+    # Translation of opening_line into the learner's interface language so
+    # they can read what the AI is about to say. The agent speaks
+    # opening_line verbatim in the target language; this field is UI-only.
+    opening_line_translation: str = ""
+    user_goal: str = ""
+    target_vocab: list[VocabItem] = field(default_factory=list)
     language: str = ""
     level_label: str = ""
+    # BCP-47 code of the learner's interface language (e.g. "vi", "en").
+    # Used to localize scene_context, user_goal, and vocab meanings.
+    interface_language: str = "en"
 
     def to_json_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-safe dict for LiveKit token metadata."""
@@ -68,10 +94,12 @@ class SituationConfig:
             "ai_role": self.ai_role,
             "scene_context": self.scene_context,
             "opening_line": self.opening_line,
+            "opening_line_translation": self.opening_line_translation,
             "user_goal": self.user_goal,
-            "target_vocab": list(self.target_vocab),
+            "target_vocab": [v.to_json_dict() for v in self.target_vocab],
             "language": self.language,
             "level_label": self.level_label,
+            "interface_language": self.interface_language,
         }
 
     @classmethod
@@ -83,10 +111,12 @@ class SituationConfig:
             ai_role=data["ai_role"],
             scene_context=data["scene_context"],
             opening_line=data["opening_line"],
+            opening_line_translation=data.get("opening_line_translation", ""),
             user_goal=data["user_goal"],
-            target_vocab=list(data.get("target_vocab", [])),
+            target_vocab=[VocabItem.from_json_dict(v) for v in data.get("target_vocab", [])],
             language=data["language"],
             level_label=data.get("level_label", ""),
+            interface_language=data.get("interface_language", "en"),
         )
 
 

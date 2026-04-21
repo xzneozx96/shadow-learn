@@ -56,7 +56,11 @@ class PersonaAgent(Agent):
         config = getattr(userdata, "situation_config", None)
         if config and getattr(config, "opening_line", None):
             await self.session.generate_reply(
-                instructions=f"Say exactly this opening line to start the scene: {config.opening_line}"
+                instructions=(
+                    f"Your FIRST utterance MUST be VERBATIM, word-for-word: "
+                    f'"{config.opening_line}" — '
+                    f"Speak those exact words only. Do not paraphrase, summarize, or add anything before them."
+                )
             )
         else:
             logger.warning("No situation_config.opening_line; falling back to generic greeting")

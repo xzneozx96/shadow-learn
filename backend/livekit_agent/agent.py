@@ -128,6 +128,14 @@ async def shadowlearn_session(ctx: agents.JobContext):
                 from types import SimpleNamespace as _SN
                 situation_json = _unquote(v)
                 raw = _json.loads(situation_json)
+                # Normalize vocab: accept both new {term, meaning} shape and
+                # legacy plain-string shape. Downstream consumers expect
+                # plain strings for prompts; meanings are UI-only.
+                raw_vocab = raw.get("target_vocab", [])
+                vocab_terms = [
+                    v["term"] if isinstance(v, dict) else str(v)
+                    for v in raw_vocab
+                ]
                 userdata.situation_config = _SN(
                     id=raw["id"],
                     title=raw["title"],
@@ -135,9 +143,10 @@ async def shadowlearn_session(ctx: agents.JobContext):
                     scene_context=raw["scene_context"],
                     opening_line=raw["opening_line"],
                     user_goal=raw["user_goal"],
-                    target_vocab=raw.get("target_vocab", []),
+                    target_vocab=vocab_terms,
                     language=raw["language"],
                     level_label=raw.get("level_label", ""),
+                    interface_language=raw.get("interface_language", "en"),
                 )
                 userdata.target_language = raw["language"]
             except Exception as exc:
@@ -153,7 +162,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     if google_key:
         llm = google.realtime.RealtimeModel(
             api_key=google_key,
-            model="gemini-3.1-flash-live-preview",
+            model="gemini-2.5-flash-native-audio-preview-12-2025",
             voice=voice_id,
         )
     else:

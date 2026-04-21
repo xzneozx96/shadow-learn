@@ -2,13 +2,19 @@ import { BookOpen, MapPin, MessageSquareQuote, RefreshCw, Target } from 'lucide-
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 
+export interface VocabItem {
+  term: string
+  meaning: string
+}
+
 export interface SituationPreviewData {
   title: string
   ai_role: string
   scene_context: string
   opening_line: string
+  opening_line_translation: string
   user_goal: string
-  target_vocab: string[]
+  target_vocab: VocabItem[]
 }
 
 interface SituationPreviewProps {
@@ -22,7 +28,7 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
   const { t } = useI18n()
 
   return (
-    <div className="flex flex-col gap-6 py-2">
+    <div className="flex flex-col gap-8 py-2">
       {/* Header Section */}
       <div className="space-y-1">
         <h2 className="text-2xl font-bold tracking-tight text-foreground">{preview.title}</h2>
@@ -53,14 +59,20 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
 
       {/* Opening Line Section */}
       <div className="space-y-3">
-        <SectionLabel icon={MessageSquareQuote}>{t('speak.preview.openingLine')}</SectionLabel>
-        <div className="relative p-5 rounded-xl bg-primary/5 border border-primary/10">
+        <div className="flex items-center justify-between">
+          <SectionLabel icon={MessageSquareQuote}>{t('speak.preview.openingLine')}</SectionLabel>
+        </div>
+        <div className="relative p-5 rounded-xl bg-primary/5 border border-primary/10 space-y-2">
           <p className="text-base italic text-foreground leading-relaxed relative z-10">
             "
             {preview.opening_line}
             "
           </p>
-          <MessageSquareQuote className="absolute top-2 right-4 w-12 h-12 text-primary/5 z-0" />
+          {preview.opening_line_translation && (
+            <p className="text-sm text-muted-foreground leading-relaxed relative z-10">
+              {preview.opening_line_translation}
+            </p>
+          )}
         </div>
       </div>
 
@@ -68,14 +80,19 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
       {preview.target_vocab.length > 0 && (
         <div className="space-y-3">
           <SectionLabel icon={BookOpen}>{t('speak.preview.vocab')}</SectionLabel>
-          <div className="flex flex-wrap gap-2">
-            {preview.target_vocab.map(word => (
-              <span
-                key={word}
-                className="inline-flex items-center rounded-lg px-3 py-1 text-sm font-semibold bg-primary/10 text-primary border border-primary/20 transition-colors"
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {preview.target_vocab.map(item => (
+              <div
+                key={item.term}
+                className="flex flex-col gap-0.5 rounded-lg px-3 py-2 bg-primary/10 border border-primary/20"
               >
-                {word}
-              </span>
+                <span className="font-bold text-primary leading-tight">
+                  {item.term}
+                </span>
+                <span className="text-sm text-muted-foreground leading-snug">
+                  {item.meaning}
+                </span>
+              </div>
             ))}
           </div>
         </div>

@@ -29,6 +29,11 @@ router = APIRouter(prefix="/api/speak")
 session_cache: dict[str, dict[str, Any]] = {}
 
 
+class VocabItemResponse(BaseModel):
+    term: str
+    meaning: str
+
+
 class SessionStartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -37,6 +42,7 @@ class SessionStartRequest(BaseModel):
     situation_id: str = Field(..., pattern=r"^[a-z_0-9]+$")
     target_language: str = Field(..., pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
     proficiency_level: Literal["beginner", "intermediate", "advanced"]
+    interface_language: str = Field(default="en", pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
     mode: str = Field(default="free", pattern=r"^(free|guided)$")
     force_regenerate: bool = Field(default=False)
 
@@ -50,8 +56,9 @@ class SessionStartResponse(BaseModel):
     situation_ai_role: str
     situation_scene_context: str
     situation_opening_line: str
+    situation_opening_line_translation: str
     situation_user_goal: str
-    situation_target_vocab: list[str]
+    situation_target_vocab: list[VocabItemResponse]
 
 
 class SessionEndRequest(BaseModel):
@@ -64,6 +71,7 @@ class GenerateSituationRequest(BaseModel):
     level: Literal["beginner", "intermediate", "advanced"]
     google_key: str = Field(..., min_length=1)
     persona_id: str = Field(..., pattern=r"^[a-z_]+$")
+    interface_language: str = Field(default="en", pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
 
 
 class GenerateSituationResponse(BaseModel):
@@ -72,8 +80,9 @@ class GenerateSituationResponse(BaseModel):
     ai_role: str
     scene_context: str
     opening_line: str
+    opening_line_translation: str
     user_goal: str
-    target_vocab: list[str]
+    target_vocab: list[VocabItemResponse]
 
 
 def _generate_livekit_token(
@@ -154,6 +163,7 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
                 google_key=request.google_key,
                 situation_id=request.situation_id,
                 force_regenerate=request.force_regenerate,
+                interface_language=request.interface_language,
             )
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
@@ -213,8 +223,12 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
         situation_ai_role=situation.ai_role,
         situation_scene_context=situation.scene_context,
         situation_opening_line=situation.opening_line,
+        situation_opening_line_translation=situation.opening_line_translation,
         situation_user_goal=situation.user_goal,
-        situation_target_vocab=list(situation.target_vocab),
+        situation_target_vocab=[
+            VocabItemResponse(term=v.term, meaning=v.meaning)
+            for v in situation.target_vocab
+        ],
     )
 
 
@@ -245,6 +259,7 @@ async def generate_situation(request: GenerateSituationRequest) -> GenerateSitua
             language=request.language,
             level=request.level,
             google_key=request.google_key,
+            interface_language=request.interface_language,
         )
     except GenerationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -255,8 +270,12 @@ async def generate_situation(request: GenerateSituationRequest) -> GenerateSitua
         ai_role=cfg.ai_role,
         scene_context=cfg.scene_context,
         opening_line=cfg.opening_line,
+        opening_line_translation=cfg.opening_line_translation,
         user_goal=cfg.user_goal,
-        target_vocab=list(cfg.target_vocab),
+        target_vocab=[
+            VocabItemResponse(term=v.term, meaning=v.meaning)
+            for v in cfg.target_vocab
+        ],
     )
 
 

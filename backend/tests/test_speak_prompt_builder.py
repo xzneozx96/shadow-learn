@@ -1,6 +1,6 @@
 import pytest
 from app.speak.prompt_builder import build_system_prompt
-from app.speak.situations import SituationConfig
+from app.speak.situations import SituationConfig, VocabItem
 
 
 def _cfg() -> SituationConfig:
@@ -11,7 +11,7 @@ def _cfg() -> SituationConfig:
         scene_context="You are a server at a busy noodle restaurant during lunch rush.",
         opening_line="您好！想吃点什么？",
         user_goal="Order a bowl of noodles",
-        target_vocab=["我想要", "一碗"],
+        target_vocab=[VocabItem(term="我想要", meaning="I want")],
         language="zh-CN",
         level_label="HSK 1-2",
     )

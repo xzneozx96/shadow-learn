@@ -1,6 +1,7 @@
 import type { TokenSourceLiteral } from 'livekit-client'
 import type { GeneratedSituation } from './CustomSituationInput'
 import type { ProficiencyLevel } from './LanguageLevelPicker'
+import { isSupportedSpeakLanguage } from './LanguageLevelPicker'
 import type { SituationPreviewData } from './SituationPreview'
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
@@ -201,7 +202,7 @@ function SessionWrapper({
 }
 
 export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { keys, db } = useAuth()
   const { currentSession, startSession, endSession, clearSession, updateTranscript, updateFeedback } = useSpeakSession()
   const [step, setStep] = useState<Step>('language-level')
@@ -222,7 +223,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     if (!db)
       return
     getSettings(db).then((s) => {
-      if (s?.translationLanguage)
+      if (s?.translationLanguage && isSupportedSpeakLanguage(s.translationLanguage))
         setTargetLanguage(s.translationLanguage)
     })
   }, [db])
@@ -297,6 +298,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
           situation_id: selectedSituation.id,
           target_language: targetLanguage,
           proficiency_level: proficiencyLevel,
+          interface_language: locale,
           force_regenerate: forceRegenerate,
         }),
       })
@@ -314,8 +316,9 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         situation_ai_role: string
         situation_scene_context: string
         situation_opening_line: string
+        situation_opening_line_translation: string
         situation_user_goal: string
-        situation_target_vocab: string[]
+        situation_target_vocab: Array<{ term: string, meaning: string }>
       }
 
       setPendingToken({ url: data.livekit_url, token: data.livekit_token, sessionId: data.session_id })
@@ -324,6 +327,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         ai_role: data.situation_ai_role,
         scene_context: data.situation_scene_context,
         opening_line: data.situation_opening_line,
+        opening_line_translation: data.situation_opening_line_translation,
         user_goal: data.situation_user_goal,
         target_vocab: data.situation_target_vocab,
       })
@@ -336,7 +340,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     finally {
       setLoading(false)
     }
-  }, [hasGoogleKey, keys, proficiencyLevel, targetLanguage, t])
+  }, [hasGoogleKey, keys, proficiencyLevel, targetLanguage, locale, t])
 
   // Moves the pending token into active use and connects to LiveKit.
   const connectToSession = useCallback(async (
@@ -460,20 +464,20 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     <Dialog
       open={open}
       onOpenChange={(isOpen) => {
-        if (!isOpen && step === 'active') {
-          return
-        }
-        if (!isOpen) {
+        // Only fires for backdrop click and ESC — our own X button calls handleClose() directly.
+        // Block both when the session is active so the user can't accidentally leave mid-call.
+        if (!isOpen && step !== 'active')
           handleClose()
-        }
       }}
     >
-      <DialogContent className={cn(
-        'p-0 gap-0 overflow-hidden elegant-card transition-all duration-500 ease-in-out max-w-4xl! min-w-[700px]',
-      )}
+      <DialogContent
+        className={cn(
+          'p-0 gap-0 overflow-hidden elegant-card transition-all duration-500 ease-in-out max-w-4xl! min-w-[700px]',
+        )}
+        showCloseButton={false}
       >
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border flex items-center gap-2 pr-12">
+        <div className="px-4 py-3 border-b border-border flex items-center gap-2">
           {canGoBack && (
             <button
               onClick={handleBack}
@@ -484,7 +488,17 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             </button>
           )}
-          <h2 className="text-lg font-bold pr-6">{t('speak.title')}</h2>
+          <h2 className="text-lg font-bold flex-1">{t('speak.title')}</h2>
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Error banner */}

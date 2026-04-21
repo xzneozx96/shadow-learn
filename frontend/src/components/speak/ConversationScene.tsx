@@ -164,8 +164,12 @@ function ConversationSceneInner({
 
   const isConnected = agent.isConnected
   const agentState = agent.state
-  const error = agent.state === 'failed' ? agent.failureReasons?.[0] : undefined
   const audioTrack = agent.microphoneTrack
+
+  // Derived during rendering — no state needed.
+  // Show the error only while the agent is failed AND not connected.
+  // When the agent reconnects (isConnected → true), this naturally becomes undefined.
+  const agentError = agentState === 'failed' && !isConnected ? agent.failureReasons?.[0] : undefined
 
   // Capture the moment the agent first connects. Guarded conditional setState during render
   // is the React-recommended pattern for deriving state from props (avoids useEffect loop).
@@ -234,7 +238,7 @@ function ConversationSceneInner({
           </div>
         </div>
 
-        {(isOffline || error) && (
+        {(isOffline || agentError) && (
           <div className="space-y-2 mb-4 shrink-0 px-2">
             {isOffline && (
               <div className="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-center justify-center gap-2">
@@ -244,10 +248,10 @@ function ConversationSceneInner({
                 </p>
               </div>
             )}
-            {error && (
+            {agentError && (
               <div className="p-2 bg-destructive/10 border border-destructive/30 rounded-lg">
                 <p className="text-xs text-destructive text-center font-medium">
-                  {error}
+                  {agentError}
                 </p>
               </div>
             )}
@@ -279,11 +283,11 @@ function ConversationSceneInner({
 
           <div className="absolute bottom-0 right-0 left-0 flex justify-center py-1">
             <p className="text-xs font-bold text-primary uppercase tracking-[0.2em] h-4">
-              {(agentState === 'connecting' || agentState === 'initializing') && t('speak.status.connecting')}
-              {agentState === 'listening' && t('speak.status.listening')}
-              {agentState === 'thinking' && t('speak.status.thinking')}
-              {agentState === 'speaking' && t('speak.status.speaking')}
-              {agentState === 'idle' && t('speak.status.ready')}
+              {(!isConnected || agentState === 'connecting' || agentState === 'initializing') && t('speak.status.connecting')}
+              {isConnected && agentState === 'listening' && t('speak.status.listening')}
+              {isConnected && agentState === 'thinking' && t('speak.status.thinking')}
+              {isConnected && agentState === 'speaking' && t('speak.status.speaking')}
+              {isConnected && agentState === 'idle' && t('speak.status.ready')}
             </p>
           </div>
         </div>

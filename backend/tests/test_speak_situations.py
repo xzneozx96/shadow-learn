@@ -1,57 +1,85 @@
 import pytest
 from dataclasses import is_dataclass
+
 from app.speak.situations import (
+    BUILT_IN_SITUATIONS,
     SituationConfig,
-    get_situation,
+    VocabItem,
     cache_custom_situation,
+    get_custom_situation,
+    get_situation_seed,
     list_built_in_situations,
 )
 
 
+def _make_config(**overrides) -> SituationConfig:
+    base = dict(
+        id="custom_test123",
+        title="Test",
+        ai_role="r",
+        scene_context="s",
+        opening_line="你好",
+        opening_line_translation="Xin chào",
+        user_goal="g",
+        target_vocab=[VocabItem(term="你好", meaning="Xin chào")],
+        language="zh-CN",
+        level_label="HSK 1-2",
+        interface_language="vi",
+    )
+    base.update(overrides)
+    return SituationConfig(**base)
+
+
 def test_situation_config_is_frozen_dataclass():
     assert is_dataclass(SituationConfig)
-    cfg = SituationConfig(
-        id="x", title="t", ai_role="r", scene_context="s",
-        opening_line="hi", user_goal="g", target_vocab=[],
-        language="zh-CN", level_label="HSK 1",
-    )
+    cfg = _make_config()
     with pytest.raises((AttributeError, Exception)):
         cfg.title = "mutated"  # type: ignore
 
 
-def test_get_situation_returns_built_in_for_zh_cn_beginner():
-    cfg = get_situation("ordering_food", "zh-CN", "beginner")
-    assert cfg.id == "ordering_food"
-    assert cfg.language == "zh-CN"
-    assert cfg.level_label == "HSK 1-2"
-    assert len(cfg.opening_line) > 0
-    assert len(cfg.target_vocab) >= 3
+def test_list_built_in_situations_returns_display_metadata():
+    items = list_built_in_situations()
+    assert len(items) == len(BUILT_IN_SITUATIONS)
+    for item in items:
+        assert {"id", "title", "description", "icon"} <= item.keys()
 
 
-def test_get_situation_unknown_id_raises():
+def test_get_situation_seed_returns_seed_text():
+    seed = get_situation_seed("ordering_food")
+    assert isinstance(seed, str) and len(seed) > 0
+
+
+def test_get_situation_seed_unknown_raises():
     with pytest.raises(KeyError):
-        get_situation("nonexistent", "zh-CN", "beginner")
-
-
-def test_get_situation_unsupported_language_raises():
-    with pytest.raises(KeyError):
-        get_situation("ordering_food", "xx", "beginner")
+        get_situation_seed("nonexistent_situation")
 
 
 def test_cache_custom_situation_and_retrieve():
-    cfg = SituationConfig(
-        id="custom_test123", title="Test", ai_role="r", scene_context="s",
-        opening_line="hi", user_goal="g", target_vocab=["a", "b"],
-        language="zh-CN", level_label="HSK 1-2",
-    )
+    cfg = _make_config(id="custom_roundtrip")
     cache_custom_situation(cfg)
-    retrieved = get_situation("custom_test123", "zh-CN", "beginner")
-    assert retrieved.id == "custom_test123"
-    assert retrieved.target_vocab == ["a", "b"]
+    retrieved = get_custom_situation("custom_roundtrip")
+    assert retrieved.id == "custom_roundtrip"
+    assert retrieved.interface_language == "vi"
+    assert retrieved.target_vocab[0].term == "你好"
+    assert retrieved.target_vocab[0].meaning == "Xin chào"
 
 
-def test_list_built_in_situations_returns_display_metadata():
-    items = list_built_in_situations()
-    assert len(items) >= 1
-    for item in items:
-        assert "id" in item and "title" in item and "description" in item
+def test_get_custom_situation_unknown_raises():
+    with pytest.raises(KeyError):
+        get_custom_situation("custom_nonexistent")
+
+
+def test_vocab_item_legacy_string_roundtrip():
+    """Legacy cached data may have plain-string vocab; deserialization accepts it."""
+    vi = VocabItem.from_json_dict("你好")
+    assert vi.term == "你好" and vi.meaning == ""
+
+
+def test_situation_config_to_from_json_dict():
+    cfg = _make_config()
+    data = cfg.to_json_dict()
+    assert data["target_vocab"] == [{"term": "你好", "meaning": "Xin chào"}]
+    assert data["interface_language"] == "vi"
+
+    restored = SituationConfig.from_json_dict(data)
+    assert restored == cfg

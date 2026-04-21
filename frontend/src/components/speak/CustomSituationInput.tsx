@@ -4,14 +4,20 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { API_BASE } from '@/lib/config'
 
+export interface VocabItem {
+  term: string
+  meaning: string
+}
+
 export interface GeneratedSituation {
   situation_id: string
   title: string
   ai_role: string
   scene_context: string
   opening_line: string
+  opening_line_translation: string
   user_goal: string
-  target_vocab: string[]
+  target_vocab: VocabItem[]
 }
 
 export interface CustomSituationInputProps {
@@ -24,7 +30,7 @@ export interface CustomSituationInputProps {
 
 export function CustomSituationInput({ language, level, personaId, onGenerated, onCancel }: CustomSituationInputProps) {
   const { keys } = useAuth()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const hasGoogleKey = !!(keys?.googleRealtimeKey)
 
   const [text, setText] = useState('')
@@ -52,6 +58,7 @@ export function CustomSituationInput({ language, level, personaId, onGenerated, 
           level,
           google_key: keys.googleRealtimeKey,
           persona_id: personaId,
+          interface_language: locale,
         }),
       })
       if (!resp.ok) {
