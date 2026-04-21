@@ -175,7 +175,7 @@ export const SegmentText = memo(({
   }, [player])
 
   return (
-    <span className="text-lg">
+    <>
       {spans.map((span, spanIdx) => {
         const spanStart = spanStarts[spanIdx]
 
@@ -210,7 +210,7 @@ export const SegmentText = memo(({
               {showRomanization && span.word.romanization && (
                 <span
                   className={cn(
-                    'text-sm',
+                    'text-sm font-mono',
                     fullySpoken ? 'text-yellow-400' : 'text-muted-foreground',
                   )}
                   ref={karaokeEnabled ? (el) => { wordPinyinRef.current[spanIdx] = el } : undefined}
@@ -218,7 +218,7 @@ export const SegmentText = memo(({
                   {span.word.romanization}
                 </span>
               )}
-              <span className={cn('decoration-white/30 decoration-dotted underline-offset-4', fullySpoken && 'text-yellow-400')}>
+              <span className={cn('decoration-white/30 decoration-dotted underline-offset-4 text-xl mt-1', fullySpoken && 'text-yellow-400')}>
                 {textNode}
               </span>
             </PopoverTrigger>
@@ -312,7 +312,7 @@ export const SegmentText = memo(({
           </Popover>
         )
       })}
-    </span>
+    </>
   )
 })
 

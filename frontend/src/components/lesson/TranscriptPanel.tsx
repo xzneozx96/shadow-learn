@@ -93,7 +93,7 @@ const SegmentRow = memo(({
               forceSpoken={forceSpoken}
             />
           </div>
-          <p className="mt-1 text-muted-foreground">
+          <p className="mt-1 text-muted-foreground italic">
             {segment.translations[activeLang] ?? Object.values(segment.translations)[0]}
           </p>
         </div>
