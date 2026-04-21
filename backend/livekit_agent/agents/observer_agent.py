@@ -182,9 +182,23 @@ class ObserverAgent:
         ])
 
         # Format prompt
+        try:
+            userdata = self.session.userdata
+            language = getattr(userdata, "target_language", "zh-CN")
+            level = getattr(userdata, "proficiency_level", "intermediate")
+            config = getattr(userdata, "situation_config", None)
+            proficiency_label = getattr(config, "level_label", "") if config else ""
+        except Exception:
+            language = "zh-CN"
+            level = "intermediate"
+            proficiency_label = ""
+
         context = {
             "conversation_text": conversation_text,
             "user_turn": text,
+            "language": language,
+            "level": level,
+            "proficiency_label": proficiency_label or "general",
         }
 
         try:
@@ -254,17 +268,35 @@ class ObserverAgent:
 
         # Get userdata for situation info
         try:
-            userdata: SpeakSessionData = self.session.userdata
-            situation_id = userdata.situation_id or "casual chat"
+            userdata = self.session.userdata
+            config = getattr(userdata, "situation_config", None)
+            if config:
+                situation_description = config.scene_context
+                user_goal = config.user_goal
+                target_vocab = ", ".join(config.target_vocab) if config.target_vocab else ""
+            else:
+                situation_description = userdata.situation_id or "casual chat"
+                user_goal = ""
+                target_vocab = ""
             persona_id = userdata.persona_id or "friendly buddy"
+            language = getattr(userdata, "target_language", "zh-CN")
+            level = getattr(userdata, "proficiency_level", "intermediate")
         except Exception:
-            situation_id = "casual chat"
+            situation_description = "casual chat"
+            user_goal = ""
+            target_vocab = ""
             persona_id = "friendly buddy"
+            language = "zh-CN"
+            level = "intermediate"
 
         context = {
             "conversation_text": conversation_text,
-            "situation_description": situation_id,
+            "situation_description": situation_description,
+            "user_goal": user_goal,
+            "target_vocab": target_vocab,
             "persona_name": persona_id,
+            "language": language,
+            "level": level,
         }
 
         try:

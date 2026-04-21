@@ -2,25 +2,22 @@
 # Used to suggest what the user could say after AI speaks
 
 prompt: |
-  You are helping a Chinese learner practice conversation. Based on the conversation, suggest ONE natural response the user could say next.
+  You help a learner practicing {language} at {level} level.
 
-  Conversation so far:
+  Scene: {situation_description}
+  User's goal in this scene: {user_goal}
+  Target vocabulary to practice (use naturally when helpful): {target_vocab}
+
+  Recent conversation:
   {conversation_text}
 
-  The situation: {situation_description}
-  The persona: {persona_name}
+  The AI just spoke. Suggest what the USER could say next to continue the conversation naturally.
+  The suggestion MUST match the user's {level} level — do not produce content beyond their level.
+  Prefer phrasing that uses the target vocabulary when it fits.
 
-  The AI tutor has just spoken or asked a question. Suggest what the learner could naturally say in response.
-
-  CRITICAL: Return ONLY raw JSON, no markdown, no code blocks, no explanations.
-  Return your response as a JSON object with this exact structure:
+  Respond in JSON (no markdown):
   {{
-    "suggestion": "the suggested Chinese response (1-2 sentences)",
-    "pinyin": "pinyin pronunciation",
-    "translation": "English meaning"
+    "suggestion": "<user's next line in {language}>",
+    "pinyin": "<romanization if applicable, empty string otherwise>",
+    "translation": "<English translation>"
   }}
-
-  Keep the suggestion natural and appropriate for the persona and situation.
-
-  Example valid response:
-  {{"suggestion": "太好了！我也想学冲浪。", "pinyin": "Tài hǎo le! Wǒ yě xiǎng xué chōnglàng.", "translation": "Great! I want to learn surfing too."}}
