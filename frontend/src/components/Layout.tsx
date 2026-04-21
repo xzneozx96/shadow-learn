@@ -1,10 +1,11 @@
-import { Newspaper, Settings, Sparkles } from 'lucide-react'
+import { Newspaper, Settings, Sparkles, Zap } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { useHasUnseenAnnouncement } from '@/lib/whats-new'
 import { ScrollArea } from './ui/scroll-area'
 
@@ -17,6 +18,7 @@ export function Layout({ children }: LayoutProps) {
   const { t } = useI18n()
   const { trialMode } = useAuth()
   const { isGlobalPanelOpen, openPanel } = useGlobalCompanionContext()
+  const { openSpeakModal } = useSpeakModal()
   const hasUnseen = useHasUnseenAnnouncement()
 
   return (
@@ -35,20 +37,34 @@ export function Layout({ children }: LayoutProps) {
             </Link>
 
             <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={openPanel} className="gap-1.5">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={openPanel}
+                className="gap-2 bg-linear-to-br from-violet-500/12 to-transparent border-violet-500/25 hover:border-violet-500/40 hover:from-violet-500/18 text-violet-400 transition-all duration-200"
+              >
                 <Sparkles className="size-3.5" />
                 {t('companion.askButton')}
               </Button>
               <Button
+                variant="outline"
+                size="lg"
+                onClick={openSpeakModal}
+                className="gap-2 bg-linear-to-br from-amber-500/15 to-transparent border-amber-500/30 hover:border-amber-500/50 hover:from-amber-500/22 text-amber-400 font-medium transition-all duration-200 active:scale-[0.98]"
+              >
+                <Zap className="size-3.5" />
+                {t('speak.title')}
+              </Button>
+              <Button
                 variant={location.pathname.startsWith('/vocabulary') ? 'default' : 'outline'}
-                size="sm"
+                size="lg"
                 render={<Link to="/vocabulary" />}
               >
                 {t('nav.workbook')}
               </Button>
               <Button
                 variant={location.pathname === '/docs' ? 'default' : 'outline'}
-                size="sm"
+                size="lg"
                 render={<Link to="/docs" />}
               >
                 {t('nav.documentation')}
@@ -56,7 +72,7 @@ export function Layout({ children }: LayoutProps) {
               <div className="relative">
                 <Button
                   variant={location.pathname === '/changelog' ? 'default' : 'outline'}
-                  size="sm"
+                  size="lg"
                   render={<Link to="/changelog" />}
                   className="gap-1.5"
                 >
@@ -69,7 +85,7 @@ export function Layout({ children }: LayoutProps) {
                   </span>
                 )}
               </div>
-              <Button variant="outline" size="icon" render={<Link to="/settings" />}>
+              <Button variant="outline" size="lg" render={<Link to="/settings" />}>
                 <Settings className="size-4" />
               </Button>
             </div>

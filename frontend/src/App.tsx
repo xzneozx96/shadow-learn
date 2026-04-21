@@ -11,6 +11,8 @@ import { Settings } from '@/components/settings/Settings'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { GlobalCompanionProvider } from '@/contexts/GlobalCompanionContext'
+import { SpeakModalProvider, useSpeakModal } from '@/contexts/SpeakModalContext'
+import { PracticeSpeakingModal } from '@/components/speak/PracticeSpeakingModal'
 import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
@@ -20,12 +22,20 @@ import { DocumentationPage } from '@/pages/DocumentationPage'
 import { StudySessionPage } from '@/pages/StudySessionPage'
 import { WorkbookPage } from '@/pages/WorkbookPage'
 
+function GlobalSpeakModal() {
+  const { isOpen, closeSpeakModal } = useSpeakModal()
+  return <PracticeSpeakingModal open={isOpen} onClose={closeSpeakModal} />
+}
+
 function AppLayout() {
   return (
     <PlayerProvider>
       <GlobalCompanionProvider>
-        <Outlet />
-        <FeedbackButton />
+        <SpeakModalProvider>
+          <Outlet />
+          <FeedbackButton />
+          <GlobalSpeakModal />
+        </SpeakModalProvider>
       </GlobalCompanionProvider>
     </PlayerProvider>
   )

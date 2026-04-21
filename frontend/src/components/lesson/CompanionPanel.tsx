@@ -1,14 +1,14 @@
 import type { Segment } from '@/types'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useAgentChat } from '@/hooks/useAgentChat'
 import { captureCompanionMessageSent } from '@/lib/posthog-events'
 import { CompanionChatArea } from '../chat/CompanionChatArea'
-import { PracticeSpeakingModal } from '../speak/PracticeSpeakingModal'
 import { LessonWorkbookPanel } from './LessonWorkbookPanel'
 
 interface CompanionPanelProps {
@@ -31,7 +31,7 @@ export function CompanionPanel({
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
   const { messages, isLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
-  const [speakModalOpen, setSpeakModalOpen] = useState(false)
+  const { openSpeakModal } = useSpeakModal()
 
   useEffect(() => {
     if (chips.length > 0)
@@ -57,8 +57,7 @@ export function CompanionPanel({
     : undefined
 
   return (
-    <>
-      <Tabs defaultValue="ai" value={activeTab} onValueChange={onTabChange} className="flex h-full flex-col gap-0">
+    <Tabs defaultValue="ai" value={activeTab} onValueChange={onTabChange} className="flex h-full flex-col gap-0">
         <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3 rounded-none h-[65px]!">
           <TabsTrigger value="ai">{t('lesson.aiCompanion')}</TabsTrigger>
           <TabsTrigger value="workbook" className="gap-1.5">
@@ -78,16 +77,13 @@ export function CompanionPanel({
             onSend={handleSend}
             onStop={stop}
             headerSlot={headerSlot}
-            onSpeakClick={() => setSpeakModalOpen(true)}
+            onSpeakClick={openSpeakModal}
           />
         </TabsContent>
 
         <TabsContent value="workbook" className="min-h-0 flex-1 overflow-hidden">
           <LessonWorkbookPanel lessonId={lessonId} />
         </TabsContent>
-      </Tabs>
-
-      <PracticeSpeakingModal open={speakModalOpen} onClose={() => setSpeakModalOpen(false)} />
-    </>
+    </Tabs>
   )
 }
