@@ -21,6 +21,11 @@ from utils import load_prompt
 
 logger = logging.getLogger("speak-with-ai.observer")
 
+_LOCALE_TO_LANGUAGE_NAME = {
+    "en": "English",
+    "vi": "Vietnamese",
+}
+
 
 class ObserverAgent:
     """Parallel observer that monitors conversations for feedback.
@@ -187,18 +192,25 @@ class ObserverAgent:
             language = getattr(userdata, "target_language", "zh-CN")
             level = getattr(userdata, "proficiency_level", "intermediate")
             config = getattr(userdata, "situation_config", None)
-            proficiency_label = getattr(config, "level_label", "") if config else ""
+            if config:
+                proficiency_label = getattr(config, "level_label", "") or "general"
+                interface_language = getattr(config, "interface_language", "en")
+            else:
+                proficiency_label = "general"
+                interface_language = "en"
         except Exception:
             language = "zh-CN"
             level = "intermediate"
-            proficiency_label = ""
+            proficiency_label = "general"
+            interface_language = "en"
 
         context = {
             "conversation_text": conversation_text,
             "user_turn": text,
             "language": language,
             "level": level,
-            "proficiency_label": proficiency_label or "general",
+            "proficiency_label": proficiency_label,
+            "interface_language": _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language),
         }
 
         try:
@@ -299,7 +311,7 @@ class ObserverAgent:
             "target_vocab": target_vocab,
             "persona_name": persona_id,
             "target_language": target_language,
-            "interface_language": interface_language,
+            "interface_language": _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language),
             "level": level,
         }
 

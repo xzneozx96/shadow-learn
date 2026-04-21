@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { MenuBackdrop, MenuItem, MenuPopup, MenuPortal, MenuPositioner, MenuRoot, MenuTrigger } from '@/components/ui/menu'
 import { useI18n } from '@/contexts/I18nContext'
+import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useUploadThumbnail } from '@/hooks/useUploadThumbnail'
 import { cn } from '@/lib/utils'
 import { getYoutubeThumbnail } from '@/lib/youtube'
@@ -45,6 +46,8 @@ function UploadPlaceholder() {
 
 export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardProps) {
   const { t } = useI18n()
+  const { entriesByLesson } = useVocabulary()
+  const vocabCount = entriesByLesson[lesson.id]?.length ?? 0
   const status = lesson.status ?? 'complete'
   const isProcessing = status === 'processing'
   const isError = status === 'error'
@@ -153,7 +156,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
         {/* Progress bar */}
         {!isProcessing && !isError && (
-          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10">
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-muted-foreground">
             <div className="h-full bg-red-600" style={{ width: `${progress}%` }} />
           </div>
         )}
@@ -170,8 +173,8 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                 </span>
               )
             : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Upload
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">
+                  {t('library.uploadSource')}
                 </span>
               )}
 
@@ -262,16 +265,12 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
         {/* Footer */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {lesson.segmentCount != null && (
-            <>
-              <span>
-                {lesson.segmentCount}
-                {' '}
-                segments
-              </span>
-              <span>·</span>
-            </>
-          )}
+          <span>
+            {vocabCount}
+            {' '}
+            {t('library.vocabWords')}
+          </span>
+          <span>·</span>
           <span>{formatDate(lesson.lastOpenedAt)}</span>
         </div>
       </div>

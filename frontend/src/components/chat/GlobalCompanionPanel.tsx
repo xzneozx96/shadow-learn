@@ -21,7 +21,7 @@ export function GlobalCompanionPanel() {
 
   return (
     <div className="w-[400px] shrink-0 flex flex-col border-l border-border bg-background">
-      <div className="h-[65px] flex items-center gap-2 border-b border-border px-3">
+      <div className="h-[69px] flex items-center gap-2 border-b border-border px-3">
         <Sparkles className="size-4 text-primary" />
         <span className="flex-1 text-sm font-semibold">{t('companion.title')}</span>
         <Button variant="ghost" size="icon" className="size-7" onClick={closePanel}>

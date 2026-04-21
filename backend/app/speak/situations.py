@@ -7,34 +7,64 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-BUILT_IN_SITUATIONS: dict[str, dict[str, str]] = {
+BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
     "ordering_food": {
-        "title": "Ordering Food",
-        "description": "Practice your survival skills at a local restaurant.",
+        "en": {
+            "title": "Ordering Food",
+            "description": "Practice your survival skills at a local restaurant.",
+        },
+        "vi": {
+            "title": "Gọi món ăn",
+            "description": "Luyện tập kỹ năng gọi món và thanh toán tại nhà hàng.",
+        },
         "icon": "🍜",
         "seed": "Customer enters a busy restaurant, scans the menu, needs to order and ask questions, eventually pays.",
     },
     "asking_directions": {
-        "title": "Asking Directions",
-        "description": "Navigate through the city by asking for help.",
+        "en": {
+            "title": "Asking Directions",
+            "description": "Navigate through the city by asking for help.",
+        },
+        "vi": {
+            "title": "Hỏi đường",
+            "description": "Di chuyển trong thành phố bằng cách hỏi người địa phương.",
+        },
         "icon": "🧭",
         "seed": "A tourist stops a local on a busy street to find a specific landmark and confirm the route.",
     },
     "shopping": {
-        "title": "Shopping",
-        "description": "Browse items, ask for prices, and find what you need.",
+        "en": {
+            "title": "Shopping",
+            "description": "Browse items, ask for prices, and find what you need.",
+        },
+        "vi": {
+            "title": "Mua sắm",
+            "description": "Xem hàng, hỏi giá và tìm thứ bạn cần.",
+        },
         "icon": "🛍️",
         "seed": "Customer browses a boutique, asks about sizes/prices, tries something on, decides whether to buy.",
     },
     "job_interview": {
-        "title": "Job Interview",
-        "description": "Prepare for your career with professional dialogue.",
+        "en": {
+            "title": "Job Interview",
+            "description": "Prepare for your career with professional dialogue.",
+        },
+        "vi": {
+            "title": "Phỏng vấn xin việc",
+            "description": "Chuẩn bị cho sự nghiệp với các câu hỏi phỏng vấn chuyên nghiệp.",
+        },
         "icon": "💼",
         "seed": "Formal interview in an office. Manager asks standard interview questions; candidate answers and asks about the role.",
     },
     "casual_chat": {
-        "title": "Casual Chat",
-        "description": "Have a relaxed conversation about your day and interests.",
+        "en": {
+            "title": "Casual Chat",
+            "description": "Have a relaxed conversation about your day and interests.",
+        },
+        "vi": {
+            "title": "Trò chuyện thường ngày",
+            "description": "Tán gẫu về cuộc sống hàng ngày và sở thích.",
+        },
         "icon": "💬",
         "seed": "Two people at a cafe table, relaxed catching-up about daily life, hobbies, and recent news.",
     },
@@ -133,9 +163,15 @@ def cache_custom_situation(config: SituationConfig) -> None:
     _custom_cache[config.id] = (config, time.time() + _CUSTOM_TTL_SECONDS)
 
 
-def list_built_in_situations() -> list[dict[str, str]]:
+def list_built_in_situations(interface_language: str = "en") -> list[dict[str, str]]:
+    lang = interface_language if interface_language in ("en", "vi") else "en"
     return [
-        {"id": sid, "title": v["title"], "description": v["description"], "icon": v["icon"]}
+        {
+            "id": sid,
+            "title": v[lang]["title"],
+            "description": v[lang]["description"],
+            "icon": v["icon"],
+        }
         for sid, v in BUILT_IN_SITUATIONS.items()
     ]
 

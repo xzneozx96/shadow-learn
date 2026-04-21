@@ -1,5 +1,5 @@
 import type { SpeakSession } from '@/db'
-import type { Persona } from '@/lib/constants'
+import { getPersonaName, type Persona } from '@/lib/constants'
 import type { GrammarFeedback, SpeakSituation } from '@/types'
 import { CheckCircle2, Clock, MessageSquare, Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -52,7 +52,7 @@ function GrammarCorrectionCard({ feedback }: { feedback: GrammarFeedback }) {
 }
 
 export function SessionRecap({ speakSession, persona, situation, onRepeat, onBack }: SessionRecapProps) {
-  const { t: tr } = useI18n()
+  const { t: tr, locale } = useI18n()
   const { transcript } = speakSession
   const feedbacks = speakSession.feedbacks ?? {}
 
@@ -68,7 +68,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
           <div className="space-y-1">
             <h2 className="text-2xl font-black tracking-tight text-foreground">{tr('speak.sessionComplete')}</h2>
             <p className="text-muted-foreground max-w-90 leading-relaxed">
-              {tr('speak.sessionSuccess', { situation: situation.name, persona: persona.name, level: speakSession.levelLabel || speakSession.proficiencyLevel })}
+              {tr('speak.sessionSuccess', { situation: situation.name, persona: getPersonaName(persona, locale), level: speakSession.levelLabel || speakSession.proficiencyLevel })}
             </p>
           </div>
         </div>

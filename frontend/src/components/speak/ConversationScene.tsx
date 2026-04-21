@@ -1,5 +1,5 @@
 import type { SpeakSession } from '@/db'
-import type { Persona } from '@/lib/constants'
+import { getPersonaName, type Persona } from '@/lib/constants'
 import type { GrammarFeedback, NextLineSuggestion, SpeakSituation } from '@/types'
 import { useAgent, useSessionMessages } from '@livekit/components-react'
 import { CheckCircle2, Info, Sparkles } from 'lucide-react'
@@ -75,7 +75,7 @@ function SessionTimer({ connectedAt, maxDurationSeconds, onExpire }: SessionTime
 }
 
 function FeedbackPanel({ feedback }: { feedback: GrammarFeedback | null }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   return (
     <div className="flex flex-col h-full border-l border-border">
@@ -160,7 +160,7 @@ function ConversationSceneInner({
 }: ConversationSceneProps & { isOffline: boolean }) {
   const agent = useAgent()
   const { messages: chatMessages } = useSessionMessages()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const isConnected = agent.isConnected
   const agentState = agent.state
@@ -196,7 +196,7 @@ function ConversationSceneInner({
     void handleEnd()
   }, [handleEnd])
 
-  const portraitInitials = useMemo(() => getInitials(persona.name), [persona.name])
+  const portraitInitials = useMemo(() => getInitials(getPersonaName(persona, locale)), [persona, locale])
 
   const selectedFeedback = selectedMsgId ? feedbackHistory[selectedMsgId] : null
 
@@ -213,7 +213,7 @@ function ConversationSceneInner({
                 ? (
                     <img
                       src={persona.portrait_url}
-                      alt={persona.name}
+                      alt={getPersonaName(persona, locale)}
                       className="w-full h-full object-cover"
                     />
                   )
@@ -222,7 +222,7 @@ function ConversationSceneInner({
                   )}
             </div>
             <div className="min-w-0">
-              <h2 className="font-bold text-sm truncate">{persona.name}</h2>
+              <h2 className="font-bold text-sm truncate">{getPersonaName(persona, locale)}</h2>
               <p className="text-[11px] text-muted-foreground truncate uppercase tracking-wider">{situation.name}</p>
             </div>
           </div>
@@ -266,7 +266,7 @@ function ConversationSceneInner({
                   <div className="relative w-32 h-32 rounded-full bg-primary/20 flex items-center justify-center ring-4 ring-primary/30 overflow-hidden shadow-2xl">
                     <img
                       src={persona.portrait_url}
-                      alt={persona.name}
+                      alt={getPersonaName(persona, locale)}
                       className="w-full h-full object-cover"
                     />
                   </div>

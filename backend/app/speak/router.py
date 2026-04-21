@@ -263,9 +263,12 @@ async def session_end(request: SessionEndRequest) -> dict[str, str]:
 
 
 @router.get("/situations")
-async def list_situations(lang: str = Query(default="zh-CN")) -> dict[str, list[dict[str, str]]]:
+async def list_situations(
+    target_lang: str = Query(default="zh-CN", alias="target_lang"),
+    interface_lang: str = Query(default="en", alias="interface_lang"),
+) -> dict[str, list[dict[str, str]]]:
     """List built-in situations (display metadata only)."""
-    return {"situations": list_built_in_situations()}
+    return {"situations": list_built_in_situations(interface_language=interface_lang)}
 
 
 @router.post("/situations/generate", response_model=GenerateSituationResponse)

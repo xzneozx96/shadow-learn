@@ -134,6 +134,8 @@ export const TRANSLATIONS = {
     'library.retry': 'Retry',
     'library.reuploadToRetry': 'Re-upload to retry',
     'library.retryFailed': 'Failed to retry lesson processing',
+    'library.uploadSource': 'Upload',
+    'library.vocabWords': 'words',
 
     // Lesson View
     'lesson.transcript': 'Transcript',
@@ -604,6 +606,8 @@ export const TRANSLATIONS = {
     'library.retry': 'Thử lại',
     'library.reuploadToRetry': 'Tải lại file để thử lại',
     'library.retryFailed': 'Có lỗi khi thử lại xử lý bài học',
+    'library.uploadSource': 'Tải lên',
+    'library.vocabWords': 'từ vựng',
 
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',

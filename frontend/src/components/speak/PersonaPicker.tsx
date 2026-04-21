@@ -17,7 +17,7 @@ const PERSONA_ICONS: Record<string, LucideIcon> = {
 }
 
 export function PersonaPicker({ targetLanguage, onSelect }: PersonaPickerProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const filteredPersonas = PERSONAS.filter(p =>
     (p.supported_languages as unknown as string[]).includes(targetLanguage),
@@ -33,6 +33,8 @@ export function PersonaPicker({ targetLanguage, onSelect }: PersonaPickerProps) 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
         {filteredPersonas.map((p) => {
           const Icon = PERSONA_ICONS[p.id] || User
+          const name = p.name[locale] ?? p.name['en']
+          const tagline = p.tagline[locale] ?? p.tagline['en']
 
           return (
             <button
@@ -43,15 +45,15 @@ export function PersonaPicker({ targetLanguage, onSelect }: PersonaPickerProps) 
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 transition-all border border-primary/20 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-transparent">
                 {p.portrait_url
-                  ? <img src={p.portrait_url} alt={p.name} className="w-full h-full object-cover rounded-full" />
+                  ? <img src={p.portrait_url} alt={name} className="w-full h-full object-cover rounded-full" />
                   : <Icon className="w-6 h-6" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 overflow-hidden mb-1">
-                  <h3 className="font-bold text-foreground truncate">{p.name}</h3>
+                  <h3 className="font-bold text-foreground truncate">{name}</h3>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                  {p.tagline}
+                  {tagline}
                 </p>
               </div>
             </button>

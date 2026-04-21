@@ -37,15 +37,15 @@ const SITUATION_ICONS: Record<string, LucideIcon> = {
 }
 
 export function SituationPicker({ targetLanguage, onSelect, onRequestCustom }: SituationPickerProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [situations, setSituations] = useState<ApiSituation[]>([])
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/speak/situations?lang=${encodeURIComponent(targetLanguage)}`)
+    fetch(`${API_BASE}/api/speak/situations?target_lang=${encodeURIComponent(targetLanguage)}&interface_lang=${encodeURIComponent(locale)}`)
       .then(r => r.json())
       .then((d: any) => setSituations(d.situations ?? []))
       .catch(() => {})
-  }, [targetLanguage])
+  }, [targetLanguage, locale])
 
   return (
     <div className="space-y-4 py-2">

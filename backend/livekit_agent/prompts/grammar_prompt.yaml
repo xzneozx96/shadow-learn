@@ -20,7 +20,7 @@ prompt: |
       {{
         "original": "<the problematic phrase>",
         "correction": "<corrected version in {language}>",
-        "explanation": "<brief why, in English, for the learner>"
+        "explanation": "<brief why, in {interface_language}, for the learner>"
       }}
     ]
   }}
