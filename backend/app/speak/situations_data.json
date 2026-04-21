@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "version": 1,
+    "seeded_at": null
+  },
+  "situations": {
+    "ordering_food": {
+      "display": {
+        "title": "Ordering Food",
+        "description": "Practice your survival skills at a local restaurant.",
+        "icon": "🍜"
+      },
+      "seed": {
+        "ai_role_neutral": "server at a casual restaurant",
+        "user_goal_neutral": "Order food, ask about preparation, get the bill",
+        "scene_dynamics": "Customer entering a busy restaurant, scanning menu, needs to order and ask questions."
+      },
+      "variants": {
+        "zh-CN": {
+          "beginner": {
+            "ai_role": "服务员 at a casual noodle restaurant in Beijing",
+            "scene_context": "You are a server at a busy noodle restaurant during lunch rush. The menu has beef noodles (牛肉面), dumplings (饺子), and soup. Customer is a first-time visitor. Use casual direct speech typical of mainland Chinese restaurants.",
+            "opening_line": "您好！想吃点什么？",
+            "user_goal": "Order a bowl of noodles, ask about spice, get the bill",
+            "target_vocab": ["我想要", "一碗", "多辣", "买单", "谢谢"]
+          },
+          "intermediate": {
+            "ai_role": "服务员 at a mid-range Chinese restaurant",
+            "scene_context": "You are a server during the lunch rush. Menu includes regional specialties. Customer wants a meaningful conversation about the food. Use natural everyday Mandarin.",
+            "opening_line": "欢迎光临！今天想试试什么菜？有特色菜要推荐吗？",
+            "user_goal": "Order, ask recommendations, discuss preferences, pay",
+            "target_vocab": ["推荐", "招牌菜", "不太辣", "买单", "刷卡"]
+          },
+          "advanced": {
+            "ai_role": "服务员 at an upscale restaurant",
+            "scene_context": "You are an experienced server. Menu has refined dishes, wine pairings. Customer expects sophisticated conversation about food. Natural colloquial Mandarin with some flourishes.",
+            "opening_line": "欢迎光临！您几位用餐？需要我先介绍一下今天的主厨推荐吗？",
+            "user_goal": "Have a full dining conversation, ask about ingredients, pay",
+            "target_vocab": ["食材", "搭配", "推荐", "结账", "开发票"]
+          }
+        }
+      }
+    }
+  }
+}
