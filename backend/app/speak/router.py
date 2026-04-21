@@ -87,7 +87,7 @@ def _generate_livekit_token(
         f"session_id={session_id}"
         f",persona_id={persona_id}"
         f",situation_id={situation_config.id}"
-        f",google_key={google_key}"
+        f",google_key={quote(google_key)}"
         f",system_prompt={quote(system_prompt)}"
         f",voice_id={quote(voice_id)}"
         f",situation_config={situation_json}"

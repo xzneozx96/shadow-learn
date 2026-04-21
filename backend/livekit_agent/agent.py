@@ -89,9 +89,12 @@ async def shadowlearn_session(ctx: agents.JobContext):
     persona_id = session_info.get("persona_id", "friendly_buddy")
     situation_id = session_info.get("situation_id", "casual_chat")
 
-    # Get API keys - prefer OpenAI for observer, fallback to Google for main
-    google_key = session_info.get("google_key", os.getenv("GOOGLE_API_KEY", ""))
-    openai_key = session_info.get("openai_key", os.getenv("OPENAI_API_KEY", ""))
+    # Get API keys - prefer OpenAI for observer, fallback to Google for main.
+    # google_key is URL-encoded by the router (quote()) so unquote on read.
+    google_key_raw = session_info.get("google_key", "")
+    google_key = unquote(google_key_raw) if google_key_raw else os.getenv("GOOGLE_API_KEY", "")
+    openai_key_raw = session_info.get("openai_key", "")
+    openai_key = unquote(openai_key_raw) if openai_key_raw else os.getenv("OPENAI_API_KEY", "")
 
     if not google_key and not openai_key:
         raise Exception("No API key provided (google_key or openai_key)")
@@ -211,7 +214,10 @@ async def shadowlearn_session(ctx: agents.JobContext):
         asyncio.create_task(ctx.room.disconnect())
         ctx.shutdown()
 
-    # Start session with PersonaAgent
+    # Start session with PersonaAgent.
+    # PersonaAgent.on_enter() fires the opening line from situation_config.
+    # Do NOT call session.generate_reply() here — that produces a second
+    # greeting and ignores the selected language/situation.
     await session.start(
         room=ctx.room,
         agent=PersonaAgent(instructions=system_prompt),
@@ -222,11 +228,6 @@ async def shadowlearn_session(ctx: agents.JobContext):
                 else noise_cancellation.BVC(),
             ),
         ),
-    )
-
-    # Generate initial greeting
-    await session.generate_reply(
-        instructions=f"Start a conversation in Chinese for the situation: {situation_id}. Greet the user warmly and naturally begin the roleplay."
     )
 
 

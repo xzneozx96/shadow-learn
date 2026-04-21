@@ -23,12 +23,15 @@ _REQUIRED_FIELDS = (
 )
 
 _INJECTION_PATTERNS = [
-    r"ignore\s+(previous|prior|all)\s+instructions",
+    # "ignore [all|the] [previous|prior|above] instructions" — any optional qualifier
+    r"ignore\s+(?:\w+\s+){0,3}instructions",
+    r"ignore\s+(?:the\s+)?(?:above|prompt)",
     r"system\s*[:=]",
     r"you\s+are\s+now\s+\w+",
-    r"disregard\s+(previous|prior|the above)",
+    r"disregard\s+(?:\w+\s+){0,3}(?:instructions|prompt|above)",
     r"<\s*system\s*>",
     r"###\s*system",
+    r"forget\s+(?:\w+\s+){0,3}(?:instructions|above)",
 ]
 
 
@@ -106,11 +109,15 @@ def validate_generated_config(data: dict[str, Any]) -> None:
     if not isinstance(data["target_vocab"], list):
         raise GenerationError("target_vocab must be a list")
 
+    vocab_list = data.get("target_vocab", [])
+    vocab_str = " ".join(str(v) for v in vocab_list) if isinstance(vocab_list, list) else ""
     scannable = " ".join([
+        str(data.get("title", "")),
         str(data.get("ai_role", "")),
         str(data.get("scene_context", "")),
         str(data.get("opening_line", "")),
         str(data.get("user_goal", "")),
+        vocab_str,
     ]).lower()
     for pattern in _INJECTION_PATTERNS:
         if re.search(pattern, scannable, re.IGNORECASE):
