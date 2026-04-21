@@ -9,6 +9,11 @@ export interface SpeakSessionParams {
   lessonId: string
   promptVersion: string
   modelId: string
+  situationTitle: string
+  targetLanguage: string
+  proficiencyLevel: 'beginner' | 'intermediate' | 'advanced'
+  levelLabel: string
+  userGoal: string
 }
 
 interface UseSpeakSessionReturn {
@@ -79,6 +84,11 @@ export function useSpeakSession(): UseSpeakSessionReturn {
         feedbacks: {},
         promptVersion: params.promptVersion,
         modelId: params.modelId,
+        targetLanguage: params.targetLanguage,
+        proficiencyLevel: params.proficiencyLevel,
+        levelLabel: params.levelLabel,
+        situationTitle: params.situationTitle,
+        userGoal: params.userGoal,
       }
       try {
         await saveSpeakSession(db, session)
