@@ -68,6 +68,24 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
           </div>
         </div>
 
+        {/* Session context */}
+        <div className="elegant-card p-4 space-y-2 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground shrink-0">Situation</span>
+            <span className="font-medium text-foreground text-right">{speakSession.situationTitle || situation.name}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground shrink-0">Level</span>
+            <span className="font-medium text-foreground text-right">{speakSession.levelLabel || speakSession.proficiencyLevel}</span>
+          </div>
+          {speakSession.userGoal && (
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-muted-foreground shrink-0">Goal</span>
+              <span className="text-foreground text-right leading-snug">{speakSession.userGoal}</span>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div className="elegant-card p-4 flex flex-col items-center justify-center gap-2 text-center">
             <div className="p-2 rounded-lg bg-primary/10 text-primary mb-1">
