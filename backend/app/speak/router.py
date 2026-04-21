@@ -9,12 +9,14 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.speak.generation import GenerationError, generate_custom_situation
+from app.speak.generation import GenerationError
+from app.speak.generation import generate_situation as _generate_situation
 from app.speak.personas import get_persona_voice, is_persona_supported_in
 from app.speak.prompt_builder import build_system_prompt
 from app.speak.situations import (
     SituationConfig,
-    get_situation,
+    get_custom_situation,
+    get_situation_seed,
     list_built_in_situations,
 )
 from app.settings import settings
@@ -36,12 +38,20 @@ class SessionStartRequest(BaseModel):
     target_language: str = Field(..., pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
     proficiency_level: Literal["beginner", "intermediate", "advanced"]
     mode: str = Field(default="free", pattern=r"^(free|guided)$")
+    force_regenerate: bool = Field(default=False)
 
 
 class SessionStartResponse(BaseModel):
     livekit_url: str
     livekit_token: str
     session_id: str
+    # Situation preview fields — shown to the user before connecting to LiveKit
+    situation_title: str
+    situation_ai_role: str
+    situation_scene_context: str
+    situation_opening_line: str
+    situation_user_goal: str
+    situation_target_vocab: list[str]
 
 
 class SessionEndRequest(BaseModel):
@@ -53,12 +63,17 @@ class GenerateSituationRequest(BaseModel):
     language: str = Field(..., pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
     level: Literal["beginner", "intermediate", "advanced"]
     google_key: str = Field(..., min_length=1)
+    persona_id: str = Field(..., pattern=r"^[a-z_]+$")
 
 
 class GenerateSituationResponse(BaseModel):
     situation_id: str
     title: str
+    ai_role: str
+    scene_context: str
+    opening_line: str
     user_goal: str
+    target_vocab: list[str]
 
 
 def _generate_livekit_token(
@@ -127,13 +142,24 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
         )
 
     try:
-        situation = get_situation(
-            request.situation_id,
-            request.target_language,
-            request.proficiency_level,
-        )
+        if request.situation_id.startswith("custom_"):
+            situation = get_custom_situation(request.situation_id)
+        else:
+            seed_text = get_situation_seed(request.situation_id)
+            situation = await _generate_situation(
+                seed_text=seed_text,
+                persona_id=request.persona_id,
+                language=request.target_language,
+                level=request.proficiency_level,
+                google_key=request.google_key,
+                situation_id=request.situation_id,
+                force_regenerate=request.force_regenerate,
+            )
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+    except GenerationError as e:
+        logger.error(f"[session_start] Scene generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
     try:
         voice_id = get_persona_voice(request.persona_id, request.target_language)
@@ -183,6 +209,12 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
         livekit_url=livekit_url,
         livekit_token=livekit_token,
         session_id=session_id,
+        situation_title=situation.title,
+        situation_ai_role=situation.ai_role,
+        situation_scene_context=situation.scene_context,
+        situation_opening_line=situation.opening_line,
+        situation_user_goal=situation.user_goal,
+        situation_target_vocab=list(situation.target_vocab),
     )
 
 
@@ -207,8 +239,9 @@ async def list_situations(lang: str = Query(default="zh-CN")) -> dict[str, list[
 async def generate_situation(request: GenerateSituationRequest) -> GenerateSituationResponse:
     """Generate a custom situation from a free-text user description."""
     try:
-        cfg = await generate_custom_situation(
-            user_text=request.user_text,
+        cfg = await _generate_situation(
+            seed_text=request.user_text,
+            persona_id=request.persona_id,
             language=request.language,
             level=request.level,
             google_key=request.google_key,
@@ -219,5 +252,11 @@ async def generate_situation(request: GenerateSituationRequest) -> GenerateSitua
     return GenerateSituationResponse(
         situation_id=cfg.id,
         title=cfg.title,
+        ai_role=cfg.ai_role,
+        scene_context=cfg.scene_context,
+        opening_line=cfg.opening_line,
         user_goal=cfg.user_goal,
+        target_vocab=list(cfg.target_vocab),
     )
+
+

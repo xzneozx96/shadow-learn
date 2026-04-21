@@ -25,10 +25,12 @@ def build_system_prompt(
     """Build the full system prompt passed to the PersonaAgent.
 
     Layers (in order):
-      1. Persona base prompt (character voice, correction style)
-      2. Language + culture context (social norms, register)
-      3. Level instructions + proficiency target
-      4. Situation scene context + opening line + language directive
+      1. Persona (who you ARE — primary)
+      2. Target language directive (four-layer enforcement)
+      3. Cultural context
+      4. Learner level + proficiency target
+      5. Scene context + learner goal
+      6. Opening line + language reinforcement
 
     Raises ValueError if the persona does not support the target language.
     """
@@ -44,27 +46,38 @@ def build_system_prompt(
     language_name = _LANGUAGE_NAMES.get(language, language)
 
     parts = [
-        "# Persona",
+        "# Persona (who you ARE for this entire session)",
         persona_prompt,
+        "",
+        f"# Target Language: {language_name}",
+        (
+            f"You respond ONLY in {language_name}. Never switch to English or another "
+            f"language unless the learner explicitly asks for translation help. "
+            f"Your internal reasoning may be in any language but every spoken token "
+            f"must be {language_name}."
+        ),
         "",
         "# Cultural Context",
         culture,
         "",
         "# Learner Level",
-        f"{level_instruction} Target proficiency standard: {proficiency_label}.",
+        f"{level_instruction} Target proficiency: {proficiency_label}.",
         "",
         "# Scene",
-        f"Role: {situation.ai_role}.",
-        situation.scene_context,
+        f"Setting: {situation.scene_context}",
+        f"Your role here: {situation.ai_role}",
+        f"Learner's goal: {situation.user_goal}",
         "",
         "# Opening",
-        f"You speak first. Your exact opening line: {situation.opening_line}",
-        "",
-        "# Language Directive",
         (
-            f"Respond ONLY in {language_name}. Never switch to English or any other "
-            "language unless the user explicitly asks for translation help. "
-            "Stay in the scene for the entire conversation."
+            f"You speak first, in character, in {language_name}. "
+            f"Opening line: {situation.opening_line}"
+        ),
+        "",
+        "# Staying in Character",
+        (
+            f"Remain fully in persona for the entire session. Speak only {language_name}. "
+            f"If the learner switches languages, acknowledge in character and reply in {language_name}."
         ),
     ]
     return "\n".join(parts)

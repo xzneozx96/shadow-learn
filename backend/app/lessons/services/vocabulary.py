@@ -8,7 +8,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict
 
 from app.settings import settings
-from app.shared._retry import RetryableError, openrouter_retry
+from app.shared._retry import RetryableError, http_retry
 from app.shared.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
@@ -124,7 +124,7 @@ async def _extract_batch_with_retry(
         },
     }
 
-    @openrouter_retry(logger)
+    @http_retry(logger)
     async def _call() -> dict[int, list[dict]]:
         async with semaphore:
             async with httpx.AsyncClient(timeout=180.0) as client:

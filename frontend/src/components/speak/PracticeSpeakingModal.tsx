@@ -1,6 +1,7 @@
 import type { TokenSourceLiteral } from 'livekit-client'
 import type { GeneratedSituation } from './CustomSituationInput'
 import type { ProficiencyLevel } from './LanguageLevelPicker'
+import type { SituationPreviewData } from './SituationPreview'
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
 import type { GrammarFeedback, NextLineSuggestion, SpeakSituation } from '@/types'
@@ -22,8 +23,9 @@ import { LanguageLevelPicker } from './LanguageLevelPicker'
 import { PersonaPicker } from './PersonaPicker'
 import { SessionRecap } from './SessionRecap'
 import { SituationPicker } from './SituationPicker'
+import { SituationPreview } from './SituationPreview'
 
-type Step = 'language-level' | 'persona' | 'situation' | 'custom' | 'active' | 'recap'
+type Step = 'language-level' | 'persona' | 'situation' | 'custom' | 'preview' | 'active' | 'recap'
 
 interface SelectedSituation {
   id: string
@@ -210,6 +212,11 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tokenSource, setTokenSource] = useState<TokenSourceLiteral | null>(null)
+  const [situationPreview, setSituationPreview] = useState<SituationPreviewData | null>(null)
+  // Pending session data — token ready, waiting for user to confirm on preview screen
+  const [pendingToken, setPendingToken] = useState<{ url: string, token: string, sessionId: string } | null>(null)
+  // Track whether the previewed situation came from the custom flow (affects regenerate behavior)
+  const [isCustomSituation, setIsCustomSituation] = useState(false)
 
   useEffect(() => {
     if (!db)
@@ -240,6 +247,9 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       setProficiencyLevel(null)
       setError(null)
       setTokenSource(null)
+      setPendingToken(null)
+      setSituationPreview(null)
+      setIsCustomSituation(false)
     }
   }
 
@@ -252,6 +262,9 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     setProficiencyLevel(null)
     setError(null)
     setTokenSource(null)
+    setPendingToken(null)
+    setSituationPreview(null)
+    setIsCustomSituation(false)
   }, [handleAbandonedSession, clearSession])
 
   const handleClose = useCallback(() => {
@@ -259,9 +272,12 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     onClose()
   }, [onClose, resetState])
 
-  const startSessionWithSituation = useCallback(async (
+  // Calls session-start, populates preview data + pending token, then goes to preview step.
+  // forceRegenerate=true bypasses the built-in scene cache for a fresh generation.
+  const fetchSessionData = useCallback(async (
     selectedSituation: SelectedSituation,
     selectedPersona: Persona,
+    forceRegenerate = false,
   ) => {
     if (!hasGoogleKey || !keys?.googleRealtimeKey || !proficiencyLevel) {
       setError(t('auth.error.googleRequired'))
@@ -281,6 +297,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
           situation_id: selectedSituation.id,
           target_language: targetLanguage,
           proficiency_level: proficiencyLevel,
+          force_regenerate: forceRegenerate,
         }),
       })
 
@@ -289,29 +306,29 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         throw new Error((err as { detail?: string }).detail || 'Failed to start session')
       }
 
-      const data = await res.json() as { livekit_url: string, livekit_token: string, session_id: string }
+      const data = await res.json() as {
+        livekit_url: string
+        livekit_token: string
+        session_id: string
+        situation_title: string
+        situation_ai_role: string
+        situation_scene_context: string
+        situation_opening_line: string
+        situation_user_goal: string
+        situation_target_vocab: string[]
+      }
 
-      const ts = TokenSource.literal({
-        serverUrl: data.livekit_url,
-        participantToken: data.livekit_token,
+      setPendingToken({ url: data.livekit_url, token: data.livekit_token, sessionId: data.session_id })
+      setSituationPreview({
+        title: data.situation_title,
+        ai_role: data.situation_ai_role,
+        scene_context: data.situation_scene_context,
+        opening_line: data.situation_opening_line,
+        user_goal: data.situation_user_goal,
+        target_vocab: data.situation_target_vocab,
       })
-      setTokenSource(ts)
-
-      const levelLabel = getLevelLabel(targetLanguage, proficiencyLevel)
-
-      await startSession({
-        sessionId: data.session_id,
-        lessonId: selectedSituation.id,
-        promptVersion: '1.0',
-        modelId: 'gemini-live',
-        situationTitle: selectedSituation.title,
-        targetLanguage,
-        proficiencyLevel,
-        levelLabel,
-        userGoal: selectedSituation.userGoal,
-      })
-
-      setStep('active')
+      setSituation(selectedSituation)
+      setStep('preview')
     }
     catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to start session')
@@ -319,7 +336,38 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     finally {
       setLoading(false)
     }
-  }, [hasGoogleKey, keys, proficiencyLevel, targetLanguage, t, startSession])
+  }, [hasGoogleKey, keys, proficiencyLevel, targetLanguage, t])
+
+  // Moves the pending token into active use and connects to LiveKit.
+  const connectToSession = useCallback(async (
+    selectedSituation: SelectedSituation,
+    pending: { url: string, token: string, sessionId: string },
+  ) => {
+    if (!proficiencyLevel)
+      return
+
+    const ts = TokenSource.literal({
+      serverUrl: pending.url,
+      participantToken: pending.token,
+    })
+    setTokenSource(ts)
+
+    const levelLabel = getLevelLabel(targetLanguage, proficiencyLevel)
+
+    await startSession({
+      sessionId: pending.sessionId,
+      lessonId: selectedSituation.id,
+      promptVersion: '1.0',
+      modelId: 'gemini-live',
+      situationTitle: selectedSituation.title,
+      targetLanguage,
+      proficiencyLevel,
+      levelLabel,
+      userGoal: selectedSituation.userGoal,
+    })
+
+    setStep('active')
+  }, [proficiencyLevel, targetLanguage, startSession])
 
   const handleLanguageLevelContinue = useCallback(() => {
     setStep('persona')
@@ -331,11 +379,11 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   }, [])
 
   const handleSituationSelect = useCallback(async (sel: { id: string, title: string, userGoal: string }) => {
-    setSituation(sel)
+    setIsCustomSituation(false)
     if (persona) {
-      await startSessionWithSituation(sel, persona)
+      await fetchSessionData(sel, persona)
     }
-  }, [persona, startSessionWithSituation])
+  }, [persona, fetchSessionData])
 
   const handleRequestCustom = useCallback(() => {
     setStep('custom')
@@ -347,11 +395,26 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       title: gen.title,
       userGoal: gen.user_goal,
     }
-    setSituation(sel)
+    setIsCustomSituation(true)
     if (persona) {
-      await startSessionWithSituation(sel, persona)
+      await fetchSessionData(sel, persona)
     }
-  }, [persona, startSessionWithSituation])
+  }, [persona, fetchSessionData])
+
+  const handlePreviewConfirm = useCallback(async () => {
+    if (!pendingToken || !situation || !persona)
+      return
+    await connectToSession(situation, pendingToken)
+  }, [pendingToken, situation, persona, connectToSession])
+
+  const handlePreviewRegenerate = useCallback(async () => {
+    if (isCustomSituation) {
+      setStep('custom')
+    }
+    else if (situation && persona) {
+      await fetchSessionData(situation, persona, true)
+    }
+  }, [isCustomSituation, situation, persona, fetchSessionData])
 
   const handleSessionEnd = useCallback(async (_sessionData: SpeakSession) => {
     await endSession('completed')
@@ -360,19 +423,34 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
   const handleRepeat = useCallback(() => {
     if (situation && persona) {
-      startSessionWithSituation(situation, persona)
+      fetchSessionData(situation, persona)
     }
-  }, [situation, persona, startSessionWithSituation])
+  }, [situation, persona, fetchSessionData])
 
   const handleBackHome = useCallback(() => {
     resetState()
   }, [resetState])
 
-  const backStep: Partial<Record<Step, Step>> = {
-    persona: 'language-level',
-    situation: 'persona',
-    custom: 'situation',
-  }
+  const handleBack = useCallback(() => {
+    switch (step) {
+      case 'persona':
+        setStep('language-level')
+        break
+      case 'situation':
+        setStep('persona')
+        break
+      case 'custom':
+        setStep('situation')
+        break
+      case 'preview':
+        setStep(isCustomSituation ? 'custom' : 'situation')
+        break
+      default:
+        break
+    }
+  }, [step, isCustomSituation])
+
+  const canGoBack = ['persona', 'situation', 'custom', 'preview'].includes(step)
 
   const speakSituation: SpeakSituation | null = situation
     ? { id: situation.id, name: situation.title, description: '' }
@@ -396,10 +474,11 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       >
         {/* Header */}
         <div className="px-4 py-3 border-b border-border flex items-center gap-2 pr-12">
-          {backStep[step] && (
+          {canGoBack && (
             <button
-              onClick={() => setStep(backStep[step]!)}
-              className="p-1 -ml-1 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              onClick={handleBack}
+              disabled={loading}
+              className="p-1 -ml-1 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
               aria-label="Back"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
@@ -455,12 +534,22 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
               />
             )}
 
-            {step === 'custom' && proficiencyLevel && (
+            {step === 'custom' && proficiencyLevel && persona && (
               <CustomSituationInput
                 language={targetLanguage}
                 level={proficiencyLevel}
+                personaId={persona.id}
                 onGenerated={handleCustomGenerated}
                 onCancel={() => setStep('situation')}
+              />
+            )}
+
+            {step === 'preview' && situationPreview && (
+              <SituationPreview
+                preview={situationPreview}
+                onConfirm={handlePreviewConfirm}
+                onRegenerate={handlePreviewRegenerate}
+                loading={loading}
               />
             )}
 
@@ -491,10 +580,10 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
         {/* Loading overlay */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-lg">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/95 backdrop-blur-sm rounded-lg z-50 animate-in fade-in duration-200">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+              <p className="text-sm font-medium text-foreground">{t('common.loading')}</p>
             </div>
           </div>
         )}

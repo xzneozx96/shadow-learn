@@ -7,17 +7,22 @@ import { API_BASE } from '@/lib/config'
 export interface GeneratedSituation {
   situation_id: string
   title: string
+  ai_role: string
+  scene_context: string
+  opening_line: string
   user_goal: string
+  target_vocab: string[]
 }
 
 export interface CustomSituationInputProps {
   language: string
   level: 'beginner' | 'intermediate' | 'advanced'
+  personaId: string
   onGenerated: (situation: GeneratedSituation) => void
   onCancel: () => void
 }
 
-export function CustomSituationInput({ language, level, onGenerated, onCancel }: CustomSituationInputProps) {
+export function CustomSituationInput({ language, level, personaId, onGenerated, onCancel }: CustomSituationInputProps) {
   const { keys } = useAuth()
   const { t } = useI18n()
   const hasGoogleKey = !!(keys?.googleRealtimeKey)
@@ -46,6 +51,7 @@ export function CustomSituationInput({ language, level, onGenerated, onCancel }:
           language,
           level,
           google_key: keys.googleRealtimeKey,
+          persona_id: personaId,
         }),
       })
       if (!resp.ok) {

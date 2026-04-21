@@ -1,4 +1,4 @@
-"""Reusable retry decorators for external HTTP calls.
+"""Reusable retry decorator for external HTTP calls.
 
 Usage
 -----
@@ -6,10 +6,10 @@ Define a nested ``_call()`` inside the service function, decorate it, then
 await it.  Captured variables (api_key, payload, …) are read-only across
 retries, so closure capture is safe:
 
-    from app.shared._retry import openrouter_retry, RetryableError
+    from app.shared._retry import http_retry, RetryableError
 
     async def call_openrouter(api_key: str, payload: dict) -> dict:
-        @openrouter_retry(logger)
+        @http_retry(logger)
         async def _call() -> dict:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 resp = await client.post(url, headers={...}, json=payload)
@@ -47,6 +47,9 @@ class RetryableError(Exception):
     Examples: finish_reason='length' (token truncation), JSONDecodeError on a
     200 response. The retry decorator catches this the same way it catches
     network errors and HTTP 4xx/5xx rate-limit responses.
+
+    Non-LLM callers (TTS, STT) simply don't raise it, so the retry predicate
+    is inert for them.
     """
 
 
@@ -58,8 +61,8 @@ def _is_retryable_http_status(exc: BaseException) -> bool:
     )
 
 
-def openrouter_retry(logger: logging.Logger, *, max_attempts: int = 3):
-    """Decorator factory for OpenRouter LLM calls.
+def http_retry(logger: logging.Logger, *, max_attempts: int = 3):
+    """Decorator factory for external HTTP calls (LLM + TTS + STT).
 
     Retries on:
     - ``RetryableError`` (caller-raised for truncation / JSON parse failure)
@@ -75,24 +78,6 @@ def openrouter_retry(logger: logging.Logger, *, max_attempts: int = 3):
             retry_if_exception_type(
                 (RetryableError, httpx.ConnectError, httpx.TimeoutException)
             )
-            | retry_if_exception(_is_retryable_http_status)
-        ),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-        reraise=True,
-    )
-
-
-def http_retry(logger: logging.Logger, *, max_attempts: int = 3):
-    """Decorator factory for generic HTTP calls (TTS, STT providers, etc.).
-
-    Same as ``openrouter_retry`` but does NOT retry on ``RetryableError``
-    because non-LLM services don't have body-level retry signals.
-    """
-    return retry(
-        stop=stop_after_attempt(max_attempts),
-        wait=wait_exponential(multiplier=1, min=1, max=60) + wait_random(0, 1),
-        retry=(
-            retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException))
             | retry_if_exception(_is_retryable_http_status)
         ),
         before_sleep=before_sleep_log(logger, logging.WARNING),

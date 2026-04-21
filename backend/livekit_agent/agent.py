@@ -153,7 +153,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     if google_key:
         llm = google.realtime.RealtimeModel(
             api_key=google_key,
-            model="gemini-2.5-flash-native-audio-preview-12-2025",
+            model="gemini-3.1-flash-live-preview",
             voice=voice_id,
         )
     else:

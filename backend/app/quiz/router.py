@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.settings import settings
 from app.shared.utils import _resolve_key
-from app.shared._retry import RetryableError, openrouter_retry
+from app.shared._retry import RetryableError, http_retry
 from app.shared.language_config import get_language_config
 
 logger = logging.getLogger(__name__)
@@ -158,7 +158,7 @@ async def generate_quiz(req: QuizRequest):
         "reasoning": {"effort": "none"},
     }
 
-    @openrouter_retry(logger)
+    @http_retry(logger)
     async def _call() -> dict:
         async with httpx.AsyncClient(timeout=90) as client:
             resp = await client.post(

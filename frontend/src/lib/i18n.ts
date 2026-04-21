@@ -490,6 +490,12 @@ export const TRANSLATIONS = {
     'speak.recap.situation': 'Situation',
     'speak.recap.level': 'Level',
     'speak.recap.goal': 'Goal',
+    'speak.preview.scene': 'Scene',
+    'speak.preview.yourGoal': 'Your goal',
+    'speak.preview.openingLine': 'Opening line',
+    'speak.preview.vocab': 'Key vocabulary',
+    'speak.preview.startSession': 'Start session',
+    'speak.preview.regenerate': 'Regenerate',
   },
   vi: {
     // Navigation
@@ -974,6 +980,12 @@ export const TRANSLATIONS = {
     'speak.recap.situation': 'Tình huống',
     'speak.recap.level': 'Trình độ',
     'speak.recap.goal': 'Mục tiêu',
+    'speak.preview.scene': 'Bối cảnh',
+    'speak.preview.yourGoal': 'Mục tiêu của bạn',
+    'speak.preview.openingLine': 'Câu mở đầu',
+    'speak.preview.vocab': 'Từ vựng chính',
+    'speak.preview.startSession': 'Bắt đầu',
+    'speak.preview.regenerate': 'Tạo lại',
   },
 } satisfies Record<Locale, Record<string, string>>
 

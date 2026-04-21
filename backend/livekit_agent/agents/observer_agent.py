@@ -369,11 +369,23 @@ class ObserverAgent:
             return
 
         first_issue = issues[0]
-        hint = f"""[CORRECTION]: {first_issue.get('correction', '')}
+        persona_id = getattr(self.session.userdata, "persona_id", "") or "your character"
+        target_language = getattr(self.session.userdata, "target_language", "") or "the target language"
+        original = first_issue.get("original", "")
+        correction = first_issue.get("correction", "")
+        explanation = first_issue.get("explanation", "")
 
-Explanation: {first_issue.get('explanation', '')}
-
-Please acknowledge naturally and restate correctly in your response."""
+        hint = (
+            f"[LANGUAGE COACH NOTE — you are still {persona_id}, stay in character, "
+            f"continue speaking {target_language}]\n"
+            f"The learner just said: \"{original}\"\n"
+            f"A more natural form: \"{correction}\"\n"
+            f"Why: {explanation}\n\n"
+            f"On your next natural turn, weave this correction into dialogue as "
+            f"{persona_id} would react. Do NOT switch to English, do NOT announce "
+            f"'grammar correction', do NOT list issues. Stay in scene, in character, "
+            f"in {target_language}."
+        )
 
         logger.info(f"[OBSERVER] Injecting hint: {hint[:80]}...")
 
