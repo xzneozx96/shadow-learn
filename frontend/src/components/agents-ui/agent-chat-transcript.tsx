@@ -1,7 +1,7 @@
 import type { AgentState, ReceivedMessage } from '@livekit/components-react'
 import type { ComponentProps } from 'react'
 import type { GrammarFeedback } from '@/types'
-import { CheckCircle2 } from 'lucide-react'
+import { InfoIcon } from 'lucide-react'
 import { AnimatePresence } from 'motion/react'
 import { AgentChatIndicator } from '@/components/agents-ui/agent-chat-indicator'
 import {
@@ -62,7 +62,7 @@ export function AgentChatTranscript({
                                 className="shrink-0 p-1.5 rounded-full bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 transition-all border border-amber-500/30 shadow-sm"
                                 aria-label="View feedback"
                               >
-                                <CheckCircle2 size={14} strokeWidth={3} />
+                                <InfoIcon size={14} strokeWidth={3} />
                               </button>
                             )}
                             <div className="rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">

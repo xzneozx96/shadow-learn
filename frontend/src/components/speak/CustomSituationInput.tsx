@@ -20,13 +20,14 @@ export interface CustomSituationInputProps {
 export function CustomSituationInput({ language, level, onGenerated, onCancel }: CustomSituationInputProps) {
   const { keys } = useAuth()
   const { t } = useI18n()
-  const googleKey = keys?.googleRealtimeKey
+  const hasGoogleKey = !!(keys?.googleRealtimeKey)
+
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleGenerate() {
-    if (!googleKey) {
+    if (!hasGoogleKey) {
       setError(t('auth.error.googleRequired'))
       return
     }
@@ -44,7 +45,7 @@ export function CustomSituationInput({ language, level, onGenerated, onCancel }:
           user_text: text.trim(),
           language,
           level,
-          google_key: googleKey,
+          google_key: keys.googleRealtimeKey,
         }),
       })
       if (!resp.ok) {
