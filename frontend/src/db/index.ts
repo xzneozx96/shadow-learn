@@ -4,7 +4,7 @@ import type { AppSettings, GrammarFeedback, LessonMeta, Segment, VocabEntry } fr
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 9
+const DB_VERSION = 10
 
 export interface LearnerProfile {
   name: string
@@ -128,6 +128,12 @@ export interface SpeakSession {
   feedbacks?: Record<string, GrammarFeedback>
   promptVersion: string
   modelId: string
+  // v10
+  targetLanguage: string
+  proficiencyLevel: 'beginner' | 'intermediate' | 'advanced'
+  levelLabel: string
+  situationTitle: string
+  userGoal: string
 }
 
 export interface SpeakTurn {
@@ -266,6 +272,22 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
         // Additive schema change: transcript turns gain optional `id`, session
         // gains optional `feedbacks` map. Defaults applied at read sites; no row
         // rewrite needed. Version bump forces older tabs to close their handle.
+      }
+      if (oldVersion < 10) {
+        const store = transaction.objectStore('speak-sessions')
+        let cursor = await store.openCursor()
+        while (cursor) {
+          const s = cursor.value as any
+          await cursor.update({
+            ...s,
+            targetLanguage: s.targetLanguage ?? 'zh-CN',
+            proficiencyLevel: s.proficiencyLevel ?? 'intermediate',
+            levelLabel: s.levelLabel ?? 'HSK 3-4',
+            situationTitle: s.situationTitle ?? 'Casual Chat',
+            userGoal: s.userGoal ?? '',
+          })
+          cursor = await cursor.continue()
+        }
       }
     },
   })
