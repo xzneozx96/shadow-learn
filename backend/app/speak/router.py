@@ -1,13 +1,22 @@
 """Speak router: AI conversation session management."""
 
+import json
 import logging
 import uuid
 from urllib.parse import quote
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
 
+from app.speak.generation import GenerationError, generate_custom_situation
+from app.speak.personas import get_persona_voice, is_persona_supported_in
+from app.speak.prompt_builder import build_system_prompt
+from app.speak.situations import (
+    SituationConfig,
+    get_situation,
+    list_built_in_situations,
+)
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -18,59 +27,53 @@ router = APIRouter(prefix="/api/speak")
 session_cache: dict[str, dict[str, Any]] = {}
 
 
-# --------------------------------------------------------------------------- #
-# Request/Response models
-# --------------------------------------------------------------------------- #
-
-
 class SessionStartRequest(BaseModel):
-    """Request to start a new AI conversation session."""
-    
-    google_key: str = Field(..., min_length=1, description="User's Google Gemini API key")
-    persona_id: str = Field(..., pattern=r"^[a-z_]+$", description="Persona ID")
-    situation_id: str = Field(..., pattern=r"^[a-z_]+$", description="Situation ID")
-    system_prompt: str = Field(..., min_length=10, description="System prompt for the AI agent")
-    voice_id: str = Field(default="Puck", description="Voice ID for Gemini Live API")
-    mode: str = Field(default="free", pattern=r"^(free|guided)$", description="Session mode")
+    model_config = ConfigDict(extra="forbid")
+
+    google_key: str = Field(..., min_length=1)
+    persona_id: str = Field(..., pattern=r"^[a-z_]+$")
+    situation_id: str = Field(..., pattern=r"^[a-z_0-9]+$")
+    target_language: str = Field(..., pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
+    proficiency_level: Literal["beginner", "intermediate", "advanced"]
+    mode: str = Field(default="free", pattern=r"^(free|guided)$")
 
 
 class SessionStartResponse(BaseModel):
-    """Response after starting a session."""
-    
     livekit_url: str
     livekit_token: str
     session_id: str
 
 
 class SessionEndRequest(BaseModel):
-    """Request to end a session."""
-    
     session_id: str = Field(..., min_length=1)
 
 
-# --------------------------------------------------------------------------- #
-# Helper functions
-# --------------------------------------------------------------------------- #
+class GenerateSituationRequest(BaseModel):
+    user_text: str = Field(..., min_length=10, max_length=500)
+    language: str = Field(..., pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
+    level: Literal["beginner", "intermediate", "advanced"]
+    openrouter_key: str = Field(..., min_length=1)
+
+
+class GenerateSituationResponse(BaseModel):
+    situation_id: str
+    title: str
+    user_goal: str
 
 
 def _generate_livekit_token(
     session_id: str,
     persona_id: str,
     google_key: str,
-    situation_id: str,
-    system_prompt: str = "",
-    voice_id: str = "Puck",
+    situation_config: SituationConfig,
+    system_prompt: str,
+    voice_id: str,
+    target_language: str,
+    proficiency_level: str,
 ) -> str:
-    """Generate a LiveKit token with embedded credentials for the agent.
-
-    Uses LiveKit AccessToken API to create a token that includes:
-    - RoomAgentDispatch with agent_name for automatic agent dispatch
-    - The Google key in metadata (for agent to use)
-    - Persona, situation IDs, system_prompt, and voice_id
-    - Session ID for tracking
-    """
+    """Generate a LiveKit token carrying the full session payload in metadata."""
     try:
-        from livekit import api
+        from livekit import api as livekit_api
     except ImportError:
         logger.warning("livekit package not installed, returning mock token")
         return f"mock-token-{session_id}-{uuid.uuid4().hex[:8]}"
@@ -79,68 +82,103 @@ def _generate_livekit_token(
         logger.warning("LiveKit credentials not configured, returning mock token")
         return f"mock-token-{session_id}-{uuid.uuid4().hex[:8]}"
 
-    # Create token with session-scoped permissions
-    # Use the fluent builder API from livekit-api package
-    token = api.AccessToken(
-        settings.livekit_api_key,
-        settings.livekit_api_secret,
-    ).with_identity(f"user-{session_id}").with_name(f"ShadowLearn-User-{session_id}").with_metadata(
-        f"session_id={session_id},persona_id={persona_id},situation_id={situation_id},google_key={google_key},system_prompt={quote(system_prompt)},voice_id={quote(voice_id)}",
-    ).with_grants(
-        api.VideoGrants(
-            room_join=True,
-            room=f"speak-{session_id}",
-            can_publish=True,
-            can_subscribe=True,
-        ),
+    situation_json = quote(json.dumps(situation_config.to_json_dict(), ensure_ascii=False))
+    metadata = (
+        f"session_id={session_id}"
+        f",persona_id={persona_id}"
+        f",situation_id={situation_config.id}"
+        f",google_key={google_key}"
+        f",system_prompt={quote(system_prompt)}"
+        f",voice_id={quote(voice_id)}"
+        f",situation_config={situation_json}"
+        f",target_language={target_language}"
+        f",proficiency_level={proficiency_level}"
     )
 
-    # Add agent dispatch configuration so LiveKit knows which agent to start
-    # The agent_name must match a deployed agent in LiveKit Cloud
-    token = token.with_room_config(
-        api.RoomConfiguration(
-            agents=[
-                api.RoomAgentDispatch(
-                    agent_name="shadowlearn-speak",
-                ),
-            ],
-        ),
+    token = (
+        livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
+        .with_identity(f"user-{session_id}")
+        .with_name(f"ShadowLearn-User-{session_id}")
+        .with_metadata(metadata)
+        .with_grants(
+            livekit_api.VideoGrants(
+                room_join=True,
+                room=f"speak-{session_id}",
+                can_publish=True,
+                can_subscribe=True,
+            ),
+        )
+        .with_room_config(
+            livekit_api.RoomConfiguration(
+                agents=[livekit_api.RoomAgentDispatch(agent_name="shadowlearn-speak")],
+            ),
+        )
     )
-
-    # Generate the JWT
     return token.to_jwt()
-
-
-# --------------------------------------------------------------------------- #
-# Endpoints
-# --------------------------------------------------------------------------- #
 
 
 @router.post("/session-start", response_model=SessionStartResponse)
 async def session_start(request: SessionStartRequest) -> SessionStartResponse:
     """Start a new AI conversation session."""
+    if not is_persona_supported_in(request.persona_id, request.target_language):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Persona {request.persona_id!r} does not support language {request.target_language!r}",
+        )
+
+    try:
+        situation = get_situation(
+            request.situation_id,
+            request.target_language,
+            request.proficiency_level,
+        )
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    try:
+        voice_id = get_persona_voice(request.persona_id, request.target_language)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    try:
+        system_prompt = build_system_prompt(
+            persona_id=request.persona_id,
+            language=request.target_language,
+            level=request.proficiency_level,
+            situation=situation,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
     session_id = f"session-{uuid.uuid4().hex[:12]}"
-    
     livekit_token = _generate_livekit_token(
-        session_id, 
-        request.persona_id, 
-        request.google_key,
-        request.situation_id,
-        system_prompt=request.system_prompt,
-        voice_id=request.voice_id,
+        session_id=session_id,
+        persona_id=request.persona_id,
+        google_key=request.google_key,
+        situation_config=situation,
+        system_prompt=system_prompt,
+        voice_id=voice_id,
+        target_language=request.target_language,
+        proficiency_level=request.proficiency_level,
     )
-    
+
     livekit_url = settings.livekit_url or "wss://your-project.livekit.cloud"
-    
+
     session_cache[session_id] = {
         "session_id": session_id,
         "persona_id": request.persona_id,
         "situation_id": request.situation_id,
+        "target_language": request.target_language,
+        "proficiency_level": request.proficiency_level,
         "mode": request.mode,
     }
-    
-    logger.info(f"[session_start] Session started: {session_id}, persona={request.persona_id}, situation={request.situation_id}")
-    
+
+    logger.info(
+        f"[session_start] {session_id} persona={request.persona_id} "
+        f"situation={request.situation_id} lang={request.target_language} "
+        f"level={request.proficiency_level}"
+    )
+
     return SessionStartResponse(
         livekit_url=livekit_url,
         livekit_token=livekit_token,
@@ -152,12 +190,34 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
 async def session_end(request: SessionEndRequest) -> dict[str, str]:
     """End an AI conversation session and cleanup resources."""
     session_id = request.session_id
-    
     if session_id not in session_cache:
         raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
-    
     del session_cache[session_id]
-    
     logger.info(f"[session_end] Session ended: {session_id}")
-    
     return {"session_id": session_id, "status": "ended"}
+
+
+@router.get("/situations")
+async def list_situations(lang: str = Query(default="zh-CN")) -> dict[str, list[dict[str, str]]]:
+    """List built-in situations (display metadata only)."""
+    return {"situations": list_built_in_situations()}
+
+
+@router.post("/situations/generate", response_model=GenerateSituationResponse)
+async def generate_situation(request: GenerateSituationRequest) -> GenerateSituationResponse:
+    """Generate a custom situation from a free-text user description."""
+    try:
+        cfg = await generate_custom_situation(
+            user_text=request.user_text,
+            language=request.language,
+            level=request.level,
+            openrouter_key=request.openrouter_key,
+        )
+    except GenerationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return GenerateSituationResponse(
+        situation_id=cfg.id,
+        title=cfg.title,
+        user_goal=cfg.user_goal,
+    )
