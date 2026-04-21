@@ -1,4 +1,6 @@
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
+import { Button } from '../ui/button'
 
 export type ProficiencyLevel = 'beginner' | 'intermediate' | 'advanced'
 
@@ -12,17 +14,14 @@ export interface LanguageLevelPickerProps {
 
 const SPEAK_LANGUAGES = [
   { code: 'zh-CN', flag: '🇨🇳', label: '中文 (简体)' },
-  { code: 'zh-TW', flag: '🇹🇼', label: '中文 (繁體)' },
   { code: 'en', flag: '🇬🇧', label: 'English' },
   { code: 'ja', flag: '🇯🇵', label: '日本語' },
-  { code: 'ko', flag: '🇰🇷', label: '한국어' },
-  { code: 'vi', flag: '🇻🇳', label: 'Tiếng Việt' },
 ]
 
-const LEVELS: Array<{ id: ProficiencyLevel, title: string, subtitle: string, icon: string }> = [
-  { id: 'beginner', title: 'Still learning', subtitle: 'Basics. Short sentences. Slow pace.', icon: '🌱' },
-  { id: 'intermediate', title: 'Getting there', subtitle: 'Everyday topics. Natural pace with support.', icon: '🌿' },
-  { id: 'advanced', title: 'Pretty confident', subtitle: 'Natural pace. Idioms. No hand-holding.', icon: '🌳' },
+const LEVEL_IDS: Array<{ id: ProficiencyLevel, icon: string }> = [
+  { id: 'beginner', icon: '🌱' },
+  { id: 'intermediate', icon: '🌿' },
+  { id: 'advanced', icon: '🌳' },
 ]
 
 export function LanguageLevelPicker({
@@ -32,14 +31,14 @@ export function LanguageLevelPicker({
   onLevelChange,
   onContinue,
 }: LanguageLevelPickerProps) {
+  const { t } = useI18n()
   const canContinue = language !== null && level !== null
 
   return (
     <div className="space-y-6">
-      {/* Language section */}
       <div className="space-y-3">
-        <h3 className="text-base font-semibold text-foreground">Which language do you want to practice?</h3>
-        <div className="grid grid-cols-2 gap-2">
+        <h3 className="font-semibold text-foreground">{t('speak.languagePicker.title')}</h3>
+        <div className="grid grid-cols-3 gap-4">
           {SPEAK_LANGUAGES.map(lang => (
             <button
               key={lang.code}
@@ -60,17 +59,16 @@ export function LanguageLevelPicker({
         </div>
       </div>
 
-      {/* Level section */}
       <div className="space-y-3">
-        <h3 className="text-base font-semibold text-foreground">How does your language feel today?</h3>
-        <div className="space-y-1.5">
-          {LEVELS.map(lvl => (
+        <h3 className="font-semibold text-foreground">{t('speak.levelPicker.title')}</h3>
+        <div className="flex gap-4">
+          {LEVEL_IDS.map(lvl => (
             <button
               key={lvl.id}
               type="button"
               onClick={() => onLevelChange(lvl.id)}
               className={cn(
-                'elegant-card px-3 py-2.5 w-full flex items-center gap-3 text-left transition-colors cursor-pointer',
+                'elegant-card px-3 py-2.5 w-full flex flex-col gap-3 text-left transition-colors cursor-pointer',
                 level === lvl.id
                   ? 'border-primary ring-1 ring-primary/40 bg-primary/5'
                   : 'hover:bg-muted/50',
@@ -79,23 +77,22 @@ export function LanguageLevelPicker({
             >
               <span className="text-xl" aria-hidden="true">{lvl.icon}</span>
               <div>
-                <div className="text-sm font-medium text-foreground">{lvl.title}</div>
-                <div className="text-xs text-muted-foreground">{lvl.subtitle}</div>
+                <div className="font-medium text-foreground">{t(`speak.level.${lvl.id}.title`)}</div>
+                <div className="text-sm text-muted-foreground">{t(`speak.level.${lvl.id}.subtitle`)}</div>
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Continue button */}
-      <button
-        type="button"
+      <Button
+        size="xl"
         onClick={onContinue}
         disabled={!canContinue}
-        className="w-full py-2.5 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+        className="w-full"
       >
-        Continue
-      </button>
+        {t('speak.continue')}
+      </Button>
     </div>
   )
 }

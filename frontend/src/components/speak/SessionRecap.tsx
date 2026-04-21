@@ -71,16 +71,16 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
         {/* Session context */}
         <div className="elegant-card p-4 space-y-2 text-sm">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground shrink-0">Situation</span>
+            <span className="text-muted-foreground shrink-0">{tr('speak.recap.situation')}</span>
             <span className="font-medium text-foreground text-right">{speakSession.situationTitle || situation.name}</span>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground shrink-0">Level</span>
+            <span className="text-muted-foreground shrink-0">{tr('speak.recap.level')}</span>
             <span className="font-medium text-foreground text-right">{speakSession.levelLabel || speakSession.proficiencyLevel}</span>
           </div>
           {speakSession.userGoal && (
             <div className="flex items-start justify-between gap-3">
-              <span className="text-muted-foreground shrink-0">Goal</span>
+              <span className="text-muted-foreground shrink-0">{tr('speak.recap.goal')}</span>
               <span className="text-foreground text-right leading-snug">{speakSession.userGoal}</span>
             </div>
           )}
@@ -138,10 +138,10 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
       </div>
 
       <div className="p-6 flex gap-3 border-t border-border">
-        <Button size="lg" variant="outline" className="flex-1" onClick={onBack}>
+        <Button size="xl" variant="outline" className="flex-1" onClick={onBack}>
           {tr('speak.backHome')}
         </Button>
-        <Button className="flex-1" size="lg" onClick={onRepeat}>
+        <Button className="flex-1" size="xl" onClick={onRepeat}>
           {tr('speak.repeatSession')}
         </Button>
       </div>

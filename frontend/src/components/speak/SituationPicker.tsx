@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { Briefcase, DollarSign, Heart, Hospital, MapPin, MessageCircle, Mic, ShoppingCart, Sparkles, Users, Utensils } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
 
 interface ApiSituation {
@@ -61,9 +61,9 @@ export function SituationPicker({ targetLanguage, onSelect, onRequestCustom }: S
           className="elegant-card p-4 cursor-pointer group flex flex-col items-center justify-center gap-2 h-full border-dashed text-center"
         >
           <span aria-hidden="true" className="text-2xl">✨</span>
-          <span className="font-medium text-sm text-foreground">Create your own</span>
-          <span className="text-xs text-muted-foreground text-center">
-            Describe any scene and we'll set it up
+          <span className="font-medium text-foreground">{t('speak.createOwn.title')}</span>
+          <span className="text-sm text-muted-foreground text-center">
+            {t('speak.createOwn.desc')}
           </span>
         </button>
 
