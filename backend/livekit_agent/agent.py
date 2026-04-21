@@ -198,7 +198,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     # Start Observer agent in parallel
     # Use separate LLM for observer (can be different model)
     observer_llm = google.LLM(
-        model="gemini-2.5-flash-lite",
+        model="gemini-3.1-flash-lite-preview",
         api_key=google_key or os.getenv("GOOGLE_API_KEY", ""),
     )
 

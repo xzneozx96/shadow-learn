@@ -11,62 +11,86 @@ BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
     "ordering_food": {
         "en": {
             "title": "Ordering Food",
-            "description": "Practice your survival skills at a local restaurant.",
+            "description": "Order your favorite meal and handle special requests like a pro.",
         },
         "vi": {
             "title": "Gọi món ăn",
-            "description": "Luyện tập kỹ năng gọi món và thanh toán tại nhà hàng.",
+            "description": "Gọi món ăn yêu thích và xử lý các yêu cầu đặc biệt như người bản xứ.",
         },
         "icon": "🍜",
-        "seed": "Customer enters a busy restaurant, scans the menu, needs to order and ask questions, eventually pays.",
+        "seed": "A customer enters a cozy local restaurant. They need to browse the menu, ask about today's specials, place an order with specific dietary preferences, and handle the bill at the end.",
     },
     "asking_directions": {
         "en": {
             "title": "Asking Directions",
-            "description": "Navigate through the city by asking for help.",
+            "description": "Get lost in the city and find your way by chatting with locals.",
         },
         "vi": {
             "title": "Hỏi đường",
-            "description": "Di chuyển trong thành phố bằng cách hỏi người địa phương.",
+            "description": "Dạo chơi trong thành phố và tìm đường về bằng cách trò chuyện với người địa phương.",
         },
         "icon": "🧭",
-        "seed": "A tourist stops a local on a busy street to find a specific landmark and confirm the route.",
+        "seed": "A tourist is trying to find a hidden gem or a specific landmark. They stop a friendly-looking local to ask for the best route, clarify street signs, and ask for a personal recommendation nearby.",
     },
     "shopping": {
         "en": {
             "title": "Shopping",
-            "description": "Browse items, ask for prices, and find what you need.",
+            "description": "Find the perfect outfit or gift while navigating a local boutique.",
         },
         "vi": {
             "title": "Mua sắm",
-            "description": "Xem hàng, hỏi giá và tìm thứ bạn cần.",
+            "description": "Tìm kiếm bộ đồ hoặc món quà ưng ý khi ghé thăm các cửa hàng địa phương.",
         },
         "icon": "🛍️",
-        "seed": "Customer browses a boutique, asks about sizes/prices, tries something on, decides whether to buy.",
+        "seed": "A customer is browsing a stylish boutique. They need to ask about different sizes, materials, and prices. They might try something on and negotiate a small discount or ask about the return policy.",
     },
     "job_interview": {
         "en": {
             "title": "Job Interview",
-            "description": "Prepare for your career with professional dialogue.",
+            "description": "Land your dream job by practicing high-stakes professional interviews.",
         },
         "vi": {
             "title": "Phỏng vấn xin việc",
-            "description": "Chuẩn bị cho sự nghiệp với các câu hỏi phỏng vấn chuyên nghiệp.",
+            "description": "Chinh phục công việc mơ ước bằng cách luyện tập phỏng vấn chuyên nghiệp.",
         },
         "icon": "💼",
-        "seed": "Formal interview in an office. Manager asks standard interview questions; candidate answers and asks about the role.",
+        "seed": "A formal but encouraging interview for a modern startup. The hiring manager asks about past experiences and problem-solving skills, while the candidate describes their strengths and asks insightful questions about the company culture.",
     },
     "casual_chat": {
         "en": {
             "title": "Casual Chat",
-            "description": "Have a relaxed conversation about your day and interests.",
+            "description": "Catch up with an old friend and talk about everything under the sun.",
         },
         "vi": {
             "title": "Trò chuyện thường ngày",
-            "description": "Tán gẫu về cuộc sống hàng ngày và sở thích.",
+            "description": "Gặp gỡ bạn cũ và 'tám' đủ mọi chuyện trên đời.",
         },
         "icon": "💬",
-        "seed": "Two people at a cafe table, relaxed catching-up about daily life, hobbies, and recent news.",
+        "seed": "Two friends meet at a quiet cafe. They catch up on recent life events, share stories about their weekend, talk about their latest hobbies, and make plans for a future hangout.",
+    },
+    "doctor_visit": {
+        "en": {
+            "title": "Doctor Visit",
+            "description": "Describe your symptoms and understand medical advice during a check-up.",
+        },
+        "vi": {
+            "title": "Khám bệnh",
+            "description": "Mô tả triệu chứng và lắng nghe lời khuyên của bác sĩ khi đi khám bệnh.",
+        },
+        "icon": "🏥",
+        "seed": "A patient visits a clinic for a minor health issue. They need to explain their symptoms clearly, ask about the diagnosis, understand the prescription, and ask about follow-up care.",
+    },
+    "hotel_checkin": {
+        "en": {
+            "title": "Hotel Check-in",
+            "description": "Check into your hotel and ensure your stay is perfectly comfortable.",
+        },
+        "vi": {
+            "title": "Nhận phòng khách sạn",
+            "description": "Làm thủ tục nhận phòng và đảm bảo kỳ nghỉ của bạn thật thoải mái.",
+        },
+        "icon": "🏨",
+        "seed": "A traveler arrives at a hotel front desk. They need to check in, ask about hotel amenities like WiFi and breakfast, and perhaps request a quiet room or a late check-out.",
     },
 }
 

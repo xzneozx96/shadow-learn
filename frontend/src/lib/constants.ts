@@ -31,8 +31,8 @@ export function getPersonaTagline(persona: { tagline: PersonaName | string }, lo
 export const PERSONAS = [
   {
     id: 'friendly_buddy',
-    name: { en: 'Friendly Buddy', vi: 'Người bạn thân thiện' },
-    tagline: { en: 'A friendly language partner for casual practice', vi: 'Trò chuyện tự nhiên, thoải mái' },
+    name: { en: 'Cozy Bestie', vi: 'Cạ Cứng' },
+    tagline: { en: 'Always ready for a lovely little chat! ✨', vi: 'Tán gẫu sương sương, vui vẻ không quạo! ✨' },
     portrait_url: null as string | null,
     voice_ids: {
       'zh-CN': 'Puck',
@@ -46,8 +46,8 @@ export const PERSONAS = [
   },
   {
     id: 'anime_crushing',
-    name: { en: 'Anime Crush', vi: 'Bồ nhí' },
-    tagline: { en: 'Flirty and fun — but don\'t get distracted!', vi: 'Soái ca của em - đừng bị phân tâm nhé!' },
+    name: { en: 'Anime Sweetie', vi: 'Người Thương' },
+    tagline: { en: 'Study hard for me, okay? I\'ll be watching... 🌸', vi: 'Học giỏi đi rồi em thưởng cho nha... 🌸' },
     portrait_url: null as string | null,
     voice_ids: {
       'zh-CN': 'Zephyr',
@@ -60,8 +60,8 @@ export const PERSONAS = [
   },
   {
     id: 'strict_parent',
-    name: { en: 'Strict Parent', vi: 'Phụ huynh nghiêm khắc' },
-    tagline: { en: 'Why haven\'t you studied?! Let me help you!', vi: 'Sao chưa học bài? Ăn đòn bây giờ!' },
+    name: { en: 'Tiger Mom', vi: 'Mẹ "Hổ"' },
+    tagline: { en: 'No studying, no snacks! Focus! 🥖', vi: 'Học không hay là ăn gậy? Tùy con chọn! 🥖' },
     portrait_url: null as string | null,
     voice_ids: {
       'zh-CN': 'Gacrux',
@@ -75,8 +75,8 @@ export const PERSONAS = [
   },
   {
     id: 'taxi_driver',
-    name: { en: 'Beijing Taxi Driver', vi: 'Tài xế taxi Bắc Kinh' },
-    tagline: { en: 'Knows the city like the back of his hand', vi: 'Am hiểu thành phố như lòng bàn tay' },
+    name: { en: 'Tech Rider', vi: 'Anh Grab' },
+    tagline: { en: 'Rain or shine, the road is clear, Your friendly rider is always here! 🛵', vi: 'Nắng mưa là chuyện của trời, Đưa bạn đi học là đời anh vui! 🛵' },
     portrait_url: null as string | null,
     voice_ids: { 'zh-CN': 'Fenrir' },
     supported_languages: ['zh-CN'],
