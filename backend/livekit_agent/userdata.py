@@ -1,7 +1,7 @@
 """Session data for Speak with AI voice practice workflow."""
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger("speak-with-ai.userdata")
 
@@ -17,6 +17,11 @@ class SpeakSessionData:
     situation_id: Optional[str] = None
     system_prompt: Optional[str] = None
     voice_id: Optional[str] = None
+
+    # NEW — language + level + resolved situation config
+    target_language: Optional[str] = None
+    proficiency_level: Optional[str] = None
+    situation_config: Optional[Any] = None
 
     # User credentials (may be passed for BYO keys)
     openai_api_key: Optional[str] = None
@@ -61,6 +66,12 @@ class SpeakSessionData:
             parts.append(f"Persona: {self.persona_id}")
         if self.situation_id:
             parts.append(f"Situation: {self.situation_id}")
+        if self.target_language:
+            parts.append(f"Language: {self.target_language}")
+        if self.proficiency_level:
+            parts.append(f"Level: {self.proficiency_level}")
+        if self.situation_config:
+            parts.append(f"Config: {getattr(self.situation_config, 'id', 'set')}")
         parts.append(f"Turns: {self.turn_count}")
         return " | ".join(parts) if parts else "No session info yet"
 
