@@ -1,7 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
-import { Briefcase, DollarSign, Heart, Hospital, MapPin, MessageCircle, Mic, ShoppingCart, Sparkles, Users, Utensils } from 'lucide-react'
+import { Briefcase, DollarSign, Heart, Hospital, MapPin, MessageCircle, Mic, ShoppingCart, Users, Utensils } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
+import { API_BASE } from '@/lib/config'
 
 interface ApiSituation {
   id: string
@@ -40,7 +41,7 @@ export function SituationPicker({ targetLanguage, onSelect, onRequestCustom }: S
   const [situations, setSituations] = useState<ApiSituation[]>([])
 
   useEffect(() => {
-    fetch(`/api/speak/situations?lang=${encodeURIComponent(targetLanguage)}`)
+    fetch(`${API_BASE}/api/speak/situations?lang=${encodeURIComponent(targetLanguage)}`)
       .then(r => r.json())
       .then((d: any) => setSituations(d.situations ?? []))
       .catch(() => {})
@@ -82,9 +83,9 @@ export function SituationPicker({ targetLanguage, onSelect, onRequestCustom }: S
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 overflow-hidden mb-1">
-                  <h3 className="font-bold text-sm text-foreground truncate">{s.title}</h3>
+                  <h3 className="font-bold text-foreground truncate">{s.title}</h3>
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                   {s.description}
                 </p>
               </div>
