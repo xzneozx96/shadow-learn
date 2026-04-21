@@ -182,8 +182,8 @@ export function CreateLesson() {
                 {t('create.queued')}
               </p>
               <div className="flex gap-2">
-                <Button onClick={() => navigate('/')} data-testid="create-lesson-go-to-library-button">{t('create.goToLibrary')}</Button>
-                <Button variant="outline" onClick={() => setQueued(false)} data-testid="create-lesson-queue-another-button">{t('create.queueAnother')}</Button>
+                <Button size="lg" onClick={() => navigate('/')} data-testid="create-lesson-go-to-library-button">{t('create.goToLibrary')}</Button>
+                <Button variant="outline" size="lg" onClick={() => setQueued(false)} data-testid="create-lesson-queue-another-button">{t('create.queueAnother')}</Button>
               </div>
             </CardContent>
           </Card>
@@ -245,6 +245,7 @@ export function CreateLesson() {
               disabled={!canGenerate || submitting}
               onClick={handleGenerate}
               className="w-full"
+              size="xl"
               data-testid="create-lesson-generate-button"
             >
               <Sparkles className="size-4" />
