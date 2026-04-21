@@ -142,8 +142,9 @@ test('US01.US06-E2E-023 @p1 @regression @create-lesson — ac-04.1: Library show
   // Navigate to Library — lesson should already be in IDB, card should show processing immediately
   await page.goto('/')
 
-  // Processing badge must appear without waiting for a poll cycle (immediate IDB read)
-  await expect(page.getByTestId('lesson-card-processing')).toBeVisible({ timeout: 5_000 })
+  // Processing state must appear without waiting for a poll cycle (immediate IDB read)
+  // New LessonCard shows Loader2 spinner with "processing" text in the thumbnail area
+  await expect(page.locator('.animate-spin.text-muted-foreground').first()).toBeVisible({ timeout: 5_000 })
 })
 
 test('US01.US06-E2E-024 @p1 @regression @create-lesson — ac-04.3: Pipeline completion writes segments to IDB', async ({ page }) => {
@@ -224,7 +225,7 @@ test('US01.US06-E2E-024 @p1 @regression @create-lesson — ac-04.3: Pipeline com
   // Verify segments were persisted in IDB
   const segments = await page.evaluate(async (lessonId) => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('shadowlearn', 7)
+      const req = indexedDB.open('shadowlearn', 10)
       req.onerror = () => reject(req.error)
       req.onsuccess = () => resolve(req.result as IDBDatabase)
     })

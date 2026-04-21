@@ -145,11 +145,12 @@ export function Library() {
           </div> */}
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {/* Add new lesson card */}
           <Link
             to="/create"
-            className="group flex h-full min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/20 text-muted-foreground transition-all duration-200 hover:bg-white/3"
+            className="group flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/20 text-muted-foreground transition-all duration-200 hover:bg-white/3"
+            style={{ aspectRatio: '16/9' }}
           >
             <div className="flex size-10 items-center justify-center rounded-full border border-white/25 transition-colors group-hover:bg-white/5">
               <Plus className="size-5" />

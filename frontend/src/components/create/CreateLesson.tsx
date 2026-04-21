@@ -167,7 +167,7 @@ export function CreateLesson() {
     finally {
       setSubmitting(false)
     }
-  }, [db, keys, tab, youtubeUrl, file, language, sourceLanguage, updateLesson, sttProvider])
+  }, [db, keys, tab, youtubeUrl, file, language, sourceLanguage, updateLesson, sttProvider, trialMode])
 
   const canGenerate = sttProvider !== null
     && (tab === 'youtube' ? !!youtubeUrl.trim() : !!file)

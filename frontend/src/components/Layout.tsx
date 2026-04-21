@@ -41,7 +41,7 @@ export function Layout({ children }: LayoutProps) {
                 variant="outline"
                 size="lg"
                 onClick={openPanel}
-                className="gap-2 bg-linear-to-br from-violet-500/12 to-transparent border-violet-500/25 hover:border-violet-500/40 hover:from-violet-500/18 text-violet-400 transition-all duration-200"
+                className="gap-2 bg-linear-to-br from-violet-500/12 to-transparent border-violet-500/50 hover:border-violet-500/80 hover:from-violet-500/18 text-violet-400! transition-all duration-200"
               >
                 <Sparkles className="size-3.5" />
                 {t('companion.askButton')}
@@ -50,7 +50,7 @@ export function Layout({ children }: LayoutProps) {
                 variant="outline"
                 size="lg"
                 onClick={openSpeakModal}
-                className="gap-2 bg-linear-to-br from-amber-500/15 to-transparent border-amber-500/30 hover:border-amber-500/50 hover:from-amber-500/22 text-amber-400 font-medium transition-all duration-200 active:scale-[0.98]"
+                className="gap-2 bg-linear-to-br from-amber-500/15 to-transparent border-amber-500/50 hover:border-amber-500/80 hover:from-amber-500/22 text-amber-400! font-medium transition-all duration-200"
               >
                 <Zap className="size-3.5" />
                 {t('speak.title')}

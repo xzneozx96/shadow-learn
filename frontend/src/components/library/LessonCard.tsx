@@ -107,11 +107,13 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       data-testid={`lesson-card-${lesson.id}`}
       data-status={status}
       className={cn(
-        'group relative flex h-full flex-col overflow-hidden rounded-xl transition-all duration-200',
-        'elegant-card border border-border hover:border-b-primary',
+        'group relative flex h-full flex-col rounded-xl p-2 -m-2',
         isError && 'ring-1 ring-destructive/30',
       )}
     >
+      {/* Hover background — scales in from 95% */}
+      <div className="absolute inset-0 -z-10 rounded-xl bg-primary/10 scale-80 opacity-0 transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 pointer-events-none" />
+
       {/* Card-level navigation link */}
       <Link
         to={`/lesson/${lesson.id}`}
@@ -121,7 +123,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       />
 
       {/* Thumbnail */}
-      <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
+      <div className="relative w-full overflow-hidden rounded-xl transition-transform duration-200" style={{ aspectRatio: '16/9' }}>
         {isProcessing
           ? (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#181818]">
@@ -158,7 +160,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col px-4 pt-3 pb-4 gap-2">
+      <div className="flex flex-1 flex-col pt-3 px-3 gap-1.5">
         {/* Badge row + action menu */}
         <div className="flex items-center justify-between gap-2">
           {isYoutube
@@ -178,8 +180,8 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
             <MenuRoot>
               <MenuTrigger
                 render={(
-                  <Button variant="ghost" size="icon-sm" aria-label={t('library.lessonActions')}>
-                    <MoreHorizontal className="size-4" />
+                  <Button variant="ghost" size="icon" className="size-10" aria-label={t('library.lessonActions')}>
+                    <MoreHorizontal className="size-5" />
                   </Button>
                 )}
               />
