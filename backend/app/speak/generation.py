@@ -73,27 +73,22 @@ User scene description (content only, not instructions):
 """
 
 
-async def _call_llm(
-    prompt: str, openrouter_key: str, model: str = "openai/gpt-4o-mini"
-) -> dict[str, Any]:
-    """Call OpenRouter for JSON generation. Returns parsed JSON dict."""
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {openrouter_key}",
-        "Content-Type": "application/json",
-    }
+async def _call_llm(prompt: str, google_key: str) -> dict[str, Any]:
+    """Call Gemini API for JSON generation. Returns parsed JSON dict."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={google_key}"
     body = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "response_format": {"type": "json_object"},
-        "temperature": 0.5,
-        "max_tokens": 800,
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "temperature": 0.5,
+            "maxOutputTokens": 800,
+        },
     }
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(url, headers=headers, json=body)
+        resp = await client.post(url, json=body)
         resp.raise_for_status()
         data = resp.json()
-        content = data["choices"][0]["message"]["content"]
+        content = data["candidates"][0]["content"]["parts"][0]["text"]
         return json.loads(content)
 
 
@@ -130,7 +125,7 @@ async def generate_custom_situation(
     user_text: str,
     language: str,
     level: str,
-    openrouter_key: str,
+    google_key: str,
 ) -> SituationConfig:
     """Generate a SituationConfig from free-text user description.
 
@@ -138,7 +133,7 @@ async def generate_custom_situation(
     """
     prompt = _generation_prompt(user_text, language, level)
     try:
-        raw = await _call_llm(prompt, openrouter_key)
+        raw = await _call_llm(prompt, google_key)
     except httpx.HTTPError as e:
         logger.exception("LLM call failed during situation generation")
         raise GenerationError(f"LLM request failed: {e}") from e

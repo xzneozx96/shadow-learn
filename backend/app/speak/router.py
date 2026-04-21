@@ -52,7 +52,7 @@ class GenerateSituationRequest(BaseModel):
     user_text: str = Field(..., min_length=10, max_length=500)
     language: str = Field(..., pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
     level: Literal["beginner", "intermediate", "advanced"]
-    openrouter_key: str = Field(..., min_length=1)
+    google_key: str = Field(..., min_length=1)
 
 
 class GenerateSituationResponse(BaseModel):
@@ -211,7 +211,7 @@ async def generate_situation(request: GenerateSituationRequest) -> GenerateSitua
             user_text=request.user_text,
             language=request.language,
             level=request.level,
-            openrouter_key=request.openrouter_key,
+            google_key=request.google_key,
         )
     except GenerationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

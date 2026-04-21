@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
-import { Button } from '@/components/ui/button'
+import { API_BASE } from '@/lib/config'
 
 export interface GeneratedSituation {
   situation_id: string
@@ -19,14 +20,14 @@ export interface CustomSituationInputProps {
 export function CustomSituationInput({ language, level, onGenerated, onCancel }: CustomSituationInputProps) {
   const { keys } = useAuth()
   const { t } = useI18n()
-  const openrouterKey = keys?.openrouterApiKey
+  const googleKey = keys?.googleRealtimeKey
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleGenerate() {
-    if (!openrouterKey) {
-      setError(t('auth.error.openrouterRequired'))
+    if (!googleKey) {
+      setError(t('auth.error.googleRequired'))
       return
     }
     if (text.trim().length < 10) {
@@ -36,14 +37,14 @@ export function CustomSituationInput({ language, level, onGenerated, onCancel }:
     setLoading(true)
     setError(null)
     try {
-      const resp = await fetch('/api/speak/situations/generate', {
+      const resp = await fetch(`${API_BASE}/api/speak/situations/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_text: text.trim(),
           language,
           level,
-          openrouter_key: openrouterKey,
+          google_key: googleKey,
         }),
       })
       if (!resp.ok) {
@@ -76,12 +77,14 @@ export function CustomSituationInput({ language, level, onGenerated, onCancel }:
       <div className="flex gap-2 justify-end">
         <Button
           variant="outline"
+          size="lg"
           onClick={onCancel}
           disabled={loading}
         >
           {t('common.cancel')}
         </Button>
         <Button
+          size="lg"
           onClick={handleGenerate}
           disabled={loading || text.trim().length < 10}
         >
