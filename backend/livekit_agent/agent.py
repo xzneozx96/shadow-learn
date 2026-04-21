@@ -116,6 +116,34 @@ async def shadowlearn_session(ctx: agents.JobContext):
         voice_id=voice_id,
     )
 
+    # Parse extended metadata fields into userdata
+    for k, v in session_info.items():
+        if k == "situation_config":
+            try:
+                from urllib.parse import unquote as _unquote
+                import json as _json
+                from types import SimpleNamespace as _SN
+                situation_json = _unquote(v)
+                raw = _json.loads(situation_json)
+                userdata.situation_config = _SN(
+                    id=raw["id"],
+                    title=raw["title"],
+                    ai_role=raw["ai_role"],
+                    scene_context=raw["scene_context"],
+                    opening_line=raw["opening_line"],
+                    user_goal=raw["user_goal"],
+                    target_vocab=raw.get("target_vocab", []),
+                    language=raw["language"],
+                    level_label=raw.get("level_label", ""),
+                )
+                userdata.target_language = raw["language"]
+            except Exception as exc:
+                logger.error(f"Failed to parse situation_config metadata: {exc}")
+        elif k == "target_language":
+            userdata.target_language = v
+        elif k == "proficiency_level":
+            userdata.proficiency_level = v
+
     # Create AgentSession
     # Note: Using Google Gemini Realtime for main voice
     # Could alternatively use OpenAI Realtime
