@@ -1,8 +1,7 @@
 import type { TokenSourceLiteral } from 'livekit-client'
-import type { GeneratedSituation } from './CustomSituationInput'
+import type { GeneratedSituation, SessionStartApiResponse, SituationPreviewData } from './types'
 import type { ProficiencyLevel } from './LanguageLevelPicker'
 import { isSupportedSpeakLanguage } from './LanguageLevelPicker'
-import type { SituationPreviewData } from './SituationPreview'
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
 import type { GrammarFeedback, NextLineSuggestion, SpeakSituation } from '@/types'
@@ -308,29 +307,10 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         throw new Error((err as { detail?: string }).detail || 'Failed to start session')
       }
 
-      const data = await res.json() as {
-        livekit_url: string
-        livekit_token: string
-        session_id: string
-        situation_title: string
-        situation_ai_role: string
-        situation_scene_context: string
-        situation_opening_line: string
-        situation_opening_line_translation: string
-        situation_user_goal: string
-        situation_target_vocab: Array<{ term: string, meaning: string }>
-      }
+      const data = await res.json() as SessionStartApiResponse
 
       setPendingToken({ url: data.livekit_url, token: data.livekit_token, sessionId: data.session_id })
-      setSituationPreview({
-        title: data.situation_title,
-        ai_role: data.situation_ai_role,
-        scene_context: data.situation_scene_context,
-        opening_line: data.situation_opening_line,
-        opening_line_translation: data.situation_opening_line_translation,
-        user_goal: data.situation_user_goal,
-        target_vocab: data.situation_target_vocab,
-      })
+      setSituationPreview(data.situation)
       setSituation(selectedSituation)
       setStep('preview')
     }

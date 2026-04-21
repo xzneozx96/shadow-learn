@@ -34,6 +34,28 @@ class VocabItemResponse(BaseModel):
     meaning: str
 
 
+class SituationPreviewResponse(BaseModel):
+    title: str
+    ai_role: str
+    scene_context: str
+    opening_line: str
+    opening_line_translation: str
+    user_goal: str
+    target_vocab: list[VocabItemResponse]
+
+    @classmethod
+    def from_config(cls, cfg: SituationConfig) -> "SituationPreviewResponse":
+        return cls(
+            title=cfg.title,
+            ai_role=cfg.ai_role,
+            scene_context=cfg.scene_context,
+            opening_line=cfg.opening_line,
+            opening_line_translation=cfg.opening_line_translation,
+            user_goal=cfg.user_goal,
+            target_vocab=[VocabItemResponse(term=v.term, meaning=v.meaning) for v in cfg.target_vocab],
+        )
+
+
 class SessionStartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -51,14 +73,7 @@ class SessionStartResponse(BaseModel):
     livekit_url: str
     livekit_token: str
     session_id: str
-    # Situation preview fields — shown to the user before connecting to LiveKit
-    situation_title: str
-    situation_ai_role: str
-    situation_scene_context: str
-    situation_opening_line: str
-    situation_opening_line_translation: str
-    situation_user_goal: str
-    situation_target_vocab: list[VocabItemResponse]
+    situation: SituationPreviewResponse
 
 
 class SessionEndRequest(BaseModel):
@@ -83,6 +98,19 @@ class GenerateSituationResponse(BaseModel):
     opening_line_translation: str
     user_goal: str
     target_vocab: list[VocabItemResponse]
+
+    @classmethod
+    def from_config(cls, cfg: SituationConfig) -> "GenerateSituationResponse":
+        return cls(
+            situation_id=cfg.id,
+            title=cfg.title,
+            ai_role=cfg.ai_role,
+            scene_context=cfg.scene_context,
+            opening_line=cfg.opening_line,
+            opening_line_translation=cfg.opening_line_translation,
+            user_goal=cfg.user_goal,
+            target_vocab=[VocabItemResponse(term=v.term, meaning=v.meaning) for v in cfg.target_vocab],
+        )
 
 
 def _generate_livekit_token(
@@ -219,16 +247,7 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
         livekit_url=livekit_url,
         livekit_token=livekit_token,
         session_id=session_id,
-        situation_title=situation.title,
-        situation_ai_role=situation.ai_role,
-        situation_scene_context=situation.scene_context,
-        situation_opening_line=situation.opening_line,
-        situation_opening_line_translation=situation.opening_line_translation,
-        situation_user_goal=situation.user_goal,
-        situation_target_vocab=[
-            VocabItemResponse(term=v.term, meaning=v.meaning)
-            for v in situation.target_vocab
-        ],
+        situation=SituationPreviewResponse.from_config(situation),
     )
 
 
@@ -264,18 +283,6 @@ async def generate_situation(request: GenerateSituationRequest) -> GenerateSitua
     except GenerationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return GenerateSituationResponse(
-        situation_id=cfg.id,
-        title=cfg.title,
-        ai_role=cfg.ai_role,
-        scene_context=cfg.scene_context,
-        opening_line=cfg.opening_line,
-        opening_line_translation=cfg.opening_line_translation,
-        user_goal=cfg.user_goal,
-        target_vocab=[
-            VocabItemResponse(term=v.term, meaning=v.meaning)
-            for v in cfg.target_vocab
-        ],
-    )
+    return GenerateSituationResponse.from_config(cfg)
 
 

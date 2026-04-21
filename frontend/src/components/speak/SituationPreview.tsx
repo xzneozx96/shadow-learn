@@ -1,21 +1,7 @@
 import { BookOpen, MapPin, MessageSquareQuote, RefreshCw, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
-
-export interface VocabItem {
-  term: string
-  meaning: string
-}
-
-export interface SituationPreviewData {
-  title: string
-  ai_role: string
-  scene_context: string
-  opening_line: string
-  opening_line_translation: string
-  user_goal: string
-  target_vocab: VocabItem[]
-}
+import type { SituationPreviewData } from './types'
 
 interface SituationPreviewProps {
   preview: SituationPreviewData

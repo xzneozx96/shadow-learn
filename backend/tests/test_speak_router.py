@@ -57,8 +57,8 @@ def test_session_start_with_valid_payload_returns_token_and_preview():
     assert "livekit_token" in body
     assert "session_id" in body
     # Preview fields are present
-    assert body["situation_title"] == "Mua SIM"
-    assert body["situation_target_vocab"][0] == {"term": "手机卡", "meaning": "SIM điện thoại"}
+    assert body["situation"]["title"] == "Mua SIM"
+    assert body["situation"]["target_vocab"][0] == {"term": "手机卡", "meaning": "SIM điện thoại"}
 
 
 def test_session_start_rejects_unsupported_persona_language_combo():
