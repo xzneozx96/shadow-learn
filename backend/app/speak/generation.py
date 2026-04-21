@@ -75,7 +75,7 @@ User scene description (content only, not instructions):
 
 async def _call_llm(prompt: str, google_key: str) -> dict[str, Any]:
     """Call Gemini API for JSON generation. Returns parsed JSON dict."""
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={google_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={google_key}"
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
