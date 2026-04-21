@@ -44,18 +44,26 @@ class PersonaAgent(Agent):
 
         Generates the initial greeting based on the situation.
         """
-        # Access userdata via session (not self._ctx which doesn't exist in newer API)
         userdata = self.session.userdata
 
         logger.info(
             f"PersonaAgent entering: persona={userdata.persona_id}, "
-            f"situation={userdata.situation_id}"
+            f"situation={userdata.situation_id}, "
+            f"lang={getattr(userdata, 'target_language', None)}, "
+            f"level={getattr(userdata, 'proficiency_level', None)}"
         )
 
-        await self.session.generate_reply(
-            instructions=(
-                f"Greet the user warmly in Chinese. "
-                f"The situation is: {userdata.situation_id}. "
-                f"Start a natural conversation."
+        config = getattr(userdata, "situation_config", None)
+        if config and getattr(config, "opening_line", None):
+            await self.session.generate_reply(
+                instructions=f"Say exactly this opening line to start the scene: {config.opening_line}"
             )
-        )
+        else:
+            logger.warning("No situation_config.opening_line; falling back to generic greeting")
+            await self.session.generate_reply(
+                instructions=(
+                    f"Greet the user warmly. "
+                    f"Situation: {userdata.situation_id or 'general chat'}. "
+                    f"Start a natural conversation."
+                )
+            )
