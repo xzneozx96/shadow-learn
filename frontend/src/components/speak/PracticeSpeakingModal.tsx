@@ -1,4 +1,6 @@
 import type { TokenSourceLiteral } from 'livekit-client'
+import type { GeneratedSituation } from './CustomSituationInput'
+import type { ProficiencyLevel } from './LanguageLevelPicker'
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
 import type { GrammarFeedback, NextLineSuggestion, SpeakSituation } from '@/types'
@@ -10,16 +12,24 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { getSettings } from '@/db'
 import { useSpeakSession } from '@/hooks/useSpeakSession'
 import { API_BASE } from '@/lib/config'
-import { SITUATIONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { ConversationScene } from './ConversationScene'
+import { CustomSituationInput } from './CustomSituationInput'
+import { LanguageLevelPicker } from './LanguageLevelPicker'
 import { PersonaPicker } from './PersonaPicker'
 import { SessionRecap } from './SessionRecap'
 import { SituationPicker } from './SituationPicker'
 
-type Step = 'situation' | 'persona' | 'active' | 'recap'
+type Step = 'language-level' | 'persona' | 'situation' | 'custom' | 'active' | 'recap'
+
+interface SelectedSituation {
+  id: string
+  title: string
+  userGoal: string
+}
 
 interface PracticeSpeakingModalProps {
   open: boolean
@@ -29,6 +39,19 @@ interface PracticeSpeakingModalProps {
 // Hoisted empty default so the identity is stable across renders — prevents
 // ConversationScene's feedbackHistory prop from changing every render.
 const EMPTY_FEEDBACKS: Record<string, GrammarFeedback> = {}
+
+const PROFICIENCY_LABELS: Record<string, Record<ProficiencyLevel, string>> = {
+  'zh-CN': { beginner: 'HSK 1-2', intermediate: 'HSK 3-4', advanced: 'HSK 5-6' },
+  'zh-TW': { beginner: 'TOCFL A1-A2', intermediate: 'TOCFL B1-B2', advanced: 'TOCFL C1-C2' },
+  'ja': { beginner: 'JLPT N5-N4', intermediate: 'JLPT N3-N2', advanced: 'JLPT N1' },
+  'ko': { beginner: 'TOPIK I', intermediate: 'TOPIK II 3-4', advanced: 'TOPIK II 5-6' },
+  'en': { beginner: 'CEFR A1-A2', intermediate: 'CEFR B1-B2', advanced: 'CEFR C1-C2' },
+  'vi': { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' },
+}
+
+function getLevelLabel(language: string, level: ProficiencyLevel): string {
+  return PROFICIENCY_LABELS[language]?.[level] ?? level
+}
 
 interface SessionInnerProps {
   speakSession: SpeakSession
@@ -159,7 +182,6 @@ function SessionWrapper({
     return () => {
       livekitSession.end()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
@@ -178,14 +200,25 @@ function SessionWrapper({
 
 export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalProps) {
   const { t } = useI18n()
-  const { keys } = useAuth()
+  const { keys, db } = useAuth()
   const { currentSession, startSession, endSession, clearSession, updateTranscript, updateFeedback } = useSpeakSession()
-  const [step, setStep] = useState<Step>('situation')
-  const [situation, setSituation] = useState<SpeakSituation | null>(null)
+  const [step, setStep] = useState<Step>('language-level')
+  const [targetLanguage, setTargetLanguage] = useState('zh-CN')
+  const [proficiencyLevel, setProficiencyLevel] = useState<ProficiencyLevel | null>(null)
+  const [situation, setSituation] = useState<SelectedSituation | null>(null)
   const [persona, setPersona] = useState<Persona | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tokenSource, setTokenSource] = useState<TokenSourceLiteral | null>(null)
+
+  useEffect(() => {
+    if (!db)
+      return
+    getSettings(db).then((s) => {
+      if (s?.translationLanguage)
+        setTargetLanguage(s.translationLanguage)
+    })
+  }, [db])
 
   const hasGoogleKey = !!(keys?.googleRealtimeKey)
 
@@ -201,9 +234,10 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     setPrevOpen(open)
     if (!open) {
       void handleAbandonedSession()
-      setStep('situation')
+      setStep('language-level')
       setSituation(null)
       setPersona(null)
+      setProficiencyLevel(null)
       setError(null)
       setTokenSource(null)
     }
@@ -212,9 +246,10 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   const resetState = useCallback(async () => {
     await handleAbandonedSession()
     clearSession()
-    setStep('situation')
+    setStep('language-level')
     setSituation(null)
     setPersona(null)
+    setProficiencyLevel(null)
     setError(null)
     setTokenSource(null)
   }, [handleAbandonedSession, clearSession])
@@ -224,15 +259,11 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     onClose()
   }, [onClose, resetState])
 
-  const handleSituationSelect = useCallback((situationId: string) => {
-    const sitDefinition = SITUATIONS.find(s => s.id === situationId)
-    const sit = { id: situationId, name: sitDefinition?.title || situationId, description: sitDefinition?.description || '' }
-    setSituation(sit)
-    setStep('persona')
-  }, [])
-
-  const handlePersonaSelect = useCallback(async (selectedPersona: Persona) => {
-    if (!situation || !hasGoogleKey || !keys?.googleRealtimeKey) {
+  const startSessionWithSituation = useCallback(async (
+    selectedSituation: SelectedSituation,
+    selectedPersona: Persona,
+  ) => {
+    if (!hasGoogleKey || !keys?.googleRealtimeKey || !proficiencyLevel) {
       setError(t('auth.error.googleRequired'))
       return
     }
@@ -247,18 +278,18 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         body: JSON.stringify({
           google_key: keys.googleRealtimeKey,
           persona_id: selectedPersona.id,
-          system_prompt: selectedPersona.system_prompt,
-          voice_id: selectedPersona.voice_id,
-          situation_id: situation.id,
+          situation_id: selectedSituation.id,
+          target_language: targetLanguage,
+          proficiency_level: proficiencyLevel,
         }),
       })
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: 'Failed to start session' }))
-        throw new Error(err.detail || 'Failed to start session')
+        throw new Error((err as { detail?: string }).detail || 'Failed to start session')
       }
 
-      const data = await res.json()
+      const data = await res.json() as { livekit_url: string, livekit_token: string, session_id: string }
 
       const ts = TokenSource.literal({
         serverUrl: data.livekit_url,
@@ -266,14 +297,20 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       })
       setTokenSource(ts)
 
+      const levelLabel = getLevelLabel(targetLanguage, proficiencyLevel)
+
       await startSession({
         sessionId: data.session_id,
-        lessonId: situation.id,
+        lessonId: selectedSituation.id,
         promptVersion: '1.0',
         modelId: 'gemini-live',
+        situationTitle: selectedSituation.title,
+        targetLanguage,
+        proficiencyLevel,
+        levelLabel,
+        userGoal: selectedSituation.userGoal,
       })
 
-      setPersona(selectedPersona)
       setStep('active')
     }
     catch (e) {
@@ -282,7 +319,39 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     finally {
       setLoading(false)
     }
-  }, [situation, hasGoogleKey, keys, t, startSession])
+  }, [hasGoogleKey, keys, proficiencyLevel, targetLanguage, t, startSession])
+
+  const handleLanguageLevelContinue = useCallback(() => {
+    setStep('persona')
+  }, [])
+
+  const handlePersonaSelect = useCallback((selectedPersona: Persona) => {
+    setPersona(selectedPersona)
+    setStep('situation')
+  }, [])
+
+  const handleSituationSelect = useCallback(async (sel: { id: string, title: string, userGoal: string }) => {
+    setSituation(sel)
+    if (persona) {
+      await startSessionWithSituation(sel, persona)
+    }
+  }, [persona, startSessionWithSituation])
+
+  const handleRequestCustom = useCallback(() => {
+    setStep('custom')
+  }, [])
+
+  const handleCustomGenerated = useCallback(async (gen: GeneratedSituation) => {
+    const sel: SelectedSituation = {
+      id: gen.situation_id,
+      title: gen.title,
+      userGoal: gen.user_goal,
+    }
+    setSituation(sel)
+    if (persona) {
+      await startSessionWithSituation(sel, persona)
+    }
+  }, [persona, startSessionWithSituation])
 
   const handleSessionEnd = useCallback(async (_sessionData: SpeakSession) => {
     await endSession('completed')
@@ -291,22 +360,32 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
   const handleRepeat = useCallback(() => {
     if (situation && persona) {
-      handlePersonaSelect(persona)
+      startSessionWithSituation(situation, persona)
     }
-  }, [situation, persona, handlePersonaSelect])
+  }, [situation, persona, startSessionWithSituation])
 
   const handleBackHome = useCallback(() => {
     resetState()
   }, [resetState])
 
+  const backStep: Partial<Record<Step, Step>> = {
+    persona: 'language-level',
+    situation: 'persona',
+    custom: 'situation',
+  }
+
+  const speakSituation: SpeakSituation | null = situation
+    ? { id: situation.id, name: situation.title, description: '' }
+    : null
+
   return (
     <Dialog
       open={open}
-      onOpenChange={(open) => {
-        if (!open && step === 'active') {
+      onOpenChange={(isOpen) => {
+        if (!isOpen && step === 'active') {
           return
         }
-        if (!open) {
+        if (!isOpen) {
           handleClose()
         }
       }}
@@ -317,9 +396,9 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       >
         {/* Header */}
         <div className="px-4 py-3 border-b border-border flex items-center gap-2 pr-12">
-          {step === 'persona' && (
+          {backStep[step] && (
             <button
-              onClick={() => setStep('situation')}
+              onClick={() => setStep(backStep[step]!)}
               className="p-1 -ml-1 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
               aria-label="Back"
             >
@@ -337,7 +416,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         )}
 
         {/* Setup prompt if no keys */}
-        {!hasGoogleKey && step === 'situation' && (
+        {!hasGoogleKey && step === 'language-level' && (
           <div className="flex flex-col items-center justify-center p-6 text-center">
             <p className="text-muted-foreground mb-4">
               {t('auth.error.googleRequired')}
@@ -351,32 +430,58 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         {/* Step content */}
         {hasGoogleKey && (
           <div className={step === 'active' ? '' : 'p-4'}>
+            {step === 'language-level' && (
+              <LanguageLevelPicker
+                language={targetLanguage}
+                level={proficiencyLevel}
+                onLanguageChange={setTargetLanguage}
+                onLevelChange={setProficiencyLevel}
+                onContinue={handleLanguageLevelContinue}
+              />
+            )}
+
+            {step === 'persona' && (
+              <PersonaPicker
+                targetLanguage={targetLanguage}
+                onSelect={handlePersonaSelect}
+              />
+            )}
+
             {step === 'situation' && (
-              <SituationPicker onSelect={handleSituationSelect} />
+              <SituationPicker
+                targetLanguage={targetLanguage}
+                onSelect={handleSituationSelect}
+                onRequestCustom={handleRequestCustom}
+              />
             )}
 
-            {step === 'persona' && situation && (
-              <PersonaPicker onSelect={handlePersonaSelect} />
+            {step === 'custom' && proficiencyLevel && (
+              <CustomSituationInput
+                language={targetLanguage}
+                level={proficiencyLevel}
+                onGenerated={handleCustomGenerated}
+                onCancel={() => setStep('situation')}
+              />
             )}
 
-            {step === 'active' && currentSession && persona && situation && tokenSource && (
+            {step === 'active' && currentSession && persona && speakSituation && tokenSource && (
               <SessionWrapper
                 key={currentSession.sessionId}
                 tokenSource={tokenSource}
                 speakSession={currentSession}
                 persona={persona}
-                situation={situation}
+                situation={speakSituation}
                 onEnd={handleSessionEnd}
                 onTranscriptUpdate={updateTranscript}
                 onFeedbackUpdate={updateFeedback}
               />
             )}
 
-            {step === 'recap' && currentSession && persona && situation && (
+            {step === 'recap' && currentSession && persona && speakSituation && (
               <SessionRecap
                 speakSession={currentSession}
                 persona={persona}
-                situation={situation}
+                situation={speakSituation}
                 onRepeat={handleRepeat}
                 onBack={handleBackHome}
               />
