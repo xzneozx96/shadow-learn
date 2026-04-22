@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from livekit import agents, rtc
 from livekit.agents import AgentServer, AgentSession, room_io, TurnHandlingOptions
 from livekit.agents.voice import Agent
+from google.genai import types as genai_types
 from livekit.plugins import google, openai
 from livekit.plugins import noise_cancellation
 from livekit.plugins import silero
@@ -164,6 +165,19 @@ async def shadowlearn_session(ctx: agents.JobContext):
             api_key=google_key,
             model="gemini-2.5-flash-native-audio-preview-12-2025",
             voice=voice_id,
+            # Forces api_version="v1alpha", required by the native-audio preview endpoint.
+            enable_affective_dialog=True,
+            realtime_input_config=genai_types.RealtimeInputConfig(
+                automatic_activity_detection=genai_types.AutomaticActivityDetection(
+                    # Quick pickup — learners use short affirmations ("好", "嗯")
+                    start_of_speech_sensitivity=genai_types.StartSensitivity.START_SENSITIVITY_HIGH,
+                    # Don't cut them off mid-sentence; learners pause more than native speakers
+                    end_of_speech_sensitivity=genai_types.EndSensitivity.END_SENSITIVITY_LOW,
+                    prefix_padding_ms=200,   # commit speech start after 200ms
+                    silence_duration_ms=1200, # 1.2s silence to commit end-of-speech
+                ),
+                activity_handling=genai_types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
+            ),
         )
     else:
         # Fallback: Use OpenAI Realtime
@@ -180,11 +194,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
         llm=llm,
         user_away_timeout=15.0,
         turn_handling=TurnHandlingOptions(
-            turn_detection="vad",
-            endpointing={
-                "min_delay": 0.3,
-                "max_delay": 1.2,
-            },
+            turn_detection="realtime_llm",
             interruption={
                 "mode": "adaptive",
                 "enabled": True,

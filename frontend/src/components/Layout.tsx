@@ -22,7 +22,7 @@ export function Layout({ children }: LayoutProps) {
   const hasUnseen = useHasUnseenAnnouncement()
 
   return (
-    <div className="gradient-bg flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       <div className="flex-1 min-w-0 flex flex-col text-foreground">
         {trialMode && (
           <div className="bg-yellow-500/10 text-yellow-500 text-center text-xs py-1.5 border-b border-yellow-500/20 backdrop-blur-md">

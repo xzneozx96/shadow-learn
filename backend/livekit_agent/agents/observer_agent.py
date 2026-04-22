@@ -190,7 +190,7 @@ class ObserverAgent:
         # Build context for grammar evaluation
         conversation_text = "\n".join([
             f"{msg['role']}: {msg['text']}"
-            for msg in self.conversation_history[-5:]
+            for msg in self.conversation_history
         ])
 
         # Format prompt
@@ -282,7 +282,7 @@ class ObserverAgent:
         # Get conversation context
         conversation_text = "\n".join([
             f"{msg['role']}: {msg['text']}"
-            for msg in self.conversation_history[-6:]
+            for msg in self.conversation_history
         ])
 
         # Get userdata for situation info
