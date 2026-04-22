@@ -54,6 +54,7 @@ class PersonaAgent(Agent):
         )
 
         config = getattr(userdata, "situation_config", None)
+
         if config and getattr(config, "opening_line", None):
             await self.session.generate_reply(
                 instructions=(

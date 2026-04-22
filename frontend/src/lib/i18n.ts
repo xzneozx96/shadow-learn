@@ -136,6 +136,7 @@ export const TRANSLATIONS = {
     'library.retryFailed': 'Failed to retry lesson processing',
     'library.uploadSource': 'Upload',
     'library.vocabWords': 'words',
+    'library.noSearchResults': 'No lessons match your search',
 
     // Lesson View
     'lesson.transcript': 'Transcript',
@@ -472,6 +473,7 @@ export const TRANSLATIONS = {
     'speak.feedbackPanel.corrections': 'Corrections',
     'speak.feedbackPanel.advancedFeedback': 'Advanced feedback',
     'speak.feedbackPanel.nextLineSuggestion': 'Next line suggestion',
+    'speak.feedbackPanel.waitingForSuggestion': 'Waiting for next suggestion...',
     'speak.controls.endCall': 'END CALL',
     'speak.controls.end': 'END',
     'speak.continue': 'Continue',
@@ -611,6 +613,7 @@ export const TRANSLATIONS = {
     'library.retryFailed': 'Có lỗi khi thử lại xử lý bài học',
     'library.uploadSource': 'Tải lên',
     'library.vocabWords': 'từ vựng',
+    'library.noSearchResults': 'Không tìm thấy bài học nào',
 
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',
@@ -967,6 +970,7 @@ export const TRANSLATIONS = {
     'speak.feedbackPanel.corrections': 'Chỉnh sửa',
     'speak.feedbackPanel.advancedFeedback': 'Phản hồi chi tiết',
     'speak.feedbackPanel.nextLineSuggestion': 'Gợi ý câu tiếp theo',
+    'speak.feedbackPanel.waitingForSuggestion': 'Đang chờ gợi ý tiếp theo...',
     'speak.controls.endCall': 'KẾT THÚC',
     'speak.controls.end': 'KẾT THÚC',
     'speak.continue': 'Tiếp tục',

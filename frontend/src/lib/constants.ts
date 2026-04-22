@@ -32,7 +32,7 @@ export const PERSONAS = [
   {
     id: 'friendly_buddy',
     name: { en: 'Cozy Bestie', vi: 'Cạ Cứng' },
-    tagline: { en: 'Always ready for a lovely little chat! ✨', vi: 'Tán gẫu sương sương, vui vẻ không quạo! ✨' },
+    tagline: { en: 'Always ready for a lovely little chat! ✨', vi: 'Vui vẻ không quạo! ✨' },
     portrait_url: null as string | null,
     voice_ids: {
       'zh-CN': 'Puck',
@@ -61,7 +61,7 @@ export const PERSONAS = [
   {
     id: 'strict_parent',
     name: { en: 'Angry Mom', vi: 'Phụ huynh mẫu mực' },
-    tagline: { en: 'No studying, no snacks! Focus! 🥖', vi: 'Học không hay là ăn gậy? Tùy con chọn! 🥖' },
+    tagline: { en: 'No studying, no snacks! Focus! 🥖', vi: 'Học hay là ăn gậy? 🥖' },
     portrait_url: null as string | null,
     voice_ids: {
       'zh-CN': 'Gacrux',

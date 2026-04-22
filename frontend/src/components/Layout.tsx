@@ -22,14 +22,14 @@ export function Layout({ children }: LayoutProps) {
   const hasUnseen = useHasUnseenAnnouncement()
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="gradient-bg flex h-screen overflow-hidden">
       <div className="flex-1 min-w-0 flex flex-col text-foreground">
         {trialMode && (
           <div className="bg-yellow-500/10 text-yellow-500 text-center text-xs py-1.5 border-b border-yellow-500/20 backdrop-blur-md">
             {t('auth.trial.banner')}
           </div>
         )}
-        <nav className="z-50 border-b border-border bg-background p-4 backdrop-blur-md">
+        <nav className="z-50 border-b border-border p-4 backdrop-blur-md">
           <div className="container mx-auto flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2 font-bold tracking-tight text-foreground hover:opacity-90 transition-opacity">
               <img src="/favicon.svg" className="size-5" alt="ShadowLearn Logo" />

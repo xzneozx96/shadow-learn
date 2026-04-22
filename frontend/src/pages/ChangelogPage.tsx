@@ -128,7 +128,7 @@ export function ChangelogPage() {
     <Layout>
       <div className="flex h-[calc(100vh-65px)]">
         {/* Sidebar */}
-        <ScrollArea className="w-96 shrink-0 border-r border-border bg-background">
+        <ScrollArea className="w-96 shrink-0 border-r border-border">
           <div className="p-4">
             {entries.map(entry => (
               <SidebarEntry

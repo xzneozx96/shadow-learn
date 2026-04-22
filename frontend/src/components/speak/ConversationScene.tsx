@@ -1,5 +1,5 @@
 import type { SpeakSession } from '@/db'
-import { getPersonaName, type Persona } from '@/lib/constants'
+import type { Persona } from '@/lib/constants'
 import type { GrammarFeedback, NextLineSuggestion, SpeakSituation } from '@/types'
 import { useAgent, useSessionMessages } from '@livekit/components-react'
 import { CheckCircle2, Info, Sparkles } from 'lucide-react'
@@ -8,6 +8,7 @@ import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-vis
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript'
 import { AgentControlBar } from '@/components/agents-ui/agent-control-bar'
 import { useI18n } from '@/contexts/I18nContext'
+import { getPersonaName } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 const MAX_DURATION_SECONDS = 3 * 60
@@ -74,8 +75,14 @@ function SessionTimer({ connectedAt, maxDurationSeconds, onExpire }: SessionTime
   return <span className="text-sm font-bold tabular-nums">{formatDuration(remaining)}</span>
 }
 
-function FeedbackPanel({ feedback }: { feedback: GrammarFeedback | null }) {
-  const { t, locale } = useI18n()
+function FeedbackPanel({
+  feedback,
+  nextLineSuggestion,
+}: {
+  feedback: GrammarFeedback | null
+  nextLineSuggestion?: NextLineSuggestion | null
+}) {
+  const { t } = useI18n()
 
   return (
     <div className="flex flex-col h-full border-l border-border">
@@ -134,13 +141,34 @@ function FeedbackPanel({ feedback }: { feedback: GrammarFeedback | null }) {
       </div>
 
       <div className="p-4 border-t border-border mt-auto">
-        <button
-          disabled={!feedback}
-          className="w-full py-2 px-4 bg-primary/10 hover:bg-primary/20 disabled:opacity-50 disabled:hover:bg-primary/10 text-primary text-xs font-bold rounded-lg border border-primary/20 transition-all flex items-center justify-center gap-2"
-        >
-          <Sparkles size={14} />
-          {t('speak.feedbackPanel.advancedFeedback')}
-        </button>
+        {nextLineSuggestion
+          ? (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shadow-sm">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 mb-2 uppercase tracking-wider">
+                  <Sparkles size={12} />
+                  {t('speak.feedbackPanel.nextLineSuggestion')}
+                </div>
+                <div className="space-y-1">
+                  <div className="text-base font-bold text-foreground leading-tight">
+                    {nextLineSuggestion.suggestion}
+                  </div>
+                  <div className="text-[11px] text-emerald-500/90 font-medium leading-relaxed">
+                    {nextLineSuggestion.romanization}
+                  </div>
+                  <div className="text-xs text-muted-foreground italic leading-relaxed">
+                    {nextLineSuggestion.translation}
+                  </div>
+                </div>
+              </div>
+            )
+          : (
+              <div className="h-[100px] flex flex-col items-center justify-center text-center px-4 space-y-2 border border-dashed border-border rounded-xl opacity-40">
+                <Sparkles size={16} className="text-muted-foreground/40" />
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  {t('speak.feedbackPanel.waitingForSuggestion')}
+                </p>
+              </div>
+            )}
       </div>
     </div>
   )
@@ -223,7 +251,7 @@ function ConversationSceneInner({
             </div>
             <div className="min-w-0">
               <h2 className="font-bold text-sm truncate">{getPersonaName(persona, locale)}</h2>
-              <p className="text-[11px] text-muted-foreground truncate uppercase tracking-wider">{situation.name}</p>
+              <p className="text-xs text-muted-foreground truncate uppercase tracking-wider">{situation.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -302,28 +330,6 @@ function ConversationSceneInner({
           />
         </div>
 
-        <div className="shrink-0 space-y-2 mb-4 px-2">
-          {nextLineSuggestion && (
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md rounded-xl relative group shadow-sm">
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 mb-2 uppercase tracking-wider">
-                <Sparkles size={12} />
-                {t('speak.feedbackPanel.nextLineSuggestion')}
-              </div>
-              <div className="space-y-1">
-                <div className="text-base font-bold text-foreground leading-tight">
-                  {nextLineSuggestion.suggestion}
-                </div>
-                <div className="text-sm text-emerald-500/90 font-medium">
-                  {nextLineSuggestion.romanization}
-                </div>
-                <div className="text-sm text-muted-foreground/70 italic line-clamp-1">
-                  {nextLineSuggestion.translation}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="shrink-0 mt-auto">
           <AgentControlBar
             controls={CONTROL_BAR_CONTROLS}
@@ -336,7 +342,7 @@ function ConversationSceneInner({
       </div>
 
       <div className="w-[320px] shrink-0">
-        <FeedbackPanel feedback={selectedFeedback} />
+        <FeedbackPanel feedback={selectedFeedback} nextLineSuggestion={nextLineSuggestion} />
       </div>
     </div>
   )

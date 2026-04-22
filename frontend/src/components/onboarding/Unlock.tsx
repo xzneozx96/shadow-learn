@@ -67,7 +67,7 @@ export function Unlock() {
                 <p className="text-center text-sm text-red-400">{error}</p>
               )}
 
-              <Button type="submit" disabled={loading}>
+              <Button size="lg" type="submit" disabled={loading}>
                 {loading ? t('auth.unlocking') : t('auth.unlock')}
               </Button>
             </form>
