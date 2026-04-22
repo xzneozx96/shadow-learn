@@ -149,10 +149,10 @@ function FeedbackPanel({
                   {t('speak.feedbackPanel.nextLineSuggestion')}
                 </div>
                 <div className="space-y-1">
-                  <div className="text-base font-bold text-foreground leading-tight">
+                  <div className="text-base font-bold text-foreground leading-relaxed">
                     {nextLineSuggestion.suggestion}
                   </div>
-                  <div className="text-[11px] text-emerald-500/90 font-medium leading-relaxed">
+                  <div className="text-[xs text-emerald-500/90 font-medium leading-relaxed">
                     {nextLineSuggestion.romanization}
                   </div>
                   <div className="text-xs text-muted-foreground italic leading-relaxed">

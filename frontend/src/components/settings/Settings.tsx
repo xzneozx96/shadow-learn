@@ -86,15 +86,15 @@ export function Settings() {
     if (trialMode) {
       // Trial path: create a new PIN (no existing one to verify)
       if (newTrialPin.length < 4) {
-        setKeysError('PIN must be at least 4 digits')
+        setKeysError(t('settings.pinMinDigits'))
         return
       }
       if (newTrialPin !== newTrialPinConfirm) {
-        setKeysError('PINs do not match')
+        setKeysError(t('settings.pinDoNotMatch'))
         return
       }
       if (!db) {
-        setKeysError('Database not ready')
+        setKeysError(t('settings.databaseNotReady'))
         return
       }
       try {
@@ -106,15 +106,15 @@ export function Settings() {
         setTimeout(setKeysSaved, 2000, false)
       }
       catch {
-        setKeysError('Failed to save API keys')
-        toast.error('Failed to save API keys')
+        setKeysError(t('settings.failedToSaveKeys'))
+        toast.error(t('settings.failedToSaveKeys'))
       }
       return
     }
 
     // Own-keys path: verify existing PIN before saving
     if (!keysPin) {
-      setKeysError('Enter your PIN to save key changes')
+      setKeysError(t('settings.enterPinToSaveChanges'))
       return
     }
     if (!db)
@@ -131,8 +131,8 @@ export function Settings() {
       setTimeout(setKeysSaved, 2000, false)
     }
     catch {
-      setKeysError('Incorrect PIN or save failed')
-      toast.error('Failed to save API keys')
+      setKeysError(t('settings.incorrectPinOrFailed'))
+      toast.error(t('settings.failedToSaveKeys'))
     }
   }
 
@@ -208,7 +208,7 @@ export function Settings() {
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
                 {t('auth.googleRealtimeKey')}
-                <span className="text-white/20">(for voice conversation)</span>
+                <span className="text-white/20">{t('settings.googleRealtimeHint')}</span>
               </label>
               <Input
                 type={showKeys ? 'text' : 'password'}
@@ -226,7 +226,7 @@ export function Settings() {
                   <label className="text-sm text-muted-foreground">
                     {t('settings.azureSpeechKey')}
                     {' '}
-                    <span className="text-white/20">(for TTS and pronunciation assessment)</span>
+                    <span className="text-white/20">{t('settings.azureTtsHint')}</span>
                   </label>
                   <Input
                     type={showKeys ? 'text' : 'password'}
@@ -240,7 +240,7 @@ export function Settings() {
                   <label className="text-sm text-muted-foreground">
                     {t('settings.azureSpeechRegion')}
                     {' '}
-                    <span className="text-white/20">(e.g. eastus)</span>
+                    <span className="text-white/20">{t('settings.azureRegionHint')}</span>
                   </label>
                   <Input
                     type={showKeys ? 'text' : 'password'}
@@ -259,7 +259,7 @@ export function Settings() {
                 <label className="text-sm text-muted-foreground">
                   {t('settings.minimaxKey')}
                   {' '}
-                  <span className="text-white/20">(for listening practice)</span>
+                  <span className="text-white/20">{t('settings.minimaxHint')}</span>
                 </label>
                 <Input
                   type={showKeys ? 'text' : 'password'}
@@ -276,7 +276,7 @@ export function Settings() {
                 <label className="text-sm text-muted-foreground">
                   {t('settings.deepgramKey')}
                   {' '}
-                  <span className="text-white/20">(for video subtitles)</span>
+                  <span className="text-white/20">{t('settings.deepgramHint')}</span>
                 </label>
                 <Input
                   type={showKeys ? 'text' : 'password'}
@@ -292,7 +292,7 @@ export function Settings() {
                 <label className="text-sm text-muted-foreground">
                   {t('settings.gladiaKey')}
                   {' '}
-                  <span className="text-white/20">(for video transcription)</span>
+                  <span className="text-white/20">{t('settings.gladiaHint')}</span>
                 </label>
                 <Input
                   type={showKeys ? 'text' : 'password'}
@@ -307,21 +307,21 @@ export function Settings() {
               ? (
                   <>
                     <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">Create a PIN</label>
+                      <label className="text-sm text-muted-foreground">{t('settings.createPin')}</label>
                       <Input
                         type="password"
                         value={newTrialPin}
                         onChange={e => setNewTrialPin(e.target.value)}
-                        placeholder="4+ digits"
+                        placeholder={t('settings.pinDigits')}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">Confirm PIN</label>
+                      <label className="text-sm text-muted-foreground">{t('settings.confirmPinShort')}</label>
                       <Input
                         type="password"
                         value={newTrialPinConfirm}
                         onChange={e => setNewTrialPinConfirm(e.target.value)}
-                        placeholder="Repeat your PIN"
+                        placeholder={t('settings.repeatPin')}
                       />
                     </div>
                   </>
@@ -333,12 +333,12 @@ export function Settings() {
                       type="password"
                       value={keysPin}
                       onChange={e => setKeysPin(e.target.value)}
-                      placeholder="Enter your PIN to save"
+                      placeholder={t('settings.enterPinToSave')}
                     />
                   </div>
                 )}
             {keysError && <p className="text-sm text-destructive">{keysError}</p>}
-            {keysSaved && <p className="text-sm text-emerald-400">Keys saved</p>}
+            {keysSaved && <p className="text-sm text-emerald-400">{t('settings.keysSavedSuccess')}</p>}
             <Button onClick={handleSaveKeys} disabled={provider === null}>{t('settings.saveKeys')}</Button>
           </CardContent>
         </Card>
