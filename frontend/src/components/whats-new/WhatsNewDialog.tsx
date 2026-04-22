@@ -113,10 +113,10 @@ export function WhatsNewDialog() {
         </div>
 
         <DialogFooter className="flex items-center sm:justify-center border-t border-border/50 bg-muted/10 mt-2">
-          <Button variant="outline" onClick={handleDismiss}>
+          <Button size="lg" variant="outline" onClick={handleDismiss}>
             {t('whatsNew.dismiss')}
           </Button>
-          <Button onClick={handleSeeChangelog}>
+          <Button size="lg" onClick={handleSeeChangelog}>
             {t('whatsNew.seeChangelog')}
           </Button>
         </DialogFooter>
