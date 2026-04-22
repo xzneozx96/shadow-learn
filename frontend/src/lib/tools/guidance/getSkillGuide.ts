@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import skillCharactersContent from '@/lib/skills/skill_characters.md?raw'
-import skillGrammarFoundationsContent from '@/lib/skills/skill_grammar_foundations.md?raw'
 import skillGrammarComplementsContent from '@/lib/skills/skill_grammar_complements.md?raw'
+import skillGrammarFoundationsContent from '@/lib/skills/skill_grammar_foundations.md?raw'
 import skillListeningContent from '@/lib/skills/skill_listening.md?raw'
 import skillPronunciationContent from '@/lib/skills/skill_pronunciation.md?raw'
 import skillSpeakingContent from '@/lib/skills/skill_speaking.md?raw'
