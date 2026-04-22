@@ -172,7 +172,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
                     # Quick pickup — learners use short affirmations ("好", "嗯")
                     start_of_speech_sensitivity=genai_types.StartSensitivity.START_SENSITIVITY_HIGH,
                     # Don't cut them off mid-sentence; learners pause more than native speakers
-                    end_of_speech_sensitivity=genai_types.EndSensitivity.END_SENSITIVITY_LOW,
+                    end_of_speech_sensitivity=genai_types.EndSensitivity.END_SENSITIVITY_HIGH,
                     prefix_padding_ms=200,   # commit speech start after 200ms
                     silence_duration_ms=1200, # 1.2s silence to commit end-of-speech
                 ),
@@ -193,16 +193,6 @@ async def shadowlearn_session(ctx: agents.JobContext):
         vad=silero.VAD.load(),
         llm=llm,
         user_away_timeout=15.0,
-        turn_handling=TurnHandlingOptions(
-            turn_detection="realtime_llm",
-            interruption={
-                "mode": "adaptive",
-                "enabled": True,
-                "min_duration": 0.2,
-                "resume_false_interruption": True,
-                "false_interruption_timeout": 1.5,
-            },
-        ),
     )
 
     # Start Observer agent in parallel
@@ -213,10 +203,10 @@ async def shadowlearn_session(ctx: agents.JobContext):
     )
 
     # Start Observer agent (pronunciation removed - not feasible with OpenAI Realtime)
-    await start_observer(
-        session=session,
-        llm=observer_llm,
-    )
+    # await start_observer(
+    #     session=session,
+    #     llm=observer_llm,
+    # )
 
     # Handle disconnect
     def on_participant_disconnected(p: rtc.RemoteParticipant):
