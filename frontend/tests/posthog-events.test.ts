@@ -9,6 +9,11 @@ import {
   captureLessonJobFailed,
   captureShadowingSessionCompleted,
   captureShadowingSessionStarted,
+  captureSpeakPersonaSelected,
+  captureSpeakSessionAbandoned,
+  captureSpeakSessionCompleted,
+  captureSpeakSessionStarted,
+  captureSpeakSituationSelected,
   captureStudySessionCompleted,
   captureStudySessionStarted,
   captureVocabularyWordSaved,
@@ -96,6 +101,49 @@ describe('posthog event schemas', () => {
   it('captureVocabularyWordSaved sends vocabulary_word_saved with source language', () => {
     captureVocabularyWordSaved({ source_language: 'zh-CN' })
     expect(posthog.capture).toHaveBeenCalledWith('vocabulary_word_saved', { source_language: 'zh-CN' })
+  })
+
+  it('captureSpeakSessionStarted sends speak_session_started with full session context', () => {
+    captureSpeakSessionStarted({ target_language: 'zh-CN', proficiency_level: 'intermediate', persona_id: 'anime_crushing', situation_id: 'casual_chat', is_custom_situation: false })
+    expect(posthog.capture).toHaveBeenCalledWith('speak_session_started', {
+      target_language: 'zh-CN',
+      proficiency_level: 'intermediate',
+      persona_id: 'anime_crushing',
+      situation_id: 'casual_chat',
+      is_custom_situation: false,
+    })
+  })
+
+  it('captureSpeakSessionCompleted sends speak_session_completed with duration and turn count', () => {
+    captureSpeakSessionCompleted({ target_language: 'zh-CN', proficiency_level: 'beginner', duration_seconds: 120, turn_count: 8 })
+    expect(posthog.capture).toHaveBeenCalledWith('speak_session_completed', {
+      target_language: 'zh-CN',
+      proficiency_level: 'beginner',
+      duration_seconds: 120,
+      turn_count: 8,
+    })
+  })
+
+  it('captureSpeakSessionAbandoned sends speak_session_abandoned with turn count', () => {
+    captureSpeakSessionAbandoned({ target_language: 'ja', proficiency_level: 'advanced', turn_count: 2 })
+    expect(posthog.capture).toHaveBeenCalledWith('speak_session_abandoned', {
+      target_language: 'ja',
+      proficiency_level: 'advanced',
+      turn_count: 2,
+    })
+  })
+
+  it('captureSpeakPersonaSelected sends speak_persona_selected with persona_id and language', () => {
+    captureSpeakPersonaSelected({ persona_id: 'anime_crushing', target_language: 'zh-CN' })
+    expect(posthog.capture).toHaveBeenCalledWith('speak_persona_selected', { persona_id: 'anime_crushing', target_language: 'zh-CN' })
+  })
+
+  it('captureSpeakSituationSelected sends speak_situation_selected with id and custom flag', () => {
+    captureSpeakSituationSelected({ situation_id: 'ordering_food', is_custom: false })
+    expect(posthog.capture).toHaveBeenCalledWith('speak_situation_selected', { situation_id: 'ordering_food', is_custom: false })
+    vi.mocked(posthog.capture).mockClear()
+    captureSpeakSituationSelected({ situation_id: 'custom_abc123', is_custom: true })
+    expect(posthog.capture).toHaveBeenCalledWith('speak_situation_selected', { situation_id: 'custom_abc123', is_custom: true })
   })
 
   it('captureWhatsNewModalShown sends whats_new_modal_shown with announcement_id and locale', () => {

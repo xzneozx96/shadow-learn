@@ -16,6 +16,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { getSettings } from '@/db'
 import { useSpeakSession } from '@/hooks/useSpeakSession'
 import { API_BASE } from '@/lib/config'
+import { captureSpeakPersonaSelected, captureSpeakSessionAbandoned, captureSpeakSessionCompleted, captureSpeakSessionStarted, captureSpeakSituationSelected } from '@/lib/posthog-events'
 import { cn } from '@/lib/utils'
 import { ConversationScene } from './ConversationScene'
 import { CustomSituationInput } from './CustomSituationInput'
@@ -231,6 +232,11 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
   const handleAbandonedSession = useCallback(async () => {
     if (currentSession && step === 'active') {
+      captureSpeakSessionAbandoned({
+        target_language: currentSession.targetLanguage,
+        proficiency_level: currentSession.proficiencyLevel,
+        turn_count: currentSession.transcript?.filter(t => t.role === 'user').length ?? 0,
+      })
       await endSession('abandoned')
     }
   }, [currentSession, step, endSession])
@@ -350,19 +356,29 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       userGoal: selectedSituation.userGoal,
     })
 
+    captureSpeakSessionStarted({
+      target_language: targetLanguage,
+      proficiency_level: proficiencyLevel,
+      persona_id: persona?.id ?? '',
+      situation_id: selectedSituation.id,
+      is_custom_situation: isCustomSituation,
+    })
+
     setStep('active')
-  }, [proficiencyLevel, targetLanguage, startSession])
+  }, [proficiencyLevel, targetLanguage, startSession, persona, isCustomSituation])
 
   const handleLanguageLevelContinue = useCallback(() => {
     setStep('persona')
   }, [])
 
   const handlePersonaSelect = useCallback((selectedPersona: Persona) => {
+    captureSpeakPersonaSelected({ persona_id: selectedPersona.id, target_language: targetLanguage })
     setPersona(selectedPersona)
     setStep('situation')
-  }, [])
+  }, [targetLanguage])
 
   const handleSituationSelect = useCallback(async (sel: { id: string, title: string, userGoal: string }) => {
+    captureSpeakSituationSelected({ situation_id: sel.id, is_custom: false })
     setIsCustomSituation(false)
     if (persona) {
       await fetchSessionData(sel, persona)
@@ -379,6 +395,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       title: gen.title,
       userGoal: gen.user_goal,
     }
+    captureSpeakSituationSelected({ situation_id: gen.situation_id, is_custom: true })
     setIsCustomSituation(true)
     if (persona) {
       await fetchSessionData(sel, persona)
@@ -401,6 +418,12 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   }, [isCustomSituation, situation, persona, fetchSessionData])
 
   const handleSessionEnd = useCallback(async (_sessionData: SpeakSession) => {
+    captureSpeakSessionCompleted({
+      target_language: _sessionData.targetLanguage,
+      proficiency_level: _sessionData.proficiencyLevel,
+      duration_seconds: Math.round((Date.now() - new Date(_sessionData.startedAt).getTime()) / 1000),
+      turn_count: _sessionData.transcript?.filter(t => t.role === 'user').length ?? 0,
+    })
     await endSession('completed')
     setStep('recap')
   }, [endSession])
