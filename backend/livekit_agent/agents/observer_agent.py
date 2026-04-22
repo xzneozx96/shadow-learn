@@ -66,7 +66,6 @@ class ObserverAgent:
         self._evaluating = False
 
         # Correction rate-limiting
-        self._base_instructions: str = ""  # captured on first injection
         self._turn_count: int = 0
         self._last_correction_turn: int = -3  # start ready to correct
         self._correction_cooldown: int = 3  # min turns between corrections
@@ -196,20 +195,20 @@ class ObserverAgent:
         # Format prompt
         try:
             userdata = self.session.userdata
-            language = getattr(userdata, "target_language", "zh-CN")
+            language = getattr(userdata, "target_language", None) or "zh-CN"
             level = getattr(userdata, "proficiency_level", "intermediate")
             config = getattr(userdata, "situation_config", None)
             if config:
                 proficiency_label = getattr(config, "level_label", "") or "general"
-                interface_language = getattr(config, "interface_language", "en")
+                interface_language = getattr(config, "interface_language", "vi")
             else:
                 proficiency_label = "general"
-                interface_language = "en"
+                interface_language = "vi"
         except Exception:
             language = "zh-CN"
             level = "intermediate"
             proficiency_label = "general"
-            interface_language = "en"
+            interface_language = "vi"
 
         context = {
             "conversation_text": conversation_text,
@@ -293,23 +292,23 @@ class ObserverAgent:
                 situation_description = config.scene_context
                 user_goal = config.user_goal
                 target_vocab = ", ".join(config.target_vocab) if config.target_vocab else ""
-                interface_language = config.interface_language or "en"
+                interface_language = config.interface_language or "vi"
             else:
-                situation_description = userdata.situation_id or "casual chat"
+                situation_description = userdata.situation_id or "casual_chat"
                 user_goal = ""
                 target_vocab = ""
-                interface_language = "en"
-            persona_id = userdata.persona_id or "friendly buddy"
-            target_language = getattr(userdata, "target_language", "zh-CN")
+                interface_language = "vi"
+            persona_id = userdata.persona_id or "friendly_buddy"
+            target_language = getattr(userdata, "target_language", None) or "zh-CN"
             level = getattr(userdata, "proficiency_level", "intermediate")
         except Exception:
-            situation_description = "casual chat"
+            situation_description = "casual_chat"
             user_goal = ""
             target_vocab = ""
-            persona_id = "friendly buddy"
+            persona_id = "friendly_buddy"
             target_language = "zh-CN"
             level = "intermediate"
-            interface_language = "en"
+            interface_language = "vi"
 
         context = {
             "conversation_text": conversation_text,
@@ -376,10 +375,20 @@ class ObserverAgent:
                     pass
 
     async def _inject_correction_hint(self, grammar_result: dict) -> None:
-        """Inject a correction hint into main agent's context.
+        """Inject a correction hint via update_chat_ctx as a user-role message.
 
-        Args:
-            grammar_result: Grammar evaluation result with issues
+        Why user-role (not assistant/model):
+        Gemini Live API requires alternating user/model turns. At injection time,
+        the AI has already auto-responded to the user's last utterance, so the last
+        turn is model-role. Appending another model-role turn → consecutive model →
+        1008 policy violation. Injecting as user-role maintains valid alternation.
+
+        Why not update_instructions():
+        That sends LiveClientContent with role=None (system-level mid-session
+        update), which Gemini native audio models reject with 1008.
+
+        The cue is framed as an external teacher hint so the AI treats it as a
+        directive for its next response rather than something it "said".
         """
         if not hasattr(self.session, "current_agent") or not self.session.current_agent:
             logger.warning("No active agent to inject hint")
@@ -387,7 +396,6 @@ class ObserverAgent:
 
         current_agent = self.session.current_agent
 
-        # Build correction hint
         issues = grammar_result.get("issues", [])
         if not issues:
             return
@@ -397,23 +405,22 @@ class ObserverAgent:
         correction = first_issue.get("correction", "")
         explanation = first_issue.get("explanation", "")
 
-        # Cache base instructions once so repeated injections don't stack
-        if not self._base_instructions:
-            self._base_instructions = current_agent.instructions
-
         cue = (
-            f"[CORRECTION CUE]\n"
-            f'Learner said: "{original}"\n'
-            f'More natural: "{correction}"\n'
-            f"Why: {explanation}\n"
-            f"[END CUE]"
+            f"[TEACHER HINT — not spoken by anyone, for the AI tutor's eyes only]\n"
+            f'The learner just said: "{original}"\n'
+            f'A more natural phrasing: "{correction}"\n'
+            f"Reason: {explanation}\n"
+            f"In your NEXT spoken reply, gently weave this correction into the "
+            f"conversation without breaking character. Do not read this hint aloud."
         )
-        logger.info(f"[OBSERVER] Injecting correction cue: {cue[:80]}...")
+        logger.info(f"[OBSERVER] Injecting correction cue (user-role): {cue[:80]}...")
 
         try:
-            await current_agent.update_instructions(f"{self._base_instructions}\n\n{cue}")
+            chat_ctx = current_agent.chat_ctx.copy()
+            chat_ctx.add_message(role="user", content=cue)
+            await current_agent.update_chat_ctx(chat_ctx)
             self._last_correction_turn = self._turn_count
-            logger.info("[OBSERVER] Correction cue injected via update_instructions()")
+            logger.info("[OBSERVER] Correction cue injected via update_chat_ctx()")
         except Exception as e:
             logger.error(f"Failed to inject correction cue: {e}")
 

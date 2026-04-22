@@ -203,10 +203,10 @@ async def shadowlearn_session(ctx: agents.JobContext):
     )
 
     # Start Observer agent (pronunciation removed - not feasible with OpenAI Realtime)
-    # await start_observer(
-    #     session=session,
-    #     llm=observer_llm,
-    # )
+    await start_observer(
+        session=session,
+        llm=observer_llm,
+    )
 
     # Handle disconnect
     def on_participant_disconnected(p: rtc.RemoteParticipant):

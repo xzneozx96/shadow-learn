@@ -11,7 +11,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { getPersonaName } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
-const MAX_DURATION_SECONDS = 5 * 60
+const MAX_DURATION_SECONDS = 10 * 60
 
 const CONTROL_BAR_CONTROLS = {
   leave: true,

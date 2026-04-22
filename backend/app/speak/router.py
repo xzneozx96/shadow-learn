@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.speak.generation import GenerationError
 from app.speak.generation import generate_situation as _generate_situation
-from app.speak.personas import get_persona_voice, is_persona_supported_in
+from app.speak.personas import get_persona_voice, is_persona_supported_in, list_personas
 from app.speak.prompt_builder import build_system_prompt
 from app.speak.situations import (
     SituationConfig,
@@ -287,5 +287,22 @@ async def generate_situation(request: GenerateSituationRequest) -> GenerateSitua
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return GenerateSituationResponse.from_config(cfg)
+
+
+@router.get("/personas")
+async def list_personas_endpoint(
+    target_lang: str | None = Query(default=None, alias="target_lang"),
+    interface_lang: str = Query(default="en", alias="interface_lang"),
+) -> dict[str, list[dict[str, Any]]]:
+    """List personas for the picker.
+
+    Filter by target_lang if provided (e.g., 'en' returns only English-capable personas).
+    Localize name/tagline by interface_lang.
+    """
+    personas = list_personas(
+        target_language=target_lang,
+        interface_language=interface_lang,
+    )
+    return {"personas": personas}
 
 
