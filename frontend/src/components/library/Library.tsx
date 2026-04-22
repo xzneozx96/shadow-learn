@@ -113,50 +113,57 @@ export function Library() {
 
   return (
     <Layout>
-      <div className="py-20 px-4">
-        {/* Section header */}
-        <div className="mb-20 flex flex-col items-center justify-center gap-8">
-          <h2 className="text-4xl sm:text-5xl text-center font-bold tracking-wide leading-tight">
-            {t('library.heroTitleLine1')}
-            <br />
-            <span className="gradient-text">{t('library.heroTitleLine2')}</span>
-          </h2>
-          <h4 className="text-base lg:text-lg text-muted-foreground max-w-xl text-center tracking-wide">
-            {t('library.heroSubtitle')}
-          </h4>
-          <Input
-            placeholder={t('nav.search')}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="max-w-lg h-12"
-          />
-          {/* <div className="flex items-center gap-1">
-            {sortButtons.map(({ mode, label }) => (
-              <Button
-                key={mode}
-                variant={sort === mode ? 'secondary' : 'ghost'}
-                size="xs"
-                onClick={() => setSort(mode)}
-                className={cn(sort === mode && 'font-semibold')}
-              >
-                {label}
-              </Button>
-            ))}
-          </div> */}
+      <div className="min-h-full py-16 px-4">
+        {/* Hero section */}
+        <div className="mb-16 relative">
+          <div className="flex flex-col items-center justify-center gap-6 text-center">
+            <h2 className="text-5xl sm:text-6xl font-bold tracking-tight leading-[1.1] max-w-2xl">
+              {t('library.heroTitleLine1')}
+              <br />
+              <span className="text-primary">{t('library.heroTitleLine2')}</span>
+            </h2>
+            <p className="text-lg lg:text-xl text-muted-foreground max-w-xl leading-relaxed">
+              {t('library.heroSubtitle')}
+            </p>
+          </div>
+
+          {/* Search bar */}
+          <div className="mt-10 flex justify-center">
+            <div className="relative w-full max-w-lg">
+              <Input
+                placeholder={t('nav.search')}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="h-12 pl-4 pr-4 bg-card/50 backdrop-blur-sm border-border/60 focus:border-primary/50 transition-all duration-200"
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {/* Add new lesson card */}
-          <Link
-            to="/create"
-            className="group flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/20 text-muted-foreground transition-all duration-200 hover:bg-white/3"
-            style={{ aspectRatio: '16/9' }}
-          >
-            <div className="flex size-10 items-center justify-center rounded-full border border-white/25 transition-colors group-hover:bg-white/5">
-              <Plus className="size-5" />
+        {/* Lessons grid with staggered entrance */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {/* Add new lesson card — outer div mirrors LessonCard byte-for-byte
+              (same tag, same classes). Link + thumbnail-sized box mirror LessonCard
+              internals. Uses padding-top aspect-ratio trick (height = 56.25% of width)
+              which bypasses any flex/grid/aspect-ratio interaction bugs. */}
+          <div className="group relative flex h-full flex-col rounded-xl p-2 -m-2">
+            <Link
+              to="/create"
+              className="absolute inset-0 z-10"
+              aria-label={t('library.addNew')}
+            />
+            <div className="relative w-full overflow-hidden rounded-xl">
+              <div style={{ paddingTop: '56.25%' }} />
+              <div className="absolute inset-0 flex items-center justify-center rounded-xl border-2 border-dashed border-white/10 bg-white/5 text-muted-foreground transition-all duration-200 group-hover:border-primary/40 group-hover:bg-primary/10 group-hover:text-foreground">
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-white/15 bg-white/5 group-hover:bg-primary/15 transition-colors duration-200">
+                    <Plus className="size-5" />
+                  </div>
+                  <span className="text-sm font-semibold">{t('library.addNew')}</span>
+                </div>
+              </div>
             </div>
-            <span className="text-sm font-medium">{t('library.addNew')}</span>
-          </Link>
+          </div>
 
           {filtered.map(lesson => (
             <LessonCard
@@ -168,6 +175,13 @@ export function Library() {
             />
           ))}
         </div>
+
+        {/* Empty state: no lessons or no search results */}
+        {filtered.length === 0 && lessons.length > 0 && search.trim() && (
+          <div className="col-span-full py-12 text-center">
+            <p className="text-muted-foreground">{t('library.noSearchResults')}</p>
+          </div>
+        )}
       </div>
       <WhatsNewDialog />
     </Layout>

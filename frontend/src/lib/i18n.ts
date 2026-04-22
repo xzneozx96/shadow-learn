@@ -136,6 +136,7 @@ export const TRANSLATIONS = {
     'library.retryFailed': 'Failed to retry lesson processing',
     'library.uploadSource': 'Upload',
     'library.vocabWords': 'words',
+    'library.noSearchResults': 'No lessons match your search',
 
     // Lesson View
     'lesson.transcript': 'Transcript',
@@ -328,6 +329,9 @@ export const TRANSLATIONS = {
     'shadowing.segmentsToPractice': 'Segments to practice:',
     'shadowing.startArrow': 'Start →',
     'shadowing.startingFrom': 'Starting from "{text}" ({time})',
+    'shadowing.errorWrong': 'Wrong',
+    'shadowing.errorMissing': 'Missing',
+    'shadowing.errorExtra': 'Extra',
 
     // Workbook
     'workbook.title': 'Learning & Progress',
@@ -469,6 +473,7 @@ export const TRANSLATIONS = {
     'speak.feedbackPanel.corrections': 'Corrections',
     'speak.feedbackPanel.advancedFeedback': 'Advanced feedback',
     'speak.feedbackPanel.nextLineSuggestion': 'Next line suggestion',
+    'speak.feedbackPanel.waitingForSuggestion': 'Waiting for next suggestion...',
     'speak.controls.endCall': 'END CALL',
     'speak.controls.end': 'END',
     'speak.continue': 'Continue',
@@ -608,6 +613,7 @@ export const TRANSLATIONS = {
     'library.retryFailed': 'Có lỗi khi thử lại xử lý bài học',
     'library.uploadSource': 'Tải lên',
     'library.vocabWords': 'từ vựng',
+    'library.noSearchResults': 'Không tìm thấy bài học nào',
 
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',
@@ -723,7 +729,7 @@ export const TRANSLATIONS = {
     'study.pronunciation.fair': 'Khá',
     'study.pronunciation.keepPracticing': 'Cần luyện thêm xíu nữa',
     'study.pronunciation.needsWork': 'Cần cải thiện nhiều',
-    'study.pronunciation.scoring': 'Hệ thống đang chấm điểm…',
+    'study.pronunciation.scoring': 'Đang chấm điểm…',
     'study.pronunciation.submitButton': 'Gửi bài →',
     'study.pronunciation.tryAgain': '↺ Thử lại',
     'study.pronunciation.nextButton': 'Câu tiếp →',
@@ -785,7 +791,7 @@ export const TRANSLATIONS = {
     'shadowing.yourAttempt': 'Lần thử vừa rồi của bạn',
     'shadowing.accuracy': 'Độ chính xác',
     'shadowing.retry': '↺ Thử lại',
-    'shadowing.analyzing': 'Hệ thống đang phân tích…',
+    'shadowing.analyzing': 'Đang phân tích…',
     'shadowing.nextArrow': 'Tiếp theo →',
     'shadowing.segmentsAttempted': 'đoạn đã tập',
     'shadowing.skipped': 'đã bỏ qua',
@@ -800,6 +806,9 @@ export const TRANSLATIONS = {
     'shadowing.segmentsToPractice': 'Số lượng đoạn cần luyện:',
     'shadowing.startArrow': 'Bắt đầu →',
     'shadowing.startingFrom': 'Bắt đầu từ "{text}" ({time})',
+    'shadowing.errorWrong': 'Sai',
+    'shadowing.errorMissing': 'Thiếu',
+    'shadowing.errorExtra': 'Thừa',
 
     // Workbook
     'workbook.title': 'Quản lý Học tập',
@@ -961,6 +970,7 @@ export const TRANSLATIONS = {
     'speak.feedbackPanel.corrections': 'Chỉnh sửa',
     'speak.feedbackPanel.advancedFeedback': 'Phản hồi chi tiết',
     'speak.feedbackPanel.nextLineSuggestion': 'Gợi ý câu tiếp theo',
+    'speak.feedbackPanel.waitingForSuggestion': 'Đang chờ gợi ý tiếp theo...',
     'speak.controls.endCall': 'KẾT THÚC',
     'speak.controls.end': 'KẾT THÚC',
     'speak.continue': 'Tiếp tục',

@@ -1,4 +1,5 @@
 import type { DiffToken } from '@/lib/diff-utils'
+import type { TranslationKey } from '@/lib/i18n'
 import type { PronunciationAssessResult, Segment } from '@/types'
 import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -196,6 +197,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           language={props.language}
           onLoading={setLoadingScore}
           onScore={(score) => { speakingScoreRef.current = score }}
+          t={t}
         />
       )}
 
@@ -203,6 +205,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
       <div className="mt-auto flex gap-2 p-4">
         <Button
           variant="outline"
+          size="xl"
           className="flex-1 py-1.5 text-sm"
           onClick={onRetry}
           disabled={loadingScore}
@@ -211,6 +214,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
         </Button>
         <Button
           ref={nextBtnRef}
+          size="xl"
           className="flex-1 py-1.5 text-sm flex items-center justify-center gap-1.5"
           onClick={() => onNext(props.mode === 'dictation' ? dictationScore : speakingScoreRef.current)}
           disabled={loadingScore}
@@ -233,9 +237,10 @@ interface SpeakingScoresProps {
   language: string
   onScore: (score: number | null) => void
   onLoading?: (isLoading: boolean) => void
+  t: (key: TranslationKey) => string
 }
 
-function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScore, onLoading }: SpeakingScoresProps) {
+function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScore, onLoading, t }: SpeakingScoresProps) {
   const [result, setResult] = useState<AssessResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -323,9 +328,8 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
   return (
     <ScrollArea className="min-h-0 flex-1">
       <div className="p-4 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        {/* Score panel */}
+        {/* Hero: accuracy score */}
         <div className="rounded-xl border border-border/50 bg-muted/20 backdrop-blur-sm overflow-hidden">
-          {/* Hero: accuracy */}
           <div className="flex items-center justify-between px-4 pt-3 pb-2.5">
             <div>
               <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(accuracy))}>
@@ -337,8 +341,12 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
               {label}
             </div>
           </div>
+        </div>
+
+        {/* Breakdown */}
+        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Secondary scores */}
-          <div className="grid grid-cols-3 border-t border-border/40">
+          <div className="grid grid-cols-3 rounded-xl border border-border/40 bg-muted/20">
             {(['fluency', 'completeness', 'prosody'] as const).map((k, i) => (
               <div key={k} className={cn('px-3 py-2 text-center', i < 2 && 'border-r border-border/40')}>
                 <div className={cn('text-base font-bold tabular-nums', scoreColor(result.overall[k]))}>
@@ -348,42 +356,42 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Word breakdown */}
-        <div className="space-y-1.5">
-          {result.words.map(w => (
-            <div
-              key={w.word}
-              className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2 transition-colors hover:bg-muted/40"
-            >
-              <span className={cn('w-20 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
-                {w.word}
-              </span>
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/60">
-                <div
-                  className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
-                  style={{ width: `${w.accuracy}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-end w-20 gap-2">
-                <span className={cn('w-7 shrink-0 text-right text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
-                  {Math.round(w.accuracy)}
+          {/* Word breakdown */}
+          <div className="space-y-1.5">
+            {result.words.map(w => (
+              <div
+                key={w.word}
+                className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2 transition-colors hover:bg-muted/40"
+              >
+                <span className={cn('w-20 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
+                  {w.word}
                 </span>
-                {w.error_type && (
-                  <span className={cn(
-                    'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
-                    w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
-                    w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
-                    w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
-                  )}
-                  >
-                    {w.error_type === 'Mispronunciation' ? 'Mispron.' : w.error_type}
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/60">
+                  <div
+                    className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
+                    style={{ width: `${w.accuracy}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-end w-20 gap-2">
+                  <span className={cn('w-7 shrink-0 text-right text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
+                    {Math.round(w.accuracy)}
                   </span>
-                )}
+                  {w.error_type && (
+                    <span className={cn(
+                      'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
+                      w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+                      w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
+                      w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+                    )}
+                    >
+                      {w.error_type === 'Mispronunciation' ? t('shadowing.errorWrong') : w.error_type === 'Omission' ? t('shadowing.errorMissing') : t('shadowing.errorExtra')}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </ScrollArea>

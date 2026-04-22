@@ -110,12 +110,12 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       data-testid={`lesson-card-${lesson.id}`}
       data-status={status}
       className={cn(
-        'group relative flex h-full flex-col rounded-xl p-2 -m-2',
+        'group relative flex flex-col rounded-xl p-2 -m-2',
         isError && 'ring-1 ring-destructive/30',
       )}
     >
       {/* Hover background — scales in from 95% */}
-      <div className="absolute inset-0 -z-10 rounded-xl bg-primary/10 scale-80 opacity-0 transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 pointer-events-none" />
+      <div className="absolute inset-0 z-2 rounded-xl bg-primary/10 scale-80 opacity-0 transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 pointer-events-none" />
 
       {/* Card-level navigation link */}
       <Link
@@ -125,8 +125,8 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         style={{ pointerEvents: isEditing || isProcessing ? 'none' : undefined }}
       />
 
-      {/* Thumbnail */}
-      <div className="relative w-full overflow-hidden rounded-xl transition-transform duration-200" style={{ aspectRatio: '16/9' }}>
+      {/* Thumbnail — shrink-0 prevents flex-col from stealing pixels from the aspect-ratio box */}
+      <div className="relative w-full shrink-0 overflow-hidden rounded-xl transition-transform duration-200" style={{ aspectRatio: '16/9' }}>
         {isProcessing
           ? (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#181818]">
@@ -149,7 +149,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
         {/* Duration overlay */}
         {!isProcessing && lesson.duration != null && (
-          <div className="absolute bottom-2 right-2 rounded bg-black/80 px-1.5 py-0.5 text-xs font-semibold text-white">
+          <div className="absolute bottom-2 right-2 rounded bg-[#080a0d]/80 px-1.5 py-0.5 text-xs font-semibold text-white">
             {formatDuration(lesson.duration)}
           </div>
         )}

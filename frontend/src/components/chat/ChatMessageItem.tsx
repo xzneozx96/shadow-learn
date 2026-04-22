@@ -24,7 +24,7 @@ import { ExerciseRenderer } from '../lesson/ExerciseRenderer'
 // Memoized so that already-streamed text parts are not re-parsed by ReactMarkdown
 // on every new token. Only the part whose text actually changed re-renders.
 const MemoMarkdown = memo(({ text }: { text: string }) => (
-  <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 [&_table]:block [&_table]:overflow-x-auto [&_table]:whitespace-nowrap">
+  <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-[#080a0d]/50 [&_table]:block [&_table]:overflow-x-auto [&_table]:whitespace-nowrap">
     <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
   </div>
 ))
@@ -46,9 +46,9 @@ export type SendMessage = (opts: { text: string }) => void
 export function StreamingDots() {
   return (
     <span className="inline-flex items-center gap-0.5">
-      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
-      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
-      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
+      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:0ms]" />
+      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:150ms]" />
+      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:300ms]" />
     </span>
   )
 }

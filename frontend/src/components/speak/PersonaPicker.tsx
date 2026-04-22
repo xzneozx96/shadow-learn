@@ -30,11 +30,11 @@ export function PersonaPicker({ targetLanguage, onSelect }: PersonaPickerProps) 
         <p className="text-xs text-muted-foreground mt-1">{t('speak.selectPersonaDesc')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
         {filteredPersonas.map((p) => {
           const Icon = PERSONA_ICONS[p.id] || User
-          const name = p.name[locale] ?? p.name['en']
-          const tagline = p.tagline[locale] ?? p.tagline['en']
+          const name = p.name[locale] ?? p.name.en
+          const tagline = p.tagline[locale] ?? p.tagline.en
 
           return (
             <button
