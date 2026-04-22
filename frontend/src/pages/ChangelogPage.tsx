@@ -198,7 +198,7 @@ export function ChangelogPage() {
                     ol: ({ children }) => <ol className="list-outside list-decimal pl-5 mb-6 space-y-3">{children}</ol>,
                     pre: ({ children }) => <pre className="block bg-muted/50 p-4 rounded-xl text-sm font-mono overflow-x-auto mb-6 border border-border/50">{children}</pre>,
                     code: ({ className, children }) => <code className={className ?? 'bg-muted text-foreground px-1.5 py-0.5 rounded-md text-[0.9em] font-mono'}>{children}</code>,
-                    blockquote: ({ children }) => <blockquote className="border-l-4 border-primary/40 bg-muted/30 pl-6 pr-4 py-3 rounded-r-lg italic my-8 text-foreground/80">{children}</blockquote>,
+                    blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 bg-muted/30 pl-6 pr-4 py-3 rounded-r-lg italic my-8 text-foreground/80">{children}</blockquote>,
                   }}
                 >
                   {selectedEntry.body}

@@ -328,6 +328,9 @@ export const TRANSLATIONS = {
     'shadowing.segmentsToPractice': 'Segments to practice:',
     'shadowing.startArrow': 'Start →',
     'shadowing.startingFrom': 'Starting from "{text}" ({time})',
+    'shadowing.errorWrong': 'Wrong',
+    'shadowing.errorMissing': 'Missing',
+    'shadowing.errorExtra': 'Extra',
 
     // Workbook
     'workbook.title': 'Learning & Progress',
@@ -723,7 +726,7 @@ export const TRANSLATIONS = {
     'study.pronunciation.fair': 'Khá',
     'study.pronunciation.keepPracticing': 'Cần luyện thêm xíu nữa',
     'study.pronunciation.needsWork': 'Cần cải thiện nhiều',
-    'study.pronunciation.scoring': 'Hệ thống đang chấm điểm…',
+    'study.pronunciation.scoring': 'Đang chấm điểm…',
     'study.pronunciation.submitButton': 'Gửi bài →',
     'study.pronunciation.tryAgain': '↺ Thử lại',
     'study.pronunciation.nextButton': 'Câu tiếp →',
@@ -785,7 +788,7 @@ export const TRANSLATIONS = {
     'shadowing.yourAttempt': 'Lần thử vừa rồi của bạn',
     'shadowing.accuracy': 'Độ chính xác',
     'shadowing.retry': '↺ Thử lại',
-    'shadowing.analyzing': 'Hệ thống đang phân tích…',
+    'shadowing.analyzing': 'Đang phân tích…',
     'shadowing.nextArrow': 'Tiếp theo →',
     'shadowing.segmentsAttempted': 'đoạn đã tập',
     'shadowing.skipped': 'đã bỏ qua',
@@ -800,6 +803,9 @@ export const TRANSLATIONS = {
     'shadowing.segmentsToPractice': 'Số lượng đoạn cần luyện:',
     'shadowing.startArrow': 'Bắt đầu →',
     'shadowing.startingFrom': 'Bắt đầu từ "{text}" ({time})',
+    'shadowing.errorWrong': 'Sai',
+    'shadowing.errorMissing': 'Thiếu',
+    'shadowing.errorExtra': 'Thừa',
 
     // Workbook
     'workbook.title': 'Quản lý Học tập',

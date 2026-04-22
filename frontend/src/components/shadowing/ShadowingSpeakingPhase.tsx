@@ -179,6 +179,7 @@ export function ShadowingSpeakingPhase({
               ? (
                   <Button
                     variant="outline"
+                    size="lg"
                     className="flex-1 backdrop-blur-sm border-border/50 hover:bg-accent/40"
                     onClick={handleRerecord}
                   >
@@ -188,6 +189,7 @@ export function ShadowingSpeakingPhase({
               : (
                   <Button
                     variant="outline"
+                    size="lg"
                     className="flex-1 backdrop-blur-sm border-border/50 hover:bg-accent/40"
                     onClick={() => {
                       isReplayingRef.current = true
@@ -200,6 +202,7 @@ export function ShadowingSpeakingPhase({
                 )}
 
             <Button
+              size="lg"
               className="flex-1"
               disabled={recordingState !== 'stopped' || !blob}
               onClick={() => blob && onSubmit(blob)}

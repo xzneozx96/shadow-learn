@@ -149,7 +149,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
         {/* Duration overlay */}
         {!isProcessing && lesson.duration != null && (
-          <div className="absolute bottom-2 right-2 rounded bg-black/80 px-1.5 py-0.5 text-xs font-semibold text-white">
+          <div className="absolute bottom-2 right-2 rounded bg-[#080a0d]/80 px-1.5 py-0.5 text-xs font-semibold text-white">
             {formatDuration(lesson.duration)}
           </div>
         )}

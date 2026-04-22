@@ -168,6 +168,13 @@ export function Library() {
             />
           ))}
         </div>
+
+        {/* Empty state: no lessons or no search results */}
+        {filtered.length === 0 && lessons.length > 0 && search.trim() && (
+          <div className="col-span-full py-12 text-center">
+            <p className="text-muted-foreground">{t('library.noSearchResults')}</p>
+          </div>
+        )}
       </div>
       <WhatsNewDialog />
     </Layout>
