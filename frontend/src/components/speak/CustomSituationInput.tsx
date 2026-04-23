@@ -1,9 +1,9 @@
+import type { GeneratedSituation } from './types'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { API_BASE } from '@/lib/config'
-import type { GeneratedSituation } from './types'
 
 export interface CustomSituationInputProps {
   language: string

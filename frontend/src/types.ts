@@ -119,6 +119,27 @@ export interface NextLineSuggestion {
   translation: string
 }
 
+export interface CulturalTip {
+  type: 'cultural-tip'
+  phrase: string
+  explanation: string
+}
+
+export interface VocabTip {
+  type: 'vocab-tip'
+  word: string
+  reason: string
+}
+
+export interface SessionEvaluation {
+  type: 'session-evaluation'
+  strengths: string[]
+  areas_to_improve: string[]
+  vocabulary_mastered: string[]
+  vocabulary_to_practice: string[]
+  suggestions: string[]
+}
+
 export interface SpeakSituation {
   id: string
   name: string

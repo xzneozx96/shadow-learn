@@ -1,7 +1,7 @@
+import type { SituationPreviewData } from './types'
 import { BookOpen, MapPin, MessageSquareQuote, RefreshCw, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
-import type { SituationPreviewData } from './types'
 
 interface SituationPreviewProps {
   preview: SituationPreviewData

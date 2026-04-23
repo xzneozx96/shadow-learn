@@ -65,10 +65,17 @@ class ObserverAgent:
         self.eval_threshold = 1  # Evaluate every user turn
         self._evaluating = False
 
-        # Correction rate-limiting
+        # Correction rate-limiting (DYNAMIC based on error type)
         self._turn_count: int = 0
         self._last_correction_turn: int = -3  # start ready to correct
-        self._correction_cooldown: int = 3  # min turns between corrections
+        self._correction_cooldown: int = 1  # Now dynamic - see _inject_correction_hint
+        self._last_correction_types: set[str] = set()  # Track error types already corrected
+        self._turn_count_for_reset: Optional[int] = None  # When to reset tracking
+
+        # Vocabulary tracking
+        self._target_vocab: list[str] = []
+        self._used_vocab: set[str] = set()
+        self._turns_since_vocab_check: int = 0
 
         self._setup_listeners()
 
@@ -76,6 +83,23 @@ class ObserverAgent:
             f"ObserverAgent initialized: LLM={getattr(self.llm, 'model', 'custom')}, "
             f"eval_threshold={self.eval_threshold}"
         )
+
+    def initialize_from_userdata(self) -> None:
+        """Load target vocabulary from session userdata."""
+        try:
+            userdata = self.session.userdata
+            config = getattr(userdata, "situation_config", None)
+            if config:
+                target_vocab = getattr(config, "target_vocab", [])
+                if target_vocab:
+                    # Accept both list of strings and list of dicts
+                    self._target_vocab = [
+                        v["term"] if isinstance(v, dict) else str(v)
+                        for v in target_vocab
+                    ]
+                    logger.info(f"[OBSERVER] Loaded {len(self._target_vocab)} target vocab words")
+        except Exception as e:
+            logger.warning(f"[OBSERVER] Could not load target vocab: {e}")
 
     def _setup_listeners(self) -> None:
         """Set up session event listeners."""
@@ -120,6 +144,13 @@ class ObserverAgent:
     def _handle_user_turn(self, transcript: str) -> None:
         """Handle user turn - trigger grammar evaluation."""
         self._turn_count += 1
+        
+        # Reset correction tracking after 2 turns
+        if self._turn_count_for_reset and self._turn_count >= self._turn_count_for_reset:
+            self._last_correction_types.clear()
+            self._turn_count_for_reset = None
+            logger.info("[OBSERVER] Correction tracking reset")
+        
         total_segments = len(self.conversation_history)
         new_segments = total_segments - self.last_eval_transcript_count
 
@@ -127,6 +158,11 @@ class ObserverAgent:
             # Fire and forget - don't block the voice loop
             asyncio.create_task(self._evaluate_user_turn(transcript))
             self.last_eval_transcript_count = total_segments
+
+        # Check for cultural moments every 3 turns (throttled)
+        if self._turn_count % 3 == 0:
+            asyncio.create_task(self._trigger_cultural_check(transcript))
+            asyncio.create_task(self._trigger_vocab_check(transcript))
 
     def _handle_ai_turn(self, transcript: str) -> None:
         """Handle AI turn - trigger next line suggestion."""
@@ -374,8 +410,141 @@ class ObserverAgent:
                 except json.JSONDecodeError:
                     pass
 
+    async def _detect_cultural_moment(self, transcript: str) -> Optional[dict]:
+        """LLM-powered cultural moment detection."""
+        
+        CULTURAL_PROMPT = """You are a cultural guide for language learning.
+
+CONVERSATION:
+{conversation}
+
+Analyze the LAST USER message for cultural moments. Look for:
+1. Greeting patterns that aren't literal (e.g., "你吃了吗" = "How are you?")
+2. Politeness markers (e.g., "辛苦啦", "有空来玩")  
+3. Context-dependent meanings
+4. Cultural assumptions in what was said
+
+If there's a cultural moment in the last user message, respond with:
+{{"has_cultural": true, "phrase": "...", "explanation": "..."}}
+
+If no cultural moment, respond with:
+{{"has_cultural": false}}
+"""
+
+        # Build conversation context (last 3 turns)
+        conv = "\n".join([
+            f"{m['role']}: {m['text'][:100]}"
+            for m in self.conversation_history[-3:]
+        ])
+        
+        prompt = CULTURAL_PROMPT.format(conversation=conv)
+        
+        chat_ctx = ChatContext()
+        chat_ctx.add_message(role="user", content=prompt)
+        
+        response = ""
+        async with self.llm.chat(chat_ctx=chat_ctx) as stream:
+            async for chunk in stream:
+                if chunk.delta and chunk.delta.content:
+                    response += chunk.delta.content
+        
+        if not response:
+            return None
+        
+        try:
+            result = json.loads(response.strip())
+            if result.get("has_cultural"):
+                return {
+                    "type": "cultural-tip",
+                    "phrase": result.get("phrase", ""),
+                    "explanation": result.get("explanation", ""),
+                }
+        except json.JSONDecodeError:
+            pass
+        
+        return None
+
+    async def _trigger_cultural_check(self, transcript: str) -> None:
+        """Trigger cultural check and stream result."""
+        try:
+            cultural = await self._detect_cultural_moment(transcript)
+            if cultural:
+                await self._stream_feedback(cultural)
+                logger.info(f"[OBSERVER] Cultural tip: {cultural.get('explanation', '')[:50]}...")
+        except Exception as e:
+            logger.error(f"Cultural check failed: {e}")
+
+    async def _trigger_vocab_check(self, transcript: str) -> None:
+        """Check vocab usage and prompt if needed."""
+        self._turns_since_vocab_check += 1
+        
+        # Check every 3-4 turns
+        if self._turns_since_vocab_check < 3:
+            return
+        
+        self._turns_since_vocab_check = 0
+        
+        # Check which target vocab was used
+        for word in self._target_vocab:
+            if word.lower() in transcript.lower():
+                self._used_vocab.add(word)
+        
+        # Find unused target vocab
+        unused = [w for w in self._target_vocab if w not in self._used_vocab]
+        if not unused:
+            return
+        
+        # LLM-powered vocab suggestion
+        VOCAB_PROMPT = """The learner is practicing. Target vocabulary: {target_vocab}
+
+Recent conversation:
+{conversation}
+
+Which target word is most natural to use in the NEXT response?
+Respond with:
+{{"suggests_vocab": true, "word": "...", "reason": "..."}}
+
+If none fit naturally:
+{{"suggests_vocab": false}}
+"""
+        
+        conv = "\n".join([f"{m['role']}: {m['text'][:80]}" for m in self.conversation_history[-3:]])
+        prompt = VOCAB_PROMPT.format(
+            target_vocab=", ".join(unused[:3]),
+            conversation=conv
+        )
+        
+        chat_ctx = ChatContext()
+        chat_ctx.add_message(role="user", content=prompt)
+        
+        response = ""
+        async with self.llm.chat(chat_ctx=chat_ctx) as stream:
+            async for chunk in stream:
+                if chunk.delta and chunk.delta.content:
+                    response += chunk.delta.content
+        
+        if not response:
+            return
+        
+        try:
+            result = json.loads(response.strip())
+            if result.get("suggests_vocab"):
+                await self._stream_feedback({
+                    "type": "vocab-tip",
+                    "word": result.get("word", ""),
+                    "reason": result.get("reason", ""),
+                })
+                logger.info(f"[OBSERVER] Vocab tip: {result.get('word', '')}")
+        except json.JSONDecodeError:
+            pass
+
     async def _inject_correction_hint(self, grammar_result: dict) -> None:
         """Inject a correction hint via update_chat_ctx as a user-role message.
+
+        DYNAMIC BEHAVIOR:
+        - If learner makes a NEW error type → correct immediately
+        - If learner repeats the SAME error within 2 turns → correct immediately  
+        - Only skip if exact same correction was already given in last turn
 
         Why user-role (not assistant/model):
         Gemini Live API requires alternating user/model turns. At injection time,
@@ -400,10 +569,28 @@ class ObserverAgent:
         if not issues:
             return
 
-        first_issue = issues[0]
+        # DYNAMIC: Filter out already-corrected error types
+        new_issues = [
+            i for i in issues
+            if i.get("type") not in self._last_correction_types
+        ]
+
+        if not new_issues:
+            logger.info("[OBSERVER] No new error types to correct")
+            return
+
+        # Inject first new issue immediately
+        first_issue = new_issues[0]
         original = first_issue.get("original", "")
         correction = first_issue.get("correction", "")
         explanation = first_issue.get("explanation", "")
+
+        # Track this error type so we don't correct again immediately
+        error_type = first_issue.get("type", "unknown")
+        self._last_correction_types.add(error_type)
+        
+        # Reset after 2 turns to allow re-correction if error persists
+        self._turn_count_for_reset = self._turn_count + 2
 
         cue = (
             f"[TEACHER HINT — not spoken by anyone, for the AI tutor's eyes only]\n"
@@ -452,7 +639,16 @@ class ObserverAgent:
 
         try:
             payload = json.dumps(data)
-            method_name = "grammar_feedback" if data["type"] == "grammar" else "next_line_suggestion"
+            if data["type"] == "grammar":
+                method_name = "grammar_feedback"
+            elif data["type"] == "next-line":
+                method_name = "next_line_suggestion"
+            elif data["type"] == "cultural-tip":
+                method_name = "cultural_tip"
+            elif data["type"] == "vocab-tip":
+                method_name = "vocab_tip"
+            else:
+                method_name = "next_line_suggestion"  # default
 
             await room.local_participant.perform_rpc(
                 destination_identity=target_identity,
@@ -463,6 +659,75 @@ class ObserverAgent:
 
         except Exception as e:
             logger.error(f"Failed to stream feedback via RPC: {e}")
+
+    async def evaluate_session(self) -> dict:
+        """Generate rich session evaluation summary."""
+        
+        SESSION_EVAL_PROMPT = """You are a language learning evaluator.
+Analyze this practice session and provide a helpful summary.
+
+Session transcript:
+{transcript}
+
+Target vocabulary to practice:
+{target_vocab}
+
+What the learner used:
+{used_vocab}
+
+Provide a JSON response with exactly these fields:
+{{
+  "strengths": ["what the learner did well - 2 items max"],
+  "areas_to_improve": ["specific grammar/language points to work on - 2 items max"],
+  "vocabulary_mastered": ["words used correctly from target vocab"],
+  "vocabulary_to_practice": ["target words not yet used"],
+  "suggestions": ["specific actionable suggestions to improve - 2 items max"]
+}}
+
+Be specific and actionable. Generic advice is not helpful."""
+
+        transcript = "\n".join([
+            f"{m['role']}: {m['text'][:150]}"
+            for m in self.conversation_history[-20:]  # Last 20 messages
+        ])
+        
+        target = ", ".join(self._target_vocab) if self._target_vocab else "none"
+        used = ", ".join(self._used_vocab) if self._used_vocab else "none"
+        
+        prompt = SESSION_EVAL_PROMPT.format(
+            transcript=transcript[:2000],
+            target_vocab=target,
+            used_vocab=used
+        )
+        
+        chat_ctx = ChatContext()
+        chat_ctx.add_message(role="user", content=prompt)
+        
+        response = ""
+        async with self.llm.chat(chat_ctx=chat_ctx) as stream:
+            async for chunk in stream:
+                if chunk.delta and chunk.delta.content:
+                    response += chunk.delta.content
+        
+        if not response:
+            return self._fallback_evaluation()
+        
+        try:
+            result = json.loads(response.strip())
+            return result
+        except json.JSONDecodeError:
+            return self._fallback_evaluation()
+
+    def _fallback_evaluation(self) -> dict:
+        """Fallback evaluation if LLM fails."""
+        unused = [w for w in self._target_vocab if w not in self._used_vocab]
+        return {
+            "strengths": ["Kept conversation going"],
+            "areas_to_improve": [],
+            "vocabulary_mastered": list(self._used_vocab),
+            "vocabulary_to_practice": unused,
+            "suggestions": ["Continue practicing to build fluency"]
+        }
 
 
 async def start_observer(
@@ -484,5 +749,19 @@ async def start_observer(
         session=session,
         llm=llm,
     )
+
+    # Hook into session close to trigger evaluation
+    @session.on("close")
+    async def on_observer_session_close(event):
+        logger.info("[OBSERVER] Session closing, generating evaluation...")
+        try:
+            evaluation = await observer.evaluate_session()
+            await observer._stream_feedback({
+                "type": "session-evaluation",
+                **evaluation,
+            })
+        except Exception as e:
+            logger.error(f"Failed to generate session evaluation: {e}")
+
     logger.info("Observer agent started")
     return observer

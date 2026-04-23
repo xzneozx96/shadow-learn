@@ -19,6 +19,7 @@ export function SpeakModalProvider({ children }: { children: React.ReactNode }) 
 
 export function useSpeakModal() {
   const ctx = use(SpeakModalContext)
-  if (!ctx) throw new Error('useSpeakModal must be used within SpeakModalProvider')
+  if (!ctx)
+    throw new Error('useSpeakModal must be used within SpeakModalProvider')
   return ctx
 }

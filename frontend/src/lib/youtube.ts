@@ -1,4 +1,4 @@
-const YT_ID_RE = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+const YT_ID_RE = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/)|youtu\.be\/)([\w-]{11})/
 
 export function getYoutubeThumbnail(url: string | null): string | null {
   if (!url)

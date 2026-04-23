@@ -1,9 +1,10 @@
 import type { SpeakSession } from '@/db'
-import { getPersonaName, type Persona } from '@/lib/constants'
+import type { Persona } from '@/lib/constants'
 import type { GrammarFeedback, SpeakSituation } from '@/types'
 import { CheckCircle2, Clock, MessageSquare, Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
+import { getPersonaName } from '@/lib/constants'
 
 interface SessionRecapProps {
   speakSession: SpeakSession

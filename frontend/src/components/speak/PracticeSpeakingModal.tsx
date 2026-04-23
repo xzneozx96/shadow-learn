@@ -1,10 +1,9 @@
 import type { TokenSourceLiteral } from 'livekit-client'
-import type { GeneratedSituation, SessionStartApiResponse, SituationPreviewData } from './types'
 import type { ProficiencyLevel } from './LanguageLevelPicker'
-import { isSupportedSpeakLanguage } from './LanguageLevelPicker'
+import type { GeneratedSituation, SessionStartApiResponse, SituationPreviewData } from './types'
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
-import type { GrammarFeedback, NextLineSuggestion, SpeakSituation } from '@/types'
+import type { CulturalTip, GrammarFeedback, NextLineSuggestion, SessionEvaluation, SpeakSituation, VocabTip } from '@/types'
 import { useRoomContext, useSession, useSessionMessages } from '@livekit/components-react'
 import { TokenSource } from 'livekit-client'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -20,7 +19,7 @@ import { captureSpeakPersonaSelected, captureSpeakSessionAbandoned, captureSpeak
 import { cn } from '@/lib/utils'
 import { ConversationScene } from './ConversationScene'
 import { CustomSituationInput } from './CustomSituationInput'
-import { LanguageLevelPicker } from './LanguageLevelPicker'
+import { isSupportedSpeakLanguage, LanguageLevelPicker } from './LanguageLevelPicker'
 import { PersonaPicker } from './PersonaPicker'
 import { SessionRecap } from './SessionRecap'
 import { SituationPicker } from './SituationPicker'
@@ -63,6 +62,7 @@ interface SessionInnerProps {
   onEnd: (speakSession: SpeakSession) => void
   onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
   onFeedbackUpdate?: (turnId: string, feedback: GrammarFeedback) => Promise<void>
+  updateEvaluation: (evaluation: SessionEvaluation) => Promise<void>
 }
 
 // Renders inside AgentSessionProvider — session hooks are available here
@@ -73,10 +73,13 @@ function SessionInner({
   onEnd,
   onTranscriptUpdate,
   onFeedbackUpdate,
+  updateEvaluation,
 }: SessionInnerProps) {
   const room = useRoomContext()
   const { messages: chatMessages } = useSessionMessages()
   const [nextLineSuggestion, setNextLineSuggestion] = useState<NextLineSuggestion | null>(null)
+  const [culturalTips, setCulturalTips] = useState<CulturalTip[]>([])
+  const [vocabTips, setVocabTips] = useState<VocabTip[]>([])
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null)
 
   const messagesRef = useRef(chatMessages)
@@ -132,9 +135,48 @@ function SessionInner({
       }
     })
 
+    room.registerRpcMethod('cultural_tip', async (data) => {
+      try {
+        const tip = JSON.parse(data.payload) as { type: string, phrase: string, explanation: string }
+        setCulturalTips(prev => [...prev, tip])
+        return JSON.stringify({ success: true })
+      }
+      catch (e) {
+        console.error('Failed to parse cultural tip:', e)
+        return JSON.stringify({ success: false, error: String(e) })
+      }
+    })
+
+    room.registerRpcMethod('vocab_tip', async (data) => {
+      try {
+        const tip = JSON.parse(data.payload) as { type: string, word: string, reason: string }
+        setVocabTips(prev => [...prev, tip])
+        return JSON.stringify({ success: true })
+      }
+      catch (e) {
+        console.error('Failed to parse vocab tip:', e)
+        return JSON.stringify({ success: false, error: String(e) })
+      }
+    })
+
+    room.registerRpcMethod('session_evaluation', async (data) => {
+      try {
+        const evalData = JSON.parse(data.payload) as SessionEvaluation
+        await updateEvaluation(evalData)
+        return JSON.stringify({ success: true })
+      }
+      catch (e) {
+        console.error('Failed to parse session evaluation:', e)
+        return JSON.stringify({ success: false, error: String(e) })
+      }
+    })
+
     return () => {
       room.unregisterRpcMethod('grammar_feedback')
       room.unregisterRpcMethod('next_line_suggestion')
+      room.unregisterRpcMethod('cultural_tip')
+      room.unregisterRpcMethod('vocab_tip')
+      room.unregisterRpcMethod('session_evaluation')
     }
   }, [room])
 
@@ -147,6 +189,8 @@ function SessionInner({
       situation={situation}
       onEnd={onEnd}
       nextLineSuggestion={nextLineSuggestion}
+      culturalTips={culturalTips}
+      vocabTips={vocabTips}
       feedbackHistory={feedbackHistory}
       selectedMsgId={selectedMsgId}
       onSelectFeedback={setSelectedMsgId}
@@ -164,6 +208,7 @@ function SessionWrapper({
   onEnd,
   onTranscriptUpdate,
   onFeedbackUpdate,
+  updateEvaluation,
 }: {
   tokenSource: TokenSourceLiteral
   speakSession: SpeakSession
@@ -172,6 +217,7 @@ function SessionWrapper({
   onEnd: (speakSession: SpeakSession) => void
   onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
   onFeedbackUpdate?: (turnId: string, feedback: GrammarFeedback) => Promise<void>
+  updateEvaluation: (evaluation: SessionEvaluation) => Promise<void>
 }) {
   const livekitSession = useSession(tokenSource, { agentName: 'shadowlearn-speak' })
 
@@ -196,6 +242,7 @@ function SessionWrapper({
         onEnd={onEnd}
         onTranscriptUpdate={onTranscriptUpdate}
         onFeedbackUpdate={onFeedbackUpdate}
+        updateEvaluation={updateEvaluation}
       />
     </AgentSessionProvider>
   )
@@ -204,7 +251,7 @@ function SessionWrapper({
 export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalProps) {
   const { t, locale } = useI18n()
   const { keys, db } = useAuth()
-  const { currentSession, startSession, endSession, clearSession, updateTranscript, updateFeedback } = useSpeakSession()
+  const { currentSession, startSession, endSession, clearSession, updateTranscript, updateFeedback, updateEvaluation } = useSpeakSession()
   const [step, setStep] = useState<Step>('language-level')
   const [targetLanguage, setTargetLanguage] = useState('zh-CN')
   const [proficiencyLevel, setProficiencyLevel] = useState<ProficiencyLevel | null>(null)
@@ -580,6 +627,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
                 onEnd={handleSessionEnd}
                 onTranscriptUpdate={updateTranscript}
                 onFeedbackUpdate={updateFeedback}
+                updateEvaluation={updateEvaluation}
               />
             )}
 

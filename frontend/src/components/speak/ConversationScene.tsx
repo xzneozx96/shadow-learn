@@ -27,6 +27,8 @@ interface ConversationSceneProps {
   situation: SpeakSituation
   onEnd: (session: SpeakSession) => void
   nextLineSuggestion?: NextLineSuggestion | null
+  culturalTips?: Array<{ type: string, phrase: string, explanation: string }>
+  vocabTips?: Array<{ type: string, word: string, reason: string }>
   feedbackHistory: Record<string, GrammarFeedback>
   selectedMsgId: string | null
   onSelectFeedback: (id: string | null) => void
@@ -78,9 +80,13 @@ function SessionTimer({ connectedAt, maxDurationSeconds, onExpire }: SessionTime
 function FeedbackPanel({
   feedback,
   nextLineSuggestion,
+  culturalTips,
+  vocabTips,
 }: {
   feedback: GrammarFeedback | null
   nextLineSuggestion?: NextLineSuggestion | null
+  culturalTips?: Array<{ type: string, phrase: string, explanation: string }>
+  vocabTips?: Array<{ type: string, word: string, reason: string }>
 }) {
   const { t } = useI18n()
 
@@ -94,6 +100,28 @@ function FeedbackPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-6">
+        {culturalTips && culturalTips.length > 0 && (
+          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+            <div className="flex items-center gap-2 text-xs font-bold text-blue-500 mb-2">
+              <Info size={12} />
+              Cultural Insight
+            </div>
+            <p className="text-sm text-foreground font-medium">{culturalTips[0].phrase}</p>
+            <p className="text-xs text-blue-200/80 mt-1">{culturalTips[0].explanation}</p>
+          </div>
+        )}
+
+        {vocabTips && vocabTips.length > 0 && (
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 mb-2">
+              <Sparkles size={12} />
+              Try This Word
+            </div>
+            <p className="text-sm font-bold">{vocabTips[0].word}</p>
+            <p className="text-xs mt-1 text-muted-foreground">{vocabTips[0].reason}</p>
+          </div>
+        )}
+
         {!feedback
           ? (
               <div className="h-full flex flex-col items-center justify-center text-center px-4 space-y-4 py-20">
@@ -104,6 +132,9 @@ function FeedbackPanel({
                   <p className="text-sm font-semibold text-foreground/80">{t('speak.feedbackPanel.noActiveFeedback')}</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {t('speak.feedbackPanel.noActiveFeedbackDesc')}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-2">
+                    {t('speak.feedbackPanel.waitingForSuggestionHint')}
                   </p>
                 </div>
               </div>
@@ -181,6 +212,8 @@ function ConversationSceneInner({
   onEnd,
   isOffline,
   nextLineSuggestion,
+  culturalTips,
+  vocabTips,
   feedbackHistory,
   selectedMsgId,
   onSelectFeedback,
@@ -342,7 +375,12 @@ function ConversationSceneInner({
       </div>
 
       <div className="w-[320px] shrink-0">
-        <FeedbackPanel feedback={selectedFeedback} nextLineSuggestion={nextLineSuggestion} />
+        <FeedbackPanel
+          feedback={selectedFeedback}
+          nextLineSuggestion={nextLineSuggestion}
+          culturalTips={culturalTips}
+          vocabTips={vocabTips}
+        />
       </div>
     </div>
   )

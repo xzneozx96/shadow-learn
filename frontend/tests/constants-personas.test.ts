@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PERSONAS } from '../src/lib/constants'
 
-describe('PERSONAS', () => {
+describe('pERSONAS', () => {
   it('all personas have voice_ids map and supported_languages', () => {
     for (const p of PERSONAS) {
       expect((p as any).voice_ids).toBeDefined()
