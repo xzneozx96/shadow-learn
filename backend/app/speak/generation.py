@@ -215,7 +215,7 @@ async def _call_llm(prompt: str, google_key: str) -> dict[str, Any]:
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "responseMimeType": "application/json",
-                "temperature": 0.85,
+                "temperature": 0.7,
                 "maxOutputTokens": 800,
             },
         }

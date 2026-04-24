@@ -119,7 +119,7 @@ async def _translate_batch(
                     "model": settings.openrouter_structured_model,
                     "messages": [{"role": "user", "content": prompt}],
                     "response_format": response_format,
-                    "temperature": 0.1,
+                    "temperature": 0.5,
                     "reasoning": {"effort": "none"},
                 },
             )

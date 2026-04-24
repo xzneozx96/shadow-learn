@@ -233,7 +233,7 @@ async def evaluate_translation(req: EvaluateRequest):
             {"role": "system", "content": "You are a language teacher evaluating student translations."},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.3,
+        "temperature": 0.5,
         "response_format": _EVALUATE_RESPONSE_FORMAT,
         "reasoning": {"effort": "none"},
     }

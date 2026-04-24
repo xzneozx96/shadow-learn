@@ -138,7 +138,7 @@ async def _extract_batch_with_retry(
                         "model": settings.openrouter_structured_model,
                         "messages": [{"role": "user", "content": prompt}],
                         "response_format": response_format,
-                        "temperature": 0.1,
+                        "temperature": 0.5,
                         "max_tokens": 65000,
                         "reasoning": {"effort": "none"},
                     },

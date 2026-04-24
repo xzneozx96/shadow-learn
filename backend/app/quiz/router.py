@@ -153,7 +153,7 @@ async def generate_quiz(req: QuizRequest):
             {"role": "system", "content": f"You are a {lang_cfg['language_name']} teacher creating learning exercises."},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.7,
+        "temperature": 0.5,
         "response_format": response_format,
         "reasoning": {"effort": "none"},
     }
