@@ -18,6 +18,10 @@ void main(void) {
     gl_Position = vec4(aVertexPosition, 1.0);
 }`
 const UNIFORM_TIME = 'iTime'
+const log = (text: string) => `react-shaders: ${text}`
+const IMAGE_EXTENSIONS_RE = /(\.jpg|\.jpeg|\.png|\.gif|\.bmp)$/i
+const VIDEO_EXTENSIONS_RE = /(\.mp4|\.3gp|\.webm|\.ogv)$/i
+const TEXTURE2D_RE = /texture\(/g
 const UNIFORM_TIMEDELTA = 'iTimeDelta'
 const UNIFORM_DATE = 'iDate'
 const UNIFORM_FRAME = 'iFrame'
@@ -140,14 +144,6 @@ function uniformTypeToGLSLType(t: string) {
 const LinearFilter = 9729
 const NearestFilter = 9728
 const LinearMipMapLinearFilter = 9987
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _NearestMipMapLinearFilter = 9986
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _LinearMipMapNearestFilter = 9985
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _NearestMipMapNearestFilter = 9984
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _MirroredRepeatWrapping = 33648
 const ClampToEdgeWrapping = 33071
 const RepeatWrapping = 10497
 
@@ -248,8 +244,8 @@ class Texture {
         ),
       )
     }
-    const isImage = /(\.jpg|\.jpeg|\.png|\.gif|\.bmp)$/i.exec(url)
-    const isVideo = /(\.mp4|\.3gp|\.webm|\.ogv)$/i.exec(url)
+    const isImage = IMAGE_EXTENSIONS_RE.exec(url)
+    const isVideo = VIDEO_EXTENSIONS_RE.exec(url)
     if (isImage === null && isVideo === null) {
       return Promise.reject(
         new Error(log(`Please upload a video or an image with a valid format (url: ${url})`)),
@@ -339,8 +335,6 @@ class Texture {
     return this
   }
 }
-
-const log = (text: string) => `react-shaders: ${text}`
 
 function latestPointerClientCoords(e: MouseEvent | TouchEvent) {
   if ('changedTouches' in e) {
@@ -736,7 +730,7 @@ export function ReactShaderToy({
     }
     let fragmentShader = precisionString
       .concat(`#define DPR ${devicePixelRatio.toFixed(1)}\n`)
-      .concat(fragment.replace(/texture\(/g, 'texture2D('))
+      .concat(fragment.replace(TEXTURE2D_RE, 'texture2D('))
     for (const uniform of Object.keys(uniformsRef.current)) {
       if (fragment.includes(uniform)) {
         const u = uniformsRef.current[uniform]
