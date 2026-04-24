@@ -1,8 +1,8 @@
-import type { MutableRefObject } from 'react'
 import type { ReceivedMessage } from '@livekit/components-react'
+import type { MutableRefObject } from 'react'
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
 import { ParticipantKind, RoomEvent } from 'livekit-client'
+import { describe, expect, it, vi } from 'vitest'
 import { useAgentRpc } from '../src/hooks/useAgentRpc'
 
 // ── Minimal room mock ─────────────────────────────────────────────────────────
@@ -19,14 +19,13 @@ function makeRoom() {
     registerRpcMethod: vi.fn((name: string, handler: any) => { rpcHandlers.set(name, handler) }),
     unregisterRpcMethod: vi.fn((name: string) => { rpcHandlers.delete(name) }),
     on: vi.fn((event: string, cb: any) => {
-      if (!listeners.has(event)) listeners.set(event, new Set())
+      if (!listeners.has(event))
+        listeners.set(event, new Set())
       listeners.get(event)!.add(cb)
     }),
     off: vi.fn((event: string, cb: any) => { listeners.get(event)?.delete(cb) }),
   }
 }
-
-type MockRoom = ReturnType<typeof makeRoom>
 
 function makeMessagesRef(messages: Partial<ReceivedMessage>[] = []): MutableRefObject<ReceivedMessage[]> {
   return { current: messages as ReceivedMessage[] }

@@ -1,6 +1,6 @@
 import type { TranslationKey } from '@/lib/i18n'
 import type { LessonMeta } from '@/types'
-import { FileVideo, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { BookOpen, Clock, FileVideo, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -110,7 +110,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       data-testid={`lesson-card-${lesson.id}`}
       data-status={status}
       className={cn(
-        'group relative flex flex-col rounded-xl p-2 -m-2',
+        'group relative flex flex-col rounded-xl p-2 -m-2 transition-transform duration-200 hover:-translate-y-0.5',
         isError && 'ring-1 ring-destructive/30',
       )}
     >
@@ -154,10 +154,10 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
           </div>
         )}
 
-        {/* Progress bar */}
+        {/* Progress bar — top edge, always visible as a track */}
         {!isProcessing && !isError && (
-          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-muted-foreground">
-            <div className="h-full bg-red-600" style={{ width: `${progress}%` }} />
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-muted/40 rounded-t-xl overflow-hidden">
+            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         )}
       </div>
@@ -265,13 +265,17 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
         {/* Footer */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>
+          <span className="flex items-center gap-1">
+            <BookOpen className="size-3 shrink-0" />
             {vocabCount}
             {' '}
             {t('library.vocabWords')}
           </span>
-          <span>·</span>
-          <span>{formatDate(lesson.lastOpenedAt)}</span>
+          <span className="text-muted-foreground/40">·</span>
+          <span className="flex items-center gap-1">
+            <Clock className="size-3 shrink-0" />
+            {formatDate(lesson.lastOpenedAt)}
+          </span>
         </div>
       </div>
 

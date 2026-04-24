@@ -168,8 +168,15 @@ export function AgentControlBar({
     camera: controls?.camera ?? publishPermissions.camera,
     chat: controls?.chat ?? publishPermissions.data,
   }), [
-    controls?.leave, controls?.microphone, controls?.screenShare, controls?.camera, controls?.chat,
-    publishPermissions.microphone, publishPermissions.screenShare, publishPermissions.camera, publishPermissions.data,
+    controls?.leave,
+    controls?.microphone,
+    controls?.screenShare,
+    controls?.camera,
+    controls?.chat,
+    publishPermissions.microphone,
+    publishPermissions.screenShare,
+    publishPermissions.camera,
+    publishPermissions.data,
   ])
 
   if (Object.values(visibleControls).every(value => !value))

@@ -138,6 +138,9 @@ export const TRANSLATIONS = {
     'library.uploadSource': 'Upload',
     'library.vocabWords': 'words',
     'library.noSearchResults': 'No lessons match your search',
+    'library.continueStudying': 'Continue studying',
+    'library.continue': 'Continue',
+    'library.allLessons': 'All lessons',
 
     // Lesson View
     'lesson.transcript': 'Transcript',
@@ -652,6 +655,8 @@ export const TRANSLATIONS = {
     'library.uploadSource': 'Tải lên',
     'library.vocabWords': 'từ vựng',
     'library.noSearchResults': 'Không tìm thấy bài học nào',
+    'library.continueStudying': 'Tiếp tục học',
+    'library.continue': 'Tiếp tục',
 
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',

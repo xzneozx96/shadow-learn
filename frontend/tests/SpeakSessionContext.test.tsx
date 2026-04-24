@@ -1,6 +1,6 @@
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
-import type { GrammarFeedback, SessionEvaluation, SpeakSituation } from '@/types'
+import type { SpeakSituation } from '@/types'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { SpeakSessionProvider, useSpeakSession } from '../src/contexts/SpeakSessionContext'
@@ -55,10 +55,16 @@ const baseValue = {
 
 function Consumer() {
   const ctx = useSpeakSession()
-  return <div>{ctx.persona.name}-{ctx.situation.title}</div>
+  return (
+    <div>
+      {ctx.persona.name}
+      -
+      {ctx.situation.title}
+    </div>
+  )
 }
 
-describe('SpeakSessionContext', () => {
+describe('speakSessionContext', () => {
   it('provides value to nested consumers', () => {
     render(
       <SpeakSessionProvider value={baseValue}>

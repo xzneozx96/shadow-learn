@@ -63,7 +63,7 @@ function renderWithProvider(ui: ReactNode) {
   return render(<SpeakSessionProvider value={sessionValue}>{ui}</SpeakSessionProvider>)
 }
 
-describe('ConversationScene — slot composition', () => {
+describe('conversationScene — slot composition', () => {
   it('renders the intelligencePanel slot', () => {
     renderWithProvider(
       <ConversationScene {...baseProps} intelligencePanel={<div data-testid="intel">INTEL</div>} />,

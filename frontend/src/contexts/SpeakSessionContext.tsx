@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { createContext, use } from 'react'
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
 import type { GrammarFeedback, SessionEvaluation, SpeakSituation } from '@/types'
+import { createContext, use } from 'react'
 
 export interface SpeakSessionValue {
   speakSession: SpeakSession
@@ -22,6 +22,7 @@ export function SpeakSessionProvider({ value, children }: { value: SpeakSessionV
   return <SpeakSessionContext value={value}>{children}</SpeakSessionContext>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSpeakSession(): SpeakSessionValue {
   const ctx = use(SpeakSessionContext)
   if (!ctx)

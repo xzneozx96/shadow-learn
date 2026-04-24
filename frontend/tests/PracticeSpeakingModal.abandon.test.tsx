@@ -1,5 +1,8 @@
-import { render } from '@testing-library/react'
+import { act, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { PracticeSpeakingModal } from '@/components/speak/PracticeSpeakingModal'
+import { captureSpeakSessionAbandoned } from '@/lib/posthog-events'
 
 // Mock heavy deps
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }))
@@ -35,11 +38,7 @@ vi.mock('@/lib/posthog-events', () => ({
 }))
 vi.mock('@/lib/speak-evaluation', () => ({ fetchSessionEvaluation: vi.fn() }))
 
-import { act } from '@testing-library/react'
-import { PracticeSpeakingModal } from '@/components/speak/PracticeSpeakingModal'
-import { captureSpeakSessionAbandoned } from '@/lib/posthog-events'
-
-describe('PracticeSpeakingModal abandon tracking', () => {
+describe('practiceSpeakingModal abandon tracking', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('does not fire abandon on initial mount with open=true', () => {

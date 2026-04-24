@@ -1,9 +1,9 @@
-import type { MutableRefObject } from 'react'
 import type { ReceivedMessage } from '@livekit/components-react'
 import type { Room } from 'livekit-client'
+import type { MutableRefObject } from 'react'
 import type { CulturalTip, GrammarFeedback, NextLineSuggestion, VocabTip } from '@/types'
-import { useEffect, useRef, useState } from 'react'
 import { ParticipantKind, RoomEvent } from 'livekit-client'
+import { useEffect, useRef, useState } from 'react'
 
 export interface UseAgentRpcOptions {
   messagesRef: MutableRefObject<ReceivedMessage[]>
@@ -34,7 +34,8 @@ export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): A
 
   // Agent disconnect tracking
   useEffect(() => {
-    if (!room) return
+    if (!room)
+      return
     const handleDisconnect = (participant: { kind: number }) => {
       if (participant.kind === ParticipantKind.AGENT)
         setAgentDisconnected(true)
@@ -45,14 +46,16 @@ export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): A
 
   // RPC method registration — deps: only room (stable for session lifetime)
   useEffect(() => {
-    if (!room) return
+    if (!room)
+      return
 
     room.registerRpcMethod('grammar_feedback', async (data) => {
       try {
         const feedback = JSON.parse(data.payload) as GrammarFeedback
         const fbText = feedback.transcript.toLowerCase().trim()
         const match = [...opts.messagesRef.current].reverse().find((m) => {
-          if (!m.from?.isLocal) return false
+          if (!m.from?.isLocal)
+            return false
           const msgText = m.message?.toLowerCase().trim()
           return !!msgText && (msgText === fbText || fbText.includes(msgText))
         })

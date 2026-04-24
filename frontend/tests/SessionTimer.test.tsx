@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionTimer } from '../src/components/speak/SessionTimer'
 
-describe('SessionTimer', () => {
+describe('sessionTimer', () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => { vi.useRealTimers() })
 

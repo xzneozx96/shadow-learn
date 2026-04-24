@@ -17,6 +17,7 @@ export function SpeakModalProvider({ children }: { children: React.ReactNode }) 
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSpeakModal() {
   const ctx = use(SpeakModalContext)
   if (!ctx)

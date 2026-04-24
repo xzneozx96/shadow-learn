@@ -62,7 +62,7 @@ export function useAgentAudioVisualizerBarAnimator(
     dispatchIndex({ type: 'reset' })
   }
 
-  const animationFrameId = useRef<number | null>(null)
+  const animationFrameIdRef = useRef<number | null>(null)
   useEffect(() => {
     let startTime = performance.now()
 
@@ -74,14 +74,14 @@ export function useAgentAudioVisualizerBarAnimator(
         startTime = time
       }
 
-      animationFrameId.current = requestAnimationFrame(animate)
+      animationFrameIdRef.current = requestAnimationFrame(animate)
     }
 
-    animationFrameId.current = requestAnimationFrame(animate)
+    animationFrameIdRef.current = requestAnimationFrame(animate)
 
     return () => {
-      if (animationFrameId.current !== null) {
-        cancelAnimationFrame(animationFrameId.current)
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current)
       }
     }
   }, [interval, columns, state, sequence.length])
