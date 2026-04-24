@@ -1,25 +1,18 @@
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
 import type { GrammarFeedback, NextLineSuggestion, SpeakSituation } from '@/types'
-import { useAgent, useSessionMessages } from '@livekit/components-react'
-import { CheckCircle2, Info, Sparkles } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useAgent, useLocalParticipant, useSessionMessages } from '@livekit/components-react'
+import { Info, Loader2, Sparkles } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript'
 import { AgentControlBar } from '@/components/agents-ui/agent-control-bar'
+import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { getPersonaName } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 const MAX_DURATION_SECONDS = 10 * 60
-
-const CONTROL_BAR_CONTROLS = {
-  leave: true,
-  microphone: true,
-  camera: false,
-  screenShare: false,
-  chat: false,
-} as const
 
 interface ConversationSceneProps {
   speakSession: SpeakSession
@@ -29,10 +22,16 @@ interface ConversationSceneProps {
   nextLineSuggestion?: NextLineSuggestion | null
   culturalTips?: Array<{ type: string, phrase: string, explanation: string }>
   vocabTips?: Array<{ type: string, word: string, reason: string }>
+  masteredVocab: Set<string>
   feedbackHistory: Record<string, GrammarFeedback>
   selectedMsgId: string | null
   onSelectFeedback: (id: string | null) => void
   onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
+  agentDisconnected?: boolean
+  evaluationStatus?: 'idle' | 'generating' | 'complete'
+  setEvaluationStatus?: (status: 'idle' | 'generating' | 'complete') => void
+  onViewRecap?: () => void
+  onRetry?: () => void
 }
 
 function formatDuration(seconds: number) {
@@ -77,130 +76,165 @@ function SessionTimer({ connectedAt, maxDurationSeconds, onExpire }: SessionTime
   return <span className="text-sm font-bold tabular-nums">{formatDuration(remaining)}</span>
 }
 
-function FeedbackPanel({
-  feedback,
+function IntelligencePanel({
   nextLineSuggestion,
   culturalTips,
   vocabTips,
+  masteredVocab,
+  targetVocab,
 }: {
-  feedback: GrammarFeedback | null
   nextLineSuggestion?: NextLineSuggestion | null
   culturalTips?: Array<{ type: string, phrase: string, explanation: string }>
   vocabTips?: Array<{ type: string, word: string, reason: string }>
+  masteredVocab: Set<string>
+  targetVocab: string[]
 }) {
   const { t } = useI18n()
 
   return (
-    <div className="flex flex-col h-full border-l border-border">
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <h3 className="font-bold flex items-center gap-2">
-          <CheckCircle2 className="text-amber-500" size={18} />
-          {t('speak.feedbackPanel.grammarIntelligence')}
-        </h3>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-5 space-y-6">
-        {culturalTips && culturalTips.length > 0 && (
-          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-            <div className="flex items-center gap-2 text-xs font-bold text-blue-500 mb-2">
-              <Info size={12} />
-              Cultural Insight
-            </div>
-            <p className="text-sm text-foreground font-medium">{culturalTips[0].phrase}</p>
-            <p className="text-xs text-blue-200/80 mt-1">{culturalTips[0].explanation}</p>
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="p-4 space-y-4 overflow-y-auto">
+        {/* Target Vocabulary Checklist */}
+        <div className="p-3 bg-cyan-500/5 rounded-xl border border-cyan-500/20">
+          <div className="flex items-center gap-2 text-xs font-bold text-cyan-500 uppercase mb-3 tracking-wider">
+            <Sparkles size={12} />
+            {t('speak.feedbackPanel.targetVocabulary')}
           </div>
-        )}
-
-        {vocabTips && vocabTips.length > 0 && (
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 mb-2">
-              <Sparkles size={12} />
-              Try This Word
-            </div>
-            <p className="text-sm font-bold">{vocabTips[0].word}</p>
-            <p className="text-xs mt-1 text-muted-foreground">{vocabTips[0].reason}</p>
+          <div className="flex flex-wrap gap-2">
+            {targetVocab.map((word) => {
+              const isMastered = masteredVocab.has(word)
+              return (
+                <div
+                  key={word}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-300 bg-cyan-500/10 border border-cyan-500/30 text-cyan-200',
+                    isMastered && 'line-through opacity-30',
+                  )}
+                >
+                  {word}
+                </div>
+              )
+            })}
           </div>
-        )}
+        </div>
 
-        {!feedback
-          ? (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4 space-y-4 py-20">
-                <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500/50">
-                  <Info size={24} />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-foreground/80">{t('speak.feedbackPanel.noActiveFeedback')}</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {t('speak.feedbackPanel.noActiveFeedbackDesc')}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-2">
-                    {t('speak.feedbackPanel.waitingForSuggestionHint')}
-                  </p>
-                </div>
-              </div>
-            )
-          : (
-              <>
-                <div>
-                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t('speak.feedbackPanel.yourSpokenText')}</h4>
-                  <p className="text-sm font-medium leading-relaxed">{feedback.transcript}</p>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('speak.feedbackPanel.corrections')}</h4>
-                  {feedback.issues.map(issue => (
-                    <div key={`${issue.original}::${issue.correction}::${issue.explanation}`} className="group relative">
-                      <div className="flex flex-col gap-2 p-3 bg-background/50 rounded-xl border border-border/50 shadow-sm">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm text-muted-foreground line-through decoration-amber-500/50">{issue.original}</span>
-                          <span className="text-amber-500 font-bold">→</span>
-                          <span className="text-sm text-foreground font-bold">{issue.correction}</span>
-                        </div>
-                        {issue.explanation && (
-                          <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/10">
-                            <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
-                              {issue.explanation}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-      </div>
-
-      <div className="p-4 border-t border-border mt-auto">
+        {/* Next line suggestion */}
         {nextLineSuggestion
           ? (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shadow-sm">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 mb-2 uppercase tracking-wider">
-                  <Sparkles size={12} />
+              <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl shadow-sm space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 uppercase tracking-wider">
+                  <Sparkles size={14} />
                   {t('speak.feedbackPanel.nextLineSuggestion')}
                 </div>
-                <div className="space-y-1">
+
+                <div className="space-y-1.5">
                   <div className="text-base font-bold text-foreground leading-relaxed">
                     {nextLineSuggestion.suggestion}
                   </div>
-                  <div className="text-[xs text-emerald-500/90 font-medium leading-relaxed">
-                    {nextLineSuggestion.romanization}
-                  </div>
-                  <div className="text-xs text-muted-foreground italic leading-relaxed">
+                  {nextLineSuggestion.romanization && (
+                    <div className="text-sm text-emerald-500/90 font-medium leading-relaxed">
+                      {nextLineSuggestion.romanization}
+                    </div>
+                  )}
+                  <div className="text-sm text-emerald-100/70 italic leading-relaxed">
                     {nextLineSuggestion.translation}
                   </div>
                 </div>
+
+                {vocabTips && vocabTips.length > 0 && (
+                  <div className="pt-3 border-t border-emerald-500/20 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white">{vocabTips[0].word}</span>
+                    </div>
+                    <p className="text-xs text-emerald-100/70 leading-relaxed italic">{vocabTips[0].reason}</p>
+                  </div>
+                )}
               </div>
             )
-          : (
-              <div className="h-[100px] flex flex-col items-center justify-center text-center px-4 space-y-2 border border-dashed border-border rounded-xl opacity-40">
-                <Sparkles size={16} className="text-muted-foreground/40" />
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                  {t('speak.feedbackPanel.waitingForSuggestion')}
+          : vocabTips && vocabTips.length > 0
+            ? (
+                <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl shadow-sm space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 uppercase tracking-wider">
+                    <Sparkles size={14} />
+                    {t('speak.feedbackPanel.tryThisWord')}
+                  </div>
+                  <p className="text-sm font-bold text-emerald-400">{vocabTips[0].word}</p>
+                  <p className="text-xs text-emerald-100/70 font-medium leading-relaxed">{vocabTips[0].reason}</p>
+                </div>
+              )
+            : null}
+
+        {/* Cultural Tips */}
+        {culturalTips && culturalTips.length > 0 && (
+          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
+              <Info size={14} />
+              Cultural Insight
+            </div>
+            <p className="text-base text-foreground font-semibold leading-snug">{culturalTips[0].phrase}</p>
+            <p className="text-sm text-blue-200/70 leading-relaxed">{culturalTips[0].explanation}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function GrammarPanel({
+  feedback,
+}: {
+  feedback: GrammarFeedback | null
+}) {
+  const { t } = useI18n()
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {!feedback
+        ? (
+            <div className="h-full flex flex-col items-center justify-center text-center px-6 space-y-4">
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500/40">
+                <Info size={24} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-base font-semibold text-foreground/70">{t('speak.feedbackPanel.noActiveFeedback')}</p>
+                <p className="text-sm text-muted-foreground/60 leading-relaxed max-w-64">
+                  {t('speak.feedbackPanel.noActiveFeedbackDesc')}
                 </p>
               </div>
-            )}
-      </div>
+            </div>
+          )
+        : (
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('speak.feedbackPanel.yourSpokenText')}</h4>
+                <p className="text-sm font-medium leading-relaxed text-foreground/90 bg-primary/10 p-3 rounded-lg border border-primary/50">
+                  {feedback.transcript}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('speak.feedbackPanel.corrections')}</h4>
+                <div className="space-y-3">
+                  {feedback.issues.map(issue => (
+                    <div key={`${issue.original}::${issue.correction}::${issue.explanation}`} className="p-4 bg-amber-200/5 rounded-xl border border-amber-500/20 shadow-sm space-y-3">
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <span className="text-base text-amber-200/50 line-through decoration-amber-500">{issue.original}</span>
+                        <span className="text-amber-500 font-bold rotate-90">→</span>
+                        <span className="text-base text-foreground font-bold">{issue.correction}</span>
+                      </div>
+                      {issue.explanation && (
+                        <div className="p-3 bg-amber-200/10 rounded-lg border border-amber-200/10">
+                          <p className="text-sm text-amber-100/70 leading-relaxed font-medium text-center">
+                            {issue.explanation}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
     </div>
   )
 }
@@ -214,18 +248,66 @@ function ConversationSceneInner({
   nextLineSuggestion,
   culturalTips,
   vocabTips,
+  masteredVocab,
   feedbackHistory,
   selectedMsgId,
   onSelectFeedback,
   onTranscriptUpdate,
+  agentDisconnected,
+  evaluationStatus,
+  setEvaluationStatus,
+  onViewRecap,
+  onRetry,
 }: ConversationSceneProps & { isOffline: boolean }) {
   const agent = useAgent()
+  const { localParticipant } = useLocalParticipant()
   const { messages: chatMessages } = useSessionMessages()
   const { t, locale } = useI18n()
 
   const isConnected = agent.isConnected
   const agentState = agent.state
   const audioTrack = agent.microphoneTrack
+
+  // Gate mic until AI finishes its opening turn (speaking → listening transition).
+  const [aiHasSpoken, markAiHasSpoken] = useReducer(() => true, false)
+  const prevAgentStateRef = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const prev = prevAgentStateRef.current
+    prevAgentStateRef.current = agentState
+    if (!aiHasSpoken && prev === 'speaking' && agentState === 'listening')
+      markAiHasSpoken()
+  }, [agentState, aiHasSpoken])
+
+  // Mute mic originally then re-enable when aiHasSpoken becomes true
+  const hasInitialUnmutedRef = useRef(false)
+
+  useEffect(() => {
+    if (!localParticipant)
+      return
+
+    const shouldAutoUnmute = isConnected && aiHasSpoken
+
+    if (!shouldAutoUnmute) {
+      // Keep muted while connecting or waiting for AI
+      if (localParticipant.isMicrophoneEnabled) {
+        localParticipant.setMicrophoneEnabled(false)
+        hasInitialUnmutedRef.current = false
+      }
+    }
+    else if (!localParticipant.isMicrophoneEnabled && !hasInitialUnmutedRef.current) {
+      // Auto-unmute exactly once when ready
+      localParticipant.setMicrophoneEnabled(true)
+      hasInitialUnmutedRef.current = true
+    }
+  }, [isConnected, aiHasSpoken, localParticipant])
+
+  const controlBarControls = useMemo(() => ({
+    leave: true,
+    microphone: true, // Always visible
+    camera: false,
+    screenShare: false,
+    chat: false,
+  }), [])
 
   // Derived during rendering — no state needed.
   // Show the error only while the agent is failed AND not connected.
@@ -239,6 +321,11 @@ function ConversationSceneInner({
     setConnectedAt(Date.now())
 
   const handleEnd = useCallback(async () => {
+    // Set generating BEFORE transitioning - this shows loading screen
+    // so user waits for backend evaluation even on manual end
+    if (setEvaluationStatus) {
+      setEvaluationStatus('generating')
+    }
     if (onTranscriptUpdate) {
       const transcript = chatMessages.map(m => ({
         id: m.id,
@@ -249,7 +336,7 @@ function ConversationSceneInner({
       await onTranscriptUpdate(transcript)
     }
     onEnd(speakSession)
-  }, [onEnd, speakSession, chatMessages, onTranscriptUpdate])
+  }, [onEnd, speakSession, chatMessages, onTranscriptUpdate, setEvaluationStatus])
 
   // Timer expiry must flush the transcript the same way an explicit END CALL
   // does — otherwise the recap renders with an empty transcript (0 turns).
@@ -262,12 +349,24 @@ function ConversationSceneInner({
   const selectedFeedback = selectedMsgId ? feedbackHistory[selectedMsgId] : null
 
   return (
-    <div className="flex h-[85vh] bg-background relative overflow-hidden">
+    <div className="flex h-full bg-background relative overflow-hidden">
+      {/* Left Panel: Intelligence */}
+      <div className="w-90 shrink-0 border-r border-border">
+        <IntelligencePanel
+          nextLineSuggestion={nextLineSuggestion}
+          culturalTips={culturalTips}
+          vocabTips={vocabTips}
+          masteredVocab={masteredVocab}
+          targetVocab={situation.target_vocab?.map(v => typeof v === 'string' ? v : v.term) || []}
+        />
+      </div>
+
+      {/* Center Panel: Conversation */}
       <div className={cn(
-        'flex flex-col h-full transition-all duration-300 ease-in-out relative p-5 w-[calc(100%-320px)]',
+        'flex flex-col h-full relative p-5 flex-1 min-w-0',
       )}
       >
-        <div className="flex items-center justify-between shrink-0 mb-4">
+        <div className="flex items-center justify-between shrink-0 mb-6 px-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary shrink-0 overflow-hidden shadow-lg">
               {persona.portrait_url
@@ -284,7 +383,7 @@ function ConversationSceneInner({
             </div>
             <div className="min-w-0">
               <h2 className="font-bold text-sm truncate">{getPersonaName(persona, locale)}</h2>
-              <p className="text-xs text-muted-foreground truncate uppercase tracking-wider">{situation.name}</p>
+              <p className="text-xs text-muted-foreground truncate uppercase tracking-wider">{situation.title}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -319,12 +418,12 @@ function ConversationSceneInner({
           </div>
         )}
 
-        <div className="h-[240px] flex flex-col items-center justify-center shrink-0 relative mb-4">
+        <div className="h-[200px] flex flex-col items-center justify-center shrink-0 relative mb-4">
           {persona.portrait_url
             ? (
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-110"></div>
-                  <div className="relative w-32 h-32 rounded-full bg-primary/20 flex items-center justify-center ring-4 ring-primary/30 overflow-hidden shadow-2xl">
+                  <div className="relative w-28 h-28 rounded-full bg-primary/20 flex items-center justify-center ring-4 ring-primary/30 overflow-hidden shadow-2xl">
                     <img
                       src={persona.portrait_url}
                       alt={getPersonaName(persona, locale)}
@@ -343,7 +442,7 @@ function ConversationSceneInner({
               )}
 
           <div className="absolute bottom-0 right-0 left-0 flex justify-center py-1">
-            <p className="text-xs font-bold text-primary uppercase tracking-[0.2em] h-4">
+            <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] h-4">
               {(!isConnected || agentState === 'connecting' || agentState === 'initializing') && t('speak.status.connecting')}
               {isConnected && agentState === 'listening' && t('speak.status.listening')}
               {isConnected && agentState === 'thinking' && t('speak.status.thinking')}
@@ -365,7 +464,7 @@ function ConversationSceneInner({
 
         <div className="shrink-0 mt-auto">
           <AgentControlBar
-            controls={CONTROL_BAR_CONTROLS}
+            controls={controlBarControls}
             variant="livekit"
             isConnected={isConnected}
             onDisconnect={handleEnd}
@@ -374,14 +473,40 @@ function ConversationSceneInner({
         </div>
       </div>
 
-      <div className="w-[320px] shrink-0">
-        <FeedbackPanel
-          feedback={selectedFeedback}
-          nextLineSuggestion={nextLineSuggestion}
-          culturalTips={culturalTips}
-          vocabTips={vocabTips}
-        />
+      {/* Right Panel: Grammar */}
+      <div className="w-90 shrink-0 border-l border-border">
+        <GrammarPanel feedback={selectedFeedback} />
       </div>
+
+      {evaluationStatus === 'generating'
+        ? (
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm gap-4">
+              <Loader2 size={40} className="animate-spin text-primary" />
+              <p className="text-base font-semibold text-foreground">{t('speak.generatingSummary')}</p>
+              <p className="text-sm text-muted-foreground">{t('speak.generatingSummaryHint')}</p>
+            </div>
+          )
+        : agentDisconnected && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm gap-4">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+              <Info size={24} className="text-muted-foreground" />
+            </div>
+            <p className="text-base font-semibold text-foreground">{t('speak.status.disconnected')}</p>
+            <p className="text-sm text-muted-foreground">{t('speak.status.inactivity')}</p>
+            <div className="flex gap-3 mt-2">
+              {onRetry && (
+                <Button size="lg" variant="outline" onClick={onRetry}>
+                  {t('speak.tryAgain')}
+                </Button>
+              )}
+              {onViewRecap && (
+                <Button size="lg" onClick={onViewRecap}>
+                  {t('speak.viewRecap')}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
     </div>
   )
 }

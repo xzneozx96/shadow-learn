@@ -60,7 +60,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
   const userTurns = transcript.filter(turn => turn.role === 'user').length
 
   return (
-    <div className="flex flex-col h-[80vh] bg-background">
+    <div className="flex flex-col h-full bg-background">
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center text-success border border-success/20 animate-in zoom-in-50 duration-500">
@@ -69,7 +69,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
           <div className="space-y-1">
             <h2 className="text-2xl font-black tracking-tight text-foreground">{tr('speak.sessionComplete')}</h2>
             <p className="text-muted-foreground max-w-90 leading-relaxed">
-              {tr('speak.sessionSuccess', { situation: situation.name, persona: getPersonaName(persona, locale), level: speakSession.levelLabel || speakSession.proficiencyLevel })}
+              {tr('speak.sessionSuccess', { situation: situation.title, persona: getPersonaName(persona, locale), level: speakSession.levelLabel || speakSession.proficiencyLevel })}
             </p>
           </div>
         </div>

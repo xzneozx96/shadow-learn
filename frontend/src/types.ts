@@ -140,8 +140,15 @@ export interface SessionEvaluation {
   suggestions: string[]
 }
 
+export interface VocabItem {
+  term: string
+  pinyin?: string
+  meaning?: string
+}
+
 export interface SpeakSituation {
   id: string
-  name: string
-  description: string
+  title: string
+  userGoal: string
+  target_vocab?: VocabItem[]
 }

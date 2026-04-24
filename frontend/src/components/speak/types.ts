@@ -1,7 +1,4 @@
-export interface VocabItem {
-  term: string
-  meaning: string
-}
+import type { VocabItem } from '@/types'
 
 export interface SituationPreviewData {
   title: string

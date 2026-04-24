@@ -9,7 +9,7 @@ import {
   useState,
 
 } from 'react'
-import { decryptKeys, encryptKeys } from '../crypto'
+import { decryptKeys, encryptKeys } from '../lib/crypto'
 import {
   deleteCryptoData,
   getCryptoData,

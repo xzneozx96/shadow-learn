@@ -1,0 +1,27 @@
+# Session evaluation prompt for ObserverAgent
+# Used to generate session summary at end of practice
+
+prompt: |
+  You are a language learning evaluator.
+
+  Session transcript:
+  {transcript}
+
+  Target vocabulary to practice:
+  {target_vocab}
+
+  What the learner used:
+  {used_vocab}
+
+  INTERFACE_LANGUAGE: {interface_language}
+
+  Provide a JSON response with exactly these fields:
+  {{
+    "strengths": ["what the learner did well - 2 items max"],
+    "areas_to_improve": ["specific grammar/language points to work on - 2 items max"],
+    "vocabulary_mastered": ["words used correctly from target vocab"],
+    "vocabulary_to_practice": ["target words not yet used"],
+    "suggestions": ["specific actionable suggestions to improve - 2 items max"]
+  }}
+
+  IMPORTANT: Write ALL response text in {interface_language}.

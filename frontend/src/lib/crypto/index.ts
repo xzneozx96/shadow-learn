@@ -1,4 +1,4 @@
-import type { DecryptedKeys } from '../types'
+import type { DecryptedKeys } from '../../types'
 
 export interface EncryptedData {
   encrypted: ArrayBuffer

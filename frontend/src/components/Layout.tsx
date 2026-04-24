@@ -1,4 +1,4 @@
-import { Newspaper, Settings, Sparkles, Zap } from 'lucide-react'
+import { Settings, Sparkles, Zap } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { Button } from '@/components/ui/button'
@@ -6,8 +6,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useSpeakModal } from '@/contexts/SpeakModalContext'
+import { cn } from '@/lib/utils'
 import { useHasUnseenAnnouncement } from '@/lib/whats-new'
-import { ScrollArea } from './ui/scroll-area'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -30,72 +30,83 @@ export function Layout({ children }: LayoutProps) {
           </div>
         )}
         <nav className="z-50 border-b border-border p-4 backdrop-blur-md">
-          <div className="container mx-auto flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-2 font-bold tracking-tight text-foreground hover:opacity-90 transition-opacity">
-              <img src="/favicon.svg" className="size-5" alt="ShadowLearn Logo" />
-              <span className="text-lg">ShadowLearn</span>
-            </Link>
+          <div className="container mx-auto flex items-center justify-between gap-4">
+            {/* Logo Group */}
+            <div className="flex shrink-0 justify-start">
+              <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight text-foreground hover:opacity-90 transition-opacity">
+                <img src="/favicon.svg" className="size-8" alt="ShadowLearn Logo" />
+                <span className="text-xl hidden xl:inline-block">ShadowLearn</span>
+              </Link>
+            </div>
 
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={openPanel}
-                className="gap-2 bg-linear-to-br from-violet-500/12 to-transparent border-violet-500/50 hover:border-violet-500/80 hover:from-violet-500/18 text-violet-400! transition-all duration-200"
-              >
-                <Sparkles className="size-3.5" />
-                {t('companion.askButton')}
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={openSpeakModal}
-                className="gap-2 bg-linear-to-br from-amber-500/15 to-transparent border-amber-500/50 hover:border-amber-500/80 hover:from-amber-500/22 text-amber-400! font-medium transition-all duration-200"
-              >
-                <Zap className="size-3.5" />
-                {t('speak.title')}
-              </Button>
-              <Button
-                variant={location.pathname.startsWith('/vocabulary') ? 'default' : 'outline'}
-                size="lg"
-                render={<Link to="/vocabulary" />}
-              >
-                {t('nav.workbook')}
-              </Button>
-              <Button
-                variant={location.pathname === '/docs' ? 'default' : 'outline'}
-                size="lg"
-                render={<Link to="/docs" />}
-              >
-                {t('nav.documentation')}
-              </Button>
-              <div className="relative">
+            {/* Navigation Group (Centered pill) */}
+            <div className="hidden md:flex flex-1 justify-center">
+              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 shadow-xs backdrop-blur-md">
                 <Button
-                  variant={location.pathname === '/changelog' ? 'default' : 'outline'}
-                  size="lg"
-                  render={<Link to="/changelog" />}
-                  className="gap-1.5"
+                  variant={location.pathname === '/' ? 'secondary' : 'ghost'}
+                  className={cn('rounded-full h-9', location.pathname === '/' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
+                  render={<Link to="/" />}
                 >
-                  <Newspaper className="size-3.5" />
-                  {t('whatsNew.navLabel')}
+                  {t('nav.library')}
                 </Button>
-                {hasUnseen && (
-                  <span className="pointer-events-none absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                    1
-                  </span>
-                )}
+                <Button
+                  variant={location.pathname.startsWith('/vocabulary') ? 'secondary' : 'ghost'}
+                  className={cn('rounded-full h-9', location.pathname.startsWith('/vocabulary') ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
+                  render={<Link to="/vocabulary" />}
+                >
+                  {t('nav.workbook')}
+                </Button>
+                <Button
+                  variant={location.pathname === '/docs' ? 'secondary' : 'ghost'}
+                  className={cn('rounded-full h-9', location.pathname === '/docs' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
+                  render={<Link to="/docs" />}
+                >
+                  {t('nav.documentation')}
+                </Button>
+                <div className="relative">
+                  <Button
+                    variant={location.pathname === '/changelog' ? 'secondary' : 'ghost'}
+                    className={cn('rounded-full h-9', location.pathname === '/changelog' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
+                    render={<Link to="/changelog" />}
+                  >
+                    {t('whatsNew.navLabel')}
+                  </Button>
+                  {hasUnseen && (
+                    <span className="pointer-events-none absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm ring-2 ring-background">
+                      1
+                    </span>
+                  )}
+                </div>
               </div>
-              <Button variant="outline" size="lg" render={<Link to="/settings" />}>
+            </div>
+
+            {/* Actions Group (Right) */}
+            <div className="flex shrink-0 justify-end items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={openPanel}
+                className="gap-2 bg-linear-to-br from-violet-500/10 to-transparent border-violet-500/30 hover:border-violet-500/60 hover:from-violet-500/20 text-violet-400! h-9"
+              >
+                <Sparkles className="size-4" />
+                <span className="hidden xl:inline">{t('companion.askButton')}</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={openSpeakModal}
+                className="gap-2 bg-linear-to-br from-amber-500/10 to-transparent border-amber-500/30 hover:border-amber-500/60 hover:from-amber-500/20 text-amber-400! font-medium h-9"
+              >
+                <Zap className="size-4" />
+                <span className="hidden xl:inline">{t('speak.title')}</span>
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-lg border-border/50 hover:bg-muted text-muted-foreground hover:text-foreground h-9 w-9" render={<Link to="/settings" />}>
                 <Settings className="size-4" />
               </Button>
             </div>
           </div>
         </nav>
 
-        <main className="container mx-auto flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            {children}
-          </ScrollArea>
+        <main className="flex-1 overflow-hidden">
+          {children}
         </main>
       </div>
       {isGlobalPanelOpen ? <GlobalCompanionPanel /> : null}

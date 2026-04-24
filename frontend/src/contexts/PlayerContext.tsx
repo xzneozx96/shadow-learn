@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { VideoPlayer } from '../player/types'
+import type { VideoPlayer } from '../lib/player/types'
 import {
   createContext,
   use,

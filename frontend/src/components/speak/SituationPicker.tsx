@@ -1,7 +1,9 @@
 import type { LucideIcon } from 'lucide-react'
+import type { SpeakSituation } from '@/types'
 import { Briefcase, DollarSign, Heart, Hospital, MapPin, MessageCircle, Mic, ShoppingCart, Users, Utensils } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
+
 import { API_BASE } from '@/lib/config'
 
 interface ApiSituation {
@@ -11,15 +13,9 @@ interface ApiSituation {
   icon?: string
 }
 
-interface SelectedSituation {
-  id: string
-  title: string
-  userGoal: string
-}
-
 interface SituationPickerProps {
   targetLanguage: string
-  onSelect: (situation: SelectedSituation) => void
+  onSelect: (situation: SpeakSituation) => void
   onRequestCustom: () => void
 }
 

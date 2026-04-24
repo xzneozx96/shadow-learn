@@ -9,6 +9,7 @@ Uses a multi-agent architecture:
 Based on the Doheny Surf Desk pattern.
 """
 import asyncio
+import json
 import logging
 import os
 from pathlib import Path
@@ -203,7 +204,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     )
 
     # Start Observer agent (pronunciation removed - not feasible with OpenAI Realtime)
-    await start_observer(
+    observer = await start_observer(
         session=session,
         llm=observer_llm,
     )
@@ -216,13 +217,43 @@ async def shadowlearn_session(ctx: agents.JobContext):
 
     ctx.room.on("participant_disconnected", on_participant_disconnected)
 
-    # Handle session close
+    # Handle session close — evaluate before disconnecting so the RPC can deliver
     @session.on("close")
     def on_session_close(event):
         logger.warning(f"[SESSION] closed — reason={event.reason}, error={event.error}")
-        asyncio.create_task(ctx.room.disconnect())
-        ctx.shutdown()
-
+        
+        # Try to notify frontend while room is still connected
+        # We need to run async code in sync callback - use create_task but fire notification first
+        async def _notify_and_evaluate():
+            try:
+                room = ctx.room
+                remote_participants = list(room.remote_participants.values())
+                if remote_participants:
+                    target_identity = remote_participants[0].identity
+                    await room.local_participant.perform_rpc(
+                        destination_identity=target_identity,
+                        method="session_evaluation_started",
+                        payload=json.dumps({"started": True}),
+                    )
+                    logger.info("[SESSION] Notified frontend: evaluation starting")
+            except Exception as e:
+                logger.warning(f"[SESSION] Failed to notify frontend: {e}")
+            
+            # Now run evaluation
+            try:
+                evaluation = await observer.evaluate_session()
+                await observer._stream_feedback({
+                    "type": "session-evaluation",
+                    **evaluation,
+                })
+            except Exception as e:
+                logger.error(f"[SESSION] Evaluation failed: {e}")
+            finally:
+                await ctx.room.disconnect()
+                ctx.shutdown()
+        
+        asyncio.create_task(_notify_and_evaluate())
+    
     # Start session with PersonaAgent.
     # PersonaAgent.on_enter() fires the opening line from situation_config.
     # Do NOT call session.generate_reply() here — that produces a second
@@ -238,6 +269,35 @@ async def shadowlearn_session(ctx: agents.JobContext):
             ),
         ),
     )
+
+async def _evaluate_and_disconnect(observer, ctx) -> None:
+    """Run session evaluation, stream result, then disconnect the room."""
+    # Send notification FIRST (before any await) so frontend knows evaluation is starting
+    try:
+        room = ctx.room
+        remote_participants = list(room.remote_participants.values())
+        if remote_participants:
+            target_identity = remote_participants[0].identity
+            await room.local_participant.perform_rpc(
+                destination_identity=target_identity,
+                method="session_evaluation_started",
+                payload=json.dumps({"started": True}),
+            )
+            logger.info("[SESSION] Notified frontend: evaluation starting")
+    except Exception as e:
+        logger.warning(f"[SESSION] Failed to notify frontend: {e}")
+    
+    try:
+        evaluation = await observer.evaluate_session()
+        await observer._stream_feedback({
+            "type": "session-evaluation",
+            **evaluation,
+        })
+    except Exception as e:
+        logger.error(f"[SESSION] Evaluation failed: {e}")
+    finally:
+        await ctx.room.disconnect()
+        ctx.shutdown()
 
 
 if __name__ == "__main__":

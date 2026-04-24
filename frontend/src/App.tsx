@@ -33,7 +33,7 @@ function AppLayout() {
       <GlobalCompanionProvider>
         <SpeakModalProvider>
           <Outlet />
-          <FeedbackButton />
+          {/* <FeedbackButton /> */}
           <GlobalSpeakModal />
         </SpeakModalProvider>
       </GlobalCompanionProvider>

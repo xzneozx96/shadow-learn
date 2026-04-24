@@ -5,11 +5,13 @@ import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
 import type { CulturalTip, GrammarFeedback, NextLineSuggestion, SessionEvaluation, SpeakSituation, VocabTip } from '@/types'
 import { useRoomContext, useSession, useSessionMessages } from '@livekit/components-react'
-import { TokenSource } from 'livekit-client'
+import { ParticipantKind, RoomEvent, TokenSource } from 'livekit-client'
+import { ChevronLeftIcon, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AgentSessionProvider } from '@/components/agents-ui/agent-session-provider'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { getSettings } from '@/db'
@@ -26,12 +28,6 @@ import { SituationPicker } from './SituationPicker'
 import { SituationPreview } from './SituationPreview'
 
 type Step = 'language-level' | 'persona' | 'situation' | 'custom' | 'preview' | 'active' | 'recap'
-
-interface SelectedSituation {
-  id: string
-  title: string
-  userGoal: string
-}
 
 interface PracticeSpeakingModalProps {
   open: boolean
@@ -62,7 +58,9 @@ interface SessionInnerProps {
   onEnd: (speakSession: SpeakSession) => void
   onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
   onFeedbackUpdate?: (turnId: string, feedback: GrammarFeedback) => Promise<void>
-  updateEvaluation: (evaluation: SessionEvaluation) => Promise<void>
+  updateEvaluation: (evaluation: SessionEvaluation | null) => Promise<void>
+  onViewRecap: () => void
+  onRetry: () => void
 }
 
 // Renders inside AgentSessionProvider — session hooks are available here
@@ -74,13 +72,53 @@ function SessionInner({
   onTranscriptUpdate,
   onFeedbackUpdate,
   updateEvaluation,
+  onViewRecap,
+  onRetry,
 }: SessionInnerProps) {
   const room = useRoomContext()
   const { messages: chatMessages } = useSessionMessages()
   const [nextLineSuggestion, setNextLineSuggestion] = useState<NextLineSuggestion | null>(null)
   const [culturalTips, setCulturalTips] = useState<CulturalTip[]>([])
   const [vocabTips, setVocabTips] = useState<VocabTip[]>([])
+  const [masteredVocab, setMasteredVocab] = useState<Set<string>>(new Set())
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null)
+  const [agentDisconnected, setAgentDisconnected] = useState(false)
+  const [evaluationStatus, setEvaluationStatus] = useState<'idle' | 'generating' | 'complete'>('idle')
+  const evaluationStatusRef = useRef(evaluationStatus)
+  const timeoutRef = useRef<number | null>(null)
+  const fallbackTimerRef = useRef<number | null>(null)
+  useEffect(() => {
+    evaluationStatusRef.current = evaluationStatus
+  }, [evaluationStatus])
+
+  // Fallback: if evaluationStatus becomes 'generating', auto-transition after 15s
+  useEffect(() => {
+    if (evaluationStatus === 'generating') {
+      fallbackTimerRef.current = window.setTimeout(() => {
+        if (evaluationStatusRef.current === 'generating') {
+          setEvaluationStatus('complete')
+        }
+      }, 15000)
+    }
+    return () => {
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current)
+      }
+    }
+  }, [evaluationStatus])
+
+  useEffect(() => {
+    if (!room)
+      return
+    const handleDisconnect = (participant: { kind: number }) => {
+      if (participant.kind === ParticipantKind.AGENT)
+        setAgentDisconnected(true)
+    }
+    room.on(RoomEvent.ParticipantDisconnected, handleDisconnect)
+    return () => {
+      room.off(RoomEvent.ParticipantDisconnected, handleDisconnect)
+    }
+  }, [room])
 
   const messagesRef = useRef(chatMessages)
   useEffect(() => {
@@ -126,7 +164,14 @@ function SessionInner({
 
     room.registerRpcMethod('next_line_suggestion', async (data) => {
       try {
-        setNextLineSuggestion(JSON.parse(data.payload) as NextLineSuggestion)
+        const payload = JSON.parse(data.payload)
+        setNextLineSuggestion(payload)
+
+        // Handle merged vocab tip
+        if (payload.vocab_tip && payload.vocab_tip.word) {
+          setVocabTips(prev => [...prev, payload.vocab_tip])
+        }
+
         return JSON.stringify({ success: true })
       }
       catch (e) {
@@ -137,7 +182,7 @@ function SessionInner({
 
     room.registerRpcMethod('cultural_tip', async (data) => {
       try {
-        const tip = JSON.parse(data.payload) as { type: string, phrase: string, explanation: string }
+        const tip = JSON.parse(data.payload) as CulturalTip
         setCulturalTips(prev => [...prev, tip])
         return JSON.stringify({ success: true })
       }
@@ -147,14 +192,14 @@ function SessionInner({
       }
     })
 
-    room.registerRpcMethod('vocab_tip', async (data) => {
+    room.registerRpcMethod('vocab_mastered', async (data) => {
       try {
-        const tip = JSON.parse(data.payload) as { type: string, word: string, reason: string }
-        setVocabTips(prev => [...prev, tip])
+        const { word } = JSON.parse(data.payload)
+        setMasteredVocab(prev => new Set(prev).add(word))
         return JSON.stringify({ success: true })
       }
       catch (e) {
-        console.error('Failed to parse vocab tip:', e)
+        console.error('Failed to parse mastered vocab:', e)
         return JSON.stringify({ success: false, error: String(e) })
       }
     })
@@ -163,6 +208,7 @@ function SessionInner({
       try {
         const evalData = JSON.parse(data.payload) as SessionEvaluation
         await updateEvaluation(evalData)
+        setEvaluationStatus('complete')
         return JSON.stringify({ success: true })
       }
       catch (e) {
@@ -171,12 +217,22 @@ function SessionInner({
       }
     })
 
+    // Listen for evaluation started signal (shows loading screen)
+    room.registerRpcMethod('session_evaluation_started', async (_data) => {
+      setEvaluationStatus('generating')
+      return JSON.stringify({ success: true })
+    })
+
     return () => {
       room.unregisterRpcMethod('grammar_feedback')
       room.unregisterRpcMethod('next_line_suggestion')
       room.unregisterRpcMethod('cultural_tip')
-      room.unregisterRpcMethod('vocab_tip')
+      room.unregisterRpcMethod('vocab_mastered')
       room.unregisterRpcMethod('session_evaluation')
+      room.unregisterRpcMethod('session_evaluation_started')
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
     }
   }, [room])
 
@@ -191,10 +247,16 @@ function SessionInner({
       nextLineSuggestion={nextLineSuggestion}
       culturalTips={culturalTips}
       vocabTips={vocabTips}
+      masteredVocab={masteredVocab}
       feedbackHistory={feedbackHistory}
       selectedMsgId={selectedMsgId}
       onSelectFeedback={setSelectedMsgId}
       onTranscriptUpdate={onTranscriptUpdate}
+      agentDisconnected={agentDisconnected}
+      evaluationStatus={evaluationStatus}
+      setEvaluationStatus={setEvaluationStatus}
+      onViewRecap={onViewRecap}
+      onRetry={onRetry}
     />
   )
 }
@@ -209,6 +271,8 @@ function SessionWrapper({
   onTranscriptUpdate,
   onFeedbackUpdate,
   updateEvaluation,
+  onViewRecap,
+  onRetry,
 }: {
   tokenSource: TokenSourceLiteral
   speakSession: SpeakSession
@@ -217,9 +281,15 @@ function SessionWrapper({
   onEnd: (speakSession: SpeakSession) => void
   onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
   onFeedbackUpdate?: (turnId: string, feedback: GrammarFeedback) => Promise<void>
-  updateEvaluation: (evaluation: SessionEvaluation) => Promise<void>
+  updateEvaluation: (evaluation: SessionEvaluation | null) => Promise<void>
+  onViewRecap: (speakSession: SpeakSession) => void
+  onRetry: () => void
 }) {
   const livekitSession = useSession(tokenSource, { agentName: 'shadowlearn-speak' })
+
+  const handleViewRecap = useCallback(() => {
+    onViewRecap(speakSession)
+  }, [onViewRecap, speakSession])
 
   // Mount-only: start the LiveKit session once, end on unmount.
   // Parent component keys <SessionWrapper> by currentSession.sessionId, so a
@@ -227,7 +297,11 @@ function SessionWrapper({
   // would fire end()/start() on every parent re-render (e.g. every feedback
   // RPC) and tear down the room mid-conversation.
   useEffect(() => {
-    livekitSession.start()
+    livekitSession.start({
+      tracks: {
+        microphone: { enabled: false },
+      },
+    })
     return () => {
       livekitSession.end()
     }
@@ -243,6 +317,8 @@ function SessionWrapper({
         onTranscriptUpdate={onTranscriptUpdate}
         onFeedbackUpdate={onFeedbackUpdate}
         updateEvaluation={updateEvaluation}
+        onViewRecap={handleViewRecap}
+        onRetry={onRetry}
       />
     </AgentSessionProvider>
   )
@@ -250,12 +326,13 @@ function SessionWrapper({
 
 export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalProps) {
   const { t, locale } = useI18n()
+  const navigate = useNavigate()
   const { keys, db } = useAuth()
   const { currentSession, startSession, endSession, clearSession, updateTranscript, updateFeedback, updateEvaluation } = useSpeakSession()
   const [step, setStep] = useState<Step>('language-level')
   const [targetLanguage, setTargetLanguage] = useState('zh-CN')
   const [proficiencyLevel, setProficiencyLevel] = useState<ProficiencyLevel | null>(null)
-  const [situation, setSituation] = useState<SelectedSituation | null>(null)
+  const [situation, setSituation] = useState<SpeakSituation | null>(null)
   const [persona, setPersona] = useState<Persona | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -328,7 +405,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   // Calls session-start, populates preview data + pending token, then goes to preview step.
   // forceRegenerate=true bypasses the built-in scene cache for a fresh generation.
   const fetchSessionData = useCallback(async (
-    selectedSituation: SelectedSituation,
+    selectedSituation: SpeakSituation,
     selectedPersona: Persona,
     forceRegenerate = false,
   ) => {
@@ -364,7 +441,10 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
       setPendingToken({ url: data.livekit_url, token: data.livekit_token, sessionId: data.session_id })
       setSituationPreview(data.situation)
-      setSituation(selectedSituation)
+      setSituation({
+        ...selectedSituation,
+        target_vocab: data.situation.target_vocab,
+      })
       setStep('preview')
     }
     catch (e) {
@@ -377,7 +457,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
   // Moves the pending token into active use and connects to LiveKit.
   const connectToSession = useCallback(async (
-    selectedSituation: SelectedSituation,
+    selectedSituation: SpeakSituation,
     pending: { url: string, token: string, sessionId: string },
   ) => {
     if (!proficiencyLevel)
@@ -437,10 +517,11 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   }, [])
 
   const handleCustomGenerated = useCallback(async (gen: GeneratedSituation) => {
-    const sel: SelectedSituation = {
+    const sel: SpeakSituation = {
       id: gen.situation_id,
       title: gen.title,
       userGoal: gen.user_goal,
+      target_vocab: gen.target_vocab,
     }
     captureSpeakSituationSelected({ situation_id: gen.situation_id, is_custom: true })
     setIsCustomSituation(true)
@@ -507,8 +588,6 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   const canGoBack = ['persona', 'situation', 'custom', 'preview'].includes(step)
 
   const speakSituation: SpeakSituation | null = situation
-    ? { id: situation.id, name: situation.title, description: '' }
-    : null
 
   return (
     <Dialog
@@ -522,33 +601,32 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     >
       <DialogContent
         className={cn(
-          'p-0 gap-0 overflow-hidden elegant-card transition-all duration-500 ease-in-out max-w-4xl! min-w-[700px]',
+          'p-0 gap-0 overflow-hidden elegant-card transition-all duration-500 ease-in-out',
+          (step === 'active' || step === 'recap') ? 'w-screen h-screen max-w-none! rounded-none' : 'max-w-5xl! min-w-[700px] rounded-xl',
         )}
         showCloseButton={false}
       >
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+        <div className={cn('flex items-center justify-between border-b border-border px-4 shrink-0', step === 'active' ? 'h-14' : 'py-3')}>
           {canGoBack && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleBack}
               disabled={loading}
-              className="p-1 -ml-1 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
               aria-label="Back"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-            </button>
+              <ChevronLeftIcon className="size-5" />
+            </Button>
           )}
-          <h2 className="text-lg font-bold flex-1">{t('speak.title')}</h2>
-          <button
+          <DialogTitle className="text-lg font-bold flex-1">{t('speak.title')}</DialogTitle>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleClose}
-            className="p-1 hover:bg-accent rounded-full transition-colors text-muted-foreground hover:text-foreground"
             aria-label="Close"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
+            <X className="size-5" />
+          </Button>
         </div>
 
         {/* Error banner */}
@@ -561,10 +639,10 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         {/* Setup prompt if no keys */}
         {!hasGoogleKey && step === 'language-level' && (
           <div className="flex flex-col items-center justify-center p-6 text-center">
-            <p className="text-muted-foreground mb-4">
+            <p className="text-lg text-muted-foreground mb-4">
               {t('auth.error.googleRequired')}
             </p>
-            <Button onClick={handleClose}>
+            <Button size="lg" className="w-24" onClick={() => { onClose(); navigate('/settings') }}>
               {t('nav.settings')}
             </Button>
           </div>
@@ -572,7 +650,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
         {/* Step content */}
         {hasGoogleKey && (
-          <div className={step === 'active' ? '' : 'p-4'}>
+          <div className={step === 'active' ? '' : 'p-4 overflow-hidden'}>
             {step === 'language-level' && (
               <LanguageLevelPicker
                 language={targetLanguage}
@@ -628,6 +706,8 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
                 onTranscriptUpdate={updateTranscript}
                 onFeedbackUpdate={updateFeedback}
                 updateEvaluation={updateEvaluation}
+                onViewRecap={handleSessionEnd}
+                onRetry={handleRepeat}
               />
             )}
 
@@ -645,7 +725,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
         {/* Loading overlay */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/95 backdrop-blur-sm rounded-lg z-50 animate-in fade-in duration-200">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-lg z-50 animate-in fade-in duration-200">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
               <p className="text-sm font-medium text-foreground">{t('common.loading')}</p>

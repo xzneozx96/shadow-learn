@@ -38,7 +38,7 @@ function formatDate(iso: string): string {
 
 function UploadPlaceholder() {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-[#181818]">
+    <div className="flex h-full w-full items-center justify-center bg-card">
       <FileVideo className="size-12 text-white/15" strokeWidth={1.25} />
     </div>
   )

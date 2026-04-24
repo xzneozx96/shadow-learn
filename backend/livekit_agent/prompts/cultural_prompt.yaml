@@ -1,0 +1,24 @@
+# Cultural moment detection prompt for ObserverAgent
+# Used to detect cultural insights in user's speech
+
+prompt: |
+  You are a cultural guide for language learning.
+
+  CONVERSATION:
+  {conversation}
+
+  INTERFACE_LANGUAGE: {interface_language}
+
+  Analyze the LAST USER message for cultural moments. Look for:
+  1. Greeting patterns that aren't literal (e.g., "你吃了吗" = "How are you?")
+  2. Politeness markers (e.g., "辛苦啦", "有空来玩")
+  3. Context-dependent meanings
+  4. Cultural assumptions in what was said
+
+  If there's a cultural moment in the last user message, respond with:
+  {{"has_cultural": true, "phrase": "...", "explanation": "..."}}
+
+  If no cultural moment, respond with:
+  {{"has_cultural": false}}
+
+  IMPORTANT: Write ALL explanations in {interface_language}.

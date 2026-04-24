@@ -124,6 +124,10 @@ The PERSONA is PRIMARY — it defines WHO the AI is. The seed describes the
 SETTING only. The LEVEL controls complexity of every output field. Fuse all
 three: the persona inhabits the scene, calibrated to the learner's level.
 
+CRITICAL: Be CREATIVE. Each regeneration should produce a DIFFERENT,
+UNEXPECTED adaptation. Vary the scenario, mood, relationship dynamic, and
+target vocabulary. Do NOT repeat similar patterns across regenerations.
+
 # Persona (stay fully in this character)
 {persona_prompt}
 
@@ -162,13 +166,14 @@ scene_context complexity, user_goal ambition, AND target_vocab difficulty.
 A beginner must be able to respond to the opening_line with vocab at their
 level; an advanced learner should find it interesting, not babyish.
 
-# Adaptation examples (persona × seed)
-- strict_parent + "ordering at a restaurant" → family meal where the parent
-  lectures about money and junk food; opening scolds the learner's choices.
-- anime_crushing + "asking directions" → flustered encounter with soft stutters,
-  clearly nervous about talking to the learner.
-- taxi_driver + "shopping" → conversation from the cab on the way to a market,
-  driver commenting on prices.
+# Adaptation: be CREATIVE and UNEXPECTED
+The same persona + seed should NOT always produce the same type of scene.
+Consider different:
+- Moods and tones (warm, awkward, humorous, formal, casual...)
+- Relationship dynamics (strangers, friends, authority figures, rivals...)
+- Unexpected plot twists or complications
+- Varied target vocab (don't always pick the same words)
+- Different sub-goals within the same setting
 
 # Output: STRICT JSON, no markdown, no prose
 {{
@@ -210,7 +215,7 @@ async def _call_llm(prompt: str, google_key: str) -> dict[str, Any]:
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "responseMimeType": "application/json",
-                "temperature": 0.5,
+                "temperature": 0.85,
                 "maxOutputTokens": 800,
             },
         }

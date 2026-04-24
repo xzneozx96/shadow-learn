@@ -1,13 +1,14 @@
 """SituationConfig dataclass and loader for built-in + custom situations."""
 
 import logging
+import random
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
+BUILT_IN_SITUATIONS: dict[str, dict[str, Any]] = {
     "ordering_food": {
         "en": {
             "title": "Ordering Food",
@@ -18,7 +19,18 @@ BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
             "description": "Gọi món ăn yêu thích và xử lý các yêu cầu đặc biệt như người bản xứ.",
         },
         "icon": "🍜",
-        "seed": "A customer enters a cozy local restaurant. They need to browse the menu, ask about today's specials, place an order with specific dietary preferences, and handle the bill at the end.",
+        "seeds": [
+            "Ordering food at a restaurant",
+            "A cozy restaurant visit",
+            "Restaurant dining experience",
+            "Getting served at a local eatery",
+            "Food ordering scenario",
+            "A meal at a neighborhood diner",
+            "Restaurant table service",
+            "Casual dining experience",
+            "A food order interaction",
+            "Restaurant counter service",
+        ],
     },
     "asking_directions": {
         "en": {
@@ -30,7 +42,18 @@ BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
             "description": "Dạo chơi trong thành phố và tìm đường về bằng cách trò chuyện với người địa phương.",
         },
         "icon": "🧭",
-        "seed": "A tourist is trying to find a hidden gem or a specific landmark. They stop a friendly-looking local to ask for the best route, clarify street signs, and ask for a personal recommendation nearby.",
+        "seeds": [
+            "Asking for directions on the street",
+            "Getting help finding a location",
+            "Navigating with local assistance",
+            "A directions request scenario",
+            "Lost in an unfamiliar area",
+            "Seeking location guidance",
+            "Street navigation help",
+            "Finding your way around",
+            "A helpful local interaction",
+            "Map and direction inquiry",
+        ],
     },
     "shopping": {
         "en": {
@@ -42,7 +65,18 @@ BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
             "description": "Tìm kiếm bộ đồ hoặc món quà ưng ý khi ghé thăm các cửa hàng địa phương.",
         },
         "icon": "🛍️",
-        "seed": "A customer is browsing a stylish boutique. They need to ask about different sizes, materials, and prices. They might try something on and negotiate a small discount or ask about the return policy.",
+        "seeds": [
+            "Shopping at a local store",
+            "Bargaining at a market",
+            "A retail shopping scenario",
+            "Store browsing experience",
+            "Finding the perfect gift",
+            "Boutique shopping trip",
+            "Market negotiation",
+            "A shopping excursion",
+            "Customer service interaction",
+            "Product inquiry at a shop",
+        ],
     },
     "job_interview": {
         "en": {
@@ -54,7 +88,18 @@ BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
             "description": "Chinh phục công việc mơ ước bằng cách luyện tập phỏng vấn chuyên nghiệp.",
         },
         "icon": "💼",
-        "seed": "A formal but encouraging interview for a modern startup. The hiring manager asks about past experiences and problem-solving skills, while the candidate describes their strengths and asks insightful questions about the company culture.",
+        "seeds": [
+            "Job interview at a company",
+            "A professional interview scenario",
+            "Meeting with a hiring manager",
+            "Career discussion interview",
+            "Applying for a dream job",
+            "Workplace recruitment chat",
+            "Interview preparation",
+            "A formal job conversation",
+            "Human resources meeting",
+            "Position application dialogue",
+        ],
     },
     "casual_chat": {
         "en": {
@@ -66,7 +111,18 @@ BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
             "description": "Gặp gỡ bạn cũ và 'tám' đủ mọi chuyện trên đời.",
         },
         "icon": "💬",
-        "seed": "Two friends meet at a quiet cafe. They catch up on recent life events, share stories about their weekend, talk about their latest hobbies, and make plans for a future hangout.",
+        "seeds": [
+            "Casual conversation with a friend",
+            "Catching up with an acquaintance",
+            "Friendly chit-chat scenario",
+            "A relaxed social dialogue",
+            "Coffee shop gossip",
+            "Reconnecting with an old friend",
+            "Everyday small talk",
+            "A lighthearted conversation",
+            "Social encounter at a cafe",
+            "Weekend plans discussion",
+        ],
     },
     "doctor_visit": {
         "en": {
@@ -78,7 +134,18 @@ BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
             "description": "Mô tả triệu chứng và lắng nghe lời khuyên của bác sĩ khi đi khám bệnh.",
         },
         "icon": "🏥",
-        "seed": "A patient visits a clinic for a minor health issue. They need to explain their symptoms clearly, ask about the diagnosis, understand the prescription, and ask about follow-up care.",
+        "seeds": [
+            "Doctor visit at a clinic",
+            "A medical consultation",
+            "Health check-up scenario",
+            "Speaking with a physician",
+            "Pharmacy prescription talk",
+            "Medical examination dialogue",
+            "Healthcare provider conversation",
+            "Symptoms discussion with a doctor",
+            "Treatment plan explanation",
+            "Wellness check appointment",
+        ],
     },
     "hotel_checkin": {
         "en": {
@@ -90,7 +157,18 @@ BUILT_IN_SITUATIONS: dict[str, dict[str, dict[str, str]]] = {
             "description": "Làm thủ tục nhận phòng và đảm bảo kỳ nghỉ của bạn thật thoải mái.",
         },
         "icon": "🏨",
-        "seed": "A traveler arrives at a hotel front desk. They need to check in, ask about hotel amenities like WiFi and breakfast, and perhaps request a quiet room or a late check-out.",
+        "seeds": [
+            "Hotel check-in at the front desk",
+            "A reception desk interaction",
+            "Registering at a hotel",
+            "Lobby encounter scenario",
+            "Accommodation check-in",
+            "Concierge conversation",
+            "Room upgrade request",
+            "Hotel amenities inquiry",
+            "Bellhop service interaction",
+            "Tourist accommodation service",
+        ],
     },
 }
 
@@ -201,10 +279,11 @@ def list_built_in_situations(interface_language: str = "en") -> list[dict[str, s
 
 
 def get_situation_seed(situation_id: str) -> str:
-    """Return the seed text for a built-in situation. Raises KeyError if unknown."""
+    """Return a random seed text for a built-in situation. Raises KeyError if unknown."""
     if situation_id not in BUILT_IN_SITUATIONS:
         raise KeyError(f"Unknown built-in situation_id: {situation_id!r}")
-    return BUILT_IN_SITUATIONS[situation_id]["seed"]
+    seeds = BUILT_IN_SITUATIONS[situation_id]["seeds"]
+    return random.choice(seeds)
 
 
 def get_custom_situation(situation_id: str) -> "SituationConfig":

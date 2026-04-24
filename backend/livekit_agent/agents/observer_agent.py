@@ -75,7 +75,6 @@ class ObserverAgent:
         # Vocabulary tracking
         self._target_vocab: list[str] = []
         self._used_vocab: set[str] = set()
-        self._turns_since_vocab_check: int = 0
 
         self._setup_listeners()
 
@@ -145,6 +144,9 @@ class ObserverAgent:
         """Handle user turn - trigger grammar evaluation."""
         self._turn_count += 1
         
+        # Track vocab usage after every turn
+        asyncio.create_task(self._track_vocab_usage(transcript))
+
         # Reset correction tracking after 2 turns
         if self._turn_count_for_reset and self._turn_count >= self._turn_count_for_reset:
             self._last_correction_types.clear()
@@ -162,12 +164,28 @@ class ObserverAgent:
         # Check for cultural moments every 3 turns (throttled)
         if self._turn_count % 3 == 0:
             asyncio.create_task(self._trigger_cultural_check(transcript))
-            asyncio.create_task(self._trigger_vocab_check(transcript))
 
     def _handle_ai_turn(self, transcript: str) -> None:
         """Handle AI turn - trigger next line suggestion."""
-        # Suggest next line after AI speaks (to help user respond)
+        # Suggest next line + vocab after AI speaks (to help user respond)
         asyncio.create_task(self._suggest_next_line())
+
+    async def _track_vocab_usage(self, transcript: str) -> None:
+        """Check user transcript for target vocab usage (async to allow RPC)."""
+        if not self._target_vocab:
+            return
+            
+        for word in self._target_vocab:
+            if word.lower() in transcript.lower():
+                if word not in self._used_vocab:
+                    self._used_vocab.add(word)
+                    logger.info(f"[OBSERVER] Mastered vocab: {word}")
+                    
+                    # Notify frontend immediately
+                    await self._stream_feedback({
+                        "type": "vocab-mastered",
+                        "word": word
+                    })
 
     async def _evaluate_user_turn(self, user_transcript: str) -> None:
         """Evaluate user's grammar.
@@ -324,15 +342,18 @@ class ObserverAgent:
         try:
             userdata = self.session.userdata
             config = getattr(userdata, "situation_config", None)
+            
+            # Find unused target vocab for the suggestion
+            unused = [w for w in self._target_vocab if w not in self._used_vocab]
+            target_vocab_context = ", ".join(unused[:5]) if unused else ""
+
             if config:
                 situation_description = config.scene_context
                 user_goal = config.user_goal
-                target_vocab = ", ".join(config.target_vocab) if config.target_vocab else ""
                 interface_language = config.interface_language or "vi"
             else:
                 situation_description = userdata.situation_id or "casual_chat"
                 user_goal = ""
-                target_vocab = ""
                 interface_language = "vi"
             persona_id = userdata.persona_id or "friendly_buddy"
             target_language = getattr(userdata, "target_language", None) or "zh-CN"
@@ -340,7 +361,7 @@ class ObserverAgent:
         except Exception:
             situation_description = "casual_chat"
             user_goal = ""
-            target_vocab = ""
+            target_vocab_context = ""
             persona_id = "friendly_buddy"
             target_language = "zh-CN"
             level = "intermediate"
@@ -350,7 +371,7 @@ class ObserverAgent:
             "conversation_text": conversation_text,
             "situation_description": situation_description,
             "user_goal": user_goal,
-            "target_vocab": target_vocab,
+            "target_vocab": target_vocab_context,
             "persona_name": persona_id,
             "target_language": target_language,
             "interface_language": _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language),
@@ -387,49 +408,35 @@ class ObserverAgent:
             result = json.loads(response_text.strip())
             logger.info(f"[OBSERVER] Next line suggestion: {result.get('suggestion', '')[:30]}...")
 
-            # Stream to frontend
+            # Stream merged suggestion (including vocab_tip if present)
             await self._stream_feedback({
                 "type": "next-line",
                 "suggestion": result.get("suggestion", ""),
                 "romanization": result.get("romanization", ""),
                 "translation": result.get("translation", ""),
+                "vocab_tip": result.get("vocab_tip")
             })
 
         except json.JSONDecodeError:
+            # Fallback parsing
             start = response_text.find('{')
             end = response_text.rfind('}') + 1
             if start >= 0 and end > start:
                 try:
                     result = json.loads(response_text[start:end])
+                    # Stream merged suggestion
                     await self._stream_feedback({
                         "type": "next-line",
                         "suggestion": result.get("suggestion", ""),
                         "romanization": result.get("romanization", ""),
                         "translation": result.get("translation", ""),
+                        "vocab_tip": result.get("vocab_tip")
                     })
                 except json.JSONDecodeError:
                     pass
 
     async def _detect_cultural_moment(self, transcript: str) -> Optional[dict]:
         """LLM-powered cultural moment detection."""
-        
-        CULTURAL_PROMPT = """You are a cultural guide for language learning.
-
-CONVERSATION:
-{conversation}
-
-Analyze the LAST USER message for cultural moments. Look for:
-1. Greeting patterns that aren't literal (e.g., "你吃了吗" = "How are you?")
-2. Politeness markers (e.g., "辛苦啦", "有空来玩")  
-3. Context-dependent meanings
-4. Cultural assumptions in what was said
-
-If there's a cultural moment in the last user message, respond with:
-{{"has_cultural": true, "phrase": "...", "explanation": "..."}}
-
-If no cultural moment, respond with:
-{{"has_cultural": false}}
-"""
 
         # Build conversation context (last 3 turns)
         conv = "\n".join([
@@ -437,7 +444,25 @@ If no cultural moment, respond with:
             for m in self.conversation_history[-3:]
         ])
         
-        prompt = CULTURAL_PROMPT.format(conversation=conv)
+        # Get interface language from session userdata
+        try:
+            userdata = self.session.userdata
+            config = getattr(userdata, "situation_config", None)
+            if config:
+                interface_language = getattr(config, "interface_language", "vi")
+            else:
+                interface_language = "vi"
+        except Exception:
+            interface_language = "vi"
+        
+        interface_lang_name = _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language)
+        
+        prompt_template = load_prompt("cultural_prompt.yaml")
+        if not prompt_template:
+            logger.warning("Cultural prompt not found, skipping detection")
+            return None
+        
+        prompt = prompt_template.format(conversation=conv, interface_language=interface_lang_name)
         
         chat_ctx = ChatContext()
         chat_ctx.add_message(role="user", content=prompt)
@@ -460,8 +485,20 @@ If no cultural moment, respond with:
                     "explanation": result.get("explanation", ""),
                 }
         except json.JSONDecodeError:
-            pass
-        
+            start = response.find('{')
+            end = response.rfind('}') + 1
+            if start >= 0 and end > start:
+                try:
+                    result = json.loads(response[start:end])
+                    if result.get("has_cultural"):
+                        return {
+                            "type": "cultural-tip",
+                            "phrase": result.get("phrase", ""),
+                            "explanation": result.get("explanation", ""),
+                        }
+                except json.JSONDecodeError:
+                    pass
+
         return None
 
     async def _trigger_cultural_check(self, transcript: str) -> None:
@@ -473,70 +510,6 @@ If no cultural moment, respond with:
                 logger.info(f"[OBSERVER] Cultural tip: {cultural.get('explanation', '')[:50]}...")
         except Exception as e:
             logger.error(f"Cultural check failed: {e}")
-
-    async def _trigger_vocab_check(self, transcript: str) -> None:
-        """Check vocab usage and prompt if needed."""
-        self._turns_since_vocab_check += 1
-        
-        # Check every 3-4 turns
-        if self._turns_since_vocab_check < 3:
-            return
-        
-        self._turns_since_vocab_check = 0
-        
-        # Check which target vocab was used
-        for word in self._target_vocab:
-            if word.lower() in transcript.lower():
-                self._used_vocab.add(word)
-        
-        # Find unused target vocab
-        unused = [w for w in self._target_vocab if w not in self._used_vocab]
-        if not unused:
-            return
-        
-        # LLM-powered vocab suggestion
-        VOCAB_PROMPT = """The learner is practicing. Target vocabulary: {target_vocab}
-
-Recent conversation:
-{conversation}
-
-Which target word is most natural to use in the NEXT response?
-Respond with:
-{{"suggests_vocab": true, "word": "...", "reason": "..."}}
-
-If none fit naturally:
-{{"suggests_vocab": false}}
-"""
-        
-        conv = "\n".join([f"{m['role']}: {m['text'][:80]}" for m in self.conversation_history[-3:]])
-        prompt = VOCAB_PROMPT.format(
-            target_vocab=", ".join(unused[:3]),
-            conversation=conv
-        )
-        
-        chat_ctx = ChatContext()
-        chat_ctx.add_message(role="user", content=prompt)
-        
-        response = ""
-        async with self.llm.chat(chat_ctx=chat_ctx) as stream:
-            async for chunk in stream:
-                if chunk.delta and chunk.delta.content:
-                    response += chunk.delta.content
-        
-        if not response:
-            return
-        
-        try:
-            result = json.loads(response.strip())
-            if result.get("suggests_vocab"):
-                await self._stream_feedback({
-                    "type": "vocab-tip",
-                    "word": result.get("word", ""),
-                    "reason": result.get("reason", ""),
-                })
-                logger.info(f"[OBSERVER] Vocab tip: {result.get('word', '')}")
-        except json.JSONDecodeError:
-            pass
 
     async def _inject_correction_hint(self, grammar_result: dict) -> None:
         """Inject a correction hint via update_chat_ctx as a user-role message.
@@ -645,10 +618,13 @@ If none fit naturally:
                 method_name = "next_line_suggestion"
             elif data["type"] == "cultural-tip":
                 method_name = "cultural_tip"
-            elif data["type"] == "vocab-tip":
-                method_name = "vocab_tip"
+            elif data["type"] == "vocab-mastered":
+                method_name = "vocab_mastered"
+            elif data["type"] == "session-evaluation":
+                method_name = "session_evaluation"
             else:
-                method_name = "next_line_suggestion"  # default
+                logger.warning(f"[OBSERVER] Unknown feedback type: {data.get('type')} — dropping")
+                return
 
             await room.local_participant.perform_rpc(
                 destination_identity=target_identity,
@@ -662,29 +638,6 @@ If none fit naturally:
 
     async def evaluate_session(self) -> dict:
         """Generate rich session evaluation summary."""
-        
-        SESSION_EVAL_PROMPT = """You are a language learning evaluator.
-Analyze this practice session and provide a helpful summary.
-
-Session transcript:
-{transcript}
-
-Target vocabulary to practice:
-{target_vocab}
-
-What the learner used:
-{used_vocab}
-
-Provide a JSON response with exactly these fields:
-{{
-  "strengths": ["what the learner did well - 2 items max"],
-  "areas_to_improve": ["specific grammar/language points to work on - 2 items max"],
-  "vocabulary_mastered": ["words used correctly from target vocab"],
-  "vocabulary_to_practice": ["target words not yet used"],
-  "suggestions": ["specific actionable suggestions to improve - 2 items max"]
-}}
-
-Be specific and actionable. Generic advice is not helpful."""
 
         transcript = "\n".join([
             f"{m['role']}: {m['text'][:150]}"
@@ -694,10 +647,28 @@ Be specific and actionable. Generic advice is not helpful."""
         target = ", ".join(self._target_vocab) if self._target_vocab else "none"
         used = ", ".join(self._used_vocab) if self._used_vocab else "none"
         
-        prompt = SESSION_EVAL_PROMPT.format(
+        # Get interface language from session userdata
+        try:
+            userdata = self.session.userdata
+            config = getattr(userdata, "situation_config", None)
+            if config:
+                interface_language = getattr(config, "interface_language", "vi")
+            else:
+                interface_language = "vi"
+        except Exception:
+            interface_language = "vi"
+        
+        interface_lang_name = _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language)
+        
+        prompt_template = load_prompt("session_evaluation_prompt.yaml")
+        if not prompt_template:
+            return self._fallback_evaluation()
+        
+        prompt = prompt_template.format(
             transcript=transcript[:2000],
             target_vocab=target,
-            used_vocab=used
+            used_vocab=used,
+            interface_language=interface_lang_name
         )
         
         chat_ctx = ChatContext()
@@ -749,19 +720,7 @@ async def start_observer(
         session=session,
         llm=llm,
     )
-
-    # Hook into session close to trigger evaluation
-    @session.on("close")
-    async def on_observer_session_close(event):
-        logger.info("[OBSERVER] Session closing, generating evaluation...")
-        try:
-            evaluation = await observer.evaluate_session()
-            await observer._stream_feedback({
-                "type": "session-evaluation",
-                **evaluation,
-            })
-        except Exception as e:
-            logger.error(f"Failed to generate session evaluation: {e}")
+    observer.initialize_from_userdata()
 
     logger.info("Observer agent started")
     return observer
