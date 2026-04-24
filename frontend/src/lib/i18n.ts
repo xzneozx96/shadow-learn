@@ -480,6 +480,8 @@ export const TRANSLATIONS = {
     'speak.backHome': 'Select situation',
     'speak.status.ready': 'Ready',
     'speak.status.connecting': 'Connecting...',
+    'speak.status.disconnected': 'Conversation ended',
+    'speak.status.inactivity': 'Session ended due to inactivity',
     'speak.status.thinking': 'Thinking...',
     'speak.status.listening': 'Listening',
     'speak.status.speaking': 'Speaking',

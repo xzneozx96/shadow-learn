@@ -47,17 +47,36 @@ export async function getSpeakProgress(db: ShadowLearnDB): Promise<SpeakProgress
     0,
   )
 
-  // Calculate streak
-  const sorted = completed.sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-  const lastDate = new Date(sorted[0]?.startedAt || '')
-  const today = new Date()
-  const daysDiff = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+  // Calculate streak — count consecutive practice days ending today or yesterday
+  const uniqueDates = [...new Set(completed.map(s => s.startedAt.slice(0, 10)))].sort((a, b) => b.localeCompare(a))
+  const sorted = [...completed].sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+
+  let currentStreak = 0
+  if (uniqueDates.length > 0) {
+    const todayMs = new Date().setHours(0, 0, 0, 0)
+    const latestMs = new Date(uniqueDates[0]).setHours(0, 0, 0, 0)
+    const daysSinceLatest = Math.floor((todayMs - latestMs) / (1000 * 60 * 60 * 24))
+
+    if (daysSinceLatest <= 1) {
+      let expected = latestMs
+      for (const dateStr of uniqueDates) {
+        const d = new Date(dateStr).setHours(0, 0, 0, 0)
+        if (d === expected) {
+          currentStreak++
+          expected -= 1000 * 60 * 60 * 24
+        }
+        else {
+          break
+        }
+      }
+    }
+  }
 
   return {
     totalSessions: completed.length,
     totalMinutes,
     totalTurns,
-    currentStreak: daysDiff <= 1 ? 1 : 0,
+    currentStreak,
     lastSessionDate: sorted[0]?.startedAt || null,
   }
 }

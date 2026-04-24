@@ -25,7 +25,7 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
         {/* Context Section */}
         <div className="flex flex-col gap-3">
           <SectionLabel icon={MapPin}>{t('speak.preview.scene')}</SectionLabel>
-          <div className="flex-1 p-4 rounded-xl bg-secondary/30 border border-border/50">
+          <div className="flex-1 p-4 rounded-xl bg-primary/5 border border-primary/10">
             <p className="text-sm text-foreground/90 leading-relaxed">
               {preview.scene_context}
             </p>
@@ -35,7 +35,7 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
         {/* Goal Section */}
         <div className="flex flex-col gap-3">
           <SectionLabel icon={Target}>{t('speak.preview.yourGoal')}</SectionLabel>
-          <div className="flex-1 p-4 rounded-xl bg-secondary/30 border border-border/50">
+          <div className="flex-1 p-4 rounded-xl bg-primary/5 border border-primary/10">
             <p className="text-sm text-foreground/90 leading-relaxed">
               {preview.user_goal}
             </p>
@@ -70,7 +70,7 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
             {preview.target_vocab.map(item => (
               <div
                 key={item.term}
-                className="flex flex-col gap-0.5 rounded-lg px-3 py-2 bg-primary/10 border border-primary/20"
+                className="flex flex-col gap-0.5 rounded-lg px-3 py-2 bg-primary/5 border border-primary/10"
               >
                 <span className="font-bold text-primary leading-tight">
                   {item.term}

@@ -13,13 +13,20 @@ prompt: |
 
   The AI just spoke. Suggest what the USER could say next to continue the conversation naturally.
   The suggestion MUST match the user's {level} level — do not produce content beyond their level.
-  Prefer phrasing that uses the target vocabulary when it fits.
+  
+  From the provided list of unused target vocabulary ({target_vocab}), pick the ONE word that is most natural to include in the conversation right now.
+  
+  **CRITICAL**: You MUST use the picked word inside the `suggestion` sentence. The purpose is to provide a natural example of how to use that specific vocabulary in context. Provide the word and its explanation in the `vocab_tip` object.
 
   Respond in JSON (no markdown):
   {{
     "suggestion": "<user's next line in {target_language}>",
     "romanization": "<pinyin if Chinese, romaji if Japanese, empty otherwise>",
-    "translation": "<translation in {interface_language}>"
+    "translation": "<translation in {interface_language}>",
+    "vocab_tip": {{
+      "word": "<the target word you picked>",
+      "reason": "<brief explanation in {interface_language} of why this word fits or how to use it>"
+    }}
   }}
 
   IMPORTANT:

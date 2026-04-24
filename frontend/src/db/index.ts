@@ -1,6 +1,6 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
-import type { AppSettings, GrammarFeedback, LessonMeta, Segment, VocabEntry } from '../types'
+import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, VocabEntry } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
@@ -116,14 +116,7 @@ export interface SpeakSession {
   status: 'active' | 'completed' | 'abandoned'
   transcript: SpeakTurn[]
   transcriptText: string
-  evaluation: {
-    overallScore: number
-    pronunciationScore: number
-    fluencyScore: number
-    intonationScore: number
-    feedback: string
-    improvements: string[]
-  } | null
+  evaluation: SessionEvaluation | null
   // Grammar feedback keyed by SpeakTurn.id. Optional so v8 rows read cleanly.
   feedbacks?: Record<string, GrammarFeedback>
   promptVersion: string
