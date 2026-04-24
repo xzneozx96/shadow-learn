@@ -110,7 +110,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       data-testid={`lesson-card-${lesson.id}`}
       data-status={status}
       className={cn(
-        'group relative flex flex-col rounded-xl p-2 -m-2 transition-transform duration-200 hover:-translate-y-0.5',
+        'group relative flex flex-col rounded-xl p-2 -m-2',
         isError && 'ring-1 ring-destructive/30',
       )}
     >
@@ -293,9 +293,11 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
             <DialogDescription>{t('library.deleteDescription' as TranslationKey)}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('common.cancel' as TranslationKey)}</Button>
+            <Button size="lg" variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('common.cancel' as TranslationKey)}</Button>
             <Button
+              size="lg"
               variant="destructive"
+              className="min-w-16"
               onClick={() => {
                 setShowDeleteConfirm(false)
                 onDelete(lesson.id)
