@@ -464,7 +464,7 @@ export const TRANSLATIONS = {
     'common.no': 'No',
 
     // Speak
-    'speak.title': 'Practice Speaking',
+    'speak.title': 'Speak with AI',
     'speak.selectSituation': 'Choose a situation',
     'speak.selectSituationDesc': 'Select a scenario to practice Chinese',
     'speak.selectPersona': 'Pick someone to talk with',

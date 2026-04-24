@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from dotenv import load_dotenv
 
 from livekit import agents, rtc
-from livekit.agents import AgentServer, AgentSession, room_io, TurnHandlingOptions
+from livekit.agents import AgentServer, AgentSession, JobProcess, room_io, TurnHandlingOptions
 from livekit.agents.voice import Agent
 from google.genai import types as genai_types
 from livekit.plugins import google, openai
@@ -32,8 +32,13 @@ load_dotenv(Path(__file__).parent / ".env")
 logger = logging.getLogger("shadowlearn-agent")
 
 
+def prewarm(proc: JobProcess) -> None:
+    """Load VAD model once per worker process to avoid per-session cold start."""
+    proc.userdata["vad"] = silero.VAD.load()
+
+
 # Initialize the LiveKit agent server
-server = AgentServer()
+server = AgentServer(setup_fnc=prewarm)
 
 
 @server.rtc_session(agent_name="shadowlearn-speak")
@@ -175,7 +180,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
                     # Don't cut them off mid-sentence; learners pause more than native speakers
                     end_of_speech_sensitivity=genai_types.EndSensitivity.END_SENSITIVITY_HIGH,
                     prefix_padding_ms=200,   # commit speech start after 200ms
-                    silence_duration_ms=1200, # 1.2s silence to commit end-of-speech
+                    silence_duration_ms=800,  # 0.8s silence to commit end-of-speech
                 ),
                 activity_handling=genai_types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
             ),
@@ -191,7 +196,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
 
     session = AgentSession[SpeakSessionData](
         userdata=userdata,
-        vad=silero.VAD.load(),
+        vad=ctx.proc.userdata.get("vad") or silero.VAD.load(),
         llm=llm,
         user_away_timeout=15.0,
     )
