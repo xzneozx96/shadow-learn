@@ -7,6 +7,7 @@ import { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } f
 import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript'
 import { AgentControlBar } from '@/components/agents-ui/agent-control-bar'
+import { SessionTimer } from '@/components/speak/SessionTimer'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { getPersonaName } from '@/lib/constants'
@@ -34,46 +35,8 @@ interface ConversationSceneProps {
   onRetry?: () => void
 }
 
-function formatDuration(seconds: number) {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-}
-
-interface SessionTimerProps {
-  connectedAt: number | null
-  maxDurationSeconds: number
-  onExpire: () => void
-}
-
-function SessionTimer({ connectedAt, maxDurationSeconds, onExpire }: SessionTimerProps) {
-  // Tick counter via useReducer — dispatch triggers re-render on each interval
-  // without storing derived time-state (React guide: subscribe to external store).
-  const [, tick] = useReducer((n: number) => n + 1, 0)
-
-  useEffect(() => {
-    if (connectedAt == null)
-      return
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [connectedAt])
-
-  // Derive `remaining` during render from the clock — not stored in state.
-  const remaining = connectedAt == null
-    ? maxDurationSeconds
-    : Math.max(0, maxDurationSeconds - Math.round((Date.now() - connectedAt) / 1000))
-
-  // Fire expiry callback exactly once when the clock hits zero.
-  useEffect(() => {
-    if (connectedAt != null && remaining === 0)
-      onExpire()
-  }, [connectedAt, remaining, onExpire])
-
-  return <span className="text-sm font-bold tabular-nums">{formatDuration(remaining)}</span>
 }
 
 function IntelligencePanel({
