@@ -20,3 +20,8 @@ def test_empty_string():
 
 def test_non_chinese_passthrough():
     assert normalize_chinese("hello world") == "hello world"
+
+
+def test_punctuation_preserved():
+    # Punctuation must not be dropped or garbled by OpenCC's separator regex
+    assert normalize_chinese("這，那") == "这，那"

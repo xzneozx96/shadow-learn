@@ -32,8 +32,10 @@ export interface AgentDisconnectButtonProps
   children?: React.ReactNode
   /**
    * The callback for when the button is clicked.
+   * If it returns a Promise, `end()` is deferred until the Promise resolves —
+   * allowing async work (e.g. evaluation RPC) to finish before disconnecting.
    */
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void | Promise<void>
 }
 
 /**
@@ -56,8 +58,8 @@ export function AgentDisconnectButton({
   ...props
 }: AgentDisconnectButtonProps) {
   const { end } = useSessionContext()
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    onClick?.(event)
+  const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    await onClick?.(event)
     if (typeof end === 'function') {
       end()
     }

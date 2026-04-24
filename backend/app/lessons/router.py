@@ -20,6 +20,7 @@ from app.lessons.services.audio import (
     probe_upload_duration,
 )
 from app.lessons.services.romanization_provider import get_romanization_provider
+from app.lessons.services.chinese_normalizer import normalize_chinese
 from app.transcription.services.transcription_provider import STTProvider, TranscriptionKeys
 from app.translation.services.translation import translate_segments
 from app.lessons.services.validation import ValidationError, validate_upload_file, validate_youtube_url
@@ -49,6 +50,10 @@ async def _shared_pipeline(
     """Background pipeline: romanization → translate + vocab → assemble → mark job complete."""
     t_pipeline = time.monotonic()
     logger.info("[pipeline] shared_pipeline: start segments=%d source=%s", len(segments), source)
+
+    if source_language.startswith("zh"):
+        jobs[job_id].step = "normalization"
+        segments = [{**seg, "text": normalize_chinese(seg.get("text", ""))} for seg in segments]
 
     jobs[job_id].step = "romanization"
     t0 = time.monotonic()

@@ -103,8 +103,8 @@ export interface AgentControlBarProps extends UseInputControlsProps {
    * @default false
    */
   isChatOpen?: boolean
-  /** The callback for when the user disconnects. */
-  onDisconnect?: () => void
+  /** The callback for when the user disconnects. May return a Promise; `end()` is deferred until it resolves. */
+  onDisconnect?: () => void | Promise<void>
   /** The callback for when the chat is opened or closed. */
   onIsChatOpenChange?: (open: boolean) => void
   /** The callback for when a device error occurs. */

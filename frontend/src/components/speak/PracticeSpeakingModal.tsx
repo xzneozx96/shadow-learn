@@ -18,6 +18,7 @@ import { getSettings } from '@/db'
 import { useSpeakSession } from '@/hooks/useSpeakSession'
 import { API_BASE } from '@/lib/config'
 import { captureSpeakPersonaSelected, captureSpeakSessionAbandoned, captureSpeakSessionCompleted, captureSpeakSessionStarted, captureSpeakSituationSelected } from '@/lib/posthog-events'
+import { fetchSessionEvaluation } from '@/lib/speak-evaluation'
 import { cn } from '@/lib/utils'
 import { ConversationScene } from './ConversationScene'
 import { CustomSituationInput } from './CustomSituationInput'
@@ -84,28 +85,6 @@ function SessionInner({
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null)
   const [agentDisconnected, setAgentDisconnected] = useState(false)
   const [evaluationStatus, setEvaluationStatus] = useState<'idle' | 'generating' | 'complete'>('idle')
-  const evaluationStatusRef = useRef(evaluationStatus)
-  const timeoutRef = useRef<number | null>(null)
-  const fallbackTimerRef = useRef<number | null>(null)
-  useEffect(() => {
-    evaluationStatusRef.current = evaluationStatus
-  }, [evaluationStatus])
-
-  // Fallback: if evaluationStatus becomes 'generating', auto-transition after 15s
-  useEffect(() => {
-    if (evaluationStatus === 'generating') {
-      fallbackTimerRef.current = window.setTimeout(() => {
-        if (evaluationStatusRef.current === 'generating') {
-          setEvaluationStatus('complete')
-        }
-      }, 15000)
-    }
-    return () => {
-      if (fallbackTimerRef.current) {
-        clearTimeout(fallbackTimerRef.current)
-      }
-    }
-  }, [evaluationStatus])
 
   useEffect(() => {
     if (!room)
@@ -204,37 +183,27 @@ function SessionInner({
       }
     })
 
-    room.registerRpcMethod('session_evaluation', async (data) => {
-      try {
-        const evalData = JSON.parse(data.payload) as SessionEvaluation
-        await updateEvaluation(evalData)
-        setEvaluationStatus('complete')
-        return JSON.stringify({ success: true })
-      }
-      catch (e) {
-        console.error('Failed to parse session evaluation:', e)
-        return JSON.stringify({ success: false, error: String(e) })
-      }
-    })
-
-    // Listen for evaluation started signal (shows loading screen)
-    room.registerRpcMethod('session_evaluation_started', async (_data) => {
-      setEvaluationStatus('generating')
-      return JSON.stringify({ success: true })
-    })
-
     return () => {
       room.unregisterRpcMethod('grammar_feedback')
       room.unregisterRpcMethod('next_line_suggestion')
       room.unregisterRpcMethod('cultural_tip')
       room.unregisterRpcMethod('vocab_mastered')
-      room.unregisterRpcMethod('session_evaluation')
-      room.unregisterRpcMethod('session_evaluation_started')
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
     }
   }, [room])
+
+  // Fetch evaluation from agent via RPC before disconnecting from the room.
+  // The agent registers 'request_session_evaluation' and returns JSON in the response.
+  const handleEndWithEvaluation = useCallback(async (session: typeof speakSession) => {
+    try {
+      const evaluation = await fetchSessionEvaluation(room)
+      if (evaluation)
+        await updateEvaluation(evaluation)
+    }
+    catch (e) {
+      console.error('Session evaluation RPC failed, continuing without it:', e)
+    }
+    onEnd(session)
+  }, [room, updateEvaluation, onEnd])
 
   const feedbackHistory = speakSession.feedbacks ?? EMPTY_FEEDBACKS
 
@@ -243,7 +212,7 @@ function SessionInner({
       speakSession={speakSession}
       persona={persona}
       situation={situation}
-      onEnd={onEnd}
+      onEnd={handleEndWithEvaluation}
       nextLineSuggestion={nextLineSuggestion}
       culturalTips={culturalTips}
       vocabTips={vocabTips}
@@ -601,8 +570,8 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     >
       <DialogContent
         className={cn(
-          'p-0 gap-0 overflow-hidden elegant-card transition-all duration-500 ease-in-out',
-          (step === 'active' || step === 'recap') ? 'w-screen h-screen max-w-none! rounded-none' : 'max-w-5xl! min-w-[700px] rounded-xl',
+          'p-0 gap-0 overflow-hidden elegant-card transition-all duration-500 ease-in-out flex flex-col',
+          step === 'active' ? 'w-screen h-screen max-w-none! rounded-none' : step === 'recap' ? 'w-full max-w-5xl! rounded-xl h-[90vh]' : 'w-full max-w-5xl! rounded-xl max-h-[90vh]',
         )}
         showCloseButton={false}
       >
@@ -650,7 +619,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
         {/* Step content */}
         {hasGoogleKey && (
-          <div className={step === 'active' ? '' : 'p-4 overflow-hidden'}>
+          <div className={['preview', 'recap', 'active'].includes(step) ? 'flex-1 min-h-0 overflow-hidden flex flex-col' : 'flex-1 overflow-y-auto custom-scrollbar p-4'}>
             {step === 'language-level' && (
               <LanguageLevelPicker
                 language={targetLanguage}

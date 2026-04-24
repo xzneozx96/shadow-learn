@@ -203,56 +203,36 @@ async def shadowlearn_session(ctx: agents.JobContext):
         api_key=google_key or os.getenv("GOOGLE_API_KEY", ""),
     )
 
-    # Start Observer agent (pronunciation removed - not feasible with OpenAI Realtime)
+    # Pass ctx.room directly so the observer can deliver RPC without going through
+    # session.room_io (which becomes unavailable after session.shutdown()).
     observer = await start_observer(
         session=session,
         llm=observer_llm,
+        room=ctx.room,
     )
 
-    # Handle disconnect
+    # Handle disconnect — log only; room_io closes the session automatically
+    # when the user participant leaves (CloseReason.PARTICIPANT_DISCONNECTED).
     def on_participant_disconnected(p: rtc.RemoteParticipant):
         if p.identity == user_identity:
             logger.warning(f"[LIFECYCLE] {p.identity} disconnected — shutting down")
-            session.shutdown()
 
     ctx.room.on("participant_disconnected", on_participant_disconnected)
 
-    # Handle session close — evaluate before disconnecting so the RPC can deliver
     @session.on("close")
     def on_session_close(event):
         logger.warning(f"[SESSION] closed — reason={event.reason}, error={event.error}")
-        
-        # Try to notify frontend while room is still connected
-        # We need to run async code in sync callback - use create_task but fire notification first
-        async def _notify_and_evaluate():
-            try:
-                room = ctx.room
-                remote_participants = list(room.remote_participants.values())
-                if remote_participants:
-                    target_identity = remote_participants[0].identity
-                    await room.local_participant.perform_rpc(
-                        destination_identity=target_identity,
-                        method="session_evaluation_started",
-                        payload=json.dumps({"started": True}),
-                    )
-                    logger.info("[SESSION] Notified frontend: evaluation starting")
-            except Exception as e:
-                logger.warning(f"[SESSION] Failed to notify frontend: {e}")
-            
-            # Now run evaluation
-            try:
-                evaluation = await observer.evaluate_session()
-                await observer._stream_feedback({
-                    "type": "session-evaluation",
-                    **evaluation,
-                })
-            except Exception as e:
-                logger.error(f"[SESSION] Evaluation failed: {e}")
-            finally:
-                await ctx.room.disconnect()
-                ctx.shutdown()
-        
-        asyncio.create_task(_notify_and_evaluate())
+
+    # Frontend-initiated evaluation: the frontend calls performRpc before disconnecting.
+    # The agent runs the LLM evaluation and returns JSON in the RPC response.
+    # This keeps the user in the room until the evaluation is delivered.
+    @ctx.room.local_participant.register_rpc_method("request_session_evaluation")
+    async def _handle_eval_rpc(data):
+        logger.info("[EVAL] Evaluation requested via RPC")
+        # evaluate_session() never raises — it returns a valid fallback on any failure
+        evaluation = await observer.evaluate_session()
+        logger.info("[EVAL] Evaluation complete, returning to frontend")
+        return json.dumps(evaluation)
     
     # Start session with PersonaAgent.
     # PersonaAgent.on_enter() fires the opening line from situation_config.
@@ -269,36 +249,6 @@ async def shadowlearn_session(ctx: agents.JobContext):
             ),
         ),
     )
-
-async def _evaluate_and_disconnect(observer, ctx) -> None:
-    """Run session evaluation, stream result, then disconnect the room."""
-    # Send notification FIRST (before any await) so frontend knows evaluation is starting
-    try:
-        room = ctx.room
-        remote_participants = list(room.remote_participants.values())
-        if remote_participants:
-            target_identity = remote_participants[0].identity
-            await room.local_participant.perform_rpc(
-                destination_identity=target_identity,
-                method="session_evaluation_started",
-                payload=json.dumps({"started": True}),
-            )
-            logger.info("[SESSION] Notified frontend: evaluation starting")
-    except Exception as e:
-        logger.warning(f"[SESSION] Failed to notify frontend: {e}")
-    
-    try:
-        evaluation = await observer.evaluate_session()
-        await observer._stream_feedback({
-            "type": "session-evaluation",
-            **evaluation,
-        })
-    except Exception as e:
-        logger.error(f"[SESSION] Evaluation failed: {e}")
-    finally:
-        await ctx.room.disconnect()
-        ctx.shutdown()
-
 
 if __name__ == "__main__":
     agents.cli.run_app(server)

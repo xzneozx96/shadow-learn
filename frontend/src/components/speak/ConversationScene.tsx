@@ -18,7 +18,7 @@ interface ConversationSceneProps {
   speakSession: SpeakSession
   persona: Persona
   situation: SpeakSituation
-  onEnd: (session: SpeakSession) => void
+  onEnd: (session: SpeakSession) => void | Promise<void>
   nextLineSuggestion?: NextLineSuggestion | null
   culturalTips?: Array<{ type: string, phrase: string, explanation: string }>
   vocabTips?: Array<{ type: string, word: string, reason: string }>
@@ -335,7 +335,7 @@ function ConversationSceneInner({
       }))
       await onTranscriptUpdate(transcript)
     }
-    onEnd(speakSession)
+    await onEnd(speakSession)
   }, [onEnd, speakSession, chatMessages, onTranscriptUpdate, setEvaluationStatus])
 
   // Timer expiry must flush the transcript the same way an explicit END CALL
@@ -351,7 +351,7 @@ function ConversationSceneInner({
   return (
     <div className="flex h-full bg-background relative overflow-hidden">
       {/* Left Panel: Intelligence */}
-      <div className="w-90 shrink-0 border-r border-border">
+      <div className="w-70 xl:w-90 shrink-0 border-r border-border">
         <IntelligencePanel
           nextLineSuggestion={nextLineSuggestion}
           culturalTips={culturalTips}
@@ -474,7 +474,7 @@ function ConversationSceneInner({
       </div>
 
       {/* Right Panel: Grammar */}
-      <div className="w-90 shrink-0 border-l border-border">
+      <div className="w-70 xl:w-90 shrink-0 border-l border-border">
         <GrammarPanel feedback={selectedFeedback} />
       </div>
 

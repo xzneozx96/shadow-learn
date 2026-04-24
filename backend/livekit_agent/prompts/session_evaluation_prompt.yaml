@@ -17,11 +17,10 @@ prompt: |
 
   Provide a JSON response with exactly these fields:
   {{
-    "strengths": ["what the learner did well - 2 items max"],
-    "areas_to_improve": ["specific grammar/language points to work on - 2 items max"],
-    "vocabulary_mastered": ["words used correctly from target vocab"],
-    "vocabulary_to_practice": ["target words not yet used"],
-    "suggestions": ["specific actionable suggestions to improve - 2 items max"]
+    "type": "session-evaluation",
+    "strengths": ["what the learner did well - 2 items max, in {interface_language}"],
+    "areas_to_improve": ["specific grammar/language points to work on - 2 items max, in {interface_language}"],
+    "vocabulary_mastered": ["words used correctly from target vocab, in {interface_language}"],
+    "vocabulary_to_practice": ["target words not yet used, in {interface_language}"],
+    "suggestions": ["specific actionable suggestions to improve - 2 items max, in {interface_language}"]
   }}
-
-  IMPORTANT: Write ALL response text in {interface_language}.

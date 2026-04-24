@@ -534,6 +534,11 @@ export const TRANSLATIONS = {
     'speak.preview.vocab': 'Key vocabulary',
     'speak.preview.startSession': 'Start session',
     'speak.preview.regenerate': 'Regenerate',
+    'speak.eval.strengths': 'What you did well',
+    'speak.eval.areasToImprove': 'Areas to improve',
+    'speak.eval.vocabMastered': 'Vocabulary mastered',
+    'speak.eval.vocabToPractice': 'Keep practicing',
+    'speak.eval.suggestions': 'Tips for next time',
   },
   vi: {
     // Navigation
@@ -1061,6 +1066,11 @@ export const TRANSLATIONS = {
     'speak.preview.vocab': 'Từ vựng chính',
     'speak.preview.startSession': 'Bắt đầu',
     'speak.preview.regenerate': 'Tạo lại',
+    'speak.eval.strengths': 'Điểm tốt',
+    'speak.eval.areasToImprove': 'Cần cải thiện',
+    'speak.eval.vocabMastered': 'Từ vựng đã dùng',
+    'speak.eval.vocabToPractice': 'Cần luyện thêm',
+    'speak.eval.suggestions': 'Gợi ý cho lần sau',
   },
 } satisfies Record<Locale, Record<string, string>>
 

@@ -42,6 +42,7 @@ class ObserverAgent:
         self,
         session,
         llm,
+        room=None,
     ):
         """Initialize the observer agent.
 
@@ -53,6 +54,7 @@ class ObserverAgent:
         """
         self.session = session
         self.llm = llm
+        self._room = room
 
         # Load evaluation prompts
         self.observer_prompt = load_prompt("observer_prompt.yaml")
@@ -590,9 +592,9 @@ class ObserverAgent:
         Args:
             data: Feedback data to send (grammar issues or next-line suggestion)
         """
-        # Get room via room_io (LiveKit 1.x pattern)
+        # Use direct room reference if provided; fall back to session.room_io.room
         try:
-            room = self.session.room_io.room
+            room = self._room or self.session.room_io.room
         except (AttributeError, RuntimeError) as e:
             logger.warning(f"No room available for streaming: {e}")
             return
@@ -620,8 +622,6 @@ class ObserverAgent:
                 method_name = "cultural_tip"
             elif data["type"] == "vocab-mastered":
                 method_name = "vocab_mastered"
-            elif data["type"] == "session-evaluation":
-                method_name = "session_evaluation"
             else:
                 logger.warning(f"[OBSERVER] Unknown feedback type: {data.get('type')} — dropping")
                 return
@@ -637,17 +637,22 @@ class ObserverAgent:
             logger.error(f"Failed to stream feedback via RPC: {e}")
 
     async def evaluate_session(self) -> dict:
-        """Generate rich session evaluation summary."""
+        """Generate rich session evaluation summary. Never raises — always returns a valid dict."""
+        try:
+            return await self._evaluate_session_inner()
+        except Exception as e:
+            logger.error(f"[OBSERVER] evaluate_session failed: {e}")
+            return self._fallback_evaluation()
 
+    async def _evaluate_session_inner(self) -> dict:
         transcript = "\n".join([
             f"{m['role']}: {m['text'][:150]}"
-            for m in self.conversation_history[-20:]  # Last 20 messages
+            for m in self.conversation_history[-20:]
         ])
-        
+
         target = ", ".join(self._target_vocab) if self._target_vocab else "none"
         used = ", ".join(self._used_vocab) if self._used_vocab else "none"
-        
-        # Get interface language from session userdata
+
         try:
             userdata = self.session.userdata
             config = getattr(userdata, "situation_config", None)
@@ -657,32 +662,32 @@ class ObserverAgent:
                 interface_language = "vi"
         except Exception:
             interface_language = "vi"
-        
+
         interface_lang_name = _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language)
-        
+
         prompt_template = load_prompt("session_evaluation_prompt.yaml")
         if not prompt_template:
             return self._fallback_evaluation()
-        
+
         prompt = prompt_template.format(
             transcript=transcript[:2000],
             target_vocab=target,
             used_vocab=used,
             interface_language=interface_lang_name
         )
-        
+
         chat_ctx = ChatContext()
         chat_ctx.add_message(role="user", content=prompt)
-        
+
         response = ""
         async with self.llm.chat(chat_ctx=chat_ctx) as stream:
             async for chunk in stream:
                 if chunk.delta and chunk.delta.content:
                     response += chunk.delta.content
-        
+
         if not response:
             return self._fallback_evaluation()
-        
+
         try:
             result = json.loads(response.strip())
             return result
@@ -693,6 +698,7 @@ class ObserverAgent:
         """Fallback evaluation if LLM fails."""
         unused = [w for w in self._target_vocab if w not in self._used_vocab]
         return {
+            "type": "session-evaluation",
             "strengths": ["Kept conversation going"],
             "areas_to_improve": [],
             "vocabulary_mastered": list(self._used_vocab),
@@ -704,12 +710,14 @@ class ObserverAgent:
 async def start_observer(
     session,
     llm,
+    room=None,
 ) -> ObserverAgent:
     """Start the observer agent for a session.
 
     Args:
         session: AgentSession to monitor
         llm: LLM instance for evaluation
+        room: Optional direct room reference for RPC delivery
 
     Returns:
         ObserverAgent instance
@@ -719,6 +727,7 @@ async def start_observer(
     observer = ObserverAgent(
         session=session,
         llm=llm,
+        room=room,
     )
     observer.initialize_from_userdata()
 
