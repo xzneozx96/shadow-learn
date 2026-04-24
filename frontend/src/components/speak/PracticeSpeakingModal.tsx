@@ -217,16 +217,27 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   // renders), so calling handleAbandonedSession() in the render body could fire the PostHog event
   // more than once. useEffect only runs after a committed render.
   useEffect(() => {
-    if (open) return
+    if (open) {
+      return
+    }
     void handleAbandonedSession()
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setStep('language-level')
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setSituation(null)
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setPersona(null)
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setProficiencyLevel(null)
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setError(null)
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setTokenSource(null)
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setPendingToken(null)
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setSituationPreview(null)
+    // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
     setIsCustomSituation(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
