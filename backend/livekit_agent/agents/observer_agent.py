@@ -593,6 +593,19 @@ class ObserverAgent:
         )
         logger.info(f"[OBSERVER] Injecting correction cue (user-role): {cue[:80]}...")
 
+        # Wait for any in-progress model turn to finish before injecting.
+        # Gemini Live API rejects send_client_content during an active model turn
+        # with 1008 policy violation ("Operation is not implemented, or supported,
+        # or enabled"). See livekit/agents#4545 and Google Live API docs:
+        # send_client_content is only valid between turns, not mid-generation.
+        current_speech = self.session.current_speech
+        if current_speech is not None and not current_speech.done():
+            logger.info("[OBSERVER] Waiting for active model turn before injecting hint")
+            try:
+                await current_speech
+            except Exception as e:
+                logger.debug(f"current_speech wait ended: {e}")
+
         try:
             chat_ctx = current_agent.chat_ctx.copy()
             chat_ctx.add_message(role="user", content=cue)

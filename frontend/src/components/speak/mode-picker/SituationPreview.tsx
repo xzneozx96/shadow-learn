@@ -1,4 +1,4 @@
-import type { SituationPreviewData } from './types'
+import type { SituationPreviewData } from '../types'
 import { BookOpen, MapPin, MessageSquareQuote, RefreshCw, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DialogFooter } from '@/components/ui/dialog'

@@ -1,4 +1,4 @@
-import type { GeneratedSituation } from './types'
+import type { GeneratedSituation } from '../types'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'

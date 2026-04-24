@@ -1,175 +1,39 @@
 import type { TokenSourceLiteral } from 'livekit-client'
-import type { ProficiencyLevel } from './LanguageLevelPicker'
+import type { ProficiencyLevel } from './mode-picker/LanguageLevelPicker'
 import type { GeneratedSituation, SessionStartApiResponse, SituationPreviewData } from './types'
 import type { SpeakSessionValue } from '@/contexts/SpeakSessionContext'
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
-import type { GrammarFeedback, SpeakSituation } from '@/types'
-import { useRoomContext, useSession, useSessionMessages } from '@livekit/components-react'
+import type { SpeakSituation } from '@/types'
 import { TokenSource } from 'livekit-client'
 import { ChevronLeftIcon, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript'
-import { AgentSessionProvider } from '@/components/agents-ui/agent-session-provider'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
-import { SpeakSessionProvider, useSpeakSession as useSpeakSessionContext } from '@/contexts/SpeakSessionContext'
+import { SpeakSessionProvider } from '@/contexts/SpeakSessionContext'
 import { getSettings } from '@/db'
-import { useAgentRpc } from '@/hooks/useAgentRpc'
 import { useSpeakSession } from '@/hooks/useSpeakSession'
 import { API_BASE } from '@/lib/config'
 import { captureSpeakPersonaSelected, captureSpeakSessionAbandoned, captureSpeakSessionCompleted, captureSpeakSessionStarted, captureSpeakSituationSelected } from '@/lib/posthog-events'
-import { fetchSessionEvaluation } from '@/lib/speak-evaluation'
 import { cn } from '@/lib/utils'
-import { ConversationScene, GrammarPanel, IntelligencePanel } from './ConversationScene'
-import { CustomSituationInput } from './CustomSituationInput'
-import { LanguageLevelPicker } from './LanguageLevelPicker'
-import { PersonaPicker } from './PersonaPicker'
-import { SessionOverlays } from './SessionOverlays'
-import { SessionRecap } from './SessionRecap'
-import { SituationPicker } from './SituationPicker'
-import { SituationPreview } from './SituationPreview'
-import { isSupportedSpeakLanguage } from './speak-languages'
+import { CustomSituationInput } from './mode-picker/CustomSituationInput'
+import { LanguageLevelPicker } from './mode-picker/LanguageLevelPicker'
+import { PersonaPicker } from './mode-picker/PersonaPicker'
+import { SituationPicker } from './mode-picker/SituationPicker'
+import { SituationPreview } from './mode-picker/SituationPreview'
+import { getLevelLabel, isSupportedSpeakLanguage } from './speak-languages'
+import { SessionInner } from './speaking-session/SessionInner'
+import { SessionRecap } from './speaking-session/SessionRecap'
+import { SessionWrapper } from './speaking-session/SessionWrapper'
 
 type Step = 'language-level' | 'persona' | 'situation' | 'custom' | 'preview' | 'active' | 'recap'
 
 interface PracticeSpeakingModalProps {
   open: boolean
   onClose: () => void
-}
-
-// Hoisted empty default so the identity is stable across renders — prevents
-// ConversationScene's feedbackHistory prop from changing every render.
-const EMPTY_FEEDBACKS: Record<string, GrammarFeedback> = {}
-
-const PROFICIENCY_LABELS: Record<string, Record<ProficiencyLevel, string>> = {
-  'zh-CN': { beginner: 'HSK 1-2', intermediate: 'HSK 3-4', advanced: 'HSK 5-6' },
-  'zh-TW': { beginner: 'TOCFL A1-A2', intermediate: 'TOCFL B1-B2', advanced: 'TOCFL C1-C2' },
-  'ja': { beginner: 'JLPT N5-N4', intermediate: 'JLPT N3-N2', advanced: 'JLPT N1' },
-  'ko': { beginner: 'TOPIK I', intermediate: 'TOPIK II 3-4', advanced: 'TOPIK II 5-6' },
-  'en': { beginner: 'CEFR A1-A2', intermediate: 'CEFR B1-B2', advanced: 'CEFR C1-C2' },
-  'vi': { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' },
-}
-
-function getLevelLabel(language: string, level: ProficiencyLevel): string {
-  return PROFICIENCY_LABELS[language]?.[level] ?? level
-}
-
-// Renders inside AgentSessionProvider — session hooks are available here
-function SessionInner() {
-  const {
-    speakSession,
-    situation,
-    onEnd,
-    onTranscriptUpdate,
-    onFeedbackUpdate,
-    updateEvaluation,
-    onViewRecap,
-    onRetry,
-  } = useSpeakSessionContext()
-  const room = useRoomContext()
-  const { messages: chatMessages } = useSessionMessages()
-  const [evaluationStatus, setEvaluationStatus] = useState<'idle' | 'generating' | 'complete'>('idle')
-
-  const chatMessagesRef = useRef(chatMessages)
-  useEffect(() => { chatMessagesRef.current = chatMessages }, [chatMessages])
-
-  const rpc = useAgentRpc(room, {
-    messagesRef: chatMessagesRef,
-    onFeedbackUpdate,
-  })
-
-  const handleEndWithEvaluation = useCallback(async () => {
-    setEvaluationStatus('generating')
-    if (onTranscriptUpdate) {
-      const transcript = chatMessagesRef.current.map(m => ({
-        id: m.id,
-        role: m.from?.isLocal ? 'user' as const : 'assistant' as const,
-        content: m.message || '',
-        timestamp: m.timestamp ? new Date(m.timestamp).toISOString() : new Date().toISOString(),
-      }))
-      await onTranscriptUpdate(transcript)
-    }
-    try {
-      const evaluation = await fetchSessionEvaluation(room)
-      if (evaluation)
-        await updateEvaluation(evaluation)
-    }
-    catch (e) {
-      console.error('Session evaluation RPC failed, continuing without it:', e)
-    }
-    onEnd(speakSession)
-  }, [room, speakSession, onEnd, onTranscriptUpdate, updateEvaluation])
-
-  const feedbackHistory = speakSession.feedbacks ?? EMPTY_FEEDBACKS
-
-  const targetVocab = useMemo(
-    () => situation.target_vocab?.map(v => typeof v === 'string' ? v : v.term) ?? [],
-    [situation.target_vocab],
-  )
-
-  const selectedFeedback = rpc.selectedMsgId ? feedbackHistory[rpc.selectedMsgId] : null
-
-  return (
-    <ConversationScene
-      onEnd={handleEndWithEvaluation}
-      transcript={(
-        <AgentChatTranscript
-          agentState={undefined}
-          messages={chatMessages}
-          feedbacks={feedbackHistory}
-          onSelectFeedback={rpc.setSelectedMsgId}
-          className="absolute inset-0"
-        />
-      )}
-      intelligencePanel={(
-        <IntelligencePanel
-          nextLineSuggestion={rpc.nextLineSuggestion}
-          culturalTips={rpc.culturalTips}
-          vocabTips={rpc.vocabTips}
-          masteredVocab={rpc.masteredVocab}
-          targetVocab={targetVocab}
-        />
-      )}
-      grammarPanel={<GrammarPanel feedback={selectedFeedback} />}
-      overlay={(
-        <SessionOverlays
-          evaluationStatus={evaluationStatus}
-          agentDisconnected={rpc.agentDisconnected}
-          onRetry={onRetry}
-          onViewRecap={onViewRecap}
-        />
-      )}
-    />
-  )
-}
-
-// Thin shell: owns LiveKit session lifecycle
-function SessionWrapper({ tokenSource, children }: { tokenSource: TokenSourceLiteral, children: React.ReactNode }) {
-  const livekitSession = useSession(tokenSource, { agentName: 'shadowlearn-speak' })
-
-  // Mount-only: start the LiveKit session once, end on unmount.
-  // Parent component keys <SessionWrapper> by currentSession.sessionId, so a
-  // new session naturally remounts this.
-  useEffect(() => {
-    livekitSession.start({
-      tracks: {
-        microphone: { enabled: false },
-      },
-    })
-    return () => {
-      livekitSession.end()
-    }
-  }, [])
-
-  return (
-    <AgentSessionProvider session={livekitSession}>
-      {children}
-    </AgentSessionProvider>
-  )
 }
 
 export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalProps) {

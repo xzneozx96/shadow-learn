@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { SpeakSessionValue } from '../src/contexts/SpeakSessionContext'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { ConversationScene } from '../src/components/speak/ConversationScene'
+import { ConversationScene } from '../src/components/speak/speaking-session/ConversationScene'
 import { SpeakSessionProvider } from '../src/contexts/SpeakSessionContext'
 
 vi.mock('@livekit/components-react', async (importOriginal) => {

@@ -1,7 +1,7 @@
+import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
-import { Button } from '../ui/button'
-import { SPEAK_LANGUAGES } from './speak-languages'
+import { SPEAK_LANGUAGES } from '../speak-languages'
 
 export type ProficiencyLevel = 'beginner' | 'intermediate' | 'advanced'
 
