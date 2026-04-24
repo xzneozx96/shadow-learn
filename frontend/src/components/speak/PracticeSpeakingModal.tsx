@@ -3,27 +3,32 @@ import type { ProficiencyLevel } from './LanguageLevelPicker'
 import type { GeneratedSituation, SessionStartApiResponse, SituationPreviewData } from './types'
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
-import type { CulturalTip, GrammarFeedback, NextLineSuggestion, SessionEvaluation, SpeakSituation, VocabTip } from '@/types'
+import type { SpeakSessionValue } from '@/contexts/SpeakSessionContext'
+import type { SpeakSituation } from '@/types'
 import { useRoomContext, useSession, useSessionMessages } from '@livekit/components-react'
-import { ParticipantKind, RoomEvent, TokenSource } from 'livekit-client'
+import { TokenSource } from 'livekit-client'
 import { ChevronLeftIcon, X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript'
 import { AgentSessionProvider } from '@/components/agents-ui/agent-session-provider'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { SpeakSessionProvider, useSpeakSession as useSpeakSessionContext } from '@/contexts/SpeakSessionContext'
 import { getSettings } from '@/db'
+import { useAgentRpc } from '@/hooks/useAgentRpc'
 import { useSpeakSession } from '@/hooks/useSpeakSession'
 import { API_BASE } from '@/lib/config'
 import { captureSpeakPersonaSelected, captureSpeakSessionAbandoned, captureSpeakSessionCompleted, captureSpeakSessionStarted, captureSpeakSituationSelected } from '@/lib/posthog-events'
 import { fetchSessionEvaluation } from '@/lib/speak-evaluation'
 import { cn } from '@/lib/utils'
-import { ConversationScene } from './ConversationScene'
+import { ConversationScene, GrammarPanel, IntelligencePanel } from './ConversationScene'
 import { CustomSituationInput } from './CustomSituationInput'
 import { isSupportedSpeakLanguage, LanguageLevelPicker } from './LanguageLevelPicker'
 import { PersonaPicker } from './PersonaPicker'
+import { SessionOverlays } from './SessionOverlays'
 import { SessionRecap } from './SessionRecap'
 import { SituationPicker } from './SituationPicker'
 import { SituationPreview } from './SituationPreview'
@@ -52,148 +57,41 @@ function getLevelLabel(language: string, level: ProficiencyLevel): string {
   return PROFICIENCY_LABELS[language]?.[level] ?? level
 }
 
-interface SessionInnerProps {
-  speakSession: SpeakSession
-  persona: Persona
-  situation: SpeakSituation
-  onEnd: (speakSession: SpeakSession) => void
-  onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
-  onFeedbackUpdate?: (turnId: string, feedback: GrammarFeedback) => Promise<void>
-  updateEvaluation: (evaluation: SessionEvaluation | null) => Promise<void>
-  onViewRecap: () => void
-  onRetry: () => void
-}
-
 // Renders inside AgentSessionProvider — session hooks are available here
-function SessionInner({
-  speakSession,
-  persona,
-  situation,
-  onEnd,
-  onTranscriptUpdate,
-  onFeedbackUpdate,
-  updateEvaluation,
-  onViewRecap,
-  onRetry,
-}: SessionInnerProps) {
+function SessionInner() {
+  const {
+    speakSession,
+    situation,
+    onEnd,
+    onTranscriptUpdate,
+    onFeedbackUpdate,
+    updateEvaluation,
+    onViewRecap,
+    onRetry,
+  } = useSpeakSessionContext()
   const room = useRoomContext()
   const { messages: chatMessages } = useSessionMessages()
-  const [nextLineSuggestion, setNextLineSuggestion] = useState<NextLineSuggestion | null>(null)
-  const [culturalTips, setCulturalTips] = useState<CulturalTip[]>([])
-  const [vocabTips, setVocabTips] = useState<VocabTip[]>([])
-  const [masteredVocab, setMasteredVocab] = useState<Set<string>>(new Set())
-  const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null)
-  const [agentDisconnected, setAgentDisconnected] = useState(false)
   const [evaluationStatus, setEvaluationStatus] = useState<'idle' | 'generating' | 'complete'>('idle')
 
-  useEffect(() => {
-    if (!room)
-      return
-    const handleDisconnect = (participant: { kind: number }) => {
-      if (participant.kind === ParticipantKind.AGENT)
-        setAgentDisconnected(true)
+  const chatMessagesRef = useRef(chatMessages)
+  useEffect(() => { chatMessagesRef.current = chatMessages }, [chatMessages])
+
+  const rpc = useAgentRpc(room, {
+    messagesRef: chatMessagesRef,
+    onFeedbackUpdate,
+  })
+
+  const handleEndWithEvaluation = useCallback(async () => {
+    setEvaluationStatus('generating')
+    if (onTranscriptUpdate) {
+      const transcript = chatMessagesRef.current.map(m => ({
+        id: m.id,
+        role: m.from?.isLocal ? 'user' as const : 'assistant' as const,
+        content: m.message || '',
+        timestamp: m.timestamp ? new Date(m.timestamp).toISOString() : new Date().toISOString(),
+      }))
+      await onTranscriptUpdate(transcript)
     }
-    room.on(RoomEvent.ParticipantDisconnected, handleDisconnect)
-    return () => {
-      room.off(RoomEvent.ParticipantDisconnected, handleDisconnect)
-    }
-  }, [room])
-
-  const messagesRef = useRef(chatMessages)
-  useEffect(() => {
-    messagesRef.current = chatMessages
-  }, [chatMessages])
-
-  // Keep the latest onFeedbackUpdate in a ref so the RPC-registration effect
-  // doesn't re-register on every render.
-  const onFeedbackUpdateRef = useRef(onFeedbackUpdate)
-  useEffect(() => {
-    onFeedbackUpdateRef.current = onFeedbackUpdate
-  }, [onFeedbackUpdate])
-
-  useEffect(() => {
-    if (!room)
-      return
-
-    room.registerRpcMethod('grammar_feedback', async (data) => {
-      try {
-        const feedback = JSON.parse(data.payload) as GrammarFeedback
-
-        const fbText = feedback.transcript.toLowerCase().trim()
-        const match = [...messagesRef.current].reverse().find((m) => {
-          if (!m.from?.isLocal)
-            return false
-          const msgText = m.message?.toLowerCase().trim()
-          if (!msgText)
-            return false
-          return msgText === fbText || fbText.includes(msgText)
-        })
-        if (match) {
-          setSelectedMsgId(match.id)
-          await onFeedbackUpdateRef.current?.(match.id, feedback)
-        }
-
-        return JSON.stringify({ success: true })
-      }
-      catch (e) {
-        console.error('Failed to parse grammar feedback:', e)
-        return JSON.stringify({ success: false, error: String(e) })
-      }
-    })
-
-    room.registerRpcMethod('next_line_suggestion', async (data) => {
-      try {
-        const payload = JSON.parse(data.payload)
-        setNextLineSuggestion(payload)
-
-        // Handle merged vocab tip
-        if (payload.vocab_tip && payload.vocab_tip.word) {
-          setVocabTips(prev => [...prev, payload.vocab_tip])
-        }
-
-        return JSON.stringify({ success: true })
-      }
-      catch (e) {
-        console.error('Failed to parse next line suggestion:', e)
-        return JSON.stringify({ success: false, error: String(e) })
-      }
-    })
-
-    room.registerRpcMethod('cultural_tip', async (data) => {
-      try {
-        const tip = JSON.parse(data.payload) as CulturalTip
-        setCulturalTips(prev => [...prev, tip])
-        return JSON.stringify({ success: true })
-      }
-      catch (e) {
-        console.error('Failed to parse cultural tip:', e)
-        return JSON.stringify({ success: false, error: String(e) })
-      }
-    })
-
-    room.registerRpcMethod('vocab_mastered', async (data) => {
-      try {
-        const { word } = JSON.parse(data.payload)
-        setMasteredVocab(prev => new Set(prev).add(word))
-        return JSON.stringify({ success: true })
-      }
-      catch (e) {
-        console.error('Failed to parse mastered vocab:', e)
-        return JSON.stringify({ success: false, error: String(e) })
-      }
-    })
-
-    return () => {
-      room.unregisterRpcMethod('grammar_feedback')
-      room.unregisterRpcMethod('next_line_suggestion')
-      room.unregisterRpcMethod('cultural_tip')
-      room.unregisterRpcMethod('vocab_mastered')
-    }
-  }, [room])
-
-  // Fetch evaluation from agent via RPC before disconnecting from the room.
-  // The agent registers 'request_session_evaluation' and returns JSON in the response.
-  const handleEndWithEvaluation = useCallback(async (session: typeof speakSession) => {
     try {
       const evaluation = await fetchSessionEvaluation(room)
       if (evaluation)
@@ -202,69 +100,59 @@ function SessionInner({
     catch (e) {
       console.error('Session evaluation RPC failed, continuing without it:', e)
     }
-    onEnd(session)
-  }, [room, updateEvaluation, onEnd])
+    onEnd(speakSession)
+  }, [room, speakSession, onEnd, onTranscriptUpdate, updateEvaluation])
 
   const feedbackHistory = speakSession.feedbacks ?? EMPTY_FEEDBACKS
 
+  const targetVocab = useMemo(
+    () => situation.target_vocab?.map(v => typeof v === 'string' ? v : v.term) ?? [],
+    [situation.target_vocab],
+  )
+
+  const selectedFeedback = rpc.selectedMsgId ? feedbackHistory[rpc.selectedMsgId] : null
+
   return (
     <ConversationScene
-      speakSession={speakSession}
-      persona={persona}
-      situation={situation}
       onEnd={handleEndWithEvaluation}
-      nextLineSuggestion={nextLineSuggestion}
-      culturalTips={culturalTips}
-      vocabTips={vocabTips}
-      masteredVocab={masteredVocab}
-      feedbackHistory={feedbackHistory}
-      selectedMsgId={selectedMsgId}
-      onSelectFeedback={setSelectedMsgId}
-      onTranscriptUpdate={onTranscriptUpdate}
-      agentDisconnected={agentDisconnected}
-      evaluationStatus={evaluationStatus}
-      setEvaluationStatus={setEvaluationStatus}
-      onViewRecap={onViewRecap}
-      onRetry={onRetry}
+      transcript={(
+        <AgentChatTranscript
+          agentState={undefined}
+          messages={chatMessages}
+          feedbacks={feedbackHistory}
+          onSelectFeedback={rpc.setSelectedMsgId}
+          className="absolute inset-0"
+        />
+      )}
+      intelligencePanel={(
+        <IntelligencePanel
+          nextLineSuggestion={rpc.nextLineSuggestion}
+          culturalTips={rpc.culturalTips}
+          vocabTips={rpc.vocabTips}
+          masteredVocab={rpc.masteredVocab}
+          targetVocab={targetVocab}
+        />
+      )}
+      grammarPanel={<GrammarPanel feedback={selectedFeedback} />}
+      overlay={(
+        <SessionOverlays
+          evaluationStatus={evaluationStatus}
+          agentDisconnected={rpc.agentDisconnected}
+          onRetry={onRetry}
+          onViewRecap={onViewRecap}
+        />
+      )}
     />
   )
 }
 
-// Thin shell: owns session lifecycle and provides the session context
-function SessionWrapper({
-  tokenSource,
-  speakSession,
-  persona,
-  situation,
-  onEnd,
-  onTranscriptUpdate,
-  onFeedbackUpdate,
-  updateEvaluation,
-  onViewRecap,
-  onRetry,
-}: {
-  tokenSource: TokenSourceLiteral
-  speakSession: SpeakSession
-  persona: Persona
-  situation: SpeakSituation
-  onEnd: (speakSession: SpeakSession) => void
-  onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
-  onFeedbackUpdate?: (turnId: string, feedback: GrammarFeedback) => Promise<void>
-  updateEvaluation: (evaluation: SessionEvaluation | null) => Promise<void>
-  onViewRecap: (speakSession: SpeakSession) => void
-  onRetry: () => void
-}) {
+// Thin shell: owns LiveKit session lifecycle
+function SessionWrapper({ tokenSource, children }: { tokenSource: TokenSourceLiteral, children: React.ReactNode }) {
   const livekitSession = useSession(tokenSource, { agentName: 'shadowlearn-speak' })
-
-  const handleViewRecap = useCallback(() => {
-    onViewRecap(speakSession)
-  }, [onViewRecap, speakSession])
 
   // Mount-only: start the LiveKit session once, end on unmount.
   // Parent component keys <SessionWrapper> by currentSession.sessionId, so a
-  // new session naturally remounts this. Including livekitSession in deps
-  // would fire end()/start() on every parent re-render (e.g. every feedback
-  // RPC) and tear down the room mid-conversation.
+  // new session naturally remounts this.
   useEffect(() => {
     livekitSession.start({
       tracks: {
@@ -278,17 +166,7 @@ function SessionWrapper({
 
   return (
     <AgentSessionProvider session={livekitSession}>
-      <SessionInner
-        speakSession={speakSession}
-        persona={persona}
-        situation={situation}
-        onEnd={onEnd}
-        onTranscriptUpdate={onTranscriptUpdate}
-        onFeedbackUpdate={onFeedbackUpdate}
-        updateEvaluation={updateEvaluation}
-        onViewRecap={handleViewRecap}
-        onRetry={onRetry}
-      />
+      {children}
     </AgentSessionProvider>
   )
 }
@@ -558,6 +436,18 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
 
   const speakSituation: SpeakSituation | null = situation
 
+  const sessionContextValue = useMemo<SpeakSessionValue>(() => ({
+    speakSession: currentSession!,
+    persona: persona!,
+    situation: speakSituation!,
+    onEnd: handleSessionEnd,
+    onRetry: handleRepeat,
+    onViewRecap: () => handleSessionEnd(currentSession!),
+    onFeedbackUpdate: updateFeedback,
+    onTranscriptUpdate: updateTranscript,
+    updateEvaluation,
+  }), [currentSession, persona, speakSituation, handleSessionEnd, handleRepeat, updateFeedback, updateTranscript, updateEvaluation])
+
   return (
     <Dialog
       open={open}
@@ -665,19 +555,11 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
             )}
 
             {step === 'active' && currentSession && persona && speakSituation && tokenSource && (
-              <SessionWrapper
-                key={currentSession.sessionId}
-                tokenSource={tokenSource}
-                speakSession={currentSession}
-                persona={persona}
-                situation={speakSituation}
-                onEnd={handleSessionEnd}
-                onTranscriptUpdate={updateTranscript}
-                onFeedbackUpdate={updateFeedback}
-                updateEvaluation={updateEvaluation}
-                onViewRecap={handleSessionEnd}
-                onRetry={handleRepeat}
-              />
+              <SpeakSessionProvider value={sessionContextValue}>
+                <SessionWrapper key={currentSession.sessionId} tokenSource={tokenSource}>
+                  <SessionInner />
+                </SessionWrapper>
+              </SpeakSessionProvider>
             )}
 
             {step === 'recap' && currentSession && persona && speakSituation && (

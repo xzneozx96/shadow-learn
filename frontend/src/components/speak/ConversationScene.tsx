@@ -1,45 +1,32 @@
-import type { SpeakSession } from '@/db'
-import type { Persona } from '@/lib/constants'
-import type { GrammarFeedback, NextLineSuggestion, SpeakSituation } from '@/types'
-import { useAgent, useLocalParticipant, useSessionMessages } from '@livekit/components-react'
-import { Info, Loader2, Sparkles } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import type { GrammarFeedback, NextLineSuggestion } from '@/types'
+import { useAgent, useLocalParticipant } from '@livekit/components-react'
+import { Info, Sparkles } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
-import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript'
 import { AgentControlBar } from '@/components/agents-ui/agent-control-bar'
 import { SessionTimer } from '@/components/speak/SessionTimer'
-import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
+import { useSpeakSession } from '@/contexts/SpeakSessionContext'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { getPersonaName } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 const MAX_DURATION_SECONDS = 10 * 60
 
-interface ConversationSceneProps {
-  speakSession: SpeakSession
-  persona: Persona
-  situation: SpeakSituation
-  onEnd: (session: SpeakSession) => void | Promise<void>
-  nextLineSuggestion?: NextLineSuggestion | null
-  culturalTips?: Array<{ type: string, phrase: string, explanation: string }>
-  vocabTips?: Array<{ type: string, word: string, reason: string }>
-  masteredVocab: Set<string>
-  feedbackHistory: Record<string, GrammarFeedback>
-  selectedMsgId: string | null
-  onSelectFeedback: (id: string | null) => void
-  onTranscriptUpdate?: (transcript: SpeakSession['transcript']) => Promise<void>
-  agentDisconnected?: boolean
-  evaluationStatus?: 'idle' | 'generating' | 'complete'
-  setEvaluationStatus?: (status: 'idle' | 'generating' | 'complete') => void
-  onViewRecap?: () => void
-  onRetry?: () => void
+export interface ConversationSceneProps {
+  onEnd: () => void | Promise<void>
+  intelligencePanel?: ReactNode
+  grammarPanel?: ReactNode
+  transcript?: ReactNode
+  overlay?: ReactNode
 }
 
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
-function IntelligencePanel({
+export function IntelligencePanel({
   nextLineSuggestion,
   culturalTips,
   vocabTips,
@@ -143,7 +130,7 @@ function IntelligencePanel({
   )
 }
 
-function GrammarPanel({
+export function GrammarPanel({
   feedback,
 }: {
   feedback: GrammarFeedback | null
@@ -202,29 +189,11 @@ function GrammarPanel({
   )
 }
 
-function ConversationSceneInner({
-  speakSession,
-  persona,
-  situation,
-  onEnd,
-  isOffline,
-  nextLineSuggestion,
-  culturalTips,
-  vocabTips,
-  masteredVocab,
-  feedbackHistory,
-  selectedMsgId,
-  onSelectFeedback,
-  onTranscriptUpdate,
-  agentDisconnected,
-  evaluationStatus,
-  setEvaluationStatus,
-  onViewRecap,
-  onRetry,
-}: ConversationSceneProps & { isOffline: boolean }) {
+export function ConversationScene({ onEnd, intelligencePanel, grammarPanel, transcript, overlay }: ConversationSceneProps) {
+  const { persona, situation } = useSpeakSession()
+  const isOffline = !useOnlineStatus()
   const agent = useAgent()
   const { localParticipant } = useLocalParticipant()
-  const { messages: chatMessages } = useSessionMessages()
   const { t, locale } = useI18n()
 
   const isConnected = agent.isConnected
@@ -266,69 +235,34 @@ function ConversationSceneInner({
 
   const controlBarControls = useMemo(() => ({
     leave: true,
-    microphone: true, // Always visible
+    microphone: true,
     camera: false,
     screenShare: false,
     chat: false,
   }), [])
 
-  // Derived during rendering — no state needed.
-  // Show the error only while the agent is failed AND not connected.
-  // When the agent reconnects (isConnected → true), this naturally becomes undefined.
   const agentError = agentState === 'failed' && !isConnected ? agent.failureReasons?.[0] : undefined
 
-  // Capture the moment the agent first connects. Guarded conditional setState during render
-  // is the React-recommended pattern for deriving state from props (avoids useEffect loop).
+  // Capture the moment the agent first connects.
   const [connectedAt, setConnectedAt] = useState<number | null>(null)
   if (isConnected && connectedAt == null)
     setConnectedAt(Date.now())
 
-  const handleEnd = useCallback(async () => {
-    // Set generating BEFORE transitioning - this shows loading screen
-    // so user waits for backend evaluation even on manual end
-    if (setEvaluationStatus) {
-      setEvaluationStatus('generating')
-    }
-    if (onTranscriptUpdate) {
-      const transcript = chatMessages.map(m => ({
-        id: m.id,
-        role: m.from?.isLocal ? 'user' as const : 'assistant' as const,
-        content: m.message || '',
-        timestamp: m.timestamp ? new Date(m.timestamp).toISOString() : new Date().toISOString(),
-      }))
-      await onTranscriptUpdate(transcript)
-    }
-    await onEnd(speakSession)
-  }, [onEnd, speakSession, chatMessages, onTranscriptUpdate, setEvaluationStatus])
-
-  // Timer expiry must flush the transcript the same way an explicit END CALL
-  // does — otherwise the recap renders with an empty transcript (0 turns).
   const handleTimerExpire = useCallback(() => {
-    void handleEnd()
-  }, [handleEnd])
+    void onEnd()
+  }, [onEnd])
 
   const portraitInitials = useMemo(() => getInitials(getPersonaName(persona, locale)), [persona, locale])
-
-  const selectedFeedback = selectedMsgId ? feedbackHistory[selectedMsgId] : null
 
   return (
     <div className="flex h-full bg-background relative overflow-hidden">
       {/* Left Panel: Intelligence */}
       <div className="w-70 xl:w-90 shrink-0 border-r border-border">
-        <IntelligencePanel
-          nextLineSuggestion={nextLineSuggestion}
-          culturalTips={culturalTips}
-          vocabTips={vocabTips}
-          masteredVocab={masteredVocab}
-          targetVocab={situation.target_vocab?.map(v => typeof v === 'string' ? v : v.term) || []}
-        />
+        {intelligencePanel}
       </div>
 
       {/* Center Panel: Conversation */}
-      <div className={cn(
-        'flex flex-col h-full relative p-5 flex-1 min-w-0',
-      )}
-      >
+      <div className={cn('flex flex-col h-full relative p-5 flex-1 min-w-0')}>
         <div className="flex items-center justify-between shrink-0 mb-6 px-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary shrink-0 overflow-hidden shadow-lg">
@@ -416,13 +350,7 @@ function ConversationSceneInner({
         </div>
 
         <div className="flex-1 relative min-h-0 w-full mb-2 px-2">
-          <AgentChatTranscript
-            agentState={agentState}
-            messages={chatMessages}
-            feedbacks={feedbackHistory}
-            onSelectFeedback={onSelectFeedback}
-            className="absolute inset-0"
-          />
+          {transcript}
         </div>
 
         <div className="shrink-0 mt-auto">
@@ -430,7 +358,7 @@ function ConversationSceneInner({
             controls={controlBarControls}
             variant="livekit"
             isConnected={isConnected}
-            onDisconnect={handleEnd}
+            onDisconnect={onEnd}
             saveUserChoices={true}
           />
         </div>
@@ -438,57 +366,10 @@ function ConversationSceneInner({
 
       {/* Right Panel: Grammar */}
       <div className="w-70 xl:w-90 shrink-0 border-l border-border">
-        <GrammarPanel feedback={selectedFeedback} />
+        {grammarPanel}
       </div>
 
-      {evaluationStatus === 'generating'
-        ? (
-            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm gap-4">
-              <Loader2 size={40} className="animate-spin text-primary" />
-              <p className="text-base font-semibold text-foreground">{t('speak.generatingSummary')}</p>
-              <p className="text-sm text-muted-foreground">{t('speak.generatingSummaryHint')}</p>
-            </div>
-          )
-        : agentDisconnected && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm gap-4">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-              <Info size={24} className="text-muted-foreground" />
-            </div>
-            <p className="text-base font-semibold text-foreground">{t('speak.status.disconnected')}</p>
-            <p className="text-sm text-muted-foreground">{t('speak.status.inactivity')}</p>
-            <div className="flex gap-3 mt-2">
-              {onRetry && (
-                <Button size="lg" variant="outline" onClick={onRetry}>
-                  {t('speak.tryAgain')}
-                </Button>
-              )}
-              {onViewRecap && (
-                <Button size="lg" onClick={onViewRecap}>
-                  {t('speak.viewRecap')}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+      {overlay}
     </div>
   )
 }
-
-export const ConversationScene = memo((props: ConversationSceneProps) => {
-  const [isOffline, setIsOffline] = useState(false)
-
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
-
-  return <ConversationSceneInner {...props} isOffline={isOffline} />
-})
-
-ConversationScene.displayName = 'ConversationScene'
