@@ -129,7 +129,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       <div className="relative w-full shrink-0 overflow-hidden rounded-xl transition-transform duration-200" style={{ aspectRatio: '16/9' }}>
         {isProcessing
           ? (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#181818]">
+              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-card">
                 <Loader2 className="size-6 animate-spin text-muted-foreground" />
                 <span className="truncate px-4 text-xs text-muted-foreground">
                   {lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}
