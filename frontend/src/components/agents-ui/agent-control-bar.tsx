@@ -3,7 +3,7 @@ import type { UseInputControlsProps } from '@/hooks/agents-ui/use-agent-control-
 import { Track } from 'livekit-client'
 import { MessageSquareTextIcon } from 'lucide-react'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AgentDisconnectButton } from '@/components/agents-ui/agent-disconnect-button'
 import { AgentTrackControl } from '@/components/agents-ui/agent-track-control'
 import { AgentTrackToggle } from '@/components/agents-ui/agent-track-toggle'
@@ -161,13 +161,16 @@ export function AgentControlBar({
     handleCameraDeviceSelectError,
   } = useInputControls({ onDeviceError, saveUserChoices })
 
-  const visibleControls = {
+  const visibleControls = useMemo(() => ({
     leave: controls?.leave ?? true,
     microphone: controls?.microphone ?? publishPermissions.microphone,
     screenShare: controls?.screenShare ?? publishPermissions.screenShare,
     camera: controls?.camera ?? publishPermissions.camera,
     chat: controls?.chat ?? publishPermissions.data,
-  }
+  }), [
+    controls?.leave, controls?.microphone, controls?.screenShare, controls?.camera, controls?.chat,
+    publishPermissions.microphone, publishPermissions.screenShare, publishPermissions.camera, publishPermissions.data,
+  ])
 
   if (Object.values(visibleControls).every(value => !value))
     return null

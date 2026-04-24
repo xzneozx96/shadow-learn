@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react'
 import type { buttonVariants } from '@/components/ui/button'
 import { useSessionContext } from '@livekit/components-react'
 import { PhoneOffIcon } from 'lucide-react'
+import { useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -58,12 +59,13 @@ export function AgentDisconnectButton({
   ...props
 }: AgentDisconnectButtonProps) {
   const { end } = useSessionContext()
-  const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+
+  const handleClick = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
     await onClick?.(event)
     if (typeof end === 'function') {
       end()
     }
-  }
+  }, [onClick, end])
 
   return (
     <Button size={size} variant={variant} onClick={handleClick} {...props}>

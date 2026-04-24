@@ -212,23 +212,24 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     }
   }, [currentSession, step, endSession])
 
-  // Reset state on close transition — React guide: "adjusting state when a prop changes"
-  const [prevOpen, setPrevOpen] = useState(open)
-  if (open !== prevOpen) {
-    setPrevOpen(open)
-    if (!open) {
-      void handleAbandonedSession()
-      setStep('language-level')
-      setSituation(null)
-      setPersona(null)
-      setProficiencyLevel(null)
-      setError(null)
-      setTokenSource(null)
-      setPendingToken(null)
-      setSituationPreview(null)
-      setIsCustomSituation(false)
-    }
-  }
+  // Reset state on close transition — moved to useEffect to avoid side effects in render body.
+  // React may execute the render function multiple times without committing (StrictMode, concurrent
+  // renders), so calling handleAbandonedSession() in the render body could fire the PostHog event
+  // more than once. useEffect only runs after a committed render.
+  useEffect(() => {
+    if (open) return
+    void handleAbandonedSession()
+    setStep('language-level')
+    setSituation(null)
+    setPersona(null)
+    setProficiencyLevel(null)
+    setError(null)
+    setTokenSource(null)
+    setPendingToken(null)
+    setSituationPreview(null)
+    setIsCustomSituation(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const resetState = useCallback(async () => {
     await handleAbandonedSession()
@@ -432,6 +433,11 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     }
   }, [step, isCustomSituation])
 
+  const handleOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen && step !== 'active')
+      handleClose()
+  }, [step, handleClose])
+
   const canGoBack = ['persona', 'situation', 'custom', 'preview'].includes(step)
 
   const speakSituation: SpeakSituation | null = situation
@@ -451,12 +457,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
   return (
     <Dialog
       open={open}
-      onOpenChange={(isOpen) => {
-        // Only fires for backdrop click and ESC — our own X button calls handleClose() directly.
-        // Block both when the session is active so the user can't accidentally leave mid-call.
-        if (!isOpen && step !== 'active')
-          handleClose()
-      }}
+      onOpenChange={handleOpenChange}
     >
       <DialogContent
         className={cn(
