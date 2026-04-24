@@ -119,7 +119,7 @@ export function IntelligencePanel({
           <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-2">
             <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
               <Info size={14} />
-              Cultural Insight
+              {t('speak.feedbackPanel.culturalInsight')}
             </div>
             <p className="text-base text-foreground font-semibold leading-snug">{culturalTips[0].phrase}</p>
             <p className="text-sm text-blue-200/70 leading-relaxed">{culturalTips[0].explanation}</p>

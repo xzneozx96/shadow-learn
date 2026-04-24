@@ -539,6 +539,7 @@ export const TRANSLATIONS = {
     'speak.eval.vocabMastered': 'Vocabulary mastered',
     'speak.eval.vocabToPractice': 'Keep practicing',
     'speak.eval.suggestions': 'Tips for next time',
+    'speak.feedbackPanel.culturalInsight': 'Cultural Insight',
   },
   vi: {
     // Navigation
@@ -1071,6 +1072,7 @@ export const TRANSLATIONS = {
     'speak.eval.vocabMastered': 'Từ vựng đã dùng',
     'speak.eval.vocabToPractice': 'Cần luyện thêm',
     'speak.eval.suggestions': 'Gợi ý cho lần sau',
+    'speak.feedbackPanel.culturalInsight': 'Hiểu biết văn hóa',
   },
 } satisfies Record<Locale, Record<string, string>>
 
