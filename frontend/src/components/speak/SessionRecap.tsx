@@ -165,7 +165,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
           <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1.5">
             {tr('speak.sessionComplete')}
           </h2>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-[28ch]">
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-80">
             {tr('speak.sessionSuccess', {
               situation: situation.title,
               persona: getPersonaName(persona, locale),

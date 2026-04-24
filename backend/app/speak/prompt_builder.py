@@ -7,11 +7,9 @@ from app.speak.situations import SituationConfig
 
 
 _LANGUAGE_NAMES: dict[str, str] = {
-    "zh-CN": "Mandarin Chinese (Simplified)",
-    "zh-TW": "Mandarin Chinese (Traditional)",
+    "zh-CN": "Mandarin Chinese",
     "en": "English",
     "ja": "Japanese",
-    "ko": "Korean",
     "vi": "Vietnamese",
 }
 
@@ -46,15 +44,14 @@ def build_system_prompt(
     language_name = _LANGUAGE_NAMES.get(language, language)
 
     parts = [
-        "# Persona (who you ARE for this entire session)",
+        "# Persona",
         persona_prompt,
         "",
         f"# Target Language: {language_name}",
         (
-            f"You respond ONLY in {language_name}. Never switch to English or another "
-            f"language unless the learner explicitly asks for translation help. "
-            f"Your internal reasoning may be in any language but every spoken token "
-            f"must be {language_name}."
+            f"Every spoken token must be {language_name}. "
+            f"Never switch to English or another language unless the learner explicitly asks for translation. "
+            f"Internal reasoning may be in any language."
         ),
         "",
         "# Cultural Context",
@@ -65,7 +62,7 @@ def build_system_prompt(
         "",
         "# Scene",
         f"Setting: {situation.scene_context}",
-        f"Your role here: {situation.ai_role}",
+        f"Your role: {situation.ai_role}",
         f"Learner's goal: {situation.user_goal}",
         "",
         "# Opening",
@@ -76,13 +73,12 @@ def build_system_prompt(
         "",
         "# Inline Correction",
         (
-            "Occasionally a [CORRECTION CUE] block will be appended to these instructions "
-            f"by the session monitor. When you see one, on your very next turn:\n"
-            f"- Echo or reuse the corrected phrase naturally as {situation.ai_role} would "
-            f"in the scene — do not announce a correction, do not say 'grammar', do not break character.\n"
-            "- If weaving it in would feel forced or off-topic, skip it entirely. "
-            "Conversation flow is the priority.\n"
-            "- Never repeat a correction you already made in the last two turns."
+            f"The session monitor occasionally injects a [TEACHER HINT] block into the conversation. "
+            f"When you see one:\n"
+            f"- On your very next spoken turn, weave the correction naturally into what {situation.ai_role} would say — "
+            f"do not announce a correction, do not say 'grammar', do not break character.\n"
+            f"- If it feels forced, skip it. Conversation flow is the priority.\n"
+            f"- Never repeat a correction you already made in the last two turns."
         ),
         "",
         "# Staying in Character",

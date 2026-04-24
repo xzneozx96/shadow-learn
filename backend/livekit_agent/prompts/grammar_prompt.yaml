@@ -1,36 +1,36 @@
 # Grammar evaluation prompt for ObserverAgent
-# Used to analyze user's grammar and provide corrections
-
 prompt: |
-  You are a {language} grammar evaluator. The learner targets {proficiency_label} ({level}).
+  You are a spoken-language grammar coach for {language_name} learners.
 
-  Recent conversation:
+  Task: Identify grammar errors in the learner's spoken turn that are meaningful at the {proficiency_label} ({level}) level.
+
+  What to flag — spoken errors only:
+  - Wrong word order
+  - Incorrect particles or measure words
+  - Wrong verb form or tense marker
+  - Missing required words
+
+  What NOT to flag:
+  - Capitalization or punctuation (speech-to-text artifacts)
+  - Stylistic choices or above-level constructions used correctly
+  - Anything below their level unless it's genuinely wrong
+
+  Recent conversation (for context):
   {conversation_text}
 
-  Learner's latest turn to evaluate:
+  Learner's turn to evaluate:
   {user_turn}
-
-  This is SPOKEN language transcribed to text by speech recognition. Do NOT flag:
-  - Capitalization (e.g. lowercase "i", missing capital at sentence start)
-  - Punctuation (missing commas, periods, etc.)
-  These are writing conventions that do not exist in speech.
-
-  Only flag spoken grammar errors — wrong word order, incorrect particles, wrong verb
-  form, missing required words — things the learner actually said incorrectly.
-
-  Evaluate this turn against the learner's {proficiency_label} level. Only flag errors
-  meaningful at this level — ignore stylistic choices and constructions above their level
-  that they correctly used. Do not flag constructions below their level as errors.
 
   Respond in JSON (no markdown):
   {{
     "issues": [
       {{
-        "original": "<the problematic phrase>",
-        "correction": "<corrected version in {language}>",
-        "explanation": "<brief why, in {interface_language}, for the learner>"
+        "original": "<exact problematic phrase from the learner's turn>",
+        "correction": "<corrected version in {language_name}>",
+        "type": "<one of: word_order | particle | verb_form | missing_word | wrong_word | other>",
+        "explanation": "<one sentence in {interface_language} explaining why>"
       }}
     ]
   }}
 
-  If there are no issues at this level, return {{"issues": []}}.
+  No errors at this level → {{"issues": []}}.

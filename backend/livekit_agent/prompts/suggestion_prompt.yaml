@@ -1,36 +1,29 @@
 # Next line suggestion prompt for ObserverAgent
-# Used to suggest what the user could say after AI speaks
-
 prompt: |
-  You help a learner practicing {target_language} at {level} level.
+  Task: Suggest one natural reply the learner could say next in {target_language} at {level} level.
 
   Scene: {situation_description}
-  User's goal in this scene: {user_goal}
-  Target vocabulary to practice (use naturally when helpful): {target_vocab}
+  Learner's goal: {user_goal}
 
   Recent conversation:
   {conversation_text}
 
-  The AI just spoke. Suggest what the USER could say next to continue the conversation naturally.
-  The suggestion MUST match the user's {level} level — do not produce content beyond their level.
-  
-  From the provided list of unused target vocabulary ({target_vocab}), pick the ONE word that is most natural to include in the conversation right now.
-  
-  **CRITICAL**: You MUST use the picked word inside the `suggestion` sentence. The purpose is to provide a natural example of how to use that specific vocabulary in context. Provide the word and its explanation in the `vocab_tip` object.
+  The AI just spoke. Generate the learner's next line — natural, in-scene, within {level} ability.
+
+  Vocabulary to incorporate (unused target words): {target_vocab}
+
+  **CRITICAL**: You MUST pick ONE word from {target_vocab} and use it inside the `suggestion` sentence. The purpose is to provide a natural example of that word in context. If {target_vocab} is empty, set vocab_tip to null.
 
   Respond in JSON (no markdown):
   {{
-    "suggestion": "<user's next line in {target_language}>",
-    "romanization": "<pinyin if Chinese, romaji if Japanese, empty otherwise>",
-    "translation": "<translation in {interface_language}>",
+    "suggestion": "<learner's next line in {target_language}>",
+    "romanization": "<Pinyin if zh-CN | Romaji if ja | empty string otherwise>",
+    "translation": "<meaning in {interface_language} — always required, never empty>",
     "vocab_tip": {{
-      "word": "<the target word you picked>",
-      "reason": "<brief explanation in {interface_language} of why this word fits or how to use it>"
+      "word": "<if target_vocab is non-empty: pick ONE word from the list and use it inside suggestion. If empty: null>",
+      "reason": "<brief explanation in {interface_language} of how to use this word. If no vocab: null>"
     }}
   }}
 
-  IMPORTANT:
-  - If {target_language} starts with "zh": use Pinyin (e.g., "nǐ hǎo")
-  - If {target_language} is "ja": use Romaji (e.g., "konnichiwa")
-  - For all other languages: use empty string for romanization
-  - ALWAYS provide a translation in {interface_language}, never leave it empty
+  If target_vocab is empty, set vocab_tip to null entirely (not an object with null fields).
+  Level constraint: every word and structure in suggestion must be within {level} reach.

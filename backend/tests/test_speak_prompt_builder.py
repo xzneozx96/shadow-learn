@@ -48,7 +48,7 @@ def test_build_system_prompt_instructs_language_only_reply():
         ),
     )
     assert "Japanese" in prompt
-    assert "respond only" in prompt.lower() or "reply only" in prompt.lower()
+    assert "spoken token" in prompt.lower() or "every spoken" in prompt.lower()
 
 
 def test_build_system_prompt_raises_on_unsupported_persona_language():

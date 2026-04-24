@@ -26,6 +26,13 @@ _LOCALE_TO_LANGUAGE_NAME = {
     "vi": "Vietnamese",
 }
 
+_TARGET_LANGUAGE_NAMES: dict[str, str] = {
+    "zh-CN": "Mandarin Chinese",
+    "en": "English",
+    "ja": "Japanese",
+    "vi": "Vietnamese",
+}
+
 
 class ObserverAgent:
     """Parallel observer that monitors conversations for feedback.
@@ -270,6 +277,7 @@ class ObserverAgent:
             "conversation_text": conversation_text,
             "user_turn": text,
             "language": language,
+            "language_name": _TARGET_LANGUAGE_NAMES.get(language, language),
             "level": level,
             "proficiency_label": proficiency_label,
             "interface_language": _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language),
@@ -446,7 +454,7 @@ class ObserverAgent:
             for m in self.conversation_history[-3:]
         ])
         
-        # Get interface language from session userdata
+        # Get interface language and target language from session userdata
         try:
             userdata = self.session.userdata
             config = getattr(userdata, "situation_config", None)
@@ -454,17 +462,25 @@ class ObserverAgent:
                 interface_language = getattr(config, "interface_language", "vi")
             else:
                 interface_language = "vi"
+            target_language = getattr(userdata, "target_language", None) or "zh-CN"
         except Exception:
             interface_language = "vi"
-        
+            target_language = "zh-CN"
+
         interface_lang_name = _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language)
-        
+        target_language_name = _TARGET_LANGUAGE_NAMES.get(target_language, target_language)
+
         prompt_template = load_prompt("cultural_prompt.yaml")
         if not prompt_template:
             logger.warning("Cultural prompt not found, skipping detection")
             return None
-        
-        prompt = prompt_template.format(conversation=conv, interface_language=interface_lang_name)
+
+        prompt = prompt_template.format(
+            conversation=conv,
+            interface_language=interface_lang_name,
+            target_language=target_language,
+            target_language_name=target_language_name,
+        )
         
         chat_ctx = ChatContext()
         chat_ctx.add_message(role="user", content=prompt)
@@ -660,10 +676,13 @@ class ObserverAgent:
                 interface_language = getattr(config, "interface_language", "vi")
             else:
                 interface_language = "vi"
+            target_language = getattr(userdata, "target_language", None) or "zh-CN"
         except Exception:
             interface_language = "vi"
+            target_language = "zh-CN"
 
         interface_lang_name = _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language)
+        target_language_name = _TARGET_LANGUAGE_NAMES.get(target_language, target_language)
 
         prompt_template = load_prompt("session_evaluation_prompt.yaml")
         if not prompt_template:
@@ -673,7 +692,8 @@ class ObserverAgent:
             transcript=transcript[:2000],
             target_vocab=target,
             used_vocab=used,
-            interface_language=interface_lang_name
+            interface_language=interface_lang_name,
+            target_language_name=target_language_name,
         )
 
         chat_ctx = ChatContext()
