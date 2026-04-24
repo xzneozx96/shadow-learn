@@ -22,7 +22,6 @@ function formatDuration(seconds: number) {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-
 function SectionDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 pt-1">
@@ -187,12 +186,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
 
       {/* Right: Conversation History + Action Buttons */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div className="flex items-center gap-2 px-6 pt-6 pb-3 shrink-0">
-          <div className="w-1 h-3 rounded-full bg-primary" />
-          <h3 className="font-bold text-sm text-foreground">{tr('speak.conversationPreview')}</h3>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-3 space-y-3">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-3">
           {transcript.map((turn, i) => {
             const turnFeedback = turn.id ? feedbacks[turn.id] : undefined
             return (
