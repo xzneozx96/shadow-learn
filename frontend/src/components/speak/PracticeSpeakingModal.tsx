@@ -338,7 +338,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
       <DialogContent
         className={cn(
           'p-0 gap-0 overflow-hidden elegant-card transition-all duration-500 ease-in-out flex flex-col',
-          step === 'active' ? 'w-screen h-screen max-w-none! rounded-none' : step === 'recap' ? 'w-full max-w-5xl! rounded-xl h-[90vh]' : 'w-full max-w-5xl! rounded-xl max-h-[90vh]',
+          step === 'active' || step === 'recap' ? 'w-full max-w-5xl! rounded-xl h-[90vh]' : 'w-full max-w-5xl! rounded-xl max-h-[90vh]',
         )}
         showCloseButton={false}
       >

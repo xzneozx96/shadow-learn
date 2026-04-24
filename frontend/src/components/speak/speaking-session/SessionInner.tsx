@@ -4,7 +4,8 @@ import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcrip
 import { useSpeakSession as useSpeakSessionContext } from '@/contexts/SpeakSessionContext'
 import { useAgentRpc } from '@/hooks/useAgentRpc'
 import { fetchSessionEvaluation } from '@/lib/speak-evaluation'
-import { ConversationScene, GrammarPanel, IntelligencePanel } from './ConversationScene'
+import { ConversationScene } from './ConversationScene'
+import { IntelligencePanel } from './IntelligencePanel'
 import { SessionOverlays } from './SessionOverlays'
 
 // Renders inside AgentSessionProvider — session hooks are available here
@@ -60,8 +61,6 @@ export function SessionInner() {
     [situation.target_vocab],
   )
 
-  const selectedFeedback = rpc.selectedMsgId ? feedbackHistory[rpc.selectedMsgId] : null
-
   return (
     <ConversationScene
       onEnd={handleEndWithEvaluation}
@@ -70,7 +69,6 @@ export function SessionInner() {
           agentState={undefined}
           messages={chatMessages}
           feedbacks={feedbackHistory}
-          onSelectFeedback={rpc.setSelectedMsgId}
           className="absolute inset-0"
         />
       )}
@@ -83,7 +81,6 @@ export function SessionInner() {
           targetVocab={targetVocab}
         />
       )}
-      grammarPanel={<GrammarPanel feedback={selectedFeedback} />}
       overlay={(
         <SessionOverlays
           evaluationStatus={evaluationStatus}

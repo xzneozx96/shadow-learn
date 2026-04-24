@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react'
-import type { GrammarFeedback, NextLineSuggestion } from '@/types'
 import { useAgent, useLocalParticipant } from '@livekit/components-react'
-import { Info, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
 import { AgentControlBar } from '@/components/agents-ui/agent-control-bar'
@@ -17,7 +15,6 @@ const MAX_DURATION_SECONDS = 10 * 60
 export interface ConversationSceneProps {
   onEnd: () => void | Promise<void>
   intelligencePanel?: ReactNode
-  grammarPanel?: ReactNode
   transcript?: ReactNode
   overlay?: ReactNode
 }
@@ -26,170 +23,7 @@ function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
-export function IntelligencePanel({
-  nextLineSuggestion,
-  culturalTips,
-  vocabTips,
-  masteredVocab,
-  targetVocab,
-}: {
-  nextLineSuggestion?: NextLineSuggestion | null
-  culturalTips?: Array<{ type: string, phrase: string, explanation: string }>
-  vocabTips?: Array<{ type: string, word: string, reason: string }>
-  masteredVocab: Set<string>
-  targetVocab: string[]
-}) {
-  const { t } = useI18n()
-
-  return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="p-4 space-y-4 overflow-y-auto">
-        {/* Target Vocabulary Checklist */}
-        <div className="p-3 bg-cyan-500/5 rounded-xl border border-cyan-500/20">
-          <div className="flex items-center gap-2 text-xs font-bold text-cyan-500 uppercase mb-3 tracking-wider">
-            <Sparkles size={12} />
-            {t('speak.feedbackPanel.targetVocabulary')}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {targetVocab.map((word) => {
-              const isMastered = masteredVocab.has(word)
-              return (
-                <div
-                  key={word}
-                  className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-300 bg-cyan-500/10 border border-cyan-500/30 text-cyan-200',
-                    isMastered && 'line-through opacity-30',
-                  )}
-                >
-                  {word}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Next line suggestion */}
-        {nextLineSuggestion
-          ? (
-              <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl shadow-sm space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 uppercase tracking-wider">
-                  <Sparkles size={14} />
-                  {t('speak.feedbackPanel.nextLineSuggestion')}
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="text-base font-bold text-foreground leading-relaxed">
-                    {nextLineSuggestion.suggestion}
-                  </div>
-                  {nextLineSuggestion.romanization && (
-                    <div className="text-sm text-emerald-500/90 font-medium leading-relaxed">
-                      {nextLineSuggestion.romanization}
-                    </div>
-                  )}
-                  <div className="text-sm text-emerald-100/70 italic leading-relaxed">
-                    {nextLineSuggestion.translation}
-                  </div>
-                </div>
-
-                {vocabTips && vocabTips.length > 0 && (
-                  <div className="pt-3 border-t border-emerald-500/20 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-white">{vocabTips[0].word}</span>
-                    </div>
-                    <p className="text-xs text-emerald-100/70 leading-relaxed italic">{vocabTips[0].reason}</p>
-                  </div>
-                )}
-              </div>
-            )
-          : vocabTips && vocabTips.length > 0
-            ? (
-                <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl shadow-sm space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 uppercase tracking-wider">
-                    <Sparkles size={14} />
-                    {t('speak.feedbackPanel.tryThisWord')}
-                  </div>
-                  <p className="text-sm font-bold text-emerald-400">{vocabTips[0].word}</p>
-                  <p className="text-xs text-emerald-100/70 font-medium leading-relaxed">{vocabTips[0].reason}</p>
-                </div>
-              )
-            : null}
-
-        {/* Cultural Tips */}
-        {culturalTips && culturalTips.length > 0 && (
-          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
-              <Info size={14} />
-              {t('speak.feedbackPanel.culturalInsight')}
-            </div>
-            <p className="text-base text-foreground font-semibold leading-snug">{culturalTips[0].phrase}</p>
-            <p className="text-sm text-blue-200/70 leading-relaxed">{culturalTips[0].explanation}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-export function GrammarPanel({
-  feedback,
-}: {
-  feedback: GrammarFeedback | null
-}) {
-  const { t } = useI18n()
-
-  return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {!feedback
-        ? (
-            <div className="h-full flex flex-col items-center justify-center text-center px-6 space-y-4">
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500/40">
-                <Info size={24} />
-              </div>
-              <div className="space-y-1">
-                <p className="text-base font-semibold text-foreground/70">{t('speak.feedbackPanel.noActiveFeedback')}</p>
-                <p className="text-sm text-muted-foreground/60 leading-relaxed max-w-64">
-                  {t('speak.feedbackPanel.noActiveFeedbackDesc')}
-                </p>
-              </div>
-            </div>
-          )
-        : (
-            <div className="flex-1 overflow-y-auto p-5 space-y-6">
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('speak.feedbackPanel.yourSpokenText')}</h4>
-                <p className="text-sm font-medium leading-relaxed text-foreground/90 bg-primary/10 p-3 rounded-lg border border-primary/50">
-                  {feedback.transcript}
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('speak.feedbackPanel.corrections')}</h4>
-                <div className="space-y-3">
-                  {feedback.issues.map(issue => (
-                    <div key={`${issue.original}::${issue.correction}::${issue.explanation}`} className="p-4 bg-amber-200/5 rounded-xl border border-amber-500/20 shadow-sm space-y-3">
-                      <div className="flex flex-col items-center gap-2 text-center">
-                        <span className="text-base text-amber-200/50 line-through decoration-amber-500">{issue.original}</span>
-                        <span className="text-amber-500 font-bold rotate-90">→</span>
-                        <span className="text-base text-foreground font-bold">{issue.correction}</span>
-                      </div>
-                      {issue.explanation && (
-                        <div className="p-3 bg-amber-200/10 rounded-lg border border-amber-200/10">
-                          <p className="text-sm text-amber-100/70 leading-relaxed font-medium text-center">
-                            {issue.explanation}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-    </div>
-  )
-}
-
-export function ConversationScene({ onEnd, intelligencePanel, grammarPanel, transcript, overlay }: ConversationSceneProps) {
+export function ConversationScene({ onEnd, intelligencePanel, transcript, overlay }: ConversationSceneProps) {
   const { persona, situation } = useSpeakSession()
   const isOffline = !useOnlineStatus()
   const agent = useAgent()
@@ -362,11 +196,6 @@ export function ConversationScene({ onEnd, intelligencePanel, grammarPanel, tran
             saveUserChoices={true}
           />
         </div>
-      </div>
-
-      {/* Right Panel: Grammar */}
-      <div className="w-70 xl:w-90 shrink-0 border-l border-border">
-        {grammarPanel}
       </div>
 
       {overlay}

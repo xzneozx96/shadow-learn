@@ -1,8 +1,7 @@
 import type { AgentState, ReceivedMessage } from '@livekit/components-react'
 import type { ComponentProps } from 'react'
 import type { GrammarFeedback } from '@/types'
-import { InfoIcon } from 'lucide-react'
-import { AnimatePresence } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { AgentChatIndicator } from '@/components/agents-ui/agent-chat-indicator'
 import {
   Conversation,
@@ -14,11 +13,39 @@ import { cn } from '@/lib/utils'
 const LOCALE = typeof navigator !== 'undefined' ? navigator.language : 'en-US'
 const EMPTY_FEEDBACKS: Record<string, GrammarFeedback> = {}
 
+export function GrammarCorrectionCard({ feedback }: { feedback: GrammarFeedback }) {
+  if (!feedback.issues.length)
+    return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+      className="mt-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2"
+    >
+      {feedback.issues.map(issue => (
+        <div key={`${issue.original}::${issue.correction}::${issue.explanation}`} className="flex flex-col gap-1 rounded-md">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-muted-foreground line-through decoration-amber-500/60">{issue.original}</span>
+            <span className="text-amber-500 font-bold text-xs">→</span>
+            <span className="text-sm text-foreground font-bold">{issue.correction}</span>
+          </div>
+          {issue.explanation && (
+            <p className="text-sm text-amber-200/80 leading-relaxed">
+              {issue.explanation}
+            </p>
+          )}
+        </div>
+      ))}
+    </motion.div>
+  )
+}
+
 export interface AgentChatTranscriptProps extends ComponentProps<'div'> {
   agentState?: AgentState
   messages?: ReceivedMessage[]
   feedbacks?: Record<string, GrammarFeedback>
-  onSelectFeedback?: (id: string) => void
   className?: string
 }
 
@@ -26,7 +53,6 @@ export function AgentChatTranscript({
   agentState,
   messages = [],
   feedbacks = EMPTY_FEEDBACKS,
-  onSelectFeedback,
   className,
   ...props
 }: AgentChatTranscriptProps) {
@@ -45,7 +71,7 @@ export function AgentChatTranscript({
                 const time = new Date(timestamp)
                 const isUser = from?.isLocal ?? false
                 const title = time.toLocaleTimeString(LOCALE, { timeStyle: 'full' })
-                const hasFeedback = !!feedbacks[id]
+                const feedback = feedbacks[id]
 
                 return (
                   <div
@@ -55,19 +81,11 @@ export function AgentChatTranscript({
                   >
                     {isUser
                       ? (
-                          <div className="flex items-end gap-2 max-w-[85%]">
-                            {hasFeedback && (
-                              <button
-                                onClick={() => onSelectFeedback?.(id)}
-                                className="shrink-0 p-1.5 rounded-full bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 transition-all border border-amber-500/30 shadow-sm"
-                                aria-label="View feedback"
-                              >
-                                <InfoIcon size={14} strokeWidth={3} />
-                              </button>
-                            )}
+                          <div className="flex flex-col items-end max-w-[85%]">
                             <div className="rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
                               {message}
                             </div>
+                            {feedback && <GrammarCorrectionCard feedback={feedback} />}
                           </div>
                         )
                       : (

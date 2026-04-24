@@ -1,8 +1,9 @@
 import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
 import type { TranslationKey } from '@/lib/i18n'
-import type { GrammarFeedback, SessionEvaluation, SpeakSituation } from '@/types'
+import type { SessionEvaluation, SpeakSituation } from '@/types'
 import { CheckCircle2, Clock, MessageSquare, TrendingUp, Trophy } from 'lucide-react'
+import { GrammarCorrectionCard } from '@/components/agents-ui/agent-chat-transcript'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { getPersonaName } from '@/lib/constants'
@@ -21,31 +22,6 @@ function formatDuration(seconds: number) {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-function GrammarCorrectionCard({ feedback }: { feedback: GrammarFeedback }) {
-  if (!feedback.issues.length)
-    return null
-
-  return (
-    <div className="mt-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-2">
-      <div className="space-y-2">
-        {feedback.issues.map(issue => (
-          <div key={`${issue.original}::${issue.correction}::${issue.explanation}`} className="flex flex-col gap-1 rounded-md">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground line-through decoration-amber-500/60">{issue.original}</span>
-              <span className="text-amber-500 font-bold text-xs">→</span>
-              <span className="text-sm text-foreground font-bold">{issue.correction}</span>
-            </div>
-            {issue.explanation && (
-              <p className="text-sm text-amber-200/80 leading-relaxed">
-                {issue.explanation}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 function SectionDivider({ label }: { label: string }) {
   return (

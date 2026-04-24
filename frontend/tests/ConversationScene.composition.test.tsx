@@ -55,7 +55,6 @@ const baseProps = {
   onEnd: vi.fn(),
   transcript: null as ReactNode,
   intelligencePanel: null as ReactNode,
-  grammarPanel: null as ReactNode,
   overlay: null as ReactNode,
 }
 
@@ -69,13 +68,6 @@ describe('conversationScene — slot composition', () => {
       <ConversationScene {...baseProps} intelligencePanel={<div data-testid="intel">INTEL</div>} />,
     )
     expect(screen.getByTestId('intel')).toHaveTextContent('INTEL')
-  })
-
-  it('renders the grammarPanel slot', () => {
-    renderWithProvider(
-      <ConversationScene {...baseProps} grammarPanel={<div data-testid="grammar">GRAMMAR</div>} />,
-    )
-    expect(screen.getByTestId('grammar')).toHaveTextContent('GRAMMAR')
   })
 
   it('renders the overlay slot when provided', () => {
@@ -102,8 +94,8 @@ describe('conversationScene — slot composition', () => {
     expect(screen.getByText('Cafe')).toBeInTheDocument()
   })
 
-  it('prop surface is ≤ 5 keys (regression guard — drilling elimination)', () => {
+  it('prop surface is ≤ 4 keys (regression guard — grammarPanel removed)', () => {
     const propCount = Object.keys(baseProps).length
-    expect(propCount).toBeLessThanOrEqual(5)
+    expect(propCount).toBeLessThanOrEqual(4)
   })
 })

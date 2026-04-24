@@ -15,9 +15,7 @@ export interface AgentRpcState {
   culturalTips: CulturalTip[]
   vocabTips: VocabTip[]
   masteredVocab: Set<string>
-  selectedMsgId: string | null
   agentDisconnected: boolean
-  setSelectedMsgId: (id: string | null) => void
 }
 
 export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): AgentRpcState {
@@ -25,7 +23,6 @@ export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): A
   const [culturalTips, setCulturalTips] = useState<CulturalTip[]>([])
   const [vocabTips, setVocabTips] = useState<VocabTip[]>([])
   const [masteredVocab, setMasteredVocab] = useState<Set<string>>(() => new Set())
-  const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null)
   const [agentDisconnected, setAgentDisconnected] = useState(false)
 
   // Keep latest onFeedbackUpdate in a ref so RPC handlers don't re-register on every render
@@ -60,7 +57,6 @@ export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): A
           return !!msgText && (msgText === fbText || fbText.includes(msgText))
         })
         if (match) {
-          setSelectedMsgId(match.id)
           await onFeedbackUpdateRef.current?.(match.id, feedback)
         }
         return JSON.stringify({ success: true })
@@ -118,8 +114,6 @@ export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): A
     culturalTips,
     vocabTips,
     masteredVocab,
-    selectedMsgId,
     agentDisconnected,
-    setSelectedMsgId,
   }
 }

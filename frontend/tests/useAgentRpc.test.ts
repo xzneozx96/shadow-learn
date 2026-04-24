@@ -84,7 +84,6 @@ describe('useAgentRpc', () => {
     await act(async () => { await handler({ payload: JSON.stringify(feedback) }) })
 
     expect(onFeedbackUpdate).toHaveBeenCalledWith('m1', feedback)
-    expect(result.current.selectedMsgId).toBe('m1')
   })
 
   it('grammar_feedback: uses latest onFeedbackUpdate via ref without re-registering', async () => {
@@ -179,12 +178,4 @@ describe('useAgentRpc', () => {
     expect(result.current.agentDisconnected).toBe(false)
   })
 
-  it('setSelectedMsgId updates selectedMsgId', () => {
-    const room = makeRoom()
-    const { result } = renderHook(() => useAgentRpc(room as any, { messagesRef: makeMessagesRef() }))
-
-    expect(result.current.selectedMsgId).toBeNull()
-    act(() => { result.current.setSelectedMsgId('msg-xyz') })
-    expect(result.current.selectedMsgId).toBe('msg-xyz')
-  })
 })
