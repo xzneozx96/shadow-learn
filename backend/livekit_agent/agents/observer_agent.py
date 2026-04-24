@@ -63,9 +63,6 @@ class ObserverAgent:
         self.llm = llm
         self._room = room
 
-        # Load evaluation prompts
-        self.observer_prompt = load_prompt("observer_prompt.yaml")
-
         # Conversation tracking
         self.conversation_history: list[dict] = []
         self.last_eval_transcript_count = 0
