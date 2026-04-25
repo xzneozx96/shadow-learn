@@ -1,0 +1,20 @@
+services:
+  livekit-agent:
+    build:
+      context: ./backend
+      dockerfile: livekit_agent/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+    env_file:
+      - ./backend/livekit_agent/.env
+    environment:
+      - HTTP_PORT=8082
+      # LIVEKIT_URL, INTERNAL_TOKEN, GOOGLE_API_KEY (fallback) set in env_file
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
