@@ -1,7 +1,7 @@
 ---
 id: 2026-04-speak-with-ai
 title: "Luyện Nói Cùng AI: Đánh Bay Nỗi Sợ Giao Tiếp"
-date: "2026-04-22"
+date: "2026-04-25"
 highlights:
   - tag: new
     text: Bứt phá kỹ năng nói và phản xạ giao tiếp qua những cuộc đối thoại nhập vai cùng AI.

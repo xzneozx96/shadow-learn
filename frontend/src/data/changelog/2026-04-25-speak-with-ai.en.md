@@ -1,7 +1,7 @@
 ---
 id: 2026-04-speak-with-ai
 title: "Speak with AI: The Future of Language Practice is Here"
-date: "2026-04-22"
+date: "2026-04-25"
 highlights:
   - tag: new
     text: Break through language barriers and master confident communication through AI-powered conversations.
