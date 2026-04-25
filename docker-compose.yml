@@ -11,6 +11,7 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "127.0.0.1:8001:8000"
     volumes:
@@ -22,6 +23,18 @@ services:
       - SHADOWLEARN_YTDLP_BGUTIL_URL=http://bgutil-provider:4416
     depends_on:
       - bgutil-provider
+
+  livekit-agent:
+    build:
+      context: ./backend
+      dockerfile: livekit_agent/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8081"
+    env_file:
+      - ./backend/livekit_agent/.env
+    environment:
+      - LIVEKIT_URL=wss://ross-geller-slpy62sv.livekit.cloud
 
   frontend:
     build: ./frontend

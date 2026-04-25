@@ -19,6 +19,7 @@ dependencies = [
     "azure-cognitiveservices-speech>=1.40.0",
     "tenacity>=9.0.0",
     "opencc-python-reimplemented>=0.1.7",
+    "livekit-api>=1.1.0",
 ]
 
 [project.optional-dependencies]
