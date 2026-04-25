@@ -15,6 +15,7 @@ import { useUploadThumbnail } from '@/hooks/useUploadThumbnail'
 import { API_BASE, getAppConfig } from '@/lib/config'
 import { cn } from '@/lib/utils'
 import { getYoutubeThumbnail } from '@/lib/youtube'
+import { Button } from '../ui/button'
 import { LessonCard } from './LessonCard'
 
 type SortMode = 'recent' | 'alpha' | 'progress'
@@ -87,8 +88,8 @@ function languageLabel(code: string | undefined, t: TFn): string | null {
 
 function HeroChip({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string, strokeWidth?: number }>, children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-card/70 backdrop-blur-md px-2.5 py-1 text-sm font-medium text-foreground/85 shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
-      <Icon className="size-3 text-foreground/60" strokeWidth={1.75} />
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-card/70 backdrop-blur-md px-2.5 py-1 text-sm font-medium text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
+      <Icon className="size-3 text-foreground" strokeWidth={1.75} />
       {children}
     </span>
   )
@@ -165,7 +166,7 @@ function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
               <h2 className="text-xl xl:text-2xl font-bold leading-[1.15] tracking-tight line-clamp-2 text-foreground drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
                 {lesson.title}
               </h2>
-              <p className="mt-1.5 text-xs text-foreground/65 leading-relaxed drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
+              <p className="mt-2 text-sm text-foreground leading-relaxed">
                 {t('library.hero.percentComplete', { n: progress })}
                 {segmentsLeft > 0 && ` · ${t('library.hero.segmentsToGo', { n: segmentsLeft })}`}
                 {' · '}
@@ -217,7 +218,7 @@ function FirstLessonCTA() {
       <article className="relative h-full min-h-[280px] overflow-hidden rounded-2xl border border-dashed border-white/10 bg-white/2 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] flex flex-col items-center justify-center text-center transition-all duration-300 hover:border-primary/30 hover:bg-primary/3">
         <div className="pointer-events-none absolute -top-16 left-1/2 size-56 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl" />
         <div className="relative mb-2 flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors duration-300 group-hover:border-primary/40 group-hover:bg-primary/10">
-          <Plus className="size-4 text-foreground/60 transition-colors duration-300 group-hover:text-primary" />
+          <Plus className="size-4 text-foreground transition-colors duration-300 group-hover:text-primary" />
         </div>
         <h2 className="relative text-base font-bold tracking-tight text-foreground">
           {t('library.firstLesson.title')}
@@ -306,12 +307,12 @@ function ActivityHeatmap({ lessons }: { lessons: LessonMeta[] }) {
       {/* Header: month + count inline */}
       <div className="flex items-baseline justify-between gap-2">
         <div className="flex items-baseline gap-2">
-          <span className="text-xs font-medium tracking-tight text-foreground/70">
+          <span className="text-xs font-medium tracking-tight text-foreground">
             {monthLabel}
           </span>
         </div>
         <span className="text-xs tabular-nums text-muted-foreground">
-          <span className="font-semibold text-foreground/80">{daysActive}</span>
+          <span className="font-semibold text-foreground">{daysActive}</span>
           <span className="text-muted-foreground">
             {' / '}
             {daysInMonth}
@@ -323,7 +324,7 @@ function ActivityHeatmap({ lessons }: { lessons: LessonMeta[] }) {
       <div className="mt-4 flex flex-1 flex-col items-center justify-center gap-1.5">
         <div className="grid w-full grid-cols-7 gap-[3px]">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
-            <span key={d} className="text-center text-[8px] font-semibold tracking-wider text-muted-foreground/35">
+            <span key={d} className="text-center text-[8px] font-semibold tracking-wider text-muted-foreground">
               {d[0]}
             </span>
           ))}
@@ -335,9 +336,9 @@ function ActivityHeatmap({ lessons }: { lessons: LessonMeta[] }) {
               style={idx === 0 ? { gridColumnStart: firstDowMon + 1 } : undefined}
               className={cn(
                 'aspect-square rounded-[4px] flex items-center justify-center text-xs font-semibold tabular-nums transition-colors',
-                d.isFuture && 'bg-white/3 text-muted-foreground/20',
+                d.isFuture && 'bg-white/3 text-muted-foreground',
                 d.isActive && 'bg-primary text-primary-foreground shadow-[0_0_4px_rgba(245,158,11,0.45)]',
-                !d.isActive && !d.isFuture && !d.isToday && 'bg-white/5 text-muted-foreground/45',
+                !d.isActive && !d.isFuture && !d.isToday && 'bg-white/5 text-muted-foreground',
                 !d.isActive && d.isToday && 'border border-primary/50 bg-primary/10 text-primary',
               )}
               title={`${monthLabel} ${d.day}`}
@@ -394,7 +395,7 @@ function StreakCard({ lessons }: { lessons: LessonMeta[] }) {
           <Flame
             className={cn(
               'relative size-9 transition-colors',
-              hasStreak ? 'text-primary fill-primary/40' : 'text-muted-foreground/25',
+              hasStreak ? 'text-primary fill-primary/40' : 'text-muted-foreground',
             )}
             strokeWidth={1.5}
           />
@@ -402,12 +403,12 @@ function StreakCard({ lessons }: { lessons: LessonMeta[] }) {
         <div className="min-w-0 leading-none text-center">
           <span className={cn(
             'text-4xl font-bold tracking-tighter tabular-nums',
-            hasStreak ? 'text-primary' : 'text-foreground/35',
+            hasStreak ? 'text-primary' : 'text-foreground',
           )}
           >
             {streak}
           </span>
-          <p className="mt-1.5 text-xs text-muted-foreground/60">
+          <p className="mt-1.5 text-xs text-muted-foreground">
             {streak === 1 ? t('library.streak.day') : t('library.streak.days')}
             {' '}
             {t('library.streak.inARow')}
@@ -417,7 +418,7 @@ function StreakCard({ lessons }: { lessons: LessonMeta[] }) {
 
       {/* Week flames at bottom */}
       <div className="mt-auto pt-5">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/35">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           {t('library.streak.thisWeek')}
         </p>
         <div className="grid grid-cols-7 gap-1">
@@ -425,7 +426,7 @@ function StreakCard({ lessons }: { lessons: LessonMeta[] }) {
             <div key={d.key} className="flex flex-col items-center gap-1">
               <span className={cn(
                 'text-[10px] font-semibold tracking-wider',
-                d.isToday ? 'text-primary' : 'text-muted-foreground/35',
+                d.isToday ? 'text-primary' : 'text-muted-foreground',
               )}
               >
                 {d.letter}
@@ -433,9 +434,9 @@ function StreakCard({ lessons }: { lessons: LessonMeta[] }) {
               <Flame
                 className={cn(
                   'size-5 transition-colors',
-                  d.isActive && 'text-primary fill-primary/40 drop-shadow-[0_0_4px_rgba(245,158,11,0.45)]',
+                  d.isActive && 'text-primary fill-primary/40',
                   !d.isActive && d.isToday && 'text-primary/40 fill-primary/5',
-                  !d.isActive && !d.isToday && 'text-muted-foreground/20 fill-muted-foreground/5',
+                  !d.isActive && !d.isToday && 'text-muted-foreground fill-muted-foreground opacity-20',
                 )}
                 strokeWidth={1.5}
               />
@@ -482,10 +483,11 @@ function WordsCard({ lessons, entriesByLesson, total }: {
         <CardLabel>{t('library.words.title')}</CardLabel>
         <Link
           to="/vocabulary"
-          className="text-sm font-medium text-foreground/40 hover:text-primary transition-colors"
+          className="text-sm font-medium text-foreground hover:text-primary transition-colors"
         >
-          {t('library.words.open')}
-          {' →'}
+          <Button size="icon-lg">
+            <ArrowUpRight />
+          </Button>
         </Link>
       </div>
       <div className="mt-3 flex items-baseline gap-2">
@@ -650,7 +652,7 @@ export function Library() {
               <h1 className="text-3xl xl:text-4xl font-bold tracking-tighter leading-none text-foreground">
                 {greeting.zh}
               </h1>
-              <p className="text-xs text-muted-foreground italic">
+              <p className="text-sm text-muted-foreground italic">
                 {greeting.sub}
                 {hasLessons ? t('library.greeting.welcomeBack') : ''}
               </p>
@@ -707,9 +709,9 @@ export function Library() {
                     <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/2 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] group-hover:border-primary/30 group-hover:bg-primary/5 transition-all duration-200">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <div className="flex items-center justify-center size-10 rounded-full border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] group-hover:bg-primary/15 group-hover:border-primary/30 transition-all duration-200">
-                          <Plus className="size-4 text-foreground/60 group-hover:text-primary transition-colors" />
+                          <Plus className="size-4 text-foreground group-hover:text-primary transition-colors" />
                         </div>
-                        <span className="text-sm font-medium text-foreground/70 group-hover:text-foreground transition-colors duration-200">
+                        <span className="text-sm font-medium text-foreground group-hover:text-foreground transition-colors duration-200">
                           {t('library.addNew')}
                         </span>
                       </div>
