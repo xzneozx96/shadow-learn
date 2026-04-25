@@ -223,7 +223,7 @@ function FirstLessonCTA() {
         <h2 className="relative text-base font-bold tracking-tight text-foreground">
           {t('library.firstLesson.title')}
         </h2>
-        <p className="relative mt-0.5 max-w-sm text-xs text-muted-foreground leading-relaxed">
+        <p className="relative mt-0.5 max-w-sm text-sm text-muted-foreground leading-relaxed">
           {t('library.firstLesson.subtitle')}
         </p>
       </article>
@@ -261,7 +261,7 @@ function BentoCard({ children, className, glow }: {
 
 function CardLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
       {children}
     </p>
   )
@@ -307,11 +307,11 @@ function ActivityHeatmap({ lessons }: { lessons: LessonMeta[] }) {
       {/* Header: month + count inline */}
       <div className="flex items-baseline justify-between gap-2">
         <div className="flex items-baseline gap-2">
-          <span className="text-xs font-medium tracking-tight text-foreground">
+          <span className="text-sm font-medium tracking-tight text-foreground">
             {monthLabel}
           </span>
         </div>
-        <span className="text-xs tabular-nums text-muted-foreground">
+        <span className="text-sm tabular-nums text-muted-foreground">
           <span className="font-semibold text-foreground">{daysActive}</span>
           <span className="text-muted-foreground">
             {' / '}
@@ -335,7 +335,7 @@ function ActivityHeatmap({ lessons }: { lessons: LessonMeta[] }) {
               key={d.day}
               style={idx === 0 ? { gridColumnStart: firstDowMon + 1 } : undefined}
               className={cn(
-                'aspect-square rounded-[4px] flex items-center justify-center text-xs font-semibold tabular-nums transition-colors',
+                'aspect-square rounded-[4px] flex items-center justify-center text-sm font-semibold tabular-nums transition-colors',
                 d.isFuture && 'bg-white/3 text-muted-foreground',
                 d.isActive && 'bg-primary text-primary-foreground shadow-[0_0_4px_rgba(245,158,11,0.45)]',
                 !d.isActive && !d.isFuture && !d.isToday && 'bg-white/5 text-muted-foreground',
@@ -408,7 +408,7 @@ function StreakCard({ lessons }: { lessons: LessonMeta[] }) {
           >
             {streak}
           </span>
-          <p className="mt-1.5 text-xs text-muted-foreground">
+          <p className="mt-1.5 text-sm text-muted-foreground">
             {streak === 1 ? t('library.streak.day') : t('library.streak.days')}
             {' '}
             {t('library.streak.inARow')}
@@ -492,7 +492,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
       </div>
       <div className="mt-3 flex items-baseline gap-2">
         <span className="text-4xl font-bold tabular-nums tracking-tighter text-foreground">{total}</span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           {total === 1 ? t('library.words.wordSaved') : t('library.words.wordsSaved')}
         </span>
       </div>
@@ -503,7 +503,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
               <div className="flex size-9 items-center justify-center rounded-md border border-white/8 bg-white/3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                 <BookOpen className="size-4 text-muted-foreground" strokeWidth={1.5} />
               </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 {emptyHint.map((line, i) => (
                   <span key={line}>
                     {line}
@@ -532,7 +532,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
               {top && (
                 <div className="mt-3 flex min-w-0 items-center gap-2">
                   <span className="size-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_4px_rgba(245,158,11,0.65)]" />
-                  <p className="min-w-0 truncate text-xs text-foreground">
+                  <p className="min-w-0 truncate text-sm text-foreground">
                     <span className="font-semibold text-foreground">{top.title}</span>
                     <span className="text-muted-foreground text-sm">
                       {' · '}

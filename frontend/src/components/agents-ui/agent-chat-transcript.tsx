@@ -47,13 +47,13 @@ export function TranslationInline({ translation, romanization }: { translation?:
   if (!translation && !romanization)
     return null
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="h-px w-full bg-border" />
       {romanization && (
         <p className="text-xs font-mono text-foreground/75 tracking-tight leading-snug">{romanization}</p>
       )}
       {translation && (
-        <p className="text-xs text-foreground/85 italic leading-snug">{translation}</p>
+        <p className="text-sm text-foreground/85 italic leading-snug">{translation}</p>
       )}
     </div>
   )

@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
     encryption_key: str | None = None          # env: SHADOWLEARN_ENCRYPTION_KEY
 
+    # Offshore Gemini proxy — see backend/livekit_agent/http_server.py.
+    # The China-side backend forwards Gemini-bound traffic here so it never
+    # crosses the GFW directly. Empty base_url disables the proxy and
+    # surfaces an explicit error from offshore_client.
+    offshore_base_url: str = ""                 # env: SHADOWLEARN_OFFSHORE_BASE_URL
+    offshore_internal_token: str = ""           # env: SHADOWLEARN_OFFSHORE_INTERNAL_TOKEN
+
     model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8"}
 
 
