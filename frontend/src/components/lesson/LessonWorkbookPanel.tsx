@@ -141,6 +141,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
       {/* Study button — pinned to bottom */}
       <div className="border-t border-border p-3">
         <Button
+          size="lg"
           className="w-full"
           disabled={count === 0}
           onClick={() => setStudyOpen(true)}

@@ -114,8 +114,8 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         isError && 'ring-1 ring-destructive/30',
       )}
     >
-      {/* Hover background — scales in from 95% */}
-      <div className="absolute inset-0 z-2 rounded-xl bg-primary/10 scale-80 opacity-0 transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 pointer-events-none" />
+      {/* Hover background — subtle amber wash */}
+      <div className="absolute inset-0 z-1 rounded-xl border border-primary/15 bg-primary/8 scale-[0.97] opacity-0 transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 pointer-events-none" />
 
       {/* Card-level navigation link */}
       <Link
@@ -157,7 +157,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         {/* Progress bar — top edge, always visible as a track */}
         {!isProcessing && !isError && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/60 rounded-t-xl overflow-hidden">
-            <div className="h-full bg-red-600 transition-all duration-300" style={{ width: `${progress}%` }} />
+            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         )}
       </div>
