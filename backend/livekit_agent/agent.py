@@ -17,9 +17,7 @@ from urllib.parse import unquote
 from dotenv import load_dotenv
 
 from livekit import agents, rtc
-from livekit.agents import AgentServer, AgentSession, JobProcess, room_io, TurnHandlingOptions
-from livekit.agents.voice import Agent
-from google.genai import types as genai_types
+from livekit.agents import AgentServer, AgentSession, JobProcess, room_io
 from livekit.plugins import google, openai
 from livekit.plugins import noise_cancellation
 from livekit.plugins import silero
@@ -32,13 +30,30 @@ load_dotenv(Path(__file__).parent / ".env")
 logger = logging.getLogger("shadowlearn-agent")
 
 
+# Workaround for livekit/agents#5102:
+# The Google plugin always sends SessionResumptionConfig even when handle is None,
+# which gemini-2.5-flash-native-audio-* rejects with 1008 (policy violation).
+# Patch _build_connect_config so session_resumption is only set when we actually
+# have a handle to resume.
+_orig_build_connect_config = google.realtime.realtime_api.RealtimeSession._build_connect_config
+
+def _patched_build_connect_config(self):
+    conf = _orig_build_connect_config(self)
+    if self._session_resumption_handle is None:
+        conf.session_resumption = None
+    return conf
+
+google.realtime.realtime_api.RealtimeSession._build_connect_config = _patched_build_connect_config
+
+
 def prewarm(proc: JobProcess) -> None:
-    """Load VAD model once per worker process to avoid per-session cold start."""
     proc.userdata["vad"] = silero.VAD.load()
 
 
 # Initialize the LiveKit agent server
-server = AgentServer(setup_fnc=prewarm)
+# num_idle_processes=1: dev mode defaults to 0 (no warm processes), causing a 4s
+# cold-start delay on every session. Keep 1 warm process ready at all times.
+server = AgentServer(setup_fnc=prewarm, num_idle_processes=1)
 
 
 @server.rtc_session(agent_name="shadowlearn-speak")
@@ -167,23 +182,15 @@ async def shadowlearn_session(ctx: agents.JobContext):
     # Note: Using Google Gemini Realtime for main voice
     # Could alternatively use OpenAI Realtime
     if google_key:
+        # Match the official Gemini Live recipe (recipes/gemini_live_vision):
+        # - default model (no custom realtime_input_config)
+        # - proactivity + affective_dialog enabled (native-audio features)
+        # - Silero VAD on AgentSession for turn-taking
         llm = google.realtime.RealtimeModel(
             api_key=google_key,
-            model="gemini-2.5-flash-native-audio-preview-12-2025",
             voice=voice_id,
-            # Forces api_version="v1alpha", required by the native-audio preview endpoint.
+            proactivity=True,
             enable_affective_dialog=True,
-            realtime_input_config=genai_types.RealtimeInputConfig(
-                automatic_activity_detection=genai_types.AutomaticActivityDetection(
-                    # Quick pickup — learners use short affirmations ("好", "嗯")
-                    start_of_speech_sensitivity=genai_types.StartSensitivity.START_SENSITIVITY_HIGH,
-                    # Don't cut them off mid-sentence; learners pause more than native speakers
-                    end_of_speech_sensitivity=genai_types.EndSensitivity.END_SENSITIVITY_HIGH,
-                    prefix_padding_ms=200,   # commit speech start after 200ms
-                    silence_duration_ms=800,  # 0.8s silence to commit end-of-speech
-                ),
-                activity_handling=genai_types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
-            ),
         )
     else:
         # Fallback: Use OpenAI Realtime
@@ -196,9 +203,8 @@ async def shadowlearn_session(ctx: agents.JobContext):
 
     session = AgentSession[SpeakSessionData](
         userdata=userdata,
-        vad=ctx.proc.userdata.get("vad") or silero.VAD.load(),
         llm=llm,
-        user_away_timeout=15.0,
+        vad=ctx.proc.userdata.get("vad") or silero.VAD.load(),
     )
 
     # Start Observer agent in parallel

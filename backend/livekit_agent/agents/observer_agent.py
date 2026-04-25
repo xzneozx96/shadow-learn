@@ -65,18 +65,11 @@ class ObserverAgent:
 
         # Conversation tracking
         self.conversation_history: list[dict] = []
-        self.last_eval_transcript_count = 0
 
         # Evaluation settings
-        self.eval_threshold = 1  # Evaluate every user turn
         self._evaluating = False
 
-        # Correction rate-limiting (DYNAMIC based on error type)
         self._turn_count: int = 0
-        self._last_correction_turn: int = -3  # start ready to correct
-        self._correction_cooldown: int = 1  # Now dynamic - see _inject_correction_hint
-        self._last_correction_types: set[str] = set()  # Track error types already corrected
-        self._turn_count_for_reset: Optional[int] = None  # When to reset tracking
 
         # Vocabulary tracking
         self._target_vocab: list[str] = []
@@ -86,7 +79,6 @@ class ObserverAgent:
 
         logger.info(
             f"ObserverAgent initialized: LLM={getattr(self.llm, 'model', 'custom')}, "
-            f"eval_threshold={self.eval_threshold}"
         )
 
     def initialize_from_userdata(self) -> None:
@@ -149,25 +141,10 @@ class ObserverAgent:
     def _handle_user_turn(self, transcript: str) -> None:
         """Handle user turn - trigger grammar evaluation."""
         self._turn_count += 1
-        
-        # Track vocab usage after every turn
+
         asyncio.create_task(self._track_vocab_usage(transcript))
+        asyncio.create_task(self._evaluate_user_turn(transcript))
 
-        # Reset correction tracking after 2 turns
-        if self._turn_count_for_reset and self._turn_count >= self._turn_count_for_reset:
-            self._last_correction_types.clear()
-            self._turn_count_for_reset = None
-            logger.info("[OBSERVER] Correction tracking reset")
-        
-        total_segments = len(self.conversation_history)
-        new_segments = total_segments - self.last_eval_transcript_count
-
-        if new_segments >= self.eval_threshold:
-            # Fire and forget - don't block the voice loop
-            asyncio.create_task(self._evaluate_user_turn(transcript))
-            self.last_eval_transcript_count = total_segments
-
-        # Check for cultural moments every 3 turns (throttled)
         if self._turn_count % 3 == 0:
             asyncio.create_task(self._trigger_cultural_check(transcript))
 
@@ -194,19 +171,7 @@ class ObserverAgent:
                     })
 
     async def _evaluate_user_turn(self, user_transcript: str) -> None:
-        """Evaluate user's grammar.
-
-        This runs asynchronously and:
-        1. Calls LLM for grammar evaluation
-        2. Streams results to frontend
-        3. Injects correction hints to main agent
-
-        Note: Pronunciation assessment removed - not feasible with OpenAI Realtime
-        due to lack of audio-text pairing. Re-evaluate in future with:
-        - Post-session pronunciation
-        - External STT with timestamps
-        - LLM-based estimation
-        """
+        """Evaluate grammar and stream results to frontend via RPC."""
         if self._evaluating:
             return
 
@@ -220,17 +185,11 @@ class ObserverAgent:
             if isinstance(grammar_result, Exception):
                 logger.error(f"Grammar evaluation failed: {grammar_result}")
             elif grammar_result:
-                # Always stream to frontend (feedback panel)
                 await self._stream_feedback({
                     "type": "grammar",
                     "transcript": user_transcript,
                     "issues": grammar_result.get("issues", []),
                 })
-
-                # Inject correction into main agent only if cooldown has passed
-                turns_since_last = self._turn_count - self._last_correction_turn
-                if grammar_result.get("issues") and turns_since_last >= self._correction_cooldown:
-                    await self._inject_correction_hint(grammar_result)
 
         except Exception as e:
             logger.error(f"Error during user turn evaluation: {e}", exc_info=True)
@@ -322,17 +281,6 @@ class ObserverAgent:
                     pass
             logger.error(f"[OBSERVER] Failed to parse grammar response: {response_text[:100]}")
             return None
-
-    # Pronunciation assessment removed - not feasible with OpenAI Realtime
-    # Kept as placeholder for future implementation options:
-    # - Post-session pronunciation with session recording
-    # - External STT with timestamps
-    # - LLM-based estimation
-    
-    async def _assess_pronunciation(self, text: str) -> Optional[dict]:
-        """Placeholder - pronunciation not implemented."""
-        logger.debug("Pronunciation skipped - not available with OpenAI Realtime")
-        return None
 
     async def _suggest_next_line(self) -> None:
         """Suggest what the user could say next.
@@ -445,10 +393,9 @@ class ObserverAgent:
     async def _detect_cultural_moment(self, transcript: str) -> Optional[dict]:
         """LLM-powered cultural moment detection."""
 
-        # Build conversation context (last 3 turns)
         conv = "\n".join([
-            f"{m['role']}: {m['text'][:100]}"
-            for m in self.conversation_history[-3:]
+            f"{m['role']}: {m['text']}"
+            for m in self.conversation_history
         ])
         
         # Get interface language and target language from session userdata
@@ -526,92 +473,6 @@ class ObserverAgent:
         except Exception as e:
             logger.error(f"Cultural check failed: {e}")
 
-    async def _inject_correction_hint(self, grammar_result: dict) -> None:
-        """Inject a correction hint via update_chat_ctx as a user-role message.
-
-        DYNAMIC BEHAVIOR:
-        - If learner makes a NEW error type → correct immediately
-        - If learner repeats the SAME error within 2 turns → correct immediately  
-        - Only skip if exact same correction was already given in last turn
-
-        Why user-role (not assistant/model):
-        Gemini Live API requires alternating user/model turns. At injection time,
-        the AI has already auto-responded to the user's last utterance, so the last
-        turn is model-role. Appending another model-role turn → consecutive model →
-        1008 policy violation. Injecting as user-role maintains valid alternation.
-
-        Why not update_instructions():
-        That sends LiveClientContent with role=None (system-level mid-session
-        update), which Gemini native audio models reject with 1008.
-
-        The cue is framed as an external teacher hint so the AI treats it as a
-        directive for its next response rather than something it "said".
-        """
-        if not hasattr(self.session, "current_agent") or not self.session.current_agent:
-            logger.warning("No active agent to inject hint")
-            return
-
-        current_agent = self.session.current_agent
-
-        issues = grammar_result.get("issues", [])
-        if not issues:
-            return
-
-        # DYNAMIC: Filter out already-corrected error types
-        new_issues = [
-            i for i in issues
-            if i.get("type") not in self._last_correction_types
-        ]
-
-        if not new_issues:
-            logger.info("[OBSERVER] No new error types to correct")
-            return
-
-        # Inject first new issue immediately
-        first_issue = new_issues[0]
-        original = first_issue.get("original", "")
-        correction = first_issue.get("correction", "")
-        explanation = first_issue.get("explanation", "")
-
-        # Track this error type so we don't correct again immediately
-        error_type = first_issue.get("type", "unknown")
-        self._last_correction_types.add(error_type)
-        
-        # Reset after 2 turns to allow re-correction if error persists
-        self._turn_count_for_reset = self._turn_count + 2
-
-        cue = (
-            f"[TEACHER HINT — not spoken by anyone, for the AI tutor's eyes only]\n"
-            f'The learner just said: "{original}"\n'
-            f'A more natural phrasing: "{correction}"\n'
-            f"Reason: {explanation}\n"
-            f"In your NEXT spoken reply, gently weave this correction into the "
-            f"conversation without breaking character. Do not read this hint aloud."
-        )
-        logger.info(f"[OBSERVER] Injecting correction cue (user-role): {cue[:80]}...")
-
-        # Wait for any in-progress model turn to finish before injecting.
-        # Gemini Live API rejects send_client_content during an active model turn
-        # with 1008 policy violation ("Operation is not implemented, or supported,
-        # or enabled"). See livekit/agents#4545 and Google Live API docs:
-        # send_client_content is only valid between turns, not mid-generation.
-        current_speech = self.session.current_speech
-        if current_speech is not None and not current_speech.done():
-            logger.info("[OBSERVER] Waiting for active model turn before injecting hint")
-            try:
-                await current_speech
-            except Exception as e:
-                logger.debug(f"current_speech wait ended: {e}")
-
-        try:
-            chat_ctx = current_agent.chat_ctx.copy()
-            chat_ctx.add_message(role="user", content=cue)
-            await current_agent.update_chat_ctx(chat_ctx)
-            self._last_correction_turn = self._turn_count
-            logger.info("[OBSERVER] Correction cue injected via update_chat_ctx()")
-        except Exception as e:
-            logger.error(f"Failed to inject correction cue: {e}")
-
     async def _stream_feedback(self, data: dict) -> None:
         """Stream feedback data to frontend via RPC.
 
@@ -672,8 +533,8 @@ class ObserverAgent:
 
     async def _evaluate_session_inner(self) -> dict:
         transcript = "\n".join([
-            f"{m['role']}: {m['text'][:150]}"
-            for m in self.conversation_history[-20:]
+            f"{m['role']}: {m['text']}"
+            for m in self.conversation_history
         ])
 
         target = ", ".join(self._target_vocab) if self._target_vocab else "none"
@@ -699,7 +560,7 @@ class ObserverAgent:
             return self._fallback_evaluation()
 
         prompt = prompt_template.format(
-            transcript=transcript[:2000],
+            transcript=transcript,
             target_vocab=target,
             used_vocab=used,
             interface_language=interface_lang_name,

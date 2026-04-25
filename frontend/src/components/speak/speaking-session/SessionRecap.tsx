@@ -2,7 +2,7 @@ import type { SpeakSession } from '@/db'
 import type { Persona } from '@/lib/constants'
 import type { TranslationKey } from '@/lib/i18n'
 import type { SessionEvaluation, SpeakSituation } from '@/types'
-import { CheckCircle2, Clock, MessageSquare, TrendingUp, Trophy } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock, MessageSquare, TrendingUp, Trophy } from 'lucide-react'
 import { GrammarCorrectionCard } from '@/components/agents-ui/agent-chat-transcript'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
@@ -195,14 +195,21 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
                 className={`flex flex-col ${turn.role === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div className={`max-w-[85%] flex flex-col ${turn.role === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div
-                    className={`px-3 py-2 rounded-lg text-sm leading-relaxed ${
-                      turn.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card border text-foreground'
-                    }`}
-                  >
-                    <p>{turn.content}</p>
+                  <div className={`flex items-center gap-1.5 ${turn.role === 'user' ? 'flex-row' : ''}`}>
+                    {turn.role === 'user' && turnFeedback && (
+                      turnFeedback.issues.length > 0
+                        ? <AlertCircle className="size-5 text-amber-500 shrink-0" />
+                        : <CheckCircle2 className="size-5 text-green-500 shrink-0" />
+                    )}
+                    <div
+                      className={`px-3 py-2 rounded-lg text-sm leading-relaxed ${
+                        turn.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card border text-foreground'
+                      }`}
+                    >
+                      <p>{turn.content}</p>
+                    </div>
                   </div>
                   {turnFeedback && <GrammarCorrectionCard feedback={turnFeedback} />}
                 </div>

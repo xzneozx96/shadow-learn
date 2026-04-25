@@ -68,14 +68,17 @@ export function IntelligencePanel({
                   </div>
                 </div>
 
-                {vocabTips && vocabTips.length > 0 && (
-                  <div className="pt-3 border-t border-emerald-500/20 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-white">{vocabTips[0].word}</span>
+                {vocabTips && vocabTips.length > 0 && (() => {
+                  const tip = vocabTips[vocabTips.length - 1]
+                  return (
+                    <div className="pt-3 border-t border-emerald-500/20 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">{tip.word}</span>
+                      </div>
+                      <p className="text-xs text-emerald-100/70 leading-relaxed italic">{tip.reason}</p>
                     </div>
-                    <p className="text-xs text-emerald-100/70 leading-relaxed italic">{vocabTips[0].reason}</p>
-                  </div>
-                )}
+                  )
+                })()}
               </div>
             )
           : vocabTips && vocabTips.length > 0
@@ -85,8 +88,8 @@ export function IntelligencePanel({
                     <Sparkles size={14} />
                     {t('speak.feedbackPanel.tryThisWord')}
                   </div>
-                  <p className="text-sm font-bold text-emerald-400">{vocabTips[0].word}</p>
-                  <p className="text-xs text-emerald-100/70 font-medium leading-relaxed">{vocabTips[0].reason}</p>
+                  <p className="text-sm font-bold text-emerald-400">{vocabTips[vocabTips.length - 1].word}</p>
+                  <p className="text-xs text-emerald-100/70 font-medium leading-relaxed">{vocabTips[vocabTips.length - 1].reason}</p>
                 </div>
               )
             : null}

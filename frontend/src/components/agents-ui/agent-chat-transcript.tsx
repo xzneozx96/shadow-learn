@@ -1,6 +1,7 @@
 import type { AgentState, ReceivedMessage } from '@livekit/components-react'
 import type { ComponentProps } from 'react'
 import type { GrammarFeedback } from '@/types'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { AgentChatIndicator } from '@/components/agents-ui/agent-chat-indicator'
 import {
@@ -82,8 +83,19 @@ export function AgentChatTranscript({
                     {isUser
                       ? (
                           <div className="flex flex-col items-end max-w-[85%]">
-                            <div className="rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
-                              {message}
+                            <div className="flex items-center gap-1.5">
+                              {feedback && (
+                                feedback.issues.length > 0
+                                  ? (
+                                      <AlertCircle className="size-5 text-amber-500 shrink-0" />
+                                    )
+                                  : (
+                                      <CheckCircle2 className="size-5 text-green-500 shrink-0" />
+                                    )
+                              )}
+                              <div className="rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
+                                {message}
+                              </div>
                             </div>
                             {feedback && <GrammarCorrectionCard feedback={feedback} />}
                           </div>

@@ -1,8 +1,4 @@
-"""Main PersonaAgent for Speak with AI voice practice.
-
-This agent handles the conversation with the user, speaks in character,
-and receives correction hints from the Observer agent via context injection.
-"""
+"""Main PersonaAgent for Speak with AI voice practice."""
 import logging
 from typing import Optional
 
