@@ -131,12 +131,12 @@ export function Library() {
           {/* Hero — encouraging study quote */}
           <div className="mb-16 relative">
             <div className="flex flex-col items-center justify-center gap-6 text-center">
-              <h2 className="text-5xl sm:text-6xl font-bold tracking-wide leading-[1.1] max-w-2xl">
+              <h2 className="text-5xl xl:text-6xl font-bold tracking-wide leading-[1.1] max-w-2xl">
                 {t('library.heroTitleLine1')}
                 <br />
                 <span className="text-primary">{t('library.heroTitleLine2')}</span>
               </h2>
-              <p className="text-lg lg:text-xl text-muted-foreground max-w-xl leading-relaxed">
+              <p className="text-base xl:text-xl text-muted-foreground max-w-lg leading-relaxed">
                 {t('library.heroSubtitle')}
               </p>
             </div>
