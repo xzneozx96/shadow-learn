@@ -60,6 +60,8 @@ def build_system_prompt(
         parts += [
             "Script: Use Simplified Chinese characters (简体字) exclusively. "
             "Never write Traditional Chinese characters (繁體字).",
+            "Speech recognition: The learner is speaking Mandarin Chinese (普通话). "
+            "Transcribe their speech as Mandarin Chinese, not Thai, Cantonese, or any other language.",
             "",
         ]
 

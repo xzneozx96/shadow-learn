@@ -110,6 +110,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     # Extract configuration
     persona_id = session_info.get("persona_id", "friendly_buddy")
     situation_id = session_info.get("situation_id", "casual_chat")
+    target_language = session_info.get("target_language", "zh-CN")
 
     # Get API keys - prefer OpenAI for observer, fallback to Google for main.
     # google_key is URL-encoded by the router (quote()) so unquote on read.
@@ -182,10 +183,9 @@ async def shadowlearn_session(ctx: agents.JobContext):
     # Note: Using Google Gemini Realtime for main voice
     # Could alternatively use OpenAI Realtime
     if google_key:
-        # Match the official Gemini Live recipe (recipes/gemini_live_vision):
-        # - default model (no custom realtime_input_config)
-        # - proactivity + affective_dialog enabled (native-audio features)
-        # - Silero VAD on AgentSession for turn-taking
+        # gemini-2.5-flash-native-audio-preview-12-2025 rejects ALL language codes
+        # via SpeechConfig.language_code (1007 error), including "zh" which the docs
+        # list as supported. Language locking via system prompt instead.
         llm = google.realtime.RealtimeModel(
             api_key=google_key,
             voice=voice_id,
@@ -240,7 +240,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     @ctx.room.local_participant.register_rpc_method("request_session_evaluation")
     async def _handle_eval_rpc(data):
         logger.info("[EVAL] Evaluation requested via RPC")
-        # evaluate_session() never raises — it returns a valid fallback on any failure
+        # Returns None if no user turns (nothing meaningful to evaluate); fallback dict on LLM errors.
         evaluation = await observer.evaluate_session()
         logger.info("[EVAL] Evaluation complete, returning to frontend")
         return json.dumps(evaluation)

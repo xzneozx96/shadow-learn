@@ -43,6 +43,22 @@ export function GrammarCorrectionCard({ feedback }: { feedback: GrammarFeedback 
   )
 }
 
+export function TranslationInline({ translation, romanization }: { translation?: string, romanization?: string }) {
+  if (!translation && !romanization)
+    return null
+  return (
+    <div className="space-y-2">
+      <div className="h-px w-full bg-border" />
+      {romanization && (
+        <p className="text-xs font-mono text-foreground/75 tracking-tight leading-snug">{romanization}</p>
+      )}
+      {translation && (
+        <p className="text-xs text-foreground/85 italic leading-snug">{translation}</p>
+      )}
+    </div>
+  )
+}
+
 const EMPTY_TRANSLATIONS: Record<string, AiTurnTranslation> = {}
 
 export interface AgentChatTranscriptProps extends ComponentProps<'div'> {
@@ -92,33 +108,27 @@ export function AgentChatTranscript({
                             <div className="flex items-center gap-1.5">
                               {feedback && (
                                 feedback.issues.length > 0
-                                  ? (
-                                      <AlertCircle className="size-5 text-amber-500 shrink-0" />
-                                    )
-                                  : (
-                                      <CheckCircle2 className="size-5 text-green-500 shrink-0" />
-                                    )
+                                  ? <AlertCircle className="size-5 text-amber-500 shrink-0" />
+                                  : <CheckCircle2 className="size-5 text-green-500 shrink-0" />
                               )}
                               <div className="rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
-                                {message}
+                                <p className="wrap-break-word">{message}</p>
                               </div>
                             </div>
                             {feedback && <GrammarCorrectionCard feedback={feedback} />}
                           </div>
                         )
                       : (
-                          <div className="max-w-[85%] flex flex-col gap-1">
-                            <div className="rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
-                              {message}
+                          <div className="max-w-[85%]">
+                            <div className="rounded-lg px-3 py-2 text-sm bg-card border text-foreground space-y-2">
+                              <p className="wrap-break-word">{message}</p>
+                              {translation && (
+                                <TranslationInline
+                                  translation={translation.translation}
+                                  romanization={translation.romanization}
+                                />
+                              )}
                             </div>
-                            {translation && (
-                              <div className="px-1 space-y-0.5">
-                                {translation.romanization && (
-                                  <p className="text-sm text-muted-foreground/80">{translation.romanization}</p>
-                                )}
-                                <p className="text-sm text-muted-foreground italic">{translation.translation}</p>
-                              </div>
-                            )}
                           </div>
                         )}
                   </div>

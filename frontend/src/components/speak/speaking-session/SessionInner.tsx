@@ -32,15 +32,25 @@ export function SessionInner() {
     onFeedbackUpdate,
   })
 
+  const aiTurnTranslationsRef = useRef(rpc.aiTurnTranslations)
+  useEffect(() => { aiTurnTranslationsRef.current = rpc.aiTurnTranslations }, [rpc.aiTurnTranslations])
+
   const handleEndWithEvaluation = useCallback(async () => {
     setEvaluationStatus('generating')
     if (onTranscriptUpdate) {
-      const transcript = chatMessagesRef.current.map(m => ({
-        id: m.id,
-        role: m.from?.isLocal ? 'user' as const : 'assistant' as const,
-        content: m.message || '',
-        timestamp: m.timestamp ? new Date(m.timestamp).toISOString() : new Date().toISOString(),
-      }))
+      const translations = aiTurnTranslationsRef.current
+      const transcript = chatMessagesRef.current.map((m) => {
+        const isUser = m.from?.isLocal ?? false
+        const t = !isUser && m.id ? translations[m.id] : undefined
+        return {
+          id: m.id,
+          role: isUser ? 'user' as const : 'assistant' as const,
+          content: m.message || '',
+          timestamp: m.timestamp ? new Date(m.timestamp).toISOString() : new Date().toISOString(),
+          ...(t?.translation ? { translation: t.translation } : {}),
+          ...(t?.romanization ? { romanization: t.romanization } : {}),
+        }
+      })
       await onTranscriptUpdate(transcript)
     }
     try {

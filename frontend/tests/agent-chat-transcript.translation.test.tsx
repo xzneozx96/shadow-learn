@@ -40,8 +40,7 @@ describe('AgentChatTranscript — translation rendering', () => {
     }
     const { container } = render(<AgentChatTranscript messages={[fakeAgentMessage('id1', 'Hello')]} aiTurnTranslations={translations} />)
     expect(screen.getByText('Xin chào')).toBeInTheDocument()
-    // romanization paragraph should not be rendered (only the translation italic p)
-    const translationBlock = container.querySelector('.space-y-0\\.5')
-    expect(translationBlock?.children).toHaveLength(1)
+    // Only the italic translation paragraph should render — no romanization mono row
+    expect(container.querySelector('p.font-mono')).toBeNull()
   })
 })

@@ -132,6 +132,7 @@ export interface AiTurnTranslation {
   romanization: string
 }
 
+
 export interface VocabTip {
   type: 'vocab-tip'
   word: string

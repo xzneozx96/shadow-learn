@@ -3,7 +3,7 @@ import type { Persona } from '@/lib/constants'
 import type { TranslationKey } from '@/lib/i18n'
 import type { SessionEvaluation, SpeakSituation } from '@/types'
 import { AlertCircle, CheckCircle2, Clock, MessageSquare, TrendingUp, Trophy } from 'lucide-react'
-import { GrammarCorrectionCard } from '@/components/agents-ui/agent-chat-transcript'
+import { GrammarCorrectionCard, TranslationInline } from '@/components/agents-ui/agent-chat-transcript'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { getPersonaName } from '@/lib/constants'
@@ -189,30 +189,41 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-3">
           {transcript.map((turn, i) => {
             const turnFeedback = turn.id ? feedbacks[turn.id] : undefined
+            const isUser = turn.role === 'user'
             return (
               <div
                 key={turn.id ?? turn.timestamp ?? i}
-                className={`flex flex-col ${turn.role === 'user' ? 'items-end' : 'items-start'}`}
+                className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[85%] flex flex-col ${turn.role === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div className={`flex items-center gap-1.5 ${turn.role === 'user' ? 'flex-row' : ''}`}>
-                    {turn.role === 'user' && turnFeedback && (
-                      turnFeedback.issues.length > 0
-                        ? <AlertCircle className="size-5 text-amber-500 shrink-0" />
-                        : <CheckCircle2 className="size-5 text-green-500 shrink-0" />
+                {isUser
+                  ? (
+                      <div className="flex flex-col items-end max-w-[85%]">
+                        <div className="flex items-center gap-1.5">
+                          {turnFeedback && (
+                            turnFeedback.issues.length > 0
+                              ? <AlertCircle className="size-5 text-amber-500 shrink-0" />
+                              : <CheckCircle2 className="size-5 text-green-500 shrink-0" />
+                          )}
+                          <div className="rounded-lg px-3 py-2 text-sm leading-relaxed bg-primary text-primary-foreground">
+                            <p className="wrap-break-word">{turn.content}</p>
+                          </div>
+                        </div>
+                        {turnFeedback && <GrammarCorrectionCard feedback={turnFeedback} />}
+                      </div>
+                    )
+                  : (
+                      <div className="max-w-[85%]">
+                        <div className="rounded-lg px-3 py-2 text-sm leading-relaxed bg-card border text-foreground space-y-2">
+                          <p className="wrap-break-word">{turn.content}</p>
+                          {(turn.translation || turn.romanization) && (
+                            <TranslationInline
+                              translation={turn.translation}
+                              romanization={turn.romanization}
+                            />
+                          )}
+                        </div>
+                      </div>
                     )}
-                    <div
-                      className={`px-3 py-2 rounded-lg text-sm leading-relaxed ${
-                        turn.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-card border text-foreground'
-                      }`}
-                    >
-                      <p>{turn.content}</p>
-                    </div>
-                  </div>
-                  {turnFeedback && <GrammarCorrectionCard feedback={turnFeedback} />}
-                </div>
               </div>
             )
           })}

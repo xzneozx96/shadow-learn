@@ -136,6 +136,8 @@ export interface SpeakTurn {
   role: 'user' | 'assistant'
   content: string
   timestamp: string
+  translation?: string
+  romanization?: string
 }
 
 interface ShadowLearnSchema extends DBSchema {

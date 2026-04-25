@@ -584,8 +584,15 @@ class ObserverAgent:
         except Exception as e:
             logger.error(f"Failed to stream feedback via RPC: {e}")
 
-    async def evaluate_session(self) -> dict:
-        """Generate rich session evaluation summary. Never raises — always returns a valid dict."""
+    async def evaluate_session(self) -> dict | None:
+        """Generate rich session evaluation summary.
+
+        Returns None if the user had no turns (nothing meaningful to evaluate).
+        Never raises — returns a valid fallback dict on LLM errors.
+        """
+        if self._turn_count == 0:
+            logger.info("[OBSERVER] Skipping evaluation — no user turns in session")
+            return None
         try:
             return await self._evaluate_session_inner()
         except Exception as e:
@@ -646,16 +653,18 @@ class ObserverAgent:
         except json.JSONDecodeError:
             return self._fallback_evaluation()
 
-    def _fallback_evaluation(self) -> dict:
-        """Fallback evaluation if LLM fails."""
+    def _fallback_evaluation(self) -> dict | None:
+        """Fallback evaluation if LLM fails. Returns None when there were no user turns."""
+        if self._turn_count == 0:
+            return None
         unused = [w for w in self._target_vocab if w not in self._used_vocab]
         return {
             "type": "session-evaluation",
-            "strengths": ["Kept conversation going"],
+            "strengths": [],
             "areas_to_improve": [],
             "vocabulary_mastered": list(self._used_vocab),
             "vocabulary_to_practice": unused,
-            "suggestions": ["Continue practicing to build fluency"]
+            "suggestions": []
         }
 
 
