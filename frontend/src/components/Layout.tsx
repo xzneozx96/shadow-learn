@@ -29,76 +29,79 @@ export function Layout({ children }: LayoutProps) {
             {t('auth.trial.banner')}
           </div>
         )}
-        <nav className="z-50 border-b border-border p-4 backdrop-blur-md">
+        <nav className="z-50 border-b border-white/6 bg-background/75 px-4 py-3 backdrop-blur-xl shadow-[inset_0_-1px_0_rgba(255,255,255,0.03)]">
           <div className="container mx-auto flex items-center justify-between gap-4">
-            {/* Logo Group */}
+            {/* Logo */}
             <div className="flex shrink-0 justify-start">
-              <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight text-foreground hover:opacity-90 transition-opacity">
-                <img src="/favicon.svg" className="size-8" alt="ShadowLearn Logo" />
-                <span className="text-xl hidden xl:inline-block">ShadowLearn</span>
+              <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight text-foreground hover:opacity-80 transition-opacity">
+                <img src="/favicon.svg" className="size-7" alt="ShadowLearn Logo" />
+                <span className="text-[15px] hidden xl:inline-block">ShadowLearn</span>
               </Link>
             </div>
 
-            {/* Navigation Group (Centered pill) */}
-            <div className="hidden md:flex flex-1 justify-center">
-              <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 shadow-xs backdrop-blur-md">
+            {/* Navigation — flat text links, no pill wrapper */}
+            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 shadow-xs backdrop-blur-md">
+              <Button
+                variant={location.pathname === '/' ? 'secondary' : 'ghost'}
+                className={cn('rounded-full h-9', location.pathname === '/' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
+                render={<Link to="/" />}
+              >
+                {t('nav.library')}
+              </Button>
+              <Button
+                variant={location.pathname.startsWith('/vocabulary') ? 'secondary' : 'ghost'}
+                className={cn('rounded-full h-9', location.pathname.startsWith('/vocabulary') ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
+                render={<Link to="/vocabulary" />}
+              >
+                {t('nav.workbook')}
+              </Button>
+              <Button
+                variant={location.pathname === '/docs' ? 'secondary' : 'ghost'}
+                className={cn('rounded-full h-9', location.pathname === '/docs' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
+                render={<Link to="/docs" />}
+              >
+                {t('nav.documentation')}
+              </Button>
+              <div className="relative">
                 <Button
-                  variant={location.pathname === '/' ? 'secondary' : 'ghost'}
-                  className={cn('rounded-full h-9', location.pathname === '/' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
-                  render={<Link to="/" />}
+                  variant={location.pathname === '/changelog' ? 'secondary' : 'ghost'}
+                  className={cn('rounded-full h-9', location.pathname === '/changelog' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
+                  render={<Link to="/changelog" />}
                 >
-                  {t('nav.library')}
+                  {t('whatsNew.navLabel')}
                 </Button>
-                <Button
-                  variant={location.pathname.startsWith('/vocabulary') ? 'secondary' : 'ghost'}
-                  className={cn('rounded-full h-9', location.pathname.startsWith('/vocabulary') ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
-                  render={<Link to="/vocabulary" />}
-                >
-                  {t('nav.workbook')}
-                </Button>
-                <Button
-                  variant={location.pathname === '/docs' ? 'secondary' : 'ghost'}
-                  className={cn('rounded-full h-9', location.pathname === '/docs' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
-                  render={<Link to="/docs" />}
-                >
-                  {t('nav.documentation')}
-                </Button>
-                <div className="relative">
-                  <Button
-                    variant={location.pathname === '/changelog' ? 'secondary' : 'ghost'}
-                    className={cn('rounded-full h-9', location.pathname === '/changelog' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
-                    render={<Link to="/changelog" />}
-                  >
-                    {t('whatsNew.navLabel')}
-                  </Button>
-                  {hasUnseen && (
-                    <span className="pointer-events-none absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm ring-2 ring-background">
-                      1
-                    </span>
-                  )}
-                </div>
+                {hasUnseen && (
+                  <span className="pointer-events-none absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm ring-2 ring-background">
+                    1
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Actions Group (Right) */}
-            <div className="flex shrink-0 justify-end items-center gap-2">
+            {/* Actions */}
+            <div className="flex shrink-0 justify-end items-center gap-1.5">
               <Button
                 variant="outline"
                 onClick={openPanel}
-                className="gap-2 bg-linear-to-br from-violet-500/10 to-transparent border-violet-500/30 hover:border-violet-500/60 hover:from-violet-500/20 text-violet-400! h-9"
+                className="gap-2 h-9 border-white/8 bg-white/4 hover:bg-white/8 text-violet-400/80 hover:text-violet-400 transition-colors"
               >
-                <Sparkles className="size-4" />
-                <span className="hidden xl:inline">{t('companion.askButton')}</span>
+                <Sparkles className="size-3.5" />
+                <span className="hidden xl:inline text-sm">{t('companion.askButton')}</span>
               </Button>
               <Button
                 variant="outline"
                 onClick={openSpeakModal}
-                className="gap-2 bg-linear-to-br from-amber-500/10 to-transparent border-amber-500/30 hover:border-amber-500/60 hover:from-amber-500/20 text-amber-400! font-medium h-9"
+                className="gap-2 h-9 border-primary/25 bg-primary/6 hover:bg-primary/15 text-primary transition-colors"
               >
-                <Zap className="size-4" />
-                <span className="hidden xl:inline">{t('speak.title')}</span>
+                <Zap className="size-3.5" />
+                <span className="hidden xl:inline text-sm">{t('speak.title')}</span>
               </Button>
-              <Button variant="outline" size="icon" className="rounded-lg border-border/50 hover:bg-muted text-muted-foreground hover:text-foreground h-9 w-9" render={<Link to="/settings" />}>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 border-white/8 bg-transparent hover:bg-white/6 text-foreground/50 hover:text-foreground transition-colors"
+                render={<Link to="/settings" />}
+              >
                 <Settings className="size-4" />
               </Button>
             </div>

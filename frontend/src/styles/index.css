@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Noto+Sans+SC:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap');
+@import '@fontsource-variable/geist';
 
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
@@ -8,36 +9,40 @@
 
 @layer base {
   :root {
-    --background: 222 18% 8%;
-    --foreground: 210 20% 90%;
-    --card: 222 16% 12%;
-    --card-foreground: 210 20% 90%;
-    --popover: 222 16% 12%;
-    --popover-foreground: 210 20% 90%;
-    --primary: 234.63 88.49% 72.75%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 222 14% 16%;
-    --secondary-foreground: 210 10% 70%;
-    --muted: 222 12% 16%;
-    --muted-foreground: 215 10% 50%;
-    --accent: 222 14% 18%;
-    --accent-foreground: 210 20% 90%;
+    /* Zinc-based neutrals — no blue tint */
+    --background: 240 6% 4%;
+    --foreground: 0 0% 90%;
+    --card: 240 6% 7%;
+    --card-foreground: 0 0% 90%;
+    --popover: 240 6% 7%;
+    --popover-foreground: 0 0% 90%;
+    /* Amber primary — warm, distinctive, non-AI */
+    --primary: 38 90% 52%;
+    --primary-foreground: 30 15% 8%;
+    --secondary: 240 4% 11%;
+    --secondary-foreground: 0 0% 70%;
+    --muted: 240 4% 10%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 240 4% 12%;
+    --accent-foreground: 0 0% 90%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 222 12% 18%;
-    --input: 222 12% 18%;
-    --ring: 203 80% 55%;
+    --border: 240 4% 15%;
+    --input: 240 4% 10%;
+    --ring: 38 90% 52%;
     --radius: 0.75rem;
-    --sidebar-background: 222 18% 7%;
-    --sidebar-foreground: 210 10% 70%;
-    --sidebar-primary: 203 80% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 14% 14%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 222 12% 16%;
-    --sidebar-ring: 203 80% 55%;
-    --tag-bg: 222 14% 16%;
-    --tag-foreground: 203 60% 65%;
+    /* Sidebar */
+    --sidebar-background: 240 6% 3%;
+    --sidebar-foreground: 0 0% 65%;
+    --sidebar-primary: 38 90% 52%;
+    --sidebar-primary-foreground: 30 15% 8%;
+    --sidebar-accent: 240 4% 9%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 240 4% 13%;
+    --sidebar-ring: 38 90% 52%;
+    /* Tags — warm amber tint */
+    --tag-bg: 38 25% 10%;
+    --tag-foreground: 38 65% 58%;
     --success: 142 76% 46%;
     --success-foreground: 0 0% 98%;
   }
@@ -83,7 +88,7 @@
 }
 
 @theme inline {
-  --font-sans: 'Nunito', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-sans: 'Geist Variable', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -132,7 +137,7 @@
 
   .elegant-card:hover {
     border-color: hsl(var(--border));
-    background: hsl(222 16% 14%);
+    background: hsl(240 4% 9%);
   }
 
   .elegant-input {
@@ -176,10 +181,9 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(1100px 700px at 85% -10%, rgba(80, 110, 220, 0.06), transparent 60%),
-      radial-gradient(900px 600px at -10% 110%, rgba(60, 180, 130, 0.07), transparent 60%),
-      radial-gradient(700px 500px at 55% 40%, rgba(80, 110, 220, 0.05), transparent 60%),
-      #111318;
+      radial-gradient(900px 600px at 80% -5%, rgba(245, 158, 11, 0.05), transparent 60%),
+      radial-gradient(700px 500px at -5% 100%, rgba(245, 158, 11, 0.03), transparent 60%),
+      hsl(240 6% 4%);
   }
 }
 
@@ -232,18 +236,21 @@
     }
   }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 0.3;
-    transform: translateX(-50%) scale(1);
-  }
-  50% {
-    opacity: 0.1;
-    transform: translateX(-50%) scale(1.1);
-  }
-}
+  @keyframes pulse {
 
-@keyframes shake {
+    0%,
+    100% {
+      opacity: 0.3;
+      transform: translateX(-50%) scale(1);
+    }
+
+    50% {
+      opacity: 0.1;
+      transform: translateX(-50%) scale(1.1);
+    }
+  }
+
+  @keyframes shake {
 
     0%,
     100% {
