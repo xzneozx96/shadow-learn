@@ -50,6 +50,41 @@ export function captureVocabularyWordSaved(data: { source_language: string }) {
   posthog.capture('vocabulary_word_saved', data)
 }
 
+export function captureSpeakSessionStarted(data: {
+  target_language: string
+  proficiency_level: string
+  persona_id: string
+  situation_id: string
+  is_custom_situation: boolean
+}) {
+  posthog.capture('speak_session_started', data)
+}
+
+export function captureSpeakSessionCompleted(data: {
+  target_language: string
+  proficiency_level: string
+  duration_seconds: number
+  turn_count: number
+}) {
+  posthog.capture('speak_session_completed', data)
+}
+
+export function captureSpeakSessionAbandoned(data: {
+  target_language: string
+  proficiency_level: string
+  turn_count: number
+}) {
+  posthog.capture('speak_session_abandoned', data)
+}
+
+export function captureSpeakPersonaSelected(data: { persona_id: string, target_language: string }) {
+  posthog.capture('speak_persona_selected', data)
+}
+
+export function captureSpeakSituationSelected(data: { situation_id: string, is_custom: boolean }) {
+  posthog.capture('speak_situation_selected', data)
+}
+
 export function captureWhatsNewModalShown(data: { announcement_id: string, locale: string }) {
   posthog.capture('whats_new_modal_shown', data)
 }

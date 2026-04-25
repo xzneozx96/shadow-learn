@@ -40,7 +40,7 @@ function MistakeItem({ mistake, entry }: { mistake: ErrorPattern, entry?: VocabE
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-destructive/15 border border-destructive/20 text-destructive font-black text-xs shadow-sm">
           {mistake.frequency}
         </div>
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-bold mt-1">
+        <span className="text-xs uppercase tracking-wider text-muted-foreground/50 font-bold mt-1">
           {t('progress.fails')}
         </span>
       </div>

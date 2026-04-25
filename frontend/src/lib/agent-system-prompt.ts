@@ -192,7 +192,7 @@ function buildDynamicSections(context: SessionContext): string {
     '- Be encouraging but concise. Lead with the answer or action, not the reasoning.',
     '- Skip filler and preamble. Use one sentence when possible.',
     '- **Call `get_core_guidelines()` at session start — loads SLA principles, feedback templates, and session protocols.**',
-    '- **ALWAYS call `get_skill_guide({ skill })` BEFORE giving advice, tips, or answering "how-to" questions about specific skills (tones, pronunciation, vocabulary, grammar, listening, speaking, characters).**',
+    '- **ALWAYS call `get_skill_guide({ skill })` BEFORE giving advice, tips, or answering "how-to" questions about specific skills (tones, pronunciation, vocabulary, grammar_foundations, grammar_complements, listening, speaking, characters).**',
     '- Chain tools when needed, but always end with a user-visible response.',
     '- Use get_study_context (composite) before suggesting exercises — it covers all data in one call.',
     '- Save important user observations with save_memory().',

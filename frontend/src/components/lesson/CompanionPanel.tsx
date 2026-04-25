@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useAgentChat } from '@/hooks/useAgentChat'
 import { captureCompanionMessageSent } from '@/lib/posthog-events'
@@ -30,6 +31,7 @@ export function CompanionPanel({
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
   const { messages, isLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
+  const { openSpeakModal } = useSpeakModal()
 
   useEffect(() => {
     if (chips.length > 0)
@@ -75,6 +77,7 @@ export function CompanionPanel({
           onSend={handleSend}
           onStop={stop}
           headerSlot={headerSlot}
+          onSpeakClick={openSpeakModal}
         />
       </TabsContent>
 

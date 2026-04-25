@@ -1,0 +1,5 @@
+# STUB — not active in evaluation flow.
+# Grammar, suggestion, cultural, and session-evaluation prompts handle all
+# ObserverAgent feedback. This file is loaded at __init__ (line 60) but
+# never passed to the LLM.
+prompt: ""

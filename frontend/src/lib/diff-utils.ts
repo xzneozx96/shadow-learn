@@ -57,6 +57,14 @@ export function stripPinyinTones(pinyin: string): string {
 export function computePinyinDiff(userInput: string, correctPinyin: string): DiffToken[] {
   const userSyllables = userInput.trim().split(SPLIT_RE).filter(FILTER_BOOL)
   const correctSyllables = correctPinyin.trim().split(SPLIT_RE).filter(FILTER_BOOL)
+
+  // Correct pinyin stored without spaces (e.g. "zhīdào") but user typed syllables separately.
+  // Fall back to whole-word comparison so token count mismatch doesn't zero the score.
+  if (correctSyllables.length === 1 && userSyllables.length > 1) {
+    const isMatch = comparePinyin(userSyllables.join(''), correctSyllables[0])
+    return userSyllables.map(u => ({ text: u, correct: isMatch }))
+  }
+
   const len = Math.max(userSyllables.length, correctSyllables.length)
   const tokens: DiffToken[] = []
   for (let i = 0; i < len; i++) {

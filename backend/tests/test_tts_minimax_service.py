@@ -22,8 +22,8 @@ async def test_synthesize_speech_returns_mp3_bytes():
     mock_client.__aexit__ = AsyncMock(return_value=None)
     mock_client.post = AsyncMock(return_value=mock_response)
 
-    with patch("app.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
-        from app.services.tts_minimax import synthesize_speech
+    with patch("app.tts.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
+        from app.tts.services.tts_minimax import synthesize_speech
         result = await synthesize_speech("你好", "test-key")
 
     assert result == fake_audio
@@ -44,8 +44,8 @@ async def test_synthesize_speech_raises_on_api_error():
     mock_client.__aexit__ = AsyncMock(return_value=None)
     mock_client.post = AsyncMock(return_value=mock_response)
 
-    with patch("app.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
-        from app.services.tts_minimax import synthesize_speech
+    with patch("app.tts.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
+        from app.tts.services.tts_minimax import synthesize_speech
         with pytest.raises(RuntimeError, match="Invalid API key"):
             await synthesize_speech("你好", "bad-key")
 
@@ -53,7 +53,7 @@ async def test_synthesize_speech_raises_on_api_error():
 @pytest.mark.asyncio
 async def test_synthesize_speech_rejects_empty_text():
     """Service raises ValueError for empty text."""
-    from app.services.tts_minimax import synthesize_speech
+    from app.tts.services.tts_minimax import synthesize_speech
     with pytest.raises(ValueError, match="text"):
         await synthesize_speech("", "key")
 
@@ -61,7 +61,7 @@ async def test_synthesize_speech_rejects_empty_text():
 @pytest.mark.asyncio
 async def test_synthesize_speech_rejects_oversized_text():
     """Service raises ValueError for text exceeding 10,000 chars."""
-    from app.services.tts_minimax import synthesize_speech
+    from app.tts.services.tts_minimax import synthesize_speech
     with pytest.raises(ValueError, match="10,000"):
         await synthesize_speech("a" * 10_001, "key")
 
@@ -91,9 +91,9 @@ async def test_synthesize_speech_retries_on_429_then_succeeds():
     mock_client.__aexit__ = AsyncMock(return_value=None)
     mock_client.post = AsyncMock(side_effect=[rate_limit_response, ok_response])
 
-    with patch("app.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
+    with patch("app.tts.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
         with patch("asyncio.sleep", new_callable=AsyncMock):
-            from app.services.tts_minimax import synthesize_speech
+            from app.tts.services.tts_minimax import synthesize_speech
             result = await synthesize_speech("你好", "key")
 
     assert result == fake_audio
@@ -121,8 +121,8 @@ async def test_minimax_provider_uses_japanese_voice_for_japanese():
     mock_client.__aexit__ = AsyncMock(return_value=None)
     mock_client.post = fake_post
 
-    with patch("app.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
-        from app.services.tts_minimax import MinimaxTTSProvider
+    with patch("app.tts.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
+        from app.tts.services.tts_minimax import MinimaxTTSProvider
         provider = MinimaxTTSProvider()
         await provider.synthesize("こんにちは", {"minimax_api_key": "key"}, language="ja")
 
@@ -150,8 +150,8 @@ async def test_minimax_provider_uses_chinese_voice_for_chinese():
     mock_client.__aexit__ = AsyncMock(return_value=None)
     mock_client.post = fake_post
 
-    with patch("app.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
-        from app.services.tts_minimax import MinimaxTTSProvider
+    with patch("app.tts.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
+        from app.tts.services.tts_minimax import MinimaxTTSProvider
         provider = MinimaxTTSProvider()
         await provider.synthesize("你好", {"minimax_api_key": "key"}, language="zh-CN")
 

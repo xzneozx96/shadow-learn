@@ -167,7 +167,7 @@ export function CreateLesson() {
     finally {
       setSubmitting(false)
     }
-  }, [db, keys, tab, youtubeUrl, file, language, sourceLanguage, updateLesson, sttProvider])
+  }, [db, keys, tab, youtubeUrl, file, language, sourceLanguage, updateLesson, sttProvider, trialMode])
 
   const canGenerate = sttProvider !== null
     && (tab === 'youtube' ? !!youtubeUrl.trim() : !!file)
@@ -175,15 +175,15 @@ export function CreateLesson() {
   if (queued) {
     return (
       <Layout>
-        <div className="mx-auto max-w-2xl p-4">
+        <div className="mx-auto max-w-2xl p-4 pt-10">
           <Card>
             <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center" data-testid="create-lesson-queued-confirmation">
               <p className="text-sm text-white/65" data-testid="create-lesson-queued-message">
                 {t('create.queued')}
               </p>
               <div className="flex gap-2">
-                <Button onClick={() => navigate('/')} data-testid="create-lesson-go-to-library-button">{t('create.goToLibrary')}</Button>
-                <Button variant="outline" onClick={() => setQueued(false)} data-testid="create-lesson-queue-another-button">{t('create.queueAnother')}</Button>
+                <Button size="lg" onClick={() => navigate('/')} data-testid="create-lesson-go-to-library-button">{t('create.goToLibrary')}</Button>
+                <Button variant="outline" size="lg" onClick={() => setQueued(false)} data-testid="create-lesson-queue-another-button">{t('create.queueAnother')}</Button>
               </div>
             </CardContent>
           </Card>
@@ -194,7 +194,7 @@ export function CreateLesson() {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-2xl p-4">
+      <div className="mx-auto max-w-2xl p-4 pt-10">
         <Card>
           <CardHeader>
             <CardTitle>{t('create.title')}</CardTitle>
@@ -245,6 +245,7 @@ export function CreateLesson() {
               disabled={!canGenerate || submitting}
               onClick={handleGenerate}
               className="w-full"
+              size="xl"
               data-testid="create-lesson-generate-button"
             >
               <Sparkles className="size-4" />

@@ -4,7 +4,7 @@ import pytest
 import respx
 from httpx import Response
 
-from app.services.transcription_azure import AzureSTTProvider, _parse_duration
+from app.transcription.services.transcription_azure import AzureSTTProvider, _parse_duration
 
 
 # ---------------------------------------------------------------------------

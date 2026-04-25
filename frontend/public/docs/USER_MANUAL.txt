@@ -12,10 +12,11 @@ This guide will walk you through setting up and maximizing the application's fea
 3. [Library & Lesson Management](#3-library--lesson-management)
 4. [Learning Interface (Classroom)](#4-learning-interface-classroom)
 5. [AI Companion — Your Personal Language Tutor](#5-ai-companion--your-personal-language-tutor)
-6. [Shadowing Practice (Pronunciation & Listening)](#6-shadowing-practice-pronunciation--listening)
-7. [Vocabulary Workbook, Quizzes & Progress](#7-vocabulary-workbook-quizzes--progress)
-8. [Settings](#8-settings)
-9. [Frequently Asked Questions (FAQ)](#9-frequently-asked-questions-faq)
+6. [Speak with AI — Live Voice Practice](#6-speak-with-ai--live-voice-practice)
+7. [Shadowing Practice (Pronunciation & Listening)](#7-shadowing-practice-pronunciation--listening)
+8. [Vocabulary Workbook, Quizzes & Progress](#8-vocabulary-workbook-quizzes--progress)
+9. [Settings](#9-settings)
+10. [Frequently Asked Questions (FAQ)](#10-frequently-asked-questions-faq)
 
 ---
 
@@ -29,26 +30,28 @@ They are "keys" that allow the app to connect with Artificial Intelligence (AI) 
 | Key Name | Main Role | Importance |
 | :--- | :--- | :--- |
 | **OpenRouter API Key** | Translates, explains grammar, and chats with you. | **Required** 🔴 |
-| **Deepgram API Key** | Converts video audio to text for learning. | **Required** 🔴 |
-| **Azure Speech Key & Region** | Grades your pronunciation word by word. | **Required** 🔴 |
+| **Google Gemini API Key** | Powers live voice conversations in Speak with AI. | **Required for Speak with AI** 🟡 |
 
 > ⚠️ **Absolute Security**: All keys are encrypted and **only saved on your computer**. The app never sends them to our servers.
 
 ### 🔑 How to Get API Keys
 
-#### 1. OpenRouter API Key (Translation & Explanation)
+#### OpenRouter API Key (Translation & Explanation)
 *   See tutorial here: https://app.tango.us/app/workflow/Create-API-Key-in-OpenRouter-95b3cf6d85df49b48ad728d93c8d5b76
 
-#### 2. Deepgram API Key (Speech-to-Text)
-*   See tutorial here: https://app.tango.us/app/workflow/Create-API-Key-in-Deepgram-d2eab0f8d3c84b8ab315964c935c3945
+#### Google Gemini API Key (Speak with AI)
 
-#### 3. Azure Speech Key & Region (Pronunciation Grading)
-*   **Step 1**: Go to [portal.azure.com](https://portal.azure.com/).
-*   **Step 2**: Search for **"Speech Services"** and select it.
-*   **Step 3**: Click **Create** → Fill in Subscription, Resource Group, Region, Name.
-    *   *Tip*: Choose the **Free F0** tier if available.
-*   **Step 4**: After creating, open the resource → Click **Keys and Endpoint** in the left menu.
-*   **Step 5**: You will find **Key 1** (your API Key) and **Location** (your Region). Note both.
+> **Video walkthrough:** https://app.tango.us/app/workflow/Create-Google-AI-Studio-API-Key-ac110f276682495784c9fa2998323bee
+
+1. Go to [aistudio.google.com](https://aistudio.google.com) and sign in with your Google account
+2. Click **Get API key** in the left sidebar
+3. Click **Create API key** → select **Create API key in new project** → copy the key (starts with `AIza…`)
+4. Still inside AI Studio, open **Billing** from the left menu → click **Add payment method** → enter your **Visa / Mastercard** details and confirm. ⚠️ **Do not use the free trial** — it is unstable and will cause the voice session to drop or fail. Paid billing is required for reliable Gemini Live performance.
+5. Open ShadowLearn → **Settings** → paste the key into the **Google Gemini (Realtime)** field and save
+
+![Google AI Studio — API key and billing setup](docs/images/speak_google_api_key.png)
+
+> 💡 **Cost:** ~300 VNĐ (~$0.012 USD) per minute of conversation. You only pay when you use it.
 
 ---
 
@@ -249,7 +252,134 @@ The AI will render a **visual chart** right in the chat — an accuracy trend gr
 
 ---
 
-## 🎤 6. Shadowing Practice (Pronunciation & Listening)
+## 🗣️ 6. Speak with AI — Live Voice Practice
+
+> *No scheduling. No judgment. Just you and an AI that corrects your grammar while you speak.*
+
+**Speak with AI** is a real-time voice conversation feature. You speak — the AI responds in your target language — and the app gives you instant support so you never get stuck. Before using this feature, make sure you've added your **Google Gemini API key** in Settings (see [Section 1](#1-initial-setup-for-beginners)).
+
+---
+
+### ✨ What You Get in Every Session
+
+| Feature | What it does |
+| :--- | :--- |
+| **Voice conversation** | Speak freely; AI responds naturally in your target language |
+| **Grammar feedback** | Every message silently analyzed — tap it to see corrections |
+| **Next-Line Suggestion** | Can't think of what to say? AI suggests your next line |
+| **Cultural tips** | Notes on idioms, formality, and cultural nuance |
+| **Vocabulary checklist** | Target words auto-ticked as you use them |
+| **Session recap** | Full summary with all grammar corrections and an overall evaluation |
+
+**Supported languages:** Chinese (Simplified), English, Japanese.
+**Session limit:** 10 minutes per session (countdown timer shown during conversation).
+
+---
+
+### 🚀 How to Use It
+
+#### Step 1 — Open Speak with AI
+There are two ways to access the feature:
+
+- **From the Topbar:** Click the **Speak with AI** button in the left navigation menu.
+- **From the Companion Panel:** Inside a lesson, click the **Voice** icon in the AI Companion panel on the right.
+
+If your Google Gemini key isn't set yet, the app will prompt you to go to Settings first.
+
+![Two entry points — sidebar and Companion Panel](docs/images/speak_entry_points.png)
+
+---
+
+#### Step 2 — Choose language and level
+Select your **target language**, then pick a **proficiency level**:
+
+- 🌱 **Beginner** — HSK 1-2 / CEFR A1-A2 / JLPT N5-N4 / TOPIK I
+- 🌿 **Intermediate** — HSK 3-4 / CEFR B1-B2 / JLPT N3-N2 / TOPIK II 3-4
+- 🌳 **Advanced** — HSK 5-6 / CEFR C1-C2 / JLPT N1 / TOPIK II 5-6
+
+The AI adjusts vocabulary, sentence complexity, and feedback depth to match your level. Click **Continue**.
+
+![Language and level picker](docs/images/speak_language_level.png)
+
+---
+
+#### Step 3 — Pick a persona
+Choose the AI character you want to talk to. Each persona has a distinct personality and speaking style — friendly study buddy, encouraging friend, strict parent, taxi driver, and more. Available personas vary by language.
+
+![Persona picker — grid of characters](docs/images/speak_persona_picker.png)
+
+---
+
+#### Step 4 — Pick a situation
+Choose a scenario from the grid: casual chat, ordering food, asking directions, shopping/bargaining, job interview, meeting the family, hospital visit, karaoke, and more.
+
+**Can't find the right scenario?** Click **✨ Create your own** at the top of the grid. Describe your situation in plain text and the AI generates a custom scenario with matching vocabulary.
+
+![Situation picker](docs/images/speak_situation_picker.png)
+
+---
+
+#### Step 5 — Preview and confirm
+Before starting, review the scenario card: description, your role and goal, and the target vocabulary for this session. Click **Regenerate** for a fresh version, or **Start** when ready.
+
+![Situation preview card](docs/images/speak_situation_preview.png)
+
+---
+
+#### Step 6 — Have the conversation
+
+The session screen has three panels:
+
+**Center — Conversation**
+- AI avatar with a mic ring that pulses when the AI is speaking
+- Live transcript of the full conversation
+- **Hold microphone button to speak, release when done**
+- Session countdown timer from 10:00
+
+**Right — Intelligence Panel**
+- 🎯 **Target vocabulary checklist** — words get crossed off as you use them
+- 💡 **Next-Line Suggestion** — a contextual prompt to help continue the conversation
+- 🌐 **Cultural tips** — idioms, register, situational etiquette
+- 📖 **Vocab tips** — quick explanations of words the AI just used
+
+**Left — Grammar Feedback**
+- Click any message in the transcript to open its grammar panel
+- Corrections shown as: ~~original~~ → **corrected**, with explanation
+
+![Active session — all three panels labeled](docs/images/speak_active_session.png)
+
+> 💡 **Tips:** Speak at a natural pace. If you go silent, the AI gently prompts you. Use Next-Line Suggestion when stuck — say it aloud and see how the AI responds. Grammar corrections appear automatically.
+
+When finished, click **End Session**.
+
+---
+
+#### Step 7 — Review your recap
+After the session, a full recap shows:
+- Duration and turn count
+- Overall AI evaluation of your performance
+- Strengths and areas to improve
+- Grammar correction timeline — every correction from the session, in order
+
+Click **Practice Again** to repeat the same scenario, or **Back** to choose a new one.
+
+![Session recap](docs/images/speak_session_recap.png)
+
+---
+
+### 🔧 Troubleshooting
+
+**"Google API key required" error** → Go to Settings and add your Google Gemini API key.
+
+**Microphone not working** → In Chrome/Edge: click the lock icon in the address bar → allow microphone.
+
+**Session won't start / loading spinner hangs** → Check your internet connection. The session requires a stable connection to the voice server.
+
+**Choppy or delayed audio** → Close other tabs using audio. Move closer to your router or switch to a wired connection.
+
+---
+
+## 🎤 7. Shadowing Practice (Pronunciation & Listening)
 
 Click the **Shadowing** button in the middle column (or the 🎯 icon on a specific segment). A dialog will appear where you choose your mode and how many segments to practice.
 
@@ -313,7 +443,7 @@ After all segments are done, you see a full summary:
 
 ---
 
-## 📓 7. Vocabulary Workbook, Quizzes & Progress
+## 📓 8. Vocabulary Workbook, Quizzes & Progress
 
 ### 📌 Saving Words
 While reading subtitles, **hover over any word** and click the **Bookmark 🔖** icon. The word is instantly added to your Workbook.
@@ -399,7 +529,7 @@ When words are due for review, a banner appears at the top of the Workbook page:
 
 ---
 
-## ⚙️ 8. Settings
+## ⚙️ 9. Settings
 
 Click the **Settings icon** (⚙️) in the top navigation at any time to:
 
@@ -412,10 +542,7 @@ Click the **Settings icon** (⚙️) in the top navigation at any time to:
 
 ---
 
-## ❓ 9. Frequently Asked Questions (FAQ)
-
-**Q: Why don't I see pronunciation scores?**
-- **A:** Check that your **Azure Speech Key** and **Region** are correctly entered in Settings. Open Settings from the ⚙️ icon anytime to update them.
+## ❓ 10. Frequently Asked Questions (FAQ)
 
 **Q: Can I change my PIN?**
 - **A:** Yes — open Settings and use the **Change PIN** section. Write your PIN down somewhere safe; there is no recovery if forgotten.

@@ -3,7 +3,6 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Layout } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface HeadingItem {
   depth: number
@@ -65,9 +64,9 @@ export function DocumentationPage() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-53px)] overflow-hidden">
+      <div className="flex h-[calc(100vh-79px)] container mx-auto overflow-hidden">
         {/* Sidebar TOC - 25% */}
-        <ScrollArea className="w-96 border-r border-border h-full px-6 py-8 shrink-0 bg-background/30 backdrop-blur-md">
+        <div className="w-96 border-r border-border h-full px-6 py-8 shrink-0 bg-background/30 backdrop-blur-md overflow-auto">
           <div className="flex gap-2 mb-6">
             <Button
               variant={lang === 'vi' ? 'default' : 'secondary'}
@@ -105,10 +104,10 @@ export function DocumentationPage() {
               </a>
             ))}
           </nav>
-        </ScrollArea>
+        </div>
 
         {/* Main Content - 75% */}
-        <ScrollArea className="flex-1 h-full px-10 py-12">
+        <div className="flex-1 h-full px-10 py-12 overflow-auto">
           <div className="prose prose-invert prose-base max-w-4xl mx-auto">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
@@ -155,7 +154,7 @@ export function DocumentationPage() {
               {content}
             </ReactMarkdown>
           </div>
-        </ScrollArea>
+        </div>
       </div>
     </Layout>
   )

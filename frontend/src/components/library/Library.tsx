@@ -14,6 +14,29 @@ import { LessonCard } from './LessonCard'
 
 type SortMode = 'recent' | 'alpha' | 'progress'
 
+// const STUDY_QUOTES = [
+//   {
+//     zh: '学如逆水行舟，不进则退',
+//     pinyin: 'Xué rú nì shuǐ xíng zhōu, bú jìn zé tuì',
+//     en: 'Learning is like rowing upstream — not to advance is to fall back.',
+//   },
+//   {
+//     zh: '千里之行，始于足下',
+//     pinyin: 'Qiān lǐ zhī xíng, shǐ yú zú xià',
+//     en: 'A journey of a thousand miles begins with a single step.',
+//   },
+//   {
+//     zh: '书山有路勤为径',
+//     pinyin: 'Shū shān yǒu lù qín wéi jìng',
+//     en: 'The road up the mountain of books is paved with diligence.',
+//   },
+//   {
+//     zh: '温故而知新',
+//     pinyin: 'Wēn gù ér zhī xīn',
+//     en: 'Revisit the old to understand the new.',
+//   },
+// ]
+
 export function Library() {
   const { keys, trialMode } = useAuth()
   const { t } = useI18n()
@@ -34,7 +57,6 @@ export function Library() {
     }
 
     return result.toSorted((a, b) => {
-      // Processing lessons always sort to the top
       const aProcessing = a.status === 'processing'
       const bProcessing = b.status === 'processing'
       if (aProcessing && !bProcessing)
@@ -65,9 +87,6 @@ export function Library() {
   }, [updateLesson])
 
   const handleRetry = useCallback(async (lesson: LessonMeta) => {
-    // Upload retry: audio blob is already in IndexedDB; only the pipeline needs re-running.
-    // The backend does not currently support re-running from a saved blob — the user must
-    // re-upload. LessonCard shows "Re-upload to retry" text for upload-sourced errors.
     if ((!keys && !trialMode) || !sttProvider || lesson.source !== 'youtube' || !lesson.sourceUrl)
       return
     try {
@@ -105,67 +124,74 @@ export function Library() {
     }
   }, [keys, trialMode, sttProvider, updateLesson, t])
 
-  // const sortButtons: { mode: SortMode, label: string }[] = [
-  //   { mode: 'recent', label: 'Recent' },
-  //   { mode: 'alpha', label: 'A-Z' },
-  //   { mode: 'progress', label: 'Progress' },
-  // ]
-
   return (
     <Layout>
-      <div className="py-20 px-4">
-        {/* Section header */}
-        <div className="mb-20 flex flex-col items-center justify-center gap-8">
-          <h2 className="text-4xl sm:text-5xl text-center font-bold tracking-wide leading-tight">
-            {t('library.heroTitleLine1')}
-            <br />
-            <span className="gradient-text">{t('library.heroTitleLine2')}</span>
-          </h2>
-          <h4 className="text-base lg:text-lg text-muted-foreground max-w-xl text-center tracking-wide">
-            {t('library.heroSubtitle')}
-          </h4>
-          <Input
-            placeholder={t('nav.search')}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="max-w-lg h-12"
-          />
-          {/* <div className="flex items-center gap-1">
-            {sortButtons.map(({ mode, label }) => (
-              <Button
-                key={mode}
-                variant={sort === mode ? 'secondary' : 'ghost'}
-                size="xs"
-                onClick={() => setSort(mode)}
-                className={cn(sort === mode && 'font-semibold')}
-              >
-                {label}
-              </Button>
-            ))}
-          </div> */}
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {/* Add new lesson card */}
-          <Link
-            to="/create"
-            className="group flex h-full min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/20 text-muted-foreground transition-all duration-200 hover:bg-white/3"
-          >
-            <div className="flex size-10 items-center justify-center rounded-full border border-white/25 transition-colors group-hover:bg-white/5">
-              <Plus className="size-5" />
+      <div className="h-[calc(100vh-53px)] overflow-y-auto gradient-bg">
+        <div className="container mx-auto px-4 py-9 pb-20">
+          {/* Hero — encouraging study quote */}
+          <div className="mb-16 relative">
+            <div className="flex flex-col items-center justify-center gap-6 text-center">
+              <h2 className="text-5xl xl:text-6xl font-bold tracking-wide leading-[1.1] max-w-2xl">
+                {t('library.heroTitleLine1')}
+                <br />
+                <span className="text-primary">{t('library.heroTitleLine2')}</span>
+              </h2>
+              <p className="text-base xl:text-xl text-muted-foreground max-w-lg leading-relaxed">
+                {t('library.heroSubtitle')}
+              </p>
             </div>
-            <span className="text-sm font-medium">{t('library.addNew')}</span>
-          </Link>
 
-          {filtered.map(lesson => (
-            <LessonCard
-              key={lesson.id}
-              lesson={lesson}
-              onDelete={handleDelete}
-              onRename={handleRename}
-              onRetry={handleRetry}
-            />
-          ))}
+            {/* Search bar */}
+            <div className="mt-10 flex justify-center">
+              <div className="relative w-full max-w-lg">
+                <Input
+                  placeholder={t('nav.search')}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="h-12"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Lessons grid */}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="group relative flex h-full flex-col rounded-xl p-2 -m-2">
+              <Link
+                to="/create"
+                className="absolute inset-0 z-10"
+                aria-label={t('library.addNew')}
+              />
+              <div className="relative w-full overflow-hidden rounded-xl">
+                <div style={{ paddingTop: '56.25%' }} />
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-dashed border-primary/40 bg-primary/5 text-foreground">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-white/15 bg-white/5 group-hover:bg-primary/15 transition-colors duration-200">
+                      <Plus className="size-5" />
+                    </div>
+                    <span className="text-sm font-semibold">{t('library.addNew')}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {filtered.map(lesson => (
+              <LessonCard
+                key={lesson.id}
+                lesson={lesson}
+                onDelete={handleDelete}
+                onRename={handleRename}
+                onRetry={handleRetry}
+              />
+            ))}
+          </div>
+
+          {/* Empty state */}
+          {filtered.length === 0 && lessons.length > 0 && search.trim() && (
+            <div className="col-span-full py-12 text-center">
+              <p className="text-muted-foreground">{t('library.noSearchResults')}</p>
+            </div>
+          )}
         </div>
       </div>
       <WhatsNewDialog />

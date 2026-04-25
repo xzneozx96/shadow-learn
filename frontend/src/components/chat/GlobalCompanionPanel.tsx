@@ -2,6 +2,7 @@ import { Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { useGlobalCompanionChat } from '@/hooks/useGlobalCompanionChat'
 import { CompanionChatArea } from './CompanionChatArea'
 
@@ -9,6 +10,7 @@ export function GlobalCompanionPanel() {
   const { t } = useI18n()
   const { chips, removeChip, clearChips, closePanel } = useGlobalCompanionContext()
   const { messages, isLoading, sendMessage, stop, loadMore, hasMore } = useGlobalCompanionChat()
+  const { openSpeakModal } = useSpeakModal()
 
   function handleSend({ text, files }: { text: string, files?: import('ai').FileUIPart[] }) {
     const context = chips.map(c => `> ${c.text}`).join('\n')
@@ -18,8 +20,8 @@ export function GlobalCompanionPanel() {
   }
 
   return (
-    <div className="w-[400px] shrink-0 flex flex-col border-l border-border bg-background">
-      <div className="h-[65px] flex items-center gap-2 border-b border-border px-3">
+    <div className="w-[300px] xl:w-[400px] shrink-0 flex flex-col border-l border-border">
+      <div className="h-[79px] flex items-center gap-2 border-b border-border px-3">
         <Sparkles className="size-4 text-primary" />
         <span className="flex-1 text-sm font-semibold">{t('companion.title')}</span>
         <Button variant="ghost" size="icon" className="size-7" onClick={closePanel}>
@@ -35,6 +37,7 @@ export function GlobalCompanionPanel() {
         onRemoveChip={removeChip}
         onSend={handleSend}
         onStop={stop}
+        onSpeakClick={openSpeakModal}
         placeholder={t('companion.placeholder')}
       />
     </div>

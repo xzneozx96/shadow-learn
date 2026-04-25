@@ -18,6 +18,8 @@ dependencies = [
     "sse-starlette>=2.2.0",
     "azure-cognitiveservices-speech>=1.40.0",
     "tenacity>=9.0.0",
+    "opencc-python-reimplemented>=0.1.7",
+    "livekit-api>=1.1.0",
 ]
 
 [project.optional-dependencies]
@@ -31,3 +33,8 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.uv.workspace]
+members = [
+    "livekit_agent",
+]

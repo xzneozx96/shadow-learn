@@ -98,7 +98,7 @@ export function WorkbookPage() {
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto px-6 py-9 pb-20">
+      <div className="container mx-auto px-6 py-9 pb-20">
         <Tabs defaultValue="workbook" className="w-full relative z-10">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-7 gap-4">
             <div>

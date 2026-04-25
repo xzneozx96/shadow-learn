@@ -119,7 +119,7 @@ test('US01.US06-E2E-022 @p1 @regression @create-lesson — ac-03.4: IDB LessonMe
   // Read the lesson record written to IndexedDB and verify language fields
   const lesson = await page.evaluate(async (jobId) => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('shadowlearn', 7)
+      const req = indexedDB.open('shadowlearn', 10)
       req.onerror = () => reject(req.error)
       req.onsuccess = () => resolve(req.result as IDBDatabase)
     })

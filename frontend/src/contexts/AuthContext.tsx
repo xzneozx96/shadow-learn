@@ -9,7 +9,6 @@ import {
   useState,
 
 } from 'react'
-import { decryptKeys, encryptKeys } from '../crypto'
 import {
   deleteCryptoData,
   getCryptoData,
@@ -17,6 +16,7 @@ import {
   saveCryptoData,
 
 } from '../db'
+import { decryptKeys, encryptKeys } from '../lib/crypto'
 import { captureAuthEvent } from '../lib/posthog-events'
 
 interface AuthState {

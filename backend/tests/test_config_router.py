@@ -23,7 +23,7 @@ async def test_get_config_returns_provider_names():
 @pytest.mark.asyncio
 async def test_free_trial_available_true_when_all_keys_set():
     from app.main import app
-    from app.config import settings
+    from app.settings import settings
 
     app.state.stt_provider_name = "deepgram"
     app.state.tts_provider_name = "azure"
@@ -46,7 +46,7 @@ async def test_free_trial_available_true_when_all_keys_set():
 @pytest.mark.asyncio
 async def test_free_trial_available_false_when_key_missing():
     from app.main import app
-    from app.config import settings
+    from app.settings import settings
 
     app.state.stt_provider_name = "deepgram"
     app.state.tts_provider_name = "azure"

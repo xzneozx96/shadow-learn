@@ -1,6 +1,6 @@
 import pytest
 from fastapi import HTTPException
-from app.routers._utils import _resolve_key
+from app.shared.utils import _resolve_key
 
 
 def test_uses_request_key_when_present():

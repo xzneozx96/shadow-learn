@@ -12,6 +12,14 @@ vi.mock('@/contexts/I18nContext', async () => {
   }
 })
 
+vi.mock('@/contexts/SpeakModalContext', () => ({
+  useSpeakModal: vi.fn(() => ({
+    isOpen: false,
+    openSpeakModal: vi.fn(),
+    closeSpeakModal: vi.fn(),
+  })),
+}))
+
 vi.mock('@/contexts/GlobalCompanionContext', () => ({
   useGlobalCompanionContext: () => ({
     messages: [],

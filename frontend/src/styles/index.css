@@ -38,6 +38,8 @@
     --sidebar-ring: 203 80% 55%;
     --tag-bg: 222 14% 16%;
     --tag-foreground: 203 60% 65%;
+    --success: 142 76% 46%;
+    --success-foreground: 0 0% 98%;
   }
 }
 
@@ -118,6 +120,8 @@
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
 }
 
 @layer components {
@@ -159,6 +163,23 @@
 
   .gradient-text {
     @apply text-primary;
+  }
+
+  .gradient-bg {
+    position: relative;
+  }
+
+  .gradient-bg::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(1100px 700px at 85% -10%, rgba(80, 110, 220, 0.06), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(60, 180, 130, 0.07), transparent 60%),
+      radial-gradient(700px 500px at 55% 40%, rgba(80, 110, 220, 0.05), transparent 60%),
+      #111318;
   }
 }
 
@@ -211,7 +232,18 @@
     }
   }
 
-  @keyframes shake {
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.1;
+    transform: translateX(-50%) scale(1.1);
+  }
+}
+
+@keyframes shake {
 
     0%,
     100% {

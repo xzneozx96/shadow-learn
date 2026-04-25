@@ -1,0 +1,29 @@
+# Next line suggestion prompt for ObserverAgent
+prompt: |
+  Task: Suggest one natural reply the learner could say next in {target_language} at {level} level.
+
+  Scene: {situation_description}
+  Learner's goal: {user_goal}
+
+  Recent conversation:
+  {conversation_text}
+
+  The AI just spoke. Generate the learner's next line — natural, in-scene, within {level} ability.
+
+  Vocabulary to incorporate (unused target words): {target_vocab}
+
+  **CRITICAL**: You MUST pick ONE word from {target_vocab} and use it inside the `suggestion` sentence. The purpose is to provide a natural example of that word in context. If {target_vocab} is empty, set vocab_tip to null.
+
+  Respond in JSON (no markdown):
+  {{
+    "suggestion": "<learner's next line in {target_language}>",
+    "romanization": "<Pinyin if zh-CN | Romaji if ja | empty string otherwise>",
+    "translation": "<meaning in {interface_language} — always required, never empty>",
+    "vocab_tip": {{
+      "word": "<if target_vocab is non-empty: pick ONE word from the list and use it inside suggestion. If empty: null>",
+      "reason": "<brief explanation in {interface_language} of how to use this word. If no vocab: null>"
+    }}
+  }}
+
+  If target_vocab is empty, set vocab_tip to null entirely (not an object with null fields).
+  Level constraint: every word and structure in suggestion must be within {level} reach.

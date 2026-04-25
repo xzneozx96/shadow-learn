@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from app.services.transcription_gladia import (
+from app.transcription.services.transcription_gladia import (
     _segments_from_gladia_utterances,
     transcribe_audio_gladia,
     GladiaSTTProvider,
@@ -105,9 +105,9 @@ async def test_transcribe_audio_gladia_full_flow(tmp_path):
             ]}}
         }
 
-    with patch("app.services.transcription_gladia._upload_audio", mock_upload):
-        with patch("app.services.transcription_gladia._start_transcription", mock_start):
-            with patch("app.services.transcription_gladia._poll_for_result", mock_poll):
+    with patch("app.transcription.services.transcription_gladia._upload_audio", mock_upload):
+        with patch("app.transcription.services.transcription_gladia._start_transcription", mock_start):
+            with patch("app.transcription.services.transcription_gladia._poll_for_result", mock_poll):
                 segments = await transcribe_audio_gladia(audio_file, api_key="test_key", language="zh-CN")
 
     assert len(segments) == 1
@@ -124,7 +124,7 @@ async def test_transcribe_audio_gladia_raises_on_api_error(tmp_path):
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"fake audio data")
 
-    with patch("app.services.transcription_gladia.httpx.AsyncClient") as mock_client_cls:
+    with patch("app.transcription.services.transcription_gladia.httpx.AsyncClient") as mock_client_cls:
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.status_code = 401

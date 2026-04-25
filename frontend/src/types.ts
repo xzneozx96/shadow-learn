@@ -59,6 +59,7 @@ export interface DecryptedKeys {
   gladiaApiKey?: string
   azureSpeechKey?: string
   azureSpeechRegion?: string
+  googleRealtimeKey?: string
 }
 
 // Azure Pronunciation Assessment types
@@ -97,4 +98,65 @@ export interface VocabEntry {
   sourceSegmentTranslation: string
   sourceLanguage: string
   createdAt: string
+}
+
+// Speak feature types
+
+export interface GrammarFeedback {
+  type: 'grammar'
+  transcript: string
+  issues: Array<{
+    original: string
+    correction: string
+    explanation: string
+  }>
+}
+
+export interface NextLineSuggestion {
+  type: 'next-line'
+  suggestion: string
+  romanization: string
+  translation: string
+}
+
+export interface CulturalTip {
+  type: 'cultural-tip'
+  phrase: string
+  explanation: string
+}
+
+export interface AiTurnTranslation {
+  type: 'ai-turn-translation'
+  transcript: string
+  translation: string
+  romanization: string
+}
+
+
+export interface VocabTip {
+  type: 'vocab-tip'
+  word: string
+  reason: string
+}
+
+export interface SessionEvaluation {
+  type: 'session-evaluation'
+  strengths: string[]
+  areas_to_improve: string[]
+  vocabulary_mastered: string[]
+  vocabulary_to_practice: string[]
+  suggestions: string[]
+}
+
+export interface VocabItem {
+  term: string
+  pinyin?: string
+  meaning?: string
+}
+
+export interface SpeakSituation {
+  id: string
+  title: string
+  userGoal: string
+  target_vocab?: VocabItem[]
 }

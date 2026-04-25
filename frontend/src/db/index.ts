@@ -1,10 +1,10 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
-import type { AppSettings, LessonMeta, Segment, VocabEntry } from '../types'
+import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, VocabEntry } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 7
+const DB_VERSION = 10
 
 export interface LearnerProfile {
   name: string
@@ -107,6 +107,39 @@ export interface AgentLog {
   exercisesCompleted: number
 }
 
+export interface SpeakSession {
+  sessionId: string
+  lessonId: string
+  startedAt: string
+  endedAt: string | null
+  durationSeconds: number
+  status: 'active' | 'completed' | 'abandoned'
+  transcript: SpeakTurn[]
+  transcriptText: string
+  evaluation: SessionEvaluation | null
+  // Grammar feedback keyed by SpeakTurn.id. Optional so v8 rows read cleanly.
+  feedbacks?: Record<string, GrammarFeedback>
+  promptVersion: string
+  modelId: string
+  // v10
+  targetLanguage: string
+  proficiencyLevel: 'beginner' | 'intermediate' | 'advanced'
+  levelLabel: string
+  situationTitle: string
+  userGoal: string
+}
+
+export interface SpeakTurn {
+  // Stable turn ID (sourced from LiveKit ReceivedMessage.id during a live session).
+  // Optional on the type so v8 rows without IDs remain readable.
+  id?: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
+  translation?: string
+  romanization?: string
+}
+
 interface ShadowLearnSchema extends DBSchema {
   'lessons': { key: string, value: LessonMeta }
   'segments': { key: string, value: Segment[] }
@@ -145,6 +178,11 @@ interface ShadowLearnSchema extends DBSchema {
   'agent-logs': {
     key: number // autoincrement
     value: AgentLog
+  }
+  'speak-sessions': {
+    key: string
+    value: SpeakSession
+    indexes: { 'by-date': string }
   }
 }
 
@@ -220,6 +258,31 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
       if (oldVersion < 7) {
         db.createObjectStore('exercise-stats')
         db.createObjectStore('agent-logs', { keyPath: 'id', autoIncrement: true })
+      }
+      if (oldVersion < 8) {
+        const ssStore = db.createObjectStore('speak-sessions', { keyPath: 'sessionId' })
+        ssStore.createIndex('by-date', 'startedAt', { unique: false })
+      }
+      if (oldVersion < 9) {
+        // Additive schema change: transcript turns gain optional `id`, session
+        // gains optional `feedbacks` map. Defaults applied at read sites; no row
+        // rewrite needed. Version bump forces older tabs to close their handle.
+      }
+      if (oldVersion < 10) {
+        const store = transaction.objectStore('speak-sessions')
+        let cursor = await store.openCursor()
+        while (cursor) {
+          const s = cursor.value as any
+          await cursor.update({
+            ...s,
+            targetLanguage: s.targetLanguage ?? 'zh-CN',
+            proficiencyLevel: s.proficiencyLevel ?? 'intermediate',
+            levelLabel: s.levelLabel ?? 'HSK 3-4',
+            situationTitle: s.situationTitle ?? 'Casual Chat',
+            userGoal: s.userGoal ?? '',
+          })
+          cursor = await cursor.continue()
+        }
       }
     },
   })

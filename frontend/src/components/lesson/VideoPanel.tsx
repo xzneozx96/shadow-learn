@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { usePlayer } from '@/contexts/PlayerContext'
+import { HTML5Player } from '@/lib/player/HTML5Player'
 import { cn } from '@/lib/utils'
-import { HTML5Player } from '@/player/HTML5Player'
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5]
 

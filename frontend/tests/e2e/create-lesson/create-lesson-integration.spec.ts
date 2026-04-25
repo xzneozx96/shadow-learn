@@ -70,7 +70,8 @@ test.describe('Real backend integration', () => {
     await page.goto('/')
 
     // Find the lesson card that was just created (it will be in processing state initially)
-    const processingCard = page.getByTestId('lesson-card-processing')
+    // New LessonCard shows Loader2 spinner with "processing" text in the thumbnail area
+    const processingCard = page.locator('.animate-spin.text-muted-foreground').first()
     await expect(processingCard).toBeVisible({ timeout: 15_000 })
     console.warn('[integration] lesson card is in processing state — pipeline running on backend')
 
@@ -96,7 +97,7 @@ test.describe('Real backend integration', () => {
 
     const segments = await page.evaluate(async (lid) => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 7)
+        const req = indexedDB.open('shadowlearn', 10)
         req.onerror = () => reject(req.error)
         req.onsuccess = () => resolve(req.result as IDBDatabase)
       })

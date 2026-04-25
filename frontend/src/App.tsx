@@ -2,30 +2,39 @@ import { Loader2 } from 'lucide-react'
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { FeedbackButton } from '@/components/FeedbackButton'
 import { LessonView } from '@/components/lesson/LessonView'
 import { Library } from '@/components/library/Library'
 import { Setup } from '@/components/onboarding/Setup'
 import { Unlock } from '@/components/onboarding/Unlock'
 import { Settings } from '@/components/settings/Settings'
+import { PracticeSpeakingModal } from '@/components/speak/PracticeSpeakingModal'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { GlobalCompanionProvider } from '@/contexts/GlobalCompanionContext'
 import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
+import { SpeakModalProvider, useSpeakModal } from '@/contexts/SpeakModalContext'
 import { VocabularyProvider } from '@/contexts/VocabularyContext'
 import { ChangelogPage } from '@/pages/ChangelogPage'
 import { DocumentationPage } from '@/pages/DocumentationPage'
 import { StudySessionPage } from '@/pages/StudySessionPage'
 import { WorkbookPage } from '@/pages/WorkbookPage'
 
+function GlobalSpeakModal() {
+  const { isOpen, closeSpeakModal } = useSpeakModal()
+  return <PracticeSpeakingModal open={isOpen} onClose={closeSpeakModal} />
+}
+
 function AppLayout() {
   return (
     <PlayerProvider>
       <GlobalCompanionProvider>
-        <Outlet />
-        <FeedbackButton />
+        <SpeakModalProvider>
+          <Outlet />
+          {/* <FeedbackButton /> */}
+          <GlobalSpeakModal />
+        </SpeakModalProvider>
       </GlobalCompanionProvider>
     </PlayerProvider>
   )

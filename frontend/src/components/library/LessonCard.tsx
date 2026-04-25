@@ -1,6 +1,6 @@
 import type { TranslationKey } from '@/lib/i18n'
 import type { LessonMeta } from '@/types'
-import { Clock, FileVideo, Loader2, MoreHorizontal, Pencil, Trash2, Youtube } from 'lucide-react'
+import { BookOpen, Clock, FileVideo, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,10 @@ import {
 } from '@/components/ui/dialog'
 import { MenuBackdrop, MenuItem, MenuPopup, MenuPortal, MenuPositioner, MenuRoot, MenuTrigger } from '@/components/ui/menu'
 import { useI18n } from '@/contexts/I18nContext'
+import { useVocabulary } from '@/contexts/VocabularyContext'
+import { useUploadThumbnail } from '@/hooks/useUploadThumbnail'
 import { cn } from '@/lib/utils'
+import { getYoutubeThumbnail } from '@/lib/youtube'
 
 interface LessonCardProps {
   lesson: LessonMeta
@@ -33,54 +36,31 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function ProgressRing({ pct }: { pct: number }) {
-  const size = 36
-  const stroke = 3
-  const r = (size - stroke) / 2
-  const circ = 2 * Math.PI * r
-  const offset = circ - (pct / 100) * circ
-  const cx = size / 2
-  const cy = size / 2
+function UploadPlaceholder() {
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={cx} cy={cy} r={r} fill="none" strokeWidth={stroke} className="stroke-border" />
-      <circle
-        cx={cx}
-        cy={cy}
-        r={r}
-        fill="none"
-        strokeWidth={stroke}
-        strokeDasharray={circ}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-        transform={`rotate(-90 ${cx} ${cy})`}
-        className="stroke-blue-500 transition-all duration-500"
-      />
-      <text
-        x="50%"
-        y="52%"
-        dominantBaseline="middle"
-        textAnchor="middle"
-        className="fill-muted-foreground"
-        style={{ fontSize: 10 }}
-      >
-        {pct}
-        %
-      </text>
-    </svg>
+    <div className="flex h-full w-full items-center justify-center bg-card">
+      <FileVideo className="size-12 text-white/15" strokeWidth={1.25} />
+    </div>
   )
 }
 
 export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardProps) {
   const { t } = useI18n()
+  const { entriesByLesson } = useVocabulary()
+  const vocabCount = entriesByLesson[lesson.id]?.length ?? 0
   const status = lesson.status ?? 'complete'
   const isProcessing = status === 'processing'
   const isError = status === 'error'
+  const isYoutube = lesson.source === 'youtube'
 
   const progress = lesson.progressSegmentId && lesson.segmentCount
     ? Math.min(100, Math.round((Number.parseInt(lesson.progressSegmentId, 10) / lesson.segmentCount) * 100))
     : 0
 
+  const thumbnailUrl = isYoutube ? getYoutubeThumbnail(lesson.sourceUrl) : null
+  const uploadThumbnail = useUploadThumbnail(lesson.id, !isYoutube)
+
+  const [imgFailed, setImgFailed] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -123,18 +103,20 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
     }
   }
 
-  const isYoutube = lesson.source === 'youtube'
+  const showThumbnail = (isYoutube && thumbnailUrl && !imgFailed) || (!isYoutube && !!uploadThumbnail)
 
   return (
     <div
       data-testid={`lesson-card-${lesson.id}`}
       data-status={status}
       className={cn(
-        'group relative flex h-full min-h-[180px] flex-col overflow-hidden rounded-xl transition-all duration-200',
-        'elegant-card border border-border hover:border-b-primary',
+        'group relative flex flex-col rounded-xl p-2 -m-2',
         isError && 'ring-1 ring-destructive/30',
       )}
     >
+      {/* Hover background — scales in from 95% */}
+      <div className="absolute inset-0 z-2 rounded-xl bg-primary/10 scale-80 opacity-0 transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 pointer-events-none" />
+
       {/* Card-level navigation link */}
       <Link
         to={`/lesson/${lesson.id}`}
@@ -143,120 +125,158 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         style={{ pointerEvents: isEditing || isProcessing ? 'none' : undefined }}
       />
 
-      {/* Action menu — top-right, appears on hover */}
-      <div className="absolute right-2 top-2 z-20">
-        <MenuRoot>
-          <MenuTrigger
-            render={(
-              <Button variant="ghost" size="icon-sm" aria-label={t('library.lessonActions')}>
-                <MoreHorizontal className="size-4" />
-              </Button>
-            )}
-          />
-          <MenuPortal>
-            <MenuBackdrop />
-            <MenuPositioner align="end">
-              <MenuPopup>
-                <MenuItem
-                  onClick={(e) => {
-                    e.preventDefault()
-                    startEditing()
-                  }}
-                >
-                  <Pencil className="size-4" />
-                  {t('library.rename')}
-                </MenuItem>
-                <MenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setShowDeleteConfirm(true)
-                  }}
-                >
-                  <Trash2 className="size-4" />
-                  {t('common.delete')}
-                </MenuItem>
-              </MenuPopup>
-            </MenuPositioner>
-          </MenuPortal>
-        </MenuRoot>
-      </div>
-
-      {/* Source icon */}
-      <div className="px-4 pt-4 pb-3">
-        {isYoutube
-          ? <Youtube className="size-7 text-red-400/80" />
-          : <FileVideo className="size-7 text-muted-foreground" />}
-      </div>
-
-      {/* Title */}
-      <div className="flex-1 px-4 pb-2">
-        {isEditing
+      {/* Thumbnail — shrink-0 prevents flex-col from stealing pixels from the aspect-ratio box */}
+      <div className="relative w-full shrink-0 overflow-hidden rounded-xl transition-transform duration-200" style={{ aspectRatio: '16/9' }}>
+        {isProcessing
           ? (
-              <input
-                ref={inputRef}
-                value={editValue}
-                onChange={e => setEditValue(e.target.value)}
-                onBlur={confirmEdit}
-                onKeyDown={handleKeyDown}
-                className="w-full rounded border border-border bg-transparent px-1 py-0.5 text-sm font-semibold text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
-                aria-label={t('library.renameLesson')}
-              />
+              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-card">
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                <span className="truncate px-4 text-xs text-muted-foreground">
+                  {lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}
+                </span>
+              </div>
             )
-          : (
-              <p className="line-clamp-3 text-sm font-semibold leading-snug text-foreground">
-                {lesson.title}
-              </p>
-            )}
-      </div>
+          : showThumbnail
+            ? (
+                <img
+                  src={(isYoutube ? thumbnailUrl : uploadThumbnail) ?? undefined}
+                  alt={lesson.title}
+                  className="h-full w-full object-cover"
+                  onError={() => setImgFailed(true)}
+                />
+              )
+            : <UploadPlaceholder />}
 
-      {/* Status indicator */}
-      {isProcessing && (
-        <div data-testid="lesson-card-processing" className="px-4 pb-2 flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Loader2 className="size-3 animate-spin" />
-          <span data-testid="lesson-card-processing-step" className="truncate">{lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}</span>
-        </div>
-      )}
-      {isError && (
-        <div data-testid="lesson-card-error" className="px-4 pb-2 flex flex-wrap items-center gap-1.5">
-          <span data-testid="lesson-card-error-badge" className="rounded bg-destructive/15 px-1.5 py-0.5 text-sm font-medium text-destructive">
-            {t('library.failed')}
-          </span>
-          {lesson.source === 'youtube' && onRetry && (
-            <button
-              data-testid="lesson-card-retry-button"
-              onClick={(e) => {
-                e.preventDefault()
-                onRetry(lesson)
-              }}
-              className="z-20 text-sm text-muted-foreground underline hover:text-white"
-            >
-              {t('library.retry')}
-            </button>
-          )}
-          {lesson.source === 'upload' && (
-            <span className="text-sm text-muted-foreground">{t('library.reuploadToRetry')}</span>
-          )}
-        </div>
-      )}
-
-      {/* Footer: date + meta + progress ring */}
-      <div className="px-4 pb-3 pt-1 flex items-center gap-2 text-sm text-muted-foreground">
-        <span>{formatDate(lesson.lastOpenedAt)}</span>
+        {/* Duration overlay */}
         {!isProcessing && lesson.duration != null && (
-          <>
-            <span>·</span>
-            <span className="flex items-center gap-0.5">
-              <Clock className="size-3" />
-              {formatDuration(lesson.duration)}
-            </span>
-          </>
-        )}
-        {!isProcessing && !isError && progress > 0 && (
-          <div className="ml-auto z-20" title={`${progress}% complete`}>
-            <ProgressRing pct={progress} />
+          <div className="absolute bottom-2 right-2 rounded bg-[#080a0d]/80 px-1.5 py-0.5 text-xs font-semibold text-white">
+            {formatDuration(lesson.duration)}
           </div>
         )}
+
+        {/* Progress bar — top edge, always visible as a track */}
+        {!isProcessing && !isError && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/60 rounded-t-xl overflow-hidden">
+            <div className="h-full bg-red-600 transition-all duration-300" style={{ width: `${progress}%` }} />
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-1 flex-col pt-3 px-3 gap-1.5">
+        {/* Badge row + action menu */}
+        <div className="flex items-center justify-between gap-2">
+          {isYoutube
+            ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-red-400">
+                  YouTube
+                </span>
+              )
+            : (
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">
+                  {t('library.uploadSource')}
+                </span>
+              )}
+
+          {/* Action menu — lives in content area so it's always visible */}
+          <div className="relative z-20 ml-auto">
+            <MenuRoot>
+              <MenuTrigger
+                render={(
+                  <Button variant="ghost" size="icon" className="size-10" aria-label={t('library.lessonActions')}>
+                    <MoreHorizontal className="size-5" />
+                  </Button>
+                )}
+              />
+              <MenuPortal>
+                <MenuBackdrop />
+                <MenuPositioner align="end">
+                  <MenuPopup>
+                    <MenuItem
+                      onClick={(e) => {
+                        e.preventDefault()
+                        startEditing()
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                      {t('library.rename')}
+                    </MenuItem>
+                    <MenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setShowDeleteConfirm(true)
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                      {t('common.delete')}
+                    </MenuItem>
+                  </MenuPopup>
+                </MenuPositioner>
+              </MenuPortal>
+            </MenuRoot>
+          </div>
+        </div>
+
+        {/* Title */}
+        <div className="flex-1">
+          {isEditing
+            ? (
+                <input
+                  ref={inputRef}
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  onBlur={confirmEdit}
+                  onKeyDown={handleKeyDown}
+                  className="w-full rounded border border-border bg-transparent px-1 py-0.5 text-sm font-semibold text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+                  aria-label={t('library.renameLesson')}
+                />
+              )
+            : (
+                <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+                  {lesson.title}
+                </p>
+              )}
+        </div>
+
+        {/* Error state */}
+        {isError && (
+          <div data-testid="lesson-card-error" className="flex flex-wrap items-center gap-1.5">
+            <span data-testid="lesson-card-error-badge" className="rounded bg-destructive/15 px-1.5 py-0.5 text-xs font-medium text-destructive">
+              {t('library.failed')}
+            </span>
+            {lesson.source === 'youtube' && onRetry && (
+              <button
+                data-testid="lesson-card-retry-button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  onRetry(lesson)
+                }}
+                className="z-20 text-xs text-muted-foreground underline hover:text-white"
+              >
+                {t('library.retry')}
+              </button>
+            )}
+            {lesson.source === 'upload' && (
+              <span className="text-xs text-muted-foreground">{t('library.reuploadToRetry')}</span>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <BookOpen className="size-3 shrink-0" />
+            {vocabCount}
+            {' '}
+            {t('library.vocabWords')}
+          </span>
+          <span className="text-muted-foreground/40">·</span>
+          <span className="flex items-center gap-1">
+            <Clock className="size-3 shrink-0" />
+            {formatDate(lesson.lastOpenedAt)}
+          </span>
+        </div>
       </div>
 
       {/* Delete confirmation modal */}
@@ -273,9 +293,11 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
             <DialogDescription>{t('library.deleteDescription' as TranslationKey)}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('common.cancel' as TranslationKey)}</Button>
+            <Button size="lg" variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('common.cancel' as TranslationKey)}</Button>
             <Button
+              size="lg"
               variant="destructive"
+              className="min-w-16"
               onClick={() => {
                 setShowDeleteConfirm(false)
                 onDelete(lesson.id)

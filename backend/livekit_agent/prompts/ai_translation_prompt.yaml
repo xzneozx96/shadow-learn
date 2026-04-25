@@ -1,0 +1,11 @@
+# AI turn translation + romanization prompt for ObserverAgent
+prompt: |
+  Translate the following {language_name} sentence to {interface_language}.
+  If the source language is Mandarin Chinese, also produce pinyin romanization with tone marks.
+  For non-Chinese languages, set romanization to "".
+
+  Respond in JSON only (no markdown):
+  {{"translation": "<translation in {interface_language}>", "romanization": "<pinyin or empty string>"}}
+
+  Sentence:
+  {transcript}

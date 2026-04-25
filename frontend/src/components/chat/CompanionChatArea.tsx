@@ -3,7 +3,7 @@ import type { ChatStatus, FileUIPart } from 'ai'
 import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
-import { ArrowDownIcon, ImageIcon, X } from 'lucide-react'
+import { ArrowDownIcon, ImageIcon, Mic, X } from 'lucide-react'
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import { useStickToBottom } from 'use-stick-to-bottom'
@@ -87,6 +87,7 @@ interface CompanionChatAreaProps {
   onStop?: () => void
   headerSlot?: ReactNode
   placeholder?: string
+  onSpeakClick?: () => void
 }
 
 export function CompanionChatArea({
@@ -100,6 +101,7 @@ export function CompanionChatArea({
   onStop,
   headerSlot,
   placeholder,
+  onSpeakClick,
 }: CompanionChatAreaProps) {
   const { t } = useI18n()
   const chatStatus: ChatStatus = isLoading ? 'streaming' : 'ready'
@@ -380,6 +382,14 @@ export function CompanionChatArea({
           </PromptInputBody>
           <PromptInputFooter>
             <PromptInputTools>
+              {onSpeakClick && (
+                <PromptInputButton
+                  aria-label={t('speak.title')}
+                  onClick={onSpeakClick}
+                >
+                  <Mic className="size-5" />
+                </PromptInputButton>
+              )}
               <AttachImageButton label={t('companion.attachImage')} />
             </PromptInputTools>
             <PromptInputSubmit status={chatStatus} onStop={onStop} />

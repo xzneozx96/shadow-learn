@@ -87,7 +87,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
         ? (
             <div className="flex flex-1 items-center justify-center px-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Tap any word in the transcript and tap the bookmark to save it here
+                Start saving words to build your personal study list — tap any word below its translation
               </p>
             </div>
           )

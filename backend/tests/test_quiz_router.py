@@ -6,7 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.routers.quiz import WordInput, QuizRequest, _build_cloze_prompt
+from app.quiz.router import WordInput, QuizRequest, _build_cloze_prompt
 
 _WORDS = [{"word": "今天", "romanization": "jīntiān", "meaning": "today", "usage": "今天很好"}]
 _CLOZE_BODY = {"exercises": [{"story": "今天很好。", "blanks": ["今天"]}]}
@@ -35,7 +35,7 @@ def test_quiz_request_has_source_language():
 
 def test_build_cloze_prompt_english():
     """Cloze prompt for English should say 'English' not 'Mandarin Chinese'."""
-    from app.services.language_config import get_language_config
+    from app.shared.language_config import get_language_config
     words = [WordInput(word="hello", romanization="/həˈloʊ/", meaning="greeting", usage="Hello world")]
     lang_cfg = get_language_config("en")
     prompt = _build_cloze_prompt(words, story_count=1, lang_cfg=lang_cfg)

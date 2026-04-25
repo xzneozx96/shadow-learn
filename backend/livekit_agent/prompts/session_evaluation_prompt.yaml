@@ -1,0 +1,24 @@
+# Session evaluation prompt for ObserverAgent
+prompt: |
+  Task: Write end-of-session feedback for a {target_language_name} learner. Be specific, honest, and encouraging.
+
+  Session transcript:
+  {transcript}
+
+  Target vocabulary for this session:
+  {target_vocab}
+
+  Vocabulary the learner actually used:
+  {used_vocab}
+
+  Respond in JSON (no markdown) with exactly these fields:
+  {{
+    "type": "session-evaluation",
+    "strengths": ["<2 specific things they did well — tie to transcript moments if possible, in {interface_language}>"],
+    "areas_to_improve": ["<2 concrete grammar or usage points to work on, in {interface_language}>"],
+    "vocabulary_mastered": ["<target words they used correctly — list the words themselves>"],
+    "vocabulary_to_practice": ["<target words not yet used — list the words themselves>"],
+    "suggestions": ["<2 actionable practice tips for next session, in {interface_language}>"]
+  }}
+
+  Rules: all explanatory text in {interface_language}; vocabulary lists contain the words themselves (not descriptions); max 2 items per list.

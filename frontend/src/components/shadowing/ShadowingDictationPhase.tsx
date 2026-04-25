@@ -124,7 +124,7 @@ export function ShadowingDictationPhase({
               onKeyDown={handleKeyDown}
               placeholder={caps.dictationPlaceholder}
               className={cn(
-                'h-12 text-center text-xl bg-transparent border-0 border-b-2 border-border/50 hover:border-border rounded-none focus-visible:ring-0 focus-visible:border-primary px-0 transition-all duration-200 placeholder:text-muted-foreground/40',
+                'h-12 text-center text-xl bg-transparent border-0 border-b border-border/50 hover:border-border rounded-none focus-visible:ring-0 focus-visible:border-primary px-0 transition-all duration-200 placeholder:text-muted-foreground/40',
                 shake && 'animate-[shake_0.4s_ease-in-out] border-destructive',
               )}
               aria-label="Your answer"
@@ -135,12 +135,14 @@ export function ShadowingDictationPhase({
           <div className="flex gap-3 w-full mt-2">
             <Button
               variant="outline"
+              size="lg"
               className="flex-1 backdrop-blur-sm border-border/50 hover:bg-accent/40"
               onClick={handleReplay}
             >
               {t('shadowing.replay')}
             </Button>
             <Button
+              size="lg"
               className="flex-1"
               onClick={handleSubmit}
             >

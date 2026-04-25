@@ -13,15 +13,9 @@ export function Setup() {
   const { setup, startTrial } = useAuth()
   const { locale, setLocale, t } = useI18n()
 
-  const [provider, setProvider] = useState<string | null>(null)
-  const [sttProvider, setSttProvider] = useState<string>('deepgram')
   const [freeTrialAvailable, setFreeTrialAvailable] = useState(false)
   const [openrouterApiKey, setOpenrouterApiKey] = useState('')
-  const [minimaxApiKey, setMinimaxApiKey] = useState('')
-  const [deepgramApiKey, setDeepgramApiKey] = useState('')
-  const [gladiaApiKey, setGladiaApiKey] = useState('')
-  const [azureSpeechKey, setAzureSpeechKey] = useState('')
-  const [azureSpeechRegion, setAzureSpeechRegion] = useState('')
+  const [geminiApiKey, setGeminiApiKey] = useState('')
   const [pin, setPin] = useState('')
   const [pinConfirm, setPinConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -29,8 +23,6 @@ export function Setup() {
 
   useEffect(() => {
     getAppConfig().then((cfg) => {
-      setProvider(cfg.ttsProvider)
-      setSttProvider(cfg.sttProvider)
       setFreeTrialAvailable(cfg.freeTrialAvailable)
     })
   }, [])
@@ -53,11 +45,7 @@ export function Setup() {
       await setup(
         {
           openrouterApiKey: openrouterApiKey.trim() || undefined,
-          minimaxApiKey: minimaxApiKey.trim() || undefined,
-          deepgramApiKey: deepgramApiKey.trim() || undefined,
-          gladiaApiKey: gladiaApiKey.trim() || undefined,
-          azureSpeechKey: azureSpeechKey.trim() || undefined,
-          azureSpeechRegion: azureSpeechRegion.trim() || undefined,
+          googleRealtimeKey: geminiApiKey.trim() || undefined,
         },
         pin,
       )
@@ -137,93 +125,21 @@ export function Setup() {
                   </p>
                 </div>
 
-                {sttProvider === 'deepgram' && (
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="deepgram" className="text-sm font-medium text-white/65">
-                      {t('auth.deepgramKey')}
-                    </label>
-                    <Input
-                      id="deepgram"
-                      type="password"
-                      placeholder={t('auth.placeholder.optionalKey')}
-                      value={deepgramApiKey}
-                      onChange={e => setDeepgramApiKey(e.target.value)}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      {t('auth.setup.deepgramHint')}
-                    </p>
-                  </div>
-                )}
-
-                {sttProvider === 'gladia' && (
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="gladia" className="text-sm font-medium text-white/65">
-                      {t('auth.gladiaKey')}
-                    </label>
-                    <Input
-                      id="gladia"
-                      type="password"
-                      placeholder={t('auth.placeholder.optionalKey')}
-                      value={gladiaApiKey}
-                      onChange={e => setGladiaApiKey(e.target.value)}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      {t('auth.setup.gladiaHint')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Azure TTS fields — shown when provider is 'azure' (or still loading, as safe default) */}
-                {(provider === null || provider === 'azure') && (
-                  <>
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="azure-speech-key" className="text-sm font-medium text-white/65">
-                        {t('auth.azureSpeechKey')}
-                      </label>
-                      <Input
-                        id="azure-speech-key"
-                        type="password"
-                        placeholder={t('auth.placeholder.optionalKey')}
-                        value={azureSpeechKey}
-                        onChange={e => setAzureSpeechKey(e.target.value)}
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        {t('auth.setup.azureHint')}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="azure-speech-region" className="text-sm font-medium text-white/65">
-                        {t('auth.azureSpeechRegion')}
-                      </label>
-                      <Input
-                        id="azure-speech-region"
-                        type="text"
-                        placeholder={t('auth.placeholder.azureRegion')}
-                        value={azureSpeechRegion}
-                        onChange={e => setAzureSpeechRegion(e.target.value)}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {/* MiniMax TTS field — shown only when provider is 'minimax' */}
-                {provider === 'minimax' && (
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="minimax" className="text-sm font-medium text-white/65">
-                      {t('auth.minimaxKey')}
-                    </label>
-                    <Input
-                      id="minimax"
-                      type="password"
-                      placeholder={t('auth.placeholder.optionalKey')}
-                      value={minimaxApiKey}
-                      onChange={e => setMinimaxApiKey(e.target.value)}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      {t('auth.setup.minimaxHint')}
-                    </p>
-                  </div>
-                )}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="gemini" className="text-sm font-medium text-white/65">
+                    {t('auth.googleRealtimeKey')}
+                  </label>
+                  <Input
+                    id="gemini"
+                    type="password"
+                    placeholder={t('auth.placeholder.optionalKey')}
+                    value={geminiApiKey}
+                    onChange={e => setGeminiApiKey(e.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {t('auth.setup.geminiHint')}
+                  </p>
+                </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="pin" className="text-sm font-medium text-white/65">

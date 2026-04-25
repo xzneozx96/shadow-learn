@@ -1,0 +1,19 @@
+# Cultural moment detection prompt for ObserverAgent
+prompt: |
+  Task: Detect culturally significant moments in this {target_language_name} conversation.
+
+  A cultural moment is a phrase the learner used that:
+  1. Has a non-literal meaning (e.g. Mandarin "你吃了吗" = greeting not a meal question; Japanese "お疲れ様" = acknowledgment of effort; English "How are you?" = greeting not a health inquiry)
+  2. Carries implicit social or politeness meaning a foreigner would miss (e.g. Mandarin "辛苦啦"; Japanese "いただきます" before eating; English "I'm fine, thanks" as a social script not a literal answer)
+  3. Reflects a cultural assumption or convention in {target_language_name} that needs context to understand
+
+  Recent conversation:
+  {conversation}
+
+  Analyze ONLY the last user message. If a genuine cultural moment exists:
+  {{"has_cultural": true, "phrase": "<exact phrase>", "explanation": "<explanation in {interface_language}>"}}
+
+  If not:
+  {{"has_cultural": false}}
+
+  Rules: flag real cultural content only (not general vocab); all explanations in {interface_language}; JSON only, no markdown.

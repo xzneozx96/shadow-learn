@@ -5,7 +5,6 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Layout } from '@/components/Layout'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { useI18n } from '@/contexts/I18nContext'
 import { getChangelog, getLatestAnnouncementId } from '@/lib/changelog'
 import { captureWhatsNewChangelogOpened } from '@/lib/posthog-events'
@@ -126,9 +125,9 @@ export function ChangelogPage() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-65px)]">
+      <div className="flex h-[calc(100vh-79px)] container mx-auto">
         {/* Sidebar */}
-        <ScrollArea className="w-96 shrink-0 border-r border-border bg-background">
+        <div className="w-96 shrink-0 border-r border-border">
           <div className="p-4">
             {entries.map(entry => (
               <SidebarEntry
@@ -141,12 +140,12 @@ export function ChangelogPage() {
               />
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Content */}
-        <div ref={contentRef} className="flex-1 overflow-y-auto">
+        <div ref={contentRef} className="flex-1 p-4 overflow-auto">
           {selectedEntry && (
-            <div className="prose prose-invert prose-base max-w-4xl mx-auto py-12">
+            <div className="prose prose-invert prose-base max-w-4xl mx-auto">
               {/* Header */}
               <div className="mb-10">
                 <p className="text-sm font-medium text-primary mb-4 tabular-nums tracking-wide uppercase">
@@ -198,7 +197,7 @@ export function ChangelogPage() {
                     ol: ({ children }) => <ol className="list-outside list-decimal pl-5 mb-6 space-y-3">{children}</ol>,
                     pre: ({ children }) => <pre className="block bg-muted/50 p-4 rounded-xl text-sm font-mono overflow-x-auto mb-6 border border-border/50">{children}</pre>,
                     code: ({ className, children }) => <code className={className ?? 'bg-muted text-foreground px-1.5 py-0.5 rounded-md text-[0.9em] font-mono'}>{children}</code>,
-                    blockquote: ({ children }) => <blockquote className="border-l-4 border-primary/40 bg-muted/30 pl-6 pr-4 py-3 rounded-r-lg italic my-8 text-foreground/80">{children}</blockquote>,
+                    blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 bg-muted/30 pl-6 pr-4 py-3 rounded-r-lg italic my-8 text-foreground/80">{children}</blockquote>,
                   }}
                 >
                   {selectedEntry.body}
