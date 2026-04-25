@@ -7,6 +7,8 @@ highlights:
     text: Break through language barriers and master confident communication through AI-powered conversations.
   - tag: new
     text: No monthly subscriptions, manage your own budget. Practice for just ~3,000 VND per 10 mins.
+  - tag: new
+    text: Key features - Voice conversation, Grammar correction, Next-line suggestion, Vocabulary list, Session summary.
 ---
 
 Tired of searching for a practice partner? Nervous about making mistakes? **Speak with AI** is here to transform your learning journey. Break the silence and start speaking fluently in a stress-free, judgement-free zone.

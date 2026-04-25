@@ -69,6 +69,7 @@ export function SessionInner() {
           agentState={undefined}
           messages={chatMessages}
           feedbacks={feedbackHistory}
+          aiTurnTranslations={rpc.aiTurnTranslations}
           className="absolute inset-0"
         />
       )}

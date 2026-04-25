@@ -1,6 +1,6 @@
 import type { AgentState, ReceivedMessage } from '@livekit/components-react'
 import type { ComponentProps } from 'react'
-import type { GrammarFeedback } from '@/types'
+import type { AiTurnTranslation, GrammarFeedback } from '@/types'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { AgentChatIndicator } from '@/components/agents-ui/agent-chat-indicator'
@@ -43,10 +43,13 @@ export function GrammarCorrectionCard({ feedback }: { feedback: GrammarFeedback 
   )
 }
 
+const EMPTY_TRANSLATIONS: Record<string, AiTurnTranslation> = {}
+
 export interface AgentChatTranscriptProps extends ComponentProps<'div'> {
   agentState?: AgentState
   messages?: ReceivedMessage[]
   feedbacks?: Record<string, GrammarFeedback>
+  aiTurnTranslations?: Record<string, AiTurnTranslation>
   className?: string
 }
 
@@ -54,6 +57,7 @@ export function AgentChatTranscript({
   agentState,
   messages = [],
   feedbacks = EMPTY_FEEDBACKS,
+  aiTurnTranslations = EMPTY_TRANSLATIONS,
   className,
   ...props
 }: AgentChatTranscriptProps) {
@@ -73,6 +77,8 @@ export function AgentChatTranscript({
                 const isUser = from?.isLocal ?? false
                 const title = time.toLocaleTimeString(LOCALE, { timeStyle: 'full' })
                 const feedback = feedbacks[id]
+
+                const translation = aiTurnTranslations[id]
 
                 return (
                   <div
@@ -101,8 +107,18 @@ export function AgentChatTranscript({
                           </div>
                         )
                       : (
-                          <div className="max-w-[85%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
-                            {message}
+                          <div className="max-w-[85%] flex flex-col gap-1">
+                            <div className="rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
+                              {message}
+                            </div>
+                            {translation && (
+                              <div className="px-1 space-y-0.5">
+                                {translation.romanization && (
+                                  <p className="text-sm text-muted-foreground/80">{translation.romanization}</p>
+                                )}
+                                <p className="text-sm text-muted-foreground italic">{translation.translation}</p>
+                              </div>
+                            )}
                           </div>
                         )}
                   </div>

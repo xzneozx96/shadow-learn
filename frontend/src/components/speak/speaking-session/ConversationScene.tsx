@@ -149,7 +149,7 @@ export function ConversationScene({ onEnd, intelligencePanel, transcript, overla
           </div>
         )}
 
-        <div className="h-[200px] flex flex-col items-center justify-center shrink-0 relative mb-4">
+        <div className="h-[120px] xl:h-[200px] flex flex-col items-center justify-center shrink-0 relative mb-4">
           {persona.portrait_url
             ? (
                 <div className="relative">

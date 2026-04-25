@@ -125,6 +125,13 @@ export interface CulturalTip {
   explanation: string
 }
 
+export interface AiTurnTranslation {
+  type: 'ai-turn-translation'
+  transcript: string
+  translation: string
+  romanization: string
+}
+
 export interface VocabTip {
   type: 'vocab-tip'
   word: string

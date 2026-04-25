@@ -7,6 +7,8 @@ highlights:
     text: Bứt phá kỹ năng nói và phản xạ giao tiếp qua những cuộc đối thoại nhập vai cùng AI.
   - tag: new
     text: Không gói tháng, tự quản lý ngân sách. Chỉ tốn khoảng ~3,000đ cho 10 phút học cùng AI.
+  - tag: new
+    text: Tính năng chính - Hội thoại giọng nói, Phản hồi ngữ pháp, Gợi ý câu tiếp theo, Danh sách từ vựng mục tiêu, Tổng kết phiên.
 ---
 
 Bạn chán nản vì không tìm được người luyện nói cùng? Bạn lo lắng vì sợ nói sai? **Speak with AI (Luyện Nói Cùng AI)** sinh ra để thay đổi hoàn toàn cách bạn học tiếng Anh. Phá tan sự im lặng và bắt đầu hành trình chinh phục tiếng Anh trong một môi trường không áp lực, không phán xét.

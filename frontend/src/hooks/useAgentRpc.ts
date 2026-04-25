@@ -1,7 +1,7 @@
 import type { ReceivedMessage } from '@livekit/components-react'
 import type { Room } from 'livekit-client'
 import type { MutableRefObject } from 'react'
-import type { CulturalTip, GrammarFeedback, NextLineSuggestion, VocabTip } from '@/types'
+import type { AiTurnTranslation, CulturalTip, GrammarFeedback, NextLineSuggestion, VocabTip } from '@/types'
 import { ParticipantKind, RoomEvent } from 'livekit-client'
 import { useEffect, useRef, useState } from 'react'
 
@@ -16,6 +16,7 @@ export interface AgentRpcState {
   vocabTips: VocabTip[]
   masteredVocab: Set<string>
   agentDisconnected: boolean
+  aiTurnTranslations: Record<string, AiTurnTranslation>
 }
 
 export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): AgentRpcState {
@@ -24,6 +25,7 @@ export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): A
   const [vocabTips, setVocabTips] = useState<VocabTip[]>([])
   const [masteredVocab, setMasteredVocab] = useState<Set<string>>(() => new Set())
   const [agentDisconnected, setAgentDisconnected] = useState(false)
+  const [aiTurnTranslations, setAiTurnTranslations] = useState<Record<string, AiTurnTranslation>>({})
 
   // Keep latest onFeedbackUpdate in a ref so RPC handlers don't re-register on every render
   const onFeedbackUpdateRef = useRef(opts.onFeedbackUpdate)
@@ -101,11 +103,30 @@ export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): A
       }
     })
 
+    room.registerRpcMethod('ai_turn_translation', async (data) => {
+      try {
+        const payload = JSON.parse(data.payload) as AiTurnTranslation
+        const txText = payload.transcript.toLowerCase().trim()
+        const match = [...opts.messagesRef.current].reverse().find((m) => {
+          if (m.from?.isLocal)
+            return false
+          return m.message?.toLowerCase().trim() === txText
+        })
+        if (match)
+          setAiTurnTranslations(prev => ({ ...prev, [match.id]: payload }))
+        return JSON.stringify({ success: true })
+      }
+      catch (e) {
+        return JSON.stringify({ success: false, error: String(e) })
+      }
+    })
+
     return () => {
       room.unregisterRpcMethod('grammar_feedback')
       room.unregisterRpcMethod('next_line_suggestion')
       room.unregisterRpcMethod('cultural_tip')
       room.unregisterRpcMethod('vocab_mastered')
+      room.unregisterRpcMethod('ai_turn_translation')
     }
   }, [room])
 
@@ -115,5 +136,6 @@ export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): A
     vocabTips,
     masteredVocab,
     agentDisconnected,
+    aiTurnTranslations,
   }
 }

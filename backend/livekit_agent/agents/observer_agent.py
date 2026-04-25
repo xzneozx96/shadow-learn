@@ -149,9 +149,9 @@ class ObserverAgent:
             asyncio.create_task(self._trigger_cultural_check(transcript))
 
     def _handle_ai_turn(self, transcript: str) -> None:
-        """Handle AI turn - trigger next line suggestion."""
-        # Suggest next line + vocab after AI speaks (to help user respond)
+        """Handle AI turn - trigger next line suggestion and translation."""
         asyncio.create_task(self._suggest_next_line())
+        asyncio.create_task(self._translate_ai_turn(transcript))
 
     async def _track_vocab_usage(self, transcript: str) -> None:
         """Check user transcript for target vocab usage (async to allow RPC)."""
@@ -463,6 +463,65 @@ class ObserverAgent:
 
         return None
 
+    async def _translate_ai_turn(self, transcript: str) -> None:
+        """Translate AI turn text and stream result to frontend via RPC."""
+        try:
+            userdata = self.session.userdata
+            language = getattr(userdata, "target_language", None) or "zh-CN"
+            config = getattr(userdata, "situation_config", None)
+            interface_language = getattr(config, "interface_language", "vi") if config else "vi"
+            interface_lang_name = _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language)
+            language_name = _TARGET_LANGUAGE_NAMES.get(language, language)
+
+            prompt_template = load_prompt("ai_translation_prompt.yaml")
+            if not prompt_template:
+                logger.warning("[OBSERVER] ai_translation_prompt.yaml not found, skipping")
+                return
+
+            prompt = prompt_template.format(
+                language_name=language_name,
+                interface_language=interface_lang_name,
+                transcript=transcript,
+            )
+
+            chat_ctx = ChatContext()
+            chat_ctx.add_message(role="user", content=prompt)
+
+            response = ""
+            async with self.llm.chat(chat_ctx=chat_ctx) as stream:
+                async for chunk in stream:
+                    if chunk.delta and chunk.delta.content:
+                        response += chunk.delta.content
+
+            if not response.strip():
+                return
+
+            result = None
+            try:
+                result = json.loads(response.strip())
+            except json.JSONDecodeError:
+                start = response.find('{')
+                end = response.rfind('}') + 1
+                if start >= 0 and end > start:
+                    try:
+                        result = json.loads(response[start:end])
+                    except json.JSONDecodeError:
+                        pass
+
+            if not result:
+                logger.warning("[OBSERVER] Failed to parse ai_translation response")
+                return
+
+            await self._stream_feedback({
+                "type": "ai-turn-translation",
+                "transcript": transcript,
+                "translation": result.get("translation", ""),
+                "romanization": result.get("romanization", ""),
+            })
+            logger.info(f"[OBSERVER] AI turn translation sent: {result.get('translation', '')[:40]}...")
+        except Exception as e:
+            logger.error(f"[OBSERVER] _translate_ai_turn failed: {e}")
+
     async def _trigger_cultural_check(self, transcript: str) -> None:
         """Trigger cultural check and stream result."""
         try:
@@ -509,6 +568,8 @@ class ObserverAgent:
                 method_name = "cultural_tip"
             elif data["type"] == "vocab-mastered":
                 method_name = "vocab_mastered"
+            elif data["type"] == "ai-turn-translation":
+                method_name = "ai_turn_translation"
             else:
                 logger.warning(f"[OBSERVER] Unknown feedback type: {data.get('type')} — dropping")
                 return

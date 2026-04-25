@@ -62,8 +62,8 @@ describe('useAgentRpc', () => {
       { initialProps: { cb: cb1 } },
     )
     rerender({ cb: cb2 })
-    // Still only 4 calls from initial mount — no re-registration
-    expect(room.registerRpcMethod).toHaveBeenCalledTimes(4)
+    // Still only 5 calls from initial mount — no re-registration
+    expect(room.registerRpcMethod).toHaveBeenCalledTimes(5)
   })
 
   it('grammar_feedback: matches last user message and calls onFeedbackUpdate', async () => {

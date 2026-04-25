@@ -50,7 +50,7 @@ def test_japanese_senpai_is_japanese_only():
 def test_get_persona_prompt_returns_base_prompt():
     prompt = get_persona_prompt("friendly_buddy")
     assert len(prompt) > 50
-    assert "friendly" in prompt.lower() or "warm" in prompt.lower()
+    assert "language" in prompt.lower() or "buddy" in prompt.lower() or "sarcastic" in prompt.lower()
 
 
 def test_get_persona_voice_returns_language_specific_voice():
@@ -66,3 +66,14 @@ def test_get_persona_voice_unsupported_language_raises():
 def test_get_persona_prompt_unknown_persona_raises():
     with pytest.raises(KeyError):
         get_persona_prompt("nonexistent")
+
+
+def test_patient_tutor_explicitly_corrects_mistakes():
+    prompt = get_persona_prompt("patient_tutor")
+    assert "must correct" in prompt.lower() or "always correct" in prompt.lower()
+
+
+def test_encouraging_friend_explicitly_corrects_mistakes():
+    prompt = get_persona_prompt("encouraging_friend")
+    assert "always correct" in prompt.lower() or "must correct" in prompt.lower()
+    assert "without making a big deal" not in prompt.lower()

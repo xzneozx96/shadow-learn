@@ -32,6 +32,14 @@ vi.mock('@/contexts/GlobalCompanionContext', () => ({
   })),
 }))
 
+vi.mock('@/contexts/SpeakModalContext', () => ({
+  useSpeakModal: vi.fn(() => ({
+    isOpen: false,
+    openSpeakModal: vi.fn(),
+    closeSpeakModal: vi.fn(),
+  })),
+}))
+
 // Mock AuthContext
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: vi.fn(() => ({

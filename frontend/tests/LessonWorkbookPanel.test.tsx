@@ -90,7 +90,7 @@ describe('lessonWorkbookPanel', () => {
 
   it('shows empty-state message when no words saved', () => {
     render(<LessonWorkbookPanel lessonId="lesson_1" />)
-    expect(screen.getByText(/tap the bookmark/i)).toBeTruthy()
+    expect(screen.getByText(/tap any word/i)).toBeTruthy()
   })
 
   it('shows "0 words saved" in sub-header', () => {

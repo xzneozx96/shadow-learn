@@ -174,7 +174,7 @@ describe('agent-tools executors', () => {
   })
 
   describe('executeGetSkillGuide', () => {
-    const VALID_SKILLS = ['tones', 'pronunciation', 'vocabulary', 'grammar', 'listening', 'speaking', 'characters'] as const
+    const VALID_SKILLS = ['tones', 'pronunciation', 'vocabulary', 'grammar_foundations', 'grammar_complements', 'listening', 'speaking', 'characters'] as const
 
     it.each(VALID_SKILLS)('returns content for skill "%s"', async (skill) => {
       const result = await executeGetSkillGuide({ skill })

@@ -54,6 +54,16 @@ def build_system_prompt(
             f"Internal reasoning may be in any language."
         ),
         "",
+    ]
+
+    if language == "zh-CN":
+        parts += [
+            "Script: Use Simplified Chinese characters (简体字) exclusively. "
+            "Never write Traditional Chinese characters (繁體字).",
+            "",
+        ]
+
+    parts += [
         "# Cultural Context",
         culture,
         "",

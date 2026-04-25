@@ -3,6 +3,20 @@ from app.speak.prompt_builder import build_system_prompt
 from app.speak.situations import SituationConfig, VocabItem
 
 
+def _ja_cfg() -> SituationConfig:
+    return SituationConfig(
+        id="cafe",
+        title="Cafe",
+        ai_role="barista",
+        scene_context="A cozy Tokyo cafe.",
+        opening_line="いらっしゃいませ",
+        user_goal="Order coffee",
+        target_vocab=[],
+        language="ja",
+        level_label="N5",
+    )
+
+
 def _cfg() -> SituationConfig:
     return SituationConfig(
         id="ordering_food",
@@ -49,6 +63,18 @@ def test_build_system_prompt_instructs_language_only_reply():
     )
     assert "Japanese" in prompt
     assert "spoken token" in prompt.lower() or "every spoken" in prompt.lower()
+
+
+def test_build_system_prompt_zh_cn_enforces_simplified_chinese():
+    prompt = build_system_prompt("friendly_buddy", "zh-CN", "beginner", _cfg())
+    assert "Simplified" in prompt or "简体" in prompt
+    assert "Traditional" in prompt or "繁體" in prompt
+
+
+def test_build_system_prompt_japanese_no_simplified_block():
+    prompt = build_system_prompt("japanese_senpai", "ja", "beginner", _ja_cfg())
+    assert "简体" not in prompt
+    assert "繁體" not in prompt
 
 
 def test_build_system_prompt_raises_on_unsupported_persona_language():
