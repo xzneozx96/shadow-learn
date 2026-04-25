@@ -264,7 +264,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         )}
 
         {/* Footer */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <BookOpen className="size-3 shrink-0" />
             {vocabCount}
