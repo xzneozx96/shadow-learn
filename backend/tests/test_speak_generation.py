@@ -1,12 +1,18 @@
+import json
+
+import httpx
 import pytest
+import respx
 from unittest.mock import AsyncMock, patch
 
 from app.shared._retry import RetryableError
 from app.speak.generation import (
     GenerationError,
+    _call_llm,
     generate_situation,
     validate_generated_config,
 )
+from app.speak.offshore_client import OFFSHORE_PATH
 
 
 def _well_formed_payload() -> dict:
@@ -99,3 +105,47 @@ def test_validate_rejects_error_marker_from_llm():
 
 def test_validate_accepts_well_formed_config():
     validate_generated_config(_well_formed_payload())
+
+
+# ---------------------------------------------------------------------------
+# _call_llm — exercises the offshore wire path end-to-end
+# ---------------------------------------------------------------------------
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_call_llm_forwards_to_offshore(monkeypatch):
+    from app.settings import settings
+
+    monkeypatch.setattr(settings, "offshore_base_url", "https://offshore.test")
+    monkeypatch.setattr(settings, "offshore_internal_token", "tok")
+
+    payload = _well_formed_payload()
+    respx.post(f"https://offshore.test{OFFSHORE_PATH}").mock(
+        return_value=httpx.Response(200, json={"text": json.dumps(payload)})
+    )
+
+    raw = await _call_llm("seed prompt", "user-google-key")
+    assert raw["title"] == payload["title"]
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_call_llm_no_longer_hits_google_directly(monkeypatch):
+    """Regression guard: China backend must NOT talk to googleapis.com."""
+    from app.settings import settings
+
+    monkeypatch.setattr(settings, "offshore_base_url", "https://offshore.test")
+    monkeypatch.setattr(settings, "offshore_internal_token", "tok")
+
+    google_route = respx.post(
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        "gemini-3.1-flash-lite-preview:generateContent"
+    )
+    payload = _well_formed_payload()
+    respx.post(f"https://offshore.test{OFFSHORE_PATH}").mock(
+        return_value=httpx.Response(200, json={"text": json.dumps(payload)})
+    )
+
+    await _call_llm("seed", "k")
+    assert google_route.call_count == 0

@@ -3,7 +3,7 @@ name = "livekit-agent"
 version = "0.2.0"
 description = "ShadowLearn Voice Agent for Speak with AI (Multi-Agent)"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "livekit-agents>=1.4.0",
     "livekit-plugins-openai>=1.0.0",
@@ -12,9 +12,23 @@ dependencies = [
     "livekit-plugins-noise-cancellation>=0.2.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "httpx>=0.28.0",
+    "tenacity>=9.0.0",
+    "pydantic>=2.0.0",
 ]
 
 [project.optional-dependencies]
 azure = [
     "azure-cognitiveservices-speech>=1.40.0",
 ]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "respx>=0.22.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

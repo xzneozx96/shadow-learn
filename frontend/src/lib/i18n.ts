@@ -690,7 +690,7 @@ export const TRANSLATIONS = {
     'library.noSearchResults': 'Không tìm thấy bài học nào',
     'library.continueStudying': 'Tiếp tục học',
     'library.continue': 'Tiếp tục',
-    'library.collection': 'Bộ sưu tập của bạn',
+    'library.collection': 'Tất cả bài học',
     'library.greeting.lateNight': 'Vẫn còn thức',
     'library.greeting.morning': 'Chào buổi sáng',
     'library.greeting.afternoon': 'Chào buổi chiều',

@@ -21,8 +21,16 @@ services:
     environment:
       - SHADOWLEARN_YTDLP_COOKIES_FILE=/app/youtube_cookies.txt
       - SHADOWLEARN_YTDLP_BGUTIL_URL=http://bgutil-provider:4416
+      # Single-host dev: proxy talks to the sibling container.
+      # Production: override with offshore https hostname in env.
+      # SHADOWLEARN_OFFSHORE_INTERNAL_TOKEN must be set in backend/.env
+      # and match INTERNAL_TOKEN in backend/livekit_agent/.env.
+      - SHADOWLEARN_OFFSHORE_BASE_URL=http://livekit-agent:8082
     depends_on:
-      - bgutil-provider
+      bgutil-provider:
+        condition: service_started
+      livekit-agent:
+        condition: service_healthy
 
   livekit-agent:
     build:
@@ -31,17 +39,16 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8081:8081"
+      - "127.0.0.1:8082:8082"
     env_file:
       - ./backend/livekit_agent/.env
     environment:
       - LIVEKIT_URL=wss://ross-geller-slpy62sv.livekit.cloud
+      - HTTP_PORT=8082
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
-  frontend:
-    build: ./frontend
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - backend

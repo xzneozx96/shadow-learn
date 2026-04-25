@@ -50,9 +50,11 @@ COPY --chown=appuser:appuser livekit_agent/ livekit_agent/
 WORKDIR /app/livekit_agent
 RUN uv run python agent.py download-files || true
 
-# Health-check endpoint (optional, used by load balancers / monitoring).
-# Agents connect outbound to LiveKit Cloud — no inbound ports required.
-EXPOSE 8081
+# 8081: legacy health-check exposed by AgentServer.
+# 8082: offshore FastAPI proxy (see http_server.py).
+EXPOSE 8081 8082
 
-# Run from livekit_agent/ so bare imports (userdata, agents) resolve correctly.
-CMD ["uv", "run", "python", "agent.py", "start"]
+# Run from livekit_agent/ so bare imports (userdata, agents, http_server,
+# schemas, gemini_client) resolve correctly. entrypoint.py runs the LiveKit
+# agent worker AND the FastAPI proxy concurrently in one process.
+CMD ["uv", "run", "python", "entrypoint.py"]
