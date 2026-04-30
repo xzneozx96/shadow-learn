@@ -193,18 +193,6 @@ describe('shadowingPanel', () => {
     })
   })
 
-  it('auto-skips segments with duration < 0.5 s', async () => {
-    const segments = [
-      { ...makeSegment(0), start: 0, end: 0.3 }, // short
-      makeSegment(1),
-    ]
-    render(<ShadowingPanel {...DEFAULT_PROPS} segments={segments} />)
-    // Should auto-skip to segment 1 — seekTo called with segment 1's start
-    await waitFor(() => {
-      expect(mockPlayer.seekTo).toHaveBeenCalledWith(segments[1].start)
-    })
-  })
-
   it('does not submit empty dictation answer (shake only)', async () => {
     render(<ShadowingPanel {...DEFAULT_PROPS} />)
     fireEnded()

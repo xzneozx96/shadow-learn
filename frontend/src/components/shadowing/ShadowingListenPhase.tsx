@@ -139,6 +139,7 @@ export function ShadowingListenPhase({
         <span className="text-sm text-muted-foreground">{t('shadowing.playingSegment')}</span>
 
         <Button
+          size="lg"
           ref={replayButtonRef}
           variant="secondary"
           onClick={handleReplay}
@@ -148,6 +149,7 @@ export function ShadowingListenPhase({
       </div>
 
       <Button
+        size="lg"
         variant="ghost"
         className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground hover:bg-transparent h-auto p-0"
         onClick={onSkip}

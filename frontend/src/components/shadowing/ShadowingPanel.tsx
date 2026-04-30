@@ -13,7 +13,7 @@ import {
 import { useI18n } from '@/contexts/I18nContext'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { captureShadowingSessionCompleted, captureShadowingSessionStarted } from '@/lib/posthog-events'
-import { computeSessionSummary, isAutoSkipSegment } from '@/lib/shadowing-utils'
+import { computeSessionSummary } from '@/lib/shadowing-utils'
 import { ShadowingDictationPhase } from './ShadowingDictationPhase'
 import { ShadowingListenPhase } from './ShadowingListenPhase'
 import { ShadowingRevealPhase } from './ShadowingRevealPhase'
@@ -59,23 +59,6 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSummary])
 
-  // Auto-skip: setState-during-render pattern — avoids effect setter
-  const [lastAutoSkipCheck, setLastAutoSkipCheck] = useState(-1)
-  if (!showSummary && lastAutoSkipCheck !== segmentIndex) {
-    setLastAutoSkipCheck(segmentIndex)
-    const seg = segments[segmentIndex]
-    if (seg && isAutoSkipSegment(seg)) {
-      setResults(prev => [...prev, {
-        segmentIndex,
-        attempted: false,
-        skipped: false,
-        autoSkipped: true,
-        score: null,
-      }])
-      setSegmentIndex(si => si + 1)
-    }
-  }
-
   const segment = segments[segmentIndex] ?? null
 
   // Count attempted segments (de-duplicated, same definition as session summary)
@@ -118,7 +101,6 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
       segmentIndex,
       attempted: true,
       skipped: false,
-      autoSkipped: false,
       score,
     }])
     advanceToNextSegment()
@@ -129,7 +111,6 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
       segmentIndex,
       attempted: false,
       skipped: true,
-      autoSkipped: false,
       score: null,
     }])
     advanceToNextSegment()

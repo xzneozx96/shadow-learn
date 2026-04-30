@@ -71,7 +71,7 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
           </div>
         )}
 
-        <Button className="w-full" onClick={onDone}>{t('shadowing.done')}</Button>
+        <Button size="lg" className="w-full" onClick={onDone}>{t('shadowing.done')}</Button>
       </div>
     </div>
   )
