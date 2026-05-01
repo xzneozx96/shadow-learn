@@ -78,7 +78,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
     ? null
     : (
         <div className="flex items-center justify-center gap-3 p-3">
-          <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
+          <Button variant="ghost" size="lg" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
           {sentence.romanization && (
             <HintButton
               level={hint.level}
@@ -88,7 +88,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
             />
           )}
           <Button
-            size="sm"
+            size="lg"
             disabled={!canSubmit}
             onClick={() => blob && void submit(blob, sentence.sentence, language)}
           >
@@ -126,7 +126,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
         {result && (
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon-lg"
             aria-label="Play reference audio"
             onClick={() => void playTTS(sentence.sentence)}
             disabled={isTTSLoading}

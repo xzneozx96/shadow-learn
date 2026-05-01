@@ -107,7 +107,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
         </div>
       )}
 
-      <Button className="w-full mt-8" onClick={onStart} disabled={loading}>
+      <Button size="lg" className="w-full mt-8" onClick={onStart} disabled={loading}>
         <Sparkles className="size-4" />
         {loading ? t('study.generating') : t('study.startSessionButton')}
       </Button>

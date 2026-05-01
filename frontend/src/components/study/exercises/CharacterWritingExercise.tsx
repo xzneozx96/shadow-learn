@@ -94,7 +94,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
 
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
+      <Button variant="ghost" size="lg" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {stage === 'blank' && showRadicals && (
         <HintButton
           level={radicalHint.level}
@@ -105,10 +105,10 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
       )}
       {hintAnimating
         ? (
-            <Button size="sm" onClick={() => handleComplete(true)}>{t('study.writing.continueButton')}</Button>
+            <Button size="lg" onClick={() => handleComplete(true)}>{t('study.writing.continueButton')}</Button>
           )
         : (
-            <Button variant="outline" size="sm" onClick={handleHint}>{t('study.writing.hint')}</Button>
+            <Button variant="outline" size="lg" onClick={handleHint}>{t('study.writing.hint')}</Button>
           )}
     </div>
   )

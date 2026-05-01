@@ -36,12 +36,12 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
 
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
+      <Button variant="ghost" size="lg" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {!checked
-        ? <Button size="sm" onClick={handleCheck}>{t('study.checkButton')}</Button>
+        ? <Button size="lg" onClick={handleCheck}>{t('study.checkButton')}</Button>
         : (
             <Button
-              size="sm"
+              size="lg"
               onClick={() => {
                 const today = new Date().toISOString().split('T')[0]
                 const mistakes: MistakeExample[] = accuracyScore < 100
