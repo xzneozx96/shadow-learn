@@ -1,3 +1,4 @@
+import type { SessionLog } from '@/db'
 import type { SegmentResult } from '@/lib/shadowing-utils'
 import type { LessonMeta, Segment } from '@/types'
 import { useEffect, useState } from 'react'
@@ -10,7 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { saveSessionLog } from '@/db'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { captureShadowingSessionCompleted, captureShadowingSessionStarted } from '@/lib/posthog-events'
 import { computeSessionSummary } from '@/lib/shadowing-utils'
@@ -33,6 +36,7 @@ interface ShadowingPanelProps {
 
 export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, lesson }: ShadowingPanelProps) {
   const { t } = useI18n()
+  const { db } = useAuth()
   const resolvedCaps = getLanguageCaps(lesson.sourceLanguage)
   const [segmentIndex, setSegmentIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>('listen')
@@ -56,6 +60,19 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
       return
     const summary = computeSessionSummary(results, segments.length)
     captureShadowingSessionCompleted({ mode, attempted: summary.attempted, total: summary.total })
+    if (db && summary.attempted >= 1) {
+      const log: SessionLog = {
+        sessionId: crypto.randomUUID(),
+        date: new Date().toISOString().slice(0, 10),
+        durationMinutes: 0,
+        skillPracticed: mode === 'speaking' ? 'speaking' : 'listening',
+        exercisesCompleted: summary.attempted,
+        exercisesCorrect: summary.attempted,
+        accuracy: 100,
+        itemsMastered: [],
+      }
+      void saveSessionLog(db, log)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSummary])
 
