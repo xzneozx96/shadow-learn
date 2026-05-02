@@ -465,6 +465,10 @@ export async function saveSessionLog(db: ShadowLearnDB, log: SessionLog) {
   await db.put('session-logs', log)
 }
 
+export async function getAllSessionLogs(db: ShadowLearnDB): Promise<SessionLog[]> {
+  return db.getAll('session-logs')
+}
+
 // Learner Profile
 export async function getLearnerProfile(db: ShadowLearnDB): Promise<LearnerProfile | undefined> {
   return db.get('learner-profile', 'profile')
