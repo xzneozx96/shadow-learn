@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
+import { getAllSessionLogs } from '@/db'
 import { useUploadThumbnail } from '@/hooks/useUploadThumbnail'
 import { API_BASE, getAppConfig } from '@/lib/config'
 import { cn } from '@/lib/utils'
@@ -48,13 +49,11 @@ function relativeTime(iso: string, t: TFn, locale: Locale): string {
   return new Date(iso).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US', { month: 'short', day: 'numeric' })
 }
 
-function buildActiveDays(lessons: LessonMeta[]): Set<string> {
+function buildActiveDays(activityDates: Set<string>): Set<string> {
   const set = new Set<string>()
-  for (const l of lessons) {
-    if (l.lastOpenedAt)
-      set.add(new Date(l.lastOpenedAt).toDateString())
-    if (l.createdAt)
-      set.add(new Date(l.createdAt).toDateString())
+  for (const iso of activityDates) {
+    const [year, month, day] = iso.split('-').map(Number)
+    set.add(new Date(year, month - 1, day).toDateString())
   }
   return set
 }
@@ -268,7 +267,7 @@ function CardLabel({ children }: { children: React.ReactNode }) {
 }
 
 /* ── Activity: calendar month view ── */
-function ActivityHeatmap({ lessons }: { lessons: LessonMeta[] }) {
+function ActivityHeatmap({ activityDates }: { activityDates: Set<string> }) {
   const { locale } = useI18n()
   const { monthLabel, days, firstDowMon, daysActive, daysInMonth } = useMemo(() => {
     const today = new Date()
@@ -283,7 +282,7 @@ function ActivityHeatmap({ lessons }: { lessons: LessonMeta[] }) {
     // Convert Sun-start (0..6) to Mon-start (0..6 where Mon=0)
     const firstDowMon = (firstDay.getDay() + 6) % 7
 
-    const active = buildActiveDays(lessons)
+    const active = buildActiveDays(activityDates)
     const days: { day: number, isActive: boolean, isToday: boolean, isFuture: boolean }[] = []
     let count = 0
     for (let d = 1; d <= lastDayOfMonth; d++) {
@@ -300,7 +299,7 @@ function ActivityHeatmap({ lessons }: { lessons: LessonMeta[] }) {
       })
     }
     return { monthLabel, days, firstDowMon, daysActive: count, daysInMonth: lastDayOfMonth }
-  }, [lessons, locale])
+  }, [activityDates, locale])
 
   return (
     <div className="flex h-full flex-col">
@@ -353,10 +352,10 @@ function ActivityHeatmap({ lessons }: { lessons: LessonMeta[] }) {
 }
 
 /* ── Streak: flame + week dots ── */
-function StreakCard({ lessons }: { lessons: LessonMeta[] }) {
+function StreakCard({ activityDates }: { activityDates: Set<string> }) {
   const { t } = useI18n()
   const { streak, week } = useMemo(() => {
-    const active = buildActiveDays(lessons)
+    const active = buildActiveDays(activityDates)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -380,7 +379,7 @@ function StreakCard({ lessons }: { lessons: LessonMeta[] }) {
       })
     }
     return { streak: s, week: w }
-  }, [lessons])
+  }, [activityDates])
 
   const hasStreak = streak > 0
 
@@ -548,7 +547,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
 }
 
 export function Library() {
-  const { keys, trialMode } = useAuth()
+  const { keys, trialMode, db } = useAuth()
   const { t } = useI18n()
   const { lessons, updateLesson, deleteLesson } = useLessons()
   const { entriesByLesson } = useVocabulary()
@@ -559,6 +558,16 @@ export function Library() {
   useEffect(() => {
     getAppConfig().then(cfg => setSttProvider(cfg.sttProvider))
   }, [])
+
+  const [activityDates, setActivityDates] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!db)
+      return
+    getAllSessionLogs(db).then((logs) => {
+      setActivityDates(new Set(logs.map(l => l.date)))
+    })
+  }, [db])
 
   const greeting = useMemo(() => getGreeting(t), [t])
 
@@ -669,8 +678,8 @@ export function Library() {
             {hasLessons && (
               <div className="flex flex-col gap-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <BentoCard glow="tr"><ActivityHeatmap lessons={lessons} /></BentoCard>
-                  <BentoCard glow="tl"><StreakCard lessons={lessons} /></BentoCard>
+                  <BentoCard glow="tr"><ActivityHeatmap activityDates={activityDates} /></BentoCard>
+                  <BentoCard glow="tl"><StreakCard activityDates={activityDates} /></BentoCard>
                 </div>
                 <BentoCard glow="bl">
                   <WordsCard lessons={lessons} entriesByLesson={entriesByLesson} total={totalVocab} />
