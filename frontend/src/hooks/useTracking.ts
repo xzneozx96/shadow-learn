@@ -1,5 +1,5 @@
 import type { ExerciseMode } from '@/components/study/ModePicker'
-import type { MistakeExample, ShadowLearnDB, SpacedRepetitionItem } from '@/db'
+import type { MistakeExample, SessionLog, ShadowLearnDB, SpacedRepetitionItem } from '@/db'
 import type { VocabEntry } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -11,6 +11,7 @@ import {
   saveErrorPattern,
   saveMasteryData,
   saveProgressStats,
+  saveSessionLog,
   saveSpacedRepetitionItem,
   upsertExerciseStat,
 } from '@/db'
@@ -177,5 +178,28 @@ export function useTracking() {
     await saveProgressStats(db, progress)
   }
 
-  return { logExerciseResult, getDueItemCount, getDueItemsList, logSessionComplete }
+  async function logActivityDay(args: {
+    skillPracticed: SessionLog['skillPracticed']
+    exercisesCompleted: number
+    exercisesCorrect: number
+    durationMinutes?: number
+  }): Promise<void> {
+    if (!db)
+      return
+    const log: SessionLog = {
+      sessionId: crypto.randomUUID(),
+      date: new Date().toISOString().slice(0, 10),
+      durationMinutes: args.durationMinutes ?? 0,
+      skillPracticed: args.skillPracticed,
+      exercisesCompleted: args.exercisesCompleted,
+      exercisesCorrect: args.exercisesCorrect,
+      accuracy: args.exercisesCompleted > 0
+        ? Math.round((args.exercisesCorrect / args.exercisesCompleted) * 100)
+        : 0,
+      itemsMastered: [],
+    }
+    await saveSessionLog(db, log)
+  }
+
+  return { logExerciseResult, getDueItemCount, getDueItemsList, logSessionComplete, logActivityDay }
 }
