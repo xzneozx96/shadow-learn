@@ -60,21 +60,7 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
       return
     const summary = computeSessionSummary(results, segments.length)
     captureShadowingSessionCompleted({ mode, attempted: summary.attempted, total: summary.total })
-    if (db && summary.attempted >= 1) {
-      const _d = new Date()
-      const localDate = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
-      const log: SessionLog = {
-        sessionId: crypto.randomUUID(),
-        date: localDate,
-        durationMinutes: 0,
-        skillPracticed: mode === 'speaking' ? 'speaking' : 'listening',
-        exercisesCompleted: summary.attempted,
-        exercisesCorrect: summary.attempted,
-        accuracy: 100,
-        itemsMastered: [],
-      }
-      void saveSessionLog(db, log)
-    }
+    logActivityIfPracticed()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSummary])
 
@@ -87,12 +73,37 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
     return [...byIndex.values()].filter(r => r.attempted).length
   }
 
+  function logActivityIfPracticed() {
+    const summary = computeSessionSummary(results, segments.length)
+    if (!db || summary.attempted < 1)
+      return
+    const _d = new Date()
+    const localDate = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
+    const passing = results.filter(r => r.attempted && r.score !== null && r.score >= 60).length
+    const log: SessionLog = {
+      sessionId: crypto.randomUUID(),
+      date: localDate,
+      durationMinutes: 0,
+      skillPracticed: mode === 'speaking' ? 'speaking' : 'listening',
+      exercisesCompleted: summary.attempted,
+      exercisesCorrect: passing,
+      accuracy: summary.averageScore ?? 0,
+      itemsMastered: [],
+    }
+    void saveSessionLog(db, log)
+  }
+
+  function handleConfirmedExit() {
+    logActivityIfPracticed()
+    onExit()
+  }
+
   function handleExitRequest() {
     if (attemptedCount() >= 3) {
       setShowExitConfirm(true)
     }
     else {
-      onExit()
+      handleConfirmedExit()
     }
   }
 
@@ -243,7 +254,7 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
               variant="destructive"
               onClick={() => {
                 setShowExitConfirm(false)
-                onExit()
+                handleConfirmedExit()
               }}
             >
               {t('shadowing.exit')}

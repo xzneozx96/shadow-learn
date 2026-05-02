@@ -19,7 +19,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useQuizGeneration } from '@/hooks/useQuizGeneration'
-import { useTracking } from '@/hooks/useTracking'
+import { EXERCISE_TO_SKILL, useTracking } from '@/hooks/useTracking'
 import { useTTS } from '@/hooks/useTTS'
 import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
@@ -241,18 +241,19 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
   function modeToSkill(m: ExerciseMode): SessionLog['skillPracticed'] {
     if (m === 'mixed')
       return 'mixed'
-    if (m === 'writing')
-      return 'writing'
-    if (m === 'pronunciation')
-      return 'speaking'
-    if (m === 'dictation' || m === 'romanization-recall')
-      return 'listening'
-    return 'vocabulary'
+    return EXERCISE_TO_SKILL[m]
   }
 
   function handleConfirmLeave() {
     confirmedRef.current = true
     setConfirmLeave(false)
+    if (results.length > 0) {
+      void logActivityDay({
+        skillPracticed: modeToSkill(mode),
+        exercisesCompleted: results.length,
+        exercisesCorrect: results.filter(r => r.correct).length,
+      })
+    }
     if (blocker.state === 'blocked')
       blocker.proceed()
     else

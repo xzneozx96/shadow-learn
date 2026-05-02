@@ -20,7 +20,7 @@ import { createSpacedRepetitionItem, updateSpacedRepetition } from '@/lib/spaced
 export type Skill = 'writing' | 'speaking' | 'vocabulary' | 'reading' | 'listening'
 export type ExerciseType = Exclude<ExerciseMode, 'mixed'>
 
-const EXERCISE_TO_SKILL: Record<ExerciseType, Skill> = {
+export const EXERCISE_TO_SKILL: Record<ExerciseType, Skill> = {
   'dictation': 'listening',
   'romanization-recall': 'speaking',
   'reconstruction': 'reading',
