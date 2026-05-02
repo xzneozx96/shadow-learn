@@ -186,9 +186,11 @@ export function useTracking() {
   }): Promise<void> {
     if (!db)
       return
+    const d = new Date()
+    const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     const log: SessionLog = {
       sessionId: crypto.randomUUID(),
-      date: new Date().toISOString().slice(0, 10),
+      date: localDate,
       durationMinutes: args.durationMinutes ?? 0,
       skillPracticed: args.skillPracticed,
       exercisesCompleted: args.exercisesCompleted,

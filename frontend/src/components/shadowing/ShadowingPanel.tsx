@@ -61,9 +61,11 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
     const summary = computeSessionSummary(results, segments.length)
     captureShadowingSessionCompleted({ mode, attempted: summary.attempted, total: summary.total })
     if (db && summary.attempted >= 1) {
+      const _d = new Date()
+      const localDate = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
       const log: SessionLog = {
         sessionId: crypto.randomUUID(),
-        date: new Date().toISOString().slice(0, 10),
+        date: localDate,
         durationMinutes: 0,
         skillPracticed: mode === 'speaking' ? 'speaking' : 'listening',
         exercisesCompleted: summary.attempted,

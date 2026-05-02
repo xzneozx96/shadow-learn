@@ -186,20 +186,21 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
       void logExerciseResult({ vocabEntry: q.entry, score, exerciseType: q.type, mistakes: opts?.mistakes })
       captureExerciseCompleted({ exercise_type: q.type, correct: score >= 60, score })
       setResults(r => [...r, newResult])
-      if (isLast) {
-        void logSessionComplete()
-        const finalCorrect = results.filter(r => r.correct).length + (score >= 60 ? 1 : 0)
-        const total = questions.length
-        const completedResults = newResult ? [...results, newResult] : results
-        if (completedResults.length > 0) {
-          void logActivityDay({
-            skillPracticed: modeToSkill(mode),
-            exercisesCompleted: completedResults.length,
-            exercisesCorrect: completedResults.filter(r => r.correct).length,
-          })
-        }
-        captureStudySessionCompleted({ lesson_id: lessonId ?? '', mode, score: finalCorrect, total, perfect: finalCorrect === total })
+    }
+
+    if (isLast) {
+      void logSessionComplete()
+      const completedResults = newResult ? [...results, newResult] : results
+      if (completedResults.length > 0) {
+        void logActivityDay({
+          skillPracticed: modeToSkill(mode),
+          exercisesCompleted: completedResults.length,
+          exercisesCorrect: completedResults.filter(r => r.correct).length,
+        })
       }
+      const finalCorrect = completedResults.filter(r => r.correct).length
+      const total = questions.length
+      captureStudySessionCompleted({ lesson_id: lessonId ?? '', mode, score: finalCorrect, total, perfect: finalCorrect === total })
     }
 
     if (isLast) {
