@@ -1,5 +1,5 @@
 import type { ExerciseMode } from '@/components/study/ModePicker'
-import type { MistakeExample } from '@/db'
+import type { MistakeExample, SessionLog } from '@/db'
 import type { SessionQuestion } from '@/lib/study-utils'
 import type { VocabEntry } from '@/types'
 import { X } from 'lucide-react'
@@ -51,7 +51,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
   const { entriesByLesson } = useVocabulary()
   const { db, keys } = useAuth()
   const { t } = useI18n()
-  const { logExerciseResult, logSessionComplete } = useTracking()
+  const { logExerciseResult, logSessionComplete, logActivityDay } = useTracking()
   const { generateQuiz, loading } = useQuizGeneration()
 
   const entries = preloadedEntries ?? (lessonId ? entriesByLesson[lessonId] : undefined) ?? []
@@ -190,6 +190,14 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
         void logSessionComplete()
         const finalCorrect = results.filter(r => r.correct).length + (score >= 60 ? 1 : 0)
         const total = questions.length
+        const completedResults = newResult ? [...results, newResult] : results
+        if (completedResults.length > 0) {
+          void logActivityDay({
+            skillPracticed: modeToSkill(mode),
+            exercisesCompleted: completedResults.length,
+            exercisesCorrect: completedResults.filter(r => r.correct).length,
+          })
+        }
         captureStudySessionCompleted({ lesson_id: lessonId ?? '', mode, score: finalCorrect, total, perfect: finalCorrect === total })
       }
     }
@@ -227,6 +235,18 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
       confirmedRef.current = false
       setConfirmLeave(false)
     }
+  }
+
+  function modeToSkill(m: ExerciseMode): SessionLog['skillPracticed'] {
+    if (m === 'mixed')
+      return 'mixed'
+    if (m === 'writing')
+      return 'writing'
+    if (m === 'pronunciation')
+      return 'speaking'
+    if (m === 'dictation' || m === 'romanization-recall')
+      return 'listening'
+    return 'vocabulary'
   }
 
   function handleConfirmLeave() {
