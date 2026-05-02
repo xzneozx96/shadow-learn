@@ -559,7 +559,7 @@ export function Library() {
     getAppConfig().then(cfg => setSttProvider(cfg.sttProvider))
   }, [])
 
-  const [activityDates, setActivityDates] = useState<Set<string>>(new Set())
+  const [activityDates, setActivityDates] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
     if (!db)
