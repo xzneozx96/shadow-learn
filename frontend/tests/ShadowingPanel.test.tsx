@@ -27,6 +27,10 @@ const mockPlayer = {
   destroy: vi.fn(),
 }
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ db: null, keys: null, trialMode: false }),
+}))
+
 vi.mock('@/contexts/I18nContext', () => ({
   useI18n: () => ({ t: (key: string) => key, locale: 'en', setLocale: async () => {} }),
 }))
