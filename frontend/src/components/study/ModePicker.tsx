@@ -72,14 +72,24 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
         <div className="flex items-center gap-3">
           <button
             className="size-7 rounded-lg border border-border elegant-card text-sm hover:bg-accent transition-colors"
-            onClick={() => onCountChange(Math.max(5, count - 1))}
+            onClick={() => onCountChange(Math.max(1, count - 1))}
           >
             −
           </button>
-          <span className="text-base font-bold w-6 text-center">{count}</span>
+          <input
+            type="number"
+            min={1}
+            value={count}
+            onChange={(e) => {
+              const n = Number.parseInt(e.target.value, 10)
+              if (Number.isFinite(n) && n >= 1)
+                onCountChange(n)
+            }}
+            className="text-base font-bold w-12 text-center bg-transparent border-none outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
           <button
             className="size-7 rounded-lg border border-border elegant-card text-sm hover:bg-accent transition-colors"
-            onClick={() => onCountChange(Math.min(20, count + 1))}
+            onClick={() => onCountChange(count + 1)}
           >
             +
           </button>
