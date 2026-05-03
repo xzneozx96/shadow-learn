@@ -16,7 +16,7 @@ export function SessionSummary({ results, onStudyAgain, onBack }: Props) {
   const wrong = results.filter(r => !r.correct).map(r => r.entry)
 
   return (
-    <div className="rounded-md border border-border elegant-card backdrop-blur-xl p-8 text-center">
+    <div className="rounded-md border border-border bg-card backdrop-blur-xl p-8 text-center">
       <div className="text-4xl mb-2">{correctCount === results.length ? '🎉' : '💪'}</div>
       <div className="text-4xl font-bold tracking-tight">
         {correctCount}
@@ -50,8 +50,8 @@ export function SessionSummary({ results, onStudyAgain, onBack }: Props) {
       )}
 
       <div className="flex gap-2">
-        <Button variant="outline" className="flex-1" onClick={onBack}>{t('study.backToWorkbook')}</Button>
-        <Button className="flex-1" onClick={onStudyAgain}>{t('study.studyAgain')}</Button>
+        <Button size="lg" variant="outline" className="flex-1" onClick={onBack}>{t('study.backToWorkbook')}</Button>
+        <Button size="lg" className="flex-1" onClick={onStudyAgain}>{t('study.studyAgain')}</Button>
       </div>
     </div>
   )
