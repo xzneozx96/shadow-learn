@@ -359,8 +359,12 @@ function StreakCard({ activityDates }: { activityDates: Set<string> }) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
+    // Streak: start from today; if today not yet active, fall back to yesterday
+    // (grace period — yesterday's streak persists until end of today)
     let s = 0
     const cur = new Date(today)
+    if (!active.has(cur.toDateString()))
+      cur.setDate(cur.getDate() - 1)
     while (active.has(cur.toDateString())) {
       s++
       cur.setDate(cur.getDate() - 1)
