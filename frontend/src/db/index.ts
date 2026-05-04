@@ -4,7 +4,7 @@ import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluati
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 11
+const DB_VERSION = 12
 
 export interface LearnerProfile {
   name: string
@@ -290,6 +290,13 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
       }
       if (oldVersion < 11) {
         db.createObjectStore('word-breakdowns', { keyPath: 'word' })
+      }
+      if (oldVersion < 12) {
+        // Recovery migration: some installs reached v11 without the
+        // `word-breakdowns` store (incomplete prior upgrade). Create
+        // it idempotently here.
+        if (!db.objectStoreNames.contains('word-breakdowns'))
+          db.createObjectStore('word-breakdowns', { keyPath: 'word' })
       }
     },
   })
