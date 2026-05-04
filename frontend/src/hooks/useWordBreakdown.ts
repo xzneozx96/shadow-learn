@@ -30,6 +30,8 @@ interface UseWordBreakdownReturn {
   retryStory: () => void
   /** Discard cached story and force a fresh LLM generation. */
   regenerateStory: () => Promise<void>
+  /** Save user-edited story text. Persists to IDB; survives re-opens until regenerated. */
+  saveCustomStory: (text: string) => Promise<void>
 }
 
 export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdownReturn {
@@ -172,6 +174,26 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     setRetryTick(t => t + 1)
   }, [db, word])
 
+  const saveCustomStory = useCallback(async (text: string) => {
+    setStory(text)
+    setStoryError(null)
+    if (!db)
+      return
+    try {
+      await saveBreakdown(db, {
+        word,
+        sourceLanguage,
+        characters,
+        story: text,
+        storyLanguage: 'vi',
+        generatedAt: new Date().toISOString(),
+      })
+    }
+    catch (err) {
+      console.warn('[useWordBreakdown] saveCustomStory persist failed:', err)
+    }
+  }, [db, word, sourceLanguage, characters])
+
   return {
     characters,
     charactersLoading,
@@ -181,5 +203,6 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     storyError,
     retryStory,
     regenerateStory,
+    saveCustomStory,
   }
 }
