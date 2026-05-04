@@ -35,7 +35,7 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex shrink-0 justify-start">
               <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight text-foreground hover:opacity-80 transition-opacity">
                 <img src="/favicon.svg" className="size-7" alt="ShadowLearn Logo" />
-                <span className="text-[15px] hidden xl:inline-block">ShadowLearn</span>
+                <span className="text-base hidden xl:inline-block">ShadowLearn</span>
               </Link>
             </div>
 

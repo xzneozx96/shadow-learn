@@ -46,13 +46,13 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: L
     )}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 p-4">
-        <div className="size-10 rounded-xl bg-secondary border border-border flex items-center justify-center text-base shrink-0">
+      <div className="flex items-center gap-4 p-5">
+        <div className="size-11 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-xl shrink-0 shadow-inner">
           📺
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold truncate">{lessonTitle}</div>
-          <div className="text-sm text-muted-foreground mt-0.5">
+          <div className="text-base font-bold text-foreground tracking-tight truncate">{lessonTitle}</div>
+          <div className="text-[13px] text-foreground/50 mt-1 font-medium">
             {entries.length}
             {' '}
             {t('workbook.wordCount')}
@@ -62,27 +62,32 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: L
             {lastSavedDate}
           </div>
         </div>
-        {onDeleteGroup && (
+        <div className="flex items-center gap-3 ml-4">
+          {onDeleteGroup && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-red-400/70 hover:text-red-400 hover:bg-red-400/10 shrink-0 h-9 w-9"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          )}
           <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={() => navigate(`/vocabulary/${lessonId}/study`)}
+            className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-full px-6 shadow-sm"
           >
-            <Trash2 className="size-4" />
+            {t('lessonGroup.study')}
           </Button>
-        )}
-        <Button onClick={() => navigate(`/vocabulary/${lessonId}/study`)}>
-          {t('lessonGroup.study')}
-        </Button>
+        </div>
       </div>
 
       {/* Word grid */}
       {entries.length > 0 && (
         <>
           <div
-            className="grid border-t border-border"
-            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '1px' }}
+            className="grid border-t border-white/5"
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}
           >
             {displayed.map(entry => (
               <WordCard key={entry.id} entry={entry} onPlay={() => void playTTS(entry.word)} isLoading={loadingText === entry.word} />
@@ -90,7 +95,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: L
           </div>
           {entries.length > PREVIEW_COUNT && (
             <button
-              className="w-full py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/30 border-t border-border transition-colors"
+              className="w-full py-3 text-[13px] font-medium text-foreground/50 hover:text-foreground hover:bg-white/[0.02] border-t border-white/5 transition-colors"
               onClick={() => setExpanded(e => !e)}
             >
               {expanded ? t('lessonGroup.showLess') : `${t('lessonGroup.showAll')} ${entries.length} ${t('lessonGroup.showAllWords')}`}

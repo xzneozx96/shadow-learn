@@ -102,7 +102,7 @@ export function WhatsNewDialog() {
                     <Icon className={`h-5 w-5 ${ui.iconColor}`} strokeWidth={2} />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[15px] text-foreground leading-relaxed">
+                    <span className="text-base text-foreground leading-relaxed">
                       {item.text}
                     </span>
                   </div>

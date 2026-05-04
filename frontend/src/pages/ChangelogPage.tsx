@@ -66,7 +66,7 @@ function SidebarEntry({
           </Badge>
         )}
       </div>
-      <p className={`text-[14px] font-medium leading-snug ${isActive ? 'text-foreground' : 'text-foreground/80'}`}>
+      <p className={`text-sm font-medium leading-snug ${isActive ? 'text-foreground' : 'text-foreground/80'}`}>
         {entry.title}
       </p>
     </button>

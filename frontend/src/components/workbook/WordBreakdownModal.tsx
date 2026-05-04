@@ -88,7 +88,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
             {/* Mnemonic / Explanation */}
             <section className="w-full">
               <h3 className="text-[13px] font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.story')}</h3>
-              <div className="bg-[#141414] rounded-xl p-6 border border-white/5 min-h-[80px]">
+              <div className="bg-[#141414] rounded-xl p-6 border border-border min-h-[80px]">
                 {charactersLoading && !storyError && (
                   <div className="flex items-center gap-2 text-sm text-foreground/50">
                     <Loader2 className="size-4 animate-spin" />
@@ -110,12 +110,12 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                   </div>
                 )}
                 {!charactersLoading && !storyLoading && !storyError && story && (
-                  <div className="prose prose-invert prose-p:text-[16px] prose-p:leading-[1.85] prose-p:text-foreground/70 prose-strong:font-medium prose-strong:text-yellow-500 max-w-none">
+                  <div className="prose prose-invert prose-p:text-base prose-p:leading-[1.85] prose-p:text-foreground/70 prose-strong:font-medium prose-strong:text-yellow-500 max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{story}</ReactMarkdown>
                   </div>
                 )}
                 {!charactersLoading && !storyLoading && !storyError && !story && characters.length > 0 && (
-                  <p className="text-[15px] text-foreground/50 italic">{t('breakdown.placeholder')}</p>
+                  <p className="text-base text-foreground/50 italic">{t('breakdown.placeholder')}</p>
                 )}
               </div>
             </section>
@@ -133,9 +133,9 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                 )}
 
                 {characters.map(c => (
-                  <div key={c.char} className="bg-[#141414] rounded-xl p-5 border border-white/5 flex flex-col">
+                  <div key={c.char} className="bg-[#141414] rounded-xl p-5 border border-border flex flex-col">
                     {/* Character header for multi-character words */}
-                    <div className="flex items-end gap-3 pb-4 mb-5 border-b border-white/5">
+                    <div className="flex items-end gap-3 pb-4 mb-5 border-b border-border">
                       <span className="text-[40px] leading-none text-foreground font-bold font-serif">{c.char}</span>
                       <div className="flex items-baseline gap-2 pb-1">
                         <span className="text-base italic text-yellow-500 font-medium">
@@ -155,8 +155,8 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                           <div className="flex-1">
                             <ul className="space-y-2.5">
                               {c.components.map((comp: any, i: number) => (
-                                <li key={`${comp.char}-${i}`} className="flex items-start gap-2.5 text-[15px] leading-[1.6]">
-                                  <span className="text-[20px] text-foreground font-serif leading-none mt-[3px] shrink-0">
+                                <li key={`${comp.char}-${i}`} className="flex items-start gap-2.5 text-base leading-[1.6]">
+                                  <span className="text-xl text-foreground font-serif leading-none mt-[3px] shrink-0">
                                     {comp.char}
                                   </span>
                                   <div className="flex flex-wrap items-baseline gap-x-1.5 text-foreground/80">
@@ -164,7 +164,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                                       {comp.name || '—'}
                                     </span>
                                     {comp.pinyin && (
-                                      <span className="text-[14px] italic text-yellow-500/90">
+                                      <span className="text-sm italic text-yellow-500/90">
                                         (
                                         {comp.pinyin}
                                         )
