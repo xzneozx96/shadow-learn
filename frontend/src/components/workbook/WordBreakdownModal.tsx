@@ -1,5 +1,5 @@
 import type { ShadowLearnDB } from '@/db'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -59,6 +59,18 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
           <DialogTitle className="sr-only">{t('breakdown.title', { word })}</DialogTitle>
         </DialogHeader>
 
+        {/* Regenerate icon — sits to the left of the default close X */}
+        <button
+          type="button"
+          aria-label={t('breakdown.regenerate')}
+          title={t('breakdown.regenerate')}
+          onClick={() => { void regenerateStory() }}
+          disabled={storyLoading || charactersLoading}
+          className="absolute top-2 right-10 z-10 rounded-md p-1.5 text-foreground/55 transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <RefreshCw className={`size-4 ${storyLoading ? 'animate-spin' : ''}`} />
+        </button>
+
         <div className="text-foreground">
           {/* Main Word Header */}
           <header className="p-6 flex items-center gap-4 border-b border-border">
@@ -111,18 +123,8 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                   </div>
                 )}
                 {!charactersLoading && !storyLoading && !storyError && story && (
-                  <div className="space-y-3">
-                    <div className="prose prose-invert prose-p:text-base prose-p:leading-[1.85] prose-p:text-foreground/70 prose-strong:font-medium prose-strong:text-yellow-500 max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{story}</ReactMarkdown>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-white/10 text-foreground/70 hover:bg-white/5"
-                      onClick={() => { void regenerateStory() }}
-                    >
-                      {t('breakdown.regenerate')}
-                    </Button>
+                  <div className="prose prose-invert prose-p:text-base prose-p:leading-[1.85] prose-p:text-foreground/70 prose-strong:font-medium prose-strong:text-yellow-500 max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{story}</ReactMarkdown>
                   </div>
                 )}
                 {!charactersLoading && !storyLoading && !storyError && !story && characters.length > 0 && (
