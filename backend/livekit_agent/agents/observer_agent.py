@@ -14,9 +14,9 @@ import logging
 from typing import Optional
 
 from livekit.agents import ConversationItemAddedEvent
+from livekit.agents.voice.events import UserInputTranscribedEvent
 from livekit.agents.llm import ChatContext
 
-from userdata import SpeakSessionData
 from utils import load_prompt
 
 logger = logging.getLogger("speak-with-ai.observer")
@@ -101,17 +101,37 @@ class ObserverAgent:
     def _setup_listeners(self) -> None:
         """Set up session event listeners."""
 
+        @self.session.on("user_input_transcribed")
+        def user_input_transcribed(event: UserInputTranscribedEvent):
+            """Handle final user transcripts from STT (Deepgram).
+
+            Google Realtime's input_audio_transcription is disabled so that
+            Deepgram can deliver transcripts ~300ms after speech ends instead
+            of waiting 4-5s for Google's generation to begin. This event
+            replaces the user-role branch that was previously in
+            conversation_item_added.
+            """
+            if not event.is_final or not event.transcript:
+                return
+            transcript_text = event.transcript
+            logger.info(f"[OBSERVER] User turn (STT): {transcript_text[:50]}...")
+            self.conversation_history.append({"text": transcript_text, "role": "user"})
+            self._handle_user_turn(transcript_text)
+
         @self.session.on("conversation_item_added")
         def conversation_item_added(event: ConversationItemAddedEvent):
-            """Handle new conversation items.
+            """Handle new conversation items — assistant turns only.
 
-            Triggers:
-            - Grammar + Pronunciation evaluation after USER turns
-            - Next line suggestion after AI (assistant) turns
+            User turns now arrive via user_input_transcribed (Deepgram STT).
+            conversation_item_added still fires for assistant turns because
+            output_audio_transcription remains enabled on Google Realtime.
             """
             # Skip non-message items (like AgentHandoff)
             if not hasattr(event.item, "content"):
                 logger.debug(f"[OBSERVER] Skipping non-message item: {type(event.item).__name__}")
+                return
+
+            if event.item.role != "assistant":
                 return
 
             # Extract transcript text from the item
@@ -126,17 +146,11 @@ class ObserverAgent:
             # Track conversation history
             self.conversation_history.append({
                 "text": transcript_text,
-                "role": event.item.role,
+                "role": "assistant",
             })
 
-            # Route to appropriate handler based on speaker
-            if event.item.role == "user":
-                logger.info(f"[OBSERVER] User turn: {transcript_text[:50]}...")
-                self._handle_user_turn(transcript_text)
-
-            elif event.item.role == "assistant":
-                logger.info(f"[OBSERVER] AI turn: {transcript_text[:50]}...")
-                self._handle_ai_turn(transcript_text)
+            logger.info(f"[OBSERVER] AI turn: {transcript_text[:50]}...")
+            self._handle_ai_turn(transcript_text)
 
     def _handle_user_turn(self, transcript: str) -> None:
         """Handle user turn - trigger grammar evaluation."""

@@ -60,6 +60,7 @@ class SessionStartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     google_key: str = Field(..., min_length=1)
+    deepgram_key: str = Field(default="")
     persona_id: str = Field(..., pattern=r"^[a-z_]+$")
     situation_id: str = Field(..., pattern=r"^[a-z_0-9]+$")
     target_language: str = Field(..., pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
@@ -117,6 +118,7 @@ def _generate_livekit_token(
     session_id: str,
     persona_id: str,
     google_key: str,
+    deepgram_key: str,
     situation_config: SituationConfig,
     system_prompt: str,
     voice_id: str,
@@ -140,6 +142,7 @@ def _generate_livekit_token(
         f",persona_id={persona_id}"
         f",situation_id={situation_config.id}"
         f",google_key={quote(google_key)}"
+        f",deepgram_key={quote(deepgram_key)}"
         f",system_prompt={quote(system_prompt)}"
         f",voice_id={quote(voice_id)}"
         f",situation_config={situation_json}"
@@ -219,6 +222,7 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
         session_id=session_id,
         persona_id=request.persona_id,
         google_key=request.google_key,
+        deepgram_key=request.deepgram_key,
         situation_config=situation,
         system_prompt=system_prompt,
         voice_id=voice_id,

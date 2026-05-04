@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 from livekit import agents, rtc
 from livekit.agents import AgentServer, AgentSession, JobProcess, room_io
-from livekit.plugins import google, openai
+from livekit.plugins import deepgram, google, openai
 from livekit.plugins import noise_cancellation
 from livekit.plugins import silero
 
@@ -103,7 +103,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
             session_info[key] = value
 
     # Check attributes
-    for key in ("persona_id", "situation_id", "google_key", "openai_key"):
+    for key in ("persona_id", "situation_id", "google_key", "openai_key", "deepgram_key"):
         if key not in session_info and user.attributes.get(key):
             session_info[key] = user.attributes[key]
 
@@ -118,6 +118,8 @@ async def shadowlearn_session(ctx: agents.JobContext):
     google_key = unquote(google_key_raw) if google_key_raw else os.getenv("GOOGLE_API_KEY", "")
     openai_key_raw = session_info.get("openai_key", "")
     openai_key = unquote(openai_key_raw) if openai_key_raw else os.getenv("OPENAI_API_KEY", "")
+    deepgram_key_raw = session_info.get("deepgram_key", "")
+    deepgram_key = unquote(deepgram_key_raw) if deepgram_key_raw else os.getenv("DEEPGRAM_API_KEY", "")
 
     if not google_key and not openai_key:
         raise Exception("No API key provided (google_key or openai_key)")
@@ -186,12 +188,20 @@ async def shadowlearn_session(ctx: agents.JobContext):
         # gemini-2.5-flash-native-audio-preview-12-2025 rejects ALL language codes
         # via SpeechConfig.language_code (1007 error), including "zh" which the docs
         # list as supported. Language locking via system prompt instead.
-        llm = google.realtime.RealtimeModel(
+        #
+        # When Deepgram is available: disable Google's built-in user transcription so
+        # the SDK stops suppressing STT results (capabilities.user_transcription=False).
+        # Deepgram then delivers user transcript in ~300ms instead of 4-5s.
+        # Without Deepgram: omit the param so Google uses its default (delayed but functional).
+        google_realtime_kwargs = dict(
             api_key=google_key,
             voice=voice_id,
             proactivity=True,
             enable_affective_dialog=True,
         )
+        if deepgram_key:
+            google_realtime_kwargs["input_audio_transcription"] = None
+        llm = google.realtime.RealtimeModel(**google_realtime_kwargs)
     else:
         # Fallback: Use OpenAI Realtime
         # Note: This requires OpenAI Realtime-capable model
@@ -201,10 +211,18 @@ async def shadowlearn_session(ctx: agents.JobContext):
             voice="verse",
         )
 
+    _DEEPGRAM_LANG = {"zh-CN": "zh-CN", "en": "en-US", "ja": "ja"}
+    deepgram_lang = _DEEPGRAM_LANG.get(target_language, "en-US")
+    stt_model = (
+        deepgram.STT(api_key=deepgram_key, model="nova-3", language=deepgram_lang)
+        if deepgram_key else None
+    )
+
     session = AgentSession[SpeakSessionData](
         userdata=userdata,
         llm=llm,
         vad=ctx.proc.userdata.get("vad") or silero.VAD.load(),
+        stt=stt_model,
     )
 
     # Start Observer agent in parallel
