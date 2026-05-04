@@ -59,18 +59,6 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
           <DialogTitle className="sr-only">{t('breakdown.title', { word })}</DialogTitle>
         </DialogHeader>
 
-        {/* Regenerate icon — sits to the left of the default close X */}
-        <button
-          type="button"
-          aria-label={t('breakdown.regenerate')}
-          title={t('breakdown.regenerate')}
-          onClick={() => { void regenerateStory() }}
-          disabled={storyLoading || charactersLoading}
-          className="absolute top-2 right-10 z-10 rounded-md p-1.5 text-foreground/55 transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <RefreshCw className={`size-4 ${storyLoading ? 'animate-spin' : ''}`} />
-        </button>
-
         <div className="text-foreground">
           {/* Main Word Header */}
           <header className="p-6 flex items-center gap-4 border-b border-border">
@@ -101,7 +89,17 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
             {/* Mnemonic / Explanation */}
             <section className="w-full">
               <h3 className="text-[13px] font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.story')}</h3>
-              <div className="bg-[#141414] rounded-xl p-6 border border-border min-h-[80px]">
+              <div className="relative bg-[#141414] rounded-xl p-6 border border-border min-h-[80px]">
+                <button
+                  type="button"
+                  aria-label={t('breakdown.regenerate')}
+                  title={t('breakdown.regenerate')}
+                  onClick={() => { void regenerateStory() }}
+                  disabled={storyLoading || charactersLoading}
+                  className="absolute top-2 right-2 rounded-md p-1.5 text-foreground/55 transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`size-4 ${storyLoading ? 'animate-spin' : ''}`} />
+                </button>
                 {charactersLoading && !storyError && (
                   <div className="flex items-center gap-2 text-sm text-foreground/50">
                     <Loader2 className="size-4 animate-spin" />
