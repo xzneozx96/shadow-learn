@@ -97,7 +97,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
       open={open}
       onOpenChange={handleOpenChange}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-[850px] bg-[#0a0a0a] border border-white/10 shadow-2xl rounded-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto p-0 min-w-3xl max-w-4xl">
         <DialogHeader>
           <DialogTitle className="sr-only">{t('breakdown.title', { word })}</DialogTitle>
         </DialogHeader>
@@ -142,7 +142,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
             {/* Mnemonic / Explanation */}
             <section className="w-full">
               <h3 className="text-xs font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.story')}</h3>
-              <div className="relative bg-primary/5 rounded-xl p-6 border border-border pr-14 min-h-[80px]">
+              <div className="relative bg-primary/5 rounded-xl p-4 border border-primary/10 pr-16 min-h-[80px]">
                 {/* Action icons (top-right) — hidden in edit mode (action buttons render below textarea) */}
                 {!editing && (
                   <div className="absolute top-2 right-2 flex items-center gap-1">
@@ -249,11 +249,11 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                 )}
 
                 {characters.map(c => (
-                  <div key={c.char} className="bg-primary/5 rounded-xl p-5 border border-border flex flex-col">
+                  <div key={c.char} className="bg-primary/5 rounded-xl p-4 border border-primary/10 flex flex-col">
                     {/* Character header for multi-character words */}
                     <div className="flex items-end gap-3 pb-4 mb-5 border-b border-border">
-                      <span className="text-[40px] leading-none text-foreground font-bold font-serif">{c.char}</span>
-                      <div className="flex items-baseline gap-2 pb-1">
+                      <span className="text-3xl leading-none text-foreground font-bold font-serif">{c.char}</span>
+                      <div className="flex items-baseline gap-2">
                         <span className="text-base italic text-yellow-500 font-medium">
                           (
                           {c.pinyin}
