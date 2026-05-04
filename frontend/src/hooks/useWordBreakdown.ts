@@ -1,0 +1,120 @@
+import type { ShadowLearnDB } from '@/db'
+import type { CharData } from '@/lib/hanzi/types'
+import { useCallback, useEffect, useState } from 'react'
+import { getBreakdown, saveBreakdown } from '@/db'
+import { fetchBreakdownStory } from '@/lib/api/breakdownStory'
+import { buildCharData } from '@/lib/hanzi/lookup'
+
+interface UseWordBreakdownInput {
+  db: ShadowLearnDB | null
+  word: string
+  pinyin: string
+  meaning: string
+  sourceLanguage: string
+  openrouterApiKey: string | null
+}
+
+interface UseWordBreakdownReturn {
+  characters: CharData[]
+  sinoVietnamese: string
+  story: string | null
+  storyLoading: boolean
+  storyError: Error | null
+  retryStory: () => void
+}
+
+export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdownReturn {
+  const { db, word, pinyin, meaning, sourceLanguage, openrouterApiKey } = input
+
+  const [characters, setCharacters] = useState<CharData[]>([])
+  const [story, setStory] = useState<string | null>(null)
+  const [storyLoading, setStoryLoading] = useState(false)
+  const [storyError, setStoryError] = useState<Error | null>(null)
+  const [retryTick, setRetryTick] = useState(0)
+
+  // Build per-character data from local lookup
+  useEffect(() => {
+    let cancel = false
+
+    async function buildChars() {
+      const chars = Array.from(word)
+      const built = await Promise.all(
+        chars.map(c => buildCharData({ char: c, pinyin, meaning: '' })),
+      )
+      if (!cancel)
+        setCharacters(built)
+    }
+
+    buildChars()
+    return () => { cancel = true }
+  }, [word, pinyin])
+
+  const sinoVietnamese = characters
+    .map(c => c.sinoVietnamese ?? '?')
+    .join(' ')
+
+  // Resolve story: IDB cache first, then LLM
+  useEffect(() => {
+    if (!db || characters.length === 0)
+      return
+    let cancel = false
+
+    async function resolveStory() {
+      setStoryError(null)
+      const cached = await getBreakdown(db!, word)
+      if (cached?.story) {
+        if (!cancel)
+          setStory(cached.story)
+        return
+      }
+      if (!openrouterApiKey) {
+        if (!cancel)
+          setStoryError(new Error('No OpenRouter API key configured'))
+        return
+      }
+      if (!cancel)
+        setStoryLoading(true)
+      try {
+        const fresh = await fetchBreakdownStory({
+          word,
+          pinyin,
+          meaning,
+          sinoVietnamese,
+          characters,
+          openrouterApiKey,
+        })
+        if (cancel)
+          return
+        setStory(fresh)
+        await saveBreakdown(db!, {
+          word,
+          sourceLanguage,
+          characters,
+          story: fresh,
+          storyLanguage: 'vi',
+          generatedAt: new Date().toISOString(),
+        })
+      }
+      catch (err) {
+        if (!cancel)
+          setStoryError(err instanceof Error ? err : new Error(String(err)))
+      }
+      finally {
+        if (!cancel)
+          setStoryLoading(false)
+      }
+    }
+
+    resolveStory()
+    return () => { cancel = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, word, characters, retryTick])
+
+  const retryStory = useCallback(() => {
+    setStory(null)
+    setStoryError(null)
+    setRetryTick(t => t + 1)
+  }, [])
+
+  return { characters, sinoVietnamese, story, storyLoading, storyError, retryStory }
+}
