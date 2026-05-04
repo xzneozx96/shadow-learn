@@ -27,7 +27,11 @@ export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<s
       meaning: c.meaning,
       components: c.components.map(comp => ({
         char: comp.char,
-        name: comp.name,
+        // Backend `name` field is what the LLM uses as the inline semantic
+        // label in the story ("đá 石", "mái nhà 宀"). It must be the
+        // Vietnamese concrete meaning, not the Sino-Vietnamese reading.
+        // Fall back to English if Vietnamese is missing.
+        name: comp.meaningVi || comp.meaning,
         meaning: comp.meaning,
       })),
     })),

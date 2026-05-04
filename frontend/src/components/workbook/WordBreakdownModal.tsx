@@ -29,6 +29,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
     storyLoading,
     storyError,
     retryStory,
+    regenerateStory,
   } = useWordBreakdown({
     db,
     word,
@@ -110,8 +111,18 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                   </div>
                 )}
                 {!charactersLoading && !storyLoading && !storyError && story && (
-                  <div className="prose prose-invert prose-p:text-base prose-p:leading-[1.85] prose-p:text-foreground/70 prose-strong:font-medium prose-strong:text-yellow-500 max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{story}</ReactMarkdown>
+                  <div className="space-y-3">
+                    <div className="prose prose-invert prose-p:text-base prose-p:leading-[1.85] prose-p:text-foreground/70 prose-strong:font-medium prose-strong:text-yellow-500 max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{story}</ReactMarkdown>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-white/10 text-foreground/70 hover:bg-white/5"
+                      onClick={() => { void regenerateStory() }}
+                    >
+                      {t('breakdown.regenerate')}
+                    </Button>
                   </div>
                 )}
                 {!charactersLoading && !storyLoading && !storyError && !story && characters.length > 0 && (

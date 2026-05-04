@@ -590,3 +590,7 @@ export async function getBreakdown(
 ): Promise<import('../types').WordBreakdown | undefined> {
   return db.get('word-breakdowns', word)
 }
+
+export async function deleteBreakdown(db: ShadowLearnDB, word: string): Promise<void> {
+  await db.delete('word-breakdowns', word)
+}

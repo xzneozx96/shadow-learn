@@ -1,7 +1,7 @@
 import type { ShadowLearnDB } from '@/db'
 import type { CharData } from '@/lib/hanzi/types'
 import { useCallback, useEffect, useState } from 'react'
-import { getBreakdown, saveBreakdown } from '@/db'
+import { deleteBreakdown, getBreakdown, saveBreakdown } from '@/db'
 import { fetchBreakdownStory } from '@/lib/api/breakdownStory'
 import { buildCharData } from '@/lib/hanzi/lookup'
 
@@ -28,6 +28,8 @@ interface UseWordBreakdownReturn {
   storyLoading: boolean
   storyError: Error | null
   retryStory: () => void
+  /** Discard cached story and force a fresh LLM generation. */
+  regenerateStory: () => Promise<void>
 }
 
 export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdownReturn {
@@ -156,6 +158,20 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     setRetryTick(t => t + 1)
   }, [])
 
+  const regenerateStory = useCallback(async () => {
+    if (db) {
+      try {
+        await deleteBreakdown(db, word)
+      }
+      catch (err) {
+        console.warn('[useWordBreakdown] deleteBreakdown failed:', err)
+      }
+    }
+    setStory(null)
+    setStoryError(null)
+    setRetryTick(t => t + 1)
+  }, [db, word])
+
   return {
     characters,
     charactersLoading,
@@ -164,5 +180,6 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     storyLoading,
     storyError,
     retryStory,
+    regenerateStory,
   }
 }
