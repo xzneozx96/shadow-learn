@@ -4,7 +4,7 @@ import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluati
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 10
+const DB_VERSION = 11
 
 export interface LearnerProfile {
   name: string
@@ -184,6 +184,10 @@ interface ShadowLearnSchema extends DBSchema {
     value: SpeakSession
     indexes: { 'by-date': string }
   }
+  'word-breakdowns': {
+    key: string
+    value: import('../types').WordBreakdown
+  }
 }
 
 export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
@@ -283,6 +287,9 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
           })
           cursor = await cursor.continue()
         }
+      }
+      if (oldVersion < 11) {
+        db.createObjectStore('word-breakdowns', { keyPath: 'word' })
       }
     },
   })
@@ -561,4 +568,18 @@ export async function appendAgentLog(
   log: Omit<AgentLog, 'id'>,
 ): Promise<void> {
   await db.add('agent-logs', log as AgentLog)
+}
+
+export async function saveBreakdown(
+  db: ShadowLearnDB,
+  entry: import('../types').WordBreakdown,
+): Promise<void> {
+  await db.put('word-breakdowns', entry)
+}
+
+export async function getBreakdown(
+  db: ShadowLearnDB,
+  word: string,
+): Promise<import('../types').WordBreakdown | undefined> {
+  return db.get('word-breakdowns', word)
 }
