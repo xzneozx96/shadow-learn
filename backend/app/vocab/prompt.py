@@ -21,37 +21,43 @@ class CharPromptInput(BaseModel):
 
 SYSTEM_PROMPT = """You write Vietnamese mnemonic stories that help Vietnamese-speaking learners remember Chinese vocabulary.
 
-# Output
+# The Pattern (follow it exactly)
 
-Write 2–3 short sentences in Vietnamese. Total length under ~60 Vietnamese words.
-End with one clear sentence stating what the word means in Vietnamese.
+Goal: weave the character's components into a natural Vietnamese sentence using each component's meaning + the actual character glyph inline.
 
-# Priorities (in strict order)
+## Worked example — word: 碗 (wǎn) "cái bát"
 
-1. The mnemonic MUST help the learner remember the WORD'S ACTUAL MEANING.
-2. Anchor the story on the Sino-Vietnamese (Hán Việt) readings — the learner already knows these from Vietnamese vocabulary.
-3. Make the story COHERENT — a single small scene or idea, not a list.
+Decomposition:
+- 碗 = 石 (Thạch — đá) + 宛 (Uyển — lõm xuống / quanh co)
+- 宛 itself = 宀 (mái nhà, mái hiên) + 夕 (tối, đêm)
 
-# Hard rules — DO NOT
+Story:
+> Cái bát 碗 được làm bằng đá 石, dùng xong thì đem phơi dưới hiên nhà 宀, đến tối 夕 thì mang vào dùng tiếp.
 
-- DO NOT force every radical component into the story. Components are OPTIONAL background context, not ingredients.
-- DO NOT chain unrelated radical meanings into a Frankenstein narrative. ("Heart on earth, hands repeating, a god appears with a knife..." — this is what failure looks like.)
-- DO NOT invent Sino-Vietnamese readings or meanings. Only use what is provided.
-- DO NOT explain character composition unless it directly helps memory.
+Notice:
+1. Opens with the word's Vietnamese meaning + the character: "Cái bát 碗"
+2. Each component appears inline as "Vietnamese-meaning char": "đá 石", "hiên nhà 宀", "tối 夕"
+3. Connect components via natural Vietnamese verbs / cause-effect: "được làm bằng", "đem phơi dưới", "đến tối thì"
+4. Recursive decomposition when a component is itself compound (here 宛 → 宀 + 夕)
 
-# When to use radical components
+# Output rules
 
-Use them ONLY if at least one of these is true:
-- The word is pictographic / concrete and a radical's meaning genuinely connects to the meaning (e.g. 山 = mountain, 河 has 氵 water).
-- A radical's meaning provides a vivid hook that's hard to skip.
+- Single short Vietnamese sentence (or 2 if necessary).
+- Inline format: always pair each component meaning with its character — `meaning char` (e.g. `đá 石`, not just `đá`).
+- Open with the word's Vietnamese meaning + the character.
+- Use natural connectors: "được làm bằng", "ở dưới", "đem phơi", "đến tối", "lõm xuống", "có hình", etc.
+- If a component is itself a compound character with vivid sub-parts, recurse into it (you know the canonical sub-decomposition from your training).
+- For Hán Việt readings the learner knows (e.g. **Thạch**, **Uyển**), bold them with `**...**`.
 
-For idioms, function words, abstract words, or multi-character compounds where the meaning is non-compositional → IGNORE the components entirely. Build the story from the Sino-Vietnamese sounds + the actual meaning only.
+# When to skip components
 
-# Style
+For idiomatic / abstract / function words (e.g. 怪不得 "no wonder", 但是 "but"), the components are phonetic noise. In that case ignore them and write a short meaning-anchored Vietnamese sentence using only the Hán Việt sounds as memory hooks.
 
-- Concrete, vivid, short. One image or scene.
-- Bold the Hán Việt readings with **markdown bold** so they stand out.
-- Tone: friendly, like a teacher giving a memory hook to a Vietnamese student.
+# Hard rules
+
+- Use ONLY the Sino-Vietnamese readings and component meanings provided to you. Do not invent.
+- For recursive sub-component decomposition, use canonical etymology — never invent new components.
+- No bullet lists. No numbered steps. Continuous prose.
 """
 
 
@@ -70,7 +76,8 @@ def build_story_prompt(
         sv = c.sino_vietnamese or "(no Hán Việt reading)"
         hook_lines.append(f"- {c.char} → {sv}")
 
-    # Optional component context — clearly labeled as optional
+    # Component data — first-level decomposition. The LLM may recurse
+    # further for compound components from its training knowledge.
     component_lines: list[str] = []
     for c in characters:
         if not c.components:
@@ -80,20 +87,22 @@ def build_story_prompt(
             component_lines.append(f"- {c.char}: {comps}")
 
     components_block = (
-        "Radical components (OPTIONAL — usually ignore for idioms/abstract words):\n"
+        "First-level components (recurse further if a component is itself compound):\n"
         + "\n".join(component_lines)
         if component_lines else
-        "Radical components: none useful."
+        "No first-level components available."
     )
 
     return (
         f"Word: {word} ({pinyin})\n"
-        f"Meaning: {meaning}\n"
-        f"Sino-Vietnamese: {sino_vietnamese}\n\n"
-        f"Per-character Hán Việt hooks (use these as your primary memory anchors):\n"
+        f"Meaning (Vietnamese / English): {meaning}\n"
+        f"Full Sino-Vietnamese reading: {sino_vietnamese}\n\n"
+        f"Per-character Hán Việt anchors:\n"
         + "\n".join(hook_lines) + "\n\n"
         f"{components_block}\n\n"
-        "Now write the mnemonic in Vietnamese. Remember: meaning first, "
-        "Hán Việt sounds as anchors, components only if they genuinely help. "
-        "End with one sentence stating the word's meaning."
+        "Now write the mnemonic story in Vietnamese. Follow the pattern exactly: "
+        "open with the word's meaning + the character, then weave each component "
+        "inline as `meaning char` connected by natural Vietnamese verbs. "
+        "Recurse into sub-components where it helps. "
+        "Skip components entirely only for idiomatic/abstract words."
     )
