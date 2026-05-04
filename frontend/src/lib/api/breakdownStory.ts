@@ -12,6 +12,9 @@ export interface BreakdownStoryRequest {
 }
 
 export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<string> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false)
+    throw new Error('Offline — story unavailable')
+
   const payload = {
     word: req.word,
     pinyin: req.pinyin,
@@ -30,11 +33,20 @@ export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<s
     openrouter_api_key: req.openrouterApiKey,
   }
 
-  const resp = await fetch(`${API_BASE}/api/vocab/breakdown-story`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
+  let resp: Response
+  try {
+    resp = await fetch(`${API_BASE}/api/vocab/breakdown-story`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  }
+  catch (err) {
+    // fetch() throws TypeError on network failure
+    if (err instanceof TypeError)
+      throw new Error('Offline — story unavailable')
+    throw err
+  }
 
   if (!resp.ok) {
     const body = await resp.text()

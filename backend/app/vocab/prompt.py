@@ -3,20 +3,20 @@
 Pure function — no side effects. Easy to unit-test.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ComponentPromptInput(BaseModel):
-    name: str
-    meaning: str
+    name: str = Field(..., max_length=200)
+    meaning: str = Field(..., max_length=500)
 
 
 class CharPromptInput(BaseModel):
-    char: str
-    pinyin: str
-    sino_vietnamese: str | None
-    meaning: str
-    components: list[ComponentPromptInput]
+    char: str = Field(..., min_length=1, max_length=4)
+    pinyin: str = Field("", max_length=20)
+    sino_vietnamese: str | None = Field(None, max_length=40)
+    meaning: str = Field("", max_length=500)
+    components: list[ComponentPromptInput] = Field(default_factory=list, max_length=8)
 
 
 SYSTEM_PROMPT = """You are a Chinese teacher specialising in helping Vietnamese-speaking learners remember Chinese characters through mnemonic stories.

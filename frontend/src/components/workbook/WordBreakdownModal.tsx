@@ -24,7 +24,10 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
     meaning,
     sourceLanguage,
     openrouterApiKey,
+    enabled: open,
   })
+
+  const hasSinoVietnamese = sinoVietnamese && !sinoVietnamese.includes('?')
 
   return (
     <Dialog
@@ -36,10 +39,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
     >
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="sr-only">
-            Breakdown of
-            {word}
-          </DialogTitle>
+          <DialogTitle className="sr-only">{`Breakdown of ${word}`}</DialogTitle>
         </DialogHeader>
 
         {/* Header */}
@@ -47,7 +47,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
           <div className="text-5xl font-bold">{word}</div>
           <div className="flex-1">
             <div className="text-xl font-semibold text-primary">{pinyin}</div>
-            {sinoVietnamese && (
+            {hasSinoVietnamese && (
               <div className="mt-1 text-sm font-medium text-emerald-500">
                 {sinoVietnamese}
                 {' '}
@@ -66,19 +66,31 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
           <div className="space-y-2">
             {characters.map(c => (
               <div key={c.char} className="rounded-lg border border-border bg-card/50 p-3">
-                <div className="mb-2 flex items-center gap-3">
+                <div className="mb-2 flex flex-wrap items-center gap-3">
                   <span className="text-3xl font-bold">{c.char}</span>
-                  <span className="text-sm text-primary">{c.pinyin}</span>
+                  {c.pinyin && <span className="text-sm text-primary">{c.pinyin}</span>}
+                  {c.sinoVietnamese && (
+                    <span className="text-sm font-semibold text-emerald-500">
+                      {c.sinoVietnamese}
+                    </span>
+                  )}
                 </div>
                 {c.components.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {c.components.map((comp, i) => (
                       <div
                         key={`${comp.char}-${i}`}
-                        className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+                        className="flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                        title={comp.meaning || comp.name}
                       >
-                        <span className="mr-1 text-base">{comp.char}</span>
-                        <span className="text-muted-foreground">{comp.name}</span>
+                        <span className="text-base leading-none">{comp.char}</span>
+                        {comp.name
+                          ? (
+                              <span className="text-muted-foreground">{comp.name}</span>
+                            )
+                          : (
+                              <span className="text-muted-foreground/50 italic">component</span>
+                            )}
                       </div>
                     ))}
                   </div>
@@ -87,6 +99,21 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
             ))}
           </div>
         </section>
+
+        {/* Sino-Vietnamese anchor */}
+        {hasSinoVietnamese && (
+          <section className="mt-4">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Sino-Vietnamese anchor
+            </div>
+            <div className="rounded-lg border border-emerald-900/40 bg-emerald-950/20 p-3">
+              <div className="text-lg font-bold text-emerald-400">{sinoVietnamese}</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                Đây là âm Hán Việt — bạn có thể đã quen với từ này trong tiếng Việt.
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Mnemonic story */}
         <section className="mt-4">

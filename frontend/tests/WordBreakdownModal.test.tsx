@@ -44,8 +44,10 @@ describe('wordBreakdownModal', () => {
     const db = await initDB()
     renderModal({ db })
     await waitFor(() => {
-      // "học" and "tập" expected from Unihan lookup for 学 and 习
-      expect(screen.getByText(/học/i)).toBeInTheDocument()
+      // "học" and "tập" expected from Unihan lookup for 学 and 习.
+      // Appears in multiple places (header, per-char chip, anchor section).
+      expect(screen.getAllByText(/học/i).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/tập/i).length).toBeGreaterThan(0)
     }, { timeout: 5000 })
   })
 

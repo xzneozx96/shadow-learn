@@ -1,8 +1,9 @@
+import type hanziLib from 'hanzi'
 import type { CharData, Component } from './types'
+import { KANGXI_RADICAL_NAMES } from './kangxi-radicals'
 
 let _vietMap: Record<string, string> | null = null
-// @ts-expect-error — hanzi has no TypeScript declarations
-let _hanzi: { start: () => void, decompose: (c: string) => { components1: string[], components2: string[] }, definitionLookup: (c: string) => Array<{ definition: string }> | null } | null = null
+let _hanzi: typeof hanziLib | null = null
 
 async function loadVietMap(): Promise<Record<string, string>> {
   if (_vietMap)
@@ -12,14 +13,13 @@ async function loadVietMap(): Promise<Record<string, string>> {
   return _vietMap
 }
 
-async function loadHanzi() {
+async function loadHanzi(): Promise<typeof hanziLib> {
   if (_hanzi)
     return _hanzi
-  // @ts-expect-error — hanzi has no TypeScript declarations
   const mod = await import('hanzi')
-  _hanzi = (mod.default ?? mod) as typeof _hanzi
-  _hanzi!.start()
-  return _hanzi!
+  _hanzi = mod.default ?? mod
+  _hanzi.start()
+  return _hanzi
 }
 
 export async function getSinoVietnamese(char: string): Promise<string | null> {
@@ -27,10 +27,16 @@ export async function getSinoVietnamese(char: string): Promise<string | null> {
   return vietMap[char] ?? null
 }
 
-export async function getDecomposition(char: string): Promise<Component[]> {
-  const hanziLib = await loadHanzi()
+export async function getCharacterPinyin(char: string): Promise<string | null> {
+  const lib = await loadHanzi()
+  const readings = lib.getPinyin(char)
+  return readings?.[0] ?? null
+}
 
-  const decomp = hanziLib.decompose(char)
+export async function getDecomposition(char: string): Promise<Component[]> {
+  const hanzi = await loadHanzi()
+
+  const decomp = hanzi.decompose(char)
   if (!decomp || decomp === 'Invalid Input')
     return []
 
@@ -41,37 +47,39 @@ export async function getDecomposition(char: string): Promise<Component[]> {
 
   // Filter the character itself and sentinel strings
   const filtered = raw.filter(
-    (c: string) => c && c !== char && c !== 'No glyph available',
+    c => c && c !== char && c !== 'No glyph available',
   )
 
   const out: Component[] = []
   for (const c of filtered) {
-    const defs = (hanziLib.definitionLookup(c) ?? []) as Array<{ definition?: string }>
+    const defs = hanzi.definitionLookup(c) ?? []
     const firstDef = defs[0]?.definition ?? ''
+    const dictName = firstDef.split(';')[0]?.trim() ?? ''
+    // Prefer Kangxi radical name when CC-CEDICT has nothing useful.
+    // Empty / pure-character / placeholder definitions all fall back.
+    const radicalName = KANGXI_RADICAL_NAMES[c]
+    const name = (dictName && dictName !== c) ? dictName : (radicalName ?? '')
     out.push({
       char: c,
-      name: firstDef.split(';')[0]?.trim() || c,
-      meaning: firstDef,
+      name,
+      meaning: firstDef || radicalName || '',
     })
   }
 
   return out
 }
 
-export async function buildCharData(input: {
-  char: string
-  pinyin: string
-  meaning: string
-}): Promise<CharData> {
-  const [sinoVietnamese, components] = await Promise.all([
+export async function buildCharData(input: { char: string }): Promise<CharData> {
+  const [sinoVietnamese, pinyin, components] = await Promise.all([
     getSinoVietnamese(input.char),
+    getCharacterPinyin(input.char),
     getDecomposition(input.char),
   ])
   return {
     char: input.char,
-    pinyin: input.pinyin,
+    pinyin: pinyin ?? '',
     sinoVietnamese,
-    meaning: input.meaning,
+    meaning: '',
     components,
   }
 }

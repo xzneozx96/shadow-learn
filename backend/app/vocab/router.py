@@ -9,7 +9,7 @@ import logging
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.settings import settings
 from app.shared.utils import _resolve_key
@@ -25,12 +25,12 @@ router = APIRouter(prefix="/api/vocab", tags=["vocab"])
 
 
 class BreakdownStoryRequest(BaseModel):
-    word: str
-    pinyin: str
-    meaning: str
-    sino_vietnamese: str
-    characters: list[CharPromptInput]
-    openrouter_api_key: str | None = None
+    word: str = Field(..., min_length=1, max_length=16)
+    pinyin: str = Field("", max_length=64)
+    meaning: str = Field("", max_length=500)
+    sino_vietnamese: str = Field("", max_length=80)
+    characters: list[CharPromptInput] = Field(..., min_length=1, max_length=16)
+    openrouter_api_key: str | None = Field(None, max_length=200)
 
 
 class BreakdownStoryResponse(BaseModel):

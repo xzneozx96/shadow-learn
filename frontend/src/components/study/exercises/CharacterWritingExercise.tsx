@@ -1,21 +1,15 @@
 import type HanziWriter from 'hanzi-writer'
 import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { VocabEntry } from '@/types'
-import hanzi from 'hanzi'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { HintButton } from '@/components/study/exercises/HintButton'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { useHint } from '@/hooks/useHint'
+import { getDecomposition } from '@/lib/hanzi/lookup'
 import { animateCharacter } from '../../../lib/hanzi-writer-utils'
 import { HanziWriterCanvas } from './HanziWriterCanvas'
-
-// Module-level init — hanzi guards against double-init
-try {
-  hanzi.start()
-}
-catch { /* ignore */ }
 
 interface Props {
   entry: VocabEntry
@@ -42,14 +36,19 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
   const charProgress = `${charIndex + 1} / ${characters.length}`
 
   const radicalHint = useHint(1)
-  const radicals = useMemo(() => {
-    try {
-      const result = hanzi.decompose(currentChar, 1)
-      return result?.components?.filter(c => c !== currentChar) ?? []
-    }
-    catch {
-      return []
-    }
+  const [radicals, setRadicals] = useState<string[]>([])
+  useEffect(() => {
+    let cancel = false
+    getDecomposition(currentChar)
+      .then((comps) => {
+        if (!cancel)
+          setRadicals(comps.map(c => c.char).filter(c => c !== currentChar))
+      })
+      .catch(() => {
+        if (!cancel)
+          setRadicals([])
+      })
+    return () => { cancel = true }
   }, [currentChar])
   const showRadicals = radicals.length > 0
 

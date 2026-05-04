@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react'
+import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -18,8 +19,20 @@ import { SpeakModalProvider, useSpeakModal } from '@/contexts/SpeakModalContext'
 import { VocabularyProvider } from '@/contexts/VocabularyContext'
 import { ChangelogPage } from '@/pages/ChangelogPage'
 import { DocumentationPage } from '@/pages/DocumentationPage'
-import { StudySessionPage } from '@/pages/StudySessionPage'
 import { WorkbookPage } from '@/pages/WorkbookPage'
+
+// Lazy-loaded: pulls in `hanzi` (~7.7 MB dictionary) only when user enters study flow.
+const StudySessionPage = lazy(() =>
+  import('@/pages/StudySessionPage').then(m => ({ default: m.StudySessionPage })),
+)
+
+function PageLoader() {
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <Loader2 className="size-8 animate-spin text-muted-foreground" />
+    </div>
+  )
+}
 
 function GlobalSpeakModal() {
   const { isOpen, closeSpeakModal } = useSpeakModal()
@@ -51,7 +64,14 @@ const router = createBrowserRouter([
       { path: '/lesson/:id', element: <LessonView /> },
       { path: '/settings', element: <Settings /> },
       { path: '/vocabulary', element: <WorkbookPage /> },
-      { path: '/vocabulary/:lessonId/study', element: <StudySessionPage /> },
+      {
+        path: '/vocabulary/:lessonId/study',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <StudySessionPage />
+          </Suspense>
+        ),
+      },
     ],
   },
 ])

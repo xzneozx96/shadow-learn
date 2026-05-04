@@ -12,6 +12,12 @@ interface UseWordBreakdownInput {
   meaning: string
   sourceLanguage: string
   openrouterApiKey: string | null
+  /**
+   * When false, the hook performs no work — neither lookup nor LLM call.
+   * Lets parent components mount the modal in JSX without firing N API calls
+   * for N word cards on the page.
+   */
+  enabled?: boolean
 }
 
 interface UseWordBreakdownReturn {
@@ -24,7 +30,7 @@ interface UseWordBreakdownReturn {
 }
 
 export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdownReturn {
-  const { db, word, pinyin, meaning, sourceLanguage, openrouterApiKey } = input
+  const { db, word, pinyin, meaning, sourceLanguage, openrouterApiKey, enabled = true } = input
 
   const [characters, setCharacters] = useState<CharData[]>([])
   const [story, setStory] = useState<string | null>(null)
@@ -32,14 +38,16 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
   const [storyError, setStoryError] = useState<Error | null>(null)
   const [retryTick, setRetryTick] = useState(0)
 
-  // Build per-character data from local lookup
+  // Build per-character data from local lookup (only when enabled)
   useEffect(() => {
+    if (!enabled)
+      return
     let cancel = false
 
     async function buildChars() {
       const chars = Array.from(word)
       const built = await Promise.all(
-        chars.map(c => buildCharData({ char: c, pinyin: '', meaning: '' })),
+        chars.map(c => buildCharData({ char: c })),
       )
       if (!cancel)
         setCharacters(built)
@@ -47,7 +55,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
 
     buildChars()
     return () => { cancel = true }
-  }, [word, pinyin])
+  }, [word, enabled])
 
   const sinoVietnamese = characters
     .map(c => c.sinoVietnamese ?? '?')
@@ -55,7 +63,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
 
   // Resolve story: IDB cache first, then LLM
   useEffect(() => {
-    if (!db || characters.length === 0)
+    if (!enabled || !db || characters.length === 0)
       return
     let cancel = false
 
@@ -108,7 +116,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     resolveStory()
     return () => { cancel = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, word, characters, retryTick])
+  }, [db, word, characters, retryTick, enabled])
 
   const retryStory = useCallback(() => {
     setStory(null)
