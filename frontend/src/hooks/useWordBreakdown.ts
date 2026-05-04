@@ -22,6 +22,7 @@ interface UseWordBreakdownInput {
 
 interface UseWordBreakdownReturn {
   characters: CharData[]
+  charactersLoading: boolean
   sinoVietnamese: string
   story: string | null
   storyLoading: boolean
@@ -33,6 +34,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
   const { db, word, pinyin, meaning, sourceLanguage, openrouterApiKey, enabled = true } = input
 
   const [characters, setCharacters] = useState<CharData[]>([])
+  const [charactersLoading, setCharactersLoading] = useState(false)
   const [story, setStory] = useState<string | null>(null)
   const [storyLoading, setStoryLoading] = useState(false)
   const [storyError, setStoryError] = useState<Error | null>(null)
@@ -44,16 +46,27 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
       return
     let cancel = false
 
-    async function buildChars() {
-      const chars = Array.from(word)
-      const built = await Promise.all(
-        chars.map(c => buildCharData({ char: c })),
-      )
-      if (!cancel)
-        setCharacters(built)
-    }
+    setCharactersLoading(true)
+    void (async () => {
+      try {
+        const chars = Array.from(word)
+        const built = await Promise.all(
+          chars.map(c => buildCharData({ char: c })),
+        )
+        if (!cancel)
+          setCharacters(built)
+      }
+      catch (err) {
+        console.error('[useWordBreakdown] buildCharData failed:', err)
+        if (!cancel)
+          setStoryError(err instanceof Error ? err : new Error(String(err)))
+      }
+      finally {
+        if (!cancel)
+          setCharactersLoading(false)
+      }
+    })()
 
-    buildChars()
     return () => { cancel = true }
   }, [word, enabled])
 
@@ -67,22 +80,34 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
       return
     let cancel = false
 
-    async function resolveStory() {
-      setStoryError(null)
-      const cached = await getBreakdown(db!, word)
-      if (cached?.story) {
-        if (!cancel)
-          setStory(cached.story)
-        return
-      }
-      if (!openrouterApiKey) {
-        if (!cancel)
-          setStoryError(new Error('No OpenRouter API key configured'))
-        return
-      }
-      if (!cancel)
-        setStoryLoading(true)
+    void (async () => {
       try {
+        setStoryError(null)
+
+        let cached: Awaited<ReturnType<typeof getBreakdown>>
+        try {
+          cached = await getBreakdown(db, word)
+        }
+        catch (err) {
+          console.error('[useWordBreakdown] getBreakdown failed:', err)
+          throw new Error(`Cache lookup failed: ${err instanceof Error ? err.message : String(err)}`)
+        }
+
+        if (cached?.story) {
+          if (!cancel)
+            setStory(cached.story)
+          return
+        }
+
+        if (!openrouterApiKey) {
+          if (!cancel)
+            setStoryError(new Error('No OpenRouter API key — add one in Settings to generate the mnemonic.'))
+          return
+        }
+
+        if (!cancel)
+          setStoryLoading(true)
+
         const fresh = await fetchBreakdownStory({
           word,
           pinyin,
@@ -91,19 +116,29 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
           characters,
           openrouterApiKey,
         })
+
         if (cancel)
           return
+
         setStory(fresh)
-        await saveBreakdown(db!, {
-          word,
-          sourceLanguage,
-          characters,
-          story: fresh,
-          storyLanguage: 'vi',
-          generatedAt: new Date().toISOString(),
-        })
+
+        try {
+          await saveBreakdown(db, {
+            word,
+            sourceLanguage,
+            characters,
+            story: fresh,
+            storyLanguage: 'vi',
+            generatedAt: new Date().toISOString(),
+          })
+        }
+        catch (err) {
+          // Persistence failure shouldn't block the user — story is in memory.
+          console.warn('[useWordBreakdown] saveBreakdown failed:', err)
+        }
       }
       catch (err) {
+        console.error('[useWordBreakdown] resolveStory failed:', err)
         if (!cancel)
           setStoryError(err instanceof Error ? err : new Error(String(err)))
       }
@@ -111,9 +146,8 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
         if (!cancel)
           setStoryLoading(false)
       }
-    }
+    })()
 
-    resolveStory()
     return () => { cancel = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db, word, characters, retryTick, enabled])
@@ -124,5 +158,13 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     setRetryTick(t => t + 1)
   }, [])
 
-  return { characters, sinoVietnamese, story, storyLoading, storyError, retryStory }
+  return {
+    characters,
+    charactersLoading,
+    sinoVietnamese,
+    story,
+    storyLoading,
+    storyError,
+    retryStory,
+  }
 }

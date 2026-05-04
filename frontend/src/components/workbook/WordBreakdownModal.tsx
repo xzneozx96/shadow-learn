@@ -17,7 +17,7 @@ interface WordBreakdownModalProps {
 
 export function WordBreakdownModal(props: WordBreakdownModalProps) {
   const { open, onClose, word, pinyin, meaning, sourceLanguage, db, openrouterApiKey } = props
-  const { characters, sinoVietnamese, story, storyLoading, storyError, retryStory } = useWordBreakdown({
+  const { characters, charactersLoading, sinoVietnamese, story, storyLoading, storyError, retryStory } = useWordBreakdown({
     db,
     word,
     pinyin,
@@ -121,13 +121,19 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
             Mnemonic story
           </div>
           <div className="min-h-[80px] rounded-lg border border-violet-900/40 bg-violet-950/20 p-3">
-            {storyLoading && (
+            {charactersLoading && !storyError && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Preparing breakdown …
+              </div>
+            )}
+            {!charactersLoading && storyLoading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
                 Generating Vietnamese mnemonic …
               </div>
             )}
-            {!storyLoading && storyError && (
+            {storyError && (
               <div className="space-y-2">
                 <div className="text-sm text-destructive">
                   {storyError.message}
@@ -137,8 +143,13 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                 </Button>
               </div>
             )}
-            {!storyLoading && !storyError && story && (
+            {!charactersLoading && !storyLoading && !storyError && story && (
               <p className="text-sm leading-relaxed text-violet-200">{story}</p>
+            )}
+            {!charactersLoading && !storyLoading && !storyError && !story && characters.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                Story will appear here once generated.
+              </div>
             )}
           </div>
         </section>
