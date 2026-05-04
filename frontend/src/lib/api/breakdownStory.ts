@@ -26,6 +26,7 @@ export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<s
       sino_vietnamese: c.sinoVietnamese,
       meaning: c.meaning,
       components: c.components.map(comp => ({
+        char: comp.char,
         name: comp.name,
         meaning: comp.meaning,
       })),

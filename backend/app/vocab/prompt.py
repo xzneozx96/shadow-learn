@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class ComponentPromptInput(BaseModel):
+    char: str = Field("", max_length=4)
     name: str = Field(..., max_length=200)
     meaning: str = Field(..., max_length=500)
 
@@ -83,12 +84,17 @@ def build_story_prompt(
         cm = c.meaning or "(no per-char meaning)"
         meaning_lines.append(f"- {c.char} → {cm}")
 
-    # Component data — first-level decomposition with semantic meanings.
+    # Component data — first-level decomposition. Include the component
+    # character glyphs explicitly so the LLM doesn't hallucinate them
+    # (e.g. substituting Korean 뿔 for Chinese 角).
     component_lines: list[str] = []
     for c in characters:
         if not c.components:
             continue
-        comps = ", ".join(f"{comp.name}" for comp in c.components if comp.name)
+        comps = ", ".join(
+            f"{comp.char} = {comp.name}" if comp.char else comp.name
+            for comp in c.components if comp.name
+        )
         if comps:
             component_lines.append(f"- {c.char}: {comps}")
 
