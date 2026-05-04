@@ -106,7 +106,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
           {/* Main Word Header */}
           <header className="p-6 flex items-center gap-4 border-b border-border">
             <span className="text-5xl leading-none text-foreground font-bold font-serif tracking-tight">{word}</span>
-            <div className="flex flex-col justify-center gap-2 flex-1">
+            <div className="flex flex-col justify-center gap-2">
               <div className="flex items-baseline gap-2">
                 <span className="text-lg italic text-yellow-500 font-medium tracking-wide">
                   (
@@ -132,7 +132,6 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
               title={`Play pronunciation of ${word}`}
               onClick={() => { void playTTS(word) }}
               disabled={ttsLoading}
-              className="self-start text-foreground"
             >
               {ttsLoading ? <Loader2 className="size-5 animate-spin" /> : <Volume2 className="size-5" />}
             </Button>

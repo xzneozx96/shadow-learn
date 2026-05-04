@@ -58,7 +58,7 @@ export const KANGXI_RADICAL_DATA: Record<string, RadicalData> = {
   '口': { pinyin: 'kǒu', en: 'mouth', vi: 'Miệng, cửa ra vào' },
   '囗': { pinyin: 'wéi', en: 'enclosure', vi: 'Bao quanh, vây quanh' },
   '土': { pinyin: 'tǔ', en: 'earth', vi: 'Đất' },
-  '士': { pinyin: 'shì', en: 'scholar', vi: 'người sĩ, quan lại' },
+  '士': { pinyin: 'shì', en: 'scholar', vi: 'Quan lại' },
   '夂': { pinyin: 'zhǐ', en: 'go slowly', vi: 'đi chậm, bước chậm' },
   '夊': { pinyin: 'suī', en: 'walk slowly', vi: 'đi chậm' },
   '夕': { pinyin: 'xī', en: 'evening', vi: 'Đêm tối' },

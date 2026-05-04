@@ -1169,7 +1169,7 @@ export const TRANSLATIONS = {
 
     // Vocab Breakdown Modal
     'breakdown.title': 'Phân tích chữ {word}',
-    'breakdown.meaning': 'Nghĩa Việt:',
+    'breakdown.meaning': 'Giải nghĩa:',
     'breakdown.components': 'Bộ Kiện',
     'breakdown.story': 'Giải Thích',
     'breakdown.preparing': 'Đang chuẩn bị…',
