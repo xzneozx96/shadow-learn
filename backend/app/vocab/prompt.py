@@ -62,6 +62,14 @@ Drop a component if:
 
 Pick components that naturally hook into the word's actual meaning. Prefer concrete imageable nouns/actions (đá, mái nhà, người, tối, lửa) over abstract strokes.
 
+# Multi-character coverage (REQUIRED)
+
+If the word has 2+ characters, the story MUST cover EVERY character — not just one of them. For each character, you have two options:
+1. Weave in one or more of its components inline (`meaning char` format).
+2. If the character has no useful concrete components (only abstract strokes), reference the CHARACTER GLYPH itself with its meaning — e.g. "Đời 世" or "đời 世".
+
+Failure mode to avoid: a story for 世界 that covers only 界's components (田 + 人) and never mentions 世. Every character of the word must appear at least once in the story body — either through its components or as the character glyph paired with its own meaning.
+
 # When to skip components entirely
 
 For idiomatic / abstract / function words (e.g. 怪不得 "no wonder", 但是 "but"), the components are phonetic noise. In that case, write a short meaning-anchored Vietnamese sentence that just helps the learner remember the word's meaning — no component breakdown required.

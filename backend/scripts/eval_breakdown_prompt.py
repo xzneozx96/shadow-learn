@@ -113,7 +113,40 @@ YE_HU = TestCase(
 )
 
 
-TEST_CASES = [QUE_DING, YE_HU]
+# 世界 (shì jiè) — "thế giới" / world.
+# Stress-test for multi-character coverage: 世 has only abstract stroke
+# components, so the model is tempted to skip it entirely.
+SHI_JIE = TestCase(
+    word="世界",
+    pinyin="shìjiè",
+    meaning="thế giới, world, the world",
+    sino_vietnamese="thế giới",
+    characters=[
+        CharPromptInput(
+            char="世",
+            pinyin="shì",
+            sino_vietnamese="thế",
+            meaning="world, era, generation, life (đời)",
+            components=[
+                ComponentPromptInput(char="廿", name="hai mươi", meaning="twenty"),
+                ComponentPromptInput(char="一", name="một, vạch ngang", meaning="one"),
+            ],
+        ),
+        CharPromptInput(
+            char="界",
+            pinyin="jiè",
+            sino_vietnamese="giới",
+            meaning="boundary, realm, world",
+            components=[
+                ComponentPromptInput(char="田", name="ruộng, cánh đồng", meaning="field"),
+                ComponentPromptInput(char="人", name="người", meaning="person"),
+            ],
+        ),
+    ],
+)
+
+
+TEST_CASES = [QUE_DING, YE_HU, SHI_JIE]
 
 
 @dataclass
@@ -187,6 +220,8 @@ def has_natural_connectors(story: str) -> bool:
     connectors = [
         "được", "có", "khi", "nếu", "rồi", "thì", "đem", "đặt",
         "trông giống", "nghĩa là", "ở dưới", "lên", "dưới", "với",
+        "là nơi", "là", "để", "lại", "mà", "trên", "trong", "vào",
+        "dùng", "sau", "trước", "bên", "qua", "đi",
     ]
     return any(c in story.lower() for c in connectors)
 
@@ -195,6 +230,24 @@ def reasonable_length(story: str) -> bool:
     """20–200 Vietnamese words. Reject 1-line stubs and essays."""
     words = story.split()
     return 15 <= len(words) <= 200
+
+
+def covers_all_characters(story: str, tc: TestCase) -> bool:
+    """For multi-char words, every character of the word must appear in
+    the story body — either as the char glyph itself or via at least one
+    of its component glyphs.
+    """
+    if len(tc.characters) < 2:
+        return True
+    for char_data in tc.characters:
+        # The character itself appears anywhere?
+        if char_data.char in story:
+            continue
+        # Or any of its component glyphs?
+        if any(comp.char and comp.char in story for comp in char_data.components):
+            continue
+        return False
+    return True
 
 
 def _all_component_chars(tc: TestCase) -> list[str]:
@@ -218,6 +271,7 @@ CRITERIA = [
     Criterion("continuous_prose", lambda s, tc: is_continuous_prose(s)),
     Criterion("natural_connectors", lambda s, tc: has_natural_connectors(s)),
     Criterion("reasonable_length", lambda s, tc: reasonable_length(s)),
+    Criterion("covers_all_characters", covers_all_characters),
 ]
 
 
