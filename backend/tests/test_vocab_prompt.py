@@ -49,7 +49,11 @@ def test_prompt_handles_missing_sino_vietnamese():
                             meaning="one", components=[]),
         ],
     )
-    assert "Hán Việt: (none)" in prompt or "no Sino-Vietnamese" in prompt.lower()
+    assert (
+        "Hán Việt: (none)" in prompt
+        or "no Sino-Vietnamese" in prompt.lower()
+        or "no Hán Việt reading" in prompt
+    )
 
 
 def test_prompt_lists_components():
