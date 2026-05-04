@@ -1,7 +1,7 @@
 import type hanziLib from 'hanzi'
 import type { CharData, Component } from './types'
 import { pinyin as toPinyin } from 'pinyin-pro'
-import { KANGXI_RADICAL_NAMES } from './kangxi-radicals'
+import { KANGXI_RADICAL_DATA } from './kangxi-radicals'
 
 let _vietMap: Record<string, string> | null = null
 let _hanziPromise: Promise<typeof hanziLib> | null = null
@@ -84,14 +84,16 @@ export async function getDecomposition(char: string): Promise<Component[]> {
   )
 
   return filtered.map((c) => {
-    const englishMeaning = KANGXI_RADICAL_NAMES[c] ?? ''
+    const radical = KANGXI_RADICAL_DATA[c]
     const sinoVietnamese = vietMap[c] ?? ''
     // `name` column: Sino-Vietnamese reading (the user's primary anchor).
-    // `meaning` column: English semantic gloss. Distinct info — no duplication.
+    // `meaning` / `meaningVi`: English & Vietnamese semantic glosses,
+    // selected at render time based on the user's UI locale.
     return {
       char: c,
       name: sinoVietnamese ? capitalize(sinoVietnamese) : '',
-      meaning: englishMeaning,
+      meaning: radical?.en ?? '',
+      meaningVi: radical?.vi ?? '',
     }
   })
 }
