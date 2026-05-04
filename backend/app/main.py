@@ -14,6 +14,7 @@ from app.speak.router import router as speak_router
 from app.agent.router import router as agent_router
 from app.background.router import router as jobs_router
 from app.config.router import router as config_router
+from app.vocab.router import router as vocab_router
 from app.tts.services.tts_factory import get_tts_provider
 from app.transcription.services.transcription_factory import get_stt_provider
 
@@ -49,6 +50,7 @@ app.include_router(translation_router)
 app.include_router(pronunciation_router)
 app.include_router(agent_router)
 app.include_router(speak_router)
+app.include_router(vocab_router)
 
 
 @app.get("/api/health")
