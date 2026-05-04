@@ -1,5 +1,7 @@
 export interface Component {
   char: string
+  /** Mandarin pinyin with tone marks, e.g. "tián" for 田. */
+  pinyin: string
   /** Sino-Vietnamese reading (Hán Việt) of the component, e.g. "Điền" for 田. */
   name: string
   /** English semantic gloss, e.g. "field" for 田. */

@@ -86,11 +86,13 @@ export async function getDecomposition(char: string): Promise<Component[]> {
   return filtered.map((c) => {
     const radical = KANGXI_RADICAL_DATA[c]
     const sinoVietnamese = vietMap[c] ?? ''
-    // `name` column: Sino-Vietnamese reading (the user's primary anchor).
+    // `pinyin`: Mandarin reading via pinyin-pro.
+    // `name`: Sino-Vietnamese reading (the user's primary anchor).
     // `meaning` / `meaningVi`: English & Vietnamese semantic glosses,
     // selected at render time based on the user's UI locale.
     return {
       char: c,
+      pinyin: getCharacterPinyin(c),
       name: sinoVietnamese ? capitalize(sinoVietnamese) : '',
       meaning: radical?.en ?? '',
       meaningVi: radical?.vi ?? '',

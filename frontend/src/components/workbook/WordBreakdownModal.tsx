@@ -118,20 +118,24 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                       ? (
                           <div className="bg-[#141414] rounded-xl p-5 border border-white/5">
                             {/* Table Headers */}
-                            <div className="grid grid-cols-[80px_60px_1fr] gap-5 mb-5 text-[11px] font-bold text-foreground/30 uppercase tracking-widest">
-                              <div className="text-right">Hán Việt</div>
+                            <div className="grid grid-cols-[60px_60px_80px_1fr] gap-4 mb-5 text-[11px] font-bold text-foreground/30 uppercase tracking-widest">
+                              <div className="text-right">Pinyin</div>
                               <div className="text-center">Bộ</div>
+                              <div className="text-right">Hán Việt</div>
                               <div className="text-left">Nghĩa</div>
                             </div>
                             {/* Table Rows */}
                             <div className="space-y-5">
                               {c.components.map((comp, i) => (
-                                <div key={`${comp.char}-${i}`} className="grid grid-cols-[80px_60px_1fr] gap-5 items-center">
-                                  <div className="text-right text-[15px] font-medium text-emerald-400/90 capitalize truncate" title={comp.name}>
-                                    {comp.name || '—'}
+                                <div key={`${comp.char}-${i}`} className="grid grid-cols-[60px_60px_80px_1fr] gap-4 items-center">
+                                  <div className="text-right text-[14px] italic text-yellow-500/90 truncate" title={comp.pinyin}>
+                                    {comp.pinyin || '—'}
                                   </div>
                                   <div className="text-center text-[32px] text-foreground leading-none font-serif">
                                     {comp.char}
+                                  </div>
+                                  <div className="text-right text-[15px] font-medium text-emerald-400/90 capitalize truncate" title={comp.name}>
+                                    {comp.name || '—'}
                                   </div>
                                   <div className="text-left text-[15px] text-foreground/60 capitalize truncate" title={localizedMeaning(comp)}>
                                     {localizedMeaning(comp) || '—'}
