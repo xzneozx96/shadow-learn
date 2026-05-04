@@ -61,6 +61,9 @@ For idiomatic / abstract / function words (e.g. 怪不得 "no wonder", 但是 "b
 - Do not invent components or meanings.
 - No Sino-Vietnamese in the story body.
 - No bullet lists. No numbered steps. Continuous prose.
+- OUTPUT ONLY the story sentence(s). Do not add headings ("Breakdown:",
+  "Components:", "Note:", etc), trailing summaries, or any markdown
+  sections after the story. The response is the story and nothing else.
 """
 
 

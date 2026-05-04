@@ -73,6 +73,42 @@ QUE_DING = TestCase(
 )
 
 
+# 夜壶 (yè hú) — "cái bô đêm" / chamber pot
+YE_HU = TestCase(
+    word="夜壶",
+    pinyin="yèhú",
+    meaning="chamber pot (Vietnamese: cái bô đêm, cái bô đi tiểu ban đêm)",
+    sino_vietnamese="dạ hồ",
+    characters=[
+        CharPromptInput(
+            char="夜",
+            pinyin="yè",
+            sino_vietnamese="dạ",
+            meaning="night, evening",
+            components=[
+                ComponentPromptInput(char="亠", name="mái che", meaning="lid / top"),
+                ComponentPromptInput(char="亻", name="người", meaning="person"),
+                ComponentPromptInput(char="夂", name="đi chậm", meaning="go slowly"),
+                ComponentPromptInput(char="丶", name="giọt", meaning="dot, drop"),
+            ],
+        ),
+        CharPromptInput(
+            char="壶",
+            pinyin="hú",
+            sino_vietnamese="hồ",
+            meaning="pot, kettle, jar",
+            components=[
+                ComponentPromptInput(char="士", name="người sĩ", meaning="scholar"),
+                ComponentPromptInput(char="冖", name="nắp đậy", meaning="cover"),
+            ],
+        ),
+    ],
+)
+
+
+TEST_CASES = [QUE_DING, YE_HU]
+
+
 @dataclass
 class Criterion:
     name: str
@@ -233,39 +269,49 @@ async def main():
         "google/gemini-2.0-flash-001",
     )
 
-    tc = QUE_DING
-    user_prompt = build_story_prompt(
-        word=tc.word,
-        pinyin=tc.pinyin,
-        meaning=tc.meaning,
-        sino_vietnamese=tc.sino_vietnamese,
-        characters=tc.characters,
-    )
+    # Optional CLI arg to pick a single test case by word
+    target_word = sys.argv[1] if len(sys.argv) > 1 else None
+    cases = [tc for tc in TEST_CASES if not target_word or tc.word == target_word]
+    if not cases:
+        print(f"ERROR: no test case for word '{target_word}'", file=sys.stderr)
+        sys.exit(1)
 
-    print("=" * 70)
-    print(f"WORD: {tc.word} ({tc.pinyin}) — {tc.meaning}")
-    print(f"MODEL: {model}")
-    print("=" * 70)
-    print()
+    overall_pass = True
+    for tc in cases:
+        user_prompt = build_story_prompt(
+            word=tc.word,
+            pinyin=tc.pinyin,
+            meaning=tc.meaning,
+            sino_vietnamese=tc.sino_vietnamese,
+            characters=tc.characters,
+        )
 
-    story = await call_openrouter(api_key, SYSTEM_PROMPT, user_prompt, model)
-    print("STORY:")
-    print(story)
-    print()
-    print("-" * 70)
-    print("EVALUATION:")
-    passed, total, failures = evaluate(story, tc)
-    print(f"  Score: {passed}/{total}")
-    for c in CRITERIA:
-        marker = "✓" if c.name not in failures else "✗"
-        print(f"  {marker} {c.name}")
-    if failures:
+        print("=" * 70)
+        print(f"WORD: {tc.word} ({tc.pinyin}) — {tc.meaning}")
+        print(f"MODEL: {model}")
+        print("=" * 70)
         print()
-        print("FAILED CRITERIA:")
-        for f in failures:
-            print(f"  - {f}")
-    print("=" * 70)
-    return 0 if passed == total else 1
+
+        story = await call_openrouter(api_key, SYSTEM_PROMPT, user_prompt, model)
+        print("STORY:")
+        print(story)
+        print()
+        print("-" * 70)
+        print("EVALUATION:")
+        passed, total, failures = evaluate(story, tc)
+        print(f"  Score: {passed}/{total}")
+        for c in CRITERIA:
+            marker = "✓" if c.name not in failures else "✗"
+            print(f"  {marker} {c.name}")
+        if failures:
+            print()
+            print("FAILED CRITERIA:")
+            for f in failures:
+                print(f"  - {f}")
+            overall_pass = False
+        print("=" * 70)
+        print()
+    return 0 if overall_pass else 1
 
 
 if __name__ == "__main__":
