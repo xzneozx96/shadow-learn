@@ -40,8 +40,10 @@ def test_prompt_includes_each_character_block():
     assert "习" in prompt and "tập" in prompt
 
 
-def test_prompt_handles_missing_sino_vietnamese():
-    """If a character has no Sino-Vietnamese reading, prompt notes the absence."""
+def test_prompt_omits_sino_vietnamese_from_story_body_instructions():
+    """Story body must not use Sino-Vietnamese — it's abstract; meanings drive the story.
+    The prompt should explicitly tell the model to keep Hán Việt out of the story body.
+    """
     prompt = build_story_prompt(
         word="一", pinyin="yī", meaning="one", sino_vietnamese="nhất",
         characters=[
@@ -49,11 +51,7 @@ def test_prompt_handles_missing_sino_vietnamese():
                             meaning="one", components=[]),
         ],
     )
-    assert (
-        "Hán Việt: (none)" in prompt
-        or "no Sino-Vietnamese" in prompt.lower()
-        or "no Hán Việt reading" in prompt
-    )
+    assert "DO NOT use" in prompt and "Sino-Vietnamese" in prompt
 
 
 def test_prompt_lists_components():
