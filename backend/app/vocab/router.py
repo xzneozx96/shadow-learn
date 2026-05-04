@@ -73,8 +73,7 @@ async def generate_breakdown_story(req: BreakdownStoryRequest) -> BreakdownStory
             )
         if resp.status_code >= 500:
             raise RetryableError(f"OpenRouter {resp.status_code}")
-        if resp.status_code >= 400:
-            raise HTTPException(resp.status_code, f"OpenRouter error: {resp.text}")
+        resp.raise_for_status()
         body = resp.json()
         if "error" in body or "choices" not in body:
             logger.error("[vocab] breakdown-story unexpected response: %s", body)

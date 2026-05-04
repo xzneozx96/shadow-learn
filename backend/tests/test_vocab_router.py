@@ -9,6 +9,7 @@ from app.main import app
 
 
 def _ok_response():
+    request = _httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
     return _httpx.Response(
         200,
         json={
@@ -16,6 +17,7 @@ def _ok_response():
                 {"message": {"content": "Học là đứa trẻ ngồi dưới mái nhà..."}}
             ]
         },
+        request=request,
     )
 
 
@@ -99,7 +101,8 @@ async def test_breakdown_story_500_on_openrouter_error():
     with patch("app.vocab.router.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.__aenter__.return_value = mock_client
-        mock_client.post.return_value = _httpx.Response(500, json={"error": "boom"})
+        request = _httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+        mock_client.post.return_value = _httpx.Response(500, json={"error": "boom"}, request=request)
         mock_client_cls.return_value = mock_client
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
