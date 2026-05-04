@@ -1,6 +1,6 @@
 import type { ShadowLearnDB } from '@/db'
 import { Check, Loader2, Pencil, RefreshCw, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -46,24 +46,13 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
   const hasSinoVietnamese = sinoVietnamese && !sinoVietnamese.includes('?')
 
   // Inline editing state — user can override the AI story with their own.
+  // Per https://react.dev/learn/you-might-not-need-an-effect:
+  // - Don't sync derived state in an effect; reset via event handlers instead.
+  // - Edit state is reset when the modal closes via onOpenChange below.
+  // - Draft is initialised on startEdit; no need to mirror `story` in effect.
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
-
-  // Reset editor whenever the modal opens for a different word, or when
-  // the underlying story changes (e.g. after regenerate).
-  useEffect(() => {
-    if (!editing)
-      setDraft(story ?? '')
-  }, [story, editing])
-
-  // Discard edit state when modal closes.
-  useEffect(() => {
-    if (!open) {
-      setEditing(false)
-      setSaving(false)
-    }
-  }, [open])
 
   function startEdit() {
     setDraft(story ?? '')
@@ -71,7 +60,6 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
   }
 
   function cancelEdit() {
-    setDraft(story ?? '')
     setEditing(false)
   }
 
@@ -86,6 +74,15 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
     }
   }
 
+  function handleOpenChange(next: boolean) {
+    if (!next) {
+      // Reset edit state on close — handled here, not in an effect.
+      setEditing(false)
+      setSaving(false)
+      onClose()
+    }
+  }
+
   // Pick component meaning column based on UI locale.
   const localizedMeaning = (comp: { meaning: string, meaningVi: string }) =>
     locale === 'vi' ? (comp.meaningVi || comp.meaning) : (comp.meaning || comp.meaningVi)
@@ -93,10 +90,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
   return (
     <Dialog
       open={open}
-      onOpenChange={(v) => {
-        if (!v)
-          onClose()
-      }}
+      onOpenChange={handleOpenChange}
     >
       <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-[850px] bg-[#0a0a0a] border border-white/10 shadow-2xl rounded-2xl">
         <DialogHeader>
@@ -132,33 +126,33 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
           <div className="p-6 space-y-6">
             {/* Mnemonic / Explanation */}
             <section className="w-full">
-              <h3 className="text-[13px] font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.story')}</h3>
-              <div className="relative bg-[#141414] rounded-xl p-6 border border-border min-h-[80px]">
+              <h3 className="text-xs font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.story')}</h3>
+              <div className="relative bg-primary/5 rounded-xl p-6 border border-border pr-14 min-h-[80px]">
                 {/* Action icons (top-right) — hidden in edit mode (action buttons render below textarea) */}
                 {!editing && (
                   <div className="absolute top-2 right-2 flex items-center gap-1">
                     {!storyLoading && !storyError && characters.length > 0 && (
-                      <button
-                        type="button"
+                      <Button
+                        size="icon-sm"
+                        variant="secondary"
                         aria-label={t('breakdown.edit')}
                         title={t('breakdown.edit')}
                         onClick={startEdit}
                         disabled={charactersLoading}
-                        className="rounded-md p-1.5 text-foreground/55 transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <Pencil className="size-4" />
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      type="button"
+                    <Button
+                      size="icon-sm"
+                      variant="secondary"
                       aria-label={t('breakdown.regenerate')}
                       title={t('breakdown.regenerate')}
                       onClick={() => { void regenerateStory() }}
                       disabled={storyLoading || charactersLoading}
-                      className="rounded-md p-1.5 text-foreground/55 transition-colors hover:bg-white/10 hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <RefreshCw className={`size-4 ${storyLoading ? 'animate-spin' : ''}`} />
-                    </button>
+                    </Button>
                   </div>
                 )}
 
@@ -232,7 +226,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
 
             {/* Anatomy Cards Grid */}
             <section>
-              <h3 className="text-[13px] font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.components')}</h3>
+              <h3 className="text-xs font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.components')}</h3>
 
               <div className={`grid grid-cols-1 ${characters.length > 1 ? 'md:grid-cols-2' : ''} gap-6`}>
                 {characters.length === 0 && charactersLoading && (
@@ -243,7 +237,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                 )}
 
                 {characters.map(c => (
-                  <div key={c.char} className="bg-[#141414] rounded-xl p-5 border border-border flex flex-col">
+                  <div key={c.char} className="bg-primary/5 rounded-xl p-5 border border-border flex flex-col">
                     {/* Character header for multi-character words */}
                     <div className="flex items-end gap-3 pb-4 mb-5 border-b border-border">
                       <span className="text-[40px] leading-none text-foreground font-bold font-serif">{c.char}</span>
