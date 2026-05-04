@@ -74,32 +74,39 @@ QUE_DING = TestCase(
 
 
 # 夜壶 (yè hú) — "cái bô đêm" / chamber pot
+# Uses the EXACT data the production frontend sends — `meaning` is empty
+# at the per-char level, and `name` carries the Vietnamese semantic gloss
+# from KANGXI_RADICAL_DATA. Some of those glosses are stroke-shape
+# descriptions ("Nét trên đầu của một số chữ") rather than concrete
+# imageable objects, which is what we want to stress-test.
 YE_HU = TestCase(
     word="夜壶",
     pinyin="yèhú",
-    meaning="chamber pot (Vietnamese: cái bô đêm, cái bô đi tiểu ban đêm)",
+    meaning="bô đi tiểu ban đêm",
     sino_vietnamese="dạ hồ",
     characters=[
         CharPromptInput(
             char="夜",
             pinyin="yè",
             sino_vietnamese="dạ",
-            meaning="night, evening",
+            meaning="",
             components=[
-                ComponentPromptInput(char="亠", name="mái che", meaning="lid / top"),
-                ComponentPromptInput(char="亻", name="người", meaning="person"),
-                ComponentPromptInput(char="夂", name="đi chậm", meaning="go slowly"),
-                ComponentPromptInput(char="丶", name="giọt", meaning="dot, drop"),
+                ComponentPromptInput(char="亠", name="mái che, đầu", meaning="lid"),
+                ComponentPromptInput(char="亻", name="người", meaning="person (radical)"),
+                ComponentPromptInput(char="夂", name="đi chậm, bước chậm", meaning="go slowly"),
+                ComponentPromptInput(char="丶", name="chấm, giọt", meaning="dot"),
             ],
         ),
         CharPromptInput(
             char="壶",
             pinyin="hú",
             sino_vietnamese="hồ",
-            meaning="pot, kettle, jar",
+            meaning="",
             components=[
-                ComponentPromptInput(char="士", name="người sĩ", meaning="scholar"),
-                ComponentPromptInput(char="冖", name="nắp đậy", meaning="cover"),
+                ComponentPromptInput(char="士", name="người sĩ, quan lại", meaning="scholar"),
+                ComponentPromptInput(char="冖", name="nắp đậy, khăn trùm", meaning="cover"),
+                ComponentPromptInput(char="丷", name="", meaning=""),
+                ComponentPromptInput(char="一", name="một, vạch ngang", meaning="one"),
             ],
         ),
     ],
