@@ -1,5 +1,6 @@
 import type hanziLib from 'hanzi'
 import type { CharData, Component } from './types'
+import { pinyin as toPinyin } from 'pinyin-pro'
 import { KANGXI_RADICAL_NAMES } from './kangxi-radicals'
 
 let _vietMap: Record<string, string> | null = null
@@ -50,8 +51,23 @@ export async function getSinoVietnamese(char: string): Promise<string | null> {
   return vietMap[char] ?? null
 }
 
+/**
+ * Per-character Mandarin pinyin with tone marks. Uses pinyin-pro because
+ * hanzi.getPinyin() depends on hanzi.start() which crashes in strict mode.
+ */
+export function getCharacterPinyin(char: string): string {
+  return toPinyin(char, { toneType: 'symbol', type: 'string' }) || ''
+}
+
+/**
+ * Capitalise first letter for column display ("field" → "Field").
+ */
+function capitalize(s: string): string {
+  return s ? s[0]!.toUpperCase() + s.slice(1) : s
+}
+
 export async function getDecomposition(char: string): Promise<Component[]> {
-  const hanzi = await loadHanzi()
+  const [hanzi, vietMap] = await Promise.all([loadHanzi(), loadVietMap()])
 
   const decomp = hanzi.decompose(char)
   if (!decomp || decomp === 'Invalid Input')
@@ -68,11 +84,14 @@ export async function getDecomposition(char: string): Promise<Component[]> {
   )
 
   return filtered.map((c) => {
-    const radicalName = KANGXI_RADICAL_NAMES[c] ?? ''
+    const englishMeaning = KANGXI_RADICAL_NAMES[c] ?? ''
+    const sinoVietnamese = vietMap[c] ?? ''
+    // `name` column: Sino-Vietnamese reading (the user's primary anchor).
+    // `meaning` column: English semantic gloss. Distinct info — no duplication.
     return {
       char: c,
-      name: radicalName,
-      meaning: radicalName,
+      name: sinoVietnamese ? capitalize(sinoVietnamese) : '',
+      meaning: englishMeaning,
     }
   })
 }
@@ -84,7 +103,7 @@ export async function buildCharData(input: { char: string }): Promise<CharData> 
   ])
   return {
     char: input.char,
-    pinyin: '', // Per-char pinyin omitted — whole-word pinyin shown in modal header.
+    pinyin: getCharacterPinyin(input.char),
     sinoVietnamese,
     meaning: '',
     components,

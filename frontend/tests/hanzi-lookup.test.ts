@@ -28,12 +28,12 @@ describe('getDecomposition', () => {
 })
 
 describe('buildCharData', () => {
-  it('combines Sino-Vietnamese + decomposition into CharData', async () => {
+  it('combines pinyin (pinyin-pro) + Sino-Vietnamese + decomposition into CharData', async () => {
     const data = await buildCharData({ char: '学' })
     expect(data.char).toBe('学')
     expect(data.sinoVietnamese).toBe('học')
     expect(Array.isArray(data.components)).toBe(true)
-    // Per-char pinyin intentionally blank (hanzi.getPinyin unusable in strict mode)
-    expect(data.pinyin).toBe('')
+    // Per-char pinyin from pinyin-pro — should contain "xue" with a tone mark
+    expect(data.pinyin.toLowerCase()).toContain('xu')
   })
 })

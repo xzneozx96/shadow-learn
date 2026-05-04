@@ -35,7 +35,8 @@ describe('wordBreakdownModal', () => {
     renderModal({ db })
     await waitFor(() => {
       expect(screen.getByText('学习')).toBeInTheDocument()
-      expect(screen.getByText('xuéxí')).toBeInTheDocument()
+      // Pinyin is wrapped in parens, split across elements — use regex
+      expect(screen.getByText(/xuéxí/)).toBeInTheDocument()
       expect(screen.getByText('to study')).toBeInTheDocument()
     })
   })

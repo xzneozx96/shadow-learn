@@ -1,5 +1,7 @@
 import type { ShadowLearnDB } from '@/db'
 import { Loader2 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useWordBreakdown } from '@/hooks/useWordBreakdown'
@@ -17,7 +19,15 @@ interface WordBreakdownModalProps {
 
 export function WordBreakdownModal(props: WordBreakdownModalProps) {
   const { open, onClose, word, pinyin, meaning, sourceLanguage, db, openrouterApiKey } = props
-  const { characters, charactersLoading, sinoVietnamese, story, storyLoading, storyError, retryStory } = useWordBreakdown({
+  const {
+    characters,
+    charactersLoading,
+    sinoVietnamese,
+    story,
+    storyLoading,
+    storyError,
+    retryStory,
+  } = useWordBreakdown({
     db,
     word,
     pinyin,
@@ -37,122 +47,127 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
           onClose()
       }}
     >
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-[700px] bg-[#0f0f0f] border-border/20 shadow-2xl rounded-sm">
         <DialogHeader>
           <DialogTitle className="sr-only">{`Breakdown of ${word}`}</DialogTitle>
         </DialogHeader>
 
-        {/* Header */}
-        <div className="flex items-start gap-4 border-b border-border pb-4">
-          <div className="text-5xl font-bold">{word}</div>
-          <div className="flex-1">
-            <div className="text-xl font-semibold text-primary">{pinyin}</div>
-            {hasSinoVietnamese && (
-              <div className="mt-1 text-sm font-medium text-emerald-500">
-                {sinoVietnamese}
-                {' '}
-                <span className="text-xs opacity-60">· Hán Việt</span>
+        <div className="px-10 py-12 font-serif text-foreground">
+          {/* Main Word Header */}
+          <header className="flex flex-col items-center pb-8 border-b border-border/20">
+            <div className="flex items-baseline justify-center gap-4">
+              <span className="text-xl italic text-yellow-500/90 font-sans">
+                (
+                {pinyin}
+                )
+              </span>
+              <span className="text-[90px] leading-none text-foreground font-bold">{word}</span>
+              {hasSinoVietnamese && (
+                <span className="text-2xl font-bold text-emerald-400 font-sans">
+                  :
+                  {' '}
+                  {sinoVietnamese}
+                </span>
+              )}
+            </div>
+            <div className="mt-6 text-lg font-sans text-foreground/90">
+              <span className="font-bold text-foreground">Nghĩa Việt: </span>
+              <span className="opacity-90">{meaning}</span>
+            </div>
+          </header>
+
+          <div className="mt-8 space-y-12">
+            {characters.length === 0 && charactersLoading && (
+              <div className="flex justify-center items-center gap-2 text-sm text-foreground/60 font-sans">
+                <Loader2 className="size-4 animate-spin" />
+                Đang phân tích chữ...
               </div>
             )}
-            <div className="mt-1 text-sm text-muted-foreground">{meaning}</div>
-          </div>
-        </div>
 
-        {/* Per-character breakdown */}
-        <section className="mt-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Character by character
-          </div>
-          <div className="space-y-2">
             {characters.map(c => (
-              <div key={c.char} className="rounded-lg border border-border bg-card/50 p-3">
-                <div className="mb-2 flex flex-wrap items-center gap-3">
-                  <span className="text-3xl font-bold">{c.char}</span>
-                  {c.pinyin && <span className="text-sm text-primary">{c.pinyin}</span>}
-                  {c.sinoVietnamese && (
-                    <span className="text-sm font-semibold text-emerald-500">
-                      {c.sinoVietnamese}
+              <section key={c.char} className="flex flex-col items-center">
+                {/* For multi-character words, we show the character breakdown header if it's not the only character */}
+                {characters.length > 1 && (
+                  <div className="flex items-baseline gap-3 mb-6">
+                    <span className="text-lg italic text-yellow-500/90 font-sans">
+                      (
+                      {c.pinyin}
+                      )
                     </span>
-                  )}
-                </div>
+                    <span className="text-[50px] leading-none text-foreground font-bold">{c.char}</span>
+                    {c.sinoVietnamese && (
+                      <span className="text-xl font-bold text-emerald-400 font-sans">
+                        :
+                        {' '}
+                        {c.sinoVietnamese}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Anatomy / Components Table */}
                 {c.components.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="w-full max-w-sm mx-auto mb-8">
+                    {/* Column header */}
+                    <div className="grid grid-cols-[1.5fr_auto_2fr] gap-x-6 items-center pb-1 mb-1 border-b border-border/10 text-[11px] uppercase tracking-wider text-foreground/40 font-sans">
+                      <span className="text-right">Hán Việt</span>
+                      <span className="text-center">Bộ kiện</span>
+                      <span className="text-left">Nghĩa</span>
+                    </div>
                     {c.components.map((comp, i) => (
-                      <div
-                        key={`${comp.char}-${i}`}
-                        className="flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs"
-                        title={comp.meaning || comp.name}
-                      >
-                        <span className="text-base leading-none">{comp.char}</span>
-                        {comp.name
-                          ? (
-                              <span className="text-muted-foreground">{comp.name}</span>
-                            )
-                          : (
-                              <span className="text-muted-foreground/50 italic">component</span>
-                            )}
+                      <div key={`${comp.char}-${i}`} className="grid grid-cols-[1.5fr_auto_2fr] gap-x-6 items-center py-2 text-[17px]">
+                        <span className="font-bold text-right text-emerald-400/90 font-sans">
+                          {comp.name || '—'}
+                        </span>
+                        <div className="flex items-baseline gap-2 justify-center">
+                          <span className="text-[28px] text-foreground leading-none font-normal">{comp.char}</span>
+                        </div>
+                        <span className="text-foreground/70 font-sans capitalize">
+                          {comp.meaning || '—'}
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
+              </section>
             ))}
-          </div>
-        </section>
 
-        {/* Sino-Vietnamese anchor */}
-        {hasSinoVietnamese && (
-          <section className="mt-4">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Sino-Vietnamese anchor
-            </div>
-            <div className="rounded-lg border border-emerald-900/40 bg-emerald-950/20 p-3">
-              <div className="text-lg font-bold text-emerald-400">{sinoVietnamese}</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                Đây là âm Hán Việt — bạn có thể đã quen với từ này trong tiếng Việt.
+            {/* Mnemonic / Explanation */}
+            <section className="w-full">
+              <h3 className="text-lg font-bold text-emerald-400 mb-3 font-sans">Giải thích:</h3>
+              <div className="min-h-[60px] font-sans text-[16px] leading-[1.8] text-foreground/90">
+                {charactersLoading && !storyError && (
+                  <div className="flex items-center gap-2 text-sm text-foreground/60">
+                    <Loader2 className="size-4" />
+                    Đang chuẩn bị...
+                  </div>
+                )}
+                {!charactersLoading && storyLoading && (
+                  <div className="flex items-center gap-2 text-sm text-foreground/60">
+                    <Loader2 className="size-4" />
+                    Đang tạo giải thích...
+                  </div>
+                )}
+                {storyError && (
+                  <div className="space-y-2">
+                    <div className="text-sm text-destructive">{storyError.message}</div>
+                    <Button size="sm" variant="outline" onClick={retryStory}>
+                      Thử lại
+                    </Button>
+                  </div>
+                )}
+                {!charactersLoading && !storyLoading && !storyError && story && (
+                  <div className="prose prose-invert prose-sm max-w-none prose-p:leading-[1.8] prose-p:text-foreground/80 prose-strong:font-bold prose-strong:text-yellow-500">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{story}</ReactMarkdown>
+                  </div>
+                )}
+                {!charactersLoading && !storyLoading && !storyError && !story && characters.length > 0 && (
+                  <p className="text-sm text-foreground/60">Giải thích sẽ hiển thị ở đây.</p>
+                )}
               </div>
-            </div>
-          </section>
-        )}
-
-        {/* Mnemonic story */}
-        <section className="mt-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Mnemonic story
+            </section>
           </div>
-          <div className="min-h-[80px] rounded-lg border border-violet-900/40 bg-violet-950/20 p-3">
-            {charactersLoading && !storyError && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                Preparing breakdown …
-              </div>
-            )}
-            {!charactersLoading && storyLoading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                Generating Vietnamese mnemonic …
-              </div>
-            )}
-            {storyError && (
-              <div className="space-y-2">
-                <div className="text-sm text-destructive">
-                  {storyError.message}
-                </div>
-                <Button size="sm" variant="outline" onClick={retryStory}>
-                  Try again
-                </Button>
-              </div>
-            )}
-            {!charactersLoading && !storyLoading && !storyError && story && (
-              <p className="text-sm leading-relaxed text-violet-200">{story}</p>
-            )}
-            {!charactersLoading && !storyLoading && !storyError && !story && characters.length > 0 && (
-              <div className="text-sm text-muted-foreground">
-                Story will appear here once generated.
-              </div>
-            )}
-          </div>
-        </section>
+        </div>
       </DialogContent>
     </Dialog>
   )
