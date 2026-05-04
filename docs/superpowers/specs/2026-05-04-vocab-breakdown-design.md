@@ -72,7 +72,7 @@ The LLM never produces structural facts — it only writes the creative story gi
 
 ---
 
-## 5. IndexedDB schema (v3 → v4)
+## 5. IndexedDB schema (v10 → v11)
 
 **Migration:** add a new object store `word-breakdowns`. The existing `vocabulary` store is unchanged.
 
@@ -121,7 +121,7 @@ interface Component {
 | `frontend/src/lib/hanzi/lookup.ts` | New | `getSinoVietnamese()`, `getDecomposition()`, `buildCharData()` |
 | `frontend/src/hooks/useWordBreakdown.ts` | New | Struct lookup + IDB cache check + LLM story trigger |
 | `frontend/src/components/workbook/WordBreakdownModal.tsx` | New | The modal UI |
-| `frontend/src/db/index.ts` | Modified | v4 migration, add `word-breakdowns` store + helpers `getBreakdown()`, `saveBreakdown()` |
+| `frontend/src/db/index.ts` | Modified | v11 migration, add `word-breakdowns` store + helpers `getBreakdown()`, `saveBreakdown()` |
 | `frontend/src/components/workbook/WordCard.tsx` | Modified | Add 🔍 breakdown button + click handler |
 | `frontend/src/components/lesson/LessonWorkbookPanel.tsx` | Modified | Add breakdown button to inline cards |
 | `scripts/build-unihan-viet.ts` | New | One-off build script: downloads `Unihan_Readings.txt`, extracts `kVietnamese`, writes JSON. Output committed; not run at build time. |
@@ -254,7 +254,7 @@ Write the mnemonic story now.
 - Re-opening the same word renders the entire modal — including the story — with zero network calls.
 - Saving the same word from two different lessons reuses one cached breakdown.
 - If the LLM call fails, the user can click "Try again" to retry without re-opening.
-- IDB schema upgrades cleanly from v3 to v4 for existing users (no data loss in `vocabulary` store).
+- IDB schema upgrades cleanly from v10 to v11 for existing users (no data loss in `vocabulary` store).
 - Bundle weight increase: < 200 KB gzipped, lazy-loaded.
 
 ---
