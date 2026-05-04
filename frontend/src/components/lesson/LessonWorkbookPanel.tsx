@@ -1,5 +1,5 @@
 import type { VocabEntry } from '@/types'
-import { Loader2, Volume2, X } from 'lucide-react'
+import { BookOpen, Loader2, Volume2, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -7,6 +7,7 @@ import { StudySession } from '@/components/study/StudySession'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { WordBreakdownModal } from '@/components/workbook/WordBreakdownModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
@@ -28,6 +29,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const [studyOpen, setStudyOpen] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
   const [pendingRemove, setPendingRemove] = useState<VocabEntry | null>(null)
+  const [breakdownEntry, setBreakdownEntry] = useState<VocabEntry | null>(null)
 
   const handleConfirmRemove = useCallback(
     async (entry: VocabEntry) => {
@@ -104,6 +106,18 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                     onKeyDown={e => e.key === 'Enter' && navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
                     className="group/card relative cursor-pointer rounded-lg border border-border elegant-card p-3 text-left transition-colors"
                   >
+                    {entry.sourceLanguage?.startsWith('zh') && (
+                      <button
+                        aria-label={`Show breakdown of ${entry.word}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setBreakdownEntry(entry)
+                        }}
+                        className="absolute top-1.5 right-7 rounded p-0.5 text-muted-foreground opacity-40 transition-opacity hover:opacity-100 hover:text-foreground"
+                      >
+                        <BookOpen className="size-4" />
+                      </button>
+                    )}
                     <button
                       aria-label={t('lesson.removeFromWorkbook')}
                       onClick={(e) => {
@@ -155,6 +169,18 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
         onClose={() => setPendingRemove(null)}
         onConfirm={handleConfirmRemove}
       />
+      {breakdownEntry && (
+        <WordBreakdownModal
+          open
+          onClose={() => setBreakdownEntry(null)}
+          word={breakdownEntry.word}
+          pinyin={breakdownEntry.romanization}
+          meaning={breakdownEntry.meaning}
+          sourceLanguage={breakdownEntry.sourceLanguage}
+          db={db}
+          openrouterApiKey={keys?.openrouterApiKey ?? null}
+        />
+      )}
     </div>
   )
 }
