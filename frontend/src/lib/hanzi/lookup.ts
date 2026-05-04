@@ -1,26 +1,34 @@
 import type { CharData, Component } from './types'
 
+let _vietMap: Record<string, string> | null = null
 // @ts-expect-error — hanzi has no TypeScript declarations
-import hanziLib from 'hanzi'
-import vietMapRaw from './unihan-viet.json'
+let _hanzi: { start: () => void, decompose: (c: string) => { components1: string[], components2: string[] }, definitionLookup: (c: string) => Array<{ definition: string }> | null } | null = null
 
-const vietMap = vietMapRaw as Record<string, string>
+async function loadVietMap(): Promise<Record<string, string>> {
+  if (_vietMap)
+    return _vietMap
+  const m = await import('./unihan-viet.json')
+  _vietMap = (m.default ?? m) as Record<string, string>
+  return _vietMap
+}
 
-let _started = false
-
-function ensureStarted(): void {
-  if (_started)
-    return
-  hanziLib.start()
-  _started = true
+async function loadHanzi() {
+  if (_hanzi)
+    return _hanzi
+  // @ts-expect-error — hanzi has no TypeScript declarations
+  const mod = await import('hanzi')
+  _hanzi = (mod.default ?? mod) as typeof _hanzi
+  _hanzi!.start()
+  return _hanzi!
 }
 
 export async function getSinoVietnamese(char: string): Promise<string | null> {
+  const vietMap = await loadVietMap()
   return vietMap[char] ?? null
 }
 
 export async function getDecomposition(char: string): Promise<Component[]> {
-  ensureStarted()
+  const hanziLib = await loadHanzi()
 
   const decomp = hanziLib.decompose(char)
   if (!decomp || decomp === 'Invalid Input')

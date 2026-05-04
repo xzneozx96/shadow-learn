@@ -39,7 +39,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     async function buildChars() {
       const chars = Array.from(word)
       const built = await Promise.all(
-        chars.map(c => buildCharData({ char: c, pinyin, meaning: '' })),
+        chars.map(c => buildCharData({ char: c, pinyin: '', meaning: '' })),
       )
       if (!cancel)
         setCharacters(built)

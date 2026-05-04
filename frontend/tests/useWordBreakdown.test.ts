@@ -31,7 +31,7 @@ describe('useWordBreakdown', () => {
       }),
     )
 
-    await waitFor(() => expect(result.current.characters.length).toBe(1))
+    await waitFor(() => expect(result.current.characters.length).toBe(1), { timeout: 5000 })
     expect(result.current.characters[0].char).toBe('学')
     expect(result.current.characters[0].sinoVietnamese).toBe('học')
   })

@@ -46,7 +46,7 @@ describe('wordBreakdownModal', () => {
     await waitFor(() => {
       // "học" and "tập" expected from Unihan lookup for 学 and 习
       expect(screen.getByText(/học/i)).toBeInTheDocument()
-    })
+    }, { timeout: 5000 })
   })
 
   it('renders the LLM story once it loads', async () => {

@@ -72,9 +72,9 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                 </div>
                 {c.components.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {c.components.map(comp => (
+                    {c.components.map((comp, i) => (
                       <div
-                        key={comp.char}
+                        key={`${comp.char}-${i}`}
                         className="rounded-md border border-border bg-background px-2 py-1 text-xs"
                       >
                         <span className="mr-1 text-base">{comp.char}</span>
