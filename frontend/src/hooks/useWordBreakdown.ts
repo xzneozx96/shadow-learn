@@ -99,11 +99,9 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
           return
         }
 
-        if (!openrouterApiKey) {
-          if (!cancel)
-            setStoryError(new Error('No OpenRouter API key — add one in Settings to generate the mnemonic.'))
-          return
-        }
+        // Don't gate on openrouterApiKey — backend falls back to env var
+        // when frontend sends null/empty (trial mode). If both missing,
+        // backend returns 400 and we surface it via the catch below.
 
         if (!cancel)
           setStoryLoading(true)
