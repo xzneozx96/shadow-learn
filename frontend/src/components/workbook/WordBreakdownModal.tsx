@@ -1,12 +1,14 @@
 import type { ShadowLearnDB } from '@/db'
-import { Check, Loader2, Pencil, RefreshCw, X } from 'lucide-react'
+import { Check, Loader2, Pencil, RefreshCw, Volume2, X } from 'lucide-react'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useTTS } from '@/hooks/useTTS'
 import { useWordBreakdown } from '@/hooks/useWordBreakdown'
 
 interface WordBreakdownModalProps {
@@ -23,6 +25,9 @@ interface WordBreakdownModalProps {
 export function WordBreakdownModal(props: WordBreakdownModalProps) {
   const { open, onClose, word, pinyin, meaning, sourceLanguage, db, openrouterApiKey } = props
   const { locale, t } = useI18n()
+  const { keys } = useAuth()
+  const { playTTS, loadingText } = useTTS(db, keys, sourceLanguage)
+  const ttsLoading = loadingText === word
   const {
     characters,
     charactersLoading,
@@ -101,7 +106,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
           {/* Main Word Header */}
           <header className="p-6 flex items-center gap-4 border-b border-border">
             <span className="text-5xl leading-none text-foreground font-bold font-serif tracking-tight">{word}</span>
-            <div className="flex flex-col justify-center gap-2">
+            <div className="flex flex-col justify-center gap-2 flex-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-lg italic text-yellow-500 font-medium tracking-wide">
                   (
@@ -120,6 +125,17 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                 <span className="text-foreground/60">{meaning}</span>
               </div>
             </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label={`Play pronunciation of ${word}`}
+              title={`Play pronunciation of ${word}`}
+              onClick={() => { void playTTS(word) }}
+              disabled={ttsLoading}
+              className="self-start text-foreground"
+            >
+              {ttsLoading ? <Loader2 className="size-5 animate-spin" /> : <Volume2 className="size-5" />}
+            </Button>
           </header>
 
           {/* Single-Column Flow with Grid for Anatomy */}
@@ -134,7 +150,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                     {!storyLoading && !storyError && characters.length > 0 && (
                       <Button
                         size="icon-sm"
-                        variant="secondary"
+                        variant="ghost"
                         aria-label={t('breakdown.edit')}
                         title={t('breakdown.edit')}
                         onClick={startEdit}
@@ -145,7 +161,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                     )}
                     <Button
                       size="icon-sm"
-                      variant="secondary"
+                      variant="ghost"
                       aria-label={t('breakdown.regenerate')}
                       title={t('breakdown.regenerate')}
                       onClick={() => { void regenerateStory() }}
@@ -169,9 +185,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                         />
                         <div className="flex items-center justify-end gap-2">
                           <Button
-                            size="sm"
                             variant="outline"
-                            className="border-white/10 text-foreground/80 hover:bg-white/5"
                             onClick={cancelEdit}
                             disabled={saving}
                           >
@@ -179,7 +193,6 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                             {t('breakdown.cancel')}
                           </Button>
                           <Button
-                            size="sm"
                             onClick={() => { void commitEdit() }}
                             disabled={saving || draft.trim().length === 0}
                           >

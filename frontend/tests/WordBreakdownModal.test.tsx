@@ -8,6 +8,16 @@ vi.mock('@/lib/api/breakdownStory', () => ({
   fetchBreakdownStory: vi.fn().mockResolvedValue('Người thợ kéo sợi ...'),
 }))
 
+// useAuth is needed for the TTS button. Modal only reads `keys`, no setup needed.
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ keys: null, db: null }),
+}))
+
+// useTTS depends on AuthContext + keys. Stub it out in tests.
+vi.mock('@/hooks/useTTS', () => ({
+  useTTS: () => ({ playTTS: vi.fn(), loadingText: null }),
+}))
+
 afterEach(() => {
   // @ts-expect-error injected
   globalThis.indexedDB = new IDBFactory()
