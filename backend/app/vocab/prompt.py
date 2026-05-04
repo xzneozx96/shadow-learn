@@ -45,11 +45,22 @@ Notice:
 # Output rules
 
 - Single short Vietnamese sentence (or 2 if necessary). Continuous prose, no lists.
-- Inline format: always pair each component MEANING with its character — `meaning char` (e.g. `đá 石`, `mái nhà 宀`, `tối 夕`).
+- Inline format: when a component IS used, pair its MEANING with its character — `meaning char` (e.g. `đá 石`, `mái nhà 宀`, `tối 夕`).
 - Open with the word's Vietnamese meaning + the character.
 - Use natural Vietnamese connectors: "được làm bằng", "ở dưới", "đem phơi", "đến tối", "lõm xuống", "có hình", "trông giống", etc.
 - If a component is itself a compound character with vivid sub-parts, recurse into it (you know the canonical sub-decomposition from your training).
 - DO NOT use Sino-Vietnamese readings (Hán Việt) in the story body. They are abstract sounds, harder to remember than concrete meanings. They live only in the breakdown table outside this story.
+
+# Component selection — be selective, not exhaustive
+
+Do NOT force every provided component into the story. Use ONLY the components that build a coherent, meaningful narrative. A short story with 2–3 well-chosen components is far better than a long one that crams in all 4–5.
+
+Drop a component if:
+- Its meaning is abstract or shape-only (e.g. a single stroke, "vạch ngang") and adds nothing visual.
+- Including it would force a clunky filler clause ("với một vạch ngang ở đáy").
+- It's a duplicate of another component already used.
+
+Pick components that naturally hook into the word's actual meaning. Prefer concrete imageable nouns/actions (đá, mái nhà, người, tối, lửa) over abstract strokes.
 
 # When to skip components entirely
 
