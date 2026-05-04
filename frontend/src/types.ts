@@ -100,6 +100,15 @@ export interface VocabEntry {
   createdAt: string
 }
 
+export interface WordBreakdown {
+  word: string
+  sourceLanguage: string
+  characters: import('./lib/hanzi/types').CharData[]
+  story: string | null
+  storyLanguage: string
+  generatedAt: string | null
+}
+
 // Speak feature types
 
 export interface GrammarFeedback {
@@ -131,7 +140,6 @@ export interface AiTurnTranslation {
   translation: string
   romanization: string
 }
-
 
 export interface VocabTip {
   type: 'vocab-tip'
