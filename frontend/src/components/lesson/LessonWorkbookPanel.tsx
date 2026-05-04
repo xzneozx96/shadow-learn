@@ -104,48 +104,59 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                     onClick={() =>
                       navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
                     onKeyDown={e => e.key === 'Enter' && navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
-                    className="group/card relative cursor-pointer rounded-lg border border-border elegant-card p-3 text-left transition-colors"
+                    className="group/card relative flex cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left transition-colors duration-200 hover:border-primary/30 hover:bg-[hsl(240_5%_9%)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
-                    {entry.sourceLanguage?.startsWith('zh') && (
+                    {/* Actions — top right */}
+                    <div className="absolute top-2 right-2 flex items-center gap-0.5">
+                      {entry.sourceLanguage?.startsWith('zh') && (
+                        <button
+                          aria-label={t('breakdown.button.show', { word: entry.word })}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setBreakdownEntry(entry)
+                          }}
+                          className="rounded-md p-1 text-foreground/55 transition-colors hover:bg-foreground/6 hover:text-foreground"
+                        >
+                          <BookOpen className="size-4" />
+                        </button>
+                      )}
                       <button
-                        aria-label={`Show breakdown of ${entry.word}`}
+                        aria-label={t('lesson.removeFromWorkbook')}
                         onClick={(e) => {
                           e.stopPropagation()
-                          setBreakdownEntry(entry)
+                          setPendingRemove(entry)
                         }}
-                        className="absolute top-1.5 right-7 rounded p-0.5 text-muted-foreground opacity-40 transition-opacity hover:opacity-100 hover:text-foreground"
+                        className="rounded-md p-1 text-foreground/55 transition-colors hover:bg-foreground/6 hover:text-foreground"
                       >
-                        <BookOpen className="size-4" />
+                        <X className="size-4" />
                       </button>
+                    </div>
+
+                    {/* Word — hero, confident tracking */}
+                    <p className="pr-12 text-2xl font-bold leading-tight tracking-tight text-foreground">{entry.word}</p>
+
+                    {/* Pinyin — phonetic guide, tracking-wide */}
+                    {entry.romanization && (
+                      <p className="mt-1 text-sm font-medium tracking-wide text-foreground/55">{entry.romanization}</p>
                     )}
-                    <button
-                      aria-label={t('lesson.removeFromWorkbook')}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setPendingRemove(entry)
-                      }}
-                      className="absolute top-1.5 right-1.5 rounded p-0.5 text-muted-foreground opacity-40 transition-opacity hover:opacity-100 hover:text-foreground"
-                    >
-                      <X className="size-4" />
-                    </button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`Play pronunciation of ${entry.word}`}
-                      disabled={loadingText === entry.word}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        playTTS(entry.word)
-                      }}
-                      className="absolute bottom-2 right-2 text-foreground"
-                    >
-                      {loadingText === entry.word
-                        ? <Loader2 className="size-4 animate-spin" />
-                        : <Volume2 className="size-4" />}
-                    </Button>
-                    <p className="text-2xl font-bold text-foreground">{entry.word}</p>
-                    {entry.romanization && <p className="text-sm text-muted-foreground">{entry.romanization}</p>}
-                    <p className="line-clamp-2 text-sm text-muted-foreground/70">{entry.meaning}</p>
+
+                    {/* Translation + volume inline */}
+                    <div className="mt-3 flex items-end justify-between gap-2">
+                      <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-muted-foreground">{entry.meaning}</p>
+                      <button
+                        aria-label={`Play pronunciation of ${entry.word}`}
+                        disabled={loadingText === entry.word}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          playTTS(entry.word)
+                        }}
+                        className="-mr-1 -mb-1 shrink-0 rounded-md p-1.5 text-foreground/55 transition-colors hover:bg-foreground/6 hover:text-foreground disabled:opacity-50"
+                      >
+                        {loadingText === entry.word
+                          ? <Loader2 className="size-4 animate-spin" />
+                          : <Volume2 className="size-4" />}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

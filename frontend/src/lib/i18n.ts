@@ -576,6 +576,23 @@ export const TRANSLATIONS = {
     'speak.eval.vocabToPractice': 'Keep practicing',
     'speak.eval.suggestions': 'Tips for next time',
     'speak.feedbackPanel.culturalInsight': 'Cultural Insight',
+
+    // Vocab Breakdown Modal
+    'breakdown.title': 'Breakdown of {word}',
+    'breakdown.meaning': 'Meaning:',
+    'breakdown.components': 'Components',
+    'breakdown.story': 'Mnemonic',
+    'breakdown.preparing': 'Preparing breakdown…',
+    'breakdown.generating': 'Generating mnemonic…',
+    'breakdown.analyzing': 'Analyzing characters…',
+    'breakdown.retry': 'Try again',
+    'breakdown.placeholder': 'Mnemonic will appear here.',
+    'breakdown.noComponents': 'No components',
+    'breakdown.col.pinyin': 'Pinyin',
+    'breakdown.col.radical': 'Radical',
+    'breakdown.col.hanviet': 'Sino-Viet',
+    'breakdown.col.meaning': 'Meaning',
+    'breakdown.button.show': 'Show breakdown of {word}',
   },
   vi: {
     // Navigation
@@ -1144,6 +1161,23 @@ export const TRANSLATIONS = {
     'speak.eval.vocabToPractice': 'Cần luyện thêm',
     'speak.eval.suggestions': 'Gợi ý cho lần sau',
     'speak.feedbackPanel.culturalInsight': 'Hiểu biết văn hóa',
+
+    // Vocab Breakdown Modal
+    'breakdown.title': 'Phân tích chữ {word}',
+    'breakdown.meaning': 'Nghĩa Việt:',
+    'breakdown.components': 'Bộ Kiện',
+    'breakdown.story': 'Giải Thích',
+    'breakdown.preparing': 'Đang chuẩn bị…',
+    'breakdown.generating': 'Đang tạo giải thích…',
+    'breakdown.analyzing': 'Đang phân tích chữ…',
+    'breakdown.retry': 'Thử lại',
+    'breakdown.placeholder': 'Giải thích sẽ hiển thị ở đây.',
+    'breakdown.noComponents': 'Không có bộ kiện',
+    'breakdown.col.pinyin': 'Pinyin',
+    'breakdown.col.radical': 'Bộ',
+    'breakdown.col.hanviet': 'Hán Việt',
+    'breakdown.col.meaning': 'Nghĩa',
+    'breakdown.button.show': 'Xem phân tích chữ {word}',
   },
 } satisfies Record<Locale, Record<string, string>>
 

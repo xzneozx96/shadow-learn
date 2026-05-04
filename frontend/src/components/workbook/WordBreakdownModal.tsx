@@ -20,7 +20,7 @@ interface WordBreakdownModalProps {
 
 export function WordBreakdownModal(props: WordBreakdownModalProps) {
   const { open, onClose, word, pinyin, meaning, sourceLanguage, db, openrouterApiKey } = props
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const {
     characters,
     charactersLoading,
@@ -55,127 +55,57 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
     >
       <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-[850px] bg-[#0a0a0a] border border-white/10 shadow-2xl rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="sr-only">{`Breakdown of ${word}`}</DialogTitle>
+          <DialogTitle className="sr-only">{t('breakdown.title', { word })}</DialogTitle>
         </DialogHeader>
 
         <div className="text-foreground">
           {/* Main Word Header */}
-          <header className="px-10 pt-10 pb-8 flex items-center gap-8 border-b border-white/5">
-            <span className="text-[88px] leading-none text-foreground font-bold font-serif tracking-tight">{word}</span>
-            <div className="flex flex-col justify-center gap-3">
-              <div className="flex items-baseline gap-4">
-                <span className="text-[22px] italic text-yellow-500 font-medium tracking-wide">
+          <header className="p-6 flex items-center gap-4 border-b border-border">
+            <span className="text-5xl leading-none text-foreground font-bold font-serif tracking-tight">{word}</span>
+            <div className="flex flex-col justify-center gap-2">
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg italic text-yellow-500 font-medium tracking-wide">
                   (
                   {pinyin}
                   )
                 </span>
                 {hasSinoVietnamese && (
-                  <span className="text-[22px] font-bold text-emerald-400 tracking-wide">{sinoVietnamese}</span>
+                  <span className="text-lg font-bold text-emerald-500 tracking-wide">{sinoVietnamese}</span>
                 )}
               </div>
-              <div className="text-[17px]">
-                <span className="font-semibold text-foreground/90">Nghĩa Việt: </span>
+              <div className="text-lg">
+                <span className="font-semibold text-foreground/90">
+                  {t('breakdown.meaning')}
+                  {' '}
+                </span>
                 <span className="text-foreground/60">{meaning}</span>
               </div>
             </div>
           </header>
 
-          {/* Two-Column Body */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-12 px-10 py-10">
-            {/* Left Column: Anatomy */}
-            <div>
-              <h3 className="text-[13px] font-bold text-foreground/40 uppercase tracking-[0.2em] mb-6">Bộ Kiện</h3>
-
-              <div className="space-y-8">
-                {characters.length === 0 && charactersLoading && (
-                  <div className="flex items-center gap-2 text-sm text-foreground/60">
-                    <Loader2 className="size-4 animate-spin" />
-                    Đang phân tích chữ...
-                  </div>
-                )}
-
-                {characters.map(c => (
-                  <section key={c.char}>
-                    {/* Character header for multi-character words */}
-                    {characters.length > 1 && (
-                      <div className="flex items-end gap-3 mb-4">
-                        <span className="text-[44px] leading-none text-foreground font-bold font-serif">{c.char}</span>
-                        <div className="flex items-baseline gap-2 pb-1">
-                          <span className="text-[16px] italic text-yellow-500 font-medium">
-                            (
-                            {c.pinyin}
-                            )
-                          </span>
-                          {c.sinoVietnamese && (
-                            <span className="text-[16px] font-bold text-emerald-400">{c.sinoVietnamese}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Anatomy Table Card */}
-                    {c.components.length > 0
-                      ? (
-                          <div className="bg-[#141414] rounded-xl p-5 border border-white/5">
-                            {/* Table Headers */}
-                            <div className="grid grid-cols-[60px_60px_80px_1fr] gap-4 mb-5 text-[11px] font-bold text-foreground/30 uppercase tracking-widest">
-                              <div className="text-right">Pinyin</div>
-                              <div className="text-center">Bộ</div>
-                              <div className="text-right">Hán Việt</div>
-                              <div className="text-left">Nghĩa</div>
-                            </div>
-                            {/* Table Rows */}
-                            <div className="space-y-5">
-                              {c.components.map((comp, i) => (
-                                <div key={`${comp.char}-${i}`} className="grid grid-cols-[60px_60px_80px_1fr] gap-4 items-center">
-                                  <div className="text-right text-[14px] italic text-yellow-500/90 truncate" title={comp.pinyin}>
-                                    {comp.pinyin || '—'}
-                                  </div>
-                                  <div className="text-center text-[32px] text-foreground leading-none font-serif">
-                                    {comp.char}
-                                  </div>
-                                  <div className="text-right text-[15px] font-medium text-emerald-400/90 capitalize truncate" title={comp.name}>
-                                    {comp.name || '—'}
-                                  </div>
-                                  <div className="text-left text-[15px] text-foreground/60 capitalize truncate" title={localizedMeaning(comp)}>
-                                    {localizedMeaning(comp) || '—'}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )
-                      : (
-                          <div className="text-sm text-foreground/40 italic py-2">
-                            Không có bộ kiện
-                          </div>
-                        )}
-                  </section>
-                ))}
-              </div>
-            </div>
-
-            {/* Right Column: Mnemonic */}
-            <div>
-              <h3 className="text-[13px] font-bold text-foreground/40 uppercase tracking-[0.2em] mb-6">Giải Thích</h3>
-              <div className="min-h-[60px]">
+          {/* Single-Column Flow with Grid for Anatomy */}
+          <div className="p-6 space-y-6">
+            {/* Mnemonic / Explanation */}
+            <section className="w-full">
+              <h3 className="text-[13px] font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.story')}</h3>
+              <div className="bg-[#141414] rounded-xl p-6 border border-white/5 min-h-[80px]">
                 {charactersLoading && !storyError && (
                   <div className="flex items-center gap-2 text-sm text-foreground/50">
                     <Loader2 className="size-4 animate-spin" />
-                    Đang chuẩn bị...
+                    {t('breakdown.preparing')}
                   </div>
                 )}
                 {!charactersLoading && storyLoading && (
                   <div className="flex items-center gap-2 text-sm text-foreground/50">
                     <Loader2 className="size-4 animate-spin" />
-                    Đang tạo giải thích...
+                    {t('breakdown.generating')}
                   </div>
                 )}
                 {storyError && (
                   <div className="space-y-3 mt-2">
                     <div className="text-sm text-red-400">{storyError.message}</div>
                     <Button size="sm" variant="outline" className="border-white/10 text-foreground/80 hover:bg-white/5" onClick={retryStory}>
-                      Thử lại
+                      {t('breakdown.retry')}
                     </Button>
                   </div>
                 )}
@@ -185,10 +115,81 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
                   </div>
                 )}
                 {!charactersLoading && !storyLoading && !storyError && !story && characters.length > 0 && (
-                  <p className="text-[15px] text-foreground/50 italic">Giải thích sẽ hiển thị ở đây.</p>
+                  <p className="text-[15px] text-foreground/50 italic">{t('breakdown.placeholder')}</p>
                 )}
               </div>
-            </div>
+            </section>
+
+            {/* Anatomy Cards Grid */}
+            <section>
+              <h3 className="text-[13px] font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.components')}</h3>
+
+              <div className={`grid grid-cols-1 ${characters.length > 1 ? 'md:grid-cols-2' : ''} gap-6`}>
+                {characters.length === 0 && charactersLoading && (
+                  <div className="flex items-center gap-2 text-sm text-foreground/60 col-span-full">
+                    <Loader2 className="size-4 animate-spin" />
+                    {t('breakdown.analyzing')}
+                  </div>
+                )}
+
+                {characters.map(c => (
+                  <div key={c.char} className="bg-[#141414] rounded-xl p-5 border border-white/5 flex flex-col">
+                    {/* Character header for multi-character words */}
+                    <div className="flex items-end gap-3 pb-4 mb-5 border-b border-white/5">
+                      <span className="text-[40px] leading-none text-foreground font-bold font-serif">{c.char}</span>
+                      <div className="flex items-baseline gap-2 pb-1">
+                        <span className="text-base italic text-yellow-500 font-medium">
+                          (
+                          {c.pinyin}
+                          )
+                        </span>
+                        {c.sinoVietnamese && (
+                          <span className="text-base font-bold text-emerald-500">{c.sinoVietnamese}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Anatomy Plain Text List */}
+                    {c.components.length > 0
+                      ? (
+                          <div className="flex-1">
+                            <ul className="space-y-2.5">
+                              {c.components.map((comp: any, i: number) => (
+                                <li key={`${comp.char}-${i}`} className="flex items-start gap-2.5 text-[15px] leading-[1.6]">
+                                  <span className="text-[20px] text-foreground font-serif leading-none mt-[3px] shrink-0">
+                                    {comp.char}
+                                  </span>
+                                  <div className="flex flex-wrap items-baseline gap-x-1.5 text-foreground/80">
+                                    <span className="font-medium text-emerald-500 capitalize">
+                                      {comp.name || '—'}
+                                    </span>
+                                    {comp.pinyin && (
+                                      <span className="text-[14px] italic text-yellow-500/90">
+                                        (
+                                        {comp.pinyin}
+                                        )
+                                      </span>
+                                    )}
+                                    <span className="text-foreground/30 mx-0.5">—</span>
+                                    <span className="text-foreground/70">
+                                      {localizedMeaning(comp) || '—'}
+                                    </span>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )
+                      : (
+                          <div className="text-sm text-foreground/40 italic py-2">
+                            {t('breakdown.noComponents')}
+                          </div>
+                        )}
+                  </div>
+                ))}
+              </div>
+            </section>
+
           </div>
         </div>
       </DialogContent>

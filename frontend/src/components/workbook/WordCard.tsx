@@ -2,6 +2,7 @@ import type { VocabEntry } from '@/types'
 import { BookOpen, Loader2, Volume2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
 import { WordBreakdownModal } from './WordBreakdownModal'
@@ -15,6 +16,7 @@ interface WordCardProps {
 
 export function WordCard({ entry, className, onPlay, isLoading }: WordCardProps) {
   const { db, keys } = useAuth()
+  const { t } = useI18n()
   const [breakdownOpen, setBreakdownOpen] = useState(false)
   const isChinese = entry.sourceLanguage?.startsWith('zh') ?? false
 
@@ -25,7 +27,7 @@ export function WordCard({ entry, className, onPlay, isLoading }: WordCardProps)
           <Button
             size="icon"
             variant="ghost"
-            aria-label={`Show breakdown of ${entry.word}`}
+            aria-label={t('breakdown.button.show', { word: entry.word })}
             onClick={(e) => {
               e.stopPropagation()
               setBreakdownOpen(true)
