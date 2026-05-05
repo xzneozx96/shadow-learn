@@ -33,7 +33,7 @@ class TranscriptionKeys(TypedDict, total=False):
     deepgram_api_key: str
     azure_speech_key: str
     azure_speech_region: str
-    gladia_api_key: str
+    gladia_api_keys: list[str]
 
 
 class STTProvider(Protocol):

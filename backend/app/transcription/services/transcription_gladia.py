@@ -11,10 +11,7 @@ from app.shared._retry import http_retry
 from app.transcription.services.transcription_provider import (
     TranscriptionKeys,
     _Segment,
-    _Word,
     _WordTiming,
-    STTProvider,
-    _finalize_segment,
 )
 from app.lessons.services.subtitle_segmenter import SubtitleSegmenter
 
@@ -240,7 +237,21 @@ class GladiaSTTProvider:
     """STTProvider implementation backed by Gladia."""
 
     async def transcribe(self, audio_path: Path, keys: TranscriptionKeys, language: str) -> list[_Segment]:
-        api_key = keys.get("gladia_api_key", "")
-        if not api_key:
+        key_list = keys.get("gladia_api_keys") or []
+        if not key_list:
             raise ValueError("Gladia API key is required when stt_provider=gladia")
-        return await transcribe_audio_gladia(audio_path, api_key, language)
+
+        last_error: Exception | None = None
+        for api_key in key_list:
+            try:
+                return await transcribe_audio_gladia(audio_path, api_key, language)
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code in (402, 403):
+                    logger.warning(
+                        "Gladia key quota exceeded (HTTP %d), rotating to next key",
+                        exc.response.status_code,
+                    )
+                    last_error = exc
+                    continue
+                raise
+        raise last_error  # type: ignore[misc]

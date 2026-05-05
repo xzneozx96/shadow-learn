@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     fpt_ai_api_key: str | None = None         # env: SHADOWLEARN_FPT_AI_API_KEY
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
-    gladia_api_key: str | None = None          # env: SHADOWLEARN_GLADIA_API_KEY
+    gladia_api_keys: list[str] = []            # env: SHADOWLEARN_GLADIA_API_KEYS='["key1","key2"]' — tried in order, rotated on 402/403
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
     encryption_key: str | None = None          # env: SHADOWLEARN_ENCRYPTION_KEY
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     offshore_base_url: str = ""                 # env: SHADOWLEARN_OFFSHORE_BASE_URL
     offshore_internal_token: str = ""           # env: SHADOWLEARN_OFFSHORE_INTERNAL_TOKEN
 
-    model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

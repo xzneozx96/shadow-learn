@@ -1,10 +1,18 @@
 import pytest
-from unittest.mock import patch
+import httpx
+from unittest.mock import patch, AsyncMock, MagicMock
 from app.transcription.services.transcription_gladia import (
     _segments_from_gladia_utterances,
     transcribe_audio_gladia,
     GladiaSTTProvider,
 )
+
+
+def _quota_error(status_code: int) -> httpx.HTTPStatusError:
+    request = MagicMock(spec=httpx.Request)
+    response = MagicMock(spec=httpx.Response)
+    response.status_code = status_code
+    return httpx.HTTPStatusError("quota exceeded", request=request, response=response)
 
 
 def test_segments_from_gladia_utterances_chinese_strips_spaces():
@@ -119,7 +127,7 @@ async def test_transcribe_audio_gladia_full_flow(tmp_path):
 @pytest.mark.asyncio
 async def test_transcribe_audio_gladia_raises_on_api_error(tmp_path):
     """transcribe_audio_gladia raises on API error."""
-    from unittest.mock import MagicMock, AsyncMock
+    from unittest.mock import MagicMock
 
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"fake audio data")
@@ -140,12 +148,124 @@ async def test_transcribe_audio_gladia_raises_on_api_error(tmp_path):
 
 @pytest.mark.asyncio
 async def test_gladia_provider_requires_api_key(tmp_path):
-    """GladiaSTTProvider raises if api_key is missing."""
+    """GladiaSTTProvider raises if api_key list is empty."""
     provider = GladiaSTTProvider()
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"fake audio data")
 
     with pytest.raises(ValueError, match="Gladia API key is required"):
         await provider.transcribe(audio_file, {}, "zh-CN")
+
+
+@pytest.mark.asyncio
+async def test_gladia_provider_rotates_to_key2_on_402(tmp_path):
+    """Key1 returns 402 → provider rotates to key2 and succeeds."""
+    audio_file = tmp_path / "test.mp3"
+    audio_file.write_bytes(b"fake audio")
+
+    segments = [{"id": 0, "start": 0.0, "end": 1.0, "text": "你好", "word_timings": []}]
+    calls: list[str] = []
+
+    async def mock_transcribe(path, api_key, language):
+        calls.append(api_key)
+        if api_key == "key1":
+            raise _quota_error(402)
+        return segments
+
+    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+        result = await GladiaSTTProvider().transcribe(
+            audio_file, {"gladia_api_keys": ["key1", "key2"]}, "zh-CN"
+        )
+
+    assert calls == ["key1", "key2"]
+    assert result == segments
+
+
+@pytest.mark.asyncio
+async def test_gladia_provider_rotates_to_key2_on_403(tmp_path):
+    """Key1 returns 403 → provider rotates to key2 and succeeds."""
+    audio_file = tmp_path / "test.mp3"
+    audio_file.write_bytes(b"fake audio")
+
+    segments = [{"id": 0, "start": 0.0, "end": 1.0, "text": "你好", "word_timings": []}]
+    calls: list[str] = []
+
+    async def mock_transcribe(path, api_key, language):
+        calls.append(api_key)
+        if api_key == "key1":
+            raise _quota_error(403)
+        return segments
+
+    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+        result = await GladiaSTTProvider().transcribe(
+            audio_file, {"gladia_api_keys": ["key1", "key2"]}, "zh-CN"
+        )
+
+    assert calls == ["key1", "key2"]
+    assert result == segments
+
+
+@pytest.mark.asyncio
+async def test_gladia_provider_rotates_through_all_keys(tmp_path):
+    """Exhausted keys are all tried; succeeds on last key."""
+    audio_file = tmp_path / "test.mp3"
+    audio_file.write_bytes(b"fake audio")
+
+    segments = [{"id": 0, "start": 0.0, "end": 1.0, "text": "你好", "word_timings": []}]
+    calls: list[str] = []
+
+    async def mock_transcribe(path, api_key, language):
+        calls.append(api_key)
+        if api_key != "key5":
+            raise _quota_error(402)
+        return segments
+
+    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+        result = await GladiaSTTProvider().transcribe(
+            audio_file, {"gladia_api_keys": ["key1", "key2", "key3", "key4", "key5"]}, "zh-CN"
+        )
+
+    assert calls == ["key1", "key2", "key3", "key4", "key5"]
+    assert result == segments
+
+
+@pytest.mark.asyncio
+async def test_gladia_provider_raises_when_all_keys_exhausted(tmp_path):
+    """All keys return 402 → raises the last HTTPStatusError."""
+    audio_file = tmp_path / "test.mp3"
+    audio_file.write_bytes(b"fake audio")
+
+    async def mock_transcribe(path, api_key, language):
+        raise _quota_error(402)
+
+    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+            await GladiaSTTProvider().transcribe(
+                audio_file, {"gladia_api_keys": ["key1", "key2", "key3"]}, "zh-CN"
+            )
+
+    assert exc_info.value.response.status_code == 402
+
+
+@pytest.mark.asyncio
+async def test_gladia_provider_does_not_rotate_on_non_quota_error(tmp_path):
+    """Non-quota errors (401) raise immediately without trying remaining keys."""
+    audio_file = tmp_path / "test.mp3"
+    audio_file.write_bytes(b"fake audio")
+
+    calls: list[str] = []
+
+    async def mock_transcribe(path, api_key, language):
+        calls.append(api_key)
+        raise _quota_error(401)
+
+    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+            await GladiaSTTProvider().transcribe(
+                audio_file, {"gladia_api_keys": ["key1", "key2", "key3"]}, "zh-CN"
+            )
+
+    assert calls == ["key1"]
+    assert exc_info.value.response.status_code == 401
 
 
