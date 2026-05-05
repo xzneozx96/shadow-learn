@@ -131,7 +131,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
           ? (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-card">
                 <Loader2 className="size-6 animate-spin text-muted-foreground" />
-                <span className="truncate px-4 text-xs text-muted-foreground">
+                <span className="truncate px-4 text-sm text-muted-foreground">
                   {lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}
                 </span>
               </div>
