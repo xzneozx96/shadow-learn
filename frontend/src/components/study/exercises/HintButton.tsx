@@ -17,7 +17,7 @@ export function HintButton({ level, totalLevels, exhausted, onHint, className, i
   return (
     <Button
       variant="ghost"
-      size={iconOnly ? 'icon' : 'sm'}
+      size={iconOnly ? 'icon-lg' : 'lg'}
       disabled={exhausted}
       onClick={onHint}
       aria-label={level > 0 ? `${t('study.hint')} ${level}/${totalLevels}` : t('study.hint')}

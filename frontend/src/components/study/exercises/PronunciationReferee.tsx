@@ -144,6 +144,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
         <>
           <div className="flex gap-2 mb-2">
             <Button
+              size="lg"
               variant="destructive"
               className={cn(
                 'flex-1',
@@ -154,6 +155,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
               {recordingState === 'recording' ? t('study.stopRecord') : t('study.startRecord')}
             </Button>
             <Button
+              size="lg"
               variant="outline"
               disabled={!blob}
               onClick={togglePlayback}
@@ -246,6 +248,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
 
           <div className="flex gap-2 pt-2">
             <Button
+              size="lg"
               variant="outline"
               className="flex-1"
               onClick={() => {
@@ -256,6 +259,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
               {t('study.pronunciation.tryAgain')}
             </Button>
             <Button
+              size="lg"
               className="flex-1"
               onClick={() => onNext(Math.round(result.overall.accuracy * hint.hintScore), { assessment: result })}
             >

@@ -39,7 +39,7 @@ export function ExerciseCard({ type, progress, footer, children, className, info
         <span className="text-[11px] text-muted-foreground ml-auto">{progress}</span>
       </div>
       {/* Body */}
-      <div className="px-[18px] py-5">{children}</div>
+      <div className="px-[5 py-5">{children}</div>
       {/* Footer */}
       {footer !== null && (
         <div className="border-t border-border">{footer}</div>

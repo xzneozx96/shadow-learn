@@ -219,6 +219,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           )}
 
           <Button
+            size="lg"
             className="w-full"
             onClick={() => {
               const today = new Date().toISOString().split('T')[0]
@@ -288,13 +289,13 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           )}
           <Button
             variant="ghost"
-            size="sm"
+            size="lg"
             onClick={() => onNext(0, { skipped: true })}
           >
             {t('study.skip')}
           </Button>
           <Button
-            size="sm"
+            size="lg"
             onClick={() => void handleSubmit()}
             disabled={loading || !value.trim()}
           >
