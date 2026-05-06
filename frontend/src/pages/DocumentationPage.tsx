@@ -64,7 +64,7 @@ export function DocumentationPage() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-79px)] container mx-auto overflow-hidden">
+      <div className="flex h-full container mx-auto overflow-hidden">
         {/* Sidebar TOC - 25% */}
         <div className="w-96 border-r border-border h-full px-6 py-8 shrink-0 bg-background/30 backdrop-blur-md overflow-auto">
           <div className="flex gap-2 mb-6">

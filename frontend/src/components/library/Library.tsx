@@ -695,8 +695,8 @@ export function Library() {
 
   return (
     <Layout>
-      <div className="h-[calc(100vh-53px)] overflow-y-auto gradient-bg">
-        <div className="mx-auto w-full container px-6 pt-5 pb-12">
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto w-full container px-6 py-9 pb-10">
           {/* ── Top: greeting ── */}
           <header className="mb-4 flex items-baseline justify-between gap-4">
             <div className="flex items-baseline gap-3 flex-wrap">
@@ -733,7 +733,7 @@ export function Library() {
           {/* ── Library section ── */}
           {hasLessons && (
             <section className="mt-16">
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="mb-8 flex items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                   {t('library.collection')}
                 </h3>

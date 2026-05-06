@@ -1,4 +1,4 @@
-import { Settings, Sparkles, Zap } from 'lucide-react'
+import { BookOpen, FileText, Library, Newspaper, Settings, Sparkles, Zap } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { Button } from '@/components/ui/button'
@@ -21,98 +21,93 @@ export function Layout({ children }: LayoutProps) {
   const { openSpeakModal } = useSpeakModal()
   const hasUnseen = useHasUnseenAnnouncement()
 
+  const navItems = [
+    { to: '/', label: t('nav.library'), icon: Library, active: location.pathname === '/' },
+    { to: '/vocabulary', label: t('nav.workbook'), icon: BookOpen, active: location.pathname.startsWith('/vocabulary') },
+    { to: '/docs', label: t('nav.documentation'), icon: FileText, active: location.pathname === '/docs' },
+    { to: '/changelog', label: t('whatsNew.navLabel'), icon: Newspaper, active: location.pathname === '/changelog', badge: hasUnseen },
+  ]
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className="flex-1 min-w-0 flex flex-col text-foreground">
+    <div className="flex h-screen overflow-hidden text-foreground">
+      {/* Sidebar */}
+      <aside className="w-48 xl:w-56 shrink-0 flex flex-col border-r border backdrop-blur-xl z-50">
         {trialMode && (
-          <div className="bg-yellow-500/10 text-yellow-500 text-center text-xs py-1.5 border-b border-yellow-500/20 backdrop-blur-md">
+          <div className="bg-yellow-500/10 text-yellow-500 text-center text-xs py-1.5 border-b border-yellow-500/20">
             {t('auth.trial.banner')}
           </div>
         )}
-        <nav className="z-50 border-b border-white/6 bg-background/75 px-4 py-3 backdrop-blur-xl shadow-[inset_0_-1px_0_rgba(255,255,255,0.03)]">
-          <div className="container mx-auto flex items-center justify-between gap-4">
-            {/* Logo */}
-            <div className="flex shrink-0 justify-start">
-              <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight text-foreground hover:opacity-80 transition-opacity">
-                <img src="/favicon.svg" className="size-7" alt="ShadowLearn Logo" />
-                <span className="text-base hidden xl:inline-block">ShadowLearn</span>
-              </Link>
-            </div>
 
-            {/* Navigation — flat text links, no pill wrapper */}
-            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-card p-1 shadow-xs backdrop-blur-md">
+        {/* Logo */}
+        <div className="px-4 py-4">
+          <Link to="/" className="flex items-center gap-3 font-semibold tracking-tight text-foreground hover:opacity-80 transition-opacity">
+            <img src="/favicon.svg" className="size-7" alt="ShadowLearn Logo" />
+            <span className="text-base">ShadowLearn</span>
+          </Link>
+        </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 flex flex-col gap-3 px-3 py-3">
+          {navItems.map(({ to, label, icon: Icon, active, badge }) => (
+            <div key={to} className="relative">
               <Button
-                variant={location.pathname === '/' ? 'secondary' : 'ghost'}
-                className={cn('rounded-full h-9', location.pathname === '/' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
-                render={<Link to="/" />}
-              >
-                {t('nav.library')}
-              </Button>
-              <Button
-                variant={location.pathname.startsWith('/vocabulary') ? 'secondary' : 'ghost'}
-                className={cn('rounded-full h-9', location.pathname.startsWith('/vocabulary') ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
-                render={<Link to="/vocabulary" />}
-              >
-                {t('nav.workbook')}
-              </Button>
-              <Button
-                variant={location.pathname === '/docs' ? 'secondary' : 'ghost'}
-                className={cn('rounded-full h-9', location.pathname === '/docs' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
-                render={<Link to="/docs" />}
-              >
-                {t('nav.documentation')}
-              </Button>
-              <div className="relative">
-                <Button
-                  variant={location.pathname === '/changelog' ? 'secondary' : 'ghost'}
-                  className={cn('rounded-full h-9', location.pathname === '/changelog' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
-                  render={<Link to="/changelog" />}
-                >
-                  {t('whatsNew.navLabel')}
-                </Button>
-                {hasUnseen && (
-                  <span className="pointer-events-none absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm ring-2 ring-background">
-                    1
-                  </span>
+                variant="ghost"
+                className={cn(
+                  'w-full justify-start gap-3 h-10 rounded-lg px-3 text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-primary! text-primary-foreground shadow-sm'
+                    : 'text-foreground/60 hover:text-foreground hover:bg-white/6',
                 )}
-              </div>
+                render={<Link to={to} />}
+              >
+                <Icon className="size-4 shrink-0" />
+                {label}
+              </Button>
+              {badge && (
+                <span className="pointer-events-none absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm ring-2 ring-background">
+                  1
+                </span>
+              )}
             </div>
-
-            {/* Actions */}
-            <div className="flex shrink-0 justify-end items-center gap-1.5">
-              <Button
-                variant="outline"
-                onClick={openPanel}
-                className="gap-2 h-9 border-white/8 bg-white/4 hover:bg-white/8 text-amber-400/80 hover:text-amber-400 transition-colors"
-              >
-                <Sparkles className="size-3.5" />
-                <span className="hidden xl:inline text-sm">{t('companion.askButton')}</span>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={openSpeakModal}
-                className="gap-2 h-9 border-primary/25 bg-primary/6 hover:bg-primary/15 text-primary transition-colors"
-              >
-                <Zap className="size-3.5" />
-                <span className="hidden xl:inline text-sm">{t('speak.title')}</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 border-white/8 bg-transparent hover:bg-white/6 text-foreground/50 hover:text-foreground transition-colors"
-                render={<Link to="/settings" />}
-              >
-                <Settings className="size-4" />
-              </Button>
-            </div>
-          </div>
+          ))}
         </nav>
 
-        <main className="flex-1 overflow-hidden">
+        {/* Bottom actions */}
+        <div className="border-t border-white/6 p-3 flex flex-col gap-3">
+          <Button
+            onClick={openPanel}
+            className="w-full justify-start gap-3 h-10 px-3 text-sm font-medium bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 hover:text-amber-300 border border-amber-500/25 hover:border-amber-400/40 shadow-sm transition-colors"
+            variant="ghost"
+          >
+            <Sparkles className="size-4 shrink-0" />
+            {t('companion.askButton')}
+          </Button>
+          <Button
+            onClick={openSpeakModal}
+            className="w-full justify-start gap-3 h-10 px-3 text-sm font-medium bg-primary/15 hover:bg-primary/25 text-primary hover:text-primary border border-primary/25 hover:border-primary/50 shadow-sm transition-colors"
+            variant="ghost"
+          >
+            <Zap className="size-4 shrink-0" />
+            {t('speak.title')}
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 h-9 px-3 text-sm text-foreground/40 hover:text-foreground hover:bg-white/6 transition-colors"
+            render={<Link to="/settings" />}
+          >
+            <Settings className="size-3.5 shrink-0" />
+            {t('nav.settings')}
+          </Button>
+        </div>
+      </aside>
+
+      {/* Content area */}
+      <div className="flex-1 min-w-0 flex overflow-hidden">
+        <main className="flex-1 min-w-0 h-full overflow-hidden">
           {children}
         </main>
+        {isGlobalPanelOpen ? <GlobalCompanionPanel /> : null}
       </div>
-      {isGlobalPanelOpen ? <GlobalCompanionPanel /> : null}
     </div>
   )
 }

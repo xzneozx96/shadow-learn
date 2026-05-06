@@ -969,7 +969,7 @@ export const TRANSLATIONS = {
     'progress.wrong': 'đã sai',
     'progress.sessions': 'Số lần học',
     'progress.completedSets': 'Bộ ôn thành công',
-    'progress.accuracyTrend': 'Biểu đồ chính xác (30 ngày gần đây)',
+    'progress.accuracyTrend': 'Hiệu suất học tập (30 ngày gần đây)',
     'progress.noPracticeHistory': 'Chưa ghi nhận lịch sử luyện tập nào.',
     'progress.accuracyTooltip': 'Độ chính xác',
     'progress.frequentTroubles': 'Các từ vựng hay sai sót',

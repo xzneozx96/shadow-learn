@@ -175,22 +175,6 @@
   .gradient-text {
     @apply text-primary;
   }
-
-  .gradient-bg {
-    position: relative;
-  }
-
-  .gradient-bg::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(900px 600px at 80% -5%, rgba(148, 163, 184, 0.05), transparent 60%),
-      radial-gradient(700px 500px at -5% 100%, rgba(148, 163, 184, 0.03), transparent 60%),
-      hsl(230 40% 6%);
-  }
 }
 
 /* YouTube iframe must fill its container */

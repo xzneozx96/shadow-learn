@@ -125,10 +125,10 @@ export function ChangelogPage() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-79px)] container mx-auto">
+      <div className="flex h-full container mx-auto px-6 py-9 pb-10">
         {/* Sidebar */}
         <div className="w-96 shrink-0 border-r border-border">
-          <div className="p-4">
+          <div className="px-4">
             {entries.map(entry => (
               <SidebarEntry
                 key={entry.id}
@@ -143,7 +143,7 @@ export function ChangelogPage() {
         </div>
 
         {/* Content */}
-        <div ref={contentRef} className="flex-1 p-4 overflow-auto">
+        <div ref={contentRef} className="flex-1 px-4 overflow-auto">
           {selectedEntry && (
             <div className="prose prose-invert prose-base max-w-4xl mx-auto">
               {/* Header */}
