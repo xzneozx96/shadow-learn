@@ -1,7 +1,7 @@
 import type { Locale, TranslationKey } from '@/lib/i18n'
 import type { LessonMeta } from '@/types'
-import { ArrowUpRight, BookOpen, Clock, Flame, Languages, Plus, Search, Sparkles } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowUpRight, BookOpen, ChevronLeft, ChevronRight, Clock, Flame, Languages, Plus, Search, Sparkles } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
@@ -119,7 +119,7 @@ function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
 
   return (
     <Link to={`/lesson/${lesson.id}`} className="group block h-full">
-      <article className="relative h-full min-h-[280px] overflow-hidden rounded-2xl border border-white/8 bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors duration-300 hover:border-primary/30">
+      <article className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-white/8 bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors duration-300 hover:border-primary/30">
         {/* Background image — full bleed (scale-110 crops baked-in YouTube letterbox bars) */}
         {showThumbnail
           ? (
@@ -208,7 +208,7 @@ function FirstLessonCTA() {
   const { t } = useI18n()
   return (
     <Link to="/create" className="group block h-full">
-      <article className="relative h-full min-h-[280px] overflow-hidden rounded-2xl border border-dashed border-white/10 bg-white/2 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] flex flex-col items-center justify-center text-center transition-all duration-300 hover:border-primary/30 hover:bg-primary/3">
+      <article className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-dashed border-white/10 bg-white/2 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] flex flex-col items-center justify-center text-center transition-all duration-300 hover:border-primary/30 hover:bg-primary/3">
         <div className="pointer-events-none absolute -top-16 left-1/2 size-56 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl" />
         <div className="relative mb-2 flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors duration-300 group-hover:border-primary/40 group-hover:bg-primary/10">
           <Plus className="size-4 text-foreground transition-colors duration-300 group-hover:text-primary" />
@@ -231,7 +231,7 @@ function BentoCard({ children, className, glow }: {
 }) {
   return (
     <div className={cn(
-      'group relative h-full overflow-hidden rounded-2xl border border-white/8 bg-white/2 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] p-3 xl:p-6 transition-colors duration-300 hover:border-white/12',
+      'group relative h-full overflow-hidden rounded-2xl border border-white/8 bg-white/2 backdrop-blur-sm p-3 xl:p-6 transition-colors duration-300 hover:border-white/12',
       className,
     )}
     >
@@ -483,7 +483,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
           className="text-sm font-medium text-foreground hover:text-primary transition-colors"
         >
           <Button size="icon-lg">
-            <ArrowUpRight />
+            <ArrowUpRight className="size-5" />
           </Button>
         </Link>
       </div>
@@ -551,6 +551,38 @@ export function Library() {
   const { entriesByLesson } = useVocabulary()
   const [search, setSearch] = useState('')
   const [sort] = useState<SortMode>('recent')
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollPrev, setCanScrollPrev] = useState(false)
+  const [canScrollNext, setCanScrollNext] = useState(false)
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current
+    if (!el)
+      return
+    setCanScrollPrev(el.scrollLeft > 0)
+    setCanScrollNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+  }, [])
+
+  function scrollCarousel(dir: 'prev' | 'next') {
+    if (!scrollRef.current)
+      return
+    scrollRef.current.scrollBy({ left: dir === 'next' ? 600 : -600, behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el)
+      return
+    updateScrollState()
+    el.addEventListener('scroll', updateScrollState, { passive: true })
+    const ro = new ResizeObserver(updateScrollState)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', updateScrollState)
+      ro.disconnect()
+    }
+  }, [updateScrollState])
+
   const [sttProvider, setSttProvider] = useState<string | null>(null)
 
   useEffect(() => {
@@ -606,6 +638,8 @@ export function Library() {
       return pB - pA
     })
   }, [lessons, search, sort])
+
+  useEffect(() => { updateScrollState() }, [filtered, updateScrollState])
 
   const handleDelete = useCallback(async (id: string) => {
     await deleteLesson(id)
@@ -667,19 +701,19 @@ export function Library() {
           </header>
 
           {/* Hero bento — continue left, stats right */}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1fr]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.25fr_1fr]">
             <div className="lg:row-span-1">
               {continueLesson
                 ? <CurrentLessonHero lesson={continueLesson} />
                 : <FirstLessonCTA />}
             </div>
             {hasLessons && (
-              <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <BentoCard glow="tr"><ActivityHeatmap activityDates={activityDates} /></BentoCard>
                   <BentoCard glow="tl"><StreakCard activityDates={activityDates} /></BentoCard>
                 </div>
-                <BentoCard glow="bl">
+                <BentoCard className="hidden lg:block" glow="bl">
                   <WordsCard lessons={lessons} entriesByLesson={entriesByLesson} total={totalVocab} />
                 </BentoCard>
               </div>
@@ -693,20 +727,49 @@ export function Library() {
                 <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                   {t('library.collection')}
                 </h3>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder={t('nav.search')}
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="h-8 w-44 pl-7 text-sm"
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder={t('nav.search')}
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      // className="h- w-44 pl-7 text-sm"
+                    />
+                  </div>
+                  <Button
+                    size="icon-lg"
+                    variant="outline"
+                    onClick={() => scrollCarousel('prev')}
+                    disabled={!canScrollPrev}
+                    aria-label="Scroll left"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <Button
+                    size="icon-lg"
+                    variant="outline"
+                    onClick={() => scrollCarousel('next')}
+                    disabled={!canScrollNext}
+                    aria-label="Scroll right"
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-5 lg:grid-cols-3 xl:grid-cols-4">
+              <div
+                ref={scrollRef}
+                className="flex gap-5 overflow-x-auto pb-2 -mb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                onWheel={(e) => {
+                  if (e.deltaY === 0)
+                    return
+                  e.preventDefault()
+                  e.currentTarget.scrollLeft += e.deltaY
+                }}
+              >
                 {/* Add new lesson card */}
-                <div className="group relative flex flex-col rounded-xl p-2 -m-2">
+                <div className="group relative flex shrink-0 flex-col rounded-xl p-2 -m-2" style={{ width: '340px' }}>
                   <Link
                     to="/create"
                     className="absolute inset-0 z-10"
@@ -727,13 +790,14 @@ export function Library() {
                 </div>
 
                 {filtered.map(lesson => (
-                  <LessonCard
-                    key={lesson.id}
-                    lesson={lesson}
-                    onDelete={handleDelete}
-                    onRename={handleRename}
-                    onRetry={handleRetry}
-                  />
+                  <div key={lesson.id} className="shrink-0" style={{ width: '340px' }}>
+                    <LessonCard
+                      lesson={lesson}
+                      onDelete={handleDelete}
+                      onRename={handleRename}
+                      onRetry={handleRetry}
+                    />
+                  </div>
                 ))}
               </div>
               {filtered.length === 0 && search.trim() && (
