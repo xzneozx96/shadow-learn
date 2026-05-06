@@ -72,3 +72,6 @@ ai-agent-research/
 # Remember plugin (Claude Code session logs)
 .remember/
 .gstack/
+
+# Remotion intro video (local only)
+intro-video/

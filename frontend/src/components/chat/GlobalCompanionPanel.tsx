@@ -6,6 +6,8 @@ import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { useGlobalCompanionChat } from '@/hooks/useGlobalCompanionChat'
 import { CompanionChatArea } from './CompanionChatArea'
 
+const NEWLINES_RE = /\n+/g
+
 export function GlobalCompanionPanel() {
   const { t } = useI18n()
   const { chips, removeChip, clearChips, closePanel } = useGlobalCompanionContext()
@@ -13,7 +15,7 @@ export function GlobalCompanionPanel() {
   const { openSpeakModal } = useSpeakModal()
 
   function handleSend({ text, files }: { text: string, files?: import('ai').FileUIPart[] }) {
-    const context = chips.map(c => `> ${c.text}`).join('\n')
+    const context = chips.map(c => `> ${c.text.replace(NEWLINES_RE, ' ')}`).join('\n')
     const composed = chips.length > 0 ? `Context:\n${context}\n\n${text}` : text
     sendMessage({ text: composed, files })
     clearChips()

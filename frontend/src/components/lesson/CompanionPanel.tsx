@@ -11,6 +11,8 @@ import { captureCompanionMessageSent } from '@/lib/posthog-events'
 import { CompanionChatArea } from '../chat/CompanionChatArea'
 import { LessonWorkbookPanel } from './LessonWorkbookPanel'
 
+const NEWLINES_RE = /\n+/g
+
 interface CompanionPanelProps {
   activeSegment: Segment | null
   lessonId: string
@@ -39,7 +41,7 @@ export function CompanionPanel({
   }, [chips.length, onTabChange])
 
   function handleSend({ text, files }: { text: string, files?: import('ai').FileUIPart[] }) {
-    const context = chips.map(c => `> ${c.text}`).join('\n')
+    const context = chips.map(c => `> ${c.text.replace(NEWLINES_RE, ' ')}`).join('\n')
     const composed = chips.length > 0 ? `Context:\n${context}\n\n${text}` : text
     captureCompanionMessageSent({ with_context: chips.length > 0, file_count: files?.length ?? 0 })
     sendMessageRaw({ text: composed, files })
