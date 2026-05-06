@@ -98,121 +98,123 @@ export function WorkbookPage() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-6 py-9 pb-20">
-        <Tabs defaultValue="workbook" className="w-full relative z-10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-7 gap-4">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground to-foreground/70">
-                {t('workbook.title')}
-              </h1>
-              <p className="text-sm font-medium text-muted-foreground mt-2">
-                {t('workbook.subtitle')}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-4 w-full sm:w-auto">
-              <TabsList className="grid w-full sm:w-64 grid-cols-2">
-                <TabsTrigger value="workbook">{t('workbook.tab')}</TabsTrigger>
-                <TabsTrigger value="progress">{t('workbook.progressTab')}</TabsTrigger>
-              </TabsList>
-            </div>
-          </div>
-
-          <TabsContent value="workbook" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-            <div className="flex items-center justify-between mb-6">
-              <div className="text-sm text-muted-foreground font-medium">
-                {entries.length}
-                {' '}
-                {t('workbook.wordCount')}
-                {' · '}
-                {sortedLessonIds.length}
-                {' '}
-                {t('workbook.lessonCount')}
-                {lastSaved && ` · ${t('workbook.lastSaved')} ${new Date(lastSaved).toLocaleDateString()}`}
+      <div className="h-full overflow-y-auto">
+        <div className="container mx-auto px-6 py-9 pb-10">
+          <Tabs defaultValue="workbook" className="w-full relative z-10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-7 gap-4">
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground to-foreground/70">
+                  {t('workbook.title')}
+                </h1>
+                <p className="text-sm font-medium text-muted-foreground mt-2">
+                  {t('workbook.subtitle')}
+                </p>
               </div>
-              <Input
-                className="w-48 bg-background backdrop-blur-sm"
-                placeholder={t('workbook.searchPlaceholder')}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
 
-            {/* Review Banner */}
-            <div className="mb-6">
-              <ReviewQueueBanner count={dueItems.length} onStartReview={() => setReviewOpen(true)} />
-            </div>
-
-            {/* Empty state */}
-            {sortedLessonIds.length === 0 && (
-              <div className="text-center py-20 text-muted-foreground text-sm">
-                {t('workbook.noWords')}
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <TabsList className="grid w-full sm:w-64 grid-cols-2">
+                  <TabsTrigger value="workbook">{t('workbook.tab')}</TabsTrigger>
+                  <TabsTrigger value="progress">{t('workbook.progressTab')}</TabsTrigger>
+                </TabsList>
               </div>
-            )}
-
-            {/* No search results state */}
-            {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
-              <div className="text-center py-20 text-muted-foreground text-sm">
-                {t('workbook.noSearchResults')}
-                {' "'}
-                {search}
-                ".
-                {' '}
-              </div>
-            )}
-
-            {/* Groups */}
-            <div className="flex flex-col gap-7">
-              {sortedLessonIds
-                .filter(id => filteredByLesson[id])
-                .map(id => (
-                  <LessonGroup
-                    key={id}
-                    lessonId={id}
-                    lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
-                    entries={filteredByLesson[id]}
-                    onDeleteGroup={removeGroup}
-                  />
-                ))}
             </div>
-          </TabsContent>
 
-          <TabsContent value="progress" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-            {loadingProgress
-              ? (
-                  <div className="h-64 flex flex-col items-center justify-center text-muted-foreground animate-pulse space-y-4">
-                    <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                    <span className="text-sm font-medium tracking-widest uppercase">{t('workbook.loadingMetrics')}</span>
-                  </div>
-                )
-              : (
-                  <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-min gap-4 md:gap-6 pt-4">
-                    {/* Overall Stats - taking up 12 cols */}
-                    <div className="md:col-span-12">
-                      <OverallStatsPanel stats={stats} />
-                    </div>
+            <TabsContent value="workbook" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+              <div className="flex items-center justify-between mb-6">
+                <div className="text-sm text-muted-foreground font-medium">
+                  {entries.length}
+                  {' '}
+                  {t('workbook.wordCount')}
+                  {' · '}
+                  {sortedLessonIds.length}
+                  {' '}
+                  {t('workbook.lessonCount')}
+                  {lastSaved && ` · ${t('workbook.lastSaved')} ${new Date(lastSaved).toLocaleDateString()}`}
+                </div>
+                <Input
+                  className="w-48 bg-background backdrop-blur-sm"
+                  placeholder={t('workbook.searchPlaceholder')}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
 
-                    {/* Accuracy Chart - taking up 8 cols */}
-                    <div className="md:col-span-8 flex flex-col">
-                      <AccuracyTrendChart trend={stats?.accuracyTrend} />
-                    </div>
+              {/* Review Banner */}
+              <div className="mb-6">
+                <ReviewQueueBanner count={dueItems.length} onStartReview={() => setReviewOpen(true)} />
+              </div>
 
-                    {/* Mistakes Panel - taking up 4 cols */}
-                    <div className="md:col-span-4 flex flex-col">
-                      <MistakesPanel mistakes={mistakes} entries={entries} />
-                    </div>
+              {/* Empty state */}
+              {sortedLessonIds.length === 0 && (
+                <div className="text-center py-20 text-muted-foreground text-sm">
+                  {t('workbook.noWords')}
+                </div>
+              )}
 
-                    {/* Skill Mastery Grid - taking up full width */}
-                    <div className="md:col-span-12 mt-2">
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1">
-                        {t('workbook.skillBreakdown')}
-                      </h3>
-                      <SkillMasteryGrid stats={stats} />
+              {/* No search results state */}
+              {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
+                <div className="text-center py-20 text-muted-foreground text-sm">
+                  {t('workbook.noSearchResults')}
+                  {' "'}
+                  {search}
+                  ".
+                  {' '}
+                </div>
+              )}
+
+              {/* Groups */}
+              <div className="flex flex-col gap-7">
+                {sortedLessonIds
+                  .filter(id => filteredByLesson[id])
+                  .map(id => (
+                    <LessonGroup
+                      key={id}
+                      lessonId={id}
+                      lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
+                      entries={filteredByLesson[id]}
+                      onDeleteGroup={removeGroup}
+                    />
+                  ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="progress" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+              {loadingProgress
+                ? (
+                    <div className="h-64 flex flex-col items-center justify-center text-muted-foreground animate-pulse space-y-4">
+                      <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                      <span className="text-sm font-medium tracking-widest uppercase">{t('workbook.loadingMetrics')}</span>
                     </div>
-                  </div>
-                )}
-          </TabsContent>
-        </Tabs>
+                  )
+                : (
+                    <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-min gap-4 md:gap-6 pt-4">
+                      {/* Overall Stats - taking up 12 cols */}
+                      <div className="md:col-span-12">
+                        <OverallStatsPanel stats={stats} />
+                      </div>
+
+                      {/* Accuracy Chart - taking up 8 cols */}
+                      <div className="md:col-span-8 flex flex-col">
+                        <AccuracyTrendChart trend={stats?.accuracyTrend} />
+                      </div>
+
+                      {/* Mistakes Panel - taking up 4 cols */}
+                      <div className="md:col-span-4 flex flex-col">
+                        <MistakesPanel mistakes={mistakes} entries={entries} />
+                      </div>
+
+                      {/* Skill Mastery Grid - taking up full width */}
+                      <div className="md:col-span-12 mt-2">
+                        <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1">
+                          {t('workbook.skillBreakdown')}
+                        </h3>
+                        <SkillMasteryGrid stats={stats} />
+                      </div>
+                    </div>
+                  )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
 
       <Dialog
