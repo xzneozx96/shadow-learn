@@ -157,7 +157,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
         {/* Progress bar — top edge, always visible as a track */}
         {!isProcessing && !isError && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/60 rounded-t-xl overflow-hidden">
-            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
+            <div className="h-full bg-red-500 transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         )}
       </div>
