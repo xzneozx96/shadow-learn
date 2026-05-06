@@ -40,7 +40,7 @@ export function Layout({ children }: LayoutProps) {
             </div>
 
             {/* Navigation — flat text links, no pill wrapper */}
-            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 shadow-xs backdrop-blur-md">
+            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-card p-1 shadow-xs backdrop-blur-md">
               <Button
                 variant={location.pathname === '/' ? 'secondary' : 'ghost'}
                 className={cn('rounded-full h-9', location.pathname === '/' ? 'bg-primary! shadow-md text-primary-foreground' : 'text-foreground/70 hover:text-foreground hover:bg-background/50')}
@@ -83,7 +83,7 @@ export function Layout({ children }: LayoutProps) {
               <Button
                 variant="outline"
                 onClick={openPanel}
-                className="gap-2 h-9 border-white/8 bg-white/4 hover:bg-white/8 text-violet-400/80 hover:text-violet-400 transition-colors"
+                className="gap-2 h-9 border-white/8 bg-white/4 hover:bg-white/8 text-amber-400/80 hover:text-amber-400 transition-colors"
               >
                 <Sparkles className="size-3.5" />
                 <span className="hidden xl:inline text-sm">{t('companion.askButton')}</span>

@@ -104,7 +104,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                     onClick={() =>
                       navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
                     onKeyDown={e => e.key === 'Enter' && navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
-                    className="group/card relative flex cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left transition-colors duration-200 hover:border-primary/30 hover:bg-[hsl(240_5%_9%)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="group/card relative flex cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left transition-colors duration-200 hover:border-primary/30"
                   >
                     {/* Actions — top right */}
                     <div className="absolute top-2 right-2 flex items-center gap-0.5">

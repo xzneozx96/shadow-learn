@@ -8,40 +8,47 @@
 
 @layer base {
   :root {
-    /* Zinc-based neutrals — no blue tint */
-    --background: 240 6% 4%;
-    --foreground: 0 0% 90%;
-    --card: 240 6% 7%;
-    --card-foreground: 0 0% 90%;
-    --popover: 240 6% 7%;
-    --popover-foreground: 0 0% 90%;
-    /* Amber primary — warm, distinctive, non-AI */
-    --primary: 38 90% 52%;
-    --primary-foreground: 30 15% 8%;
-    --secondary: 240 4% 11%;
-    --secondary-foreground: 0 0% 70%;
-    --muted: 240 4% 10%;
-    --muted-foreground: 240 4% 46%;
-    --accent: 240 4% 12%;
-    --accent-foreground: 0 0% 90%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 15%;
-    --input: 240 4% 10%;
-    --ring: 38 90% 52%;
+    /* Deep Navy / Slate neutrals matching new design */
+    --background: 233 29% 6%;
+    --foreground: 210 40% 98%;
+    --card: 235 27% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 235 27% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary - bolder periwinkle blue for better contrast */
+    --primary: 235 88% 73%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 32% 12%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 32% 12%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217 32% 12%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 224 21% 65% / 0.1;
+    --input: 217 32% 12%;
+    --ring: 217 91% 60%;
+
     --radius: 0.75rem;
-    /* Sidebar */
-    --sidebar-background: 240 6% 3%;
-    --sidebar-foreground: 0 0% 65%;
-    --sidebar-primary: 38 90% 52%;
-    --sidebar-primary-foreground: 30 15% 8%;
-    --sidebar-accent: 240 4% 9%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 240 4% 13%;
-    --sidebar-ring: 38 90% 52%;
-    /* Tags — warm amber tint */
-    --tag-bg: 38 25% 10%;
-    --tag-foreground: 38 65% 58%;
+
+    /* Sidebar matching deep navy */
+    --sidebar-background: 222 47% 4%;
+    --sidebar-foreground: 215 20.2% 65.1%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 32% 12%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 32% 17%;
+    --sidebar-ring: 217 91% 60%;
+
+    /* Tags - soft slate */
+    --tag-bg: 217 32% 17%;
+    --tag-foreground: 210 40% 98%;
+
     --success: 142 76% 46%;
     --success-foreground: 0 0% 98%;
   }
@@ -136,7 +143,7 @@
 
   .elegant-card:hover {
     border-color: hsl(var(--border));
-    background: hsl(240 4% 9%);
+    background: hsl(222 47% 9%);
   }
 
   .elegant-input {
@@ -180,9 +187,9 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(900px 600px at 80% -5%, rgba(245, 158, 11, 0.05), transparent 60%),
-      radial-gradient(700px 500px at -5% 100%, rgba(245, 158, 11, 0.03), transparent 60%),
-      hsl(240 6% 4%);
+      radial-gradient(900px 600px at 80% -5%, rgba(148, 163, 184, 0.05), transparent 60%),
+      radial-gradient(700px 500px at -5% 100%, rgba(148, 163, 184, 0.03), transparent 60%),
+      hsl(222 47% 4%);
   }
 }
 

@@ -52,7 +52,7 @@ export function ShadowingModePicker({
           className={cn(
             'rounded-lg border p-3 text-left transition-colors',
             selectedMode === 'dictation'
-              ? 'border-foreground/25 bg-foreground/8'
+              ? 'border-primary bg-primary/8'
               : 'border-border hover:bg-accent',
           )}
           onClick={() => setSelectedMode('dictation')}
@@ -71,7 +71,7 @@ export function ShadowingModePicker({
             'rounded-lg border p-3 text-left transition-colors',
             !speakingAvailable && 'cursor-not-allowed opacity-40',
             selectedMode === 'speaking' && speakingAvailable
-              ? 'border-foreground/25 bg-foreground/8'
+              ? 'border-primary bg-primary/8'
               : 'border-border',
             speakingAvailable && 'hover:bg-accent',
           )}
@@ -97,7 +97,7 @@ export function ShadowingModePicker({
           {COUNT_OPTIONS.map(n => (
             <Button
               key={n}
-              variant={count === n ? 'secondary' : 'outline'}
+              variant={count === n ? 'default' : 'outline'}
               size="sm"
               className="min-w-12 h-8"
               disabled={totalRemaining < n}
@@ -121,9 +121,9 @@ export function ShadowingModePicker({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
-        <Button onClick={() => onStart(selectedMode, count)}>{t('shadowing.startArrow')}</Button>
+      <div className="flex justify-end gap-2 mt-6">
+        <Button size="lg" variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
+        <Button size="lg" onClick={() => onStart(selectedMode, count)}>{t('shadowing.startArrow')}</Button>
       </div>
     </>
   )

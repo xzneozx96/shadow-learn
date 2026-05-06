@@ -136,17 +136,11 @@ function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
               </div>
             )}
 
-        {/* Image dim layer */}
-        <div className="absolute inset-0 bg-card/30" />
-
         {/* Left fade — solid card → transparent for text readability */}
         <div className="absolute inset-0 bg-linear-to-r from-card from-5% via-card/85 via-20% to-card/10" />
 
         {/* Bottom fade — for CTA grounding */}
         <div className="absolute inset-x-0 bottom-0 h-3/4 bg-linear-to-t from-card via-card/60 to-transparent" />
-
-        {/* Ambient amber glow */}
-        <div className="pointer-events-none absolute -top-16 -right-16 size-64 rounded-full bg-primary/15 blur-3xl" />
 
         {/* Content overlay — bottom-left composition */}
         <div className="relative flex h-full flex-col justify-between p-6 lg:p-7">
@@ -199,7 +193,7 @@ function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
             </div>
 
             {/* CTA */}
-            <div className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_4px_16px_rgba(245,158,11,0.35)] transition-transform duration-200 group-hover:translate-x-0.5">
+            <div className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_4px_16px_hsl(var(--primary)/0.4)] transition-transform duration-200 group-hover:translate-x-0.5">
               {t('library.hero.continueWhereStopped')}
               <ArrowUpRight className="size-3.5" />
             </div>
@@ -336,7 +330,7 @@ function ActivityHeatmap({ activityDates }: { activityDates: Set<string> }) {
               className={cn(
                 'aspect-square rounded-[4px] flex items-center justify-center text-sm font-semibold tabular-nums transition-colors',
                 d.isFuture && 'bg-white/3 text-muted-foreground',
-                d.isActive && 'bg-primary text-primary-foreground shadow-[0_0_4px_rgba(245,158,11,0.45)]',
+                d.isActive && 'bg-primary text-primary-foreground shadow-[0_0_4px_hsl(var(--primary)/0.5)]',
                 !d.isActive && !d.isFuture && !d.isToday && 'bg-white/5 text-muted-foreground',
                 !d.isActive && d.isToday && 'border border-primary/50 bg-primary/10 text-primary',
               )}
@@ -525,7 +519,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
                     className={cn(
                       'h-full transition-all duration-700 ease-out',
                       shades[i] ?? 'bg-primary/15',
-                      i === 0 && 'shadow-[0_0_8px_rgba(245,158,11,0.45)]',
+                      i === 0 && 'shadow-[0_0_8px_hsl(var(--primary)/0.5)]',
                     )}
                     style={{ width: `${(s.count / total) * 100}%` }}
                     title={`${s.title}: ${s.count}`}
@@ -534,7 +528,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
               </div>
               {top && (
                 <div className="mt-3 flex min-w-0 items-center gap-2">
-                  <span className="size-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_4px_rgba(245,158,11,0.65)]" />
+                  <span className="size-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_4px_hsl(var(--primary)/0.7)]" />
                   <p className="min-w-0 truncate text-sm text-foreground">
                     <span className="font-semibold text-foreground">{top.title}</span>
                     <span className="text-muted-foreground text-sm">
