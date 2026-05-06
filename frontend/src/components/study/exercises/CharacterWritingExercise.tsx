@@ -28,8 +28,6 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
   const anyHintUsedRef = useRef(false)
   const writerRef = useRef<HanziWriter | null>(null)
 
-  type WritingStage = 'guided' | 'blank'
-  const [stage, setStage] = useState<WritingStage>('guided')
   const [blankRep, setBlankRep] = useState(0)
 
   const currentChar = characters[charIndex]
@@ -57,11 +55,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
       anyHintUsedRef.current = true
     setHintAnimating(false)
 
-    if (stage === 'guided') {
-      setStage('blank')
-      setBlankRep(0)
-    }
-    else if (blankRep < writingReps - 1) {
+    if (blankRep < writingReps - 1) {
       setBlankRep(blankRep + 1)
     }
     else {
@@ -81,7 +75,6 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
       }
       return next
     })
-    setStage('guided')
     setBlankRep(0)
   }
 
@@ -94,7 +87,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
       <Button variant="ghost" size="lg" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
-      {stage === 'blank' && showRadicals && (
+      {showRadicals && (
         <HintButton
           level={radicalHint.level}
           totalLevels={1}
@@ -125,19 +118,16 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
         {entry.romanization && <p className="text-sm text-muted-foreground/60 mt-1">{entry.romanization}</p>}
       </div>
 
-      {/* Character progress and stage label */}
+      {/* Character progress */}
       <div className="text-center mb-3 space-y-0.5">
-        <p className="text-sm text-muted-foreground">
-          {stage === 'guided' ? t('study.writing.stageGuided') : t('study.writing.stageBlank')}
-        </p>
         <p className="text-xs text-muted-foreground/60">
           {characters.length > 1 && charProgress}
-          {stage === 'blank' && writingReps > 1 && ` · ${blankRep + 1} / ${writingReps}`}
+          {writingReps > 1 && ` · ${blankRep + 1} / ${writingReps}`}
         </p>
       </div>
 
       {/* Radical hint */}
-      {stage === 'blank' && showRadicals && radicalHint.level > 0 && (
+      {showRadicals && radicalHint.level > 0 && (
         <div className="flex justify-center gap-2 mb-3">
           {radicals.map(r => (
             <span
@@ -153,11 +143,11 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
       {/* Canvas */}
       <div className="flex justify-center mb-2">
         <HanziWriterCanvas
-          key={`${entry.id}-${charIndex}-${stage}-${blankRep}`}
+          key={`${entry.id}-${charIndex}-${blankRep}`}
           character={currentChar}
           writerRef={writerRef}
           onComplete={handleComplete}
-          showOutline={stage === 'guided'}
+          showOutline={false}
         />
       </div>
     </ExerciseCard>
