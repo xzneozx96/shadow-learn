@@ -455,8 +455,8 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
         raise HTTPException(status_code=400, detail="messages must not be empty")
 
     client = AsyncOpenAI(
-        api_key=settings.fpt_ai_api_key,
-        base_url=settings.fpt_ai_base_url,
+        api_key=request.openrouter_api_key or settings.openrouter_api_key,
+        base_url=settings.openrouter_base_url,
     )
 
     has_images = _messages_contain_image(request.messages)

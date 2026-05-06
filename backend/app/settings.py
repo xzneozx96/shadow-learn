@@ -12,11 +12,10 @@ class Settings(BaseSettings):
     translation_batch_size: int = 30
     translation_max_retries: int = 2
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    fpt_ai_base_url: str = "https://mkp-api.fptcloud.com/v1"
     openrouter_chat_url: str = "https://openrouter.ai/api/v1/chat/completions"
     openrouter_structured_model: str = "qwen/qwen3.5-flash-02-23" # "openai/gpt-4o-mini"
-    openrouter_agent_model: str = "Nemotron-3-Super-120B-A12B"
-    openrouter_vision_model: str = ""  # env: SHADOWLEARN_OPENROUTER_VISION_MODEL
+    openrouter_agent_model: str = "qwen/qwen3.6-35b-a3b"
+    openrouter_vision_model: str = "qwen/qwen3.6-35b-a3b"  # env: SHADOWLEARN_OPENROUTER_VISION_MODEL
     # When set, requests that contain image attachments are routed to this model instead of
     # openrouter_agent_model. Must support vision inputs (e.g. "google/gemini-2.0-flash-001").
     # Leave empty to use openrouter_agent_model for all requests (vision may fail silently).
@@ -37,7 +36,6 @@ class Settings(BaseSettings):
 
     # Fallback API keys for free trial — all optional; unset means trial unavailable
     openrouter_api_key: str | None = None       # env: SHADOWLEARN_OPENROUTER_API_KEY
-    fpt_ai_api_key: str | None = None         # env: SHADOWLEARN_FPT_AI_API_KEY
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
     gladia_api_keys: list[str] = []            # env: SHADOWLEARN_GLADIA_API_KEYS='["key1","key2"]' — tried in order, rotated on 402/403

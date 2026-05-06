@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { useHint } from '@/hooks/useHint'
 import { getDecomposition } from '@/lib/hanzi/lookup'
-import { animateCharacter } from '../../../lib/hanzi-writer-utils'
 import { HanziWriterCanvas } from './HanziWriterCanvas'
 
 interface Props {
@@ -23,12 +22,12 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
   const { t } = useI18n()
   const characters = [...entry.word]
   const [charIndex, setCharIndex] = useState(0)
-  const [hintAnimating, setHintAnimating] = useState(false)
   // Use a ref (not state) for anyHintUsed to avoid stale closures in advance().
   const anyHintUsedRef = useRef(false)
   const writerRef = useRef<HanziWriter | null>(null)
 
   const [blankRep, setBlankRep] = useState(0)
+  const [hintShown, setHintShown] = useState(false)
 
   const currentChar = characters[charIndex]
   const charProgress = `${charIndex + 1} / ${characters.length}`
@@ -53,7 +52,6 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
   function handleComplete(usedHint: boolean) {
     if (usedHint)
       anyHintUsedRef.current = true
-    setHintAnimating(false)
 
     if (blankRep < writingReps - 1) {
       setBlankRep(blankRep + 1)
@@ -76,12 +74,7 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
       return next
     })
     setBlankRep(0)
-  }
-
-  function handleHint() {
-    anyHintUsedRef.current = true
-    setHintAnimating(true)
-    animateCharacter(writerRef, () => setHintAnimating(false))
+    setHintShown(false)
   }
 
   const footer = (
@@ -95,13 +88,6 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
           onHint={radicalHint.revealNext}
         />
       )}
-      {hintAnimating
-        ? (
-            <Button size="lg" onClick={() => handleComplete(true)}>{t('study.writing.continueButton')}</Button>
-          )
-        : (
-            <Button variant="outline" size="lg" onClick={handleHint}>{t('study.writing.hint')}</Button>
-          )}
     </div>
   )
 
@@ -143,11 +129,11 @@ export function CharacterWritingExercise({ entry, progress = '', onNext, writing
       {/* Canvas */}
       <div className="flex justify-center mb-2">
         <HanziWriterCanvas
-          key={`${entry.id}-${charIndex}-${blankRep}`}
+          key={`${entry.id}-${charIndex}-${blankRep}-${hintShown}`}
           character={currentChar}
           writerRef={writerRef}
           onComplete={handleComplete}
-          showOutline={false}
+          showOutline={hintShown}
         />
       </div>
     </ExerciseCard>
