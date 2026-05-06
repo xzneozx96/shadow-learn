@@ -230,10 +230,10 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
         </div>
 
         <div className="shrink-0 p-6 pt-4 flex gap-3 border-t border-border">
-          <Button size="xl" variant="outline" className="flex-1" onClick={onBack}>
+          <Button size="lg" variant="outline" className="flex-1" onClick={onBack}>
             {tr('speak.backHome')}
           </Button>
-          <Button className="flex-1" size="xl" onClick={onRepeat}>
+          <Button className="flex-1" size="lg" onClick={onRepeat}>
             {tr('speak.repeatSession')}
           </Button>
         </div>

@@ -62,6 +62,12 @@ def build_system_prompt(
             "Never write Traditional Chinese characters (繁體字).",
             "Speech recognition: The learner is speaking Mandarin Chinese (普通话). "
             "Transcribe their speech as Mandarin Chinese, not Thai, Cantonese, or any other language.",
+            "Output format: Speak and write Simplified Chinese characters ONLY. "
+            "Never include pinyin, romanization, phonetic spellings, tone marks, "
+            "or pronunciation guides in any form — not in parentheses, not after the characters, "
+            "not on a new line. Example of FORBIDDEN output: '你好 (Nǐ hǎo)'. "
+            "Correct output: '你好'. The learner has separate UI for pinyin; "
+            "including it in your reply causes duplicate audio playback.",
             "",
         ]
 

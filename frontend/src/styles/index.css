@@ -143,7 +143,7 @@
 
   .elegant-card:hover {
     border-color: hsl(var(--border));
-    background: hsl(222 47% 9%);
+    background: hsl(var(--primary) / 0.05);
   }
 
   .elegant-input {

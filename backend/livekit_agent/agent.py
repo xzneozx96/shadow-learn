@@ -39,7 +39,11 @@ _orig_build_connect_config = google.realtime.realtime_api.RealtimeSession._build
 
 def _patched_build_connect_config(self):
     conf = _orig_build_connect_config(self)
-    if self._session_resumption_handle is None:
+    handle = self._session_resumption_handle
+    logging.getLogger("shadowlearn-agent").info(
+        f"[CONNECT] _build_connect_config handle={handle!r} model={self._opts.model!r} voice={self._opts.voice!r}"
+    )
+    if handle is None:
         conf.session_resumption = None
     return conf
 
@@ -193,11 +197,20 @@ async def shadowlearn_session(ctx: agents.JobContext):
         # the SDK stops suppressing STT results (capabilities.user_transcription=False).
         # Deepgram then delivers user transcript in ~300ms instead of 4-5s.
         # Without Deepgram: omit the param so Google uses its default (delayed but functional).
+        # context_window_compression: required for long sessions on
+        # gemini-2.5-flash-native-audio-*. Without it, the server closes the
+        # WebSocket with 1008 "Operation is not implemented, or supported, or
+        # enabled." once the model's context fills (~10 min of audio). Sliding
+        # window compression lets the session run indefinitely.
+        # See: https://ai.google.dev/gemini-api/docs/live-guide#context-window-compression
         google_realtime_kwargs = dict(
             api_key=google_key,
             voice=voice_id,
-            proactivity=True,
+            # proactivity=True,
             enable_affective_dialog=True,
+            # context_window_compression=genai_types.ContextWindowCompressionConfig(
+            #     sliding_window=genai_types.SlidingWindow(),
+            # ),
         )
         if deepgram_key:
             google_realtime_kwargs["input_audio_transcription"] = None
@@ -213,8 +226,16 @@ async def shadowlearn_session(ctx: agents.JobContext):
 
     _DEEPGRAM_LANG = {"zh-CN": "zh-CN", "en": "en-US", "ja": "ja"}
     deepgram_lang = _DEEPGRAM_LANG.get(target_language, "en-US")
+    # endpointing_ms default is 25 — too aggressive for learners. Brief mid-sentence
+    # pauses get treated as utterance end, splitting one turn into many transcripts.
+    # 800ms gives learners room to think between words without fragmenting the turn.
     stt_model = (
-        deepgram.STT(api_key=deepgram_key, model="nova-3", language=deepgram_lang)
+        deepgram.STT(
+            api_key=deepgram_key,
+            model="nova-3",
+            language=deepgram_lang,
+            endpointing_ms=2000,
+        )
         if deepgram_key else None
     )
 
