@@ -53,8 +53,7 @@ describe('characterWritingExercise', () => {
 
   it('advances to second character after first completes without hint', () => {
     render(<CharacterWritingExercise entry={entry} onNext={vi.fn()} caps={caps} writingReps={1} />)
-    // guided stage → blank stage (click 1), then blank stage → advance to char 2 (click 2)
-    fireEvent.click(screen.getByText('complete-no-hint'))
+    // 1 click per char (blank only, no guided stage)
     fireEvent.click(screen.getByText('complete-no-hint'))
     expect(screen.getByText('2 / 2')).toBeTruthy()
   })
@@ -62,9 +61,7 @@ describe('characterWritingExercise', () => {
   it('calls onNext(100) when all chars complete without hint', () => {
     const onNext = vi.fn()
     render(<CharacterWritingExercise entry={entry} onNext={onNext} caps={caps} writingReps={1} />)
-    // 2 clicks per character (guided + blank), 2 characters = 4 clicks total
-    fireEvent.click(screen.getByText('complete-no-hint'))
-    fireEvent.click(screen.getByText('complete-no-hint'))
+    // 1 click per char, 2 chars = 2 clicks
     fireEvent.click(screen.getByText('complete-no-hint'))
     fireEvent.click(screen.getByText('complete-no-hint'))
     vi.runAllTimers()
@@ -74,10 +71,7 @@ describe('characterWritingExercise', () => {
   it('calls onNext(80) when any char used a hint', () => {
     const onNext = vi.fn()
     render(<CharacterWritingExercise entry={entry} onNext={onNext} caps={caps} writingReps={1} />)
-    // hint on guided stage of first char, then complete remaining stages
     fireEvent.click(screen.getByText('complete-with-hint'))
-    fireEvent.click(screen.getByText('complete-no-hint'))
-    fireEvent.click(screen.getByText('complete-no-hint'))
     fireEvent.click(screen.getByText('complete-no-hint'))
     vi.runAllTimers()
     expect(onNext).toHaveBeenCalledWith(80)
