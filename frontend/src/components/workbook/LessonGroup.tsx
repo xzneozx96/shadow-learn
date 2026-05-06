@@ -41,7 +41,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: L
   return (
     <div className={cn(
       'rounded-md border border-border',
-      'bg-card/50 backdrop-blur-xl overflow-hidden',
+      'bg-card backdrop-blur-xl overflow-hidden',
       'relative',
     )}
     >
