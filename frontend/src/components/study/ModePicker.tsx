@@ -40,7 +40,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
   ]
 
   return (
-    <div>
+    <div className="container mx-auto">
       <h2 className="text-xl font-bold tracking-tight">{t('study.startSession')}</h2>
       <p className="text-sm text-muted-foreground mt-1 mb-8">{lessonTitle}</p>
 

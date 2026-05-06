@@ -74,8 +74,8 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: L
             </Button>
           )}
           <Button
+            size="lg"
             onClick={() => navigate(`/vocabulary/${lessonId}/study`)}
-            className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-full px-6 shadow-sm"
           >
             {t('lessonGroup.study')}
           </Button>
