@@ -320,7 +320,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
         </div>
       )}
 
-      <div className="mx-auto px-6 py-20">
+      <div className="mx-auto p-6">
         {/* Picker */}
         {phase === 'picker' && (
           <ModePicker
