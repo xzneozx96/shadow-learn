@@ -13,6 +13,7 @@ import { useLessons } from '@/contexts/LessonsContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { getAllSessionLogs } from '@/db'
 import { useUploadThumbnail } from '@/hooks/useUploadThumbnail'
+import { computeScrollState } from '@/lib/carousel'
 import { API_BASE, getAppConfig } from '@/lib/config'
 import { cn } from '@/lib/utils'
 import { getYoutubeThumbnail } from '@/lib/youtube'
@@ -551,37 +552,43 @@ export function Library() {
   const { entriesByLesson } = useVocabulary()
   const [search, setSearch] = useState('')
   const [sort] = useState<SortMode>('recent')
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const cleanupRef = useRef<(() => void) | null>(null)
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(false)
 
-  const updateScrollState = useCallback(() => {
-    const el = scrollRef.current
+  const updateScrollState = useCallback((el: HTMLDivElement) => {
+    const { canScrollPrev, canScrollNext } = computeScrollState(
+      el.scrollLeft,
+      el.clientWidth,
+      el.scrollWidth,
+    )
+    setCanScrollPrev(canScrollPrev)
+    setCanScrollNext(canScrollNext)
+  }, [])
+
+  const setScrollRef = useCallback((el: HTMLDivElement | null) => {
+    cleanupRef.current?.()
+    cleanupRef.current = null
+    scrollRef.current = el
     if (!el)
       return
-    setCanScrollPrev(el.scrollLeft > 0)
-    setCanScrollNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
-  }, [])
+    const onScroll = () => updateScrollState(el)
+    const ro = new ResizeObserver(() => updateScrollState(el))
+    el.addEventListener('scroll', onScroll, { passive: true })
+    ro.observe(el)
+    cleanupRef.current = () => {
+      el.removeEventListener('scroll', onScroll)
+      ro.disconnect()
+    }
+    updateScrollState(el)
+  }, [updateScrollState])
 
   function scrollCarousel(dir: 'prev' | 'next') {
     if (!scrollRef.current)
       return
     scrollRef.current.scrollBy({ left: dir === 'next' ? 600 : -600, behavior: 'smooth' })
   }
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el)
-      return
-    updateScrollState()
-    el.addEventListener('scroll', updateScrollState, { passive: true })
-    const ro = new ResizeObserver(updateScrollState)
-    ro.observe(el)
-    return () => {
-      el.removeEventListener('scroll', updateScrollState)
-      ro.disconnect()
-    }
-  }, [updateScrollState])
 
   const [sttProvider, setSttProvider] = useState<string | null>(null)
 
@@ -639,7 +646,10 @@ export function Library() {
     })
   }, [lessons, search, sort])
 
-  useEffect(() => { updateScrollState() }, [filtered, updateScrollState])
+  useEffect(() => {
+    if (scrollRef.current)
+      updateScrollState(scrollRef.current)
+  }, [filtered, updateScrollState])
 
   const handleDelete = useCallback(async (id: string) => {
     await deleteLesson(id)
@@ -759,7 +769,7 @@ export function Library() {
               </div>
 
               <div
-                ref={scrollRef}
+                ref={setScrollRef}
                 className="flex gap-5 overflow-x-auto pb-2 -mb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 onWheel={(e) => {
                   if (e.deltaY === 0)
