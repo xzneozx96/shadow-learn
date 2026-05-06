@@ -770,7 +770,7 @@ export function Library() {
 
               <div
                 ref={setScrollRef}
-                className="flex gap-5 overflow-x-auto pb-2 -mb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex items-stretch gap-5 overflow-x-auto py-3 -my-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 onWheel={(e) => {
                   if (e.deltaY === 0)
                     return
@@ -779,7 +779,7 @@ export function Library() {
                 }}
               >
                 {/* Add new lesson card */}
-                <div className="group relative flex shrink-0 flex-col rounded-xl p-2 -m-2" style={{ width: '340px' }}>
+                <div className="group relative flex shrink-0 self-start flex-col rounded-xl p-2 -m-2" style={{ width: '340px' }}>
                   <Link
                     to="/create"
                     className="absolute inset-0 z-10"
@@ -800,14 +800,13 @@ export function Library() {
                 </div>
 
                 {filtered.map(lesson => (
-                  <div key={lesson.id} className="shrink-0" style={{ width: '340px' }}>
-                    <LessonCard
-                      lesson={lesson}
-                      onDelete={handleDelete}
-                      onRename={handleRename}
-                      onRetry={handleRetry}
-                    />
-                  </div>
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    onDelete={handleDelete}
+                    onRename={handleRename}
+                    onRetry={handleRetry}
+                  />
                 ))}
               </div>
               {filtered.length === 0 && search.trim() && (

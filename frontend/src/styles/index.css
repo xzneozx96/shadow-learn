@@ -20,33 +20,33 @@
     --primary: 235 88% 73%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 32% 12%;
+    --secondary: 230 30% 12%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 32% 12%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217 32% 12%;
+    --muted: 230 30% 11%;
+    --muted-foreground: 230 15% 65%;
+    --accent: 230 30% 12%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 72% 52%;
     --destructive-foreground: 210 40% 98%;
     --border: 224 21% 65% / 0.1;
-    --input: 217 32% 12%;
-    --ring: 217 91% 60%;
+    --input: 230 30% 12%;
+    --ring: 235 88% 73%;
 
     --radius: 0.75rem;
 
     /* Sidebar matching deep navy */
-    --sidebar-background: 222 47% 4%;
-    --sidebar-foreground: 215 20.2% 65.1%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-background: 230 45% 4%;
+    --sidebar-foreground: 230 15% 65%;
+    --sidebar-primary: 235 88% 73%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 32% 12%;
+    --sidebar-accent: 230 30% 12%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 32% 17%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-border: 230 30% 12%;
+    --sidebar-ring: 235 88% 73%;
 
     /* Tags - soft slate */
-    --tag-bg: 217 32% 17%;
+    --tag-bg: 230 30% 15%;
     --tag-foreground: 210 40% 98%;
 
     --success: 142 76% 46%;
@@ -189,7 +189,7 @@
     background:
       radial-gradient(900px 600px at 80% -5%, rgba(148, 163, 184, 0.05), transparent 60%),
       radial-gradient(700px 500px at -5% 100%, rgba(148, 163, 184, 0.03), transparent 60%),
-      hsl(222 47% 4%);
+      hsl(230 40% 6%);
   }
 }
 

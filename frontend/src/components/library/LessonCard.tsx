@@ -110,7 +110,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
       data-testid={`lesson-card-${lesson.id}`}
       data-status={status}
       className={cn(
-        'group relative flex flex-col rounded-xl p-2 -m-2',
+        'group relative flex shrink-0 w-[340px] flex-col rounded-xl p-2 -m-2',
         isError && 'ring-1 ring-destructive/30',
       )}
     >
