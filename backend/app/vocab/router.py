@@ -58,7 +58,8 @@ async def generate_breakdown_story(req: BreakdownStoryRequest) -> BreakdownStory
             {"role": "user", "content": user_prompt},
         ],
         "temperature": 0.7,
-        "max_tokens": 400,
+        "max_tokens": 512,
+        "reasoning": {"effort": "none"},
     }
 
     logger.info("[vocab] breakdown-story: word=%s chars=%d", req.word, len(req.characters))
