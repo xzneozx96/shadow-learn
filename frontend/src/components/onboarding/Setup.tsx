@@ -84,6 +84,10 @@ export function Setup() {
       </div>
       <div className="flex items-center justify-center py-6 mt-10">
         <div className="flex w-full max-w-md flex-col gap-3">
+          <div className="mb-2 flex items-center gap-3 px-1">
+            <img src="/favicon.svg" alt="ShadowLearn" className="size-8" />
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">ShadowLearn</h1>
+          </div>
           {freeTrialAvailable && (
             <Card className="mb-5 bg-white/6 text-white/90">
               <CardContent className="flex flex-col gap-3 ">
@@ -93,7 +97,7 @@ export function Setup() {
                     {t('auth.trial.hint')}
                   </p>
                 </div>
-                <Button type="button" variant="default" onClick={startTrial} className="w-full mt-3">
+                <Button size="lg" type="button" variant="default" onClick={startTrial} className="w-full mt-3">
                   {t('auth.trial.button')}
                 </Button>
               </CardContent>
@@ -152,6 +156,9 @@ export function Setup() {
                     value={pin}
                     onChange={e => setPin(e.target.value)}
                   />
+                  <p className="text-sm text-muted-foreground">
+                    {t('auth.setup.pinHint')}
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
@@ -171,7 +178,7 @@ export function Setup() {
                   <p className="text-sm text-red-400">{error}</p>
                 )}
 
-                <Button type="submit" disabled={loading || !formReady} className="mt-1">
+                <Button size="lg" type="submit" disabled={loading || !formReady} className="mt-1">
                   {loading ? t('auth.settingUp') : t('auth.getStarted')}
                 </Button>
               </form>
