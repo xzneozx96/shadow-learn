@@ -217,10 +217,10 @@ async def shadowlearn_session(ctx: agents.JobContext):
             api_key=google_key,
             voice=voice_id,
             # proactivity=True,
-            # enable_affective_dialog disabled: Gemini leaks emotion labels
-            # ("Amusement", "Contempt", "Observation") into spoken output.
-            # No official knob to suppress only the labels — disabling whole feature.
-            enable_affective_dialog=False,
+            # enable_affective_dialog omitted: Gemini leaks emotion labels
+            # ("Amusement", "Contempt", "Observation") into spoken output when on.
+            # Setting False causes 1007 error (field only valid in v1alpha API
+            # which is auto-selected when True), so omit the field entirely.
             context_window_compression=genai_types.ContextWindowCompressionConfig(
                 sliding_window=genai_types.SlidingWindow(),
             ),
