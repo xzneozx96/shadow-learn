@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useAgent, useLocalParticipant } from '@livekit/components-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
 import { AgentControlBar } from '@/components/agents-ui/agent-control-bar'
@@ -172,14 +173,23 @@ export function ConversationScene({ onEnd, intelligencePanel, transcript, overla
                 />
               )}
 
-          <div className="absolute bottom-0 right-0 left-0 flex justify-center py-1">
-            <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] h-4">
-              {(!isConnected || agentState === 'connecting' || agentState === 'initializing') && t('speak.status.connecting')}
-              {isConnected && agentState === 'listening' && t('speak.status.listening')}
-              {isConnected && agentState === 'thinking' && t('speak.status.thinking')}
-              {isConnected && agentState === 'speaking' && t('speak.status.speaking')}
-              {isConnected && agentState === 'idle' && t('speak.status.ready')}
-            </p>
+          <div className="absolute bottom-0 right-0 left-0 flex justify-center py-1 h-4 overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={agentState ?? 'disconnected'}
+                className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {(!isConnected || agentState === 'connecting' || agentState === 'initializing') && t('speak.status.connecting')}
+                {isConnected && agentState === 'listening' && t('speak.status.listening')}
+                {isConnected && agentState === 'thinking' && t('speak.status.thinking')}
+                {isConnected && agentState === 'speaking' && t('speak.status.speaking')}
+                {isConnected && agentState === 'idle' && t('speak.status.ready')}
+              </motion.p>
+            </AnimatePresence>
           </div>
         </div>
 

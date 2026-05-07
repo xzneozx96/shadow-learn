@@ -177,14 +177,20 @@ export function WorkbookPage() {
                     <div className="flex flex-col gap-7">
                       {sortedLessonIds
                         .filter(id => filteredByLesson[id])
-                        .map(id => (
-                          <LessonGroup
+                        .map((id, index) => (
+                          <motion.div
                             key={id}
-                            lessonId={id}
-                            lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
-                            entries={filteredByLesson[id]}
-                            onDeleteGroup={removeGroup}
-                          />
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.22, delay: Math.min(index, 6) * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                          >
+                            <LessonGroup
+                              lessonId={id}
+                              lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
+                              entries={filteredByLesson[id]}
+                              onDeleteGroup={removeGroup}
+                            />
+                          </motion.div>
                         ))}
                     </div>
                   </motion.div>

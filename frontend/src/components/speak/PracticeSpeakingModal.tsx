@@ -7,6 +7,7 @@ import type { Persona } from '@/lib/constants'
 import type { SpeakSituation } from '@/types'
 import { TokenSource } from 'livekit-client'
 import { ChevronLeftIcon, X } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -338,8 +339,8 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     >
       <DialogContent
         className={cn(
-          'p-0 gap-0 overflow-hidden elegant-card transition-all duration-500 ease-in-out flex flex-col',
-          step === 'active' || step === 'recap' ? 'w-full max-w-5xl! rounded-xl h-[90vh]' : 'w-full max-w-5xl! rounded-xl max-h-[90vh]',
+          'p-0 gap-0 overflow-hidden elegant-card flex flex-col',
+          step === 'active' || step === 'recap' ? 'w-full max-w-5xl! rounded-xl h-[90vh]' : 'w-full max-w-5xl! rounded-xl h-[80vh]',
         )}
         showCloseButton={false}
       >
@@ -388,67 +389,83 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         {/* Step content */}
         {hasGoogleKey && (
           <div className={['preview', 'recap', 'active'].includes(step) ? 'flex-1 min-h-0 overflow-hidden flex flex-col' : 'flex-1 overflow-y-auto custom-scrollbar p-4'}>
-            {step === 'language-level' && (
-              <LanguageLevelPicker
-                language={targetLanguage}
-                level={proficiencyLevel}
-                onLanguageChange={setTargetLanguage}
-                onLevelChange={setProficiencyLevel}
-                onContinue={handleLanguageLevelContinue}
-              />
-            )}
+            <AnimatePresence mode="wait">
+              {step === 'language-level' && (
+                <motion.div key="language-level" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}>
+                  <LanguageLevelPicker
+                    language={targetLanguage}
+                    level={proficiencyLevel}
+                    onLanguageChange={setTargetLanguage}
+                    onLevelChange={setProficiencyLevel}
+                    onContinue={handleLanguageLevelContinue}
+                  />
+                </motion.div>
+              )}
 
-            {step === 'persona' && (
-              <PersonaPicker
-                targetLanguage={targetLanguage}
-                onSelect={handlePersonaSelect}
-              />
-            )}
+              {step === 'persona' && (
+                <motion.div key="persona" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}>
+                  <PersonaPicker
+                    targetLanguage={targetLanguage}
+                    onSelect={handlePersonaSelect}
+                  />
+                </motion.div>
+              )}
 
-            {step === 'situation' && (
-              <SituationPicker
-                targetLanguage={targetLanguage}
-                onSelect={handleSituationSelect}
-                onRequestCustom={handleRequestCustom}
-              />
-            )}
+              {step === 'situation' && (
+                <motion.div key="situation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}>
+                  <SituationPicker
+                    targetLanguage={targetLanguage}
+                    onSelect={handleSituationSelect}
+                    onRequestCustom={handleRequestCustom}
+                  />
+                </motion.div>
+              )}
 
-            {step === 'custom' && proficiencyLevel && persona && (
-              <CustomSituationInput
-                language={targetLanguage}
-                level={proficiencyLevel}
-                personaId={persona.id}
-                onGenerated={handleCustomGenerated}
-                onCancel={() => setStep('situation')}
-              />
-            )}
+              {step === 'custom' && proficiencyLevel && persona && (
+                <motion.div key="custom" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}>
+                  <CustomSituationInput
+                    language={targetLanguage}
+                    level={proficiencyLevel}
+                    personaId={persona.id}
+                    onGenerated={handleCustomGenerated}
+                    onCancel={() => setStep('situation')}
+                  />
+                </motion.div>
+              )}
 
-            {step === 'preview' && situationPreview && (
-              <SituationPreview
-                preview={situationPreview}
-                onConfirm={handlePreviewConfirm}
-                onRegenerate={handlePreviewRegenerate}
-                loading={loading}
-              />
-            )}
+              {step === 'preview' && situationPreview && (
+                <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}>
+                  <SituationPreview
+                    preview={situationPreview}
+                    onConfirm={handlePreviewConfirm}
+                    onRegenerate={handlePreviewRegenerate}
+                    loading={loading}
+                  />
+                </motion.div>
+              )}
 
-            {step === 'active' && currentSession && persona && speakSituation && tokenSource && (
-              <SpeakSessionProvider value={sessionContextValue}>
-                <SessionWrapper key={currentSession.sessionId} tokenSource={tokenSource}>
-                  <SessionInner />
-                </SessionWrapper>
-              </SpeakSessionProvider>
-            )}
+              {step === 'active' && currentSession && persona && speakSituation && tokenSource && (
+                <motion.div key="active" className="flex-1 min-h-0 flex flex-col overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
+                  <SpeakSessionProvider value={sessionContextValue}>
+                    <SessionWrapper key={currentSession.sessionId} tokenSource={tokenSource}>
+                      <SessionInner />
+                    </SessionWrapper>
+                  </SpeakSessionProvider>
+                </motion.div>
+              )}
 
-            {step === 'recap' && currentSession && persona && speakSituation && (
-              <SessionRecap
-                speakSession={currentSession}
-                persona={persona}
-                situation={speakSituation}
-                onRepeat={handleRepeat}
-                onBack={handleBackHome}
-              />
-            )}
+              {step === 'recap' && currentSession && persona && speakSituation && (
+                <motion.div key="recap" className="flex-1 min-h-0 flex flex-col overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
+                  <SessionRecap
+                    speakSession={currentSession}
+                    persona={persona}
+                    situation={speakSituation}
+                    onRepeat={handleRepeat}
+                    onBack={handleBackHome}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
