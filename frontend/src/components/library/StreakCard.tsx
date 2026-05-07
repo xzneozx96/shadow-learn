@@ -3,8 +3,8 @@ import { motion } from 'motion/react'
 import { useMemo } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
 import { useCountUp } from '@/hooks/useCountUp'
+import { buildActiveDays } from '@/lib/libraryUtils'
 import { cn } from '@/lib/utils'
-import { buildActiveDays } from '../../lib/libraryUtils'
 
 /* ── Streak: flame + week dots ── */
 export function StreakCard({ activityDates }: { activityDates: Set<string> }) {

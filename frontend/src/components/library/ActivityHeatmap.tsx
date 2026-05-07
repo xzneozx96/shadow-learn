@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
 import { useCountUp } from '@/hooks/useCountUp'
+import { buildActiveDays } from '@/lib/libraryUtils'
 import { cn } from '@/lib/utils'
-import { buildActiveDays } from '../../lib/libraryUtils'
 
 /* ── Activity: calendar month view ── */
 export function ActivityHeatmap({ activityDates }: { activityDates: Set<string> }) {
