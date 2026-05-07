@@ -18,9 +18,10 @@ from dotenv import load_dotenv
 
 from livekit import agents, rtc
 from livekit.agents import AgentServer, AgentSession, JobProcess, room_io
-from livekit.plugins import deepgram, google, openai
+from livekit.plugins import google, openai
 from livekit.plugins import noise_cancellation
 from livekit.plugins import silero
+from google.genai import types as genai_types
 
 from userdata import SpeakSessionData
 from agents import PersonaAgent, start_observer
@@ -51,6 +52,15 @@ google.realtime.realtime_api.RealtimeSession._build_connect_config = _patched_bu
 
 
 def prewarm(proc: JobProcess) -> None:
+    # Strip inherited StreamHandler from child process root logger.
+    # Child has both StreamHandler (writes stderr directly) and LogQueueHandler
+    # (ships to parent which emits via its own StreamHandler) — that double-prints
+    # every log line. Keep only LogQueueHandler so logs flow once via parent.
+    root = logging.getLogger()
+    for h in list(root.handlers):
+        if h.__class__.__name__ == "StreamHandler":
+            root.removeHandler(h)
+
     proc.userdata["vad"] = silero.VAD.load()
 
 
@@ -60,7 +70,7 @@ def prewarm(proc: JobProcess) -> None:
 server = AgentServer(setup_fnc=prewarm, num_idle_processes=1)
 
 
-@server.rtc_session(agent_name="shadowlearn-speak")
+@server.rtc_session(agent_name="shadowlearn-speak-local")
 async def shadowlearn_session(ctx: agents.JobContext):
     """Main session handler for Speak with AI voice practice.
 
@@ -114,7 +124,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     # Extract configuration
     persona_id = session_info.get("persona_id", "friendly_buddy")
     situation_id = session_info.get("situation_id", "casual_chat")
-    target_language = session_info.get("target_language", "zh-CN")
+    # target_language = session_info.get("target_language", "zh-CN")
 
     # Get API keys - prefer OpenAI for observer, fallback to Google for main.
     # google_key is URL-encoded by the router (quote()) so unquote on read.
@@ -122,8 +132,8 @@ async def shadowlearn_session(ctx: agents.JobContext):
     google_key = unquote(google_key_raw) if google_key_raw else os.getenv("GOOGLE_API_KEY", "")
     openai_key_raw = session_info.get("openai_key", "")
     openai_key = unquote(openai_key_raw) if openai_key_raw else os.getenv("OPENAI_API_KEY", "")
-    deepgram_key_raw = session_info.get("deepgram_key", "")
-    deepgram_key = unquote(deepgram_key_raw) if deepgram_key_raw else os.getenv("DEEPGRAM_API_KEY", "")
+    # deepgram_key_raw = session_info.get("deepgram_key", "")
+    # deepgram_key = unquote(deepgram_key_raw) if deepgram_key_raw else os.getenv("DEEPGRAM_API_KEY", "")
 
     if not google_key and not openai_key:
         raise Exception("No API key provided (google_key or openai_key)")
@@ -208,12 +218,19 @@ async def shadowlearn_session(ctx: agents.JobContext):
             voice=voice_id,
             # proactivity=True,
             enable_affective_dialog=True,
-            # context_window_compression=genai_types.ContextWindowCompressionConfig(
-            #     sliding_window=genai_types.SlidingWindow(),
-            # ),
+            context_window_compression=genai_types.ContextWindowCompressionConfig(
+                sliding_window=genai_types.SlidingWindow(),
+            ),
+            # Disable thinking. Native-audio Gemini models think before each reply
+            # by default; thinking time grows with context, causing linear TTFT
+            # growth (+3s/turn observed). thinking_budget=0 turns it off entirely.
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
         )
-        if deepgram_key:
-            google_realtime_kwargs["input_audio_transcription"] = None
+        # Deepgram STT disabled — use Gemini Live native transcription instead.
+        # Was needed when thinking was on (Gemini's transcription was 4-5s slow);
+        # with thinking_budget=0 the native transcription is fast enough.
+        # if deepgram_key:
+        #     google_realtime_kwargs["input_audio_transcription"] = None
         llm = google.realtime.RealtimeModel(**google_realtime_kwargs)
     else:
         # Fallback: Use OpenAI Realtime
@@ -224,26 +241,23 @@ async def shadowlearn_session(ctx: agents.JobContext):
             voice="verse",
         )
 
-    _DEEPGRAM_LANG = {"zh-CN": "zh-CN", "en": "en-US", "ja": "ja"}
-    deepgram_lang = _DEEPGRAM_LANG.get(target_language, "en-US")
-    # endpointing_ms default is 25 — too aggressive for learners. Brief mid-sentence
-    # pauses get treated as utterance end, splitting one turn into many transcripts.
-    # 800ms gives learners room to think between words without fragmenting the turn.
-    stt_model = (
-        deepgram.STT(
-            api_key=deepgram_key,
-            model="nova-3",
-            language=deepgram_lang,
-            endpointing_ms=2000,
-        )
-        if deepgram_key else None
-    )
+    # Deepgram STT disabled — Gemini Live native transcription used instead.
+    # _DEEPGRAM_LANG = {"zh-CN": "zh-CN", "en": "en-US", "ja": "ja"}
+    # deepgram_lang = _DEEPGRAM_LANG.get(target_language, "en-US")
+    # stt_model = (
+    #     deepgram.STT(
+    #         api_key=deepgram_key,
+    #         model="nova-3",
+    #         language=deepgram_lang,
+    #         endpointing_ms=2000,
+    #     )
+    #     if deepgram_key else None
+    # )
 
     session = AgentSession[SpeakSessionData](
         userdata=userdata,
         llm=llm,
         vad=ctx.proc.userdata.get("vad") or silero.VAD.load(),
-        stt=stt_model,
     )
 
     # Start Observer agent in parallel
@@ -280,7 +294,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     async def _handle_eval_rpc(data):
         logger.info("[EVAL] Evaluation requested via RPC")
         # Returns None if no user turns (nothing meaningful to evaluate); fallback dict on LLM errors.
-        evaluation = await observer.evaluate_session()
+        evaluation = await observer.evaluate_session() if observer else None
         logger.info("[EVAL] Evaluation complete, returning to frontend")
         return json.dumps(evaluation)
     
