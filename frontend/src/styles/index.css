@@ -11,26 +11,26 @@
     /* Deep Navy / Slate neutrals matching new design */
     --background: 233 29% 6%;
     --foreground: 210 40% 98%;
-    --card: 235 27% 8%;
+    --card: 235 26% 11%;
     --card-foreground: 210 40% 98%;
-    --popover: 235 27% 8%;
+    --popover: 235 26% 11%;
     --popover-foreground: 210 40% 98%;
 
     /* Primary - bolder periwinkle blue for better contrast */
     --primary: 235 88% 73%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 230 30% 12%;
+    --secondary: 230 28% 17%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 230 30% 11%;
-    --muted-foreground: 230 15% 65%;
-    --accent: 230 30% 12%;
+    --muted: 230 28% 15%;
+    --muted-foreground: 230 18% 72%;
+    --accent: 230 28% 17%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 72% 52%;
     --destructive-foreground: 210 40% 98%;
-    --border: 224 21% 65% / 0.1;
-    --input: 230 30% 12%;
+    --border: 224 28% 78% / 0.18;
+    --input: 230 28% 16%;
     --ring: 235 88% 73%;
 
     --radius: 0.75rem;
@@ -40,13 +40,13 @@
     --sidebar-foreground: 230 15% 65%;
     --sidebar-primary: 235 88% 73%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 30% 12%;
+    --sidebar-accent: 230 28% 17%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 230 30% 12%;
+    --sidebar-border: 224 28% 78% / 0.18;
     --sidebar-ring: 235 88% 73%;
 
     /* Tags - soft slate */
-    --tag-bg: 230 30% 15%;
+    --tag-bg: 230 28% 20%;
     --tag-foreground: 210 40% 98%;
 
     --success: 142 76% 46%;
