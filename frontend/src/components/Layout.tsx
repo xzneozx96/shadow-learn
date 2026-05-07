@@ -1,4 +1,4 @@
-import { BookOpen, FileText, Library, Newspaper, Settings, Sparkles, Zap } from 'lucide-react'
+import { BookOpen, FileText, Library, Newspaper, Settings, Sparkles, Sprout, Zap } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { Button } from '@/components/ui/button'
@@ -33,8 +33,9 @@ export function Layout({ children }: LayoutProps) {
       {/* Sidebar */}
       <aside className="w-48 xl:w-56 shrink-0 flex flex-col border-r border backdrop-blur-xl z-50">
         {trialMode && (
-          <div className="bg-yellow-500/10 text-yellow-500 text-center text-xs py-1.5 border-b border-yellow-500/20">
-            {t('auth.trial.banner')}
+          <div className="flex items-start gap-2 border-b border-amber-400/20 bg-amber-400/8 px-3 py-2.5 text-[12px] leading-snug text-amber-200/90">
+            <Sprout className="size-3.5 mt-0.5 shrink-0 text-amber-300" />
+            <span>{t('auth.trial.banner')}</span>
           </div>
         )}
 
