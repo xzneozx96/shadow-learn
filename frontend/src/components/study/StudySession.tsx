@@ -3,6 +3,7 @@ import type { MistakeExample, SessionLog } from '@/db'
 import type { SessionQuestion } from '@/lib/study-utils'
 import type { VocabEntry } from '@/types'
 import { X } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useBlocker } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -338,82 +339,90 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
         )}
 
         {/* Session */}
-        {phase === 'session' && q != null && !loading && (
-          <>
-            {/* <ProgressBar current={current} total={questions.length} /> */}
-            {q.type === 'romanization-recall' && (
-              <RomanizationRecallExercise
-                key={current}
-                entry={q.entry}
-                progress={`${current + 1} / ${questions.length}`}
-                onNext={handleNext}
-                playTTS={playTTS}
-                caps={caps}
-              />
-            )}
-            {q.type === 'dictation' && (
-              <DictationExercise
-                key={current}
-                entry={q.entry}
-                progress={`${current + 1} / ${questions.length}`}
-                onNext={handleNext}
-                playTTS={playTTS}
-                loadingText={loadingText}
-                caps={caps}
-              />
-            )}
-            {q.type === 'cloze' && q.clozeData && (
-              <ClozeExercise
-                key={current}
-                question={q.clozeData}
-                entries={entries}
-                caps={caps}
-                progress={`${current + 1} / ${questions.length}`}
-                onNext={handleNext}
-              />
-            )}
-            {q.type === 'pronunciation' && q.pronunciationData && azurePronunciationLocale && (
-              <PronunciationReferee
-                key={current}
-                sentence={q.pronunciationData}
-                language={azurePronunciationLocale}
-                progress={`${current + 1} / ${questions.length}`}
-                onNext={handleNext}
-              />
-            )}
-            {q.type === 'reconstruction' && (
-              <ReconstructionExercise
-                key={current}
-                entry={q.entry}
-                words={q.reconstructionTokens ?? [q.entry.word]}
-                progress={`${current + 1} / ${questions.length}`}
-                onNext={handleNext}
-                caps={caps}
-                playTTS={playTTS}
-              />
-            )}
-            {q.type === 'writing' && isWritingSupported(q.entry.word) && (
-              <CharacterWritingExercise
-                key={current}
-                entry={q.entry}
-                progress={`${current + 1} / ${questions.length}`}
-                onNext={handleNext}
-                caps={caps}
-                writingReps={writingReps}
-              />
-            )}
-            {q.type === 'translation' && q.translationData && (
-              <TranslationExercise
-                key={current}
-                sentence={q.translationData.sentence}
-                direction={q.translationData.direction}
-                progress={`${current + 1} / ${questions.length}`}
-                onNext={handleNext}
-                caps={caps}
-              />
-            )}
-          </>
-        )}
+        <AnimatePresence mode="wait">
+          {phase === 'session' && q != null && !loading && (
+            <motion.div
+              key={current}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {/* <ProgressBar current={current} total={questions.length} /> */}
+              {q.type === 'romanization-recall' && (
+                <RomanizationRecallExercise
+                  key={current}
+                  entry={q.entry}
+                  progress={`${current + 1} / ${questions.length}`}
+                  onNext={handleNext}
+                  playTTS={playTTS}
+                  caps={caps}
+                />
+              )}
+              {q.type === 'dictation' && (
+                <DictationExercise
+                  key={current}
+                  entry={q.entry}
+                  progress={`${current + 1} / ${questions.length}`}
+                  onNext={handleNext}
+                  playTTS={playTTS}
+                  loadingText={loadingText}
+                  caps={caps}
+                />
+              )}
+              {q.type === 'cloze' && q.clozeData && (
+                <ClozeExercise
+                  key={current}
+                  question={q.clozeData}
+                  entries={entries}
+                  caps={caps}
+                  progress={`${current + 1} / ${questions.length}`}
+                  onNext={handleNext}
+                />
+              )}
+              {q.type === 'pronunciation' && q.pronunciationData && azurePronunciationLocale && (
+                <PronunciationReferee
+                  key={current}
+                  sentence={q.pronunciationData}
+                  language={azurePronunciationLocale}
+                  progress={`${current + 1} / ${questions.length}`}
+                  onNext={handleNext}
+                />
+              )}
+              {q.type === 'reconstruction' && (
+                <ReconstructionExercise
+                  key={current}
+                  entry={q.entry}
+                  words={q.reconstructionTokens ?? [q.entry.word]}
+                  progress={`${current + 1} / ${questions.length}`}
+                  onNext={handleNext}
+                  caps={caps}
+                  playTTS={playTTS}
+                />
+              )}
+              {q.type === 'writing' && isWritingSupported(q.entry.word) && (
+                <CharacterWritingExercise
+                  key={current}
+                  entry={q.entry}
+                  progress={`${current + 1} / ${questions.length}`}
+                  onNext={handleNext}
+                  caps={caps}
+                  writingReps={writingReps}
+                />
+              )}
+              {q.type === 'translation' && q.translationData && (
+                <TranslationExercise
+                  key={current}
+                  sentence={q.translationData.sentence}
+                  direction={q.translationData.direction}
+                  progress={`${current + 1} / ${questions.length}`}
+                  onNext={handleNext}
+                  caps={caps}
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Summary */}
         {phase === 'summary' && (

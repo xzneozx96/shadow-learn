@@ -3,9 +3,11 @@ import type { Persona } from '@/lib/constants'
 import type { TranslationKey } from '@/lib/i18n'
 import type { SessionEvaluation, SpeakSituation } from '@/types'
 import { AlertCircle, CheckCircle2, Clock, MessageSquare, TrendingUp, Trophy } from 'lucide-react'
+import { motion } from 'motion/react'
 import { GrammarCorrectionCard, TranslationInline } from '@/components/agents-ui/agent-chat-transcript'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
+import { useCountUp } from '@/hooks/useCountUp'
 import { getPersonaName } from '@/lib/constants'
 
 interface SessionRecapProps {
@@ -124,6 +126,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
   const feedbacks = speakSession.feedbacks ?? {}
 
   const userTurns = transcript.filter(turn => turn.role === 'user').length
+  const animatedTurns = useCountUp(userTurns)
 
   return (
     <div className="flex flex-1 min-h-0 bg-background gap-0">
@@ -171,7 +174,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
               </span>
             </div>
             <p className="text-2xl font-bold tabular-nums text-foreground leading-none tracking-tight">
-              {userTurns}
+              {animatedTurns}
             </p>
           </div>
         </div>
@@ -191,9 +194,12 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
             const turnFeedback = turn.id ? feedbacks[turn.id] : undefined
             const isUser = turn.role === 'user'
             return (
-              <div
+              <motion.div
                 key={turn.id ?? turn.timestamp ?? i}
                 className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}
+                initial={{ opacity: 0, x: isUser ? 12 : -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: Math.min(i, 12) * 0.04, ease: [0.16, 1, 0.3, 1] }}
               >
                 {isUser
                   ? (
@@ -224,7 +230,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
                         </div>
                       </div>
                     )}
-              </div>
+              </motion.div>
             )
           })}
         </div>

@@ -69,7 +69,7 @@ export function CustomSituationInput({ language, level, personaId, onGenerated, 
         value={text}
         onChange={e => setText(e.target.value)}
         placeholder={t('speak.customScene.placeholder')}
-        className="w-full min-h-[100px] border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 bg-background text-foreground"
+        className="w-full min-h-[100px] border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 bg-card text-foreground"
         disabled={loading}
       />
       {error && <p className="text-sm text-destructive">{error}</p>}

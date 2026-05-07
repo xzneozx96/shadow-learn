@@ -2,6 +2,7 @@ import type { DiffToken } from '@/lib/diff-utils'
 import type { TranslationKey } from '@/lib/i18n'
 import type { PronunciationAssessResult, Segment } from '@/types'
 import { X } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
@@ -153,8 +154,13 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
             </span>
             <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 px-4">
               {dictationDiff.map((tok, i) => (
-                // eslint-disable-next-line react/no-array-index-key
-                <div key={i} className="flex flex-col items-center gap-0.5">
+                <motion.div
+                  key={i}
+                  className="flex flex-col items-center gap-0.5"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18, delay: i < 30 ? i * 0.025 : 0, ease: [0.16, 1, 0.3, 1] }}
+                >
                   <span
                     className={cn(
                       'text-xl font-semibold px-2 rounded-md transition-colors duration-200',
@@ -165,7 +171,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
                   >
                     {tok.text || '□'}
                   </span>
-                </div>
+                </motion.div>
               ))}
             </div>
 

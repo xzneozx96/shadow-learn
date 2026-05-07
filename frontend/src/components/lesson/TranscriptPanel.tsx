@@ -68,7 +68,7 @@ const SegmentRow = memo(({
     <div
       ref={isActive ? activeRef : undefined}
       className={cn(
-        'p-3 transition-colors',
+        'p-3 transition-[background-color,border-color] duration-200 ease-out',
         isActive && 'border-l-2 border-l-primary bg-primary/10',
       )}
     >

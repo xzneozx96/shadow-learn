@@ -1,5 +1,6 @@
 import type { ProgressStats } from '@/db'
 import { useI18n } from '@/contexts/I18nContext'
+import { useCountUp } from '@/hooks/useCountUp'
 
 interface Props {
   stats?: ProgressStats
@@ -17,6 +18,8 @@ export function OverallStatsPanel({ stats }: Props) {
   }
 
   const accuracy = Math.round(s.accuracyRate * 100)
+  const animatedExercises = useCountUp(s.totalExercises)
+  const animatedSessions = useCountUp(s.totalSessions)
   const r = 48
   const stroke = 6
   const circ = 2 * Math.PI * r
@@ -28,7 +31,7 @@ export function OverallStatsPanel({ stats }: Props) {
       <div className="group flex flex-col items-center justify-center p-6 text-center rounded-2xl border elegant-card backdrop-blur-xl shadow-xs relative overflow-hidden h-full">
         <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
         <div className="text-4xl font-black tracking-tighter text-foreground bg-clip-text relative z-10">
-          {s.totalExercises}
+          {animatedExercises}
         </div>
         <div className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80 mt-4 relative z-10">
           {t('progress.exercises')}
@@ -100,7 +103,7 @@ export function OverallStatsPanel({ stats }: Props) {
       <div className="group flex flex-col items-center justify-center p-6 text-center rounded-2xl border elegant-card backdrop-blur-xl shadow-xs relative overflow-hidden h-full">
         <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
         <div className="text-4xl font-black tracking-tighter text-foreground bg-clip-text relative z-10">
-          {s.totalSessions}
+          {animatedSessions}
         </div>
         <div className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80 mt-4 relative z-10">
           {t('progress.sessions')}

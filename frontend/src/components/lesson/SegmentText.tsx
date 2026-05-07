@@ -1,6 +1,6 @@
 import type { Segment, Word, WordTiming } from '@/types'
 import { Bookmark, Copy, Loader2, Volume2 } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -40,6 +40,7 @@ export const SegmentText = memo(({
 }: SegmentTextProps) => {
   const { t } = useI18n()
   const { player, subscribeTime, getTime } = usePlayer()
+  const [clickedWord, setClickedWord] = useState<string | null>(null)
 
   // Build spans once per text/words change
   const spans = useMemo(() => buildWordSpans(text, words), [text, words])
@@ -204,8 +205,13 @@ export const SegmentText = memo(({
         return (
           <Popover key={spanStart} onOpenChange={handlePopoverOpenChange}>
             <PopoverTrigger
-              className="inline-flex flex-col items-center cursor-pointer rounded-sm px-1 transition-colors hover:bg-white/10"
-              onClick={e => e.stopPropagation()}
+              className="inline-flex flex-col items-center cursor-pointer rounded-sm px-1 transition-[colors,transform] duration-150 hover:bg-white/10 data-[clicked=true]:scale-110"
+              data-clicked={clickedWord === span.word.word || undefined}
+              onClick={(e) => {
+                e.stopPropagation()
+                setClickedWord(span.word!.word)
+                setTimeout(setClickedWord, 200, null)
+              }}
             >
               {showRomanization && span.word.romanization && (
                 <span

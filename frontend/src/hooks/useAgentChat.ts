@@ -83,12 +83,14 @@ export function useAgentChat(
   const allStoredRef = useRef<UIMessage[]>([])
   const loadedOffsetRef = useRef(0)
   const [hasMore, setHasMore] = useState(false)
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true)
   // Track lessonId to reset pagination state synchronously during render on lesson change
   // (pattern #3 from CLAUDE.md — setState-during-render with guard)
   const [prevLessonId, setPrevLessonId] = useState(lessonId)
   if (prevLessonId !== lessonId) {
     setPrevLessonId(lessonId)
     setHasMore(false)
+    setIsHistoryLoading(true)
     allStoredRef.current = []
     loadedOffsetRef.current = 0
   }
@@ -299,22 +301,34 @@ export function useAgentChat(
   useEffect(() => {
     if (!db || !lessonId)
       return
-    getChatMessages(db, lessonId).then((saved) => {
-      if (!saved || saved.length === 0)
-        return
-      const seen = new Set<string>()
-      const unique = saved.filter((m) => {
-        if (seen.has(m.id))
-          return false
-        seen.add(m.id)
-        return true
+    let cancelled = false
+    setIsHistoryLoading(true)
+    getChatMessages(db, lessonId)
+      .then((saved) => {
+        if (cancelled)
+          return
+        if (!saved || saved.length === 0)
+          return
+        const seen = new Set<string>()
+        const unique = saved.filter((m) => {
+          if (seen.has(m.id))
+            return false
+          seen.add(m.id)
+          return true
+        })
+        allStoredRef.current = unique
+        const offset = Math.max(0, unique.length - PAGE_SIZE)
+        loadedOffsetRef.current = offset
+        setMessages(unique.slice(offset))
+        setHasMore(offset > 0)
       })
-      allStoredRef.current = unique
-      const offset = Math.max(0, unique.length - PAGE_SIZE)
-      loadedOffsetRef.current = offset
-      setMessages(unique.slice(offset))
-      setHasMore(offset > 0)
-    })
+      .finally(() => {
+        if (!cancelled)
+          setIsHistoryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [db, lessonId, setMessages])
 
   // Persist messages to IDB when they change
@@ -442,6 +456,7 @@ export function useAgentChat(
   return {
     messages,
     isLoading,
+    isHistoryLoading,
     status,
     sendMessage: sendMessageWithReset,
     stop,

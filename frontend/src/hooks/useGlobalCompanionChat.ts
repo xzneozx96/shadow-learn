@@ -46,6 +46,7 @@ export function useGlobalCompanionChat() {
   const allStoredRef = useRef<UIMessage[]>([])
   const loadedOffsetRef = useRef(0)
   const [hasMore, setHasMore] = useState(false)
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true)
 
   // Tool pool for API (filtered) and executor (full pool for execution)
   // Executor must use getAllBaseTools to execute deferred tools after tool_search loads them
@@ -188,22 +189,34 @@ export function useGlobalCompanionChat() {
   useEffect(() => {
     if (!db)
       return
-    getChatMessages(db, CHAT_KEY).then((saved) => {
-      if (!saved || saved.length === 0)
-        return
-      const seen = new Set<string>()
-      const unique = saved.filter((m) => {
-        if (seen.has(m.id))
-          return false
-        seen.add(m.id)
-        return true
+    let cancelled = false
+    setIsHistoryLoading(true)
+    getChatMessages(db, CHAT_KEY)
+      .then((saved) => {
+        if (cancelled)
+          return
+        if (!saved || saved.length === 0)
+          return
+        const seen = new Set<string>()
+        const unique = saved.filter((m) => {
+          if (seen.has(m.id))
+            return false
+          seen.add(m.id)
+          return true
+        })
+        allStoredRef.current = unique
+        const offset = Math.max(0, unique.length - PAGE_SIZE)
+        loadedOffsetRef.current = offset
+        setMessages(unique.slice(offset))
+        setHasMore(offset > 0)
       })
-      allStoredRef.current = unique
-      const offset = Math.max(0, unique.length - PAGE_SIZE)
-      loadedOffsetRef.current = offset
-      setMessages(unique.slice(offset))
-      setHasMore(offset > 0)
-    })
+      .finally(() => {
+        if (!cancelled)
+          setIsHistoryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [db, setMessages])
 
   // Persist messages to IDB when they change
@@ -280,6 +293,7 @@ export function useGlobalCompanionChat() {
   return {
     messages,
     isLoading,
+    isHistoryLoading,
     status,
     sendMessage: sendMessageWithReset,
     stop,

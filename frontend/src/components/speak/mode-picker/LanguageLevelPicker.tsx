@@ -1,3 +1,4 @@
+import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
@@ -34,11 +35,14 @@ export function LanguageLevelPicker({
       <div className="space-y-3">
         <h3 className="font-semibold text-foreground">{t('speak.languagePicker.title')}</h3>
         <div className="grid grid-cols-3 gap-4">
-          {SPEAK_LANGUAGES.map(lang => (
-            <button
+          {SPEAK_LANGUAGES.map((lang, i) => (
+            <motion.button
               key={lang.code}
               type="button"
               onClick={() => onLanguageChange(lang.code)}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}
               className={cn(
                 'elegant-card px-3 py-2.5 flex items-center gap-2.5 text-left transition-colors cursor-pointer',
                 language === lang.code
@@ -49,7 +53,7 @@ export function LanguageLevelPicker({
             >
               <span className="text-2xl" aria-hidden="true">{lang.flag}</span>
               <span className="text-sm font-medium text-foreground">{lang.label}</span>
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -57,11 +61,14 @@ export function LanguageLevelPicker({
       <div className="space-y-3">
         <h3 className="font-semibold text-foreground">{t('speak.levelPicker.title')}</h3>
         <div className="flex gap-4">
-          {LEVEL_IDS.map(lvl => (
-            <button
+          {LEVEL_IDS.map((lvl, i) => (
+            <motion.button
               key={lvl.id}
               type="button"
               onClick={() => onLevelChange(lvl.id)}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: 0.15 + i * 0.04, ease: [0.16, 1, 0.3, 1] }}
               className={cn(
                 'elegant-card px-3 py-2.5 w-full flex flex-col gap-3 text-left transition-colors cursor-pointer',
                 level === lvl.id
@@ -75,7 +82,7 @@ export function LanguageLevelPicker({
                 <div className="font-medium text-foreground">{t(`speak.level.${lvl.id}.title`)}</div>
                 <div className="text-sm text-muted-foreground mt-1">{t(`speak.level.${lvl.id}.subtitle`)}</div>
               </div>
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>

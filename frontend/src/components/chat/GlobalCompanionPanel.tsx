@@ -11,7 +11,7 @@ const NEWLINES_RE = /\n+/g
 export function GlobalCompanionPanel() {
   const { t } = useI18n()
   const { chips, removeChip, clearChips, closePanel } = useGlobalCompanionContext()
-  const { messages, isLoading, sendMessage, stop, loadMore, hasMore } = useGlobalCompanionChat()
+  const { messages, isLoading, isHistoryLoading, sendMessage, stop, loadMore, hasMore } = useGlobalCompanionChat()
   const { openSpeakModal } = useSpeakModal()
 
   function handleSend({ text, files }: { text: string, files?: import('ai').FileUIPart[] }) {
@@ -33,6 +33,7 @@ export function GlobalCompanionPanel() {
       <CompanionChatArea
         messages={messages}
         isLoading={isLoading}
+        isHistoryLoading={isHistoryLoading}
         hasMore={hasMore}
         onLoadMore={loadMore}
         chips={chips}

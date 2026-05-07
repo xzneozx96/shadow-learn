@@ -1,4 +1,5 @@
 import type { ReceivedMessage } from '@livekit/components-react'
+import type { Participant } from 'livekit-client'
 import type { MutableRefObject } from 'react'
 import { act, renderHook } from '@testing-library/react'
 import { ParticipantKind, RoomEvent } from 'livekit-client'
@@ -70,11 +71,11 @@ describe('useAgentRpc', () => {
     const room = makeRoom()
     const onFeedbackUpdate = vi.fn().mockResolvedValue(undefined)
     const messagesRef = makeMessagesRef([
-      { id: 'm1', from: { isLocal: true }, message: '我是美国人' },
-      { id: 'm2', from: { isLocal: false }, message: '很好！' },
+      { id: 'm1', from: { isLocal: true } as unknown as Participant, message: '我是美国人' },
+      { id: 'm2', from: { isLocal: false } as unknown as Participant, message: '很好！' },
     ])
 
-    const { result } = renderHook(() =>
+    renderHook(() =>
       useAgentRpc(room as any, { messagesRef, onFeedbackUpdate }),
     )
 
@@ -91,7 +92,7 @@ describe('useAgentRpc', () => {
     const cb1 = vi.fn().mockResolvedValue(undefined)
     const cb2 = vi.fn().mockResolvedValue(undefined)
     const messagesRef = makeMessagesRef([
-      { id: 'm1', from: { isLocal: true }, message: '你好' },
+      { id: 'm1', from: { isLocal: true } as unknown as Participant, message: '你好' },
     ])
 
     const { rerender } = renderHook(
@@ -177,5 +178,4 @@ describe('useAgentRpc', () => {
     act(() => { room._fireEvent(RoomEvent.ParticipantDisconnected, { kind: ParticipantKind.STANDARD }) })
     expect(result.current.agentDisconnected).toBe(false)
   })
-
 })

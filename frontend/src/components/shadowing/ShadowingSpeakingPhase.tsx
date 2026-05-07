@@ -126,7 +126,7 @@ export function ShadowingSpeakingPhase({
           </div>
 
           {/* Glass Card Ring containing Trigger Mic */}
-          <div className="relative flex items-center justify-center p-2 rounded-full h-32">
+          <div key={recordingState} className="relative flex items-center justify-center p-2 rounded-full h-32">
             {(recordingState === 'idle' || recordingState === 'recording') && (
               <Button
                 ref={micBtnRef}
