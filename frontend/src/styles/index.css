@@ -8,29 +8,33 @@
 
 @layer base {
   :root {
+    /* Spring physics easings */
+    --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
     /* Deep Navy / Slate neutrals matching new design */
     --background: 233 29% 6%;
     --foreground: 210 40% 98%;
-    --card: 235 27% 8%;
+    --card: 235 26% 11%;
     --card-foreground: 210 40% 98%;
-    --popover: 235 27% 8%;
+    --popover: 235 26% 11%;
     --popover-foreground: 210 40% 98%;
 
     /* Primary - bolder periwinkle blue for better contrast */
     --primary: 235 88% 73%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 230 30% 12%;
+    --secondary: 230 28% 17%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 230 30% 11%;
-    --muted-foreground: 230 15% 65%;
-    --accent: 230 30% 12%;
+    --muted: 230 28% 15%;
+    --muted-foreground: 230 18% 72%;
+    --accent: 230 28% 17%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 72% 52%;
     --destructive-foreground: 210 40% 98%;
-    --border: 224 21% 65% / 0.1;
-    --input: 230 30% 12%;
+    --border: 224 28% 78% / 0.18;
+    --input: 230 28% 16%;
     --ring: 235 88% 73%;
 
     --radius: 0.75rem;
@@ -40,13 +44,13 @@
     --sidebar-foreground: 230 15% 65%;
     --sidebar-primary: 235 88% 73%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 30% 12%;
+    --sidebar-accent: 230 28% 17%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 230 30% 12%;
+    --sidebar-border: 224 28% 78% / 0.18;
     --sidebar-ring: 235 88% 73%;
 
     /* Tags - soft slate */
-    --tag-bg: 230 30% 15%;
+    --tag-bg: 230 28% 20%;
     --tag-foreground: 210 40% 98%;
 
     --success: 142 76% 46%;
@@ -138,28 +142,39 @@
 @layer components {
 
   .elegant-card {
-    @apply bg-card rounded-xl border border-border transition-colors duration-150;
+    @apply bg-card rounded-xl border border-border;
+    transition: all 0.2s var(--ease-spring);
+    will-change: transform;
   }
 
   .elegant-card:hover {
-    border-color: hsl(var(--border));
+    border-color: hsl(var(--primary) / 0.2);
     background: hsl(var(--primary) / 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 1px hsl(var(--primary) / 0.08);
   }
 
   .elegant-input {
-    @apply rounded-lg border border-border bg-secondary px-4 py-3 text-foreground placeholder:text-muted-foreground transition-colors duration-150 outline-none;
+    @apply rounded-lg border border-border bg-secondary px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none;
+    transition: border-color 0.15s ease, box-shadow 0.25s var(--ease-spring);
   }
 
   .elegant-input:focus {
     border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
   }
 
   .elegant-button {
-    @apply rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-150;
+    @apply rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground;
+    transition: opacity 0.15s ease, transform 0.15s var(--ease-spring);
   }
 
   .elegant-button:hover {
     opacity: 0.9;
+  }
+
+  .elegant-button:active {
+    transform: scale(0.97);
   }
 
   .elegant-nav {
@@ -175,12 +190,75 @@
   .gradient-text {
     @apply text-primary;
   }
+
+  .animate-fade-up {
+    animation: fade-up 0.5s var(--ease-out-expo) both;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s var(--ease-out-expo) both;
+  }
+
+  .animate-breathe-amber {
+    animation: breathe-amber 6s ease-in-out infinite;
+  }
+
+  .animate-breathe-primary {
+    animation: breathe-primary 6s ease-in-out infinite;
+    animation-delay: 3s;
+  }
 }
 
 /* YouTube iframe must fill its container */
 #yt-player {
   width: 100% !important;
   height: 100% !important;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes breathe-amber {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px -8px rgba(251, 191, 36, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 28px -4px rgba(251, 191, 36, 0.7);
+  }
+}
+
+@keyframes breathe-primary {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px -8px hsl(var(--primary) / 0.45);
+  }
+
+  50% {
+    box-shadow: 0 0 28px -4px hsl(var(--primary) / 0.75);
+  }
 }
 
 @keyframes wave {
@@ -214,6 +292,24 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  @keyframes fade-up {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes breathe-amber {
+    0%, 100% { box-shadow: 0 0 20px -8px rgba(251, 191, 36, 0.4); }
+  }
+
+  @keyframes breathe-primary {
+    0%, 100% { box-shadow: 0 0 20px -8px hsl(var(--primary) / 0.45); }
+  }
+
   @keyframes wave {
 
     0%,
