@@ -72,15 +72,13 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
         <span className="text-sm text-muted-foreground">
           {count}
           {' '}
-          {count === 1 ? 'word' : 'words'}
-          {' '}
-          saved
+          {count === 1 ? t('library.words.wordSaved') : t('library.words.wordsSaved')}
         </span>
         <Link
           to="/vocabulary"
           className="text-sm text-foreground/70 transition-colors hover:text-foreground"
         >
-          View all →
+          {t('lesson.workbook.viewAll')}
         </Link>
       </div>
 
@@ -89,7 +87,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
         ? (
             <div className="flex flex-1 items-center justify-center px-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Start saving words to build your personal study list — tap any word below its translation
+                {t('lesson.workbook.emptyHint')}
               </p>
             </div>
           )
@@ -144,7 +142,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                     <div className="mt-3 flex items-end justify-between gap-2">
                       <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-muted-foreground">{entry.meaning}</p>
                       <button
-                        aria-label={`Play pronunciation of ${entry.word}`}
+                        aria-label={t('lesson.workbook.playPronunciation', { word: entry.word })}
                         disabled={loadingText === entry.word}
                         onClick={(e) => {
                           e.stopPropagation()

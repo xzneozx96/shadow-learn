@@ -8,6 +8,10 @@
 
 @layer base {
   :root {
+    /* Spring physics easings */
+    --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
     /* Deep Navy / Slate neutrals matching new design */
     --background: 233 29% 6%;
     --foreground: 210 40% 98%;
@@ -138,28 +142,39 @@
 @layer components {
 
   .elegant-card {
-    @apply bg-card rounded-xl border border-border transition-colors duration-150;
+    @apply bg-card rounded-xl border border-border;
+    transition: all 0.2s var(--ease-spring);
+    will-change: transform;
   }
 
   .elegant-card:hover {
-    border-color: hsl(var(--border));
+    border-color: hsl(var(--primary) / 0.2);
     background: hsl(var(--primary) / 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 1px hsl(var(--primary) / 0.08);
   }
 
   .elegant-input {
-    @apply rounded-lg border border-border bg-secondary px-4 py-3 text-foreground placeholder:text-muted-foreground transition-colors duration-150 outline-none;
+    @apply rounded-lg border border-border bg-secondary px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none;
+    transition: border-color 0.15s ease, box-shadow 0.25s var(--ease-spring);
   }
 
   .elegant-input:focus {
     border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
   }
 
   .elegant-button {
-    @apply rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors duration-150;
+    @apply rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground;
+    transition: opacity 0.15s ease, transform 0.15s var(--ease-spring);
   }
 
   .elegant-button:hover {
     opacity: 0.9;
+  }
+
+  .elegant-button:active {
+    transform: scale(0.97);
   }
 
   .elegant-nav {
@@ -175,12 +190,75 @@
   .gradient-text {
     @apply text-primary;
   }
+
+  .animate-fade-up {
+    animation: fade-up 0.5s var(--ease-out-expo) both;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s var(--ease-out-expo) both;
+  }
+
+  .animate-breathe-amber {
+    animation: breathe-amber 6s ease-in-out infinite;
+  }
+
+  .animate-breathe-primary {
+    animation: breathe-primary 6s ease-in-out infinite;
+    animation-delay: 3s;
+  }
 }
 
 /* YouTube iframe must fill its container */
 #yt-player {
   width: 100% !important;
   height: 100% !important;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes breathe-amber {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px -8px rgba(251, 191, 36, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 28px -4px rgba(251, 191, 36, 0.7);
+  }
+}
+
+@keyframes breathe-primary {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px -8px hsl(var(--primary) / 0.45);
+  }
+
+  50% {
+    box-shadow: 0 0 28px -4px hsl(var(--primary) / 0.75);
+  }
 }
 
 @keyframes wave {
@@ -214,6 +292,24 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  @keyframes fade-up {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes breathe-amber {
+    0%, 100% { box-shadow: 0 0 20px -8px rgba(251, 191, 36, 0.4); }
+  }
+
+  @keyframes breathe-primary {
+    0%, 100% { box-shadow: 0 0 20px -8px hsl(var(--primary) / 0.45); }
+  }
+
   @keyframes wave {
 
     0%,

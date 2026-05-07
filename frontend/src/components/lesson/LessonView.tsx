@@ -1,5 +1,6 @@
 import type { Segment } from '@/types'
 import { Loader2 } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
@@ -222,26 +223,36 @@ function LessonViewContent() {
   // Loading state
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center glass-bg">
+      <motion.div
+        className="flex h-screen items-center justify-center glass-bg"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
+      </motion.div>
     )
   }
 
   // Error state
   if (error || !meta) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 glass-bg">
+      <motion.div
+        className="flex h-screen flex-col items-center justify-center gap-4 glass-bg"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      >
         <p className="text-sm text-red-400">{error ?? t('lesson.notFound')}</p>
-        <Button variant="outline" render={<Link to="/" />}>
+        <Button variant="outline" className="active:scale-[0.97] transition-transform" render={<Link to="/" />}>
           {t('lesson.backToLibrary')}
         </Button>
-      </div>
+      </motion.div>
     )
   }
 
   return (
-    <div className="flex h-full overflow-hidden bg-background">
+    <div className="flex h-full overflow-hidden bg-background animate-fade-in">
       {/* Left section: video and transcript/shadowing */}
       <div className="flex flex-col 2xl:flex-row h-full w-[60%] 2xl:w-3/4 overflow-hidden border-r border-border">
         {/* Video Panel — 50% height on small, 50% width on 2xl */}

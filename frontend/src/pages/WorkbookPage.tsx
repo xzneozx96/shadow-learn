@@ -150,7 +150,7 @@ export function WorkbookPage() {
 
               {/* Empty state */}
               {sortedLessonIds.length === 0 && (
-                <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/2 px-8 py-16 text-center">
+                <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/4 px-8 py-16 text-center">
                   <div className="mb-4 flex size-12 items-center justify-center rounded-xl border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                     <Bookmark className="size-5 text-foreground/70" />
                   </div>

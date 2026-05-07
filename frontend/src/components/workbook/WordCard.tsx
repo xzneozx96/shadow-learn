@@ -20,7 +20,7 @@ export function WordCard({ entry, className, onPlay, isLoading }: WordCardProps)
   const isChinese = entry.sourceLanguage?.startsWith('zh') ?? false
 
   return (
-    <div className={cn('relative flex flex-col p-4 bg-transparent hover:bg-white/2 transition-colors cursor-default border-r border-b border-white/5', className)}>
+    <div className={cn('relative flex flex-col p-4 bg-white/2 hover:bg-white/4 transition-colors cursor-default border-r border-b border-white/5', className)}>
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <span className="text-xl font-bold text-foreground font-serif tracking-wide">{entry.word}</span>
         <div className="flex items-center gap-0.5 text-foreground/40">

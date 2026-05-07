@@ -90,8 +90,8 @@ function languageLabel(code: string | undefined, t: TFn): string | null {
 
 function HeroChip({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string, strokeWidth?: number }>, children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-card/70 backdrop-blur-md px-2.5 py-1 text-sm font-medium text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
-      <Icon className="size-3 text-foreground" strokeWidth={1.75} />
+    <span className="group inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/6 backdrop-blur-md px-2.5 py-1 text-sm font-medium text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-card/90 hover:border-white/20">
+      <Icon className="size-3 text-foreground transition-transform duration-200 group-hover:scale-110" strokeWidth={1.75} />
       {children}
     </span>
   )
@@ -157,7 +157,7 @@ function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
           </p>
 
           {/* Bottom: stack of title, chips, progress, CTA */}
-          <div className="max-w-[68%] space-y-4">
+          <div className="max-w-3/4 space-y-4">
             <div>
               <h2 className="text-xl xl:text-2xl font-bold leading-[1.15] tracking-tight line-clamp-2 text-foreground drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
                 {lesson.title}
@@ -196,9 +196,9 @@ function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
             </div>
 
             {/* CTA */}
-            <div className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_4px_16px_hsl(var(--primary)/0.4)] transition-transform duration-200 group-hover:translate-x-0.5">
+            <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_4px_16px_hsl(var(--primary)/0.4)] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:shadow-[0_6px_24px_hsl(var(--primary)/0.55)] active:scale-[0.97]">
               {t('library.hero.continueWhereStopped')}
-              <ArrowUpRight className="size-3.5" />
+              <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </div>
           </div>
         </div>
@@ -211,7 +211,7 @@ function FirstLessonCTA() {
   const { t } = useI18n()
   return (
     <Link to="/create" className="group block h-full">
-      <article className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-dashed border-white/10 bg-white/2 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] flex flex-col items-center justify-center text-center px-6 transition-all duration-300 hover:border-primary/30 hover:bg-primary/3">
+      <article className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-dashed border-white/10 bg-card backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] flex flex-col items-center justify-center text-center px-6 transition-all duration-300 hover:border-primary/30 hover:bg-primary/3">
         <div className="pointer-events-none absolute -top-16 left-1/2 size-56 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl" />
         <div className="relative mb-3 flex size-12 items-center justify-center rounded-xl border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors duration-300 group-hover:border-primary/40 group-hover:bg-primary/10">
           <Plus className="size-5 text-foreground transition-colors duration-300 group-hover:text-primary" />
@@ -238,7 +238,7 @@ function BentoCard({ children, className, glow }: {
 }) {
   return (
     <div className={cn(
-      'group relative h-full overflow-hidden rounded-2xl border border-white/8 bg-white/2 backdrop-blur-sm p-3 xl:p-6 transition-colors duration-300 hover:border-white/12',
+      'group relative h-full overflow-hidden rounded-2xl border border-white/8 bg-card backdrop-blur-sm p-3 xl:p-6 transition-colors duration-300 hover:border-white/12',
       className,
     )}
     >
@@ -719,7 +719,12 @@ export function Library() {
       <div className="h-full overflow-y-auto">
         <div className="mx-auto w-full container px-6 py-9 pb-10">
           {/* ── Top: greeting ── */}
-          <header className="mb-4 flex items-baseline justify-between gap-4">
+          <motion.header
+            className="mb-4 flex items-baseline justify-between gap-4"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          >
             <div className="flex items-baseline gap-3 flex-wrap">
               <h1 className="text-3xl xl:text-4xl font-bold tracking-tighter leading-none text-foreground">
                 {greeting.zh}
@@ -729,7 +734,7 @@ export function Library() {
                 {hasLessons ? t('library.greeting.welcomeBack') : ''}
               </p>
             </div>
-          </header>
+          </motion.header>
 
           {/* Hero bento — continue left, stats right */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.25fr_1fr]">
@@ -759,13 +764,13 @@ export function Library() {
                   {t('library.collection')}
                 </h3>
                 <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <div className="group relative">
+                    <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
                     <Input
                       placeholder={t('nav.search')}
                       value={search}
                       onChange={e => setSearch(e.target.value)}
-                      // className="h- w-44 pl-7 text-sm"
+                      className="transition-shadow duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.15)]"
                     />
                   </div>
                   <Button
@@ -774,6 +779,7 @@ export function Library() {
                     onClick={() => scrollCarousel('prev')}
                     disabled={!canScrollPrev}
                     aria-label="Scroll left"
+                    className="transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-110 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
                   >
                     <ChevronLeft className="size-4" />
                   </Button>
@@ -783,6 +789,7 @@ export function Library() {
                     onClick={() => scrollCarousel('next')}
                     disabled={!canScrollNext}
                     aria-label="Scroll right"
+                    className="transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-110 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
                   >
                     <ChevronRight className="size-4" />
                   </Button>
@@ -800,17 +807,17 @@ export function Library() {
                 }}
               >
                 {/* Add new lesson card */}
-                <div className="group relative flex shrink-0 self-start flex-col rounded-xl p-2 -m-2" style={{ width: '340px' }}>
+                <div className="group relative flex shrink-0 self-start flex-col rounded-xl p-2 -m-2 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-[1.02]" style={{ width: '340px' }}>
                   <Link
                     to="/create"
                     className="absolute inset-0 z-10"
                     aria-label={t('library.addNew')}
                   />
                   <div className="relative w-full overflow-hidden rounded-xl" style={{ aspectRatio: '16/9' }}>
-                    <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/2 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] group-hover:border-primary/30 group-hover:bg-primary/5 transition-all duration-200">
+                    <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-dashed border-white/10 bg-card backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] group-hover:border-primary/30 group-hover:bg-primary/5 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <div className="flex items-center justify-center size-10 rounded-full border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] group-hover:bg-primary/15 group-hover:border-primary/30 transition-all duration-200">
-                          <Plus className="size-4 text-foreground group-hover:text-primary transition-colors" />
+                        <div className="flex items-center justify-center size-10 rounded-full border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] group-hover:bg-primary/15 group-hover:border-primary/30 transition-all duration-300">
+                          <Plus className="size-4 text-foreground group-hover:text-primary transition-all duration-300 group-hover:rotate-90" />
                         </div>
                         <span className="text-sm font-medium text-foreground group-hover:text-foreground transition-colors duration-200">
                           {t('library.addNew')}
