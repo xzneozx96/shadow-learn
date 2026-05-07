@@ -75,29 +75,29 @@ export function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* Bottom actions */}
-        <div className="border-t border-white/6 p-3 flex flex-col gap-3">
+        <div className="border-t border-white/6 p-3 flex flex-col gap-1.5">
           <Button
             onClick={openPanel}
-            className="w-full justify-start gap-3 h-10 px-3 text-sm font-medium bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 hover:text-amber-300 border border-amber-500/25 hover:border-amber-400/40 shadow-sm transition-colors"
+            className="w-full justify-start gap-3 h-10 px-3 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-white/6 transition-colors"
             variant="ghost"
           >
-            <Sparkles className="size-4 shrink-0" />
+            <Sparkles className="size-4 shrink-0 text-amber-400" />
             {t('companion.askButton')}
           </Button>
           <Button
             onClick={openSpeakModal}
-            className="w-full justify-start gap-3 h-10 px-3 text-sm font-medium bg-primary/15 hover:bg-primary/25 text-primary hover:text-primary border border-primary/25 hover:border-primary/50 shadow-sm transition-colors"
+            className="w-full justify-start gap-3 h-10 px-3 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-white/6 transition-colors"
             variant="ghost"
           >
-            <Zap className="size-4 shrink-0" />
+            <Zap className="size-4 shrink-0 text-primary" />
             {t('speak.title')}
           </Button>
           <Button
             variant="ghost"
-            className="w-full justify-start gap-3 h-9 px-3 text-sm text-foreground/40 hover:text-foreground hover:bg-white/6 transition-colors"
+            className="w-full justify-start gap-3 h-10 px-3 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-white/6 transition-colors"
             render={<Link to="/settings" />}
           >
-            <Settings className="size-3.5 shrink-0" />
+            <Settings className="size-4 shrink-0" />
             {t('nav.settings')}
           </Button>
         </div>
