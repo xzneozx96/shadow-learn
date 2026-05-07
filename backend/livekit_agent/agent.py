@@ -217,7 +217,10 @@ async def shadowlearn_session(ctx: agents.JobContext):
             api_key=google_key,
             voice=voice_id,
             # proactivity=True,
-            enable_affective_dialog=True,
+            # enable_affective_dialog disabled: Gemini leaks emotion labels
+            # ("Amusement", "Contempt", "Observation") into spoken output.
+            # No official knob to suppress only the labels — disabling whole feature.
+            enable_affective_dialog=False,
             context_window_compression=genai_types.ContextWindowCompressionConfig(
                 sliding_window=genai_types.SlidingWindow(),
             ),
