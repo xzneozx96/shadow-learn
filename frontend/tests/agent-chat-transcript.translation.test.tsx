@@ -16,7 +16,7 @@ function fakeAgentMessage(id: string, text: string): ReceivedMessage {
   } as unknown as ReceivedMessage
 }
 
-describe('AgentChatTranscript — translation rendering', () => {
+describe('agentChatTranscript — translation rendering', () => {
   it('renders translation and romanization below AI bubble', () => {
     const messages = [fakeAgentMessage('id1', '你好')]
     const translations: Record<string, AiTurnTranslation> = {

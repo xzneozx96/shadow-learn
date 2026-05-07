@@ -57,6 +57,7 @@ export function Layout({ children }: LayoutProps) {
                   active
                     ? 'bg-primary! text-primary-foreground shadow-sm'
                     : 'text-foreground/60 hover:text-foreground hover:bg-white/6',
+                  'transition-all duration-200 ease-out',
                 )}
                 render={<Link to={to} />}
               >

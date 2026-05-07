@@ -1,6 +1,7 @@
 import type { Locale, TranslationKey } from '@/lib/i18n'
 import type { LessonMeta } from '@/types'
 import { ArrowUpRight, BookOpen, ChevronLeft, ChevronRight, Clock, Flame, Languages, Plus, Search, Sparkles } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -12,6 +13,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { getAllSessionLogs } from '@/db'
+import { useCountUp } from '@/hooks/useCountUp'
 import { useUploadThumbnail } from '@/hooks/useUploadThumbnail'
 import { computeScrollState } from '@/lib/carousel'
 import { API_BASE, getAppConfig } from '@/lib/config'
@@ -296,6 +298,8 @@ function ActivityHeatmap({ activityDates }: { activityDates: Set<string> }) {
     return { monthLabel, days, firstDowMon, daysActive: count, daysInMonth: lastDayOfMonth }
   }, [activityDates, locale])
 
+  const animatedDaysActive = useCountUp(daysActive)
+
   return (
     <div className="flex h-full flex-col">
       {/* Header: month + count inline */}
@@ -306,7 +310,7 @@ function ActivityHeatmap({ activityDates }: { activityDates: Set<string> }) {
           </span>
         </div>
         <span className="text-sm tabular-nums text-muted-foreground">
-          <span className="font-semibold text-foreground">{daysActive}</span>
+          <span className="font-semibold text-foreground">{animatedDaysActive}</span>
           <span className="text-muted-foreground">
             {' / '}
             {daysInMonth}
@@ -381,6 +385,7 @@ function StreakCard({ activityDates }: { activityDates: Set<string> }) {
   }, [activityDates])
 
   const hasStreak = streak > 0
+  const animatedStreak = useCountUp(streak)
 
   return (
     <div className="flex h-full flex-col">
@@ -388,7 +393,12 @@ function StreakCard({ activityDates }: { activityDates: Set<string> }) {
       <div className="mt-4 flex flex-col items-center gap-3">
         <div className="relative shrink-0">
           {hasStreak && (
-            <div className="absolute -inset-1.5 rounded-full bg-primary/35 blur-lg" />
+            <motion.div
+              className="absolute -inset-1.5 rounded-full bg-primary/35 blur-lg"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            />
           )}
           <Flame
             className={cn(
@@ -404,7 +414,7 @@ function StreakCard({ activityDates }: { activityDates: Set<string> }) {
             hasStreak ? 'text-primary' : 'text-foreground',
           )}
           >
-            {streak}
+            {animatedStreak}
           </span>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {streak === 1 ? t('library.streak.day') : t('library.streak.days')}
@@ -420,8 +430,14 @@ function StreakCard({ activityDates }: { activityDates: Set<string> }) {
           {t('library.streak.thisWeek')}
         </p>
         <div className="grid grid-cols-7 gap-1">
-          {week.map(d => (
-            <div key={d.key} className="flex flex-col items-center gap-1">
+          {week.map((d, i) => (
+            <motion.div
+              key={d.key}
+              className="flex flex-col items-center gap-1"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}
+            >
               <span className={cn(
                 'text-[10px] font-semibold tracking-wider',
                 d.isToday ? 'text-primary' : 'text-muted-foreground',
@@ -438,7 +454,7 @@ function StreakCard({ activityDates }: { activityDates: Set<string> }) {
                 )}
                 strokeWidth={1.5}
               />
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -474,6 +490,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
 
   const shades = ['bg-primary', 'bg-primary/65', 'bg-primary/35', 'bg-primary/18']
   const emptyHint = t('library.words.emptyHint').split('\n')
+  const animatedTotal = useCountUp(total)
 
   return (
     <div className="flex h-full flex-col">
@@ -489,7 +506,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
         </Link>
       </div>
       <div className="mt-3 flex items-baseline gap-2">
-        <span className="text-4xl font-bold tabular-nums tracking-tighter text-foreground">{total}</span>
+        <span className="text-4xl font-bold tabular-nums tracking-tighter text-foreground">{animatedTotal}</span>
         <span className="text-sm text-muted-foreground">
           {total === 1 ? t('library.words.wordSaved') : t('library.words.wordsSaved')}
         </span>
@@ -522,7 +539,7 @@ function WordsCard({ lessons, entriesByLesson, total }: {
                       shades[i] ?? 'bg-primary/15',
                       i === 0 && 'shadow-[0_0_8px_hsl(var(--primary)/0.5)]',
                     )}
-                    style={{ width: `${(s.count / total) * 100}%` }}
+                    style={{ width: `${(s.count / total) * 100}%`, transitionDelay: `${i * 60}ms` }}
                     title={`${s.title}: ${s.count}`}
                   />
                 ))}
@@ -799,14 +816,20 @@ export function Library() {
                   </div>
                 </div>
 
-                {filtered.map(lesson => (
-                  <LessonCard
+                {filtered.map((lesson, index) => (
+                  <motion.div
                     key={lesson.id}
-                    lesson={lesson}
-                    onDelete={handleDelete}
-                    onRename={handleRename}
-                    onRetry={handleRetry}
-                  />
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22, delay: Math.min(index, 8) * 0.04, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <LessonCard
+                      lesson={lesson}
+                      onDelete={handleDelete}
+                      onRename={handleRename}
+                      onRetry={handleRetry}
+                    />
+                  </motion.div>
                 ))}
               </div>
               {filtered.length === 0 && search.trim() && (

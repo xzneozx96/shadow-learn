@@ -225,7 +225,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-border/60">
                   <div
                     className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
-                    style={{ width: `${w.accuracy}%` }}
+                    style={{ width: `${w.accuracy}%`, transitionDelay: `${i * 80}ms` }}
                   />
                 </div>
                 <span className={cn('w-7 shrink-0 text-right text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>

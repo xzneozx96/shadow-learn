@@ -87,7 +87,7 @@ function useScoreLabel() {
   }
 }
 
-function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedback }) {
+function ScoreRow({ label, feedback, delay = 0 }: { label: string, feedback: CategoryFeedback, delay?: number }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
@@ -100,7 +100,7 @@ function ScoreRow({ label, feedback }: { label: string, feedback: CategoryFeedba
       <div className="h-1.5 w-full rounded-full bg-muted/60 overflow-hidden">
         <div
           className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(feedback.score), barGlow(feedback.score))}
-          style={{ width: `${feedback.score}%` }}
+          style={{ width: `${feedback.score}%`, transitionDelay: `${delay}ms` }}
         />
       </div>
       <p className="text-sm text-muted-foreground leading-relaxed">{feedback.comment}</p>
@@ -205,9 +205,9 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
 
           {/* Category breakdown */}
           <div className="space-y-4 pt-1">
-            <ScoreRow label={t('study.translation.accuracy')} feedback={result.accuracy} />
-            <ScoreRow label={t('study.translation.grammar')} feedback={result.grammar} />
-            <ScoreRow label={t('study.translation.naturalness')} feedback={result.naturalness} />
+            <ScoreRow label={t('study.translation.accuracy')} feedback={result.accuracy} delay={0} />
+            <ScoreRow label={t('study.translation.grammar')} feedback={result.grammar} delay={120} />
+            <ScoreRow label={t('study.translation.naturalness')} feedback={result.naturalness} delay={240} />
           </div>
 
           {/* Tip */}

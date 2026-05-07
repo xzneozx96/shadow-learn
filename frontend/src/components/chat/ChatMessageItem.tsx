@@ -2,6 +2,7 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { ExerciseRenderResult } from '../lesson/ExerciseRenderer'
 import { FileText } from 'lucide-react'
+import { motion } from 'motion/react'
 import { memo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -186,13 +187,18 @@ export const MessageItem = memo(
       const hasChips = contextChips.length > 0
 
       return (
-        <div className="flex justify-end">
+        <motion.div
+          className="flex justify-end"
+          initial={{ opacity: 0, x: 16, y: 4 }}
+          animate={{ opacity: 1, x: 0, y: 0 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        >
           <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
             {hasChips && (
               <div className="flex flex-wrap gap-1 mb-1.5">
-                {contextChips.map((chip, idx) => (
+                {contextChips.map(chip => (
                   <span
-                    key={idx}
+                    key={chip}
                     className="inline-flex items-center gap-1 rounded-sm bg-card/15 px-1.5 py-0.5 text-xs text-primary-foreground/90"
                   >
                     <FileText className="size-3 shrink-0" />
@@ -210,7 +216,7 @@ export const MessageItem = memo(
                 )
               : renderMessageParts(msg, sendMessage, activeWideIds)}
           </div>
-        </div>
+        </motion.div>
       )
     }
 
@@ -236,7 +242,12 @@ export const MessageItem = memo(
     })
 
     return (
-      <div className="flex flex-col gap-2 items-start w-full">
+      <motion.div
+        className="flex flex-col gap-2 items-start w-full"
+        initial={{ opacity: 0, x: -16, y: 4 }}
+        animate={{ opacity: 1, x: 0, y: 0 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      >
         {hasBubble && (
           <div className="flex justify-start w-full">
             <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
@@ -249,7 +260,7 @@ export const MessageItem = memo(
             {fullWidthContent}
           </div>
         )}
-      </div>
+      </motion.div>
     )
   },
   (prev, next) => {

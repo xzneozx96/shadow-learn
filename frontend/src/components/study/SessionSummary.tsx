@@ -1,6 +1,7 @@
 import type { VocabEntry } from '@/types'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
+import { useCountUp } from '@/hooks/useCountUp'
 
 interface Result { entry: VocabEntry, correct: boolean }
 
@@ -14,12 +15,13 @@ export function SessionSummary({ results, onStudyAgain, onBack }: Props) {
   const { t } = useI18n()
   const correctCount = results.filter(r => r.correct).length
   const wrong = results.filter(r => !r.correct).map(r => r.entry)
+  const animatedCount = useCountUp(correctCount)
 
   return (
     <div className="container mx-auto rounded-md border border-border bg-card backdrop-blur-xl p-8 text-center">
       <div className="text-4xl mb-2">{correctCount === results.length ? '🎉' : '💪'}</div>
       <div className="text-4xl font-bold tracking-tight">
-        {correctCount}
+        {animatedCount}
         {' '}
         /
         {' '}
