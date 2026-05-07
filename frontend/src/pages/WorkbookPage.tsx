@@ -1,6 +1,8 @@
 import type { ErrorPattern, ProgressStats } from '@/db'
+import { ArrowUpRight, Bookmark } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
 import { AccuracyTrendChart } from '@/components/progress/AccuracyTrendChart'
 import { MistakesPanel } from '@/components/progress/MistakesPanel'
@@ -148,8 +150,20 @@ export function WorkbookPage() {
 
               {/* Empty state */}
               {sortedLessonIds.length === 0 && (
-                <div className="text-center py-20 text-muted-foreground text-sm">
-                  {t('workbook.noWords')}
+                <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/2 px-8 py-16 text-center">
+                  <div className="mb-4 flex size-12 items-center justify-center rounded-xl border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                    <Bookmark className="size-5 text-foreground/70" />
+                  </div>
+                  <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
+                    {t('workbook.noWords')}
+                  </p>
+                  <Link
+                    to="/"
+                    className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-transform duration-200 hover:scale-[1.02]"
+                  >
+                    {t('nav.library')}
+                    <ArrowUpRight className="size-4" />
+                  </Link>
                 </div>
               )}
 
