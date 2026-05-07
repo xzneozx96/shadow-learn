@@ -32,7 +32,7 @@ export function CompanionPanel({
   const { entriesByLesson } = useVocabulary()
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
-  const { messages, isLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
+  const { messages, isLoading, isHistoryLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
   const { openSpeakModal } = useSpeakModal()
 
   useEffect(() => {
@@ -72,6 +72,7 @@ export function CompanionPanel({
         <CompanionChatArea
           messages={messages}
           isLoading={isLoading}
+          isHistoryLoading={isHistoryLoading}
           hasMore={hasMore}
           onLoadMore={loadMore}
           chips={chips}

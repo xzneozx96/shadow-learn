@@ -19,6 +19,7 @@ import {
   usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/contexts/I18nContext'
 import {
   EXERCISE_TOOLS,
@@ -79,6 +80,7 @@ export interface SendPayload {
 interface CompanionChatAreaProps {
   messages: UIMessage[]
   isLoading: boolean
+  isHistoryLoading?: boolean
   hasMore: boolean
   onLoadMore: () => void
   chips: ContextChip[]
@@ -93,6 +95,7 @@ interface CompanionChatAreaProps {
 export function CompanionChatArea({
   messages,
   isLoading,
+  isHistoryLoading = false,
   hasMore: _hasMore,
   onLoadMore: _onLoadMore,
   chips,
@@ -125,6 +128,25 @@ export function CompanionChatArea({
   // streaming token updates (non-urgent). React will interrupt deferred renders
   // when the user types and resume them afterward.
   const deferredMessages = useDeferredValue(messages)
+
+  // Track whether the initial deferred render has caught up at least once.
+  // Used only to keep the loading spinner visible during the first paint of
+  // restored history, where useDeferredValue lags behind setMessages by 1-2s
+  // when the history is large. Once the first deferred render lands, we never
+  // re-show the spinner — later deferred lag during streaming/typing is
+  // expected and shouldn't flicker the loader. Resets when the hook starts a
+  // new IDB fetch (isHistoryLoading flipping true) so lesson switches re-show
+  // the loader.
+  const initialRenderCompleteRef = useRef(false)
+  const prevHistoryLoadingRef = useRef(isHistoryLoading)
+  if (isHistoryLoading && !prevHistoryLoadingRef.current) {
+    initialRenderCompleteRef.current = false
+  }
+  prevHistoryLoadingRef.current = isHistoryLoading
+  if (!initialRenderCompleteRef.current && !isHistoryLoading && deferredMessages === messages) {
+    initialRenderCompleteRef.current = true
+  }
+  const showInitialLoading = !initialRenderCompleteRef.current && (isHistoryLoading || messages.length > 0)
 
   const uniqueMessages = useMemo(() => {
     const seen = new Set<string>()
@@ -318,7 +340,13 @@ export function CompanionChatArea({
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
       >
-        {messages.length === 0 && !isLoading && (
+        {showInitialLoading && (
+          <div className="flex h-full items-center justify-center py-12">
+            <Spinner className="size-8 text-muted-foreground" />
+          </div>
+        )}
+
+        {!showInitialLoading && messages.length === 0 && !isLoading && (
           <div className="flex h-full items-center justify-center py-12">
             <p className="text-center text-sm text-muted-foreground">
               {t('lesson.companionPlaceholder')}
