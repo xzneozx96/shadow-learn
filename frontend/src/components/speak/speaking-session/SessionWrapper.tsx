@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { AgentSessionProvider } from '@/components/agents-ui/agent-session-provider'
 
 export function SessionWrapper({ tokenSource, children }: { tokenSource: TokenSourceLiteral, children: React.ReactNode }) {
-  const livekitSession = useSession(tokenSource, { agentName: 'shadowlearn-speak-local' })
+  const livekitSession = useSession(tokenSource, { agentName: 'shadowlearn-speak' })
 
   // Mount-only: start the LiveKit session once, end on unmount.
   // Parent component keys <SessionWrapper> by currentSession.sessionId, so a

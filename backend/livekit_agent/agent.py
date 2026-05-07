@@ -70,7 +70,7 @@ def prewarm(proc: JobProcess) -> None:
 server = AgentServer(setup_fnc=prewarm, num_idle_processes=1)
 
 
-@server.rtc_session(agent_name="shadowlearn-speak-local")
+@server.rtc_session(agent_name="shadowlearn-speak")
 async def shadowlearn_session(ctx: agents.JobContext):
     """Main session handler for Speak with AI voice practice.
 

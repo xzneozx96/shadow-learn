@@ -165,7 +165,7 @@ def _generate_livekit_token(
         )
         .with_room_config(
             livekit_api.RoomConfiguration(
-                agents=[livekit_api.RoomAgentDispatch(agent_name="shadowlearn-speak-local")],
+                agents=[livekit_api.RoomAgentDispatch(agent_name="shadowlearn-speak")],
             ),
         )
     )
