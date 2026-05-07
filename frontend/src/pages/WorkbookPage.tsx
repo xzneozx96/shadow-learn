@@ -122,80 +122,68 @@ export function WorkbookPage() {
             </div>
 
             <TabsContent value="workbook" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-              <AnimatePresence mode="wait">
-                {activeTab === 'workbook' && (
-                  <motion.div
-                    key="workbook"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18 }}
-                  >
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="text-sm text-muted-foreground font-medium">
-                        {entries.length}
-                        {' '}
-                        {t('workbook.wordCount')}
-                        {' · '}
-                        {sortedLessonIds.length}
-                        {' '}
-                        {t('workbook.lessonCount')}
-                        {lastSaved && ` · ${t('workbook.lastSaved')} ${new Date(lastSaved).toLocaleDateString()}`}
-                      </div>
-                      <Input
-                        className="w-48 bg-background backdrop-blur-sm"
-                        placeholder={t('workbook.searchPlaceholder')}
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
+              <div className="flex items-center justify-between mb-6">
+                <div className="text-sm text-muted-foreground font-medium">
+                  {entries.length}
+                  {' '}
+                  {t('workbook.wordCount')}
+                  {' · '}
+                  {sortedLessonIds.length}
+                  {' '}
+                  {t('workbook.lessonCount')}
+                  {lastSaved && ` · ${t('workbook.lastSaved')} ${new Date(lastSaved).toLocaleDateString()}`}
+                </div>
+                <Input
+                  className="w-48 bg-background backdrop-blur-sm"
+                  placeholder={t('workbook.searchPlaceholder')}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+
+              {/* Review Banner */}
+              <div className="mb-6">
+                <ReviewQueueBanner count={dueItems.length} onStartReview={() => setReviewOpen(true)} />
+              </div>
+
+              {/* Empty state */}
+              {sortedLessonIds.length === 0 && (
+                <div className="text-center py-20 text-muted-foreground text-sm">
+                  {t('workbook.noWords')}
+                </div>
+              )}
+
+              {/* No search results state */}
+              {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
+                <div className="text-center py-20 text-muted-foreground text-sm">
+                  {t('workbook.noSearchResults')}
+                  {' "'}
+                  {search}
+                  ".
+                  {' '}
+                </div>
+              )}
+
+              {/* Groups */}
+              <div className="flex flex-col gap-7">
+                {sortedLessonIds
+                  .filter(id => filteredByLesson[id])
+                  .map((id, index) => (
+                    <motion.div
+                      key={id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, delay: Math.min(index, 8) * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                      <LessonGroup
+                        lessonId={id}
+                        lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
+                        entries={filteredByLesson[id]}
+                        onDeleteGroup={removeGroup}
                       />
-                    </div>
-
-                    {/* Review Banner */}
-                    <div className="mb-6">
-                      <ReviewQueueBanner count={dueItems.length} onStartReview={() => setReviewOpen(true)} />
-                    </div>
-
-                    {/* Empty state */}
-                    {sortedLessonIds.length === 0 && (
-                      <div className="text-center py-20 text-muted-foreground text-sm">
-                        {t('workbook.noWords')}
-                      </div>
-                    )}
-
-                    {/* No search results state */}
-                    {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
-                      <div className="text-center py-20 text-muted-foreground text-sm">
-                        {t('workbook.noSearchResults')}
-                        {' "'}
-                        {search}
-                        ".
-                        {' '}
-                      </div>
-                    )}
-
-                    {/* Groups */}
-                    <div className="flex flex-col gap-7">
-                      {sortedLessonIds
-                        .filter(id => filteredByLesson[id])
-                        .map((id, index) => (
-                          <motion.div
-                            key={id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.22, delay: Math.min(index, 6) * 0.06, ease: [0.16, 1, 0.3, 1] }}
-                          >
-                            <LessonGroup
-                              lessonId={id}
-                              lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
-                              entries={filteredByLesson[id]}
-                              onDeleteGroup={removeGroup}
-                            />
-                          </motion.div>
-                        ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    </motion.div>
+                  ))}
+              </div>
             </TabsContent>
 
             <TabsContent value="progress" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
