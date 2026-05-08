@@ -85,16 +85,9 @@ async def shadowlearn_session(ctx: agents.JobContext):
     await ctx.connect()
     logger.info(f"[SESSION] Room connected: {ctx.room.name}")
 
-    # Wait for user to join
-    user = None
-    for _ in range(50):
-        for p in ctx.room.remote_participants.values():
-            if p.kind != rtc.ParticipantKind.PARTICIPANT_KIND_AGENT:
-                user = p
-                break
-        if user:
-            break
-        await asyncio.sleep(0.1)
+    user = await ctx.wait_for_participant(
+        kind=rtc.ParticipantKind.PARTICIPANT_KIND_STANDARD
+    )
 
     if not user:
         raise Exception("No user joined the room")
