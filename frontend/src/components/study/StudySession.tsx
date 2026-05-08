@@ -301,7 +301,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
                 onClick={handleCancelLeave}
                 className={cn(
                   'flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium',
-                  'text-foreground hover:bg-muted/50 transition-colors',
+                  'text-foreground hover:bg-secondary/40 transition-colors',
                 )}
               >
                 {t('study.keepGoing')}

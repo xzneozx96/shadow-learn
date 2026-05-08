@@ -53,7 +53,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
             key={m.id}
             onClick={() => onSelect(m.id)}
             className={cn(
-              'py-10 px-2.5 rounded-md text-center border transition-all',
+              'py-10 px-2.5 rounded-md text-center border transition-all bg-card/50',
               selected === m.id
                 ? 'bg-secondary border-border/60 shadow-sm'
                 : 'border-border hover:bg-accent/60',
@@ -67,7 +67,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
       </div>
 
       {/* Question count */}
-      <div className="flex items-center justify-between px-4 py-3 rounded-md bg-secondary border border-border">
+      <div className="flex items-center justify-between px-4 py-3 rounded-md bg-card border border-border">
         <span className="text-sm text-muted-foreground">{t('study.questions')}</span>
         <div className="flex items-center gap-3">
           <button
@@ -97,7 +97,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
       </div>
 
       {selected === 'writing' && (
-        <div className="flex items-center justify-between px-4 py-3 rounded-md bg-secondary border border-border mt-2">
+        <div className="flex items-center justify-between px-4 py-3 rounded-md bg-card border border-border mt-2">
           <span className="text-sm text-muted-foreground">{t('study.writing.repsLabel')}</span>
           <div className="flex items-center gap-3">
             <button

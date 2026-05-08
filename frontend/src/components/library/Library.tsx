@@ -286,7 +286,7 @@ export function Library() {
                     aria-label={t('library.addNew')}
                   />
                   <div className="relative w-full overflow-hidden rounded-xl" style={{ aspectRatio: '16/9' }}>
-                    <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-dashed border-white/10 bg-card backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] group-hover:border-primary/30 group-hover:bg-primary/5 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
+                    <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-dashed border-white/10 bg-card backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] group-hover:border-primary/30 group-hover:bg-card transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <div className="flex items-center justify-center size-10 rounded-full border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] group-hover:bg-primary/15 group-hover:border-primary/30 transition-all duration-300">
                           <Plus className="size-4 text-foreground group-hover:text-primary transition-all duration-300 group-hover:rotate-90" />

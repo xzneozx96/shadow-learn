@@ -115,7 +115,7 @@ export function Layout({ children }: LayoutProps) {
           {/* Settings — utility row */}
           <Button
             variant="ghost"
-            className="group w-full justify-start gap-3 h-9 px-3 text-[13px] font-medium text-foreground/50 hover:text-foreground/70 hover:bg-white/4 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            className="group w-full justify-start gap-3 h-9 px-3 text-sm font-medium text-foreground/60 hover:text-foreground/70 hover:bg-white/4 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
             render={<Link to="/settings" />}
           >
             <Settings className="size-4 shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-45" />

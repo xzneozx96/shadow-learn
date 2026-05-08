@@ -46,8 +46,8 @@ export function LanguageLevelPicker({
               className={cn(
                 'elegant-card px-3 py-2.5 flex items-center gap-2.5 text-left transition-colors cursor-pointer',
                 language === lang.code
-                  ? 'border-primary ring-1 ring-primary/40 bg-primary/5'
-                  : 'hover:bg-muted/50',
+                  ? 'border-primary ring-1 ring-primary/40 bg-card'
+                  : 'hover:bg-secondary/40',
               )}
               aria-pressed={language === lang.code}
             >
@@ -72,8 +72,8 @@ export function LanguageLevelPicker({
               className={cn(
                 'elegant-card px-3 py-2.5 w-full flex flex-col gap-3 text-left transition-colors cursor-pointer',
                 level === lvl.id
-                  ? 'border-primary ring-1 ring-primary/40 bg-primary/5'
-                  : 'hover:bg-muted/50',
+                  ? 'border-primary ring-1 ring-primary/40 bg-card'
+                  : 'hover:bg-secondary/40',
               )}
               aria-pressed={level === lvl.id}
             >
@@ -88,7 +88,7 @@ export function LanguageLevelPicker({
       </div>
 
       <Button
-        size="xl"
+        size="lg"
         onClick={onContinue}
         disabled={!canContinue}
         className="w-full"

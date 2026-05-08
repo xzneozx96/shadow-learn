@@ -228,7 +228,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
   }, [videoBlob, lesson.title])
 
   return (
-    <div className="flex h-full flex-col bg-background backdrop-blur-md">
+    <div className="flex h-full flex-col backdrop-blur-md">
       {/* Header */}
       <div className="h-[65px] flex items-center gap-2 border-b border-border px-3 py-2">
         <Button variant="ghost" size="icon-sm" render={<Link to="/" />}>

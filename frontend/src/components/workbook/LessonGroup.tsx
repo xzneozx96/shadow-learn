@@ -52,7 +52,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: L
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-base font-bold text-foreground tracking-tight truncate">{lessonTitle}</div>
-          <div className="text-[13px] text-foreground/50 mt-1 font-medium">
+          <div className="text-sm text-foreground/50 mt-1 font-medium">
             {entries.length}
             {' '}
             {t('workbook.wordCount')}
@@ -95,7 +95,7 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: L
           </div>
           {entries.length > PREVIEW_COUNT && (
             <button
-              className="w-full py-3 text-[13px] font-medium text-foreground/50 hover:text-foreground hover:bg-white/[0.02] border-t border-white/5 transition-colors"
+              className="w-full py-3 text-sm font-medium text-foreground/50 hover:text-foreground hover:bg-white/2 border-t border-white/5 transition-colors"
               onClick={() => setExpanded(e => !e)}
             >
               {expanded ? t('lessonGroup.showLess') : `${t('lessonGroup.showAll')} ${entries.length} ${t('lessonGroup.showAllWords')}`}

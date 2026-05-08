@@ -52,7 +52,7 @@ function SidebarEntry({
       onClick={onClick}
       className={`w-full text-left p-3.5 mb-1.5 rounded-xl transition-all duration-200 border ${
         isActive
-          ? 'bg-primary/5 border-primary/20 shadow-sm'
+          ? 'bg-card border-primary/20 shadow-sm'
           : 'border-transparent hover:bg-muted/60'
       }`}
     >

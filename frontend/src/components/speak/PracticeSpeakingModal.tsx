@@ -339,7 +339,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     >
       <DialogContent
         className={cn(
-          'p-0 gap-0 overflow-hidden elegant-card flex flex-col',
+          'p-0 gap-0 overflow-hidden bg-card flex flex-col',
           step === 'active' || step === 'recap' ? 'w-full max-w-5xl! rounded-xl h-[90vh]' : 'w-full max-w-5xl! rounded-xl h-[60vh]',
         )}
         showCloseButton={false}

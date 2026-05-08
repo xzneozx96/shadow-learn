@@ -13,28 +13,28 @@
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
     /* Deep Navy / Slate neutrals matching new design */
-    --background: 233 29% 6%;
+    --background: 180 3% 6%;
     --foreground: 210 40% 98%;
-    --card: 235 26% 11%;
+    --card: 225 3% 9.1%;
     --card-foreground: 210 40% 98%;
-    --popover: 235 26% 11%;
+    --popover: 225 3% 9.1%;
     --popover-foreground: 210 40% 98%;
 
     /* Primary - bolder periwinkle blue for better contrast */
     --primary: 235 88% 73%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 230 28% 17%;
+    --secondary: 225 2% 14%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 230 28% 15%;
+    --muted: 225 3% 11%;
     --muted-foreground: 230 18% 72%;
-    --accent: 230 28% 17%;
+    --accent: 225 2% 14%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 72% 52%;
     --destructive-foreground: 210 40% 98%;
     --border: 224 28% 78% / 0.18;
-    --input: 230 28% 16%;
+    --input: 225 2% 14%;
     --ring: 235 88% 73%;
 
     --radius: 0.75rem;
@@ -148,8 +148,7 @@
   }
 
   .elegant-card:hover {
-    border-color: hsl(var(--primary) / 0.2);
-    background: hsl(var(--primary) / 0.05);
+    border-color: hsl(var(--primary) / 0.5);
   }
 
   .elegant-input {
