@@ -148,7 +148,6 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           google_key: keys.googleRealtimeKey,
-          deepgram_key: keys.deepgramApiKey ?? '',
           persona_id: selectedPersona.id,
           situation_id: selectedSituation.id,
           target_language: targetLanguage,

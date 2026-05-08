@@ -18,10 +18,9 @@ from dotenv import load_dotenv
 
 from livekit import agents, rtc
 from livekit.agents import AgentServer, AgentSession, JobProcess, room_io
-from livekit.plugins import deepgram, google, openai
+from livekit.plugins import google, speechmatics
 from livekit.plugins import noise_cancellation
 from livekit.plugins import silero
-from google.genai import types as genai_types
 
 from userdata import SpeakSessionData
 from agents import PersonaAgent, start_observer
@@ -29,26 +28,6 @@ from agents import PersonaAgent, start_observer
 load_dotenv(Path(__file__).parent / ".env")
 
 logger = logging.getLogger("shadowlearn-agent")
-
-
-# Workaround for livekit/agents#5102:
-# The Google plugin always sends SessionResumptionConfig even when handle is None,
-# which gemini-2.5-flash-native-audio-* rejects with 1008 (policy violation).
-# Patch _build_connect_config so session_resumption is only set when we actually
-# have a handle to resume.
-_orig_build_connect_config = google.realtime.realtime_api.RealtimeSession._build_connect_config
-
-def _patched_build_connect_config(self):
-    conf = _orig_build_connect_config(self)
-    handle = self._session_resumption_handle
-    logging.getLogger("shadowlearn-agent").info(
-        f"[CONNECT] _build_connect_config handle={handle!r} model={self._opts.model!r} voice={self._opts.voice!r}"
-    )
-    if handle is None:
-        conf.session_resumption = None
-    return conf
-
-google.realtime.realtime_api.RealtimeSession._build_connect_config = _patched_build_connect_config
 
 
 def prewarm(proc: JobProcess) -> None:
@@ -110,7 +89,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
             session_info[key] = value
 
     # Check attributes
-    for key in ("persona_id", "situation_id", "google_key", "openai_key", "deepgram_key"):
+    for key in ("persona_id", "situation_id", "google_key", "openai_key"):
         if key not in session_info and user.attributes.get(key):
             session_info[key] = user.attributes[key]
 
@@ -123,13 +102,10 @@ async def shadowlearn_session(ctx: agents.JobContext):
     # google_key is URL-encoded by the router (quote()) so unquote on read.
     google_key_raw = session_info.get("google_key", "")
     google_key = unquote(google_key_raw) if google_key_raw else os.getenv("GOOGLE_API_KEY", "")
-    openai_key_raw = session_info.get("openai_key", "")
-    openai_key = unquote(openai_key_raw) if openai_key_raw else os.getenv("OPENAI_API_KEY", "")
-    deepgram_key_raw = session_info.get("deepgram_key", "")
-    deepgram_key = unquote(deepgram_key_raw) if deepgram_key_raw else os.getenv("DEEPGRAM_API_KEY", "")
+    speechmatics_key = os.getenv("SPEECHMATICS_API_KEY", "")
 
-    if not google_key and not openai_key:
-        raise Exception("No API key provided (google_key or openai_key)")
+    if not google_key:
+        raise Exception("google_key required")
 
     # System prompt and voice
     system_prompt_encoded = session_info.get("system_prompt", "")
@@ -188,70 +164,45 @@ async def shadowlearn_session(ctx: agents.JobContext):
         elif k == "proficiency_level":
             userdata.proficiency_level = v
 
-    # Create AgentSession
-    # Note: Using Google Gemini Realtime for main voice
-    # Could alternatively use OpenAI Realtime
-    if google_key:
-        # gemini-2.5-flash-native-audio-preview-12-2025 rejects ALL language codes
-        # via SpeechConfig.language_code (1007 error), including "zh" which the docs
-        # list as supported. Language locking via system prompt instead.
-        #
-        # When Deepgram is available: disable Google's built-in user transcription so
-        # the SDK stops suppressing STT results (capabilities.user_transcription=False).
-        # Deepgram then delivers user transcript in ~300ms instead of 4-5s.
-        # Without Deepgram: omit the param so Google uses its default (delayed but functional).
-        # context_window_compression: required for long sessions on
-        # gemini-2.5-flash-native-audio-*. Without it, the server closes the
-        # WebSocket with 1008 "Operation is not implemented, or supported, or
-        # enabled." once the model's context fills (~10 min of audio). Sliding
-        # window compression lets the session run indefinitely.
-        # See: https://ai.google.dev/gemini-api/docs/live-guide#context-window-compression
-        google_realtime_kwargs = dict(
-            api_key=google_key,
-            voice=voice_id,
-            # proactivity=True,
-            # enable_affective_dialog omitted: Gemini leaks emotion labels
-            # ("Amusement", "Contempt", "Observation") into spoken output when on.
-            # Setting False causes 1007 error (field only valid in v1alpha API
-            # which is auto-selected when True), so omit the field entirely.
-            context_window_compression=genai_types.ContextWindowCompressionConfig(
-                sliding_window=genai_types.SlidingWindow(),
-            ),
-            # Disable thinking. Native-audio Gemini models think before each reply
-            # by default; thinking time grows with context, causing linear TTFT
-            # growth (+3s/turn observed). thinking_budget=0 turns it off entirely.
-            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
-        )
-        if deepgram_key:
-            google_realtime_kwargs["input_audio_transcription"] = None
-        llm = google.realtime.RealtimeModel(**google_realtime_kwargs)
-    else:
-        # Fallback: Use OpenAI Realtime
-        # Note: This requires OpenAI Realtime-capable model
-        llm = openai.realtime.RealtimeModel(
-            api_key=openai_key,
-            model="gpt-4o-realtime-preview",
-            voice="verse",
-        )
+    if not speechmatics_key:
+        raise Exception("speechmatics_key required")
 
-    _DEEPGRAM_LANG = {"zh-CN": "zh-CN", "en": "en-US", "ja": "ja"}
-    deepgram_lang = _DEEPGRAM_LANG.get(target_language, "en-US")
-    # endpointing_ms default is 25 — too aggressive for learners. Brief mid-sentence
-    # pauses get treated as utterance end, splitting one turn into many transcripts.
-    # 2000ms gives learners room to think between words without fragmenting the turn.
-    stt_model = (
-        deepgram.STT(
-            api_key=deepgram_key,
-            model="nova-3",
-            language=deepgram_lang,
-            endpointing_ms=2000,
-        )
-        if deepgram_key else None
+    llm = google.LLM(
+        model="gemini-3.1-flash-lite",
+        api_key=google_key,
     )
+
+    tts = google.beta.GeminiTTS(
+        model="gemini-3.1-flash-tts-preview",
+        voice_name=voice_id,
+        api_key=google_key,
+        instructions="Speak naturally and expressively as the character.",
+    )
+
+    # Speechmatics expects raw "cmn" for Mandarin, but livekit.agents.LanguageCode
+    # normalizes "cmn" -> "zh" via the hard-coded ISO_639_3_TO_1 map in
+    # livekit-agents/_language_data.py (introduced in PR #4926). Compound BCP-47
+    # tags like "cmn-Hans-CN" preserve the subtag through normalization but
+    # Speechmatics' server rejects compound forms with "lang pack not supported".
+    # Workaround: pass a placeholder to the constructor, then mutate
+    # _stt_options.language post-init with the raw "cmn" str. _prepare_config
+    # reads opts.language directly, bypassing LanguageCode wrapping.
+    _SM_LANG = {"zh-CN": "cmn", "en": "en", "ja": "ja"}
+    sm_lang = _SM_LANG.get(target_language, "en")
+
+    stt_model = speechmatics.STT(
+        api_key=speechmatics_key,
+        language="en",  # placeholder; overridden below
+        turn_detection_mode=speechmatics.TurnDetectionMode.FIXED,
+        end_of_utterance_silence_trigger=1.5,
+        end_of_utterance_max_delay=5.0,
+    )
+    stt_model._stt_options.language = sm_lang  # type: ignore[assignment]
 
     session = AgentSession[SpeakSessionData](
         userdata=userdata,
         llm=llm,
+        tts=tts,
         vad=ctx.proc.userdata.get("vad") or silero.VAD.load(),
         stt=stt_model,
     )
@@ -259,8 +210,8 @@ async def shadowlearn_session(ctx: agents.JobContext):
     # Start Observer agent in parallel
     # Use separate LLM for observer (can be different model)
     observer_llm = google.LLM(
-        model="gemini-3.1-flash-lite-preview",
-        api_key=google_key or os.getenv("GOOGLE_API_KEY", ""),
+        model="gemini-3.1-flash-lite",
+        api_key=google_key,
     )
 
     # Pass ctx.room directly so the observer can deliver RPC without going through

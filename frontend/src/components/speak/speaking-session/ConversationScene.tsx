@@ -90,7 +90,7 @@ export function ConversationScene({ onEnd, intelligencePanel, transcript, overla
   const portraitInitials = useMemo(() => getInitials(getPersonaName(persona, locale)), [persona, locale])
 
   return (
-    <div className="flex h-full bg-background relative overflow-hidden">
+    <div className="flex h-full relative overflow-hidden">
       {/* Left Panel: Intelligence */}
       <div className="w-70 xl:w-90 shrink-0 border-r border-border">
         {intelligencePanel}

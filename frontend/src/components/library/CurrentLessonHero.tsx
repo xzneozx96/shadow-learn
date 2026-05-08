@@ -87,7 +87,7 @@ export function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
 
   return (
     <Link to={`/lesson/${lesson.id}`} className="group block h-full">
-      <article className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-white/8 bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors duration-300 hover:border-primary/30">
+      <article className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-white/8 bg-card">
         {/* Background image — full bleed (scale-110 crops baked-in YouTube letterbox bars) */}
         {showThumbnail
           ? (

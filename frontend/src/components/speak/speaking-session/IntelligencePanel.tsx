@@ -114,24 +114,27 @@ export function IntelligencePanel({
         </AnimatePresence>
 
         {/* Cultural Tips */}
-        <AnimatePresence>
-          {culturalTips && culturalTips.length > 0 && (
-            <motion.div
-              key={culturalTips[0].phrase}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-2"
-            >
-              <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
-                <Info size={14} />
-                {t('speak.feedbackPanel.culturalInsight')}
-              </div>
-              <p className="text-base text-foreground font-semibold leading-snug">{culturalTips[0].phrase}</p>
-              <p className="text-sm text-blue-200/70 leading-relaxed">{culturalTips[0].explanation}</p>
-            </motion.div>
-          )}
+        <AnimatePresence mode="wait">
+          {culturalTips && culturalTips.length > 0 && (() => {
+            const tip = culturalTips.at(-1)!
+            return (
+              <motion.div
+                key={tip.phrase}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-2"
+              >
+                <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
+                  <Info size={14} />
+                  {t('speak.feedbackPanel.culturalInsight')}
+                </div>
+                <p className="text-base text-foreground font-semibold leading-snug">{tip.phrase}</p>
+                <p className="text-sm text-blue-200/70 leading-relaxed">{tip.explanation}</p>
+              </motion.div>
+            )
+          })()}
         </AnimatePresence>
       </div>
     </div>

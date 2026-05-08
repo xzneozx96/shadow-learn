@@ -35,7 +35,6 @@ vi.mock('@/contexts/AuthContext', () => ({
     db: {},
     keys: {
       openrouterApiKey: 'or-key',
-      deepgramApiKey: 'dg-key',
       azureSpeechKey: 'az-key',
       azureSpeechRegion: 'eastus',
     },
@@ -68,7 +67,7 @@ describe('createLesson STT key selection', () => {
     vi.clearAllMocks()
   })
 
-  it('sends deepgram_api_key when stt_provider is deepgram', async () => {
+  it('sends no stt key when stt_provider is deepgram', async () => {
     vi.mocked(getAppConfig).mockResolvedValue({ sttProvider: 'deepgram', ttsProvider: 'azure', freeTrialAvailable: false })
     globalThis.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
@@ -78,14 +77,14 @@ describe('createLesson STT key selection', () => {
     renderCreateLesson()
 
     await userEvent.type(screen.getByPlaceholderText(/youtube/i), 'https://www.youtube.com/watch?v=abc12345678')
-    // Wait for sttProvider to load (canGenerate becomes true) before clicking
     await waitFor(() => expect(screen.getByRole('button', { name: /generate lesson/i })).not.toBeDisabled())
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
     await waitFor(() => {
       const [lessonCall] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
       const body = JSON.parse(lessonCall[1].body)
-      expect(body.deepgram_api_key).toBe('dg-key')
+      expect(body.deepgram_api_key).toBeUndefined()
+      expect(body.gladia_api_key).toBeUndefined()
       expect(body.azure_speech_key).toBeUndefined()
       expect(body.azure_speech_region).toBeUndefined()
     })

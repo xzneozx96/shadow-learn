@@ -148,13 +148,15 @@ async def test_transcribe_audio_gladia_raises_on_api_error(tmp_path):
 
 @pytest.mark.asyncio
 async def test_gladia_provider_requires_api_key(tmp_path):
-    """GladiaSTTProvider raises if api_key list is empty."""
+    """GladiaSTTProvider raises if settings.gladia_api_keys is empty."""
     provider = GladiaSTTProvider()
     audio_file = tmp_path / "test.mp3"
     audio_file.write_bytes(b"fake audio data")
 
-    with pytest.raises(ValueError, match="Gladia API key is required"):
-        await provider.transcribe(audio_file, {}, "zh-CN")
+    with patch("app.transcription.services.transcription_gladia.settings") as mock_settings:
+        mock_settings.gladia_api_keys = []
+        with pytest.raises(ValueError, match="SHADOWLEARN_GLADIA_API_KEYS not configured"):
+            await provider.transcribe(audio_file, {}, "zh-CN")
 
 
 @pytest.mark.asyncio
@@ -172,10 +174,10 @@ async def test_gladia_provider_rotates_to_key2_on_402(tmp_path):
             raise _quota_error(402)
         return segments
 
-    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
-        result = await GladiaSTTProvider().transcribe(
-            audio_file, {"gladia_api_keys": ["key1", "key2"]}, "zh-CN"
-        )
+    with patch("app.transcription.services.transcription_gladia.settings") as mock_settings:
+        mock_settings.gladia_api_keys = ["key1", "key2"]
+        with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+            result = await GladiaSTTProvider().transcribe(audio_file, {}, "zh-CN")
 
     assert calls == ["key1", "key2"]
     assert result == segments
@@ -196,10 +198,10 @@ async def test_gladia_provider_rotates_to_key2_on_403(tmp_path):
             raise _quota_error(403)
         return segments
 
-    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
-        result = await GladiaSTTProvider().transcribe(
-            audio_file, {"gladia_api_keys": ["key1", "key2"]}, "zh-CN"
-        )
+    with patch("app.transcription.services.transcription_gladia.settings") as mock_settings:
+        mock_settings.gladia_api_keys = ["key1", "key2"]
+        with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+            result = await GladiaSTTProvider().transcribe(audio_file, {}, "zh-CN")
 
     assert calls == ["key1", "key2"]
     assert result == segments
@@ -220,10 +222,10 @@ async def test_gladia_provider_rotates_through_all_keys(tmp_path):
             raise _quota_error(402)
         return segments
 
-    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
-        result = await GladiaSTTProvider().transcribe(
-            audio_file, {"gladia_api_keys": ["key1", "key2", "key3", "key4", "key5"]}, "zh-CN"
-        )
+    with patch("app.transcription.services.transcription_gladia.settings") as mock_settings:
+        mock_settings.gladia_api_keys = ["key1", "key2", "key3", "key4", "key5"]
+        with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+            result = await GladiaSTTProvider().transcribe(audio_file, {}, "zh-CN")
 
     assert calls == ["key1", "key2", "key3", "key4", "key5"]
     assert result == segments
@@ -238,11 +240,11 @@ async def test_gladia_provider_raises_when_all_keys_exhausted(tmp_path):
     async def mock_transcribe(path, api_key, language):
         raise _quota_error(402)
 
-    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
-        with pytest.raises(httpx.HTTPStatusError) as exc_info:
-            await GladiaSTTProvider().transcribe(
-                audio_file, {"gladia_api_keys": ["key1", "key2", "key3"]}, "zh-CN"
-            )
+    with patch("app.transcription.services.transcription_gladia.settings") as mock_settings:
+        mock_settings.gladia_api_keys = ["key1", "key2", "key3"]
+        with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+            with pytest.raises(httpx.HTTPStatusError) as exc_info:
+                await GladiaSTTProvider().transcribe(audio_file, {}, "zh-CN")
 
     assert exc_info.value.response.status_code == 402
 
@@ -259,11 +261,11 @@ async def test_gladia_provider_does_not_rotate_on_non_quota_error(tmp_path):
         calls.append(api_key)
         raise _quota_error(401)
 
-    with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
-        with pytest.raises(httpx.HTTPStatusError) as exc_info:
-            await GladiaSTTProvider().transcribe(
-                audio_file, {"gladia_api_keys": ["key1", "key2", "key3"]}, "zh-CN"
-            )
+    with patch("app.transcription.services.transcription_gladia.settings") as mock_settings:
+        mock_settings.gladia_api_keys = ["key1", "key2", "key3"]
+        with patch("app.transcription.services.transcription_gladia.transcribe_audio_gladia", mock_transcribe):
+            with pytest.raises(httpx.HTTPStatusError) as exc_info:
+                await GladiaSTTProvider().transcribe(audio_file, {}, "zh-CN")
 
     assert calls == ["key1"]
     assert exc_info.value.response.status_code == 401
