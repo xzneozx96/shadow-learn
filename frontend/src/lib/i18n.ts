@@ -642,6 +642,7 @@ export const TRANSLATIONS = {
     'auth.placeholder.optionalKey': 'Tùy chọn — dùng key máy chủ nếu để trống',
     'auth.placeholder.azureRegion': 'Tùy chọn (vd. eastus)',
     'auth.setup.openrouterHint': 'Dùng cho các chức năng dịch thuật và hội thoại AI.',
+    'auth.setup.geminiHint': 'Dùng để luyện nói.',
     'auth.setup.deepgramHint': 'Dùng để chuyển video thành đoạn hội thoại.',
     'auth.setup.gladiaHint': 'Dùng để chuyển video thành đoạn hội thoại.',
     'auth.setup.azureHint': 'Dùng để chuyển văn bản thành giọng nói và chấm điểm phát âm của bạn.',
