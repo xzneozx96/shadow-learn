@@ -50,25 +50,19 @@ function SidebarEntry({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left p-3.5 mb-1.5 rounded-xl transition-all duration-200 border ${
+      className={`w-full text-left flex flex-col pl-4 pr-3 py-2 rounded-r-md transition-colors relative border-l-2 ${
         isActive
-          ? 'bg-card border-primary/20 shadow-sm'
-          : 'border-transparent hover:bg-muted/60'
+          ? 'border-primary'
+          : 'border-transparent hover:border-border hover:bg-white/5'
       }`}
     >
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className={`text-[11px] font-semibold tracking-wide uppercase ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-          {formatDate(entry.date, intlLocale, { month: 'short', day: 'numeric', year: 'numeric' })}
-        </span>
-        {isNew && (
-          <Badge className="h-auto px-1.5 py-0.5 text-[9px] font-bold bg-primary/15 text-primary border-primary/20 uppercase tracking-wider">
-            NEW
-          </Badge>
-        )}
-      </div>
-      <p className={`text-sm font-medium leading-snug ${isActive ? 'text-foreground' : 'text-foreground/80'}`}>
+      <span className="text-[11px] text-muted-foreground tabular-nums mb-0.5 flex items-center gap-1.5 uppercase tracking-wide">
+        {formatDate(entry.date, intlLocale, { month: 'short', day: 'numeric', year: 'numeric' })}
+        {isNew && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+      </span>
+      <span className={`text-sm leading-snug truncate ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
         {entry.title}
-      </p>
+      </span>
     </button>
   )
 }
@@ -125,10 +119,16 @@ export function ChangelogPage() {
 
   return (
     <Layout>
-      <div className="flex h-full container mx-auto px-6 py-9 pb-10">
-        {/* Sidebar */}
-        <div className="w-96 shrink-0 border-r border-border">
-          <div className="px-4">
+      <div className="flex h-full w-full text-foreground font-sans overflow-hidden">
+        {/* Left Sidebar */}
+        <aside className="w-80 shrink-0 border-r border-border flex flex-col h-full">
+          {/* Sidebar header */}
+          <div className="px-5 py-5 border-b border-border">
+            <h2 className="text-sm font-semibold text-foreground">{t('changelog.title')}</h2>
+          </div>
+
+          {/* Entry list */}
+          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5 scrollbar-hide">
             {entries.map(entry => (
               <SidebarEntry
                 key={entry.id}
@@ -139,19 +139,19 @@ export function ChangelogPage() {
                 onClick={() => selectEntry(entry.id)}
               />
             ))}
-          </div>
-        </div>
+          </nav>
+        </aside>
 
-        {/* Content */}
-        <div ref={contentRef} className="flex-1 px-4 overflow-auto">
+        {/* Main Content */}
+        <main ref={contentRef} className="flex-1 h-full overflow-y-auto">
           {selectedEntry && (
-            <div className="prose prose-invert prose-base max-w-4xl mx-auto">
-              {/* Header */}
-              <div className="mb-10">
-                <p className="text-sm font-medium text-primary mb-4 tabular-nums tracking-wide uppercase">
+            <div className="max-w-5xl mx-auto px-12 py-16 pb-32">
+              {/* Entry header */}
+              <div className="mb-10 pb-6 border-b border-border/20">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
                   {formatDate(selectedEntry.date, intlLocale, { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
-                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-6 leading-tight">
+                <h1 className="text-4xl font-bold tracking-tight text-foreground mb-5 leading-tight">
                   {selectedEntry.title}
                 </h1>
                 <div className="flex flex-wrap gap-2">
@@ -182,30 +182,27 @@ export function ChangelogPage() {
               )}
 
               {/* Markdown body */}
-              <div className="prose-custom text-base text-foreground/90 leading-relaxed">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-                    a: ({ href, children }) => <a href={href} className="text-primary hover:text-primary/80 font-medium underline underline-offset-4 transition-colors">{children}</a>,
-                    img: ({ src, alt }) => <img src={src} alt={alt ?? ''} className="rounded-xl w-full my-10 border border-border/50 shadow-sm" />,
-                    h2: ({ children }) => <h2 className="text-2xl font-bold text-foreground tracking-tight mt-12 mb-6">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-xl font-semibold text-foreground tracking-tight mt-8 mb-4">{children}</h3>,
-                    p: ({ children }) => <p className="mb-6 last:mb-0 leading-8">{children}</p>,
-                    ul: ({ children }) => <ul className="list-outside list-disc pl-5 mb-6 space-y-3">{children}</ul>,
-                    li: ({ children }) => <li className="pl-1 leading-normal">{children}</li>,
-                    ol: ({ children }) => <ol className="list-outside list-decimal pl-5 mb-6 space-y-3">{children}</ol>,
-                    pre: ({ children }) => <pre className="block bg-muted/50 p-4 rounded-xl text-sm font-mono overflow-x-auto mb-6 border border-border/50">{children}</pre>,
-                    code: ({ className, children }) => <code className={className ?? 'bg-muted text-foreground px-1.5 py-0.5 rounded-md text-[0.9em] font-mono'}>{children}</code>,
-                    blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 bg-muted/30 pl-6 pr-4 py-3 rounded-r-lg italic my-8 text-foreground/80">{children}</blockquote>,
-                  }}
-                >
+              <div className="prose prose-invert prose-base max-w-none
+                prose-p:text-muted-foreground prose-p:leading-relaxed
+                prose-headings:text-foreground prose-headings:font-semibold prose-headings:tracking-tight
+                prose-h2:mt-12 prose-h2:mb-6 prose-h2:border-b prose-h2:border-border/20 prose-h2:pb-2
+                prose-h3:mt-8 prose-h3:mb-4
+                prose-a:text-primary hover:prose-a:text-primary/80 prose-a:no-underline hover:prose-a:underline
+                prose-strong:text-foreground
+                prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-medium prose-code:before:content-none prose-code:after:content-none
+                prose-pre:bg-[#1c1c1f] prose-pre:border prose-pre:border-border/20 prose-pre:rounded-lg
+                prose-li:text-muted-foreground
+                prose-blockquote:border-primary/50 prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:font-normal prose-blockquote:text-muted-foreground
+                prose-img:rounded-xl prose-img:border prose-img:border-border/20 prose-img:my-8
+              "
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {selectedEntry.body}
                 </ReactMarkdown>
               </div>
             </div>
           )}
-        </div>
+        </main>
       </div>
     </Layout>
   )

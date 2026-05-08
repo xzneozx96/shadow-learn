@@ -486,6 +486,7 @@ export const TRANSLATIONS = {
     'whatsNew.tag.improved': 'IMPROVED',
     'whatsNew.tag.fixed': 'FIXED',
     'whatsNew.noEntries': 'No announcements yet.',
+    'changelog.title': 'Changelog',
 
     // Common
     'common.save': 'Save',
@@ -600,6 +601,12 @@ export const TRANSLATIONS = {
     'breakdown.col.hanviet': 'Sino-Viet',
     'breakdown.col.meaning': 'Meaning',
     'breakdown.button.show': 'Show breakdown of {word}',
+
+    // Documentation
+    'docs.category.getStarted': 'Get Started',
+    'docs.category.features': 'Features',
+    'docs.category.management': 'Management',
+    'docs.search.placeholder': 'Search documentation...',
   },
   vi: {
     // Navigation
@@ -1080,6 +1087,7 @@ export const TRANSLATIONS = {
     'whatsNew.tag.improved': 'CẢI TIẾN',
     'whatsNew.tag.fixed': 'SỬA LỖI',
     'whatsNew.noEntries': 'Chưa có thông báo nào.',
+    'changelog.title': 'Nhật ký cập nhật',
 
     // Common
     'common.save': 'Lưu',
@@ -1192,7 +1200,13 @@ export const TRANSLATIONS = {
     'breakdown.col.radical': 'Bộ',
     'breakdown.col.hanviet': 'Hán Việt',
     'breakdown.col.meaning': 'Nghĩa',
-    'breakdown.button.show': 'Xem phân tích chữ {word}',
+    'breakdown.button.show': 'Xem chi tiết từ {word}',
+
+    // Documentation
+    'docs.category.getStarted': 'Bắt đầu',
+    'docs.category.features': 'Tính năng',
+    'docs.category.management': 'Quản lý',
+    'docs.search.placeholder': 'Tìm kiếm hướng dẫn...',
   },
 } satisfies Record<Locale, Record<string, string>>
 

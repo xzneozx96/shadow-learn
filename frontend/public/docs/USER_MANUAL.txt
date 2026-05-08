@@ -1,4 +1,4 @@
-# Welcome to ShadowLearn! 🎉
+# Welcome to ShadowLearn! 
 
 **ShadowLearn** is your ultimate companion to conquer any foreign language using the **Shadowing** technique (Listen & Repeat) combined with smart interactive exercises and AI Assistance.
 
@@ -6,35 +6,21 @@ This guide will walk you through setting up and maximizing the application's fea
 
 ---
 
-## 📑 Table of Contents
-1. [Initial Setup (For Beginners)](#1-initial-setup-for-beginners)
-2. [Daily Use: Unlocking the App](#2-daily-use-unlocking-the-app)
-3. [Library & Lesson Management](#3-library--lesson-management)
-4. [Learning Interface (Classroom)](#4-learning-interface-classroom)
-5. [AI Companion — Your Personal Language Tutor](#5-ai-companion--your-personal-language-tutor)
-6. [Speak with AI — Live Voice Practice](#6-speak-with-ai--live-voice-practice)
-7. [Shadowing Practice (Pronunciation & Listening)](#7-shadowing-practice-pronunciation--listening)
-8. [Vocabulary Workbook, Quizzes & Progress](#8-vocabulary-workbook-quizzes--progress)
-9. [Settings](#9-settings)
-10. [Frequently Asked Questions (FAQ)](#10-frequently-asked-questions-faq)
-
----
-
-## 🔑 1. Initial Setup (For Beginners)
+## 1. Initial Setup (For Beginners)
 
 When you launch the app for the **first time**, you will see a **Setup** screen asking for **API Keys** and a **PIN**. This only happens once.
 
-### 💡 What are API Keys?
+### What are API Keys?
 They are "keys" that allow the app to connect with Artificial Intelligence (AI) models to power Translation, Speech Recognition, and Pronunciation features.
 
 | Key Name | Main Role | Importance |
 | :--- | :--- | :--- |
-| **OpenRouter API Key** | Translates, explains grammar, and chats with you. | **Required** 🔴 |
-| **Google Gemini API Key** | Powers live voice conversations in Speak with AI. | **Required for Speak with AI** 🟡 |
+| **OpenRouter API Key** | Translates, explains grammar, and chats with you. | **Required**  |
+| **Google Gemini API Key** | Powers live voice conversations in Speak with AI. | **Required for Speak with AI**  |
 
-> ⚠️ **Absolute Security**: All keys are encrypted and **only saved on your computer**. The app never sends them to our servers.
+> ️ **Absolute Security**: All keys are encrypted and **only saved on your computer**. The app never sends them to our servers.
 
-### 🔑 How to Get API Keys
+### How to Get API Keys
 
 #### OpenRouter API Key (Translation & Explanation)
 *   See tutorial here: https://app.tango.us/app/workflow/Create-API-Key-in-OpenRouter-95b3cf6d85df49b48ad728d93c8d5b76
@@ -46,26 +32,26 @@ They are "keys" that allow the app to connect with Artificial Intelligence (AI) 
 1. Go to [aistudio.google.com](https://aistudio.google.com) and sign in with your Google account
 2. Click **Get API key** in the left sidebar
 3. Click **Create API key** → select **Create API key in new project** → copy the key (starts with `AIza…`)
-4. Still inside AI Studio, open **Billing** from the left menu → click **Add payment method** → enter your **Visa / Mastercard** details and confirm. ⚠️ **Do not use the free trial** — it is unstable and will cause the voice session to drop or fail. Paid billing is required for reliable Gemini Live performance.
+4. Still inside AI Studio, open **Billing** from the left menu → click **Add payment method** → enter your **Visa / Mastercard** details and confirm. ️ **Do not use the free trial** — it is unstable and will cause the voice session to drop or fail. Paid billing is required for reliable Gemini Live performance.
 5. Open ShadowLearn → **Settings** → paste the key into the **Google Gemini (Realtime)** field and save
 
 ![Google AI Studio — API key and billing setup](docs/images/speak_google_api_key.png)
 
-> 💡 **Cost:** ~300 VNĐ (~$0.012 USD) per minute of conversation. You only pay when you use it.
+>  **Cost:** ~300 VNĐ (~$0.012 USD) per minute of conversation. You only pay when you use it.
 
 ---
 
-### 🔐 Create a PIN
+### Create a PIN
 - Create a PIN (minimum 4 characters) and confirm it.
 - The PIN encrypts your keys and lesson data while the app is closed.
 
-> 🚨 **Important**: If you forget your PIN, you will need to reset the app and re-enter all API keys. There is no recovery option. Write your PIN somewhere safe!
+>  **Important**: If you forget your PIN, you will need to reset the app and re-enter all API keys. There is no recovery option. Write your PIN somewhere safe!
 
 ![Setup Screen](docs/images/setup_screen.png)
 
 ---
 
-## 🔓 2. Daily Use: Unlocking the App
+## 2. Daily Use: Unlocking the App
 
 Every time you re-open ShadowLearn, you will see the **Unlock** screen. Simply enter your PIN to access your lessons and data.
 
@@ -73,45 +59,45 @@ Every time you re-open ShadowLearn, you will see the **Unlock** screen. Simply e
 
 ---
 
-## 📚 3. Library & Lesson Management
+## 3. Library & Lesson Management
 
 The main dashboard is the **Library**, containing all your created lessons.
 
 ![Library](docs/images/library.png)
 
-### ➕ Creating a New Lesson
+### Creating a New Lesson
 Click the **+** card or **Create Lesson** button. You have 2 options:
 
-1. **Via YouTube Link** 🌐:
+1. **Via YouTube Link** :
    - Paste the video URL into the box.
    - The app will download the audio and generate subtitles automatically.
-2. **Upload from Computer** 📁:
+2. **Upload from Computer** :
    - Upload an audio (.mp3) or video (.mp4) file from your device.
 
-### 🌐 Choose Translation Language
+### Choose Translation Language
 - Select your target language (e.g., **English**).
 - Click **Generate**. The lesson enters a processing queue — you can return to the Library to wait (status shown as *Processing*).
 
 ![Create New Lesson](docs/images/create_lesson.png)
 
-### 🗂️ Managing Existing Lessons
+### ️ Managing Existing Lessons
 
 Each lesson card in the Library supports:
 
-- **Rename** ✏️ — Click the pencil icon on a card to give it a new name.
-- **Delete** 🗑️ — Remove the lesson and all its data permanently.
-- **Retry** 🔄 — If a YouTube lesson failed to process, use Retry to try again.
-- **Search** 🔍 — Use the search bar at the top to filter lessons by title.
+- **Rename** ️ — Click the pencil icon on a card to give it a new name.
+- **Delete** ️ — Remove the lesson and all its data permanently.
+- **Retry**  — If a YouTube lesson failed to process, use Retry to try again.
+- **Search**  — Use the search bar at the top to filter lessons by title.
 
 ---
 
-## 🖥️ 4. Learning Interface (Classroom)
+## ️ 4. Learning Interface (Classroom)
 
 Opening a lesson divides the screen into **3 main columns**:
 
 ![Shadowing Screen](docs/images/shadowing_screen.png)
 
-### 📺 Left Column — Video / Audio Player
+### Left Column — Video / Audio Player
 
 Plays the lesson content. Controls include:
 
@@ -120,29 +106,29 @@ Plays the lesson content. Controls include:
 - **Seek bar**: Click anywhere on the timeline to jump to that moment
 - **Volume slider**: Adjust audio volume
 - **Download** ⬇️: Save the video/audio file to your computer
-- **Rename** ✏️: Click the pencil icon next to the lesson title to rename it
+- **Rename** ️: Click the pencil icon next to the lesson title to rename it
 
-### 📜 Middle Column — Subtitles & Practice
+### Middle Column — Subtitles & Practice
 
 - Displays all segments with **Pinyin**, **Chinese text**, and **translation**.
 - **Click any segment** to jump the video to that exact moment.
 - **Hover a word** to see its pronunciation and a bookmark icon.
-- **Bookmark 🔖**: Save any word to your Vocabulary Workbook.
-- **Play 🔊**: Hear the AI pronounce any segment.
-- **Copy 📋**: Copy the segment text to clipboard.
-- **Shadow 🎯**: Start a Shadowing session beginning from that specific segment.
-- **Shadowing button** 🎤 at the top: Start a full Shadowing session for the lesson.
+- **Bookmark **: Save any word to your Vocabulary Workbook.
+- **Play **: Hear the AI pronounce any segment.
+- **Copy **: Copy the segment text to clipboard.
+- **Shadow **: Start a Shadowing session beginning from that specific segment.
+- **Shadowing button**  at the top: Start a full Shadowing session for the lesson.
 
-### 🤖 Right Column — AI Companion (2 Tabs)
+### Right Column — AI Companion (2 Tabs)
 
 The right column is home to your personal AI tutor. See [Section 5](#5-ai-companion--your-personal-language-tutor) for the full guide — it's the most powerful feature in ShadowLearn.
 
-**Tab 1 — Chat 💬** — Talk to your AI tutor, ask questions, request exercises.
-**Tab 2 — Workbook 📚** — Browse words saved from this lesson; click any word to jump to it in the transcript. **Study This Lesson** button launches a quiz session.
+**Tab 1 — Chat ** — Talk to your AI tutor, ask questions, request exercises.
+**Tab 2 — Workbook ** — Browse words saved from this lesson; click any word to jump to it in the transcript. **Study This Lesson** button launches a quiz session.
 
 ---
 
-## 🧠 5. AI Companion — Your Personal Language Tutor
+## 5. AI Companion — Your Personal Language Tutor
 
 > *Most language apps give you exercises. ShadowLearn gives you a tutor.*
 
@@ -150,7 +136,7 @@ The **AI Companion** lives in the right panel of every lesson. It is not a simpl
 
 ---
 
-### ✨ What Makes It Different
+### What Makes It Different
 
 | Ordinary chatbot | ShadowLearn AI Companion |
 | :--- | :--- |
@@ -161,7 +147,7 @@ The **AI Companion** lives in the right panel of every lesson. It is not a simpl
 
 ---
 
-### 💬 How to Start a Conversation
+### How to Start a Conversation
 
 Just type naturally. Here are ideas to get you going:
 
@@ -190,7 +176,7 @@ The AI will remember everything you tell it, even in future sessions.
 
 ---
 
-### 🎮 Interactive Exercises Right in the Chat
+### Interactive Exercises Right in the Chat
 
 This is the standout feature. When you ask for practice, the AI doesn't just describe an exercise — it **renders a live, interactive exercise directly inside the conversation**. You complete it, submit your answer, and the AI responds with feedback and updates your progress automatically.
 
@@ -198,19 +184,19 @@ Exercises the AI can launch in chat:
 
 | Exercise | What happens |
 | :--- | :--- |
-| 🔤 **Dictation** | An audio clip plays; you type what you hear |
-| ✍️ **Character Writing** | A character appears; you trace its stroke order |
-| 🧠 **Pinyin Recall** | A character appears; you type its pinyin |
-| 📝 **Translation** | A sentence appears; you translate it |
-| 🎤 **Pronunciation** | A sentence appears; you record yourself saying it |
-| 📝 **Cloze (Fill-in-the-blank)** | The AI writes a short story using your words with gaps to fill |
-| 🧩 **Reconstruction** | Word chips appear scrambled; you drag them into the right order |
+|  **Dictation** | An audio clip plays; you type what you hear |
+| ️ **Character Writing** | A character appears; you trace its stroke order |
+|  **Pinyin Recall** | A character appears; you type its pinyin |
+|  **Translation** | A sentence appears; you translate it |
+|  **Pronunciation** | A sentence appears; you record yourself saying it |
+|  **Cloze (Fill-in-the-blank)** | The AI writes a short story using your words with gaps to fill |
+|  **Reconstruction** | Word chips appear scrambled; you drag them into the right order |
 
 The AI chooses which words to include based on what you've saved, what's due for review, and what you've been struggling with recently — not randomly.
 
 ---
 
-### 🧠 It Knows You — The Learner Profile
+### It Knows You — The Learner Profile
 
 The first time you start chatting, the AI will ask you a few quick questions:
 - What is your current level?
@@ -221,7 +207,7 @@ These answers build your **Learner Profile**, which the AI reads at the start of
 
 ---
 
-### 🗂️ Long-Term Memory
+### ️ Long-Term Memory
 
 The AI keeps a **persistent memory** of important things you share with it:
 - Your learning goals and motivations
@@ -233,7 +219,7 @@ This memory carries over to every future session. The AI can also search its own
 
 ---
 
-### 📊 Ask for Your Progress
+### Ask for Your Progress
 
 At any time, type:
 - *"Show me my progress chart."*
@@ -243,7 +229,7 @@ The AI will render a **visual chart** right in the chat — an accuracy trend gr
 
 ---
 
-### 💡 Tips for Getting the Best Out of It
+### Tips for Getting the Best Out of It
 
 - **Be specific.** *"Quiz me on 想 and 觉得"* works better than *"quiz me"*.
 - **Tell it your mood.** *"I only have 5 minutes"* → it will keep the session short.
@@ -252,7 +238,7 @@ The AI will render a **visual chart** right in the chat — an accuracy trend gr
 
 ---
 
-## 🗣️ 6. Speak with AI — Live Voice Practice
+## ️ 6. Speak with AI — Live Voice Practice
 
 > *No scheduling. No judgment. Just you and an AI that corrects your grammar while you speak.*
 
@@ -260,7 +246,7 @@ The AI will render a **visual chart** right in the chat — an accuracy trend gr
 
 ---
 
-### ✨ What You Get in Every Session
+### What You Get in Every Session
 
 | Feature | What it does |
 | :--- | :--- |
@@ -276,7 +262,7 @@ The AI will render a **visual chart** right in the chat — an accuracy trend gr
 
 ---
 
-### 🚀 How to Use It
+### How to Use It
 
 #### Step 1 — Open Speak with AI
 There are two ways to access the feature:
@@ -293,9 +279,9 @@ If your Google Gemini key isn't set yet, the app will prompt you to go to Settin
 #### Step 2 — Choose language and level
 Select your **target language**, then pick a **proficiency level**:
 
-- 🌱 **Beginner** — HSK 1-2 / CEFR A1-A2 / JLPT N5-N4 / TOPIK I
-- 🌿 **Intermediate** — HSK 3-4 / CEFR B1-B2 / JLPT N3-N2 / TOPIK II 3-4
-- 🌳 **Advanced** — HSK 5-6 / CEFR C1-C2 / JLPT N1 / TOPIK II 5-6
+-  **Beginner** — HSK 1-2 / CEFR A1-A2 / JLPT N5-N4 / TOPIK I
+-  **Intermediate** — HSK 3-4 / CEFR B1-B2 / JLPT N3-N2 / TOPIK II 3-4
+-  **Advanced** — HSK 5-6 / CEFR C1-C2 / JLPT N1 / TOPIK II 5-6
 
 The AI adjusts vocabulary, sentence complexity, and feedback depth to match your level. Click **Continue**.
 
@@ -313,7 +299,7 @@ Choose the AI character you want to talk to. Each persona has a distinct persona
 #### Step 4 — Pick a situation
 Choose a scenario from the grid: casual chat, ordering food, asking directions, shopping/bargaining, job interview, meeting the family, hospital visit, karaoke, and more.
 
-**Can't find the right scenario?** Click **✨ Create your own** at the top of the grid. Describe your situation in plain text and the AI generates a custom scenario with matching vocabulary.
+**Can't find the right scenario?** Click ** Create your own** at the top of the grid. Describe your situation in plain text and the AI generates a custom scenario with matching vocabulary.
 
 ![Situation picker](docs/images/speak_situation_picker.png)
 
@@ -337,10 +323,10 @@ The session screen has three panels:
 - Session countdown timer from 10:00
 
 **Right — Intelligence Panel**
-- 🎯 **Target vocabulary checklist** — words get crossed off as you use them
-- 💡 **Next-Line Suggestion** — a contextual prompt to help continue the conversation
-- 🌐 **Cultural tips** — idioms, register, situational etiquette
-- 📖 **Vocab tips** — quick explanations of words the AI just used
+-  **Target vocabulary checklist** — words get crossed off as you use them
+-  **Next-Line Suggestion** — a contextual prompt to help continue the conversation
+-  **Cultural tips** — idioms, register, situational etiquette
+-  **Vocab tips** — quick explanations of words the AI just used
 
 **Left — Grammar Feedback**
 - Click any message in the transcript to open its grammar panel
@@ -348,7 +334,7 @@ The session screen has three panels:
 
 ![Active session — all three panels labeled](docs/images/speak_active_session.png)
 
-> 💡 **Tips:** Speak at a natural pace. If you go silent, the AI gently prompts you. Use Next-Line Suggestion when stuck — say it aloud and see how the AI responds. Grammar corrections appear automatically.
+>  **Tips:** Speak at a natural pace. If you go silent, the AI gently prompts you. Use Next-Line Suggestion when stuck — say it aloud and see how the AI responds. Grammar corrections appear automatically.
 
 When finished, click **End Session**.
 
@@ -367,7 +353,7 @@ Click **Practice Again** to repeat the same scenario, or **Back** to choose a ne
 
 ---
 
-### 🔧 Troubleshooting
+### Troubleshooting
 
 **"Google API key required" error** → Go to Settings and add your Google Gemini API key.
 
@@ -379,9 +365,9 @@ Click **Practice Again** to repeat the same scenario, or **Back** to choose a ne
 
 ---
 
-## 🎤 7. Shadowing Practice (Pronunciation & Listening)
+## 7. Shadowing Practice (Pronunciation & Listening)
 
-Click the **Shadowing** button in the middle column (or the 🎯 icon on a specific segment). A dialog will appear where you choose your mode and how many segments to practice.
+Click the **Shadowing** button in the middle column (or the  icon on a specific segment). A dialog will appear where you choose your mode and how many segments to practice.
 
 ### Choosing a Mode
 
@@ -389,14 +375,14 @@ Click the **Shadowing** button in the middle column (or the 🎯 icon on a speci
 
 | Mode | What You Do |
 | :--- | :--- |
-| 🔤 **Dictation Mode** | Listen to a segment and type what you hear |
-| 🎤 **Speaking Mode** | Listen to a segment and speak it aloud into your microphone |
+|  **Dictation Mode** | Listen to a segment and type what you hear |
+|  **Speaking Mode** | Listen to a segment and speak it aloud into your microphone |
 
 You can also set **how many segments** to practice, or choose "All remaining" to go through the whole lesson.
 
 ---
 
-### 🔤 Dictation Mode Flow
+### Dictation Mode Flow
 
 **Step 1 — Listen Phase**
 - The segment audio plays automatically.
@@ -408,7 +394,7 @@ You can also set **how many segments** to practice, or choose "All remaining" to
 
 **Step 3 — Reveal Phase**
 - Your answer is shown alongside the correct text.
-- Each character is highlighted: 🟢 Green = correct, 🔴 Red = wrong.
+- Each character is highlighted:  Green = correct,  Red = wrong.
 - Your accuracy score is shown.
 - Click **Retry** to try again or **Next** to move on.
 
@@ -416,7 +402,7 @@ You can also set **how many segments** to practice, or choose "All remaining" to
 
 ---
 
-### 🎤 Speaking Mode Flow
+### Speaking Mode Flow
 
 **Step 1 — Listen Phase**
 - The segment audio plays automatically. Press **Space** or **Replay** to hear it again.
@@ -429,12 +415,12 @@ You can also set **how many segments** to practice, or choose "All remaining" to
 
 **Step 3 — Reveal Phase**
 - Your recording is played back alongside the correct AI pronunciation.
-- Azure grades your pronunciation: 🟢 Green = good, 🔴 Red = needs work.
+- Azure grades your pronunciation:  Green = good,  Red = needs work.
 - Click **Retry** to try again or **Next** to continue.
 
 ---
 
-### 📊 Session Summary
+### Session Summary
 
 After all segments are done, you see a full summary:
 - Accuracy score per segment
@@ -443,40 +429,40 @@ After all segments are done, you see a full summary:
 
 ---
 
-## 📓 8. Vocabulary Workbook, Quizzes & Progress
+## 8. Vocabulary Workbook, Quizzes & Progress
 
-### 📌 Saving Words
-While reading subtitles, **hover over any word** and click the **Bookmark 🔖** icon. The word is instantly added to your Workbook.
+### Saving Words
+While reading subtitles, **hover over any word** and click the **Bookmark ** icon. The word is instantly added to your Workbook.
 
-### 📖 Accessing the Full Workbook
+### Accessing the Full Workbook
 
 Click **Workbook** in the top navigation to open the full Vocabulary page. Here you can:
 
 - See **total words saved** and how many lessons they come from
 - **Search** for any word by character, pinyin, or meaning
 - Browse words **grouped by lesson** — click a group to expand or collapse it
-- Click **Play 🔊** on any word to hear it pronounced
+- Click **Play ** on any word to hear it pronounced
 - Click **Study** on any lesson group to practice only those words
 
 ![Workbook Dashboard](docs/images/workbook_dashboard.png)
 
 ---
 
-### 🎮 Quiz Formats
+### Quiz Formats
 
 When you start a study session (from the Workbook or the lesson's Workbook tab), choose your exercise type and how many words to practice:
 
 | Quiz Mode | What You Do | Skill Trained |
 | :--- | :--- | :--- |
-| 🔀 **Mixed** | Randomly cycles through all exercise types | All-round practice |
-| 📝 **Cloze** | Fill in blanks in an AI-generated story | Reading in context |
-| 🔤 **Dictation** | Listen and type the Chinese sentence | Listening & spelling |
-| 🎤 **Pronunciation** | Read the sentence aloud for Azure to grade | Speaking accuracy |
-| 🧩 **Reconstruction** | Arrange jumbled words into the correct sentence | Grammar & word order |
-| 🧠 **Pinyin Recall** | See the character — can you recall its pinyin? | Reading & pronunciation |
-| ✍️ **Character Writing** | Trace the stroke order of each character on screen | Writing & muscle memory |
+|  **Mixed** | Randomly cycles through all exercise types | All-round practice |
+|  **Cloze** | Fill in blanks in an AI-generated story | Reading in context |
+|  **Dictation** | Listen and type the Chinese sentence | Listening & spelling |
+|  **Pronunciation** | Read the sentence aloud for Azure to grade | Speaking accuracy |
+|  **Reconstruction** | Arrange jumbled words into the correct sentence | Grammar & word order |
+|  **Pinyin Recall** | See the character — can you recall its pinyin? | Reading & pronunciation |
+| ️ **Character Writing** | Trace the stroke order of each character on screen | Writing & muscle memory |
 
-> 💡 Each exercise has an **ⓘ info button** — click it to read a description of the exercise before starting.
+>  Each exercise has an **ⓘ info button** — click it to read a description of the exercise before starting.
 
 ![Study Session](docs/images/study_workbook.png)
 
@@ -484,17 +470,17 @@ After finishing, a **Session Summary** shows your score breakdown by exercise ty
 
 ---
 
-### 📊 Progress Dashboard
+### Progress Dashboard
 
 The bottom of the Workbook page shows a live progress dashboard that updates automatically as you complete exercises.
 
-#### 🔢 Overall Stats
+#### Overall Stats
 Displays your total exercise count, overall accuracy rate, and total study time accumulated across all sessions.
 
-#### 📈 Accuracy Trend
+#### Accuracy Trend
 A chart showing your daily accuracy over the past 90 days — one data point per day. It reflects the running accuracy of all exercises you answered that day.
 
-#### 🏅 Skill Breakdown
+#### Skill Breakdown
 Five cards — **Writing**, **Speaking**, **Vocabulary**, **Reading**, **Listening** — each showing:
 - Accuracy percentage (correct answers ÷ total attempts for that skill)
 - Total exercise attempts logged
@@ -505,20 +491,20 @@ Each exercise type feeds into a specific skill:
 
 | Exercise | Skill tracked |
 | :--- | :--- |
-| ✍️ Character Writing | Writing |
-| 📝 Translation | Writing |
-| 🎤 Pronunciation | Speaking |
-| 🧠 Pinyin Recall | Speaking |
-| 📝 Cloze | Vocabulary |
-| 🧩 Reconstruction | Reading |
-| 🔤 Dictation | Listening |
+| ️ Character Writing | Writing |
+|  Translation | Writing |
+|  Pronunciation | Speaking |
+|  Pinyin Recall | Speaking |
+|  Cloze | Vocabulary |
+|  Reconstruction | Reading |
+|  Dictation | Listening |
 
-> 💡 **How scoring works:** Binary exercises (Dictation, Cloze, Reconstruction, Pinyin Recall) score 100 for correct or 0 for wrong. Character Writing scores 100 if no hints were used, 80 if hints were used. Translation and Pronunciation receive real numeric scores (0–100) from AI. A score of **60 or above** counts as a correct answer for accuracy purposes.
+>  **How scoring works:** Binary exercises (Dictation, Cloze, Reconstruction, Pinyin Recall) score 100 for correct or 0 for wrong. Character Writing scores 100 if no hints were used, 80 if hints were used. Translation and Pronunciation receive real numeric scores (0–100) from AI. A score of **60 or above** counts as a correct answer for accuracy purposes.
 
-#### 🐛 Common Mistakes
+#### Common Mistakes
 Highlights vocabulary items you have struggled with most frequently, so you know where to focus.
 
-#### 🔁 Spaced Repetition & Review Queue
+#### Spaced Repetition & Review Queue
 Every time you answer an exercise, ShadowLearn schedules the next review for that vocabulary word using a scientifically-proven method that spaces reviews over increasing intervals based on how well you know the word:
 
 - Answer correctly and confidently → next review in several days
@@ -529,20 +515,20 @@ When words are due for review, a banner appears at the top of the Workbook page:
 
 ---
 
-## ⚙️ 9. Settings
+## ️ 9. Settings
 
-Click the **Settings icon** (⚙️) in the top navigation at any time to:
+Click the **Settings icon** (️) in the top navigation at any time to:
 
-- **Update API Keys** — paste new or corrected keys; use the 👁️ icon to show/hide a key
+- **Update API Keys** — paste new or corrected keys; use the ️ icon to show/hide a key
 - **Change PIN** — enter a new PIN and confirm it
 - **Set Default Translation Language** — choose which language lessons translate into by default
 - **Lock App** — immediately lock the app (requires PIN to re-open)
 
-> 🚨 **Forgot PIN button**: This resets the app and erases all stored API keys. You will need to re-enter them on next launch. Use only as a last resort.
+>  **Forgot PIN button**: This resets the app and erases all stored API keys. You will need to re-enter them on next launch. Use only as a last resort.
 
 ---
 
-## ❓ 10. Frequently Asked Questions (FAQ)
+## 10. Frequently Asked Questions (FAQ)
 
 **Q: Can I change my PIN?**
 - **A:** Yes — open Settings and use the **Change PIN** section. Write your PIN down somewhere safe; there is no recovery if forgotten.
@@ -566,4 +552,4 @@ Click the **Settings icon** (⚙️) in the top navigation at any time to:
 - **A:** Everything — lessons, vocabulary, chat history, AI memory, audio cache — is stored locally in your browser's storage. Nothing is sent to our servers.
 
 ---
-*Wishing you productive and enjoyable learning sessions on ShadowLearn!* 🚀
+*Wishing you productive and enjoyable learning sessions on ShadowLearn!* 
