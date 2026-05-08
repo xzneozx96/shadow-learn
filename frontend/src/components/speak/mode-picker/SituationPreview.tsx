@@ -27,7 +27,7 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
           {/* Context Section */}
           <div className="flex flex-col gap-3">
             <SectionLabel icon={MapPin}>{t('speak.preview.scene')}</SectionLabel>
-            <div className="flex-1 p-4 rounded-xl bg-card border border-primary/10">
+            <div className="flex-1 p-4 rounded-xl bg-secondary/50 border">
               <p className="text-sm text-foreground/90 leading-relaxed">
                 {preview.scene_context}
               </p>
@@ -37,7 +37,7 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
           {/* Goal Section */}
           <div className="flex flex-col gap-3">
             <SectionLabel icon={Target}>{t('speak.preview.yourGoal')}</SectionLabel>
-            <div className="flex-1 p-4 rounded-xl bg-card border border-primary/10">
+            <div className="flex-1 p-4 rounded-xl bg-secondary/50 border">
               <p className="text-sm text-foreground/90 leading-relaxed">
                 {preview.user_goal}
               </p>

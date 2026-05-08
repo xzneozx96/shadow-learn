@@ -142,7 +142,7 @@
 @layer components {
 
   .elegant-card {
-    @apply bg-card rounded-xl border border-border;
+    @apply bg-secondary/50 rounded-xl border border-border;
     transition: all 0.2s var(--ease-spring);
     will-change: transform;
   }
