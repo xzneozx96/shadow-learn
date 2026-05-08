@@ -166,7 +166,7 @@ export function DocumentationPage() {
                             setExpandedNodes(prev => ({ ...prev, [node.id]: !isExpanded }))
                             setActiveId(node.id)
                           }}
-                          className={`flex h-8 items-center justify-between text-sm rounded-r-md transition-colors hover:bg-white/5 ${
+                          className={`flex px-2 h-8 items-center justify-between text-sm rounded-md transition-colors hover:bg-white/5 ${
                             isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
                           }`}
                         >
