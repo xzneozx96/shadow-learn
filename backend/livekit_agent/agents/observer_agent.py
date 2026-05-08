@@ -75,6 +75,9 @@ class ObserverAgent:
         self._target_vocab: list[str] = []
         self._used_vocab: set[str] = set()
 
+        # Cultural tip deduplication — phrases already explained this session
+        self._seen_cultural_phrases: set[str] = set()
+
         self._setup_listeners()
 
         logger.info(
@@ -159,13 +162,11 @@ class ObserverAgent:
         asyncio.create_task(self._track_vocab_usage(transcript))
         asyncio.create_task(self._evaluate_user_turn(transcript))
 
-        if self._turn_count % 3 == 0:
-            asyncio.create_task(self._trigger_cultural_check(transcript))
-
     def _handle_ai_turn(self, transcript: str) -> None:
-        """Handle AI turn - trigger next line suggestion and translation."""
+        """Handle AI turn - trigger next line suggestion, translation, and cultural check."""
         asyncio.create_task(self._suggest_next_line())
         asyncio.create_task(self._translate_ai_turn(transcript))
+        asyncio.create_task(self._trigger_cultural_check(transcript))
 
     async def _track_vocab_usage(self, transcript: str) -> None:
         """Check user transcript for target vocab usage (async to allow RPC)."""
@@ -409,20 +410,28 @@ class ObserverAgent:
 
         conv = "\n".join([
             f"{m['role']}: {m['text']}"
-            for m in self.conversation_history
+            for m in self.conversation_history[-6:]
         ])
-        
-        # Get interface language and target language from session userdata
+
         try:
             userdata = self.session.userdata
             config = getattr(userdata, "situation_config", None)
             if config:
                 interface_language = getattr(config, "interface_language", "vi")
+                scene_context = getattr(config, "scene_context", "")
+                user_goal = getattr(config, "user_goal", "")
+                level = getattr(config, "level_label", "") or "general"
             else:
                 interface_language = "vi"
+                scene_context = ""
+                user_goal = ""
+                level = "general"
             target_language = getattr(userdata, "target_language", None) or "zh-CN"
         except Exception:
             interface_language = "vi"
+            scene_context = ""
+            user_goal = ""
+            level = "general"
             target_language = "zh-CN"
 
         interface_lang_name = _LOCALE_TO_LANGUAGE_NAME.get(interface_language, interface_language)
@@ -435,6 +444,10 @@ class ObserverAgent:
 
         prompt = prompt_template.format(
             conversation=conv,
+            transcript=transcript,
+            scene_context=scene_context,
+            user_goal=user_goal,
+            level=level,
             interface_language=interface_lang_name,
             target_language=target_language,
             target_language_name=target_language_name,
@@ -541,6 +554,12 @@ class ObserverAgent:
         try:
             cultural = await self._detect_cultural_moment(transcript)
             if cultural:
+                phrase = cultural.get("phrase", "")
+                if phrase and phrase in self._seen_cultural_phrases:
+                    logger.debug(f"[OBSERVER] Cultural tip skipped (already seen): {phrase}")
+                    return
+                if phrase:
+                    self._seen_cultural_phrases.add(phrase)
                 await self._stream_feedback(cultural)
                 logger.info(f"[OBSERVER] Cultural tip: {cultural.get('explanation', '')[:50]}...")
         except Exception as e:

@@ -146,18 +146,12 @@ async def _process_youtube_lesson(
 
         jobs[job_id].step = "transcription"
         keys: TranscriptionKeys = {}
-        deepgram = request.deepgram_api_key or settings.deepgram_api_key
         azure_key = request.azure_speech_key or settings.azure_speech_key
         azure_region = request.azure_speech_region or settings.azure_speech_region
-        if deepgram:
-            keys["deepgram_api_key"] = deepgram
         if azure_key:
             keys["azure_speech_key"] = azure_key
         if azure_region:
             keys["azure_speech_region"] = azure_region
-        gladia_keys = ([request.gladia_api_key] if request.gladia_api_key else []) + settings.gladia_api_keys
-        if gladia_keys:
-            keys["gladia_api_keys"] = gladia_keys
         segments = await stt_provider.transcribe(audio_path, keys, request.source_language)
         if not segments:
             raise ValueError("No speech detected in the video. Please try a different video.")
@@ -205,10 +199,8 @@ async def _process_upload_lesson(
     translation_languages: list[str],
     openrouter_api_key: str,
     job_id: str,
-    deepgram_api_key: str | None = None,
     azure_speech_key: str | None = None,
     azure_speech_region: str | None = None,
-    gladia_api_key: str | None = None,
     source_language: str = "zh-CN",
     stt_provider: STTProvider | None = None,
 ) -> None:
@@ -262,18 +254,12 @@ async def _process_upload_lesson(
         jobs[job_id].step = "transcription"
         t0 = time.monotonic()
         keys: TranscriptionKeys = {}
-        deepgram = deepgram_api_key or settings.deepgram_api_key
         azure_key = azure_speech_key or settings.azure_speech_key
         azure_region = azure_speech_region or settings.azure_speech_region
-        if deepgram:
-            keys["deepgram_api_key"] = deepgram
         if azure_key:
             keys["azure_speech_key"] = azure_key
         if azure_region:
             keys["azure_speech_region"] = azure_region
-        gladia_keys = ([gladia_api_key] if gladia_api_key else []) + settings.gladia_api_keys
-        if gladia_keys:
-            keys["gladia_api_keys"] = gladia_keys
         if stt_provider is None:
             raise RuntimeError("No STT provider configured")
         segments = await stt_provider.transcribe(audio_path, keys, source_language)
@@ -341,10 +327,8 @@ async def generate_lesson_upload(
     file: UploadFile,
     translation_languages: str = Form(...),
     openrouter_api_key: str = Form(default=""),
-    deepgram_api_key: str | None = Form(None),
     azure_speech_key: str | None = Form(None),
     azure_speech_region: str | None = Form(None),
-    gladia_api_key: str | None = Form(None),
     source_language: str = Form("zh-CN"),
 ) -> dict:
     """Accept a multipart upload, start background pipeline, return job_id immediately."""
@@ -361,10 +345,8 @@ async def generate_lesson_upload(
         languages,
         openrouter_api_key,
         job_id,
-        deepgram_api_key,
         azure_speech_key,
         azure_speech_region,
-        gladia_api_key,
         source_language,
         stt_provider,
     )

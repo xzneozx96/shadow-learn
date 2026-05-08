@@ -84,7 +84,7 @@ export function useAgentRpc(room: Room | undefined, opts: UseAgentRpcOptions): A
     room.registerRpcMethod('cultural_tip', async (data) => {
       try {
         const tip = JSON.parse(data.payload) as CulturalTip
-        setCulturalTips(prev => [...prev, tip])
+        setCulturalTips(prev => [...prev.slice(-2), tip])
         return JSON.stringify({ success: true })
       }
       catch (e) {

@@ -7,6 +7,7 @@ from typing import TypedDict
 
 import httpx
 
+from app.settings import settings
 from app.shared._retry import http_retry
 from app.transcription.services.transcription_provider import (
     TranscriptionKeys,
@@ -237,9 +238,9 @@ class GladiaSTTProvider:
     """STTProvider implementation backed by Gladia."""
 
     async def transcribe(self, audio_path: Path, keys: TranscriptionKeys, language: str) -> list[_Segment]:
-        key_list = keys.get("gladia_api_keys") or []
+        key_list = settings.gladia_api_keys or []
         if not key_list:
-            raise ValueError("Gladia API key is required when stt_provider=gladia")
+            raise ValueError("SHADOWLEARN_GLADIA_API_KEYS not configured")
 
         last_error: Exception | None = None
         for api_key in key_list:

@@ -1,19 +1,26 @@
 # Cultural moment detection prompt for ObserverAgent
 prompt: |
-  Task: Detect culturally significant moments in this {target_language_name} conversation.
+  Task: Detect culturally significant moments in this {target_language_name} AI utterance.
 
-  A cultural moment is a phrase the learner used that:
-  1. Has a non-literal meaning (e.g. Mandarin "你吃了吗" = greeting not a meal question; Japanese "お疲れ様" = acknowledgment of effort; English "How are you?" = greeting not a health inquiry)
-  2. Carries implicit social or politeness meaning a foreigner would miss (e.g. Mandarin "辛苦啦"; Japanese "いただきます" before eating; English "I'm fine, thanks" as a social script not a literal answer)
-  3. Reflects a cultural assumption or convention in {target_language_name} that needs context to understand
+  Scene: {scene_context}
+  Learner's goal: {user_goal}
+  Learner level: {level}
 
-  Recent conversation:
+  Recent conversation (context only):
   {conversation}
 
-  Analyze ONLY the last user message. If a genuine cultural moment exists:
-  {{"has_cultural": true, "phrase": "<exact phrase>", "explanation": "<explanation in {interface_language}>"}}
+  AI's utterance to analyze:
+  "{transcript}"
+
+  A cultural moment is a phrase the learner HEARD that:
+  1. Has a non-literal meaning (e.g. "你吃了吗" = greeting, not a meal question; "お疲れ様" = acknowledgment of effort; "How are you?" = social script, not a health inquiry)
+  2. Carries implicit social or politeness meaning a foreigner would miss (e.g. "辛苦啦"; "いただきます" before eating; register shifts like 您 vs 你)
+  3. Reflects a cultural assumption or convention in {target_language_name} that needs context to understand
+
+  Analyze ONLY the AI utterance above. If a genuine cultural moment exists AND it is relevant to the scene/goal:
+  {{"has_cultural": true, "phrase": "<exact phrase from the utterance>", "explanation": "<explanation in {interface_language} — calibrated to {level} level, connect to the scene context where helpful>"}}
 
   If not:
   {{"has_cultural": false}}
 
-  Rules: flag real cultural content only (not general vocab); all explanations in {interface_language}; JSON only, no markdown.
+  Rules: flag real cultural content only (not general vocab); calibrate depth to {level}; all explanations in {interface_language}; JSON only, no markdown.

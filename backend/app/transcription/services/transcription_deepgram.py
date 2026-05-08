@@ -7,14 +7,13 @@ from typing import TypedDict
 
 import httpx
 
+from app.settings import settings
 from app.shared._retry import http_retry
 from app.transcription.services.transcription_provider import (
     TranscriptionKeys,
     _Segment,
     _Word,
     _WordTiming,
-    STTProvider,
-    _finalize_segment,
     _group_words_into_segments,
 )
 from app.lessons.services.subtitle_segmenter import SubtitleSegmenter
@@ -201,7 +200,7 @@ class DeepgramSTTProvider:
     """STTProvider implementation backed by Deepgram nova-3."""
 
     async def transcribe(self, audio_path: Path, keys: TranscriptionKeys, language: str) -> list[_Segment]:
-        api_key = keys.get("deepgram_api_key", "")
+        api_key = settings.deepgram_api_key
         if not api_key:
-            raise ValueError("Deepgram API key is required when stt_provider=deepgram")
+            raise ValueError("SHADOWLEARN_DEEPGRAM_API_KEY not configured")
         return await transcribe_audio_deepgram(audio_path, api_key, language)
