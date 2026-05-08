@@ -50,7 +50,7 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
           <div className="flex items-center justify-between">
             <SectionLabel icon={MessageSquareQuote}>{t('speak.preview.openingLine')}</SectionLabel>
           </div>
-          <div className="relative p-5 rounded-xl bg-card border border-primary/10 space-y-2">
+          <div className="relative p-5 rounded-xl bg-secondary/50 border space-y-2">
             <p className="text-base italic text-foreground leading-relaxed relative z-10">
               "
               {preview.opening_line}
@@ -72,7 +72,7 @@ export function SituationPreview({ preview, onConfirm, onRegenerate, loading }: 
               {preview.target_vocab.map(item => (
                 <div
                   key={item.term}
-                  className="flex flex-col gap-0.5 rounded-lg px-3 py-2 bg-card border border-primary/10"
+                  className="flex flex-col gap-0.5 rounded-lg px-3 py-2 bg-secondary/50 border"
                 >
                   <span className="font-bold text-primary leading-tight">
                     {item.term}
