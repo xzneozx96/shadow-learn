@@ -135,7 +135,7 @@ export function DocumentationPage() {
               <input
                 type="text"
                 placeholder={t('docs.search.placeholder')}
-                className="w-full bg-[#1c1c1f] text-sm rounded-md py-2 pl-9 pr-4 outline-none focus:ring-1 focus:ring-primary/50 transition-all text-foreground placeholder:text-muted-foreground border border-transparent focus:border-border/50"
+                className="w-full bg-input text-sm rounded-md py-2 pl-9 pr-4 outline-none focus:ring-1 focus:ring-primary/50 transition-all text-foreground placeholder:text-muted-foreground border border-transparent focus:border-border/50"
               />
             </div>
           </div>
@@ -226,7 +226,7 @@ export function DocumentationPage() {
                 prose-a:text-primary hover:prose-a:text-primary/80 prose-a:no-underline hover:prose-a:underline
                 prose-strong:text-foreground
                 prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-medium prose-code:before:content-none prose-code:after:content-none
-                prose-pre:bg-[#1c1c1f] prose-pre:border prose-pre:border-border/20 prose-pre:rounded-lg
+                prose-pre:bg-input prose-pre:border prose-pre:border-border/20 prose-pre:rounded-lg
                 prose-li:text-muted-foreground
                 prose-blockquote:border-primary/50 prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:font-normal prose-blockquote:text-muted-foreground
               "
@@ -249,7 +249,7 @@ export function DocumentationPage() {
                   },
                   img: ({ node, ...props }) => {
                     const src = props.src?.replace(IMG_SRC_REGEX, '/docs/images')
-                    return <img {...props} src={src} className="rounded-xl shadow-2xl border border-border/20 my-8 w-full object-cover bg-[#1c1c1f]" />
+                    return <img {...props} src={src} className="rounded-xl shadow-2xl border border-border/20 my-8 w-full object-cover bg-input" />
                   },
                   a: ({ node, children, ...props }) => {
                     if (props.href?.startsWith('#')) {

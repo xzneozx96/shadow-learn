@@ -190,7 +190,7 @@ export function ChangelogPage() {
                 prose-a:text-primary hover:prose-a:text-primary/80 prose-a:no-underline hover:prose-a:underline
                 prose-strong:text-foreground
                 prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-medium prose-code:before:content-none prose-code:after:content-none
-                prose-pre:bg-[#1c1c1f] prose-pre:border prose-pre:border-border/20 prose-pre:rounded-lg
+                prose-pre:bg-input prose-pre:border prose-pre:border-border/20 prose-pre:rounded-lg
                 prose-li:text-muted-foreground
                 prose-blockquote:border-primary/50 prose-blockquote:bg-primary/5 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:font-normal prose-blockquote:text-muted-foreground
                 prose-img:rounded-xl prose-img:border prose-img:border-border/20 prose-img:my-8
