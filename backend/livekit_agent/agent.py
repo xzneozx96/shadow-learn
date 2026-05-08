@@ -168,25 +168,36 @@ async def shadowlearn_session(ctx: agents.JobContext):
         raise Exception("speechmatics_key required")
 
     llm = google.LLM(
-        model="gemini-3.1-flash-lite-preview",
+        model="gemini-3.1-flash-lite",
         api_key=google_key,
     )
 
     tts = google.beta.GeminiTTS(
-        model="gemini-2.5-flash-preview-tts",
+        model="gemini-3.1-flash-tts-preview",
         voice_name=voice_id,
         api_key=google_key,
         instructions="Speak naturally and expressively as the character.",
     )
 
-    _SM_LANG = {"zh-CN": "zh", "en": "en", "ja": "ja"}
+    # Speechmatics expects raw "cmn" for Mandarin, but livekit.agents.LanguageCode
+    # normalizes "cmn" -> "zh" via the hard-coded ISO_639_3_TO_1 map in
+    # livekit-agents/_language_data.py (introduced in PR #4926). Compound BCP-47
+    # tags like "cmn-Hans-CN" preserve the subtag through normalization but
+    # Speechmatics' server rejects compound forms with "lang pack not supported".
+    # Workaround: pass a placeholder to the constructor, then mutate
+    # _stt_options.language post-init with the raw "cmn" str. _prepare_config
+    # reads opts.language directly, bypassing LanguageCode wrapping.
+    _SM_LANG = {"zh-CN": "cmn", "en": "en", "ja": "ja"}
     sm_lang = _SM_LANG.get(target_language, "en")
 
     stt_model = speechmatics.STT(
         api_key=speechmatics_key,
-        language=sm_lang,
-        turn_detection_mode=speechmatics.TurnDetectionMode.SMART_TURN,
+        language="en",  # placeholder; overridden below
+        turn_detection_mode=speechmatics.TurnDetectionMode.FIXED,
+        end_of_utterance_silence_trigger=1.5,
+        end_of_utterance_max_delay=5.0,
     )
+    stt_model._stt_options.language = sm_lang  # type: ignore[assignment]
 
     session = AgentSession[SpeakSessionData](
         userdata=userdata,
@@ -199,8 +210,8 @@ async def shadowlearn_session(ctx: agents.JobContext):
     # Start Observer agent in parallel
     # Use separate LLM for observer (can be different model)
     observer_llm = google.LLM(
-        model="gemini-3.1-flash-lite-preview",
-        api_key=google_key or os.getenv("GOOGLE_API_KEY", ""),
+        model="gemini-3.1-flash-lite",
+        api_key=google_key,
     )
 
     # Pass ctx.room directly so the observer can deliver RPC without going through
