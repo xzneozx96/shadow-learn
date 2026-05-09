@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTTS } from '@/hooks/useTTS'
 import { useWordBreakdown } from '@/hooks/useWordBreakdown'
+import { BreakdownTree } from './BreakdownTree'
 
 interface WordBreakdownModalProps {
   open: boolean
@@ -24,7 +25,7 @@ interface WordBreakdownModalProps {
 
 export function WordBreakdownModal(props: WordBreakdownModalProps) {
   const { open, onClose, word, pinyin, meaning, sourceLanguage, db, openrouterApiKey } = props
-  const { locale, t } = useI18n()
+  const { t } = useI18n()
   const { keys } = useAuth()
   const { playTTS, loadingText } = useTTS(db, keys, sourceLanguage)
   const ttsLoading = loadingText === word
@@ -88,16 +89,12 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
     }
   }
 
-  // Pick component meaning column based on UI locale.
-  const localizedMeaning = (comp: { meaning: string, meaningVi: string }) =>
-    locale === 'vi' ? (comp.meaningVi || comp.meaning) : (comp.meaning || comp.meaningVi)
-
   return (
     <Dialog
       open={open}
       onOpenChange={handleOpenChange}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto p-0 min-w-3xl max-w-4xl">
+      <DialogContent className="max-h-[95vh] overflow-y-auto p-0 min-w-3xl max-w-4xl">
         <DialogHeader>
           <DialogTitle className="sr-only">{t('breakdown.title', { word })}</DialogTitle>
         </DialogHeader>
@@ -236,74 +233,16 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
               </div>
             </section>
 
-            {/* Anatomy Cards Grid */}
+            {/* Anatomy Tree */}
             <section>
               <h3 className="text-xs font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.components')}</h3>
-
-              <div className={`grid grid-cols-1 ${characters.length > 1 ? 'md:grid-cols-2' : ''} gap-6`}>
-                {characters.length === 0 && charactersLoading && (
-                  <div className="flex items-center gap-2 text-sm text-foreground/60 col-span-full">
-                    <Loader2 className="size-4 animate-spin" />
-                    {t('breakdown.analyzing')}
-                  </div>
-                )}
-
-                {characters.map(c => (
-                  <div key={c.char} className="bg-card rounded-xl p-4 border border-primary/10 flex flex-col">
-                    {/* Character header for multi-character words */}
-                    <div className="flex items-end gap-3 pb-4 mb-5 border-b border-border">
-                      <span className="text-3xl leading-none text-foreground font-bold font-serif">{c.char}</span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-base italic text-yellow-500 font-medium">
-                          (
-                          {c.pinyin}
-                          )
-                        </span>
-                        {c.sinoVietnamese && (
-                          <span className="text-base font-bold text-emerald-500">{c.sinoVietnamese}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Anatomy Plain Text List */}
-                    {c.components.length > 0
-                      ? (
-                          <div className="flex-1">
-                            <ul className="space-y-2.5">
-                              {c.components.map((comp: any, i: number) => (
-                                <li key={`${comp.char}-${i}`} className="flex items-start gap-2.5 text-base leading-[1.6]">
-                                  <span className="text-xl text-foreground font-serif leading-none mt-[3px] shrink-0">
-                                    {comp.char}
-                                  </span>
-                                  <div className="flex flex-wrap items-baseline gap-x-1.5 text-foreground/80">
-                                    <span className="font-medium text-emerald-500 capitalize">
-                                      {comp.name || '—'}
-                                    </span>
-                                    {comp.pinyin && (
-                                      <span className="text-sm italic text-yellow-500/90">
-                                        (
-                                        {comp.pinyin}
-                                        )
-                                      </span>
-                                    )}
-                                    <span className="text-foreground/30 mx-0.5">—</span>
-                                    <span className="text-foreground/70">
-                                      {localizedMeaning(comp) || '—'}
-                                    </span>
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )
-                      : (
-                          <div className="text-sm text-foreground/40 italic py-2">
-                            {t('breakdown.noComponents')}
-                          </div>
-                        )}
-                  </div>
-                ))}
-              </div>
+              <BreakdownTree
+                word={word}
+                pinyin={pinyin}
+                sinoVietnamese={sinoVietnamese}
+                characters={characters}
+                loading={charactersLoading}
+              />
             </section>
 
           </div>
