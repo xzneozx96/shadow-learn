@@ -56,7 +56,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
         }}
       >
         <DialogContent
-          className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-2xl"
+          className="max-h-[95vh] overflow-y-auto p-0 sm:max-w-2xl"
           showCloseButton={false}
         >
           <StudySession

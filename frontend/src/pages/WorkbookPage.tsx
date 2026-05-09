@@ -261,7 +261,7 @@ export function WorkbookPage() {
         }}
       >
         <DialogContent
-          className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-2xl border-white/10 shadow-2xl backdrop-blur-2xl bg-background/80"
+          className="max-h-[95vh] overflow-y-auto p-0 sm:max-w-2xl border-white/10 shadow-2xl backdrop-blur-2xl bg-background/80"
           showCloseButton={false}
         >
           <StudySession
