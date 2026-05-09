@@ -4,7 +4,6 @@ from typing import Optional
 
 from livekit.agents import Agent, llm
 
-from userdata import SpeakSessionData
 
 logger = logging.getLogger("speak-with-ai.persona")
 

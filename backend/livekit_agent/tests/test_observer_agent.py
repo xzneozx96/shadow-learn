@@ -2,7 +2,6 @@
 import sys
 import os
 import asyncio
-import json
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 import pytest
 

@@ -104,8 +104,12 @@ def _extract_audio_ffmpeg(video_path: Path, output_path: Path) -> None:
         logger.debug("ffmpeg stderr: %s", stderr.decode(errors="replace")[-500:])
 
 
-def _get_youtube_duration_blocking(video_id: str) -> float:
-    """Blocking: get duration of a YouTube video via yt-dlp metadata."""
+def _get_youtube_metadata_blocking(video_id: str) -> dict:
+    """Blocking: fetch duration + manual subtitles map for a YouTube video.
+
+    Note: must NOT pass process=False — yt-dlp populates info["subtitles"] and
+    info["automatic_captions"] only during processing.
+    """
     url = f"https://www.youtube.com/watch?v={video_id}"
     ydl_opts = {
         "quiet": True,
@@ -114,8 +118,11 @@ def _get_youtube_duration_blocking(video_id: str) -> float:
         **_ydl_extra_opts(),
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False, process=False)
-        return float(info.get("duration", 0))
+        info = ydl.extract_info(url, download=False)
+        return {
+            "duration": float(info.get("duration", 0) or 0),
+            "subtitles": dict(info.get("subtitles") or {}),
+        }
 
 
 async def extract_audio_from_upload(video_path: Path) -> Path:
@@ -137,13 +144,22 @@ async def extract_audio_from_upload(video_path: Path) -> Path:
     return output_path
 
 
+async def get_youtube_metadata(video_id: str) -> dict:
+    """Return YouTube metadata: {"duration": float, "subtitles": dict}."""
+    logger.info("[pipeline] get_youtube_metadata: start video_id=%s", video_id)
+    t0 = time.monotonic()
+    meta = await asyncio.to_thread(_get_youtube_metadata_blocking, video_id)
+    logger.info(
+        "[pipeline] get_youtube_metadata: duration=%.1fs subs=%d langs in %.1fs",
+        meta["duration"], len(meta["subtitles"]), time.monotonic() - t0,
+    )
+    return meta
+
+
 async def get_youtube_duration(video_id: str) -> float:
     """Return the duration in seconds of a YouTube video."""
-    logger.info("[pipeline] get_youtube_duration: start video_id=%s", video_id)
-    t0 = time.monotonic()
-    duration = await asyncio.to_thread(_get_youtube_duration_blocking, video_id)
-    logger.info("[pipeline] get_youtube_duration: %.1fs duration, fetched in %.1fs", duration, time.monotonic() - t0)
-    return duration
+    meta = await get_youtube_metadata(video_id)
+    return meta["duration"]
 
 
 async def probe_upload_duration(video_path: Path) -> float:

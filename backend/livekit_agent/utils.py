@@ -1,7 +1,6 @@
 """Utility functions for Speak with AI agent."""
 import logging
 from pathlib import Path
-from typing import Optional
 
 import yaml
 

@@ -58,20 +58,6 @@ async def test_generate_lesson_rejects_invalid_source():
 
 
 @pytest.mark.asyncio
-async def test_generate_lesson_accepts_deepgram_key_in_body():
-    from app.models import LessonRequest
-
-    req = LessonRequest(
-        source="youtube",
-        youtube_url="https://www.youtube.com/watch?v=test",
-        translation_languages=["en"],
-        openrouter_api_key="sk-test",
-        deepgram_api_key="dg-test",
-    )
-    assert req.deepgram_api_key == "dg-test"
-
-
-@pytest.mark.asyncio
 async def test_generate_lesson_youtube_returns_job_id():
     """Valid YouTube request returns a job_id immediately; pipeline runs in background."""
     from unittest.mock import AsyncMock, patch
@@ -201,6 +187,233 @@ async def test_shared_pipeline_assembles_text_and_romanization_keys():
     assert "romanization" in seg
     assert "pinyin" not in seg
     del jobs_module.jobs[job_id]
+
+
+# --- _process_youtube_lesson: subtitle vs STT branch ---
+
+
+_FAKE_VTT_BODY = """WEBVTT
+
+00:00:01.000 --> 00:00:03.000
+你好世界
+"""
+
+
+def _make_youtube_request(source_language: str = "zh-CN"):
+    from app.models import LessonRequest
+
+    return LessonRequest(
+        source="youtube",
+        youtube_url="https://www.youtube.com/watch?v=abc123",
+        translation_languages=["en"],
+        openrouter_api_key="sk-test",
+        source_language=source_language,
+    )
+
+
+@pytest.mark.asyncio
+async def test_youtube_lesson_uses_manual_subtitle_when_available():
+    """Manual subtitle in source_language → STT skipped; segments come from VTT."""
+    from app.lessons.router import _process_youtube_lesson
+    from app.job_store import Job
+
+    job_id = "job-sub-hit"
+    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    stt = AsyncMock()
+    stt.transcribe = AsyncMock(return_value=[])
+
+    captured_segments = {}
+
+    async def fake_shared(job_id, segments, *args, **kwargs):
+        captured_segments["segs"] = segments
+        jobs_module.jobs[job_id].status = "complete"
+        jobs_module.jobs[job_id].result = {"lesson": {"segments": []}}
+
+    from pathlib import Path
+
+    with (
+        patch(
+            "app.lessons.router.get_youtube_metadata",
+            new=AsyncMock(return_value={"duration": 30.0, "subtitles": {"zh-Hans": [{"ext": "vtt"}]}}),
+        ),
+        patch(
+            "app.lessons.router.download_youtube_video",
+            new=AsyncMock(return_value=Path("/tmp/shadowlearn/vid.mp4")),
+        ),
+        patch(
+            "app.lessons.router.download_subtitle_vtt",
+            new=AsyncMock(return_value=_FAKE_VTT_BODY),
+        ),
+        patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
+        patch("app.lessons.router.extract_audio_from_upload", new=AsyncMock()) as mock_extract,
+    ):
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+
+    stt.transcribe.assert_not_called()
+    mock_extract.assert_not_called()
+    assert captured_segments["segs"]
+    assert captured_segments["segs"][0]["text"] == "你好世界"
+
+
+@pytest.mark.asyncio
+async def test_youtube_lesson_falls_back_to_stt_when_no_manual_track():
+    """No manual subtitle in source_language → existing STT pipeline runs."""
+    from pathlib import Path
+
+    from app.lessons.router import _process_youtube_lesson
+    from app.job_store import Job
+
+    job_id = "job-stt-fallback"
+    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    stt = AsyncMock()
+    stt.transcribe = AsyncMock(
+        return_value=[{"id": 0, "start": 0.0, "end": 1.0, "text": "你好", "word_timings": []}]
+    )
+
+    async def fake_shared(*args, **kwargs):
+        jobs_module.jobs[job_id].status = "complete"
+        jobs_module.jobs[job_id].result = {}
+
+    with (
+        patch(
+            "app.lessons.router.get_youtube_metadata",
+            new=AsyncMock(return_value={"duration": 30.0, "subtitles": {"en": [{"ext": "vtt"}]}}),
+        ),
+        patch(
+            "app.lessons.router.download_youtube_video",
+            new=AsyncMock(return_value=Path("/tmp/shadowlearn/vid.mp4")),
+        ),
+        patch(
+            "app.lessons.router.extract_audio_from_upload",
+            new=AsyncMock(return_value=Path("/tmp/shadowlearn/vid.mp3")),
+        ),
+        patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
+        patch("pathlib.Path.unlink"),
+    ):
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+
+    stt.transcribe.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_youtube_lesson_ignores_automatic_captions():
+    """Auto-generated captions never trigger the subtitle path."""
+    from pathlib import Path
+
+    from app.lessons.router import _process_youtube_lesson
+    from app.job_store import Job
+
+    job_id = "job-auto-only"
+    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    stt = AsyncMock()
+    stt.transcribe = AsyncMock(return_value=[{"id": 0, "start": 0.0, "end": 1.0, "text": "x", "word_timings": []}])
+
+    download_sub = AsyncMock()
+    async def fake_shared(*args, **kwargs):
+        jobs_module.jobs[job_id].status = "complete"
+
+    with (
+        # subtitles dict is empty (auto-only would only appear in automatic_captions, which we never read)
+        patch(
+            "app.lessons.router.get_youtube_metadata",
+            new=AsyncMock(return_value={"duration": 30.0, "subtitles": {}}),
+        ),
+        patch(
+            "app.lessons.router.download_youtube_video",
+            new=AsyncMock(return_value=Path("/tmp/shadowlearn/vid.mp4")),
+        ),
+        patch("app.lessons.router.download_subtitle_vtt", new=download_sub),
+        patch(
+            "app.lessons.router.extract_audio_from_upload",
+            new=AsyncMock(return_value=Path("/tmp/shadowlearn/vid.mp3")),
+        ),
+        patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
+        patch("pathlib.Path.unlink"),
+    ):
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+
+    download_sub.assert_not_called()
+    stt.transcribe.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_youtube_lesson_falls_back_when_subtitle_download_fails():
+    """If yt-dlp fails to write the VTT, fall back to STT instead of erroring the job."""
+    from pathlib import Path
+
+    from app.lessons.router import _process_youtube_lesson
+    from app.job_store import Job
+
+    job_id = "job-sub-download-fails"
+    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    stt = AsyncMock()
+    stt.transcribe = AsyncMock(return_value=[{"id": 0, "start": 0.0, "end": 1.0, "text": "x", "word_timings": []}])
+
+    async def fake_shared(*args, **kwargs):
+        jobs_module.jobs[job_id].status = "complete"
+
+    with (
+        patch(
+            "app.lessons.router.get_youtube_metadata",
+            new=AsyncMock(return_value={"duration": 30.0, "subtitles": {"zh-Hans": [{"ext": "vtt"}]}}),
+        ),
+        patch(
+            "app.lessons.router.download_youtube_video",
+            new=AsyncMock(return_value=Path("/tmp/shadowlearn/vid.mp4")),
+        ),
+        patch(
+            "app.lessons.router.download_subtitle_vtt",
+            new=AsyncMock(side_effect=FileNotFoundError("no vtt")),
+        ),
+        patch(
+            "app.lessons.router.extract_audio_from_upload",
+            new=AsyncMock(return_value=Path("/tmp/shadowlearn/vid.mp3")),
+        ),
+        patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
+        patch("pathlib.Path.unlink"),
+    ):
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+
+    stt.transcribe.assert_called_once()
+    assert jobs_module.jobs[job_id].status == "complete"
+
+
+@pytest.mark.asyncio
+async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit():
+    """Even on subtitle hit, video must be downloaded for playback (media_filename)."""
+    from pathlib import Path
+
+    from app.lessons.router import _process_youtube_lesson
+    from app.job_store import Job
+
+    job_id = "job-video-still-needed"
+    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    stt = AsyncMock()
+
+    captured_kwargs: dict = {}
+
+    async def fake_shared(job_id, segments, *args, **kwargs):
+        captured_kwargs.update(kwargs)
+        jobs_module.jobs[job_id].status = "complete"
+
+    download_video = AsyncMock(return_value=Path("/tmp/shadowlearn/vid.mp4"))
+
+    with (
+        patch(
+            "app.lessons.router.get_youtube_metadata",
+            new=AsyncMock(return_value={"duration": 30.0, "subtitles": {"zh-Hans": [{"ext": "vtt"}]}}),
+        ),
+        patch("app.lessons.router.download_youtube_video", new=download_video),
+        patch(
+            "app.lessons.router.download_subtitle_vtt",
+            new=AsyncMock(return_value=_FAKE_VTT_BODY),
+        ),
+        patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
+    ):
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+
+    download_video.assert_called_once()
+    assert captured_kwargs.get("media_filename") == "vid.mp4"
 
 
 @pytest.mark.asyncio

@@ -4,7 +4,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.lessons.services.audio import _ydl_extra_opts, download_youtube_video, extract_audio_from_upload
+from app.lessons.services.audio import (
+    _ydl_extra_opts,
+    download_youtube_video,
+    extract_audio_from_upload,
+    get_youtube_duration,
+    get_youtube_metadata,
+)
 
 
 def _mock_stat():
@@ -101,6 +107,76 @@ def test_ydl_extra_opts_includes_bgutil_extractor_args():
             },
             "js_runtimes": {"node": {}},
         }
+
+
+# --- get_youtube_metadata ---
+
+
+@pytest.mark.asyncio
+async def test_get_youtube_metadata_returns_duration_and_subtitles():
+    """Single extract_info call returns both duration and the manual subtitles dict."""
+    info = {
+        "duration": 120.0,
+        "subtitles": {"zh-Hans": [{"ext": "vtt"}]},
+        "automatic_captions": {"en": [{"ext": "vtt"}]},
+    }
+    fake_ydl = MagicMock()
+    fake_ydl.__enter__.return_value = fake_ydl
+    fake_ydl.__exit__.return_value = False
+    fake_ydl.extract_info.return_value = info
+
+    with patch("app.lessons.services.audio.yt_dlp.YoutubeDL", return_value=fake_ydl):
+        result = await get_youtube_metadata("vid123")
+    assert result["duration"] == 120.0
+    assert result["subtitles"] == {"zh-Hans": [{"ext": "vtt"}]}
+
+
+@pytest.mark.asyncio
+async def test_get_youtube_metadata_drops_process_false():
+    """The subtitle dict is only populated during processing — must NOT pass process=False."""
+    captured: dict = {}
+
+    fake_ydl = MagicMock()
+    fake_ydl.__enter__.return_value = fake_ydl
+    fake_ydl.__exit__.return_value = False
+
+    def capture(url, **kwargs):
+        captured.update(kwargs)
+        return {"duration": 1.0, "subtitles": {}, "automatic_captions": {}}
+
+    fake_ydl.extract_info.side_effect = capture
+
+    with patch("app.lessons.services.audio.yt_dlp.YoutubeDL", return_value=fake_ydl):
+        await get_youtube_metadata("vid123")
+    assert captured.get("process", True) is True
+    assert captured.get("download") is False
+
+
+@pytest.mark.asyncio
+async def test_get_youtube_metadata_handles_missing_subtitles_keys():
+    """When extractor omits subtitles/automatic_captions, return empty dicts, not crash."""
+    fake_ydl = MagicMock()
+    fake_ydl.__enter__.return_value = fake_ydl
+    fake_ydl.__exit__.return_value = False
+    fake_ydl.extract_info.return_value = {"duration": 30.0}
+
+    with patch("app.lessons.services.audio.yt_dlp.YoutubeDL", return_value=fake_ydl):
+        result = await get_youtube_metadata("vid123")
+    assert result["duration"] == 30.0
+    assert result["subtitles"] == {}
+
+
+@pytest.mark.asyncio
+async def test_get_youtube_duration_shim_still_works():
+    """Existing get_youtube_duration must keep working as a thin shim."""
+    fake_ydl = MagicMock()
+    fake_ydl.__enter__.return_value = fake_ydl
+    fake_ydl.__exit__.return_value = False
+    fake_ydl.extract_info.return_value = {"duration": 42.0, "subtitles": {}}
+
+    with patch("app.lessons.services.audio.yt_dlp.YoutubeDL", return_value=fake_ydl):
+        duration = await get_youtube_duration("vid123")
+    assert duration == 42.0
 
 
 def test_ydl_extra_opts_combines_all(tmp_path):

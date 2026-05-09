@@ -16,8 +16,13 @@ from app.shared.utils import _resolve_key
 from app.lessons.services.audio import (
     download_youtube_video,
     extract_audio_from_upload,
-    get_youtube_duration,
+    get_youtube_metadata,
     probe_upload_duration,
+)
+from app.lessons.services.youtube_subtitles import (
+    download_subtitle_vtt,
+    parse_vtt_to_segments,
+    pick_manual_subtitle,
 )
 from app.lessons.services.romanization_provider import get_romanization_provider
 from app.lessons.services.chinese_normalizer import normalize_chinese
@@ -123,13 +128,13 @@ async def _process_youtube_lesson(
     job_id: str,
     stt_provider: STTProvider,
 ) -> None:
-    """Background task: validate duration → download video → extract audio →
-    transcribe → shared pipeline."""
+    """Background task: validate duration → (manual subtitle OR STT) → shared pipeline."""
     video_path: Path | None = None
     audio_path: Path | None = None
     try:
         jobs[job_id].step = "duration_check"
-        duration = await get_youtube_duration(video_id)
+        meta = await get_youtube_metadata(video_id)
+        duration = meta["duration"]
         if duration > settings.max_video_duration_seconds:
             max_mins = settings.max_video_duration_seconds / 60
             err_msg = f"Video exceeds the {max_mins:.0f}-minute duration limit."
@@ -138,26 +143,56 @@ async def _process_youtube_lesson(
             jobs[job_id].error = err_msg
             return
 
-        jobs[job_id].step = "video_download"
-        video_path = await download_youtube_video(video_id)
+        yt_lang = pick_manual_subtitle(meta["subtitles"], request.source_language)
+        segments: list[dict] | None = None
 
-        jobs[job_id].step = "audio_extraction"
-        audio_path = await extract_audio_from_upload(video_path)
+        if yt_lang:
+            jobs[job_id].step = "subtitle_download"
+            try:
+                vtt_task = asyncio.create_task(download_subtitle_vtt(video_id, yt_lang))
+                video_task = asyncio.create_task(download_youtube_video(video_id))
+                vtt_body, video_path = await asyncio.gather(vtt_task, video_task)
+                segments = parse_vtt_to_segments(vtt_body, request.source_language)
+                if not segments:
+                    logger.warning(
+                        "[pipeline] youtube subtitle: parse yielded no segments, falling back to STT"
+                    )
+                    segments = None
+                else:
+                    logger.info(
+                        "[pipeline] youtube subtitle: using manual track lang=%s, %d cues",
+                        yt_lang, len(segments),
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "[pipeline] youtube subtitle: download/parse failed (%s), falling back to STT",
+                    exc,
+                )
+                segments = None
+        else:
+            logger.info("[pipeline] youtube subtitle: no manual track, falling back to STT")
 
-        jobs[job_id].step = "transcription"
-        keys: TranscriptionKeys = {}
-        azure_key = request.azure_speech_key or settings.azure_speech_key
-        azure_region = request.azure_speech_region or settings.azure_speech_region
-        if azure_key:
-            keys["azure_speech_key"] = azure_key
-        if azure_region:
-            keys["azure_speech_region"] = azure_region
-        segments = await stt_provider.transcribe(audio_path, keys, request.source_language)
-        if not segments:
-            raise ValueError("No speech detected in the video. Please try a different video.")
-        # Audio no longer needed after transcription
-        audio_path.unlink(missing_ok=True)
-        audio_path = None
+        if segments is None:
+            if video_path is None:
+                jobs[job_id].step = "video_download"
+                video_path = await download_youtube_video(video_id)
+
+            jobs[job_id].step = "audio_extraction"
+            audio_path = await extract_audio_from_upload(video_path)
+
+            jobs[job_id].step = "transcription"
+            keys: TranscriptionKeys = {}
+            azure_key = request.azure_speech_key or settings.azure_speech_key
+            azure_region = request.azure_speech_region or settings.azure_speech_region
+            if azure_key:
+                keys["azure_speech_key"] = azure_key
+            if azure_region:
+                keys["azure_speech_region"] = azure_region
+            segments = await stt_provider.transcribe(audio_path, keys, request.source_language)
+            if not segments:
+                raise ValueError("No speech detected in the video. Please try a different video.")
+            audio_path.unlink(missing_ok=True)
+            audio_path = None
 
         source_url = f"https://www.youtube.com/watch?v={video_id}"
         title = f"YouTube Video ({video_id})"

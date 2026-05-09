@@ -237,7 +237,7 @@ export function CreateLesson() {
               disabled={!canGenerate || submitting}
               onClick={handleGenerate}
               className="w-full"
-              size="xl"
+              size="lg"
               data-testid="create-lesson-generate-button"
             >
               <Sparkles className="size-4" />

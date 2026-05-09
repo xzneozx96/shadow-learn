@@ -1,7 +1,6 @@
 import pytest
 from app.speak.proficiency import (
     PROFICIENCY_MAP,
-    LEVEL_INSTRUCTIONS,
     get_proficiency_label,
     get_level_instruction,
 )

@@ -5,7 +5,6 @@ import httpx
 import pytest
 import respx
 
-from app.shared._retry import RetryableError
 from app.speak.offshore_client import (
     OFFSHORE_PATH,
     OffshoreConfigError,

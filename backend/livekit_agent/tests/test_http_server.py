@@ -4,7 +4,6 @@ import sys
 from unittest.mock import AsyncMock, patch
 
 import httpx
-import pytest
 import respx
 from httpx import ASGITransport
 
