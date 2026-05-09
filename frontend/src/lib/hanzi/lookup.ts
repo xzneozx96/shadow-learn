@@ -73,10 +73,12 @@ export async function getDecomposition(char: string): Promise<Component[]> {
   if (!decomp || decomp === 'Invalid Input')
     return []
 
-  // components2 = radical decomposition (more meaningful); fall back to components1
-  const raw: string[] = (
-    decomp.components2?.length ? decomp.components2 : decomp.components1
-  ) ?? []
+  // Prefer components1 (direct IDS split — semantically correct top-level parts).
+  // Fall back to components2 only when components1 is empty or all placeholders.
+  const c1 = decomp.components1 ?? []
+  const raw: string[] = (c1.length > 0 && c1.some(c => c !== 'No glyph available'))
+    ? c1
+    : (decomp.components2 ?? [])
 
   // Filter the character itself and sentinel strings
   const filtered = raw.filter(

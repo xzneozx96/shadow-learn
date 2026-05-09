@@ -25,6 +25,22 @@ describe('getDecomposition', () => {
     const components = await getDecomposition('一')
     expect(components).toEqual([])
   })
+
+  it('uses components1 for 将, including out-of-BMP chars (rendered as empty in UI)', async () => {
+    // 将 components1 = [丬, 𪨃]; 𪨃 is CJK Ext-B — included in data, hidden in node renderer
+    const components = await getDecomposition('将')
+    const chars = components.map(c => c.char)
+    expect(chars).toContain('丬')
+    expect(components.length).toBeLessThanOrEqual(3)
+  })
+
+  it('uses components1 for 学, dropping placeholder-only parts', async () => {
+    // 学 components1 = ["No glyph available", "子"]; placeholder filtered → [子]
+    // Falls back to components2 only if ALL of c1 is placeholders (none pass filter)
+    const components = await getDecomposition('学')
+    const chars = components.map(c => c.char)
+    expect(chars).toContain('子')
+  })
 })
 
 describe('buildCharData', () => {

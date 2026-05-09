@@ -12,6 +12,7 @@ import '@xyflow/react/dist/style.css'
 
 function BreakdownNode({ data }: NodeProps) {
   const nodeData = data as NodeData
+  const { t } = useI18n()
   const handleClass = '!w-0 !h-0 !min-w-0 !min-h-0 !opacity-0 !border-0 !p-0'
 
   if (nodeData.kind === 'word') {
@@ -57,19 +58,26 @@ function BreakdownNode({ data }: NodeProps) {
 
   const d = nodeData as CompNodeData
   const showName = d.name && d.name !== d.char
+  const charRenderable = (d.char.codePointAt(0) ?? 0) < 0x20000
   return (
     <div className="bg-card/60 border border-border rounded-xl px-3 py-1.5 text-center min-w-[60px] shadow-sm">
       <Handle type="target" position={Position.Top} className={handleClass} />
-      <div className="text-lg font-bold font-serif leading-none text-foreground">{d.char}</div>
-      <div className="mt-1 flex items-center justify-center gap-0.5 flex-wrap">
-        {d.pinyin && <span className="text-[9px] italic text-yellow-500">{d.pinyin}</span>}
-        {showName && (
-          <>
-            {d.pinyin && <span className="text-[8px] text-foreground/30">·</span>}
-            <span className="text-[9px] font-bold text-emerald-500">{d.name}</span>
-          </>
-        )}
-      </div>
+      {charRenderable
+        ? (
+            <>
+              <div className="text-lg font-bold font-serif leading-none text-foreground">{d.char}</div>
+              <div className="mt-1 flex items-center justify-center gap-0.5 flex-wrap">
+                {d.pinyin && <span className="text-[9px] italic text-yellow-500">{d.pinyin}</span>}
+                {showName && (
+                  <>
+                    {d.pinyin && <span className="text-[8px] text-foreground/30">·</span>}
+                    <span className="text-[9px] font-bold text-emerald-500">{d.name}</span>
+                  </>
+                )}
+              </div>
+            </>
+          )
+        : <div className="text-[9px] text-foreground/30 italic leading-tight">{t('breakdown.noGlyph')}</div>}
     </div>
   )
 }
