@@ -40,6 +40,7 @@ function AttachImageButton({ label, tooltip }: { label: string, tooltip: string 
   return (
     <PromptInputButton
       tooltip={tooltip}
+      aria-label={tooltip}
       onClick={attachments.openFileDialog}
     >
       <ImageIcon className="size-4" />
@@ -435,16 +436,18 @@ export function CompanionChatArea({
             </PromptInputBody>
             <PromptInputFooter>
               <PromptInputTools>
-                <AttachImageButton label={t('voice.attach')} tooltip={t('companion.attachImage')} />
                 {onSpeakClick && (
                   <PromptInputButton
+                    variant="default"
                     onClick={onSpeakClick}
                     tooltip={t('speak.title')}
+                    aria-label={t('speak.title')}
+                    className="bg-linear-to-br from-fuchsia-500 via-purple-500 to-indigo-500 text-white shadow-md shadow-purple-500/30 hover:from-fuchsia-400 hover:via-purple-400 hover:to-indigo-400 hover:text-white"
                   >
                     <AudioLines className="size-4" />
-                    <span>{t('speak.title')}</span>
                   </PromptInputButton>
                 )}
+                <AttachImageButton label={t('voice.attach')} tooltip={t('companion.attachImage')} />
                 <PromptInputButton
                   tooltip={t('voice.dictate')}
                   onClick={() => {
