@@ -19,7 +19,7 @@ export interface UseVoiceInputReturn {
 }
 
 const MAX_BURST_MS = 30_000
-const PROCESSING_SAFETY_MS = 1_000
+const PROCESSING_SAFETY_MS = 2_000
 const WORKLET_URL = '/pcm-encoder.worklet.js'
 
 interface GladiaTranscriptMessage {

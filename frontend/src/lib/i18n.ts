@@ -800,8 +800,8 @@ export const TRANSLATIONS = {
     'voice.connectionLost': 'Mất kết nối — thử lại',
     'voice.dictate': 'Nhận diện giọng nói',
     'voice.maxReached': 'Đã đạt 30 giây tối đa',
-    'voice.permissionDenied': 'Đã từ chối quyền micro',
-    'voice.unavailable': 'Nhập giọng nói không khả dụng',
+    'voice.permissionDenied': 'Đã từ chối truy cập micro',
+    'voice.unavailable': 'Nhận diện giọng nói không khả dụng',
 
     // Study
     'study.check': 'Kiểm tra',
