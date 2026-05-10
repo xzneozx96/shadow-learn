@@ -31,6 +31,16 @@ class PlaylistConfig:
     default_skill: Skill | None = None
     videos: list[VideoConfig] = field(default_factory=list)
 
+@dataclass(frozen=True)
+class StandaloneVideoConfig:
+    video_id: str
+    difficulty: str | None = None
+    topic: Topic | None = None
+    skill: Skill | None = None
+    content_type: ContentType = "material"
+
+STANDALONE_VIDEOS: list[StandaloneVideoConfig] = []
+
 PLAYLISTS: list[PlaylistConfig] = [
     PlaylistConfig(
         name="Mr.Chinese Channel",
