@@ -1,3 +1,4 @@
+import time
 from unittest.mock import patch, MagicMock
 
 from app.collection.service import format_duration
@@ -66,3 +67,44 @@ def test_fetch_playlist_handles_missing_entries():
     with patch("app.collection.service.yt_dlp.YoutubeDL", return_value=fake_ydl):
         from app.collection.service import fetch_playlist
         assert fetch_playlist("PLfake") == []
+
+
+def test_cache_returns_fresh_within_ttl(monkeypatch):
+    """get_cached_playlist serves cached data within TTL."""
+    from app.collection import service
+
+    service._cache.clear()
+    fake_entries = [{"id": "x", "title": "t", "duration": 10}]
+    calls = {"n": 0}
+
+    def fake_fetch(playlist_id):
+        calls["n"] += 1
+        return fake_entries
+
+    monkeypatch.setattr(service, "fetch_playlist", fake_fetch)
+
+    a = service.get_cached_playlist("PL1")
+    b = service.get_cached_playlist("PL1")
+    assert a == fake_entries
+    assert b == fake_entries
+    assert calls["n"] == 1  # only one network call
+
+
+def test_cache_refetches_after_ttl(monkeypatch):
+    """get_cached_playlist refetches once entry exceeds TTL."""
+    from app.collection import service
+
+    service._cache.clear()
+    calls = {"n": 0}
+
+    def fake_fetch(playlist_id):
+        calls["n"] += 1
+        return [{"id": str(calls["n"])}]
+
+    monkeypatch.setattr(service, "fetch_playlist", fake_fetch)
+    monkeypatch.setattr(service, "CACHE_TTL_SECONDS", 0)  # immediate expiry
+
+    service.get_cached_playlist("PL1")
+    time.sleep(0.01)
+    service.get_cached_playlist("PL1")
+    assert calls["n"] == 2
