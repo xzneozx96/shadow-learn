@@ -760,6 +760,93 @@ def test_fetch_playlist_metadata_returns_empty_on_error(monkeypatch):
 
 # ── fetch_standalone_video_entries ────────────────────────────────────────────
 
+# ── get_playlist_videos ───────────────────────────────────────────────────────
+
+def test_get_playlist_videos_returns_hub_videos_with_full_fields(monkeypatch):
+    """get_playlist_videos returns enriched HubVideo list with topic/skill/content_type."""
+    import app.collection.service as svc
+    from app.collection.config import PlaylistConfig
+
+    fake_pl = PlaylistConfig(
+        name="Test PL", playlist_id="PL1",
+        default_difficulty="HSK 1-2", default_topic="Daily Life",
+        default_content_type="material",
+    )
+    monkeypatch.setattr(svc, "PLAYLISTS", [fake_pl])
+    monkeypatch.setattr(svc, "get_cached_playlist", lambda pid: [
+        {"id": "v1", "title": "Hello", "duration": 120, "view_count": 500,
+         "channel": "Chan", "description": "Desc"},
+    ])
+    monkeypatch.setattr(svc, "get_cached_playlist_metadata", lambda ids: {
+        "PL1": {"thumbnail_url": "https://t.com/1.jpg", "video_count": 1}
+    })
+
+    result = svc.get_playlist_videos("PL1")
+
+    assert result is not None
+    assert result["name"] == "Test PL"
+    assert result["thumbnail_url"] == "https://t.com/1.jpg"
+    assert result["topic"] == "Daily Life"
+    vid = result["videos"][0]
+    assert vid["video_id"] == "v1"
+    assert vid["difficulty"] == "HSK 1-2"  # canonical
+    assert vid["topic"] == "Daily Life"
+    assert vid["content_type"] == "material"
+    assert vid["duration"] == "2:00"
+
+
+def test_get_playlist_videos_applies_difficulty_bucketing(monkeypatch):
+    """get_playlist_videos normalises raw difficulty to canonical bucket."""
+    import app.collection.service as svc
+    from app.collection.config import PlaylistConfig
+
+    fake_pl = PlaylistConfig(name="PL", playlist_id="PL1", default_difficulty="HSK 5")
+    monkeypatch.setattr(svc, "PLAYLISTS", [fake_pl])
+    monkeypatch.setattr(svc, "get_cached_playlist", lambda pid: [
+        {"id": "v1", "title": "T", "duration": 60, "view_count": None,
+         "channel": None, "description": None},
+    ])
+    monkeypatch.setattr(svc, "get_cached_playlist_metadata", lambda ids: {
+        "PL1": {"thumbnail_url": None, "video_count": 1}
+    })
+
+    result = svc.get_playlist_videos("PL1")
+    assert result["videos"][0]["difficulty"] == "HSK 5+"
+
+
+def test_get_playlist_videos_applies_per_video_overrides(monkeypatch):
+    """get_playlist_videos applies VideoConfig overrides for topic, difficulty."""
+    import app.collection.service as svc
+    from app.collection.config import PlaylistConfig, VideoConfig
+
+    fake_pl = PlaylistConfig(
+        name="PL", playlist_id="PL1",
+        default_difficulty="HSK 1-2", default_topic="Daily Life",
+        videos=[VideoConfig(video_id="v1", topic="Business", difficulty="HSK 5+")],
+    )
+    monkeypatch.setattr(svc, "PLAYLISTS", [fake_pl])
+    monkeypatch.setattr(svc, "get_cached_playlist", lambda pid: [
+        {"id": "v1", "title": "T", "duration": 60, "view_count": None,
+         "channel": None, "description": None},
+    ])
+    monkeypatch.setattr(svc, "get_cached_playlist_metadata", lambda ids: {
+        "PL1": {"thumbnail_url": None, "video_count": 1}
+    })
+
+    result = svc.get_playlist_videos("PL1")
+    vid = result["videos"][0]
+    assert vid["topic"] == "Business"
+    assert vid["difficulty"] == "HSK 5+"
+
+
+def test_get_playlist_videos_returns_none_for_unknown_id(monkeypatch):
+    """get_playlist_videos returns None when playlist_id not in PLAYLISTS."""
+    import app.collection.service as svc
+    monkeypatch.setattr(svc, "PLAYLISTS", [])
+
+    assert svc.get_playlist_videos("UNKNOWN") is None
+
+
 def test_fetch_standalone_video_entries_returns_full_metadata(monkeypatch):
     """fetch_standalone_video_entries returns title, channel, duration, view_count."""
     from unittest.mock import MagicMock, patch

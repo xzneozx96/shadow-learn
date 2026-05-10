@@ -439,6 +439,53 @@ def build_hub_response(
     }
 
 
+def get_playlist_videos(playlist_id: str) -> dict | None:
+    """Fetch all videos for one playlist with full HubVideo fields.
+
+    Returns None if playlist_id is not in the curated PLAYLISTS config.
+    Returns {name, thumbnail_url, topic, videos: list[HubVideo]}.
+    """
+    playlist = next((p for p in PLAYLISTS if p.playlist_id == playlist_id), None)
+    if playlist is None:
+        return None
+
+    entries = get_cached_playlist(playlist_id)
+    meta = get_cached_playlist_metadata([playlist_id]).get(playlist_id, {})
+    base_videos = build_video_list(playlist, entries)
+    video_cfg_map = {v.video_id: v for v in playlist.videos}
+
+    hub_videos = []
+    for bv in base_videos:
+        vid = bv["video_id"]
+        vcfg = video_cfg_map.get(vid)
+        content_type = (
+            (vcfg.content_type if vcfg and vcfg.content_type is not None else None)
+            or playlist.default_content_type
+        )
+        topic = (
+            (vcfg.topic if vcfg and vcfg.topic is not None else None)
+            or playlist.default_topic
+        )
+        skill = (
+            (vcfg.skill if vcfg and vcfg.skill is not None else None)
+            or playlist.default_skill
+        )
+        hub_videos.append({
+            **bv,
+            "difficulty": bucket_difficulty(bv["difficulty"]),
+            "topic": topic,
+            "skill": skill,
+            "content_type": content_type,
+        })
+
+    return {
+        "name": playlist.name,
+        "thumbnail_url": meta.get("thumbnail_url"),
+        "topic": playlist.default_topic,
+        "videos": hub_videos,
+    }
+
+
 def get_collection() -> dict:
     """Build the full Learning Hub response from curated playlists."""
     api_key = settings.youtube_api_key
