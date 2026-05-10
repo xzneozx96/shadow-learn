@@ -93,7 +93,6 @@ interface CompanionChatAreaProps {
   headerSlot?: ReactNode
   placeholder?: string
   onSpeakClick?: () => void
-  voiceLanguage?: string
 }
 
 export function CompanionChatArea({
@@ -109,13 +108,11 @@ export function CompanionChatArea({
   headerSlot,
   placeholder,
   onSpeakClick,
-  voiceLanguage,
 }: CompanionChatAreaProps) {
   const { t } = useI18n()
   const [draftText, setDraftText] = useState('')
   const [pendingConfirmed, setPendingConfirmed] = useState<string | null>(null)
   const voice = useVoiceInput({
-    language: voiceLanguage,
     onDraft: setDraftText,
     onConfirmed: (text) => {
       setDraftText('')

@@ -16,24 +16,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/transcription", tags=["transcription"])
 
-# zh-CN -> zh, ja-JP -> ja, etc. Mirrors backend/app/transcription/services/transcription_gladia.py.
-_GLADIA_LANGUAGE_MAP: dict[str, str] = {
-    "zh-CN": "zh",
-    "ja-JP": "ja",
-    "ko-KR": "ko",
-    "en-US": "en",
-}
-
 _GLADIA_INIT_URL = "https://api.gladia.io/v2/live"
 
 # In-memory IP rate limiter: 20 sessions / 60s / IP.
 _RATE_LIMIT_WINDOW_SECONDS = 60.0
 _RATE_LIMIT_MAX = 20
 _ip_buckets: dict[str, deque[float]] = defaultdict(deque)
-
-
-def _normalize_language(language: str) -> str:
-    return _GLADIA_LANGUAGE_MAP.get(language, language.split("-")[0])
 
 
 def _check_origin(origin: str | None) -> None:
@@ -75,14 +63,14 @@ def _check_rate_limit(client_ip: str) -> None:
 @router.post("/session")
 async def create_session(
     request: Request,
-    language: str | None = None,
     origin: Annotated[str | None, Header()] = None,
 ) -> dict[str, str]:
     """Mint a Gladia v2 live session. Returns the WebSocket URL with embedded token.
 
-    `language` is an optional hint. When omitted (or "auto"), Gladia auto-detects
-    across languages. Code-switching is always enabled so the user can mix languages
-    mid-utterance.
+    Always uses full auto-detect with per-utterance code-switching (empty `languages`
+    + `code_switching: true`) so the user can speak whatever language(s) they want
+    and mix freely. Per Gladia v2 docs: "If one language is set, [code_switching]
+    will be ignored" — so we never bias the model with a single language.
     """
     _check_origin(origin)
     client_ip = request.client.host if request.client else "unknown"
@@ -93,10 +81,6 @@ async def create_session(
         logger.error("SHADOWLEARN_GLADIA_API_KEYS not configured")
         raise HTTPException(status_code=500, detail="Voice input unavailable")
 
-    languages: list[str] = []
-    if language and language.lower() != "auto":
-        languages = [_normalize_language(language)]
-
     body = {
         "encoding": "wav/pcm",
         "bit_depth": 16,
@@ -104,7 +88,7 @@ async def create_session(
         "channels": 1,
         "endpointing": 0.5,
         "language_config": {
-            "languages": languages,
+            "languages": [],
             "code_switching": True,
         },
     }

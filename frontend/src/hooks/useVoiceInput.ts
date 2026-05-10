@@ -4,7 +4,6 @@ import { API_BASE } from '@/lib/config'
 export type VoiceInputState = 'idle' | 'connecting' | 'recording' | 'processing'
 
 export interface UseVoiceInputArgs {
-  language?: string
   onDraft: (text: string) => void
   onConfirmed: (text: string) => void
 }
@@ -29,7 +28,7 @@ interface GladiaTranscriptMessage {
   }
 }
 
-export function useVoiceInput({ language, onDraft, onConfirmed }: UseVoiceInputArgs): UseVoiceInputReturn {
+export function useVoiceInput({ onDraft, onConfirmed }: UseVoiceInputArgs): UseVoiceInputReturn {
   const [state, setState] = useState<VoiceInputState>('idle')
   const [error, setError] = useState<string | null>(null)
 
@@ -162,8 +161,7 @@ export function useVoiceInput({ language, onDraft, onConfirmed }: UseVoiceInputA
   }, [stopAudioCapture])
 
   const ensureSession = useCallback(async () => {
-    const qs = language ? `?language=${encodeURIComponent(language)}` : ''
-    const url = `${API_BASE}/api/transcription/session${qs}`
+    const url = `${API_BASE}/api/transcription/session`
     const response = await fetch(url, { method: 'POST' })
     if (!response.ok) {
       throw new Error(`session http ${response.status}`)
@@ -192,7 +190,7 @@ export function useVoiceInput({ language, onDraft, onConfirmed }: UseVoiceInputA
       }
       ws.onerror = () => reject(new Error('ws open failed'))
     })
-  }, [language, handleGladiaMessage, beginCapture, stopAudioCapture, transitionToIdle])
+  }, [handleGladiaMessage, beginCapture, stopAudioCapture, transitionToIdle])
 
   const stopAndAwaitFinal = useCallback(() => {
     stopAudioCapture()

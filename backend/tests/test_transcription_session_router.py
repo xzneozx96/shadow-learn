@@ -38,13 +38,14 @@ def test_session_returns_url_on_success(client: TestClient) -> None:
 
 
 @respx.mock
-def test_session_maps_language_to_short_form(client: TestClient) -> None:
+def test_session_uses_auto_detect_with_code_switching(client: TestClient) -> None:
     route = respx.post("https://api.gladia.io/v2/live").mock(
         return_value=Response(201, json={"id": "abc", "url": "wss://gladia.io/v2/live?token=t"})
     )
-    client.post("/api/transcription/session?language=zh-CN")
-    request_body = route.calls.last.request.read().decode()
-    assert '"languages":["zh"]' in request_body.replace(" ", "")
+    client.post("/api/transcription/session")
+    request_body = route.calls.last.request.read().decode().replace(" ", "")
+    assert '"languages":[]' in request_body
+    assert '"code_switching":true' in request_body
 
 
 def test_session_500_when_no_gladia_keys(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
