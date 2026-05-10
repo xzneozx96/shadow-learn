@@ -67,9 +67,12 @@ def fetch_playlist_items(playlist_id: str, api_key: str) -> list[dict]:
             video_id = snippet.get("resourceId", {}).get("videoId")
             if not video_id:
                 continue
+            title = snippet.get("title") or "Untitled"
+            if title in ("Private video", "Deleted video"):
+                continue
             items.append({
                 "video_id": video_id,
-                "title": snippet.get("title") or "Untitled",
+                "title": title,
                 "description": snippet.get("description") or None,
                 "channel": snippet.get("videoOwnerChannelTitle") or None,
             })
