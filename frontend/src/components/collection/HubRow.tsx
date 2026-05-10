@@ -1,9 +1,10 @@
-import type { HubItem, VideoItem } from '@/types/collection'
+import type { HubItem, HubVideo } from '@/types/collection'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { computeScrollState } from '@/lib/carousel'
+import { PlaylistCard } from './PlaylistCard'
 import { VideoCard } from './VideoCard'
 
 interface HubRowProps {
@@ -14,15 +15,14 @@ interface HubRowProps {
 }
 
 export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
-  const videos = items.filter((item): item is VideoItem => item.type === 'video')
   const { t } = useI18n()
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(false)
 
-  const filteredVideos = useMemo(
-    () => activeTopic === null ? videos : videos.filter(v => v.topic === activeTopic),
-    [videos, activeTopic],
+  const filteredItems = useMemo(
+    () => activeTopic === null ? items : items.filter(item => item.topic === activeTopic),
+    [items, activeTopic],
   )
 
   const updateScrollState = useCallback((el: HTMLDivElement) => {
@@ -54,9 +54,9 @@ export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
       if (rafId)
         cancelAnimationFrame(rafId)
     }
-  }, [updateScrollState, filteredVideos.length])
+  }, [updateScrollState, filteredItems.length])
 
-  if (filteredVideos.length === 0)
+  if (filteredItems.length === 0)
     return null
 
   const scroll = (dir: 'prev' | 'next') => {
@@ -71,7 +71,7 @@ export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
             {label}
           </h2>
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium tabular-nums bg-secondary text-muted-foreground shrink-0">
-            {t('collection.videoCount', { count: filteredVideos.length })}
+            {t('collection.videoCount', { count: filteredItems.length })}
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -111,14 +111,20 @@ export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
           ref={scrollRef}
           className="flex items-stretch gap-5 overflow-x-auto px-2 py-3 -my-3 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {filteredVideos.map((v, i) => (
-            <VideoCard
-              key={`${v.video_id}-${i}`}
-              video={v}
-              alreadyCreated={createdSet.has(v.video_id)}
-              showCreateLesson={v.content_type !== 'tip'}
-            />
-          ))}
+          {filteredItems.map((item, i) =>
+            item.type === 'playlist'
+              ? (
+                  <PlaylistCard key={item.playlist_id} playlist={item} />
+                )
+              : (
+                  <VideoCard
+                    key={`${item.video_id}-${i}`}
+                    video={item as HubVideo}
+                    alreadyCreated={createdSet.has(item.video_id)}
+                    showCreateLesson={item.content_type !== 'tip'}
+                  />
+                ),
+          )}
         </div>
       </div>
     </section>
