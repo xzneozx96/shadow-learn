@@ -68,19 +68,17 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
               <CutoutCorner className="absolute -top-[31px] -left-px rotate-180 text-card" />
             </CutoutCardInsetLabel>
           )}
-          {playlist.topic && (
-            <div className="absolute bottom-2 right-2">
-              <Badge variant="secondary" className="text-[10px] font-medium shadow-sm">
-                {playlist.topic}
-              </Badge>
-            </div>
-          )}
         </CutoutCardMedia>
 
-        <CutoutCardContent className="p-4">
+        <CutoutCardContent className="p-4 flex flex-col gap-2">
           <p className="text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover/card:text-primary transition-colors duration-150">
             {playlist.name}
           </p>
+          {playlist.topic && (
+            <Badge variant="secondary" className="w-fit text-[10px] font-medium">
+              {playlist.topic}
+            </Badge>
+          )}
         </CutoutCardContent>
       </CutoutCard>
     </Link>
