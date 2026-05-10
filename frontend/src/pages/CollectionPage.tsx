@@ -1,4 +1,4 @@
-import { Loader2, Play } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { PlaylistRow } from '@/components/collection/PlaylistRow'
 import { Layout } from '@/components/Layout'
 import { useI18n } from '@/contexts/I18nContext'
@@ -11,28 +11,24 @@ export function CollectionPage() {
   return (
     <Layout>
       <div className="h-full overflow-y-auto">
-        <div className="w-full px-10 pt-4 pb-20">
-          <header className="mb-11">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-semibold uppercase tracking-[0.15em] text-primary mb-3">
-              <Play className="size-2.5" />
-              {t('collection.eyebrow')}
-            </span>
-            <h1 className="text-[30px] font-bold tracking-tight text-white/95 leading-[1.1]">
+        <div className="mx-auto w-full container px-6 py-9 pb-10">
+          <header className="mb-10">
+            <h1 className="text-3xl xl:text-4xl font-bold tracking-tighter leading-none text-foreground">
               {t('collection.title')}
             </h1>
-            <p className="mt-1.5 text-[13px] text-white/45">
+            <p className="mt-1.5 text-sm text-muted-foreground italic">
               {t('collection.subtitle')}
             </p>
           </header>
 
           {loading && (
             <div className="flex justify-center py-20">
-              <Loader2 className="size-6 animate-spin text-white/40" />
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
           )}
 
           {error && (
-            <div className="rounded-xl border border-red-400/20 bg-red-400/5 px-4 py-3 text-[13px] text-red-300">
+            <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               {t('collection.loadError')}
             </div>
           )}

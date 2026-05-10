@@ -18,15 +18,15 @@ interface VideoCardProps {
 }
 
 const DIFFICULTY_CLASSES: Record<string, string> = {
-  'HSK 1': 'bg-emerald-400/12 text-emerald-300 border-emerald-400/25',
-  'HSK 2': 'bg-blue-400/12 text-blue-300 border-blue-400/25',
-  'HSK 3-4': 'bg-yellow-400/12 text-yellow-300 border-yellow-400/25',
-  'HSK 4-5': 'bg-orange-400/12 text-orange-300 border-orange-400/25',
-  'HSK 5+': 'bg-red-400/12 text-red-300 border-red-400/25',
+  'HSK 1': 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
+  'HSK 2': 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30',
+  'HSK 3-4': 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30',
+  'HSK 4-5': 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
+  'HSK 5+': 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
 }
 
 function difficultyClass(difficulty: string): string {
-  return DIFFICULTY_CLASSES[difficulty] ?? 'bg-white/8 text-white/65 border-white/15'
+  return DIFFICULTY_CLASSES[difficulty] ?? 'bg-muted text-muted-foreground border-border'
 }
 
 export function VideoCard({ video }: VideoCardProps) {
@@ -101,47 +101,45 @@ export function VideoCard({ video }: VideoCardProps) {
   }
 
   return (
-    <div className="shrink-0 w-[calc(25%-12px)] min-w-[260px] rounded-2xl border border-white/8 bg-white/[0.025] p-[5px] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:border-white/15 hover:shadow-[0_16px_48px_rgba(0,0,0,0.4)]">
-      <div className="flex flex-col rounded-[11px] bg-[#0e0e14] overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
-        <div className="relative w-full aspect-video bg-black">
-          <iframe
-            className="absolute inset-0 w-full h-full"
-            src={`https://www.youtube.com/embed/${video.video_id}?rel=0`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            loading="lazy"
-            title={video.title}
-          />
-        </div>
-        <div className="px-3.5 pt-3 pb-3.5 flex flex-col gap-2">
-          <p className="text-[13px] font-medium leading-snug text-white/90 line-clamp-2 tracking-tight">
-            {video.title}
-          </p>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 min-w-0 text-[10px] text-white/30">
-              {video.difficulty && (
-                <span className={cn(
-                  'inline-flex items-center px-1.5 py-[1.5px] rounded-full text-[9px] font-semibold tracking-wide border whitespace-nowrap',
-                  difficultyClass(video.difficulty),
-                )}
-                >
-                  {video.difficulty}
-                </span>
+    <div className="shrink-0 w-[calc(25%-12px)] min-w-[260px] rounded-xl bg-card text-card-foreground border border-border/80 overflow-hidden shadow-[0px_1px_2px_-1px_color-mix(in_oklab,var(--foreground)_8%,transparent),0px_4px_8px_-2px_color-mix(in_oklab,var(--foreground)_6%,transparent)] transition-[box-shadow,border-color,transform] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-border hover:shadow-[0px_2px_4px_-1px_color-mix(in_oklab,var(--foreground)_10%,transparent),0px_8px_16px_-4px_color-mix(in_oklab,var(--foreground)_8%,transparent)] hover:-translate-y-0.5">
+      <div className="relative w-full aspect-video bg-muted">
+        <iframe
+          className="absolute inset-0 w-full h-full"
+          src={`https://www.youtube.com/embed/${video.video_id}?rel=0`}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          loading="lazy"
+          title={video.title}
+        />
+      </div>
+      <div className="px-3.5 pt-3 pb-3.5 flex flex-col gap-2">
+        <p className="text-[13px] font-medium leading-snug text-foreground line-clamp-2 tracking-tight">
+          {video.title}
+        </p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0 text-[10px] text-muted-foreground">
+            {video.difficulty && (
+              <span className={cn(
+                'inline-flex items-center px-1.5 py-[1.5px] rounded-full text-[9px] font-semibold tracking-wide border whitespace-nowrap',
+                difficultyClass(video.difficulty),
               )}
-              {video.difficulty && <span className="size-[2px] rounded-full bg-white/30" />}
-              <span>{video.duration}</span>
-            </div>
-            <Button
-              size="sm"
-              onClick={handleCreate}
-              disabled={submitting}
-              className="h-7 px-3 rounded-full text-[10.5px] font-semibold gap-1 shrink-0"
-              data-testid={`collection-create-${video.video_id}`}
-            >
-              <Sparkles className="size-3" />
-              {submitting ? t('collection.creating') : t('collection.createLesson')}
-            </Button>
+              >
+                {video.difficulty}
+              </span>
+            )}
+            {video.difficulty && <span className="size-[2px] rounded-full bg-border" />}
+            <span>{video.duration}</span>
           </div>
+          <Button
+            size="sm"
+            onClick={handleCreate}
+            disabled={submitting}
+            className="h-7 px-3 rounded-full text-[10.5px] font-semibold gap-1 shrink-0"
+            data-testid={`collection-create-${video.video_id}`}
+          >
+            <Sparkles className="size-3" />
+            {submitting ? t('collection.creating') : t('collection.createLesson')}
+          </Button>
         </div>
       </div>
     </div>
