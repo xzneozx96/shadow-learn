@@ -24,6 +24,8 @@ import { LessonCard } from './LessonCard'
 import { StreakCard } from './StreakCard'
 import { WordsCard } from './WordsCard'
 
+const YOUTUBE_ID_REGEX = /[?&]v=([^&]+)|youtu\.be\/([^?&]+)/
+
 type SortMode = 'recent' | 'alpha' | 'progress'
 type TFn = (key: TranslationKey, params?: Record<string, string | number>) => string
 
@@ -184,8 +186,20 @@ export function Library() {
 
   const hasLessons = lessons.length > 0
 
+  const ambientThumbnail = useMemo(() => {
+    for (const l of lessons) {
+      if (l.source === 'youtube' && l.sourceUrl) {
+        const m = l.sourceUrl.match(YOUTUBE_ID_REGEX)
+        const id = m?.[1] ?? m?.[2]
+        if (id)
+          return `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`
+      }
+    }
+    return null
+  }, [lessons])
+
   return (
-    <Layout>
+    <Layout ambientThumbnail={ambientThumbnail} ambientTone="emerald">
       <div className="h-full overflow-y-auto">
         <div className="mx-auto w-full container px-6 py-9 pb-10">
           {/* ── Top: greeting ── */}

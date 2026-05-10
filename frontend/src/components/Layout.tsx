@@ -10,12 +10,15 @@ import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { cn } from '@/lib/utils'
 import { useHasUnseenAnnouncement } from '@/lib/whats-new'
 
+type AmbientTone = 'emerald' | 'violet' | 'amber' | 'sky' | 'rose'
+
 interface LayoutProps {
   children: React.ReactNode
   ambientThumbnail?: string | null
+  ambientTone?: AmbientTone
 }
 
-export function Layout({ children, ambientThumbnail }: LayoutProps) {
+export function Layout({ children, ambientThumbnail, ambientTone }: LayoutProps) {
   const location = useLocation()
   const { t } = useI18n()
   const { trialMode } = useAuth()
@@ -130,7 +133,7 @@ export function Layout({ children, ambientThumbnail }: LayoutProps) {
       {/* Content area */}
       <div className="flex-1 min-w-0 flex overflow-hidden">
         <main className="relative flex-1 min-w-0 h-full overflow-hidden">
-          {ambientThumbnail && <AmbientBackdrop url={ambientThumbnail} />}
+          <AmbientBackdrop url={ambientThumbnail} tone={ambientTone} />
           <div className="relative h-full">
             {children}
           </div>
