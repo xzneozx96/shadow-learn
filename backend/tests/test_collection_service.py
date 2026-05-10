@@ -55,6 +55,11 @@ def test_parse_iso8601_duration_invalid():
     assert parse_iso8601_duration("garbage") is None
 
 
+def test_parse_iso8601_duration_bare_pt():
+    from app.collection.service import parse_iso8601_duration
+    assert parse_iso8601_duration("PT") is None
+
+
 # ── fetch_playlist_items ──────────────────────────────────────────────────────
 
 def test_fetch_playlist_items_returns_normalized_entries(monkeypatch):
@@ -176,6 +181,28 @@ def test_fetch_video_details_returns_empty_on_error():
     with patch("app.collection.service.httpx.get", side_effect=_httpx.RequestError("timeout")):
         from app.collection.service import fetch_video_details
         assert fetch_video_details(["abc123"], "APIKEY") == {}
+
+
+def test_fetch_video_details_batches_requests():
+    """fetch_video_details makes multiple requests when >50 video IDs given."""
+    from unittest.mock import MagicMock, patch
+
+    def make_resp():
+        return MagicMock(**{
+            "raise_for_status.return_value": None,
+            "json.return_value": {"items": []},
+        })
+
+    with patch("app.collection.service.httpx.get", side_effect=[make_resp(), make_resp()]) as mock_get:
+        from app.collection.service import fetch_video_details
+        ids = [f"v{i}" for i in range(51)]
+        fetch_video_details(ids, "APIKEY")
+
+    assert mock_get.call_count == 2
+    first_ids = mock_get.call_args_list[0][1]["params"]["id"]
+    second_ids = mock_get.call_args_list[1][1]["params"]["id"]
+    assert len(first_ids.split(",")) == 50
+    assert len(second_ids.split(",")) == 1
 
 
 # ── fetch_playlist (integration of the two helpers) ──────────────────────────

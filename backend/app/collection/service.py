@@ -29,7 +29,7 @@ def parse_iso8601_duration(duration: str | None) -> int | None:
     if not duration:
         return None
     m = re.fullmatch(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)
-    if not m:
+    if not m or not any(m.groups()):
         return None
     hours = int(m.group(1) or 0)
     minutes = int(m.group(2) or 0)
