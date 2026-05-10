@@ -488,15 +488,14 @@ def get_playlist_videos(playlist_id: str) -> dict | None:
 
 def get_collection() -> dict:
     """Build the full Learning Hub response from curated playlists."""
-    api_key = settings.youtube_api_key
     playlist_ids = [p.playlist_id for p in PLAYLISTS]
-    playlist_meta = get_cached_playlist_metadata(playlist_ids) if api_key else {
-        pid: {"thumbnail_url": None, "video_count": None} for pid in playlist_ids
-    }
+    playlist_meta = get_cached_playlist_metadata(playlist_ids)
 
     standalone_entries: dict[str, dict] = {}
-    if STANDALONE_VIDEOS and api_key:
-        video_ids = [sv.video_id for sv in STANDALONE_VIDEOS]
-        standalone_entries = fetch_standalone_video_entries(video_ids, api_key)
+    if STANDALONE_VIDEOS:
+        api_key = settings.youtube_api_key
+        if api_key:
+            video_ids = [sv.video_id for sv in STANDALONE_VIDEOS]
+            standalone_entries = fetch_standalone_video_entries(video_ids, api_key)
 
     return build_hub_response(PLAYLISTS, playlist_meta, STANDALONE_VIDEOS, standalone_entries)
