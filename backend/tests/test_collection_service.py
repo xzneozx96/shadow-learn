@@ -386,43 +386,6 @@ def test_build_video_list_preserves_api_order():
     assert [v["video_id"] for v in result] == ["b", "a"]
 
 
-def test_get_collection_returns_hub_response_shape(monkeypatch):
-    """get_collection returns a HubResponse dict with materials and tips keys."""
-    from app.collection import service
-    from app.collection.config import PlaylistConfig
-
-    fake_playlists = [
-        PlaylistConfig(
-            name="Foo", playlist_id="PL1",
-            default_difficulty="HSK 1-2", default_topic="Daily Life",
-        ),
-        PlaylistConfig(
-            name="Bar", playlist_id="PL2",
-            default_difficulty="HSK 3-4", default_topic="Culture",
-        ),
-    ]
-    fake_entries = {
-        "PL1": [{"id": "abc", "title": "Hi", "duration": 60, "view_count": None, "channel": None, "description": None}],
-        "PL2": [{"id": "xyz", "title": "Yo", "duration": 30, "view_count": None, "channel": None, "description": None}],
-    }
-
-    monkeypatch.setattr(service, "PLAYLISTS", fake_playlists)
-    monkeypatch.setattr(service, "get_cached_playlist", lambda pid: fake_entries[pid])
-
-    result = service.get_collection()
-
-    assert "materials" in result
-    assert "tips" in result
-    groups = result["materials"]["groups"]
-    assert len(groups) == 2
-    difficulties = [g["difficulty"] for g in groups]
-    assert "HSK 1-2" in difficulties
-    assert "HSK 3-4" in difficulties
-    assert groups[0]["videos"][0]["content_type"] == "material"
-    assert "Daily Life" in result["materials"]["topics"]
-    assert "Culture" in result["materials"]["topics"]
-
-
 # ── bucket_difficulty ──────────────────────────────────────────────────────────
 
 def test_bucket_difficulty_hsk1():
@@ -474,45 +437,60 @@ def test_bucket_difficulty_unrecognized_returns_none():
     assert bucket_difficulty("garbage") is None
 
 
-# ── build_hub_response helpers ─────────────────────────────────────────────────
-
-def _make_entry(video_id, title="T", duration=60, view_count=None, channel=None, description=None):
-    return {"id": video_id, "title": title, "duration": duration,
-            "view_count": view_count, "channel": channel, "description": description}
-
 # ── build_hub_response — materials grouping ────────────────────────────────────
 
-def test_build_hub_response_materials_grouped_by_canonical_difficulty():
-    """Materials are bucketed to canonical HSK groups and ordered HSK 1-2 first."""
+def test_build_hub_response_groups_playlists_by_difficulty():
+    """Playlists grouped into canonical HSK buckets, ordered HSK 1-2 first."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_hub_response
 
     playlists = [
-        PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 3-4", default_topic="Daily Life"),
-        PlaylistConfig(name="B", playlist_id="PL2", default_difficulty="HSK 1-2", default_topic="Culture"),
+        PlaylistConfig(name="B", playlist_id="PL2", default_difficulty="HSK 3-4", default_topic="Daily Life"),
+        PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 1-2", default_topic="Culture"),
     ]
-    entries = {
-        "PL1": [_make_entry("v1")],
-        "PL2": [_make_entry("v2")],
+    meta = {
+        "PL1": {"thumbnail_url": "https://t.com/1.jpg", "video_count": 10},
+        "PL2": {"thumbnail_url": "https://t.com/2.jpg", "video_count": 5},
     }
-    result = build_hub_response(playlists, entries)
+    result = build_hub_response(playlists, meta, [], {})
     groups = result["materials"]["groups"]
     assert [g["difficulty"] for g in groups] == ["HSK 1-2", "HSK 3-4"]
-    assert groups[0]["videos"][0]["video_id"] == "v2"
-    assert groups[1]["videos"][0]["video_id"] == "v1"
+
+
+def test_build_hub_response_playlist_item_has_correct_shape():
+    """Each playlist appears as a 'playlist' item with all required fields."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [PlaylistConfig(name="PL A", playlist_id="PL1", default_difficulty="HSK 1-2", default_topic="Daily Life")]
+    meta = {"PL1": {"thumbnail_url": "https://t.com/1.jpg", "video_count": 8}}
+    result = build_hub_response(playlists, meta, [], {})
+
+    item = result["materials"]["groups"][0]["items"][0]
+    assert item["type"] == "playlist"
+    assert item["playlist_id"] == "PL1"
+    assert item["name"] == "PL A"
+    assert item["thumbnail_url"] == "https://t.com/1.jpg"
+    assert item["video_count"] == 8
+    assert item["difficulty"] == "HSK 1-2"
+    assert item["topic"] == "Daily Life"
+    assert item["content_type"] == "material"
+
 
 def test_build_hub_response_raw_difficulty_is_bucketed():
-    """Raw difficulty 'HSK 2' normalises to canonical 'HSK 1-2'."""
+    """PlaylistConfig.default_difficulty 'HSK 2' normalises to 'HSK 1-2' in item."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_hub_response
 
     playlists = [PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 2")]
-    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
-    assert result["materials"]["groups"][0]["difficulty"] == "HSK 1-2"
-    assert result["materials"]["groups"][0]["videos"][0]["difficulty"] == "HSK 1-2"
+    result = build_hub_response(playlists, {"PL1": {"thumbnail_url": None, "video_count": 3}}, [], {})
+    groups = result["materials"]["groups"]
+    assert groups[0]["difficulty"] == "HSK 1-2"
+    assert groups[0]["items"][0]["difficulty"] == "HSK 1-2"
+
 
 def test_build_hub_response_no_difficulty_goes_to_uncategorized():
-    """Videos with no difficulty land in the 'Uncategorized' group (rendered last)."""
+    """Playlist with no difficulty lands in 'Uncategorized' group (rendered last)."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_hub_response
 
@@ -520,14 +498,15 @@ def test_build_hub_response_no_difficulty_goes_to_uncategorized():
         PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 1-2"),
         PlaylistConfig(name="B", playlist_id="PL2"),  # no difficulty
     ]
-    entries = {
-        "PL1": [_make_entry("v1")],
-        "PL2": [_make_entry("v2")],
+    meta = {
+        "PL1": {"thumbnail_url": None, "video_count": 2},
+        "PL2": {"thumbnail_url": None, "video_count": 1},
     }
-    result = build_hub_response(playlists, entries)
+    result = build_hub_response(playlists, meta, [], {})
     difficulties = [g["difficulty"] for g in result["materials"]["groups"]]
     assert difficulties[0] == "HSK 1-2"
     assert difficulties[-1] == "Uncategorized"
+
 
 def test_build_hub_response_hsk5plus_group_after_hsk34():
     """Group order: HSK 1-2 < HSK 3-4 < HSK 5+."""
@@ -539,37 +518,63 @@ def test_build_hub_response_hsk5plus_group_after_hsk34():
         PlaylistConfig(name="B", playlist_id="PL2", default_difficulty="HSK 1-2"),
         PlaylistConfig(name="C", playlist_id="PL3", default_difficulty="HSK 3-4"),
     ]
-    entries = {"PL1": [_make_entry("v1")], "PL2": [_make_entry("v2")], "PL3": [_make_entry("v3")]}
-    groups = build_hub_response(playlists, entries)["materials"]["groups"]
+    meta = {k: {"thumbnail_url": None, "video_count": 1} for k in ["PL1", "PL2", "PL3"]}
+    groups = build_hub_response(playlists, meta, [], {})["materials"]["groups"]
     assert [g["difficulty"] for g in groups] == ["HSK 1-2", "HSK 3-4", "HSK 5+"]
+
+
+# ── build_hub_response — standalone video items ───────────────────────────────
+
+def test_build_hub_response_standalone_video_item_shape():
+    """Standalone video appears as a 'video' item with all HubVideo fields plus type."""
+    from app.collection.config import StandaloneVideoConfig
+    from app.collection.service import build_hub_response
+
+    standalone = [StandaloneVideoConfig(
+        video_id="vid1", difficulty="HSK 1-2", topic="Business", content_type="material",
+    )]
+    entries = {
+        "vid1": {
+            "title": "Standalone Vid",
+            "description": "desc",
+            "channel": "MyChan",
+            "duration_seconds": 240,
+            "view_count": 1000,
+        }
+    }
+    result = build_hub_response([], {}, standalone, entries)
+    item = result["materials"]["groups"][0]["items"][0]
+    assert item["type"] == "video"
+    assert item["video_id"] == "vid1"
+    assert item["title"] == "Standalone Vid"
+    assert item["duration"] == "4:00"
+    assert item["difficulty"] == "HSK 1-2"
+    assert item["topic"] == "Business"
+    assert item["content_type"] == "material"
+    assert item["view_count"] == 1000
+
+
+def test_build_hub_response_standalone_video_in_same_group_as_playlist():
+    """Standalone video and playlist with same difficulty land in same group."""
+    from app.collection.config import PlaylistConfig, StandaloneVideoConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [PlaylistConfig(name="PL", playlist_id="PL1", default_difficulty="HSK 1-2")]
+    meta = {"PL1": {"thumbnail_url": None, "video_count": 5}}
+    standalone = [StandaloneVideoConfig(video_id="v1", difficulty="HSK 1-2")]
+    entries = {"v1": {"title": "T", "description": None, "channel": None, "duration_seconds": 60, "view_count": None}}
+
+    result = build_hub_response(playlists, meta, standalone, entries)
+    items = result["materials"]["groups"][0]["items"]
+    assert len(items) == 2
+    types = {i["type"] for i in items}
+    assert types == {"playlist", "video"}
+
 
 # ── build_hub_response — topic resolution ─────────────────────────────────────
 
-def test_build_hub_response_topic_from_playlist_default():
-    """Topic resolves to PlaylistConfig.default_topic when no per-video override."""
-    from app.collection.config import PlaylistConfig
-    from app.collection.service import build_hub_response
-
-    playlists = [PlaylistConfig(name="A", playlist_id="PL1",
-                                default_difficulty="HSK 1-2", default_topic="Culture")]
-    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
-    assert result["materials"]["groups"][0]["videos"][0]["topic"] == "Culture"
-
-def test_build_hub_response_topic_override_per_video():
-    """Per-video VideoConfig.topic overrides PlaylistConfig.default_topic."""
-    from app.collection.config import PlaylistConfig, VideoConfig
-    from app.collection.service import build_hub_response
-
-    playlists = [PlaylistConfig(
-        name="A", playlist_id="PL1", default_difficulty="HSK 1-2",
-        default_topic="Daily Life",
-        videos=[VideoConfig(video_id="v1", topic="Business")],
-    )]
-    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
-    assert result["materials"]["groups"][0]["videos"][0]["topic"] == "Business"
-
 def test_build_hub_response_topics_list_sorted_and_unique():
-    """materials.topics is a sorted list of unique non-None topic values."""
+    """materials.topics is a sorted list of unique non-None topic values from all items."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_hub_response
 
@@ -578,27 +583,25 @@ def test_build_hub_response_topics_list_sorted_and_unique():
         PlaylistConfig(name="B", playlist_id="PL2", default_difficulty="HSK 1-2", default_topic="Daily Life"),
         PlaylistConfig(name="C", playlist_id="PL3", default_difficulty="HSK 1-2", default_topic="Culture"),
     ]
-    entries = {
-        "PL1": [_make_entry("v1")],
-        "PL2": [_make_entry("v2")],
-        "PL3": [_make_entry("v3")],
-    }
-    topics = build_hub_response(playlists, entries)["materials"]["topics"]
+    meta = {k: {"thumbnail_url": None, "video_count": 1} for k in ["PL1", "PL2", "PL3"]}
+    topics = build_hub_response(playlists, meta, [], {})["materials"]["topics"]
     assert topics == ["Culture", "Daily Life"]
 
+
 def test_build_hub_response_topics_excludes_none():
-    """Topics list does not include None (videos with no topic are excluded)."""
+    """Topics list does not include None."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_hub_response
 
     playlists = [PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 1-2")]
-    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    result = build_hub_response(playlists, {"PL1": {"thumbnail_url": None, "video_count": 2}}, [], {})
     assert None not in result["materials"]["topics"]
+
 
 # ── build_hub_response — tips ─────────────────────────────────────────────────
 
-def test_build_hub_response_tip_goes_to_tips_section():
-    """Videos with content_type='tip' land in tips.groups, not materials.groups."""
+def test_build_hub_response_tip_playlist_goes_to_tips_section():
+    """Playlist with content_type='tip' lands in tips.groups, not materials.groups."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_hub_response
 
@@ -606,10 +609,12 @@ def test_build_hub_response_tip_goes_to_tips_section():
         name="Tips", playlist_id="PL1",
         default_content_type="tip", default_skill="Pronunciation",
     )]
-    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    meta = {"PL1": {"thumbnail_url": None, "video_count": 3}}
+    result = build_hub_response(playlists, meta, [], {})
     assert result["materials"]["groups"] == []
     assert len(result["tips"]["groups"]) == 1
     assert result["tips"]["groups"][0]["skill"] == "Pronunciation"
+
 
 def test_build_hub_response_tip_group_order():
     """Tip groups ordered: Pronunciation < Vocabulary < Speaking < Study Methods."""
@@ -622,27 +627,61 @@ def test_build_hub_response_tip_group_order():
         PlaylistConfig(name="C", playlist_id="PL3", default_content_type="tip", default_skill="Pronunciation"),
         PlaylistConfig(name="D", playlist_id="PL4", default_content_type="tip", default_skill="Vocabulary"),
     ]
-    entries = {k: [_make_entry(f"v{i}")] for i, k in enumerate(["PL1","PL2","PL3","PL4"])}
-    groups = build_hub_response(playlists, entries)["tips"]["groups"]
+    meta = {k: {"thumbnail_url": None, "video_count": 1} for k in ["PL1", "PL2", "PL3", "PL4"]}
+    groups = build_hub_response(playlists, meta, [], {})["tips"]["groups"]
     assert [g["skill"] for g in groups] == ["Pronunciation", "Vocabulary", "Speaking", "Study Methods"]
 
+
 def test_build_hub_response_tip_with_no_skill_is_dropped():
-    """A tip video missing skill is silently dropped (not added to any group)."""
+    """A tip playlist/video missing skill is silently dropped."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_hub_response
 
     playlists = [PlaylistConfig(name="A", playlist_id="PL1", default_content_type="tip")]
-    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    meta = {"PL1": {"thumbnail_url": None, "video_count": 2}}
+    result = build_hub_response(playlists, meta, [], {})
     assert result["tips"]["groups"] == []
 
+
 def test_build_hub_response_content_type_defaults_to_material():
-    """Videos with no explicit content_type default to 'material'."""
+    """Playlist with no explicit content_type defaults to 'material'."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_hub_response
 
     playlists = [PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 1-2")]
-    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
-    assert result["materials"]["groups"][0]["videos"][0]["content_type"] == "material"
+    meta = {"PL1": {"thumbnail_url": None, "video_count": 1}}
+    result = build_hub_response(playlists, meta, [], {})
+    assert result["materials"]["groups"][0]["items"][0]["content_type"] == "material"
+
+
+# ── get_collection shape ───────────────────────────────────────────────────────
+
+def test_get_collection_returns_hub_response_shape(monkeypatch):
+    """get_collection wires PLAYLISTS + STANDALONE_VIDEOS through build_hub_response."""
+    import app.collection.service as svc
+    from app.collection.config import PlaylistConfig
+
+    fake_playlists = [
+        PlaylistConfig(name="Test", playlist_id="PL_TEST", default_difficulty="HSK 1-2", default_topic="Daily Life"),
+    ]
+    monkeypatch.setattr(svc, "PLAYLISTS", fake_playlists)
+    monkeypatch.setattr(svc, "STANDALONE_VIDEOS", [])
+    monkeypatch.setattr(svc, "get_cached_playlist_metadata", lambda ids: {
+        i: {"thumbnail_url": "https://t.com/x.jpg", "video_count": 4} for i in ids
+    })
+
+    result = svc.get_collection()
+    assert "materials" in result
+    assert "tips" in result
+    assert result["tips"]["groups"] == []
+    groups = result["materials"]["groups"]
+    assert len(groups) == 1
+    assert groups[0]["difficulty"] == "HSK 1-2"
+    item = groups[0]["items"][0]
+    assert item["type"] == "playlist"
+    assert item["playlist_id"] == "PL_TEST"
+    assert item["thumbnail_url"] == "https://t.com/x.jpg"
+    assert item["video_count"] == 4
 
 
 # ── fetch_playlist_metadata ────────────────────────────────────────────────────

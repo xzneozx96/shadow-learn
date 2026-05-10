@@ -7,7 +7,7 @@ import time
 
 import httpx
 
-from app.collection.config import PlaylistConfig, PLAYLISTS
+from app.collection.config import PlaylistConfig, PLAYLISTS, STANDALONE_VIDEOS
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -336,83 +336,75 @@ def bucket_difficulty(raw: str | None) -> str | None:
 
 def build_hub_response(
     playlists: list,
-    entries_by_playlist_id: dict[str, list[dict]],
+    playlist_meta_by_id: dict[str, dict],
+    standalone_videos: list,
+    standalone_entries: dict[str, dict],
 ) -> dict:
-    """Build the HubResponse dict from playlist config and YouTube API entries.
+    """Build the HubResponse dict.
 
-    Parameters
-    ----------
-    playlists:
-        List of PlaylistConfig objects (the curated config).
-    entries_by_playlist_id:
-        Mapping of playlist_id → list of raw API entry dicts (from fetch_playlist /
-        get_cached_playlist). Each entry has keys: id, title, duration (seconds int),
-        view_count, channel, description.
-
-    Returns a dict with shape:
-        {
-            "materials": {
-                "topics": list[str],   # sorted unique topics
-                "groups": [{"difficulty": str, "videos": [...]}]
-            },
-            "tips": {
-                "groups": [{"skill": str, "videos": [...]}]
-            }
-        }
+    Each group's 'items' is a discriminated union of playlist items
+    (type='playlist') and video items (type='video').
     """
     materials: dict[str, list[dict]] = {}
     tips: dict[str, list[dict]] = {}
 
     for playlist in playlists:
-        entries = entries_by_playlist_id.get(playlist.playlist_id, [])
-        video_cfg_map = {v.video_id: v for v in playlist.videos}
+        content_type = playlist.default_content_type
+        topic = playlist.default_topic
+        skill = playlist.default_skill
+        canonical_difficulty = bucket_difficulty(playlist.default_difficulty)
+        meta = playlist_meta_by_id.get(playlist.playlist_id, {})
 
-        for entry in entries:
-            vid = entry.get("id")
-            if not vid:
+        item: dict = {
+            "type": "playlist",
+            "playlist_id": playlist.playlist_id,
+            "name": playlist.name,
+            "thumbnail_url": meta.get("thumbnail_url"),
+            "video_count": meta.get("video_count"),
+            "difficulty": canonical_difficulty,
+            "topic": topic,
+            "skill": skill,
+            "content_type": content_type,
+        }
+
+        if content_type == "tip":
+            if skill is None:
+                logger.warning("Tip playlist %s has no skill, dropping", playlist.playlist_id)
                 continue
+            tips.setdefault(skill, []).append(item)
+        else:
+            bucket = canonical_difficulty if canonical_difficulty is not None else "Uncategorized"
+            materials.setdefault(bucket, []).append(item)
 
-            vcfg = video_cfg_map.get(vid)
+    for sv in standalone_videos:
+        entry = standalone_entries.get(sv.video_id, {})
+        content_type = sv.content_type
+        topic = sv.topic
+        skill = sv.skill
+        canonical_difficulty = bucket_difficulty(sv.difficulty)
 
-            content_type = (
-                (vcfg.content_type if vcfg and vcfg.content_type is not None else None)
-                or playlist.default_content_type
-            )
-            topic = (
-                (vcfg.topic if vcfg and vcfg.topic is not None else None)
-                or playlist.default_topic
-            )
-            skill = (
-                (vcfg.skill if vcfg and vcfg.skill is not None else None)
-                or playlist.default_skill
-            )
-            raw_difficulty = (
-                (vcfg.difficulty if vcfg and vcfg.difficulty is not None else None)
-                or playlist.default_difficulty
-            )
-            canonical_difficulty = bucket_difficulty(raw_difficulty)
+        video_item: dict = {
+            "type": "video",
+            "video_id": sv.video_id,
+            "title": entry.get("title", "Untitled"),
+            "duration": format_duration(entry.get("duration_seconds")),
+            "difficulty": canonical_difficulty,
+            "view_count": entry.get("view_count"),
+            "channel": entry.get("channel"),
+            "description": entry.get("description"),
+            "topic": topic,
+            "skill": skill,
+            "content_type": content_type,
+        }
 
-            hub_video = {
-                "video_id": vid,
-                "title": entry.get("title", "Untitled"),
-                "duration": format_duration(entry.get("duration")),
-                "difficulty": canonical_difficulty,
-                "view_count": entry.get("view_count"),
-                "channel": entry.get("channel"),
-                "description": entry.get("description"),
-                "topic": topic,
-                "skill": skill,
-                "content_type": content_type,
-            }
-
-            if content_type == "tip":
-                if skill is None:
-                    logger.warning("Tip video %s has no skill, dropping", vid)
-                    continue
-                tips.setdefault(skill, []).append(hub_video)
-            else:
-                bucket = canonical_difficulty if canonical_difficulty is not None else "Uncategorized"
-                materials.setdefault(bucket, []).append(hub_video)
+        if content_type == "tip":
+            if skill is None:
+                logger.warning("Tip standalone video %s has no skill, dropping", sv.video_id)
+                continue
+            tips.setdefault(skill, []).append(video_item)
+        else:
+            bucket = canonical_difficulty if canonical_difficulty is not None else "Uncategorized"
+            materials.setdefault(bucket, []).append(video_item)
 
     def _material_sort_key(k: str) -> tuple:
         try:
@@ -427,18 +419,18 @@ def build_hub_response(
             return (1, k)
 
     material_groups = [
-        {"difficulty": k, "videos": materials[k]}
+        {"difficulty": k, "items": materials[k]}
         for k in sorted(materials, key=_material_sort_key)
     ]
     tip_groups = [
-        {"skill": k, "videos": tips[k]}
+        {"skill": k, "items": tips[k]}
         for k in sorted(tips, key=_tip_sort_key)
     ]
     all_topics = sorted({
-        v["topic"]
+        item["topic"]
         for g in material_groups
-        for v in g["videos"]
-        if v["topic"] is not None
+        for item in g["items"]
+        if item.get("topic") is not None
     })
 
     return {
@@ -449,8 +441,15 @@ def build_hub_response(
 
 def get_collection() -> dict:
     """Build the full Learning Hub response from curated playlists."""
-    entries_by_playlist_id = {
-        playlist.playlist_id: get_cached_playlist(playlist.playlist_id)
-        for playlist in PLAYLISTS
+    api_key = settings.youtube_api_key
+    playlist_ids = [p.playlist_id for p in PLAYLISTS]
+    playlist_meta = get_cached_playlist_metadata(playlist_ids) if api_key else {
+        pid: {"thumbnail_url": None, "video_count": None} for pid in playlist_ids
     }
-    return build_hub_response(PLAYLISTS, entries_by_playlist_id)
+
+    standalone_entries: dict[str, dict] = {}
+    if STANDALONE_VIDEOS and api_key:
+        video_ids = [sv.video_id for sv in STANDALONE_VIDEOS]
+        standalone_entries = fetch_standalone_video_entries(video_ids, api_key)
+
+    return build_hub_response(PLAYLISTS, playlist_meta, STANDALONE_VIDEOS, standalone_entries)
