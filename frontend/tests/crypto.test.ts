@@ -1,6 +1,6 @@
 import type { DecryptedKeys } from '../src/types'
 import { describe, expect, it } from 'vitest'
-import { decryptKeys, encryptKeys } from '../src/crypto'
+import { decryptKeys, encryptKeys } from '../src/lib/crypto'
 
 describe('crypto module', () => {
   const testKeys: DecryptedKeys = {

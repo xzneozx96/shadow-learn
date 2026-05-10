@@ -13,6 +13,19 @@ export default antfu(
     },
   },
   {
+    // AudioWorklet processors run in a different global scope (AudioWorkletGlobalScope)
+    files: ['public/**/*.worklet.js'],
+    languageOptions: {
+      globals: {
+        AudioWorkletProcessor: 'readonly',
+        registerProcessor: 'readonly',
+        sampleRate: 'readonly',
+        currentTime: 'readonly',
+        currentFrame: 'readonly',
+      },
+    },
+  },
+  {
     rules: {
       'style/max-statements-per-line': 'off',
     },

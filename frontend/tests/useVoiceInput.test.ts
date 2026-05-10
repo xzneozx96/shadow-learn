@@ -16,7 +16,10 @@ class MockWebSocket {
   onerror: (() => void) | null = null
   sent: unknown[] = []
 
-  constructor(public url: string) {
+  url: string
+
+  constructor(url: string) {
+    this.url = url
     MockWebSocket.instances.push(this)
   }
 

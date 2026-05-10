@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
 import { ArrowDownIcon, AudioLines, ImageIcon, Mic, X } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useStickToBottom } from 'use-stick-to-bottom'
@@ -34,38 +35,80 @@ import { MessageItem, StreamingDots } from './ChatMessageItem'
 import { ContextChipBar } from './ContextChipBar'
 import { VoiceInputBridge } from './VoiceInputBridge'
 
-/** Animated bars shown inside the recording pill — staggered fade for "live" feel. */
-const WAVE_BARS = [
-  { id: 'a', delay: 0, tall: false },
-  { id: 'b', delay: 120, tall: true },
-  { id: 'c', delay: 240, tall: false },
-  { id: 'd', delay: 360, tall: true },
-  { id: 'e', delay: 240, tall: false },
-  { id: 'f', delay: 120, tall: true },
-]
-function RecordingWaveform() {
+// Max recording burst in seconds — must match MAX_BURST_MS in useVoiceInput.
+const BURST_DURATION_S = 30
+const WAVE_BAR_COUNT = 4
+
+/** Each bar gets a 5-step keyframe sequence; motion cycles through these as height values. */
+function generateBarHeights(): number[][] {
+  // eslint-disable-next-line e18e/prefer-array-fill -- callback uses Math.random() per call
+  return Array.from({ length: WAVE_BAR_COUNT }, () => [
+    4 + Math.random() * 3,
+    10 + Math.random() * 4,
+    6 + Math.random() * 3,
+    14 + Math.random() * 4,
+    5 + Math.random() * 3,
+  ])
+}
+
+/**
+ * Circular recording button — destructive-colored countdown border + bouncing
+ * waveform bars inside. Click to stop.
+ */
+function RecordingPill({ onStop }: { onStop: () => void }) {
+  const [barHeights] = useState(generateBarHeights)
   return (
-    <div className="flex h-4 items-center gap-[3px]">
-      {WAVE_BARS.map(bar => (
-        <span
-          key={bar.id}
-          className="block w-[3px] rounded-full bg-white/95 animate-pulse"
-          style={{ animationDelay: `${bar.delay}ms`, animationDuration: '900ms', height: bar.tall ? '100%' : '70%' }}
+    <motion.button
+      type="button"
+      onClick={onStop}
+      aria-label="Stop recording"
+      initial={{ scale: 0.7, opacity: 0.6 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-destructive/15 text-destructive focus-visible:outline-none"
+    >
+      <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden="true">
+        <motion.circle
+          cx="50%"
+          cy="50%"
+          r="16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          pathLength={1}
+          strokeDasharray="1"
+          strokeLinecap="round"
+          initial={{ strokeDashoffset: 1 }}
+          animate={{ strokeDashoffset: 0 }}
+          transition={{ duration: BURST_DURATION_S, ease: 'linear' }}
         />
-      ))}
-    </div>
+      </svg>
+      <div className="relative z-10 flex items-center gap-[2px]">
+        {barHeights.map((heights, i) => (
+          <motion.div
+            // eslint-disable-next-line react/no-array-index-key
+            key={i}
+            animate={{ height: heights }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear', delay: i * 0.08 }}
+            style={{ originY: 1 }}
+            className="w-[2.5px] rounded-full bg-destructive"
+          />
+        ))}
+      </div>
+    </motion.button>
   )
 }
 
 /** Attach-image button — must be rendered inside a <PromptInput> so the context is available. */
-function AttachImageButton({ tooltip }: { tooltip: string }) {
+function AttachImageButton({ tooltip, muted }: { tooltip: string, muted?: boolean }) {
   const attachments = usePromptInputAttachments()
   return (
     <PromptInputButton
       size="icon-sm"
       title={tooltip}
       aria-label={tooltip}
-      onClick={attachments.openFileDialog}
+      onClick={muted ? undefined : attachments.openFileDialog}
+      className={muted ? 'pointer-events-none opacity-50' : undefined}
     >
       <ImageIcon className="size-4" />
     </PromptInputButton>
@@ -137,13 +180,18 @@ export function CompanionChatArea({
   const { t } = useI18n()
   const [draftText, setDraftText] = useState('')
   const [pendingConfirmed, setPendingConfirmed] = useState<string | null>(null)
+  const [restoreBase, setRestoreBase] = useState(false)
+  const handleRestoreHandled = useCallback(() => setRestoreBase(false), [])
   const voice = useVoiceInput({
     onDraft: setDraftText,
     onConfirmed: (text) => {
       setDraftText('')
       setPendingConfirmed(text)
     },
-    onCancel: () => setDraftText(''),
+    onCancel: () => {
+      setDraftText('')
+      setRestoreBase(true)
+    },
   })
 
   useEffect(() => {
@@ -356,13 +404,17 @@ export function CompanionChatArea({
   // User-initiated send path — called by PromptInput's onSubmit. Carries the full
   // payload including any file attachments the user selected via the attach button.
   const handlePromptSubmit = useCallback((message: { text: string, files: FileUIPart[] }) => {
+    // Block submit while voice session is active — user must explicitly stop the recording first.
+    // Throw so PromptInput's outer try/catch swallows the call without clearing the textarea.
+    if (voice.state !== 'idle')
+      throw new Error('voice-active')
     const trimmed = message.text.trim()
     const hasFiles = message.files.length > 0
     if ((!trimmed && !hasFiles) || isLoading)
       return
     scrollToBottom()
     onSend({ text: trimmed, files: hasFiles ? message.files : undefined })
-  }, [isLoading, onSend, scrollToBottom])
+  }, [isLoading, onSend, scrollToBottom, voice.state])
 
   const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept' }) => {
     if (err.code === 'accept') {
@@ -447,9 +499,12 @@ export function CompanionChatArea({
             onSubmit={handlePromptSubmit}
           >
             <VoiceInputBridge
+              voiceState={voice.state}
               draftText={draftText}
               pendingConfirmed={pendingConfirmed}
               onConfirmedFlushed={() => setPendingConfirmed(null)}
+              restoreBase={restoreBase}
+              onRestoreHandled={handleRestoreHandled}
             />
             <PromptInputHeader>
               {chips.length > 0 && <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />}
@@ -464,37 +519,17 @@ export function CompanionChatArea({
                   <PromptInputButton
                     variant="default"
                     size="icon-sm"
-                    onClick={onSpeakClick}
+                    onClick={voice.state !== 'idle' ? undefined : onSpeakClick}
                     title={t('speak.title')}
                     aria-label={t('speak.title')}
-                    className="bg-linear-to-br from-[#7e14ff] via-[#5b6cff] to-[#47bfff] text-white shadow-sm shadow-[#5b6cff]/40 hover:from-[#9341ff] hover:via-[#7787ff] hover:to-[#5fc8ff] hover:text-white"
+                    className={`bg-linear-to-br from-[#7e14ff] via-[#5b6cff] to-[#47bfff] text-white shadow-sm shadow-[#5b6cff]/40 hover:from-[#9341ff] hover:via-[#7787ff] hover:to-[#5fc8ff] hover:text-white${voice.state !== 'idle' ? ' pointer-events-none opacity-50' : ''}`}
                   >
                     <AudioLines className="size-4" />
                   </PromptInputButton>
                 )}
-                <AttachImageButton tooltip={t('companion.attachImage')} />
+                <AttachImageButton tooltip={t('companion.attachImage')} muted={voice.state !== 'idle'} />
                 {voice.state === 'recording'
-                  ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => voice.stop()}
-                          aria-label={t('voice.dictate')}
-                          title={t('voice.dictate')}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-linear-to-r from-rose-500 via-red-500 to-rose-600 px-3 text-white shadow-sm shadow-red-500/40 transition-transform hover:scale-[1.02]"
-                        >
-                          <RecordingWaveform />
-                        </button>
-                        <PromptInputButton
-                          size="icon-sm"
-                          onClick={() => voice.cancel()}
-                          title={t('voice.cancel')}
-                          aria-label={t('voice.cancel')}
-                        >
-                          <X className="size-4" />
-                        </PromptInputButton>
-                      </>
-                    )
+                  ? <RecordingPill onStop={() => voice.stop()} />
                   : (
                       <PromptInputButton
                         size="icon-sm"
@@ -509,7 +544,11 @@ export function CompanionChatArea({
                       </PromptInputButton>
                     )}
               </PromptInputTools>
-              <PromptInputSubmit status={chatStatus} onStop={onStop} />
+              <PromptInputSubmit
+                status={chatStatus}
+                onStop={onStop}
+                className={voice.state !== 'idle' ? 'pointer-events-none opacity-50' : undefined}
+              />
             </PromptInputFooter>
           </PromptInput>
         </PromptInputProvider>

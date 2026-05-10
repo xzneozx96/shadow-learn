@@ -19,7 +19,7 @@ export interface UseVoiceInputReturn {
 }
 
 const MAX_BURST_MS = 30_000
-const PROCESSING_SAFETY_MS = 3_000
+const PROCESSING_SAFETY_MS = 1_000
 const WORKLET_URL = '/pcm-encoder.worklet.js'
 
 interface GladiaTranscriptMessage {
@@ -124,6 +124,10 @@ export function useVoiceInput({ onDraft, onConfirmed, onCancel }: UseVoiceInputA
   }, [transitionToIdle])
 
   const beginCapture = useCallback(async () => {
+    // Reset finals-suppression so a previous cancel() doesn't silently drop this burst's
+    // partials/finals. cancel() sets discardFinalsRef=true and never resets it because the
+    // normal reset path only fires on is_final while isAwaitingFinalRef is true (stop path).
+    discardFinalsRef.current = false
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream

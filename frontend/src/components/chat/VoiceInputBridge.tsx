@@ -1,41 +1,57 @@
-import { useEffect, useRef, useState } from 'react'
+import type { VoiceInputState } from '@/hooks/useVoiceInput'
+import { useEffect, useRef } from 'react'
 import { usePromptInputController } from '@/components/ai-elements/prompt-input'
 
 interface VoiceInputBridgeProps {
-  /** Live partial transcript shown as overlay; '' to hide. */
+  voiceState: VoiceInputState
+  /** Live partial transcript to show inline in textarea. */
   draftText: string
-  /** Confirmed transcript to append, or null when nothing to flush. */
+  /** Confirmed transcript to lock in, or null when nothing to flush. */
   pendingConfirmed: string | null
-  /** Caller clears pendingConfirmed after the bridge has flushed it. */
   onConfirmedFlushed: () => void
+  /** True when recording was cancelled — signals bridge to restore pre-recording text. */
+  restoreBase: boolean
+  onRestoreHandled: () => void
 }
 
-export function VoiceInputBridge({ draftText, pendingConfirmed, onConfirmedFlushed }: VoiceInputBridgeProps) {
+export function VoiceInputBridge({
+  voiceState,
+  draftText,
+  pendingConfirmed,
+  onConfirmedFlushed,
+  restoreBase,
+  onRestoreHandled,
+}: VoiceInputBridgeProps) {
   const controller = usePromptInputController()
   const anchorRef = useRef<HTMLSpanElement>(null)
+  const baseTextRef = useRef('')
+  const prevVoiceStateRef = useRef<VoiceInputState>('idle')
   const isComposingRef = useRef(false)
-  const [isComposing, setIsComposing] = useState(false)
-  const queueRef = useRef('')
+  const compositionQueueRef = useRef('')
 
-  // Watch IME composition on the textarea inside this PromptInput.
+  // Capture base text when voice activates (idle → any active state).
   useEffect(() => {
-    // Scope the textarea lookup to the nearest ancestor PromptInput (rendered as <form>),
-    // not the whole document — multiple companions may mount simultaneously.
+    const prev = prevVoiceStateRef.current
+    prevVoiceStateRef.current = voiceState
+    if (prev === 'idle' && voiceState !== 'idle') {
+      baseTextRef.current = controller.textInput.value
+    }
+  }, [voiceState, controller])
+
+  // IME gating: queue confirmed text that arrives mid-composition.
+  useEffect(() => {
     const root = anchorRef.current?.closest('form') ?? anchorRef.current?.parentElement
     const textarea = root?.querySelector<HTMLTextAreaElement>('textarea[data-slot="input-group-control"]')
     if (!textarea)
       return
-    const onStart = () => {
-      isComposingRef.current = true
-      setIsComposing(true)
-    }
+    const onStart = () => { isComposingRef.current = true }
     const onEnd = () => {
       isComposingRef.current = false
-      setIsComposing(false)
-      if (queueRef.current) {
-        const text = queueRef.current
-        queueRef.current = ''
-        controller.textInput.setInput(prev => prev + text)
+      if (compositionQueueRef.current) {
+        const text = compositionQueueRef.current
+        compositionQueueRef.current = ''
+        baseTextRef.current += text
+        controller.textInput.setInput(baseTextRef.current)
       }
     }
     textarea.addEventListener('compositionstart', onStart)
@@ -46,30 +62,34 @@ export function VoiceInputBridge({ draftText, pendingConfirmed, onConfirmedFlush
     }
   }, [controller])
 
-  // Flush incoming confirmed text — queue if mid-composition.
+  // Inline draft: show partial transcript appended to base text inside the textarea.
+  useEffect(() => {
+    if (voiceState === 'idle')
+      return
+    controller.textInput.setInput(baseTextRef.current + draftText)
+  }, [draftText, voiceState, controller])
+
+  // Confirmed: lock in final text, clear the draft portion.
   useEffect(() => {
     if (pendingConfirmed === null)
       return
     if (isComposingRef.current) {
-      queueRef.current += pendingConfirmed
+      compositionQueueRef.current += pendingConfirmed
     }
     else {
-      controller.textInput.setInput(prev => prev + pendingConfirmed)
+      baseTextRef.current += pendingConfirmed
+      controller.textInput.setInput(baseTextRef.current)
     }
     onConfirmedFlushed()
   }, [pendingConfirmed, controller, onConfirmedFlushed])
 
-  return (
-    <>
-      <span ref={anchorRef} className="hidden" aria-hidden="true" />
-      {draftText && !isComposing && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-3 bottom-14 truncate text-sm italic text-muted-foreground/70"
-        >
-          {draftText}
-        </div>
-      )}
-    </>
-  )
+  // Cancel: restore textarea to its pre-recording state.
+  useEffect(() => {
+    if (!restoreBase)
+      return
+    controller.textInput.setInput(baseTextRef.current)
+    onRestoreHandled()
+  }, [restoreBase, controller, onRestoreHandled])
+
+  return <span ref={anchorRef} className="hidden" aria-hidden="true" />
 }

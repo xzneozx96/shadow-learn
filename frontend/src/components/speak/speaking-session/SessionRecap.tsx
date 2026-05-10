@@ -129,7 +129,7 @@ export function SessionRecap({ speakSession, persona, situation, onRepeat, onBac
   const animatedTurns = useCountUp(userTurns)
 
   return (
-    <div className="flex flex-1 min-h-0 bg-background gap-0">
+    <div className="flex flex-1 min-h-0 gap-0">
       {/* Left: Overview */}
       <div className="flex-1 overflow-y-auto custom-scrollbar border-r border-border">
         {/* Hero header */}

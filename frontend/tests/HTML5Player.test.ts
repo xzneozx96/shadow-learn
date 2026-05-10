@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HTML5Player } from '../src/player/HTML5Player'
+import { HTML5Player } from '../src/lib/player/HTML5Player'
 
 function makeAudio(): HTMLAudioElement {
   const el = document.createElement('audio')
