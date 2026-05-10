@@ -35,7 +35,7 @@ import { ContextChipBar } from './ContextChipBar'
 import { VoiceInputBridge } from './VoiceInputBridge'
 
 /** Attach-image button — must be rendered inside a <PromptInput> so the context is available. */
-function AttachImageButton({ label, tooltip }: { label: string, tooltip: string }) {
+function AttachImageButton({ tooltip }: { tooltip: string }) {
   const attachments = usePromptInputAttachments()
   return (
     <PromptInputButton
@@ -44,7 +44,6 @@ function AttachImageButton({ label, tooltip }: { label: string, tooltip: string 
       onClick={attachments.openFileDialog}
     >
       <ImageIcon className="size-4" />
-      <span>{label}</span>
     </PromptInputButton>
   )
 }
@@ -442,12 +441,12 @@ export function CompanionChatArea({
                     onClick={onSpeakClick}
                     tooltip={t('speak.title')}
                     aria-label={t('speak.title')}
-                    className="bg-linear-to-br from-fuchsia-500 via-purple-500 to-indigo-500 text-white shadow-md shadow-purple-500/30 hover:from-fuchsia-400 hover:via-purple-400 hover:to-indigo-400 hover:text-white"
+                    className="bg-linear-to-br from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-md shadow-primary/30 hover:from-primary/90 hover:via-primary/80 hover:to-primary/60 hover:text-primary-foreground"
                   >
                     <AudioLines className="size-4" />
                   </PromptInputButton>
                 )}
-                <AttachImageButton label={t('voice.attach')} tooltip={t('companion.attachImage')} />
+                <AttachImageButton tooltip={t('companion.attachImage')} />
                 <PromptInputButton
                   tooltip={t('voice.dictate')}
                   onClick={() => {
@@ -462,7 +461,6 @@ export function CompanionChatArea({
                   {voice.state === 'connecting' || voice.state === 'processing'
                     ? <Spinner className="size-4" />
                     : <Mic className="size-4" />}
-                  <span>{t('voice.dictate')}</span>
                 </PromptInputButton>
               </PromptInputTools>
               <PromptInputSubmit status={chatStatus} onStop={onStop} />
