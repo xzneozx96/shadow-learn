@@ -7,7 +7,6 @@ export interface CollectionVideo {
 
 export interface CollectionPlaylist {
   name: string
-  icon: string
   playlist_id: string
   videos: CollectionVideo[]
 }

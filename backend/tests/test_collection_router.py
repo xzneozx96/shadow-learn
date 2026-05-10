@@ -11,7 +11,6 @@ async def test_get_collection_returns_playlists(monkeypatch):
     fake = [
         {
             "name": "Foo",
-            "icon": "🎙️",
             "playlist_id": "PL1",
             "videos": [
                 {"video_id": "abc", "title": "Hi", "duration": "1:00", "difficulty": "HSK 1"},

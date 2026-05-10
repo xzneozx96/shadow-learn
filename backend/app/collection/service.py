@@ -53,11 +53,11 @@ def get_cached_playlist(playlist_id: str) -> list[dict]:
 
 
 def build_video_list(playlist: PlaylistConfig, entries: list[dict]) -> list[dict]:
-    """Merge yt-dlp entries with per-video difficulty from PlaylistConfig.
+    """Merge yt-dlp entries with difficulty from PlaylistConfig.
 
+    Difficulty resolution order: per-video override → playlist default → None.
     Output order matches yt-dlp entry order.
     Videos missing from yt-dlp output are silently skipped.
-    Videos missing from config get difficulty=None.
     """
     difficulty_by_id = {v.video_id: v.difficulty for v in playlist.videos}
     result = []
@@ -65,11 +65,12 @@ def build_video_list(playlist: PlaylistConfig, entries: list[dict]) -> list[dict
         vid = entry.get("id")
         if not vid:
             continue
+        difficulty = difficulty_by_id.get(vid, playlist.default_difficulty)
         result.append({
             "video_id": vid,
             "title": entry.get("title", "Untitled"),
             "duration": format_duration(entry.get("duration")),
-            "difficulty": difficulty_by_id.get(vid),
+            "difficulty": difficulty,
         })
     return result
 
@@ -81,7 +82,6 @@ def get_collection() -> list[dict]:
         entries = get_cached_playlist(playlist.playlist_id)
         out.append({
             "name": playlist.name,
-            "icon": playlist.icon,
             "playlist_id": playlist.playlist_id,
             "videos": build_video_list(playlist, entries),
         })

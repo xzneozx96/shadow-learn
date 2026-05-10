@@ -117,7 +117,6 @@ def test_build_video_list_merges_difficulty_by_video_id():
 
     playlist = PlaylistConfig(
         name="Test",
-        icon="🎙️",
         playlist_id="PL1",
         videos=[
             VideoConfig(video_id="abc", difficulty="HSK 2"),
@@ -138,15 +137,42 @@ def test_build_video_list_merges_difficulty_by_video_id():
 
 
 def test_build_video_list_video_not_in_config_has_null_difficulty():
-    """Videos returned by yt-dlp but absent from VideoConfig get difficulty=None."""
+    """Videos not in VideoConfig and no default_difficulty get difficulty=None."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_video_list
 
-    playlist = PlaylistConfig(name="T", icon="x", playlist_id="PL1", videos=[])
+    playlist = PlaylistConfig(name="T", playlist_id="PL1", videos=[])
     entries = [{"id": "abc", "title": "Hi", "duration": 60}]
 
     result = build_video_list(playlist, entries)
     assert result[0]["difficulty"] is None
+
+
+def test_build_video_list_uses_default_difficulty_as_fallback():
+    """Videos not in VideoConfig fall back to PlaylistConfig.default_difficulty."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_video_list
+
+    playlist = PlaylistConfig(name="T", playlist_id="PL1", default_difficulty="HSK 3-4")
+    entries = [{"id": "abc", "title": "Hi", "duration": 60}]
+
+    result = build_video_list(playlist, entries)
+    assert result[0]["difficulty"] == "HSK 3-4"
+
+
+def test_build_video_list_per_video_overrides_default_difficulty():
+    """Per-video VideoConfig.difficulty takes precedence over default_difficulty."""
+    from app.collection.config import PlaylistConfig, VideoConfig
+    from app.collection.service import build_video_list
+
+    playlist = PlaylistConfig(
+        name="T", playlist_id="PL1", default_difficulty="HSK 3-4",
+        videos=[VideoConfig(video_id="abc", difficulty="HSK 1")],
+    )
+    entries = [{"id": "abc", "title": "Hi", "duration": 60}]
+
+    result = build_video_list(playlist, entries)
+    assert result[0]["difficulty"] == "HSK 1"
 
 
 def test_build_video_list_skips_config_videos_missing_from_yt_dlp():
@@ -155,7 +181,7 @@ def test_build_video_list_skips_config_videos_missing_from_yt_dlp():
     from app.collection.service import build_video_list
 
     playlist = PlaylistConfig(
-        name="T", icon="x", playlist_id="PL1",
+        name="T", playlist_id="PL1",
         videos=[VideoConfig(video_id="ghost", difficulty="HSK 1")],
     )
     entries: list[dict] = []
@@ -168,7 +194,7 @@ def test_build_video_list_preserves_yt_dlp_order():
     from app.collection.service import build_video_list
 
     playlist = PlaylistConfig(
-        name="T", icon="x", playlist_id="PL1",
+        name="T", playlist_id="PL1",
         videos=[
             VideoConfig(video_id="a", difficulty="HSK 1"),
             VideoConfig(video_id="b", difficulty="HSK 2"),
@@ -189,11 +215,11 @@ def test_get_collection_returns_one_entry_per_playlist(monkeypatch):
 
     fake_playlists = [
         PlaylistConfig(
-            name="Foo", icon="🎙️", playlist_id="PL1",
+            name="Foo", playlist_id="PL1",
             videos=[VideoConfig(video_id="abc", difficulty="HSK 1")],
         ),
         PlaylistConfig(
-            name="Bar", icon="🗣️", playlist_id="PL2", videos=[],
+            name="Bar", playlist_id="PL2", default_difficulty="HSK 2",
         ),
     ]
     fake_entries = {
@@ -208,8 +234,7 @@ def test_get_collection_returns_one_entry_per_playlist(monkeypatch):
 
     assert len(result) == 2
     assert result[0]["name"] == "Foo"
-    assert result[0]["icon"] == "🎙️"
     assert result[0]["playlist_id"] == "PL1"
     assert result[0]["videos"][0]["video_id"] == "abc"
     assert result[0]["videos"][0]["difficulty"] == "HSK 1"
-    assert result[1]["videos"][0]["difficulty"] is None
+    assert result[1]["videos"][0]["difficulty"] == "HSK 2"  # from default_difficulty
