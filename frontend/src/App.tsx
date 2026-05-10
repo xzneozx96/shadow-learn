@@ -18,6 +18,7 @@ import { PlayerProvider } from '@/contexts/PlayerContext'
 import { SpeakModalProvider, useSpeakModal } from '@/contexts/SpeakModalContext'
 import { VocabularyProvider } from '@/contexts/VocabularyContext'
 import { ChangelogPage } from '@/pages/ChangelogPage'
+import { CollectionPage } from '@/pages/CollectionPage'
 import { DocumentationPage } from '@/pages/DocumentationPage'
 import { WorkbookPage } from '@/pages/WorkbookPage'
 
@@ -60,6 +61,7 @@ const router = createBrowserRouter([
       { path: '/', element: <Library /> },
       { path: '/create', element: <CreateLesson /> },
       { path: '/changelog', element: <ChangelogPage /> },
+      { path: '/collection', element: <CollectionPage /> },
       { path: '/docs', element: <DocumentationPage /> },
       { path: '/lesson/:id', element: <LessonView /> },
       { path: '/settings', element: <Settings /> },
