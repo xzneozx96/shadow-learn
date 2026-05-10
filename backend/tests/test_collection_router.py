@@ -1,22 +1,31 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-
 @pytest.mark.asyncio
-async def test_get_collection_returns_playlists(monkeypatch):
-    """GET /api/collection returns the aggregated playlist list."""
+async def test_get_collection_returns_hub_response(monkeypatch):
+    """GET /api/collection returns a HubResponse dict with materials and tips."""
     from app.main import app
     from app.collection import router as collection_router
 
-    fake = [
-        {
-            "name": "Foo",
-            "playlist_id": "PL1",
-            "videos": [
-                {"video_id": "abc", "title": "Hi", "duration": "1:00", "difficulty": "HSK 1"},
+    fake = {
+        "materials": {
+            "topics": ["Daily Life"],
+            "groups": [
+                {
+                    "difficulty": "HSK 1-2",
+                    "videos": [
+                        {
+                            "video_id": "abc", "title": "Hi", "duration": "1:00",
+                            "difficulty": "HSK 1-2", "view_count": None,
+                            "channel": None, "description": None,
+                            "topic": "Daily Life", "skill": None, "content_type": "material",
+                        }
+                    ],
+                }
             ],
-        }
-    ]
+        },
+        "tips": {"groups": []},
+    }
     monkeypatch.setattr(collection_router, "get_collection", lambda: fake)
 
     transport = ASGITransport(app=app)
@@ -25,7 +34,12 @@ async def test_get_collection_returns_playlists(monkeypatch):
 
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, list)
-    assert data[0]["name"] == "Foo"
-    assert data[0]["videos"][0]["video_id"] == "abc"
-    assert data[0]["videos"][0]["difficulty"] == "HSK 1"
+    assert "materials" in data
+    assert "tips" in data
+    assert data["materials"]["topics"] == ["Daily Life"]
+    groups = data["materials"]["groups"]
+    assert len(groups) == 1
+    assert groups[0]["difficulty"] == "HSK 1-2"
+    assert groups[0]["videos"][0]["video_id"] == "abc"
+    assert groups[0]["videos"][0]["content_type"] == "material"
+    assert data["tips"]["groups"] == []
