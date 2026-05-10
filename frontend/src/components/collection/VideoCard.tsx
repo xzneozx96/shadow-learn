@@ -1,9 +1,8 @@
 import type { LessonMeta } from '@/types'
 import type { CollectionVideo } from '@/types/collection'
-import { CheckCheck, Eye, Play, Sparkles } from 'lucide-react'
+import { CheckCheck, Eye, Play, Sparkles, Tv } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { memo, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,6 +27,7 @@ import { cn } from '@/lib/utils'
 
 interface VideoCardProps {
   video: CollectionVideo
+  alreadyCreated: boolean
 }
 
 const DIFFICULTY_TONE: Record<string, string> = {
@@ -52,16 +52,14 @@ function formatCount(n: number | null): string {
   return n.toLocaleString()
 }
 
-export function VideoCard({ video }: VideoCardProps) {
+function VideoCardImpl({ video, alreadyCreated }: VideoCardProps) {
   const { db, keys, trialMode } = useAuth()
   const { t } = useI18n()
-  const { lessons, updateLesson } = useLessons()
-  const navigate = useNavigate()
+  const { updateLesson } = useLessons()
   const stagger = useCutoutContentStaggerVariants()
   const [submitting, setSubmitting] = useState(false)
   const [playing, setPlaying] = useState(false)
 
-  const alreadyCreated = lessons.some(l => l.sourceUrl?.includes(video.video_id))
   const canCreate = !!db && (!!keys || trialMode)
   const thumbnailUrl = `https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`
 
@@ -117,7 +115,6 @@ export function VideoCard({ video }: VideoCardProps) {
 
       captureLessonCreated({ source: 'youtube' })
       toast.success(t('create.queued'))
-      navigate('/')
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
@@ -130,8 +127,10 @@ export function VideoCard({ video }: VideoCardProps) {
   }
 
   return (
-    <div className="w-[calc(25%-15px)] min-w-[260px] shrink-0 h-full">
-      <CutoutCard className={cn(cutoutCardSurfaceClassName, 'h-full flex flex-col')}>
+    <div
+      className="w-[calc(25%-15px)] min-w-[260px] shrink-0 flex flex-col [content-visibility:auto] [contain-intrinsic-size:260px_380px]"
+    >
+      <CutoutCard className={cn(cutoutCardSurfaceClassName, 'flex-1 grid grid-rows-[auto_1fr]')}>
         <CutoutCardMedia className="aspect-video">
           {playing
             ? (
@@ -153,7 +152,7 @@ export function VideoCard({ video }: VideoCardProps) {
                   <CutoutCardImage src={thumbnailUrl} alt={video.title} loading="lazy" />
                   <CutoutCardOverlay />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/play:bg-black/20 transition-colors duration-200">
-                    <span className="flex items-center justify-center size-12 rounded-full bg-black/60 backdrop-blur-sm shadow-lg transition-transform duration-200 group-hover/play:scale-110">
+                    <span className="flex items-center justify-center size-12 rounded-full bg-black/70 shadow-lg transition-transform duration-200 group-hover/play:scale-110">
                       <Play className="size-5 text-white fill-white ml-0.5" />
                     </span>
                   </div>
@@ -163,7 +162,7 @@ export function VideoCard({ video }: VideoCardProps) {
           {/* Difficulty badge — bottom-left inset cutout */}
           {video.difficulty && !playing && (
             <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-3 py-1.5">
-              <span className={cn('font-bold text-[10px] uppercase tracking-widest', difficultyTone(video.difficulty))}>
+              <span className={cn('font-bold text-xs uppercase tracking-widest', difficultyTone(video.difficulty))}>
                 {video.difficulty}
               </span>
               <CutoutCorner className="absolute -right-[31px] -bottom-px rotate-90 text-card" />
@@ -182,10 +181,10 @@ export function VideoCard({ video }: VideoCardProps) {
 
         </CutoutCardMedia>
 
-        <CutoutCardContent className="p-3 flex-1 flex flex-col gap-2.5">
+        <CutoutCardContent className="p-4 flex flex-col gap-3">
           <motion.div animate="show" className="contents" initial="hidden" variants={stagger.container}>
             <motion.h3
-              className="line-clamp-2 text-balance font-semibold text-card-foreground text-[15px] leading-snug tracking-[-0.005em]"
+              className="line-clamp-2 font-semibold text-balance text-card-foreground text-base leading-snug tracking-[-0.005em]"
               variants={stagger.item}
             >
               {video.title}
@@ -193,7 +192,7 @@ export function VideoCard({ video }: VideoCardProps) {
 
             {video.description && (
               <motion.p
-                className="line-clamp-2 text-[12px] leading-snug text-muted-foreground"
+                className="line-clamp-2 text-sm leading-snug text-muted-foreground"
                 title={video.description}
                 variants={stagger.item}
               >
@@ -205,32 +204,31 @@ export function VideoCard({ video }: VideoCardProps) {
               className="mt-auto flex items-center justify-between gap-2"
               variants={stagger.item}
             >
-              <div className="flex items-center gap-2.5 min-w-0 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1 tabular-nums shrink-0" title={`${video.view_count?.toLocaleString() ?? 'N/A'} views`}>
-                  <Eye className="size-3" />
+              <div className="flex items-center gap-2.5 min-w-0 flex-1 text-xs text-muted-foreground overflow-hidden">
+                <span className="flex items-center gap-1 tabular-nums shrink-0" title={`${video.view_count?.toLocaleString() ?? 'N/A'} views`}>
+                  <Eye className="size-4" />
                   {formatCount(video.view_count)}
                 </span>
-                <span className="inline-flex items-center gap-1 min-w-0" title={video.channel ?? 'N/A'}>
-                  <Tv className="size-3 shrink-0" />
-                  <span className="truncate">{video.channel ?? 'N/A'}</span>
+                <span className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden" title={video.channel ?? 'N/A'}>
+                  <Tv className="size-4 shrink-0" />
+                  <span className="min-w-0 flex-1 line-clamp-1">{video.channel ?? 'N/A'}</span>
                 </span>
               </div>
               {alreadyCreated
                 ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
-                      <CheckCheck className="size-3.5" />
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <CheckCheck className="size-4" />
                       {t('collection.created')}
                     </span>
                   )
                 : (
                     <Button
-                      size="sm"
                       onClick={handleCreate}
                       disabled={submitting || !canCreate}
-                      className="h-7 px-3 rounded-full text-[11px] font-semibold gap-1 shrink-0"
+                      className="shrink-0"
                       data-testid={`collection-create-${video.video_id}`}
                     >
-                      <Sparkles className="size-3" />
+                      <Sparkles className="size-4" />
                       {submitting ? t('collection.creating') : t('collection.createLesson')}
                     </Button>
                   )}
@@ -241,3 +239,5 @@ export function VideoCard({ video }: VideoCardProps) {
     </div>
   )
 }
+
+export const VideoCard = memo(VideoCardImpl)

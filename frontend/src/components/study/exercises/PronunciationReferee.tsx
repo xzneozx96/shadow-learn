@@ -95,7 +95,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
             {isProcessing
               ? (
                   <>
-                    <div className="size-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    <div className="size-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
                     {' '}
                     {t('study.pronunciation.scoring')}
                   </>
@@ -192,7 +192,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
                 <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(result.overall.accuracy))}>
                   {Math.round(result.overall.accuracy)}
                 </div>
-                <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                <div className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
                   Accuracy
                 </div>
               </div>

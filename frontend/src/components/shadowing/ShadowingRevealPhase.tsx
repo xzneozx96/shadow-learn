@@ -225,7 +225,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           onClick={() => onNext(props.mode === 'dictation' ? dictationScore : speakingScoreRef.current)}
           disabled={loadingScore}
         >
-          {loadingScore && <div className="size-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />}
+          {loadingScore && <div className="size-4 rounded-full border-2 border-current border-t-transparent animate-spin" />}
           {loadingScore ? t('shadowing.analyzing') : t('shadowing.nextArrow')}
         </Button>
       </div>
@@ -341,7 +341,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
               <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(accuracy))}>
                 {Math.round(accuracy)}
               </div>
-              <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">Accuracy</div>
+              <div className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">Accuracy</div>
             </div>
             <div className={cn('text-sm font-semibold', scoreColor(accuracy))}>
               {label}

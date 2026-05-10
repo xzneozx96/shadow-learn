@@ -82,7 +82,7 @@ export function StreakCard({ activityDates }: { activityDates: Set<string> }) {
 
       {/* Week flames at bottom */}
       <div className="mt-auto pt-5">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           {t('library.streak.thisWeek')}
         </p>
         <div className="grid grid-cols-7 gap-1">
@@ -95,7 +95,7 @@ export function StreakCard({ activityDates }: { activityDates: Set<string> }) {
               transition={{ duration: 0.18, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}
             >
               <span className={cn(
-                'text-[10px] font-semibold tracking-wider',
+                'text-xs font-semibold tracking-wider',
                 d.isToday ? 'text-primary' : 'text-muted-foreground',
               )}
               >

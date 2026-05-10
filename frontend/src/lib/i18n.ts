@@ -182,6 +182,7 @@ export const TRANSLATIONS = {
     'collection.loadError': 'Failed to load Collection. Please try again.',
     'collection.scrollPrev': 'Scroll left',
     'collection.scrollNext': 'Scroll right',
+    'collection.created': 'Lesson created',
 
     // Lesson View
     'lesson.transcript': 'Transcript',
@@ -777,6 +778,7 @@ export const TRANSLATIONS = {
     'collection.loadError': 'Không thể tải Bộ sưu tập. Vui lòng thử lại.',
     'collection.scrollPrev': 'Cuộn trái',
     'collection.scrollNext': 'Cuộn phải',
+    'collection.created': 'Đã tạo bài học',
 
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',

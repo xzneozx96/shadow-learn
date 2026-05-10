@@ -76,7 +76,7 @@ export function OverallStatsPanel({ stats }: Props) {
             <span className="text-2xl font-black text-emerald-400">
               {`${accuracy}%`}
             </span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 mt-1 antialiased">
+            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/50 mt-1 antialiased">
               {t('progress.accuracy')}
             </span>
           </div>

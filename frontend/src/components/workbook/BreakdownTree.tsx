@@ -23,11 +23,11 @@ function BreakdownNode({ data }: NodeProps) {
         <Handle type="source" position={Position.Bottom} className={handleClass} />
         <div className="text-2xl font-bold font-serif leading-none text-foreground">{d.char}</div>
         <div className="mt-1.5 flex items-center justify-center gap-1 flex-wrap">
-          {d.pinyin && <span className="text-[10px] italic text-yellow-500">{d.pinyin}</span>}
+          {d.pinyin && <span className="text-xs italic text-yellow-500">{d.pinyin}</span>}
           {showSino && (
             <>
               {d.pinyin && <span className="text-[9px] text-foreground/30">·</span>}
-              <span className="text-[10px] font-bold text-emerald-500">{d.sinoVietnamese}</span>
+              <span className="text-xs font-bold text-emerald-500">{d.sinoVietnamese}</span>
             </>
           )}
         </div>
@@ -44,11 +44,11 @@ function BreakdownNode({ data }: NodeProps) {
         <Handle type="source" position={Position.Bottom} className={handleClass} />
         <div className="text-xl font-bold font-serif leading-none text-foreground">{d.char}</div>
         <div className="mt-1.5 flex items-center justify-center gap-1 flex-wrap">
-          {d.pinyin && <span className="text-[10px] italic text-yellow-500">{d.pinyin}</span>}
+          {d.pinyin && <span className="text-xs italic text-yellow-500">{d.pinyin}</span>}
           {showSino && (
             <>
               {d.pinyin && <span className="text-[9px] text-foreground/30">·</span>}
-              <span className="text-[10px] font-bold text-emerald-500">{d.sinoVietnamese}</span>
+              <span className="text-xs font-bold text-emerald-500">{d.sinoVietnamese}</span>
             </>
           )}
         </div>
@@ -177,7 +177,7 @@ export function BreakdownTree({ word, pinyin, sinoVietnamese, characters, loadin
             className="text-foreground/30 hover:text-foreground/60 transition-colors shrink-0"
             aria-label="Close"
           >
-            <X className="size-3.5" />
+            <X className="size-4" />
           </button>
         </div>
       )}

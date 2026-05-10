@@ -169,7 +169,7 @@ export function ChineseInput({ value, onChange, onKeyDown, disabled, wrapperClas
 
         {totalPages > 1 && (
           <>
-            <span className="text-[10px] text-muted-foreground px-1 tabular-nums">
+            <span className="text-xs text-muted-foreground px-1 tabular-nums">
               {page + 1}
               /
               {totalPages}

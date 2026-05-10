@@ -35,7 +35,7 @@ export function Layout({ children }: LayoutProps) {
       <aside className="w-48 xl:w-56 shrink-0 flex flex-col border-r border backdrop-blur-xl z-50">
         {trialMode && (
           <div className="flex items-start gap-2 border-b border-amber-400/20 bg-amber-400/8 px-3 py-2.5 text-[12px] leading-snug text-amber-200/90">
-            <Sprout className="size-3.5 mt-0.5 shrink-0 text-amber-300" />
+            <Sprout className="size-4 mt-0.5 shrink-0 text-amber-300" />
             <span>{t('auth.trial.banner')}</span>
           </div>
         )}
@@ -79,7 +79,7 @@ export function Layout({ children }: LayoutProps) {
                 {label}
               </Button>
               {badge && (
-                <span className="pointer-events-none absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm ring-2 ring-background">
+                <span className="pointer-events-none absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm ring-2 ring-background">
                   1
                 </span>
               )}
@@ -96,7 +96,7 @@ export function Layout({ children }: LayoutProps) {
             className="group relative w-full h-11 px-2.5 rounded-lg bg-linear-to-br from-amber-400/10 to-amber-500/5 border border-amber-400/20 animate-breathe-amber hover:from-amber-400/15 hover:to-amber-500/10 hover:border-amber-400/35 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] flex items-center gap-2.5 cursor-pointer"
           >
             <span className="flex size-7 items-center justify-center rounded-md bg-amber-400/20 ring-1 ring-amber-400/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] shrink-0">
-              <Sparkles className="size-3.5 text-amber-300 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-12 group-hover:scale-110" />
+              <Sparkles className="size-4 text-amber-300 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-12 group-hover:scale-110" />
             </span>
             <span className="text-sm font-semibold text-amber-100/95">{t('companion.askButton')}</span>
           </button>
@@ -108,7 +108,7 @@ export function Layout({ children }: LayoutProps) {
             className="group relative w-full h-11 px-2.5 rounded-lg bg-linear-to-br from-primary/12 to-primary/5 border border-primary/25 animate-breathe-primary hover:from-primary/18 hover:to-primary/8 hover:border-primary/40 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] flex items-center gap-2.5 cursor-pointer"
           >
             <span className="flex size-7 items-center justify-center rounded-md bg-primary/20 ring-1 ring-primary/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] shrink-0">
-              <Zap className="size-3.5 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />
+              <Zap className="size-4 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />
             </span>
             <span className="text-sm font-semibold text-foreground">{t('speak.title')}</span>
           </button>

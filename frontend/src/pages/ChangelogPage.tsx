@@ -56,7 +56,7 @@ function SidebarEntry({
           : 'border-transparent hover:border-border hover:bg-white/5'
       }`}
     >
-      <span className="text-[11px] text-muted-foreground tabular-nums mb-0.5 flex items-center gap-1.5 uppercase tracking-wide">
+      <span className="text-xs text-muted-foreground tabular-nums mb-0.5 flex items-center gap-1.5 uppercase tracking-wide">
         {formatDate(entry.date, intlLocale, { month: 'short', day: 'numeric', year: 'numeric' })}
         {isNew && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
       </span>
@@ -162,7 +162,7 @@ export function ChangelogPage() {
                       <Badge
                         key={tag}
                         variant="outline"
-                        className={`h-auto flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold border uppercase tracking-wider ${ui.badge}`}
+                        className={`h-auto flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold border uppercase tracking-wider ${ui.badge}`}
                       >
                         <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
                         {t(`whatsNew.tag.${tag}` as Parameters<typeof t>[0])}

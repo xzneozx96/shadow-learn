@@ -78,7 +78,7 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
         onKeyDown={e => e.key === 'Enter' && !checked && handleCheck()}
         disabled={checked}
       />
-      <p className="text-[11px] text-muted-foreground/50 text-center mt-1.5">
+      <p className="text-xs text-muted-foreground/50 text-center mt-1.5">
         {caps.romanizationSystem === 'pinyin' ? t('study.acceptsToneMarks') : t('study.typeRomanization').replace('{romanization}', caps.romanizationLabel)}
       </p>
 

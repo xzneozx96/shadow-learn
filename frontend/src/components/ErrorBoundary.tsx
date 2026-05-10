@@ -1,5 +1,6 @@
 import type { ErrorInfo, ReactNode } from 'react'
 import { Component } from 'react'
+import { ErrorScreen } from '@/components/ErrorScreen'
 import { posthog } from '@/lib/posthog'
 
 interface Props {
@@ -8,13 +9,14 @@ interface Props {
 
 interface State {
   hasError: boolean
+  error: unknown
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false }
+  state: State = { hasError: false, error: null }
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true }
+  static getDerivedStateFromError(error: unknown): State {
+    return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -24,15 +26,10 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
-          <p className="text-sm text-muted-foreground">Something went wrong.</p>
-          <button
-            className="text-xs text-muted-foreground underline"
-            onClick={() => this.setState({ hasError: false })}
-          >
-            Try again
-          </button>
-        </div>
+        <ErrorScreen
+          error={this.state.error}
+          onRetry={() => this.setState({ hasError: false, error: null })}
+        />
       )
     }
     return this.props.children

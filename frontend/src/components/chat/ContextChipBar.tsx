@@ -27,14 +27,14 @@ export function ContextChipBar({ chips, onRemoveChip }: ContextChipBarProps) {
           className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
           title={chip.text}
         >
-          <FileText className="size-3 shrink-0" />
+          <FileText className="size-4 shrink-0" />
           <span className="truncate max-w-[200px]">{truncate(chip.text, 50)}</span>
           <button
             type="button"
             onClick={() => onRemoveChip(chip.id)}
             className="ml-0.5 shrink-0 rounded-sm p-0.5 hover:bg-muted hover:text-foreground"
           >
-            <X className="size-3" />
+            <X className="size-4" />
           </button>
         </span>
       ))}

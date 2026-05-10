@@ -201,7 +201,7 @@ export const MessageItem = memo(
                     key={chip}
                     className="inline-flex items-center gap-1 rounded-sm bg-card/15 px-1.5 py-0.5 text-xs text-primary-foreground/90"
                   >
-                    <FileText className="size-3 shrink-0" />
+                    <FileText className="size-4 shrink-0" />
                     <span className="truncate max-w-[180px]">{chip}</span>
                   </span>
                 ))}

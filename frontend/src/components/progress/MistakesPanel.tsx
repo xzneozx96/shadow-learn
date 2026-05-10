@@ -96,7 +96,7 @@ export function MistakesPanel({ mistakes = [], entries }: Props) {
                     {sortedAll.length}
                     {' '}
                     {t('progress.mistakes')}
-                    <ArrowUpRight className="size-3" />
+                    <ArrowUpRight className="size-4" />
                   </Button>
                 )}
               </div>

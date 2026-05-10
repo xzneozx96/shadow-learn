@@ -168,7 +168,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
             {/* Source badge — bottom-left inset cutout */}
             <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-4 py-2">
-              <span className={cn('font-bold text-[10px] uppercase tracking-widest', sourceTone)}>
+              <span className={cn('font-bold text-xs uppercase tracking-widest', sourceTone)}>
                 {sourceLabel}
               </span>
               <CutoutCorner className="absolute -right-[31px] -bottom-px rotate-90 text-card" />
@@ -177,7 +177,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
 
             {/* Duration pin — top-right cutout (when available, not error) */}
             {!isProcessing && !isError && lesson.duration != null && (
-              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card/95 px-3 py-1.5 text-xs font-semibold text-card-foreground tabular-nums shadow-md ring-1 ring-border/40 backdrop-blur">
+              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-3 py-1.5 text-xs font-semibold text-card-foreground tabular-nums shadow-md ring-1 ring-border/40">
                 {formatDuration(lesson.duration)}
                 <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
                 <CutoutCorner className="absolute right-0 -bottom-[23px] -rotate-90 text-card" size={24} />
@@ -291,12 +291,12 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
               <motion.div variants={stagger.item}>
                 <CutoutCardFooter className="mt-2 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1.5">
-                    <BookOpen className="size-3.5 shrink-0" />
+                    <BookOpen className="size-4 shrink-0" />
                     <span className="tabular-nums">{vocabCount}</span>
                     <span className="text-xs">{t('library.vocabWords')}</span>
                   </span>
                   <span className="flex items-center gap-1.5 text-xs">
-                    <Clock className="size-3.5 shrink-0" />
+                    <Clock className="size-4 shrink-0" />
                     {formatDate(lesson.lastOpenedAt)}
                   </span>
                 </CutoutCardFooter>

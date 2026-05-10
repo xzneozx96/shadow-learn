@@ -1,8 +1,9 @@
 import { Loader2 } from 'lucide-react'
 import { lazy, Suspense } from 'react'
-import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Outlet, RouterProvider, useRouteError } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ErrorScreen } from '@/components/ErrorScreen'
 import { LessonView } from '@/components/lesson/LessonView'
 import { Library } from '@/components/library/Library'
 import { Setup } from '@/components/onboarding/Setup'
@@ -40,6 +41,11 @@ function GlobalSpeakModal() {
   return <PracticeSpeakingModal open={isOpen} onClose={closeSpeakModal} />
 }
 
+function RouteErrorElement() {
+  const error = useRouteError()
+  return <ErrorScreen error={error} onRetry={() => window.location.reload()} />
+}
+
 function AppLayout() {
   return (
     <PlayerProvider>
@@ -57,6 +63,7 @@ function AppLayout() {
 const router = createBrowserRouter([
   {
     element: <AppLayout />,
+    errorElement: <RouteErrorElement />,
     children: [
       { path: '/', element: <Library /> },
       { path: '/create', element: <CreateLesson /> },
