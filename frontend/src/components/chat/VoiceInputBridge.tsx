@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePromptInputController } from '@/components/ai-elements/prompt-input'
 
 interface VoiceInputBridgeProps {
@@ -12,19 +12,26 @@ interface VoiceInputBridgeProps {
 
 export function VoiceInputBridge({ draftText, pendingConfirmed, onConfirmedFlushed }: VoiceInputBridgeProps) {
   const controller = usePromptInputController()
+  const anchorRef = useRef<HTMLSpanElement>(null)
   const isComposingRef = useRef(false)
+  const [isComposing, setIsComposing] = useState(false)
   const queueRef = useRef('')
 
   // Watch IME composition on the textarea inside this PromptInput.
   useEffect(() => {
-    const textarea = document.querySelector<HTMLTextAreaElement>(
-      'textarea[data-slot="input-group-control"]',
-    )
+    // Scope the textarea lookup to the nearest ancestor PromptInput (rendered as <form>),
+    // not the whole document — multiple companions may mount simultaneously.
+    const root = anchorRef.current?.closest('form') ?? anchorRef.current?.parentElement
+    const textarea = root?.querySelector<HTMLTextAreaElement>('textarea[data-slot="input-group-control"]')
     if (!textarea)
       return
-    const onStart = () => { isComposingRef.current = true }
+    const onStart = () => {
+      isComposingRef.current = true
+      setIsComposing(true)
+    }
     const onEnd = () => {
       isComposingRef.current = false
+      setIsComposing(false)
       if (queueRef.current) {
         const text = queueRef.current
         queueRef.current = ''
@@ -52,17 +59,17 @@ export function VoiceInputBridge({ draftText, pendingConfirmed, onConfirmedFlush
     onConfirmedFlushed()
   }, [pendingConfirmed, controller, onConfirmedFlushed])
 
-  if (!draftText)
-    return null
-
-  // Overlay preview — absolutely positioned, click-through, muted italic.
-  // Container caller (`CompanionChatArea`) must position-relative the input area.
   return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-x-3 bottom-14 truncate text-sm italic text-muted-foreground/70"
-    >
-      {draftText}
-    </div>
+    <>
+      <span ref={anchorRef} className="hidden" aria-hidden="true" />
+      {draftText && !isComposing && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-3 bottom-14 truncate text-sm italic text-muted-foreground/70"
+        >
+          {draftText}
+        </div>
+      )}
+    </>
   )
 }

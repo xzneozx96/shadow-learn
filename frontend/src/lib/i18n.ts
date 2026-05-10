@@ -795,7 +795,7 @@ export const TRANSLATIONS = {
     'voice.connectionLost': 'Mất kết nối — thử lại',
     'voice.maxReached': 'Đã đạt 20 giây tối đa',
     'voice.permissionDenied': 'Đã từ chối quyền micro',
-    'voice.unavailable': 'Voice input không khả dụng',
+    'voice.unavailable': 'Nhập giọng nói không khả dụng',
 
     // Study
     'study.check': 'Kiểm tra',
