@@ -8,6 +8,7 @@ export const TRANSLATIONS = {
     'nav.settings': 'Settings',
     'nav.workbook': 'Workbook',
     'nav.documentation': 'Documentation',
+    'nav.collection': 'Collection',
     'nav.search': 'Search lessons...',
 
     // Auth — Setup & Unlock
@@ -170,6 +171,17 @@ export const TRANSLATIONS = {
     'library.words.moreLessons': '{n} more',
     'library.chip.word': 'word',
     'library.chip.words': 'words',
+
+    // Collection
+    'collection.eyebrow': 'Curated Content',
+    'collection.title': 'Collection',
+    'collection.subtitle': 'High-quality channels for shadowing practice. Watch inline, then create a lesson.',
+    'collection.videoCount': '{count} videos',
+    'collection.createLesson': 'Create Lesson',
+    'collection.creating': 'Creating…',
+    'collection.loadError': 'Failed to load Collection. Please try again.',
+    'collection.scrollPrev': 'Scroll left',
+    'collection.scrollNext': 'Scroll right',
 
     // Lesson View
     'lesson.transcript': 'Transcript',
@@ -615,6 +627,7 @@ export const TRANSLATIONS = {
     'nav.settings': 'Cài đặt',
     'nav.workbook': 'Sổ từ vựng',
     'nav.documentation': 'Hướng dẫn',
+    'nav.collection': 'Bộ sưu tập',
     'nav.search': 'Tìm kiếm bài học...',
     'auth.welcome': 'Chào mừng bạn đến với ShadowLearn',
     'auth.setup.subtitle': 'Vui lòng nhập các khóa API để bắt đầu',
@@ -753,6 +766,17 @@ export const TRANSLATIONS = {
     'library.words.moreLessons': '{n} bài khác',
     'library.chip.word': 'từ',
     'library.chip.words': 'từ',
+
+    // Collection
+    'collection.eyebrow': 'Nội dung tuyển chọn',
+    'collection.title': 'Bộ sưu tập',
+    'collection.subtitle': 'Các kênh chất lượng cao để luyện shadowing. Xem trực tiếp rồi tạo bài học.',
+    'collection.videoCount': '{count} video',
+    'collection.createLesson': 'Tạo bài học',
+    'collection.creating': 'Đang tạo…',
+    'collection.loadError': 'Không thể tải Bộ sưu tập. Vui lòng thử lại.',
+    'collection.scrollPrev': 'Cuộn trái',
+    'collection.scrollNext': 'Cuộn phải',
 
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',
