@@ -42,7 +42,6 @@ export function GlobalCompanionPanel() {
         onStop={stop}
         onSpeakClick={openSpeakModal}
         placeholder={t('companion.placeholder')}
-        voiceLanguage="zh-CN"
       />
     </div>
   )

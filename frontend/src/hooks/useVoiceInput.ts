@@ -29,7 +29,7 @@ interface GladiaTranscriptMessage {
   }
 }
 
-export function useVoiceInput({ language = 'zh-CN', onDraft, onConfirmed }: UseVoiceInputArgs): UseVoiceInputReturn {
+export function useVoiceInput({ language, onDraft, onConfirmed }: UseVoiceInputArgs): UseVoiceInputReturn {
   const [state, setState] = useState<VoiceInputState>('idle')
   const [error, setError] = useState<string | null>(null)
 
@@ -162,7 +162,8 @@ export function useVoiceInput({ language = 'zh-CN', onDraft, onConfirmed }: UseV
   }, [stopAudioCapture])
 
   const ensureSession = useCallback(async () => {
-    const url = `${API_BASE}/api/transcription/session?language=${encodeURIComponent(language)}`
+    const qs = language ? `?language=${encodeURIComponent(language)}` : ''
+    const url = `${API_BASE}/api/transcription/session${qs}`
     const response = await fetch(url, { method: 'POST' })
     if (!response.ok) {
       throw new Error(`session http ${response.status}`)

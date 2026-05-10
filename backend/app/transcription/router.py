@@ -75,10 +75,15 @@ def _check_rate_limit(client_ip: str) -> None:
 @router.post("/session")
 async def create_session(
     request: Request,
-    language: str = "zh-CN",
+    language: str | None = None,
     origin: Annotated[str | None, Header()] = None,
 ) -> dict[str, str]:
-    """Mint a Gladia v2 live session. Returns the WebSocket URL with embedded token."""
+    """Mint a Gladia v2 live session. Returns the WebSocket URL with embedded token.
+
+    `language` is an optional hint. When omitted (or "auto"), Gladia auto-detects
+    across languages. Code-switching is always enabled so the user can mix languages
+    mid-utterance.
+    """
     _check_origin(origin)
     client_ip = request.client.host if request.client else "unknown"
     _check_rate_limit(client_ip)
@@ -88,6 +93,10 @@ async def create_session(
         logger.error("SHADOWLEARN_GLADIA_API_KEYS not configured")
         raise HTTPException(status_code=500, detail="Voice input unavailable")
 
+    languages: list[str] = []
+    if language and language.lower() != "auto":
+        languages = [_normalize_language(language)]
+
     body = {
         "encoding": "wav/pcm",
         "bit_depth": 16,
@@ -95,8 +104,8 @@ async def create_session(
         "channels": 1,
         "endpointing": 0.5,
         "language_config": {
-            "languages": [_normalize_language(language)],
-            "code_switching": False,
+            "languages": languages,
+            "code_switching": True,
         },
     }
 
