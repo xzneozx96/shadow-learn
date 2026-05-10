@@ -643,3 +643,115 @@ def test_build_hub_response_content_type_defaults_to_material():
     playlists = [PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 1-2")]
     result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
     assert result["materials"]["groups"][0]["videos"][0]["content_type"] == "material"
+
+
+# ── fetch_playlist_metadata ────────────────────────────────────────────────────
+
+def test_fetch_playlist_metadata_returns_thumbnail_and_count(monkeypatch):
+    """fetch_playlist_metadata returns thumbnail_url and video_count per playlist."""
+    from unittest.mock import MagicMock, patch
+
+    fake_response = MagicMock()
+    fake_response.raise_for_status.return_value = None
+    fake_response.json.return_value = {
+        "items": [
+            {
+                "id": "PL1",
+                "snippet": {
+                    "thumbnails": {
+                        "high": {"url": "https://thumb.com/high.jpg"},
+                        "default": {"url": "https://thumb.com/default.jpg"},
+                    }
+                },
+                "contentDetails": {"itemCount": 12},
+            }
+        ]
+    }
+
+    with patch("app.collection.service.httpx.get", return_value=fake_response) as mock_get:
+        from app.collection.service import fetch_playlist_metadata
+        result = fetch_playlist_metadata(["PL1"], "APIKEY")
+
+    assert result["PL1"]["thumbnail_url"] == "https://thumb.com/high.jpg"
+    assert result["PL1"]["video_count"] == 12
+    call_params = mock_get.call_args[1]["params"]
+    assert "PL1" in call_params["id"]
+    assert "snippet" in call_params["part"]
+    assert "contentDetails" in call_params["part"]
+
+
+def test_fetch_playlist_metadata_prefers_maxres_over_high(monkeypatch):
+    """fetch_playlist_metadata prefers maxres thumbnail when available."""
+    from unittest.mock import MagicMock, patch
+
+    fake_response = MagicMock()
+    fake_response.raise_for_status.return_value = None
+    fake_response.json.return_value = {
+        "items": [
+            {
+                "id": "PL1",
+                "snippet": {
+                    "thumbnails": {
+                        "maxres": {"url": "https://thumb.com/maxres.jpg"},
+                        "high": {"url": "https://thumb.com/high.jpg"},
+                    }
+                },
+                "contentDetails": {"itemCount": 5},
+            }
+        ]
+    }
+
+    with patch("app.collection.service.httpx.get", return_value=fake_response):
+        from app.collection.service import fetch_playlist_metadata
+        result = fetch_playlist_metadata(["PL1"], "APIKEY")
+
+    assert result["PL1"]["thumbnail_url"] == "https://thumb.com/maxres.jpg"
+
+
+def test_fetch_playlist_metadata_returns_empty_on_error(monkeypatch):
+    """fetch_playlist_metadata returns {} when YouTube API raises."""
+    from unittest.mock import patch
+
+    with patch("app.collection.service.httpx.get", side_effect=Exception("timeout")):
+        from app.collection.service import fetch_playlist_metadata
+        result = fetch_playlist_metadata(["PL1"], "APIKEY")
+
+    assert result == {}
+
+
+# ── fetch_standalone_video_entries ────────────────────────────────────────────
+
+def test_fetch_standalone_video_entries_returns_full_metadata(monkeypatch):
+    """fetch_standalone_video_entries returns title, channel, duration, view_count."""
+    from unittest.mock import MagicMock, patch
+
+    fake_response = MagicMock()
+    fake_response.raise_for_status.return_value = None
+    fake_response.json.return_value = {
+        "items": [
+            {
+                "id": "abc123",
+                "snippet": {
+                    "title": "Test Video",
+                    "description": "A desc",
+                    "channelTitle": "TestChannel",
+                },
+                "contentDetails": {"duration": "PT4M30S"},
+                "statistics": {"viewCount": "5000"},
+            }
+        ]
+    }
+
+    with patch("app.collection.service.httpx.get", return_value=fake_response) as mock_get:
+        from app.collection.service import fetch_standalone_video_entries
+        result = fetch_standalone_video_entries(["abc123"], "APIKEY")
+
+    assert result["abc123"]["title"] == "Test Video"
+    assert result["abc123"]["channel"] == "TestChannel"
+    assert result["abc123"]["duration_seconds"] == 270
+    assert result["abc123"]["view_count"] == 5000
+    assert result["abc123"]["description"] == "A desc"
+    call_params = mock_get.call_args[1]["params"]
+    assert "snippet" in call_params["part"]
+    assert "contentDetails" in call_params["part"]
+    assert "statistics" in call_params["part"]

@@ -169,6 +169,117 @@ def get_cached_playlist(playlist_id: str) -> list[dict]:
     return entries
 
 
+# Separate cache for playlist-level metadata (thumbnail, video_count)
+_meta_cache: dict[str, tuple[float, dict]] = {}
+
+
+def fetch_playlist_metadata(playlist_ids: list[str], api_key: str) -> dict[str, dict]:
+    """Fetch thumbnail_url and video_count for a batch of YouTube playlist IDs.
+
+    Calls playlists.list with part=snippet,contentDetails.
+    Returns {playlist_id: {thumbnail_url: str|None, video_count: int|None}}.
+    Returns {} on error.
+    """
+    result: dict[str, dict] = {}
+    for i in range(0, len(playlist_ids), 50):
+        batch = playlist_ids[i : i + 50]
+        params = {
+            "part": "snippet,contentDetails",
+            "id": ",".join(batch),
+            "key": api_key,
+        }
+        try:
+            resp = httpx.get(f"{YOUTUBE_API_BASE}/playlists", params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as exc:
+            logger.warning("YouTube API playlists.list failed: %s", exc)
+            continue
+
+        for item in data.get("items", []):
+            pid = item.get("id")
+            if not pid:
+                continue
+            thumbnails = item.get("snippet", {}).get("thumbnails", {})
+            thumbnail_url = (
+                thumbnails.get("maxres")
+                or thumbnails.get("high")
+                or thumbnails.get("medium")
+                or thumbnails.get("default")
+                or {}
+            ).get("url")
+            item_count = item.get("contentDetails", {}).get("itemCount")
+            result[pid] = {
+                "thumbnail_url": thumbnail_url,
+                "video_count": int(item_count) if item_count is not None else None,
+            }
+    return result
+
+
+def get_cached_playlist_metadata(playlist_ids: list[str]) -> dict[str, dict]:
+    """Fetch playlist metadata (thumbnail, video_count) with in-memory TTL cache."""
+    api_key = settings.youtube_api_key
+    if not api_key:
+        return {pid: {"thumbnail_url": None, "video_count": None} for pid in playlist_ids}
+    now = time.time()
+    uncached: list[str] = []
+    result: dict[str, dict] = {}
+    for pid in playlist_ids:
+        cached = _meta_cache.get(pid)
+        if cached is not None:
+            fetched_at, meta = cached
+            if now - fetched_at < CACHE_TTL_SECONDS:
+                result[pid] = meta
+                continue
+        uncached.append(pid)
+    if uncached:
+        fetched = fetch_playlist_metadata(uncached, api_key)
+        for pid in uncached:
+            meta = fetched.get(pid, {"thumbnail_url": None, "video_count": None})
+            _meta_cache[pid] = (now, meta)
+            result[pid] = meta
+    return result
+
+
+def fetch_standalone_video_entries(video_ids: list[str], api_key: str) -> dict[str, dict]:
+    """Fetch full metadata for standalone videos not belonging to a playlist.
+
+    Calls videos.list with part=snippet,contentDetails,statistics.
+    Returns {video_id: {title, description, channel, duration_seconds, view_count}}.
+    """
+    result: dict[str, dict] = {}
+    for i in range(0, len(video_ids), 50):
+        batch = video_ids[i : i + 50]
+        params = {
+            "part": "snippet,contentDetails,statistics",
+            "id": ",".join(batch),
+            "key": api_key,
+        }
+        try:
+            resp = httpx.get(f"{YOUTUBE_API_BASE}/videos", params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as exc:
+            logger.warning("YouTube API videos.list (standalone) failed: %s", exc)
+            continue
+
+        for item in data.get("items", []):
+            vid = item.get("id")
+            if not vid:
+                continue
+            snippet = item.get("snippet", {})
+            duration_str = item.get("contentDetails", {}).get("duration")
+            view_count_str = item.get("statistics", {}).get("viewCount")
+            result[vid] = {
+                "title": snippet.get("title") or "Untitled",
+                "description": snippet.get("description") or None,
+                "channel": snippet.get("channelTitle") or None,
+                "duration_seconds": parse_iso8601_duration(duration_str),
+                "view_count": int(view_count_str) if view_count_str else None,
+            }
+    return result
+
+
 def build_video_list(playlist: PlaylistConfig, entries: list[dict]) -> list[dict]:
     """Merge API entries with difficulty from PlaylistConfig.
 
