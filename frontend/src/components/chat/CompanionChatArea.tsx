@@ -13,6 +13,7 @@ import {
   PromptInputButton,
   PromptInputFooter,
   PromptInputHeader,
+  PromptInputProvider,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
@@ -414,62 +415,64 @@ export function CompanionChatArea({
       </div>
 
       <div ref={inputAreaRef} className="relative border-t border-border p-3">
-        <PromptInput
-          accept="image/jpeg,image/png,image/webp"
-          maxFileSize={5 * 1024 * 1024}
-          maxFiles={1}
-          onError={handleAttachError}
-          onSubmit={handlePromptSubmit}
-        >
-          <VoiceInputBridge
-            draftText={draftText}
-            pendingConfirmed={pendingConfirmed}
-            onConfirmedFlushed={() => setPendingConfirmed(null)}
-          />
-          <PromptInputHeader>
-            {chips.length > 0 && <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />}
-            <AttachmentPreviewBar />
-          </PromptInputHeader>
-          <PromptInputBody>
-            <PromptInputTextarea placeholder={placeholder ?? t('lesson.askAboutSegment')} />
-          </PromptInputBody>
-          <PromptInputFooter>
-            <PromptInputTools>
-              {onSpeakClick && (
-                <button
-                  type="button"
-                  onClick={onSpeakClick}
-                  aria-label={t('speak.title')}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+        <PromptInputProvider>
+          <PromptInput
+            accept="image/jpeg,image/png,image/webp"
+            maxFileSize={5 * 1024 * 1024}
+            maxFiles={1}
+            onError={handleAttachError}
+            onSubmit={handlePromptSubmit}
+          >
+            <VoiceInputBridge
+              draftText={draftText}
+              pendingConfirmed={pendingConfirmed}
+              onConfirmedFlushed={() => setPendingConfirmed(null)}
+            />
+            <PromptInputHeader>
+              {chips.length > 0 && <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />}
+              <AttachmentPreviewBar />
+            </PromptInputHeader>
+            <PromptInputBody>
+              <PromptInputTextarea placeholder={placeholder ?? t('lesson.askAboutSegment')} />
+            </PromptInputBody>
+            <PromptInputFooter>
+              <PromptInputTools>
+                {onSpeakClick && (
+                  <button
+                    type="button"
+                    onClick={onSpeakClick}
+                    aria-label={t('speak.title')}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    <AudioLines className="size-3.5" />
+                    {t('speak.title')}
+                  </button>
+                )}
+                <PromptInputButton
+                  aria-label="Voice input"
+                  onClick={() => {
+                    if (voice.state === 'recording')
+                      voice.stop()
+                    else if (voice.state === 'idle')
+                      voice.start()
+                  }}
+                  disabled={voice.state === 'connecting' || voice.state === 'processing'}
+                  className={voice.state === 'recording' ? 'animate-pulse ring-2 ring-destructive' : undefined}
                 >
-                  <AudioLines className="size-3.5" />
-                  {t('speak.title')}
-                </button>
-              )}
-              <PromptInputButton
-                aria-label="Voice input"
-                onClick={() => {
-                  if (voice.state === 'recording')
-                    voice.stop()
-                  else if (voice.state === 'idle')
-                    voice.start()
-                }}
-                disabled={voice.state === 'connecting' || voice.state === 'processing'}
-                className={voice.state === 'recording' ? 'animate-pulse ring-2 ring-destructive' : undefined}
-              >
-                {voice.state === 'connecting' || voice.state === 'processing'
-                  ? <Spinner className="size-4" />
-                  : (
-                      <Mic
-                        className={`size-5 ${voice.state === 'recording' ? 'text-destructive' : ''}`}
-                      />
-                    )}
-              </PromptInputButton>
-              <AttachImageButton label={t('companion.attachImage')} />
-            </PromptInputTools>
-            <PromptInputSubmit status={chatStatus} onStop={onStop} />
-          </PromptInputFooter>
-        </PromptInput>
+                  {voice.state === 'connecting' || voice.state === 'processing'
+                    ? <Spinner className="size-4" />
+                    : (
+                        <Mic
+                          className={`size-5 ${voice.state === 'recording' ? 'text-destructive' : ''}`}
+                        />
+                      )}
+                </PromptInputButton>
+                <AttachImageButton label={t('companion.attachImage')} />
+              </PromptInputTools>
+              <PromptInputSubmit status={chatStatus} onStop={onStop} />
+            </PromptInputFooter>
+          </PromptInput>
+        </PromptInputProvider>
       </div>
     </>
   )
