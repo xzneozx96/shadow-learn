@@ -416,3 +416,225 @@ def test_get_collection_returns_one_entry_per_playlist(monkeypatch):
     assert result[0]["videos"][0]["video_id"] == "abc"
     assert result[0]["videos"][0]["difficulty"] == "HSK 1"
     assert result[1]["videos"][0]["difficulty"] == "HSK 2"  # from default_difficulty
+
+
+# ── bucket_difficulty ──────────────────────────────────────────────────────────
+
+def test_bucket_difficulty_hsk1():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 1") == "HSK 1-2"
+
+def test_bucket_difficulty_hsk2():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 2") == "HSK 1-2"
+
+def test_bucket_difficulty_hsk12_passthrough():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 1-2") == "HSK 1-2"
+
+def test_bucket_difficulty_hsk3():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 3") == "HSK 3-4"
+
+def test_bucket_difficulty_hsk4():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 4") == "HSK 3-4"
+
+def test_bucket_difficulty_hsk34_passthrough():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 3-4") == "HSK 3-4"
+
+def test_bucket_difficulty_hsk5():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 5") == "HSK 5+"
+
+def test_bucket_difficulty_hsk6():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 6") == "HSK 5+"
+
+def test_bucket_difficulty_hsk5plus_passthrough():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 5+") == "HSK 5+"
+
+def test_bucket_difficulty_hsk56():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("HSK 5-6") == "HSK 5+"
+
+def test_bucket_difficulty_none_returns_none():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty(None) is None
+
+def test_bucket_difficulty_unrecognized_returns_none():
+    from app.collection.service import bucket_difficulty
+    assert bucket_difficulty("garbage") is None
+
+
+# ── build_hub_response helpers ─────────────────────────────────────────────────
+
+def _make_entry(video_id, title="T", duration=60, view_count=None, channel=None, description=None):
+    return {"id": video_id, "title": title, "duration": duration,
+            "view_count": view_count, "channel": channel, "description": description}
+
+# ── build_hub_response — materials grouping ────────────────────────────────────
+
+def test_build_hub_response_materials_grouped_by_canonical_difficulty():
+    """Materials are bucketed to canonical HSK groups and ordered HSK 1-2 first."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [
+        PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 3-4", default_topic="Daily Life"),
+        PlaylistConfig(name="B", playlist_id="PL2", default_difficulty="HSK 1-2", default_topic="Culture"),
+    ]
+    entries = {
+        "PL1": [_make_entry("v1")],
+        "PL2": [_make_entry("v2")],
+    }
+    result = build_hub_response(playlists, entries)
+    groups = result["materials"]["groups"]
+    assert [g["difficulty"] for g in groups] == ["HSK 1-2", "HSK 3-4"]
+    assert groups[0]["videos"][0]["video_id"] == "v2"
+    assert groups[1]["videos"][0]["video_id"] == "v1"
+
+def test_build_hub_response_raw_difficulty_is_bucketed():
+    """Raw difficulty 'HSK 2' normalises to canonical 'HSK 1-2'."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 2")]
+    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    assert result["materials"]["groups"][0]["difficulty"] == "HSK 1-2"
+    assert result["materials"]["groups"][0]["videos"][0]["difficulty"] == "HSK 1-2"
+
+def test_build_hub_response_no_difficulty_goes_to_uncategorized():
+    """Videos with no difficulty land in the 'Uncategorized' group (rendered last)."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [
+        PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 1-2"),
+        PlaylistConfig(name="B", playlist_id="PL2"),  # no difficulty
+    ]
+    entries = {
+        "PL1": [_make_entry("v1")],
+        "PL2": [_make_entry("v2")],
+    }
+    result = build_hub_response(playlists, entries)
+    difficulties = [g["difficulty"] for g in result["materials"]["groups"]]
+    assert difficulties[0] == "HSK 1-2"
+    assert difficulties[-1] == "Uncategorized"
+
+def test_build_hub_response_hsk5plus_group_after_hsk34():
+    """Group order: HSK 1-2 < HSK 3-4 < HSK 5+."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [
+        PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 5+"),
+        PlaylistConfig(name="B", playlist_id="PL2", default_difficulty="HSK 1-2"),
+        PlaylistConfig(name="C", playlist_id="PL3", default_difficulty="HSK 3-4"),
+    ]
+    entries = {"PL1": [_make_entry("v1")], "PL2": [_make_entry("v2")], "PL3": [_make_entry("v3")]}
+    groups = build_hub_response(playlists, entries)["materials"]["groups"]
+    assert [g["difficulty"] for g in groups] == ["HSK 1-2", "HSK 3-4", "HSK 5+"]
+
+# ── build_hub_response — topic resolution ─────────────────────────────────────
+
+def test_build_hub_response_topic_from_playlist_default():
+    """Topic resolves to PlaylistConfig.default_topic when no per-video override."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [PlaylistConfig(name="A", playlist_id="PL1",
+                                default_difficulty="HSK 1-2", default_topic="Culture")]
+    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    assert result["materials"]["groups"][0]["videos"][0]["topic"] == "Culture"
+
+def test_build_hub_response_topic_override_per_video():
+    """Per-video VideoConfig.topic overrides PlaylistConfig.default_topic."""
+    from app.collection.config import PlaylistConfig, VideoConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [PlaylistConfig(
+        name="A", playlist_id="PL1", default_difficulty="HSK 1-2",
+        default_topic="Daily Life",
+        videos=[VideoConfig(video_id="v1", topic="Business")],
+    )]
+    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    assert result["materials"]["groups"][0]["videos"][0]["topic"] == "Business"
+
+def test_build_hub_response_topics_list_sorted_and_unique():
+    """materials.topics is a sorted list of unique non-None topic values."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [
+        PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 1-2", default_topic="Culture"),
+        PlaylistConfig(name="B", playlist_id="PL2", default_difficulty="HSK 1-2", default_topic="Daily Life"),
+        PlaylistConfig(name="C", playlist_id="PL3", default_difficulty="HSK 1-2", default_topic="Culture"),
+    ]
+    entries = {
+        "PL1": [_make_entry("v1")],
+        "PL2": [_make_entry("v2")],
+        "PL3": [_make_entry("v3")],
+    }
+    topics = build_hub_response(playlists, entries)["materials"]["topics"]
+    assert topics == ["Culture", "Daily Life"]
+
+def test_build_hub_response_topics_excludes_none():
+    """Topics list does not include None (videos with no topic are excluded)."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 1-2")]
+    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    assert None not in result["materials"]["topics"]
+
+# ── build_hub_response — tips ─────────────────────────────────────────────────
+
+def test_build_hub_response_tip_goes_to_tips_section():
+    """Videos with content_type='tip' land in tips.groups, not materials.groups."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [PlaylistConfig(
+        name="Tips", playlist_id="PL1",
+        default_content_type="tip", default_skill="Pronunciation",
+    )]
+    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    assert result["materials"]["groups"] == []
+    assert len(result["tips"]["groups"]) == 1
+    assert result["tips"]["groups"][0]["skill"] == "Pronunciation"
+
+def test_build_hub_response_tip_group_order():
+    """Tip groups ordered: Pronunciation < Vocabulary < Speaking < Study Methods."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [
+        PlaylistConfig(name="A", playlist_id="PL1", default_content_type="tip", default_skill="Study Methods"),
+        PlaylistConfig(name="B", playlist_id="PL2", default_content_type="tip", default_skill="Speaking"),
+        PlaylistConfig(name="C", playlist_id="PL3", default_content_type="tip", default_skill="Pronunciation"),
+        PlaylistConfig(name="D", playlist_id="PL4", default_content_type="tip", default_skill="Vocabulary"),
+    ]
+    entries = {k: [_make_entry(f"v{i}")] for i, k in enumerate(["PL1","PL2","PL3","PL4"])}
+    groups = build_hub_response(playlists, entries)["tips"]["groups"]
+    assert [g["skill"] for g in groups] == ["Pronunciation", "Vocabulary", "Speaking", "Study Methods"]
+
+def test_build_hub_response_tip_with_no_skill_is_dropped():
+    """A tip video missing skill is silently dropped (not added to any group)."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [PlaylistConfig(name="A", playlist_id="PL1", default_content_type="tip")]
+    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    assert result["tips"]["groups"] == []
+
+def test_build_hub_response_content_type_defaults_to_material():
+    """Videos with no explicit content_type default to 'material'."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_hub_response
+
+    playlists = [PlaylistConfig(name="A", playlist_id="PL1", default_difficulty="HSK 1-2")]
+    result = build_hub_response(playlists, {"PL1": [_make_entry("v1")]})
+    assert result["materials"]["groups"][0]["videos"][0]["content_type"] == "material"
