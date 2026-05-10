@@ -16,7 +16,7 @@ function PlaylistPageSkeleton() {
       <div className="h-8 w-80 rounded-md bg-muted mb-3" />
       <div className="h-5 w-24 rounded-full bg-muted mb-10" />
       <div className="h-6 w-48 rounded-md bg-muted mb-6" />
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
         {Array.from({ length: 8 }, (_, i) => i).map(i => (
           <div key={i}>
             <div className="aspect-video rounded-xl bg-muted" />
@@ -78,7 +78,7 @@ export function PlaylistPage() {
               </button>
               <div className="mt-3 ml-7 flex items-center gap-2">
                 <Badge variant="secondary" className="inline-flex items-center gap-1 text-xs font-medium tabular-nums">
-                  <ListVideo className="size-3" />
+                  <ListVideo className="size-4" />
                   {data.videos.length}
                 </Badge>
                 {data.topic && (
@@ -101,7 +101,7 @@ export function PlaylistPage() {
                     </div>
                   )
                 : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
                       {data.videos.map((v, i) => (
                         <VideoCard
                           key={`${v.video_id}-${i}`}
