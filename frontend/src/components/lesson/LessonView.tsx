@@ -298,6 +298,7 @@ function LessonViewContent() {
           activeSegment={activeSegment}
           lessonId={id ?? ''}
           lessonTitle={meta.title}
+          sourceLanguage={meta.sourceLanguage}
           activeTab={companionTab}
           onTabChange={setCompanionTab}
         />

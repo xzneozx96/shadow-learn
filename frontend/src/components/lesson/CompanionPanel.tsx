@@ -17,6 +17,7 @@ interface CompanionPanelProps {
   activeSegment: Segment | null
   lessonId: string
   lessonTitle?: string
+  sourceLanguage?: string
   activeTab?: string
   onTabChange?: (tab: string) => void
 }
@@ -25,6 +26,7 @@ export function CompanionPanel({
   activeSegment,
   lessonId,
   lessonTitle,
+  sourceLanguage,
   activeTab,
   onTabChange,
 }: CompanionPanelProps) {
@@ -81,6 +83,7 @@ export function CompanionPanel({
           onStop={stop}
           headerSlot={headerSlot}
           onSpeakClick={openSpeakModal}
+          voiceLanguage={sourceLanguage}
         />
       </TabsContent>
 
