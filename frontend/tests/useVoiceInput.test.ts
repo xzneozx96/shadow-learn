@@ -201,6 +201,18 @@ describe('useVoiceInput', () => {
     expect(MockWebSocket.instances.length).toBe(1)
   })
 
+  it('handles WS close during recording with connectionLost error', async () => {
+    const { result } = renderHook(() => useVoiceInput({ onDraft: vi.fn(), onConfirmed: vi.fn() }))
+    act(() => result.current.start())
+    await waitFor(() => expect(MockWebSocket.instances.length).toBe(1))
+    act(() => MockWebSocket.instances[0].simulateOpen())
+    await waitFor(() => expect(result.current.state).toBe('recording'))
+
+    act(() => MockWebSocket.instances[0].close())
+    await waitFor(() => expect(result.current.error).toBe('voice.connectionLost'))
+    expect(result.current.state).toBe('idle')
+  })
+
   it('cleanup() sends stop_recording and closes WS', async () => {
     const { result } = renderHook(() => useVoiceInput({ onDraft: vi.fn(), onConfirmed: vi.fn() }))
     act(() => result.current.start())

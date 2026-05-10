@@ -41,6 +41,7 @@ export function useVoiceInput({ language = 'zh-CN', onDraft, onConfirmed }: UseV
   const burstTimerRef = useRef<number | null>(null)
   const processingTimerRef = useRef<number | null>(null)
   const pendingAutoStartRef = useRef(false)
+  const stateRef = useRef<VoiceInputState>('idle')
   const isAwaitingFinalRef = useRef(false)
 
   // Keep latest callbacks accessible inside long-lived listeners.
@@ -50,6 +51,10 @@ export function useVoiceInput({ language = 'zh-CN', onDraft, onConfirmed }: UseV
     onDraftRef.current = onDraft
     onConfirmedRef.current = onConfirmed
   }, [onDraft, onConfirmed])
+
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
 
   const stopAudioCapture = useCallback(() => {
     if (burstTimerRef.current !== null) {
@@ -147,13 +152,14 @@ export function useVoiceInput({ language = 'zh-CN', onDraft, onConfirmed }: UseV
       }, MAX_BURST_MS)
     }
     catch (err) {
+      stopAudioCapture()
       const msg = err instanceof DOMException && err.name === 'NotAllowedError'
         ? 'voice.permissionDenied'
         : 'voice.unavailable'
       setError(msg)
       setState('idle')
     }
-  }, [])
+  }, [stopAudioCapture])
 
   const ensureSession = useCallback(async () => {
     const url = `${API_BASE}/api/transcription/session?language=${encodeURIComponent(language)}`
@@ -166,16 +172,13 @@ export function useVoiceInput({ language = 'zh-CN', onDraft, onConfirmed }: UseV
     ws.binaryType = 'arraybuffer'
     ws.onmessage = handleGladiaMessage
     ws.onclose = () => {
-      const wasRecording = state === 'recording' || pendingAutoStartRef.current
+      const wasRecording = stateRef.current === 'recording' || pendingAutoStartRef.current
       wsRef.current = null
       if (wasRecording) {
         stopAudioCapture()
         setError('voice.connectionLost')
         transitionToIdle()
       }
-    }
-    ws.onerror = () => {
-      // onclose follows; handle there.
     }
     wsRef.current = ws
     return new Promise<void>((resolve, reject) => {
@@ -188,7 +191,7 @@ export function useVoiceInput({ language = 'zh-CN', onDraft, onConfirmed }: UseV
       }
       ws.onerror = () => reject(new Error('ws open failed'))
     })
-  }, [language, handleGladiaMessage, beginCapture, state, stopAudioCapture, transitionToIdle])
+  }, [language, handleGladiaMessage, beginCapture, stopAudioCapture, transitionToIdle])
 
   const stopAndAwaitFinal = useCallback(() => {
     stopAudioCapture()
@@ -238,6 +241,8 @@ export function useVoiceInput({ language = 'zh-CN', onDraft, onConfirmed }: UseV
     audioContextRef.current?.close().catch(() => {})
     audioContextRef.current = null
     workletNodeRef.current = null
+    pendingAutoStartRef.current = false
+    isAwaitingFinalRef.current = false
     setState('idle')
   }, [stopAudioCapture])
 
