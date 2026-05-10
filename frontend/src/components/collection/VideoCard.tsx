@@ -1,10 +1,23 @@
 import type { LessonMeta } from '@/types'
 import type { CollectionVideo } from '@/types/collection'
-import { Play, Sparkles } from 'lucide-react'
+import { Calendar, Eye, Play, Sparkles, ThumbsUp } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  CutoutCard,
+  CutoutCardContent,
+  CutoutCardImage,
+  CutoutCardInsetLabel,
+  CutoutCardMedia,
+  CutoutCardOverlay,
+  CutoutCardPin,
+  cutoutCardSurfaceClassName,
+  CutoutCorner,
+  useCutoutContentStaggerVariants,
+} from '@/components/ui/cutout-card'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
@@ -17,16 +30,35 @@ interface VideoCardProps {
   video: CollectionVideo
 }
 
-const DIFFICULTY_DOTS: Record<string, number> = {
-  'HSK 1': 1,
-  'HSK 2': 2,
-  'HSK 3-4': 3,
-  'HSK 4-5': 4,
-  'HSK 5+': 5,
+const DIFFICULTY_TONE: Record<string, string> = {
+  'HSK 1': 'text-emerald-600 dark:text-emerald-400',
+  'HSK 2': 'text-blue-600 dark:text-blue-400',
+  'HSK 3-4': 'text-amber-600 dark:text-amber-400',
+  'HSK 4-5': 'text-orange-600 dark:text-orange-400',
+  'HSK 5+': 'text-red-600 dark:text-red-400',
 }
 
-function difficultyDots(difficulty: string): number {
-  return DIFFICULTY_DOTS[difficulty] ?? 0
+function difficultyTone(difficulty: string): string {
+  return DIFFICULTY_TONE[difficulty] ?? 'text-muted-foreground'
+}
+
+function formatCount(n: number | null): string {
+  if (n === null || n === undefined)
+    return 'N/A'
+  if (n >= 1_000_000)
+    return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`
+  if (n >= 1_000)
+    return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`
+  return n.toLocaleString()
+}
+
+function formatReleaseDate(iso: string | null): string {
+  if (!iso)
+    return 'N/A'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime()))
+    return 'N/A'
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export function VideoCard({ video }: VideoCardProps) {
@@ -34,6 +66,7 @@ export function VideoCard({ video }: VideoCardProps) {
   const { t } = useI18n()
   const { updateLesson } = useLessons()
   const navigate = useNavigate()
+  const stagger = useCutoutContentStaggerVariants()
   const [submitting, setSubmitting] = useState(false)
   const [playing, setPlaying] = useState(false)
 
@@ -104,75 +137,100 @@ export function VideoCard({ video }: VideoCardProps) {
     }
   }
 
-  const dots = video.difficulty ? difficultyDots(video.difficulty) : 0
-
   return (
-    <div className="group/card shrink-0 w-[calc(25%-15px)] min-w-[260px] flex flex-col">
-      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-muted ring-1 ring-border/60 transition-all duration-300 group-hover/card:ring-border group-hover/card:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)]">
-        {playing
-          ? (
-              <iframe
-                className="absolute inset-0 w-full h-full"
-                src={`https://www.youtube.com/embed/${video.video_id}?rel=0&autoplay=1`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title={video.title}
-              />
-            )
-          : (
-              <button
-                type="button"
-                onClick={() => setPlaying(true)}
-                className="absolute inset-0 w-full h-full group/play cursor-pointer"
-                aria-label={`Play ${video.title}`}
-              >
-                <img
-                  src={thumbnailUrl}
-                  alt=""
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover"
+    <div className="w-[calc(25%-15px)] min-w-[260px] shrink-0 h-full">
+      <CutoutCard className={cn(cutoutCardSurfaceClassName, 'h-full flex flex-col')}>
+        <CutoutCardMedia className="aspect-video">
+          {playing
+            ? (
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${video.video_id}?rel=0&autoplay=1`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={video.title}
                 />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/play:bg-black/20 transition-colors duration-200">
-                  <span className="flex items-center justify-center size-12 rounded-full bg-black/60 backdrop-blur-sm shadow-lg transition-transform duration-200 group-hover/play:scale-110">
-                    <Play className="size-5 text-white fill-white ml-0.5" />
-                  </span>
-                </div>
-              </button>
-            )}
-      </div>
-      <div className="pt-3 px-1 flex flex-col gap-2 flex-1">
-        <p className="text-[15px] font-medium leading-snug tracking-[-0.005em] text-foreground line-clamp-2 text-pretty">
-          {video.title}
-        </p>
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          <div className="flex items-center gap-2 min-w-0 text-[11px] text-muted-foreground tabular-nums">
-            {dots > 0 && (
-              <span className="inline-flex items-center gap-0.5" title={video.difficulty ?? undefined}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      'size-1.5 rounded-full',
-                      i < dots ? 'bg-primary/70' : 'bg-muted-foreground/20',
-                    )}
-                  />
-                ))}
+              )
+            : (
+                <button
+                  type="button"
+                  onClick={() => setPlaying(true)}
+                  className="absolute inset-0 w-full h-full group/play cursor-pointer"
+                  aria-label={`Play ${video.title}`}
+                >
+                  <CutoutCardImage src={thumbnailUrl} alt={video.title} loading="lazy" />
+                  <CutoutCardOverlay />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/play:bg-black/20 transition-colors duration-200">
+                    <span className="flex items-center justify-center size-12 rounded-full bg-black/60 backdrop-blur-sm shadow-lg transition-transform duration-200 group-hover/play:scale-110">
+                      <Play className="size-5 text-white fill-white ml-0.5" />
+                    </span>
+                  </div>
+                </button>
+              )}
+
+          {/* Difficulty badge — bottom-left inset cutout */}
+          {video.difficulty && !playing && (
+            <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-3 py-1.5">
+              <span className={cn('font-bold text-[10px] uppercase tracking-widest', difficultyTone(video.difficulty))}>
+                {video.difficulty}
               </span>
-            )}
-            <span>{video.duration}</span>
-          </div>
-          <Button
-            size="sm"
-            onClick={handleCreate}
-            disabled={submitting || !canCreate}
-            className="h-7 px-3 rounded-full text-[11px] font-semibold gap-1 shrink-0 transition-all duration-200 group-hover/card:shadow-sm"
-            data-testid={`collection-create-${video.video_id}`}
-          >
-            <Sparkles className="size-3" />
-            {submitting ? t('collection.creating') : t('collection.createLesson')}
-          </Button>
-        </div>
-      </div>
+              <CutoutCorner className="absolute -right-[31px] -bottom-px rotate-90 text-card" />
+              <CutoutCorner className="absolute -top-[31px] -left-px rotate-90 text-card" />
+            </CutoutCardInsetLabel>
+          )}
+
+          {/* Duration pin — top-right cutout */}
+          {!playing && (
+            <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-[11px] font-semibold text-card-foreground tabular-nums shadow-md ring-1 ring-border/40">
+              {video.duration}
+              <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
+              <CutoutCorner className="absolute right-0 -bottom-[23px] -rotate-90 text-card" size={24} />
+            </CutoutCardPin>
+          )}
+
+        </CutoutCardMedia>
+
+        <CutoutCardContent className="p-3 flex-1 flex flex-col gap-2.5">
+          <motion.div animate="show" className="contents" initial="hidden" variants={stagger.container}>
+            <motion.h3
+              className="line-clamp-2 text-balance font-semibold text-card-foreground text-[15px] leading-snug tracking-[-0.005em]"
+              variants={stagger.item}
+            >
+              {video.title}
+            </motion.h3>
+
+            <motion.div
+              className="mt-auto flex items-center justify-between gap-2"
+              variants={stagger.item}
+            >
+              <div className="flex items-center gap-2.5 min-w-0 text-[11px] text-muted-foreground tabular-nums">
+                <span className="inline-flex items-center gap-1" title={`${video.view_count?.toLocaleString() ?? 'N/A'} views`}>
+                  <Eye className="size-3" />
+                  {formatCount(video.view_count)}
+                </span>
+                <span className="inline-flex items-center gap-1" title={`${video.like_count?.toLocaleString() ?? 'N/A'} likes`}>
+                  <ThumbsUp className="size-3" />
+                  {formatCount(video.like_count)}
+                </span>
+                <span className="inline-flex items-center gap-1" title={video.release_date ?? 'N/A'}>
+                  <Calendar className="size-3" />
+                  {formatReleaseDate(video.release_date)}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleCreate}
+                disabled={submitting || !canCreate}
+                className="h-7 px-3 rounded-full text-[11px] font-semibold gap-1 shrink-0"
+                data-testid={`collection-create-${video.video_id}`}
+              >
+                <Sparkles className="size-3" />
+                {submitting ? t('collection.creating') : t('collection.createLesson')}
+              </Button>
+            </motion.div>
+          </motion.div>
+        </CutoutCardContent>
+      </CutoutCard>
     </div>
   )
 }

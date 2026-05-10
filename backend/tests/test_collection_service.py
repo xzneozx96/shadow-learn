@@ -24,6 +24,23 @@ def test_format_duration_none_returns_dash():
     assert format_duration(None) == "—"
 
 
+def test_extract_release_date_from_timestamp():
+    from app.collection.service import extract_release_date
+    # 2024-05-10 00:00:00 UTC
+    assert extract_release_date({"release_timestamp": 1715308800}) == "2024-05-10"
+
+
+def test_extract_release_date_falls_back_to_upload_date():
+    from app.collection.service import extract_release_date
+    assert extract_release_date({"upload_date": "20260315"}) == "2026-03-15"
+
+
+def test_extract_release_date_returns_none_when_missing():
+    from app.collection.service import extract_release_date
+    assert extract_release_date({}) is None
+    assert extract_release_date({"upload_date": "bad"}) is None
+
+
 def test_fetch_playlist_returns_entries():
     """fetch_playlist calls yt-dlp with extract_flat=True and returns entries."""
     fake_info = {
@@ -124,15 +141,21 @@ def test_build_video_list_merges_difficulty_by_video_id():
         ],
     )
     entries = [
-        {"id": "abc", "title": "Hello", "duration": 754},
-        {"id": "def", "title": "World", "duration": 90},
+        {"id": "abc", "title": "Hello", "duration": 754, "view_count": 1000, "like_count": 50},
+        {"id": "def", "title": "World", "duration": 90, "release_timestamp": 1715308800},
     ]
 
     result = build_video_list(playlist, entries)
 
     assert result == [
-        {"video_id": "abc", "title": "Hello", "duration": "12:34", "difficulty": "HSK 2"},
-        {"video_id": "def", "title": "World", "duration": "1:30", "difficulty": "HSK 4-5"},
+        {
+            "video_id": "abc", "title": "Hello", "duration": "12:34", "difficulty": "HSK 2",
+            "view_count": 1000, "like_count": 50, "release_date": None,
+        },
+        {
+            "video_id": "def", "title": "World", "duration": "1:30", "difficulty": "HSK 4-5",
+            "view_count": None, "like_count": None, "release_date": "2024-05-10",
+        },
     ]
 
 

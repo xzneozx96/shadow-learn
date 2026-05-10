@@ -3,6 +3,9 @@ export interface CollectionVideo {
   title: string
   duration: string
   difficulty: string | null
+  view_count: number | null
+  like_count: number | null
+  release_date: string | null // ISO YYYY-MM-DD or null
 }
 
 export interface CollectionPlaylist {
