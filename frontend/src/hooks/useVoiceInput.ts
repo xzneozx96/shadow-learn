@@ -6,6 +6,7 @@ export type VoiceInputState = 'idle' | 'connecting' | 'recording' | 'processing'
 export interface UseVoiceInputArgs {
   onDraft: (text: string) => void
   onConfirmed: (text: string) => void
+  onCancel?: () => void
 }
 
 export interface UseVoiceInputReturn {
@@ -13,10 +14,11 @@ export interface UseVoiceInputReturn {
   error: string | null
   start: () => void
   stop: () => void
+  cancel: () => void
   cleanup: () => void
 }
 
-const MAX_BURST_MS = 20_000
+const MAX_BURST_MS = 30_000
 const PROCESSING_SAFETY_MS = 3_000
 const WORKLET_URL = '/pcm-encoder.worklet.js'
 
@@ -28,7 +30,7 @@ interface GladiaTranscriptMessage {
   }
 }
 
-export function useVoiceInput({ onDraft, onConfirmed }: UseVoiceInputArgs): UseVoiceInputReturn {
+export function useVoiceInput({ onDraft, onConfirmed, onCancel }: UseVoiceInputArgs): UseVoiceInputReturn {
   const [state, setState] = useState<VoiceInputState>('idle')
   const [error, setError] = useState<string | null>(null)
 
@@ -42,14 +44,18 @@ export function useVoiceInput({ onDraft, onConfirmed }: UseVoiceInputArgs): UseV
   const pendingAutoStartRef = useRef(false)
   const stateRef = useRef<VoiceInputState>('idle')
   const isAwaitingFinalRef = useRef(false)
+  // When true, suppress is_final → onConfirmed for the current burst (cancel).
+  const discardFinalsRef = useRef(false)
 
   // Keep latest callbacks accessible inside long-lived listeners.
   const onDraftRef = useRef(onDraft)
   const onConfirmedRef = useRef(onConfirmed)
+  const onCancelRef = useRef(onCancel)
   useEffect(() => {
     onDraftRef.current = onDraft
     onConfirmedRef.current = onConfirmed
-  }, [onDraft, onConfirmed])
+    onCancelRef.current = onCancel
+  }, [onDraft, onConfirmed, onCancel])
 
   useEffect(() => {
     stateRef.current = state
@@ -104,12 +110,15 @@ export function useVoiceInput({ onDraft, onConfirmed }: UseVoiceInputArgs): UseV
       return
     }
     if (msg.data.is_final) {
-      onConfirmedRef.current(`${text} `)
+      if (!discardFinalsRef.current) {
+        onConfirmedRef.current(`${text} `)
+      }
       if (isAwaitingFinalRef.current) {
+        discardFinalsRef.current = false
         transitionToIdle()
       }
     }
-    else {
+    else if (!discardFinalsRef.current) {
       onDraftRef.current(text)
     }
   }, [transitionToIdle])
@@ -182,6 +191,7 @@ export function useVoiceInput({ onDraft, onConfirmed }: UseVoiceInputArgs): UseV
     wsRef.current = ws
     return new Promise<void>((resolve, reject) => {
       ws.onopen = () => {
+        ws.onerror = null
         if (pendingAutoStartRef.current) {
           pendingAutoStartRef.current = false
           beginCapture()
@@ -220,7 +230,22 @@ export function useVoiceInput({ onDraft, onConfirmed }: UseVoiceInputArgs): UseV
     stopAndAwaitFinal()
   }, [stopAndAwaitFinal])
 
-  const cleanup = useCallback(() => {
+  const cancel = useCallback(() => {
+    // Discard the current burst entirely: no draft flush, no final flush.
+    discardFinalsRef.current = true
+    stopAudioCapture()
+    if (processingTimerRef.current !== null) {
+      window.clearTimeout(processingTimerRef.current)
+      processingTimerRef.current = null
+    }
+    isAwaitingFinalRef.current = false
+    onCancelRef.current?.()
+    setState('idle')
+  }, [stopAudioCapture])
+
+  const isMountedRef = useRef(true)
+
+  const tearDown = useCallback(() => {
     stopAudioCapture()
     if (processingTimerRef.current !== null) {
       window.clearTimeout(processingTimerRef.current)
@@ -242,16 +267,23 @@ export function useVoiceInput({ onDraft, onConfirmed }: UseVoiceInputArgs): UseV
     workletNodeRef.current = null
     pendingAutoStartRef.current = false
     isAwaitingFinalRef.current = false
-    setState('idle')
   }, [stopAudioCapture])
+
+  const cleanup = useCallback(() => {
+    tearDown()
+    if (isMountedRef.current) {
+      setState('idle')
+    }
+  }, [tearDown])
 
   useEffect(() => {
     return () => {
-      cleanup()
+      isMountedRef.current = false
+      tearDown()
     }
-    // cleanup ref is stable; we want this to run only on unmount.
+    // tearDown ref is stable; we want this to run only on unmount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { state, error, start, stop, cleanup }
+  return { state, error, start, stop, cancel, cleanup }
 }

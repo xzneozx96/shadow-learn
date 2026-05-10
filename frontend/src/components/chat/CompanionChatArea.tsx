@@ -34,6 +34,29 @@ import { MessageItem, StreamingDots } from './ChatMessageItem'
 import { ContextChipBar } from './ContextChipBar'
 import { VoiceInputBridge } from './VoiceInputBridge'
 
+/** Animated bars shown inside the recording pill — staggered fade for "live" feel. */
+const WAVE_BARS = [
+  { id: 'a', delay: 0, tall: false },
+  { id: 'b', delay: 120, tall: true },
+  { id: 'c', delay: 240, tall: false },
+  { id: 'd', delay: 360, tall: true },
+  { id: 'e', delay: 240, tall: false },
+  { id: 'f', delay: 120, tall: true },
+]
+function RecordingWaveform() {
+  return (
+    <div className="flex h-4 items-center gap-[3px]">
+      {WAVE_BARS.map(bar => (
+        <span
+          key={bar.id}
+          className="block w-[3px] rounded-full bg-white/95 animate-pulse"
+          style={{ animationDelay: `${bar.delay}ms`, animationDuration: '900ms', height: bar.tall ? '100%' : '70%' }}
+        />
+      ))}
+    </div>
+  )
+}
+
 /** Attach-image button — must be rendered inside a <PromptInput> so the context is available. */
 function AttachImageButton({ tooltip }: { tooltip: string }) {
   const attachments = usePromptInputAttachments()
@@ -120,6 +143,7 @@ export function CompanionChatArea({
       setDraftText('')
       setPendingConfirmed(text)
     },
+    onCancel: () => setDraftText(''),
   })
 
   useEffect(() => {
@@ -449,23 +473,41 @@ export function CompanionChatArea({
                   </PromptInputButton>
                 )}
                 <AttachImageButton tooltip={t('companion.attachImage')} />
-                <PromptInputButton
-                  size="icon-sm"
-                  title={t('voice.dictate')}
-                  aria-label={t('voice.dictate')}
-                  onClick={() => {
-                    if (voice.state === 'recording')
-                      voice.stop()
-                    else if (voice.state === 'idle')
-                      voice.start()
-                  }}
-                  disabled={voice.state === 'connecting' || voice.state === 'processing'}
-                  className={voice.state === 'recording' ? 'text-destructive' : undefined}
-                >
-                  {voice.state === 'connecting' || voice.state === 'processing'
-                    ? <Spinner className="size-4" />
-                    : <Mic className="size-4" />}
-                </PromptInputButton>
+                {voice.state === 'recording'
+                  ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => voice.stop()}
+                          aria-label={t('voice.dictate')}
+                          title={t('voice.dictate')}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-linear-to-r from-rose-500 via-red-500 to-rose-600 px-3 text-white shadow-sm shadow-red-500/40 transition-transform hover:scale-[1.02]"
+                        >
+                          <RecordingWaveform />
+                        </button>
+                        <PromptInputButton
+                          size="icon-sm"
+                          onClick={() => voice.cancel()}
+                          title={t('voice.cancel')}
+                          aria-label={t('voice.cancel')}
+                        >
+                          <X className="size-4" />
+                        </PromptInputButton>
+                      </>
+                    )
+                  : (
+                      <PromptInputButton
+                        size="icon-sm"
+                        title={t('voice.dictate')}
+                        aria-label={t('voice.dictate')}
+                        onClick={() => voice.state === 'idle' && voice.start()}
+                        disabled={voice.state === 'connecting' || voice.state === 'processing'}
+                      >
+                        {voice.state === 'connecting' || voice.state === 'processing'
+                          ? <Spinner className="size-4" />
+                          : <Mic className="size-4" />}
+                      </PromptInputButton>
+                    )}
               </PromptInputTools>
               <PromptInputSubmit status={chatStatus} onStop={onStop} />
             </PromptInputFooter>
