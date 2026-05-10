@@ -5,7 +5,7 @@ import time
 
 import yt_dlp
 
-from app.collection.config import PlaylistConfig
+from app.collection.config import PlaylistConfig, PLAYLISTS
 
 
 def format_duration(seconds: int | None) -> str:
@@ -69,3 +69,17 @@ def build_video_list(playlist: PlaylistConfig, entries: list[dict]) -> list[dict
             "difficulty": difficulty_by_id.get(vid),
         })
     return result
+
+
+def get_collection() -> list[dict]:
+    """Build the full Collection response: each curated playlist with merged videos."""
+    out = []
+    for playlist in PLAYLISTS:
+        entries = get_cached_playlist(playlist.playlist_id)
+        out.append({
+            "name": playlist.name,
+            "icon": playlist.icon,
+            "playlist_id": playlist.playlist_id,
+            "videos": build_video_list(playlist, entries),
+        })
+    return out
