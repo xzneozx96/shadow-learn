@@ -3,8 +3,9 @@ import type { ChatStatus, FileUIPart } from 'ai'
 import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
-import { ArrowDownIcon, ImageIcon, Mic, X } from 'lucide-react'
-import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { ArrowDownIcon, AudioLines, ImageIcon, Mic, X } from 'lucide-react'
+import { motion } from 'motion/react'
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import {
@@ -13,6 +14,7 @@ import {
   PromptInputButton,
   PromptInputFooter,
   PromptInputHeader,
+  PromptInputProvider,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
@@ -21,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/contexts/I18nContext'
+import { useVoiceInput } from '@/hooks/useVoiceInput'
 import {
   EXERCISE_TOOLS,
   getToolName,
@@ -30,16 +33,84 @@ import {
 } from '@/lib/companion-utils'
 import { MessageItem, StreamingDots } from './ChatMessageItem'
 import { ContextChipBar } from './ContextChipBar'
+import { VoiceInputBridge } from './VoiceInputBridge'
+
+// Max recording burst in seconds — must match MAX_BURST_MS in useVoiceInput.
+const BURST_DURATION_S = 30
+const WAVE_BAR_COUNT = 4
+
+/** Each bar gets a 5-step keyframe sequence; motion cycles through these as height values. */
+function generateBarHeights(): number[][] {
+  // eslint-disable-next-line e18e/prefer-array-fill -- callback uses Math.random() per call
+  return Array.from({ length: WAVE_BAR_COUNT }, () => [
+    4 + Math.random() * 3,
+    10 + Math.random() * 4,
+    6 + Math.random() * 3,
+    14 + Math.random() * 4,
+    5 + Math.random() * 3,
+  ])
+}
+
+/**
+ * Circular recording button — destructive-colored countdown border + bouncing
+ * waveform bars inside. Click to stop.
+ */
+function RecordingPill({ onStop }: { onStop: () => void }) {
+  const [barHeights] = useState(generateBarHeights)
+  return (
+    <motion.button
+      type="button"
+      onClick={onStop}
+      aria-label="Stop recording"
+      initial={{ scale: 0.7, opacity: 0.6 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-destructive/15 text-destructive focus-visible:outline-none"
+    >
+      <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden="true">
+        <motion.circle
+          cx="50%"
+          cy="50%"
+          r="16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          pathLength={1}
+          strokeDasharray="1"
+          strokeLinecap="round"
+          initial={{ strokeDashoffset: 1 }}
+          animate={{ strokeDashoffset: 0 }}
+          transition={{ duration: BURST_DURATION_S, ease: 'linear' }}
+        />
+      </svg>
+      <div className="relative z-10 flex items-center gap-[2px]">
+        {barHeights.map((heights, i) => (
+          <motion.div
+            // eslint-disable-next-line react/no-array-index-key
+            key={i}
+            animate={{ height: heights }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear', delay: i * 0.08 }}
+            style={{ originY: 1 }}
+            className="w-[2.5px] rounded-full bg-destructive"
+          />
+        ))}
+      </div>
+    </motion.button>
+  )
+}
 
 /** Attach-image button — must be rendered inside a <PromptInput> so the context is available. */
-function AttachImageButton({ label }: { label: string }) {
+function AttachImageButton({ tooltip, muted }: { tooltip: string, muted?: boolean }) {
   const attachments = usePromptInputAttachments()
   return (
     <PromptInputButton
-      aria-label={label}
-      onClick={attachments.openFileDialog}
+      size="icon-sm"
+      title={tooltip}
+      aria-label={tooltip}
+      onClick={muted ? undefined : attachments.openFileDialog}
+      className={muted ? 'pointer-events-none opacity-50' : undefined}
     >
-      <ImageIcon className="size-5" />
+      <ImageIcon className="size-4" />
     </PromptInputButton>
   )
 }
@@ -107,6 +178,27 @@ export function CompanionChatArea({
   onSpeakClick,
 }: CompanionChatAreaProps) {
   const { t } = useI18n()
+  const [draftText, setDraftText] = useState('')
+  const [pendingConfirmed, setPendingConfirmed] = useState<string | null>(null)
+  const [restoreBase, setRestoreBase] = useState(false)
+  const handleRestoreHandled = useCallback(() => setRestoreBase(false), [])
+  const voice = useVoiceInput({
+    onDraft: setDraftText,
+    onConfirmed: (text) => {
+      setDraftText('')
+      setPendingConfirmed(text)
+    },
+    onCancel: () => {
+      setDraftText('')
+      setRestoreBase(true)
+    },
+  })
+
+  useEffect(() => {
+    if (voice.error) {
+      toast.error(t(voice.error as Parameters<typeof t>[0]))
+    }
+  }, [voice.error, t])
   const chatStatus: ChatStatus = isLoading ? 'streaming' : 'ready'
   const inputAreaRef = useRef<HTMLDivElement>(null)
   // TODO: PAGINATION DISABLED — testing use-stick-to-bottom with full history
@@ -312,13 +404,17 @@ export function CompanionChatArea({
   // User-initiated send path — called by PromptInput's onSubmit. Carries the full
   // payload including any file attachments the user selected via the attach button.
   const handlePromptSubmit = useCallback((message: { text: string, files: FileUIPart[] }) => {
+    // Block submit while voice session is active — user must explicitly stop the recording first.
+    // Throw so PromptInput's outer try/catch swallows the call without clearing the textarea.
+    if (voice.state !== 'idle')
+      throw new Error('voice-active')
     const trimmed = message.text.trim()
     const hasFiles = message.files.length > 0
     if ((!trimmed && !hasFiles) || isLoading)
       return
     scrollToBottom()
     onSend({ text: trimmed, files: hasFiles ? message.files : undefined })
-  }, [isLoading, onSend, scrollToBottom])
+  }, [isLoading, onSend, scrollToBottom, voice.state])
 
   const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept' }) => {
     if (err.code === 'accept') {
@@ -393,36 +489,69 @@ export function CompanionChatArea({
         )}
       </div>
 
-      <div ref={inputAreaRef} className="border-t border-border p-3">
-        <PromptInput
-          accept="image/jpeg,image/png,image/webp"
-          maxFileSize={5 * 1024 * 1024}
-          maxFiles={1}
-          onError={handleAttachError}
-          onSubmit={handlePromptSubmit}
-        >
-          <PromptInputHeader>
-            {chips.length > 0 && <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />}
-            <AttachmentPreviewBar />
-          </PromptInputHeader>
-          <PromptInputBody>
-            <PromptInputTextarea placeholder={placeholder ?? t('lesson.askAboutSegment')} />
-          </PromptInputBody>
-          <PromptInputFooter>
-            <PromptInputTools>
-              {onSpeakClick && (
-                <PromptInputButton
-                  aria-label={t('speak.title')}
-                  onClick={onSpeakClick}
-                >
-                  <Mic className="size-5" />
-                </PromptInputButton>
-              )}
-              <AttachImageButton label={t('companion.attachImage')} />
-            </PromptInputTools>
-            <PromptInputSubmit status={chatStatus} onStop={onStop} />
-          </PromptInputFooter>
-        </PromptInput>
+      <div ref={inputAreaRef} className="relative border-t border-border p-3">
+        <PromptInputProvider>
+          <PromptInput
+            accept="image/jpeg,image/png,image/webp"
+            maxFileSize={5 * 1024 * 1024}
+            maxFiles={1}
+            onError={handleAttachError}
+            onSubmit={handlePromptSubmit}
+          >
+            <VoiceInputBridge
+              voiceState={voice.state}
+              draftText={draftText}
+              pendingConfirmed={pendingConfirmed}
+              onConfirmedFlushed={() => setPendingConfirmed(null)}
+              restoreBase={restoreBase}
+              onRestoreHandled={handleRestoreHandled}
+            />
+            <PromptInputHeader>
+              {chips.length > 0 && <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />}
+              <AttachmentPreviewBar />
+            </PromptInputHeader>
+            <PromptInputBody>
+              <PromptInputTextarea placeholder={placeholder ?? t('lesson.askAboutSegment')} />
+            </PromptInputBody>
+            <PromptInputFooter>
+              <PromptInputTools className="gap-2">
+                {onSpeakClick && (
+                  <PromptInputButton
+                    variant="default"
+                    size="icon-sm"
+                    onClick={voice.state !== 'idle' ? undefined : onSpeakClick}
+                    title={t('speak.title')}
+                    aria-label={t('speak.title')}
+                    className={`bg-linear-to-br from-[#7e14ff] via-[#5b6cff] to-[#47bfff] text-white shadow-sm shadow-[#5b6cff]/40 hover:from-[#9341ff] hover:via-[#7787ff] hover:to-[#5fc8ff] hover:text-white${voice.state !== 'idle' ? ' pointer-events-none opacity-50' : ''}`}
+                  >
+                    <AudioLines className="size-4" />
+                  </PromptInputButton>
+                )}
+                <AttachImageButton tooltip={t('companion.attachImage')} muted={voice.state !== 'idle'} />
+                {voice.state === 'recording'
+                  ? <RecordingPill onStop={() => voice.stop()} />
+                  : (
+                      <PromptInputButton
+                        size="icon-sm"
+                        title={t('voice.dictate')}
+                        aria-label={t('voice.dictate')}
+                        onClick={() => voice.state === 'idle' && voice.start()}
+                        disabled={voice.state === 'connecting' || voice.state === 'processing'}
+                      >
+                        {voice.state === 'connecting' || voice.state === 'processing'
+                          ? <Spinner className="size-4" />
+                          : <Mic className="size-4" />}
+                      </PromptInputButton>
+                    )}
+              </PromptInputTools>
+              <PromptInputSubmit
+                status={chatStatus}
+                onStop={onStop}
+                className={voice.state !== 'idle' ? 'pointer-events-none opacity-50' : undefined}
+              />
+            </PromptInputFooter>
+          </PromptInput>
+        </PromptInputProvider>
       </div>
     </>
   )

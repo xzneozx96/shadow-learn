@@ -1,9 +1,23 @@
 import type { TranslationKey } from '@/lib/i18n'
 import type { LessonMeta } from '@/types'
 import { BookOpen, Clock, FileVideo, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import {
+  CutoutCard,
+  CutoutCardContent,
+  CutoutCardFooter,
+  CutoutCardImage,
+  CutoutCardInsetLabel,
+  CutoutCardMedia,
+  CutoutCardOverlay,
+  CutoutCardPin,
+  cutoutCardSurfaceClassName,
+  CutoutCorner,
+  useCutoutContentStaggerVariants,
+} from '@/components/ui/cutout-card'
 import {
   Dialog,
   DialogContent,
@@ -38,7 +52,7 @@ function formatDate(iso: string): string {
 
 function UploadPlaceholder() {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-card">
+    <div className="flex h-full w-full items-center justify-center bg-muted/40">
       <FileVideo className="size-12 text-white/15" strokeWidth={1.25} />
     </div>
   )
@@ -47,6 +61,7 @@ function UploadPlaceholder() {
 export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardProps) {
   const { t } = useI18n()
   const { entriesByLesson } = useVocabulary()
+  const stagger = useCutoutContentStaggerVariants()
   const vocabCount = entriesByLesson[lesson.id]?.length ?? 0
   const status = lesson.status ?? 'complete'
   const isProcessing = status === 'processing'
@@ -104,180 +119,192 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
   }
 
   const showThumbnail = (isYoutube && thumbnailUrl && !imgFailed) || (!isYoutube && !!uploadThumbnail)
+  const sourceLabel = isYoutube ? 'YouTube' : t('library.uploadSource')
+  const sourceTone = isYoutube
+    ? 'text-red-400'
+    : 'text-primary'
+
+  const navDisabled = isEditing || isProcessing
 
   return (
-    <div
-      data-testid={`lesson-card-${lesson.id}`}
-      data-status={status}
-      className={cn(
-        'group relative flex shrink-0 w-[340px] flex-col rounded-xl p-2 -m-2',
-        isError && 'ring-1 ring-destructive/30',
-      )}
-    >
-      {/* Hover background — subtle amber wash */}
-      <div className="absolute inset-0 z-1 rounded-xl border border-primary/15 bg-primary/8 scale-[0.97] opacity-0 transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 pointer-events-none" />
-
-      {/* Card-level navigation link */}
+    <div className="w-[340px] shrink-0" data-testid={`lesson-card-${lesson.id}`} data-status={status}>
       <Link
         to={`/lesson/${lesson.id}`}
-        className="absolute inset-0 z-10"
-        tabIndex={isEditing || isProcessing ? -1 : undefined}
-        style={{ pointerEvents: isEditing || isProcessing ? 'none' : undefined }}
-      />
+        aria-label={lesson.title}
+        tabIndex={navDisabled ? -1 : undefined}
+        onClick={(e) => {
+          if (navDisabled)
+            e.preventDefault()
+        }}
+        className="block"
+      >
+        <CutoutCard
+          className={cn(
+            cutoutCardSurfaceClassName,
+            isError && 'ring-1 ring-destructive/40',
+          )}
+        >
+          <CutoutCardMedia className="aspect-video">
+            {isProcessing
+              ? (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted/40">
+                    <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                    <span className="truncate px-4 text-sm text-muted-foreground">
+                      {lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}
+                    </span>
+                  </div>
+                )
+              : showThumbnail
+                ? (
+                    <CutoutCardImage
+                      src={(isYoutube ? thumbnailUrl : uploadThumbnail) ?? undefined}
+                      alt={lesson.title}
+                      onError={() => setImgFailed(true)}
+                    />
+                  )
+                : <UploadPlaceholder />}
 
-      {/* Thumbnail — shrink-0 prevents flex-col from stealing pixels from the aspect-ratio box */}
-      <div className="relative w-full shrink-0 overflow-hidden rounded-xl transition-transform duration-200" style={{ aspectRatio: '16/9' }}>
-        {isProcessing
-          ? (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-card">
-                <Loader2 className="size-6 animate-spin text-muted-foreground" />
-                <span className="truncate px-4 text-sm text-muted-foreground">
-                  {lesson.currentStep ? t(`library.step.${lesson.currentStep}` as TranslationKey) : t('library.processing')}
-                </span>
-              </div>
-            )
-          : showThumbnail
-            ? (
-                <img
-                  src={(isYoutube ? thumbnailUrl : uploadThumbnail) ?? undefined}
-                  alt={lesson.title}
-                  className="h-full w-full object-cover"
-                  onError={() => setImgFailed(true)}
-                />
-              )
-            : <UploadPlaceholder />}
+            <CutoutCardOverlay />
 
-        {/* Duration overlay */}
-        {!isProcessing && lesson.duration != null && (
-          <div className="absolute bottom-2 right-2 rounded bg-[#080a0d]/80 px-1.5 py-0.5 text-xs font-semibold text-white">
-            {formatDuration(lesson.duration)}
-          </div>
-        )}
+            {/* Source badge — bottom-left inset cutout */}
+            <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-4 py-2">
+              <span className={cn('font-bold text-[10px] uppercase tracking-widest', sourceTone)}>
+                {sourceLabel}
+              </span>
+              <CutoutCorner className="absolute -right-[31px] -bottom-px rotate-90 text-card" />
+              <CutoutCorner className="absolute -top-[31px] -left-px rotate-90 text-card" />
+            </CutoutCardInsetLabel>
 
-        {/* Progress bar — top edge, always visible as a track */}
-        {!isProcessing && !isError && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/60 rounded-t-xl overflow-hidden">
-            <div className="h-full bg-red-500 transition-all duration-300" style={{ width: `${progress}%` }} />
-          </div>
-        )}
-      </div>
+            {/* Duration pin — top-right cutout (when available, not error) */}
+            {!isProcessing && !isError && lesson.duration != null && (
+              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card/95 px-3 py-1.5 text-xs font-semibold text-card-foreground tabular-nums shadow-md ring-1 ring-border/40 backdrop-blur">
+                {formatDuration(lesson.duration)}
+                <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
+                <CutoutCorner className="absolute right-0 -bottom-[23px] -rotate-90 text-card" size={24} />
+              </CutoutCardPin>
+            )}
 
-      {/* Content */}
-      <div className="flex flex-1 flex-col pt-3 px-3 gap-1.5">
-        {/* Badge row + action menu */}
-        <div className="flex items-center justify-between gap-2">
-          {isYoutube
-            ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-red-400">
-                  YouTube
-                </span>
-              )
-            : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">
-                  {t('library.uploadSource')}
-                </span>
-              )}
-
-          {/* Action menu — lives in content area so it's always visible */}
-          <div className="relative z-20 ml-auto">
-            <MenuRoot>
-              <MenuTrigger
-                render={(
-                  <Button variant="ghost" size="icon" className="size-10" aria-label={t('library.lessonActions')}>
-                    <MoreHorizontal className="size-5" />
-                  </Button>
-                )}
-              />
-              <MenuPortal>
-                <MenuBackdrop />
-                <MenuPositioner align="end">
-                  <MenuPopup>
-                    <MenuItem
-                      onClick={(e) => {
-                        e.preventDefault()
-                        startEditing()
-                      }}
-                    >
-                      <Pencil className="size-4" />
-                      {t('library.rename')}
-                    </MenuItem>
-                    <MenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setShowDeleteConfirm(true)
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                      {t('common.delete')}
-                    </MenuItem>
-                  </MenuPopup>
-                </MenuPositioner>
-              </MenuPortal>
-            </MenuRoot>
-          </div>
-        </div>
-
-        {/* Title */}
-        <div className="flex-1">
-          {isEditing
-            ? (
-                <input
-                  ref={inputRef}
-                  value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
-                  onBlur={confirmEdit}
-                  onKeyDown={handleKeyDown}
-                  className="w-full rounded border border-border bg-transparent px-1 py-0.5 text-sm font-semibold text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
-                  aria-label={t('library.renameLesson')}
-                />
-              )
-            : (
-                <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
-                  {lesson.title}
-                </p>
-              )}
-        </div>
-
-        {/* Error state */}
-        {isError && (
-          <div data-testid="lesson-card-error" className="flex flex-wrap items-center gap-1.5">
-            <span data-testid="lesson-card-error-badge" className="rounded bg-destructive/15 px-1.5 py-0.5 text-xs font-medium text-destructive">
-              {t('library.failed')}
-            </span>
-            {lesson.source === 'youtube' && onRetry && (
-              <button
-                data-testid="lesson-card-retry-button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  onRetry(lesson)
-                }}
-                className="z-20 text-xs text-muted-foreground underline hover:text-white"
+            {/* Error pin */}
+            {isError && (
+              <CutoutCardPin
+                data-testid="lesson-card-error-badge"
+                className="top-0 right-0 rounded-bl-[16px] bg-destructive px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-destructive-foreground shadow-md"
               >
-                {t('library.retry')}
-              </button>
+                {t('library.failed')}
+                <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-destructive" size={24} />
+                <CutoutCorner className="absolute right-0 -bottom-[23px] -rotate-90 text-destructive" size={24} />
+              </CutoutCardPin>
             )}
-            {lesson.source === 'upload' && (
-              <span className="text-xs text-muted-foreground">{t('library.reuploadToRetry')}</span>
-            )}
-          </div>
-        )}
 
-        {/* Footer */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <BookOpen className="size-3 shrink-0" />
-            {vocabCount}
-            {' '}
-            {t('library.vocabWords')}
-          </span>
-          <span className="text-muted-foreground/40">·</span>
-          <span className="flex items-center gap-1">
-            <Clock className="size-3 shrink-0" />
-            {formatDate(lesson.lastOpenedAt)}
-          </span>
-        </div>
-      </div>
+            {/* Progress bar — bottom edge */}
+            {!isProcessing && !isError && progress > 0 && (
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-1 bg-muted/50">
+                <div className="h-full bg-red-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+              </div>
+            )}
+          </CutoutCardMedia>
+
+          <CutoutCardContent className="p-3">
+            <motion.div animate="show" className="contents" initial="hidden" variants={stagger.container}>
+              {/* Title row + action menu */}
+              <motion.div className="flex items-center gap-2" variants={stagger.item}>
+                <div className="min-w-0 flex-1">
+                  {isEditing
+                    ? (
+                        <input
+                          ref={inputRef}
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onBlur={confirmEdit}
+                          onKeyDown={handleKeyDown}
+                          className="w-full rounded border border-border bg-transparent px-1 py-0.5 text-base font-semibold text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+                          aria-label={t('library.renameLesson')}
+                        />
+                      )
+                    : (
+                        <h3 className="line-clamp-2 text-balance font-semibold text-card-foreground text-base leading-snug">
+                          {lesson.title}
+                        </h3>
+                      )}
+                </div>
+
+                <div
+                  className="-mr-2 -mt-1 shrink-0"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+                  onMouseDown={e => e.stopPropagation()}
+                >
+                  <MenuRoot>
+                    <MenuTrigger
+                      render={(
+                        <Button variant="ghost" size="icon" className="size-9" aria-label={t('library.lessonActions')}>
+                          <MoreHorizontal className="size-5" />
+                        </Button>
+                      )}
+                    />
+                    <MenuPortal>
+                      <MenuBackdrop />
+                      <MenuPositioner align="end">
+                        <MenuPopup>
+                          <MenuItem onClick={(e) => { e.preventDefault(); startEditing() }}>
+                            <Pencil className="size-4" />
+                            {t('library.rename')}
+                          </MenuItem>
+                          <MenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => { e.preventDefault(); setShowDeleteConfirm(true) }}
+                          >
+                            <Trash2 className="size-4" />
+                            {t('common.delete')}
+                          </MenuItem>
+                        </MenuPopup>
+                      </MenuPositioner>
+                    </MenuPortal>
+                  </MenuRoot>
+                </div>
+              </motion.div>
+
+              {/* Error retry row */}
+              {isError && (
+                <motion.div
+                  data-testid="lesson-card-error"
+                  className="mt-2 flex flex-wrap items-center gap-2 text-xs"
+                  variants={stagger.item}
+                >
+                  {lesson.source === 'youtube' && onRetry
+                    ? (
+                        <button
+                          type="button"
+                          data-testid="lesson-card-retry-button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRetry(lesson) }}
+                          className="text-muted-foreground underline hover:text-foreground"
+                        >
+                          {t('library.retry')}
+                        </button>
+                      )
+                    : (
+                        <span className="text-muted-foreground">{t('library.reuploadToRetry')}</span>
+                      )}
+                </motion.div>
+              )}
+
+              {/* Footer */}
+              <motion.div variants={stagger.item}>
+                <CutoutCardFooter className="mt-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <BookOpen className="size-3.5 shrink-0" />
+                    <span className="tabular-nums">{vocabCount}</span>
+                    <span className="text-xs">{t('library.vocabWords')}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs">
+                    <Clock className="size-3.5 shrink-0" />
+                    {formatDate(lesson.lastOpenedAt)}
+                  </span>
+                </CutoutCardFooter>
+              </motion.div>
+            </motion.div>
+          </CutoutCardContent>
+        </CutoutCard>
+      </Link>
 
       {/* Delete confirmation modal */}
       <Dialog
@@ -298,10 +325,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
               size="lg"
               variant="destructive"
               className="min-w-16"
-              onClick={() => {
-                setShowDeleteConfirm(false)
-                onDelete(lesson.id)
-              }}
+              onClick={() => { setShowDeleteConfirm(false); onDelete(lesson.id) }}
             >
               {t('common.delete' as TranslationKey)}
             </Button>

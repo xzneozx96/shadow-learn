@@ -6,6 +6,7 @@ import type {
   ChangeEventHandler,
   ClipboardEventHandler,
   ComponentProps,
+  Dispatch,
   FormEvent,
   FormEventHandler,
   HTMLAttributes,
@@ -13,6 +14,7 @@ import type {
   PropsWithChildren,
   ReactNode,
   RefObject,
+  SetStateAction,
 } from 'react'
 import {
   CornerDownLeftIcon,
@@ -191,7 +193,7 @@ export interface AttachmentsContext {
 
 export interface TextInputContext {
   value: string
-  setInput: (v: string) => void
+  setInput: Dispatch<SetStateAction<string>>
   clear: () => void
 }
 

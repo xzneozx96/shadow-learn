@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura'
 import { AgentControlBar } from '@/components/agents-ui/agent-control-bar'
 import { SessionTimer } from '@/components/speak/speaking-session/SessionTimer'
+import { TextShimmer } from '@/components/ui/text-shimmer'
 import { useI18n } from '@/contexts/I18nContext'
 import { useSpeakSession } from '@/contexts/SpeakSessionContext'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
@@ -173,22 +174,41 @@ export function ConversationScene({ onEnd, intelligencePanel, transcript, overla
                 />
               )}
 
-          <div className="absolute bottom-0 right-0 left-0 flex justify-center py-1 h-4 overflow-hidden">
+          <div className="absolute bottom-0 right-0 left-0 flex justify-center h-6 overflow-hidden">
             <AnimatePresence mode="wait">
-              <motion.p
-                key={agentState ?? 'disconnected'}
-                className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              >
-                {(!isConnected || agentState === 'connecting' || agentState === 'initializing') && t('speak.status.connecting')}
-                {isConnected && agentState === 'listening' && t('speak.status.listening')}
-                {isConnected && agentState === 'thinking' && t('speak.status.thinking')}
-                {isConnected && agentState === 'speaking' && t('speak.status.speaking')}
-                {isConnected && agentState === 'idle' && t('speak.status.ready')}
-              </motion.p>
+              {(() => {
+                let label: string | null = null
+                if (!isConnected || agentState === 'connecting' || agentState === 'initializing')
+                  label = t('speak.status.connecting')
+                else if (agentState === 'listening')
+                  label = t('speak.status.listening')
+                else if (agentState === 'thinking')
+                  label = t('speak.status.thinking')
+                else if (agentState === 'speaking')
+                  label = t('speak.status.speaking')
+                else if (agentState === 'idle')
+                  label = t('speak.status.ready')
+
+                if (!label)
+                  return null
+
+                return (
+                  <motion.div
+                    key={agentState ?? 'disconnected'}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <TextShimmer
+                      className="text-xs font-bold uppercase tracking-[0.2em]"
+                      duration={1.5}
+                    >
+                      {label}
+                    </TextShimmer>
+                  </motion.div>
+                )
+              })()}
             </AnimatePresence>
           </div>
         </div>

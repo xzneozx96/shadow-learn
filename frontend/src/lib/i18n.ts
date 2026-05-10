@@ -212,6 +212,13 @@ export const TRANSLATIONS = {
     'lesson.openOnYouTube': 'Open on YouTube',
     'lesson.downloadVideo': 'Download video',
     'lesson.downloadAudio': 'Download audio',
+    'voice.attach': 'Upload Image',
+    'voice.cancel': 'Cancel recording',
+    'voice.connectionLost': 'Connection lost — try again',
+    'voice.dictate': 'Voice Input',
+    'voice.maxReached': 'Max 30s reached',
+    'voice.permissionDenied': 'Microphone permission denied',
+    'voice.unavailable': 'Voice input unavailable',
 
     // Study
     'study.check': 'Check',
@@ -788,6 +795,13 @@ export const TRANSLATIONS = {
     'lesson.openOnYouTube': 'Xem trên YouTube',
     'lesson.downloadVideo': 'Tải video về máy',
     'lesson.downloadAudio': 'Tải âm thanh về máy',
+    'voice.attach': 'Hỏi đáp với ảnh',
+    'voice.cancel': 'Huỷ ghi âm',
+    'voice.connectionLost': 'Mất kết nối — thử lại',
+    'voice.dictate': 'Nhận diện giọng nói',
+    'voice.maxReached': 'Đã đạt 30 giây tối đa',
+    'voice.permissionDenied': 'Đã từ chối truy cập micro',
+    'voice.unavailable': 'Nhận diện giọng nói không khả dụng',
 
     // Study
     'study.check': 'Kiểm tra',
@@ -1088,7 +1102,7 @@ export const TRANSLATIONS = {
     'common.no': 'Hủy bỏ',
 
     // Speak
-    'speak.title': 'Luyện nói',
+    'speak.title': 'Trò chuyện cùng AI',
     'speak.selectSituation': 'Chọn tình huống',
     'speak.selectSituationDesc': 'Chọn một kịch bản để luyện tập',
     'speak.selectPersona': 'Chọn người để trò chuyện',
