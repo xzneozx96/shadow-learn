@@ -70,7 +70,7 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
           )}
         </CutoutCardMedia>
 
-        <CutoutCardContent className="p-4 flex flex-col gap-2">
+        <CutoutCardContent className="p-4 flex flex-col justify-between gap-2">
           <p className="text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover/card:text-primary transition-colors duration-150">
             {playlist.name}
           </p>
