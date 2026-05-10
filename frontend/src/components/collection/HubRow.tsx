@@ -1,4 +1,4 @@
-import type { HubVideo } from '@/types/collection'
+import type { HubItem, VideoItem } from '@/types/collection'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -8,12 +8,13 @@ import { VideoCard } from './VideoCard'
 
 interface HubRowProps {
   label: string
-  videos: HubVideo[]
+  items: HubItem[]
   activeTopic: string | null
   createdSet: Set<string>
 }
 
-export function HubRow({ label, videos, activeTopic, createdSet }: HubRowProps) {
+export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
+  const videos = items.filter((item): item is VideoItem => item.type === 'video')
   const { t } = useI18n()
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [canScrollPrev, setCanScrollPrev] = useState(false)

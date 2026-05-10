@@ -51,10 +51,10 @@ export function CollectionPage() {
   }, [lessons])
 
   const materialsCount = data
-    ? data.materials.groups.reduce((sum, g) => sum + g.videos.length, 0)
+    ? data.materials.groups.reduce((sum, g) => sum + g.items.length, 0)
     : null
   const tipsCount = data
-    ? data.tips.groups.reduce((sum, g) => sum + g.videos.length, 0)
+    ? data.tips.groups.reduce((sum, g) => sum + g.items.length, 0)
     : null
 
   const handleTabSwitch = (tab: ActiveTab) => {
@@ -168,7 +168,7 @@ export function CollectionPage() {
                     <HubRow
                       key={g.difficulty}
                       label={g.difficulty}
-                      videos={g.videos}
+                      items={g.items}
                       activeTopic={activeTopic}
                       createdSet={createdSet}
                     />
@@ -189,7 +189,7 @@ export function CollectionPage() {
                       <HubRow
                         key={g.skill}
                         label={g.skill}
-                        videos={g.videos}
+                        items={g.items}
                         activeTopic={null}
                         createdSet={createdSet}
                       />

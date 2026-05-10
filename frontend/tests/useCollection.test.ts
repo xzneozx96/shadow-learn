@@ -9,15 +9,14 @@ const mockResponse: HubResponse = {
     groups: [
       {
         difficulty: 'HSK 1-2',
-        videos: [
+        items: [
           {
-            video_id: 'abc',
-            title: 'Hi',
-            duration: '1:00',
+            type: 'playlist',
+            playlist_id: 'PL1',
+            name: 'Test Playlist',
+            thumbnail_url: 'https://t.com/1.jpg',
+            video_count: 10,
             difficulty: 'HSK 1-2',
-            view_count: null,
-            channel: null,
-            description: null,
             topic: 'Daily Life',
             skill: null,
             content_type: 'material',
@@ -49,7 +48,8 @@ describe('useCollection', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.data).toEqual(mockResponse)
     expect(result.current.data?.materials.topics).toEqual(['Daily Life'])
-    expect(result.current.data?.materials.groups[0].difficulty).toBe('HSK 1-2')
+    const item = result.current.data?.materials.groups[0].items[0]
+    expect(item?.type).toBe('playlist')
     expect(result.current.data?.tips.groups).toHaveLength(0)
     expect(result.current.error).toBeNull()
   })

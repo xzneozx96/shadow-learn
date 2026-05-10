@@ -13,14 +13,32 @@ export interface HubVideo {
   content_type: ContentType
 }
 
+export interface PlaylistItem {
+  type: 'playlist'
+  playlist_id: string
+  name: string
+  thumbnail_url: string | null
+  video_count: number | null
+  difficulty: string | null
+  topic: string | null
+  skill: string | null
+  content_type: ContentType
+}
+
+export interface VideoItem extends HubVideo {
+  type: 'video'
+}
+
+export type HubItem = PlaylistItem | VideoItem
+
 export interface MaterialGroup {
   difficulty: string
-  videos: HubVideo[]
+  items: HubItem[]
 }
 
 export interface TipGroup {
   skill: string
-  videos: HubVideo[]
+  items: HubItem[]
 }
 
 export interface MaterialsSection {
@@ -35,4 +53,11 @@ export interface TipsSection {
 export interface HubResponse {
   materials: MaterialsSection
   tips: TipsSection
+}
+
+export interface PlaylistDetail {
+  name: string
+  thumbnail_url: string | null
+  topic: string | null
+  videos: HubVideo[]
 }

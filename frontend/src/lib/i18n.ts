@@ -187,6 +187,9 @@ export const TRANSLATIONS = {
     'collection.materialsSubtitle': 'Real videos to shadow. Pick your HSK level row, narrow by topic.',
     'collection.tipsSubtitle': 'Strategy & technique videos. Browse by skill.',
     'collection.tipsEmpty': 'No learning tips added yet. Check back soon.',
+    'collection.lessonList': 'Lesson List',
+    'collection.backToCollection': 'Collection',
+    'collection.playlistEmpty': 'No videos in this playlist yet.',
 
     // Lesson View
     'lesson.transcript': 'Transcript',
@@ -787,6 +790,9 @@ export const TRANSLATIONS = {
     'collection.materialsSubtitle': 'Video thực tế để luyện shadowing. Chọn hàng theo cấp HSK, lọc theo chủ đề.',
     'collection.tipsSubtitle': 'Video chiến lược và kỹ thuật học. Duyệt theo kỹ năng.',
     'collection.tipsEmpty': 'Chưa có mẹo học tập nào. Hãy quay lại sau.',
+    'collection.lessonList': 'Danh sách bài học',
+    'collection.backToCollection': 'Bộ sưu tập',
+    'collection.playlistEmpty': 'Chưa có video trong playlist này.',
 
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',
