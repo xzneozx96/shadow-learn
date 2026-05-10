@@ -1,37 +1,28 @@
-import type { CollectionPlaylist } from '@/types/collection'
+import type { HubVideo } from '@/types/collection'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
-import { useLessons } from '@/contexts/LessonsContext'
 import { computeScrollState } from '@/lib/carousel'
 import { VideoCard } from './VideoCard'
 
-interface PlaylistRowProps {
-  playlist: CollectionPlaylist
+interface HubRowProps {
+  label: string
+  videos: HubVideo[]
+  activeTopic: string | null
+  createdSet: Set<string>
 }
 
-const YOUTUBE_ID_REGEX = /[?&]v=([^&]+)|youtu\.be\/([^?&]+)/
-
-export function PlaylistRow({ playlist }: PlaylistRowProps) {
+export function HubRow({ label, videos, activeTopic, createdSet }: HubRowProps) {
   const { t } = useI18n()
-  const { lessons } = useLessons()
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(false)
 
-  const createdSet = useMemo(() => {
-    const set = new Set<string>()
-    for (const l of lessons) {
-      if (l.sourceUrl) {
-        const m = l.sourceUrl.match(YOUTUBE_ID_REGEX)
-        const id = m?.[1] ?? m?.[2]
-        if (id)
-          set.add(id)
-      }
-    }
-    return set
-  }, [lessons])
+  const filteredVideos = useMemo(
+    () => activeTopic === null ? videos : videos.filter(v => v.topic === activeTopic),
+    [videos, activeTopic],
+  )
 
   const updateScrollState = useCallback((el: HTMLDivElement) => {
     const s = computeScrollState(el.scrollLeft, el.clientWidth, el.scrollWidth)
@@ -62,7 +53,10 @@ export function PlaylistRow({ playlist }: PlaylistRowProps) {
       if (rafId)
         cancelAnimationFrame(rafId)
     }
-  }, [updateScrollState, playlist.videos.length])
+  }, [updateScrollState, filteredVideos.length])
+
+  if (filteredVideos.length === 0)
+    return null
 
   const scroll = (dir: 'prev' | 'next') => {
     scrollRef.current?.scrollBy({ left: dir === 'next' ? 600 : -600, behavior: 'smooth' })
@@ -73,10 +67,10 @@ export function PlaylistRow({ playlist }: PlaylistRowProps) {
       <header className="flex items-end justify-between gap-4 mb-5">
         <div className="flex items-baseline gap-3 min-w-0">
           <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground truncate">
-            {playlist.name}
+            {label}
           </h2>
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium tabular-nums bg-secondary text-muted-foreground shrink-0">
-            {t('collection.videoCount', { count: playlist.videos.length })}
+            {t('collection.videoCount', { count: filteredVideos.length })}
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -116,8 +110,13 @@ export function PlaylistRow({ playlist }: PlaylistRowProps) {
           ref={scrollRef}
           className="flex items-stretch gap-5 overflow-x-auto px-2 py-3 -my-3 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {playlist.videos.map((v, i) => (
-            <VideoCard key={`${v.video_id}-${i}`} video={v} alreadyCreated={createdSet.has(v.video_id)} />
+          {filteredVideos.map((v, i) => (
+            <VideoCard
+              key={`${v.video_id}-${i}`}
+              video={v}
+              alreadyCreated={createdSet.has(v.video_id)}
+              showCreateLesson={v.content_type !== 'tip'}
+            />
           ))}
         </div>
       </div>
