@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
     gladia_api_keys: list[str] = []            # env: SHADOWLEARN_GLADIA_API_KEYS='["key1","key2"]' — tried in order, rotated on 402/403
+    # Allowlist of frontend origins permitted to call /api/transcription/session.
+    # Empty list disables the Origin check (dev convenience).
+    # env: SHADOWLEARN_FRONTEND_ORIGIN_ALLOWLIST='["http://localhost:5173","https://shadowlearn.app"]'
+    frontend_origin_allowlist: list[str] = []
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
     encryption_key: str | None = None          # env: SHADOWLEARN_ENCRYPTION_KEY
