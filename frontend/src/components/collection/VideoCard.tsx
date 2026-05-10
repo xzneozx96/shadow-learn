@@ -29,6 +29,7 @@ interface VideoCardProps {
   video: HubVideo
   alreadyCreated: boolean
   showCreateLesson: boolean
+  wrapperClassName?: string
 }
 
 const DIFFICULTY_TONE: Record<string, string> = {
@@ -51,7 +52,7 @@ function formatCount(n: number | null): string {
   return n.toLocaleString()
 }
 
-function VideoCardImpl({ video, alreadyCreated, showCreateLesson }: VideoCardProps) {
+function VideoCardImpl({ video, alreadyCreated, showCreateLesson, wrapperClassName }: VideoCardProps) {
   const { db, keys, trialMode } = useAuth()
   const { t } = useI18n()
   const { updateLesson } = useLessons()
@@ -127,7 +128,10 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson }: VideoCardPro
 
   return (
     <div
-      className="w-[calc(25%-15px)] min-w-[260px] shrink-0 flex flex-col [content-visibility:auto] [contain-intrinsic-size:260px_380px]"
+      className={cn(
+        'flex flex-col [content-visibility:auto] [contain-intrinsic-size:260px_380px]',
+        wrapperClassName ?? 'w-[calc(25%-15px)] min-w-[260px] shrink-0',
+      )}
     >
       <CutoutCard className={cn(cutoutCardSurfaceClassName, 'flex-1 grid grid-rows-[auto_1fr]')}>
         <CutoutCardMedia className="aspect-video">
@@ -170,7 +174,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson }: VideoCardPro
 
           {video.topic && !playing && (
             <CutoutCardInsetLabel className="bottom-0 right-0 rounded-tl-[20px] bg-card px-3 py-1.5">
-              <span className="text-[10px] text-muted-foreground">{video.topic}</span>
+              <span className="text-xs text-muted-foreground">{video.topic}</span>
               <CutoutCorner className="absolute -left-[31px] -bottom-px -rotate-90 text-card" />
               <CutoutCorner className="absolute -top-[31px] -right-px -rotate-90 text-card" />
             </CutoutCardInsetLabel>

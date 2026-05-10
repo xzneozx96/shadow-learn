@@ -176,6 +176,7 @@ export function PlaylistPage() {
                           video={v}
                           alreadyCreated={createdSet.has(v.video_id)}
                           showCreateLesson={v.content_type !== 'tip'}
+                          wrapperClassName="w-full min-w-0 h-full"
                         />
                       ))}
                     </div>
