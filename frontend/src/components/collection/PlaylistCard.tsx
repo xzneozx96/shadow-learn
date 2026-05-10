@@ -73,11 +73,11 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
         </CutoutCardMedia>
 
         <CutoutCardContent className="p-4 flex items-center justify-between gap-3">
-          <p className="flex-1 text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover/card:text-primary transition-colors duration-150">
+          <p className="flex-1 text-sm font-semibold leading-snug line-clamp-2 text-foreground">
             {playlist.name}
           </p>
           {playlist.topic && (
-            <span className="shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+            <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-secondary text-muted-foreground">
               {playlist.topic}
             </span>
           )}

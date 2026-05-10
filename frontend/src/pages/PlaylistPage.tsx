@@ -16,7 +16,7 @@ function PlaylistPageSkeleton() {
       <div className="h-8 w-80 rounded-md bg-muted mb-3" />
       <div className="h-5 w-24 rounded-full bg-muted mb-10" />
       <div className="h-6 w-48 rounded-md bg-muted mb-6" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-5">
         {Array.from({ length: 8 }, (_, i) => i).map(i => (
           <div key={i}>
             <div className="aspect-video rounded-xl bg-muted" />
@@ -68,25 +68,25 @@ export function PlaylistPage() {
             <div className="px-6 md:px-10 pt-8 pb-8">
               <button
                 type="button"
-                onClick={() => navigate('/collection')}
+                onClick={() => navigate(-1)}
                 className="group flex items-center gap-2 text-left transition-colors duration-150"
               >
                 <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                 <h1 className="text-xl md:text-2xl font-bold tracking-[-0.02em] text-foreground text-balance">
                   {data.name}
                 </h1>
-              </button>
-              <div className="mt-3 ml-7 flex items-center gap-2">
-                <Badge variant="secondary" className="inline-flex items-center gap-1 text-xs font-medium tabular-nums">
-                  <ListVideo className="size-4" />
-                  {data.videos.length}
-                </Badge>
-                {data.topic && (
-                  <Badge variant="secondary" className="text-xs font-medium">
-                    {data.topic}
+                <div className="flex items-center gap-2 ml-4">
+                  <Badge variant="secondary" className="inline-flex items-center gap-1 text-xs font-medium tabular-nums">
+                    <ListVideo className="size-4" />
+                    {data.videos.length}
                   </Badge>
-                )}
-              </div>
+                  {data.topic && (
+                    <Badge variant="secondary" className="text-xs font-medium">
+                      {data.topic}
+                    </Badge>
+                  )}
+                </div>
+              </button>
             </div>
 
             {/* Video grid */}
@@ -101,7 +101,7 @@ export function PlaylistPage() {
                     </div>
                   )
                 : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-5">
                       {data.videos.map((v, i) => (
                         <VideoCard
                           key={`${v.video_id}-${i}`}

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 Topic = Literal["Daily Life", "Business", "Travel", "Culture", "Food", "News", "Other"]
-Skill = Literal["Pronunciation", "Vocabulary", "Speaking", "Study Methods"]
+Skill = Literal["Pronunciation", "Vocabulary", "Speaking", "Grammar", "Study Methods"]
 ContentType = Literal["material", "tip"]
 
 @dataclass(frozen=True)
@@ -39,7 +39,33 @@ class StandaloneVideoConfig:
     skill: Skill | None = None
     content_type: ContentType = "material"
 
-STANDALONE_VIDEOS: list[StandaloneVideoConfig] = []
+STANDALONE_VIDEOS: list[StandaloneVideoConfig] = [
+    StandaloneVideoConfig(
+        video_id="CajY1Hb8pwY",
+        content_type="tip",
+        skill="Grammar",
+    ),
+    StandaloneVideoConfig(
+        video_id="yvBZTBaX0Is",
+        content_type="tip",
+        skill="Grammar",
+    ),
+    StandaloneVideoConfig(
+        video_id="u4hwXJxNn9Q",
+        content_type="tip",
+        skill="Study Methods",
+    ),
+    StandaloneVideoConfig(
+        video_id="spdBkVsBuJc",
+        content_type="tip",
+        skill="Vocabulary",
+    ),
+    StandaloneVideoConfig(
+        video_id="f30orxV6JEE",
+        content_type="tip",
+        skill="Vocabulary",
+    ),
+]
 
 PLAYLISTS: list[PlaylistConfig] = [
     PlaylistConfig(
@@ -61,8 +87,8 @@ PLAYLISTS: list[PlaylistConfig] = [
         default_topic="Daily Life",
     ),
     PlaylistConfig(
-        name="Learn Chinese Through Daily Life",
-        playlist_id="PLs4RZIkCjJO3edAy2ixa3PRi5TobaWLgb",
+        name="Real Chinese In Daily Life",
+        playlist_id="PLs4RZIkCjJO2C2T3NjEoqLyAkyho3dUHW",
         default_difficulty="HSK 3-4",
         default_topic="Daily Life",
     ),
@@ -89,5 +115,17 @@ PLAYLISTS: list[PlaylistConfig] = [
         playlist_id="PL9LGi3bITWAZq57-7-vDO_1CTNqJjZ5M6",
         default_difficulty="HSK 3-4",
         default_topic="Daily Life",
+    ),
+    PlaylistConfig(
+        name="Chinese Pronunciation: These 12 EASY Tricks Will Change The Way You Speak",
+        playlist_id="PLVy5hP5pUOSfx4IfW1JiujZj8PoGOvjYq",
+        default_content_type="tip",
+        default_skill="Pronunciation",
+    ),
+    PlaylistConfig(
+        name="TỔNG HỢP NGỮ PHÁP TIẾNG TRUNG",
+        playlist_id="PLbGRE6dBnYmIaN5NRZ78JnWQ-57WfcTsj",
+        default_content_type="tip",
+        default_skill="Grammar",
     ),
 ]

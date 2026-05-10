@@ -109,7 +109,7 @@ export function ChangelogPage() {
 
   if (entries.length === 0) {
     return (
-      <Layout ambientTone="violet">
+      <Layout>
         <div className="flex h-[60vh] items-center justify-center">
           <p className="text-sm text-muted-foreground">{t('whatsNew.noEntries')}</p>
         </div>

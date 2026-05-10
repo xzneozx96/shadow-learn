@@ -70,9 +70,6 @@ export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
           <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground truncate">
             {label}
           </h2>
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium tabular-nums bg-secondary text-muted-foreground shrink-0">
-            {t('collection.videoCount', { count: filteredItems.length })}
-          </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Button

@@ -1,6 +1,5 @@
 import { BookOpen, FileText, Library, Newspaper, Play, Settings, Sparkles, Sprout, Zap } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
-import { AmbientBackdrop } from '@/components/AmbientBackdrop'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -10,15 +9,11 @@ import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { cn } from '@/lib/utils'
 import { useHasUnseenAnnouncement } from '@/lib/whats-new'
 
-type AmbientTone = 'emerald' | 'violet' | 'amber' | 'sky' | 'rose'
-
 interface LayoutProps {
   children: React.ReactNode
-  ambientThumbnail?: string | null
-  ambientTone?: AmbientTone
 }
 
-export function Layout({ children, ambientThumbnail, ambientTone }: LayoutProps) {
+export function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const { t } = useI18n()
   const { trialMode } = useAuth()
@@ -132,11 +127,8 @@ export function Layout({ children, ambientThumbnail, ambientTone }: LayoutProps)
 
       {/* Content area */}
       <div className="flex-1 min-w-0 flex overflow-hidden">
-        <main className="relative flex-1 min-w-0 h-full overflow-hidden">
-          <AmbientBackdrop url={ambientThumbnail} tone={ambientTone} />
-          <div className="relative h-full">
-            {children}
-          </div>
+        <main className="flex-1 min-w-0 h-full overflow-hidden">
+          {children}
         </main>
         {isGlobalPanelOpen ? <GlobalCompanionPanel /> : null}
       </div>

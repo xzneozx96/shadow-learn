@@ -784,7 +784,7 @@ export const TRANSLATIONS = {
     'collection.scrollPrev': 'Cuộn trái',
     'collection.scrollNext': 'Cuộn phải',
     'collection.created': 'Đã tạo bài học',
-    'collection.tabMaterials': 'Tài liệu luyện tập',
+    'collection.tabMaterials': 'Luyện tập Shadowing',
     'collection.tabTips': 'Mẹo học tập',
     'collection.allTopics': 'Tất cả chủ đề',
     'collection.materialsSubtitle': 'Video thực tế để luyện shadowing. Chọn hàng theo cấp HSK, lọc theo chủ đề.',
@@ -1142,7 +1142,7 @@ export const TRANSLATIONS = {
     'common.no': 'Hủy bỏ',
 
     // Speak
-    'speak.title': 'Trò chuyện cùng AI',
+    'speak.title': 'Trò chuyện AI',
     'speak.selectSituation': 'Chọn tình huống',
     'speak.selectSituationDesc': 'Chọn một kịch bản để luyện tập',
     'speak.selectPersona': 'Chọn người để trò chuyện',
