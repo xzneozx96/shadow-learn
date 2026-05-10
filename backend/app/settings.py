@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
     encryption_key: str | None = None          # env: SHADOWLEARN_ENCRYPTION_KEY
+    youtube_api_key: str | None = None          # env: SHADOWLEARN_YOUTUBE_API_KEY
 
     # Offshore Gemini proxy — see backend/livekit_agent/http_server.py.
     # The China-side backend forwards Gemini-bound traffic here so it never
