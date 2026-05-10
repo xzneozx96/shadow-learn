@@ -484,6 +484,8 @@ def get_playlist_videos(playlist_id: str) -> dict | None:
             "content_type": content_type,
         })
 
+    hub_videos.sort(key=lambda v: v.get("published_at") or "", reverse=True)
+
     return {
         "name": playlist.name,
         "thumbnail_url": meta.get("thumbnail_url"),
