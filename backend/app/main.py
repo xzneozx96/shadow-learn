@@ -8,6 +8,7 @@ from app.settings import settings
 from app.lessons.router import router as lessons_router
 from app.tts.router import router as tts_router
 from app.translation.router import router as translation_router
+from app.transcription.router import router as transcription_router
 from app.pronunciation.router import router as pronunciation_router
 from app.quiz.router import router as quiz_router
 from app.speak.router import router as speak_router
@@ -47,6 +48,7 @@ app.include_router(config_router)
 app.include_router(jobs_router)
 app.include_router(quiz_router)
 app.include_router(translation_router)
+app.include_router(transcription_router)
 app.include_router(pronunciation_router)
 app.include_router(agent_router)
 app.include_router(speak_router)
