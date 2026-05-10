@@ -6,12 +6,12 @@ interface AmbientBackdropProps {
   height?: string
 }
 
-const TONE_GRADIENTS: Record<AmbientTone, string> = {
-  emerald: 'from-emerald-500/30 via-teal-500/15 to-transparent',
-  violet: 'from-violet-500/30 via-fuchsia-500/15 to-transparent',
-  amber: 'from-amber-500/30 via-orange-500/15 to-transparent',
-  sky: 'from-sky-500/30 via-blue-500/15 to-transparent',
-  rose: 'from-rose-500/30 via-pink-500/15 to-transparent',
+const TONE_COLORS: Record<AmbientTone, { center: string, mid: string }> = {
+  emerald: { center: 'rgba(16, 185, 129, 0.45)', mid: 'rgba(20, 184, 166, 0.20)' },
+  violet: { center: 'rgba(139, 92, 246, 0.45)', mid: 'rgba(217, 70, 239, 0.20)' },
+  amber: { center: 'rgba(245, 158, 11, 0.45)', mid: 'rgba(249, 115, 22, 0.20)' },
+  sky: { center: 'rgba(14, 165, 233, 0.45)', mid: 'rgba(59, 130, 246, 0.20)' },
+  rose: { center: 'rgba(244, 63, 94, 0.45)', mid: 'rgba(236, 72, 153, 0.20)' },
 }
 
 export function AmbientBackdrop({ url, tone, height = 'h-[420px]' }: AmbientBackdropProps) {
@@ -26,16 +26,21 @@ export function AmbientBackdrop({ url, tone, height = 'h-[420px]' }: AmbientBack
               <img
                 src={url}
                 alt=""
-                className="w-full h-full object-cover scale-110 blur-3xl opacity-25 dark:opacity-20"
+                className="w-full h-full object-cover scale-110 blur-3xl opacity-40 dark:opacity-35"
               />
-              <div className="absolute inset-0 bg-linear-to-b from-background/40 via-background/85 to-background" />
+              <div className="absolute inset-0 bg-linear-to-b from-background/30 via-background/75 to-background" />
             </>
           )
         : tone
           ? (
               <>
-                <div className={`absolute inset-0 bg-radial-[at_50%_0%] ${TONE_GRADIENTS[tone]} blur-3xl opacity-60 dark:opacity-40`} />
-                <div className="absolute inset-0 bg-linear-to-b from-transparent via-background/60 to-background" />
+                <div
+                  className="absolute inset-0 blur-3xl"
+                  style={{
+                    background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${TONE_COLORS[tone].center}, ${TONE_COLORS[tone].mid} 40%, transparent 70%)`,
+                  }}
+                />
+                <div className="absolute inset-0 bg-linear-to-b from-transparent via-background/50 to-background" />
               </>
             )
           : null}
