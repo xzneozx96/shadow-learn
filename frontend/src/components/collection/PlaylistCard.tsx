@@ -6,7 +6,6 @@ import {
   CutoutCard,
   CutoutCardContent,
   CutoutCardImage,
-  CutoutCardInsetLabel,
   CutoutCardMedia,
   CutoutCardPin,
   cutoutCardSurfaceClassName,
@@ -60,13 +59,11 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
             </CutoutCardPin>
           )}
           {playlist.difficulty && (
-            <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-3 py-1.5">
-              <span className={cn('text-[10px] font-semibold', difficultyTone(playlist.difficulty))}>
+            <div className="absolute bottom-2 left-2">
+              <Badge variant="secondary" className={cn('text-xs font-semibold shadow-sm', difficultyTone(playlist.difficulty))}>
                 {playlist.difficulty}
-              </span>
-              <CutoutCorner className="absolute -right-[31px] -bottom-px text-card" />
-              <CutoutCorner className="absolute -top-[31px] -left-px rotate-180 text-card" />
-            </CutoutCardInsetLabel>
+              </Badge>
+            </div>
           )}
         </CutoutCardMedia>
 
