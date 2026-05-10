@@ -21,6 +21,7 @@ import { VocabularyProvider } from '@/contexts/VocabularyContext'
 import { ChangelogPage } from '@/pages/ChangelogPage'
 import { CollectionPage } from '@/pages/CollectionPage'
 import { DocumentationPage } from '@/pages/DocumentationPage'
+import { PlaylistPage } from '@/pages/PlaylistPage'
 import { WorkbookPage } from '@/pages/WorkbookPage'
 
 // Lazy-loaded: pulls in `hanzi` (~7.7 MB dictionary) only when user enters study flow.
@@ -69,6 +70,7 @@ const router = createBrowserRouter([
       { path: '/create', element: <CreateLesson /> },
       { path: '/changelog', element: <ChangelogPage /> },
       { path: '/collection', element: <CollectionPage /> },
+      { path: '/collection/:playlistId', element: <PlaylistPage /> },
       { path: '/docs', element: <DocumentationPage /> },
       { path: '/lesson/:id', element: <LessonView /> },
       { path: '/settings', element: <Settings /> },
