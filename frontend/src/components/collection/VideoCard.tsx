@@ -36,8 +36,10 @@ export function VideoCard({ video }: VideoCardProps) {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
 
+  const canCreate = !!db && (!!keys || trialMode)
+
   const handleCreate = async () => {
-    if (!db || (!keys && !trialMode))
+    if (!canCreate)
       return
     setSubmitting(true)
     try {
@@ -101,7 +103,7 @@ export function VideoCard({ video }: VideoCardProps) {
   }
 
   return (
-    <div className="shrink-0 w-[calc(25%-12px)] min-w-[260px] rounded-xl bg-card text-card-foreground border border-border/80 overflow-hidden shadow-[0px_1px_2px_-1px_color-mix(in_oklab,var(--foreground)_8%,transparent),0px_4px_8px_-2px_color-mix(in_oklab,var(--foreground)_6%,transparent)] transition-[box-shadow,border-color,transform] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-border hover:shadow-[0px_2px_4px_-1px_color-mix(in_oklab,var(--foreground)_10%,transparent),0px_8px_16px_-4px_color-mix(in_oklab,var(--foreground)_8%,transparent)] hover:-translate-y-0.5">
+    <div className="shrink-0 w-[calc(25%-12px)] min-w-[260px] rounded-xl bg-card text-card-foreground border border-border/80 overflow-hidden">
       <div className="relative w-full aspect-video bg-muted">
         <iframe
           className="absolute inset-0 w-full h-full"
@@ -113,7 +115,7 @@ export function VideoCard({ video }: VideoCardProps) {
         />
       </div>
       <div className="px-3.5 pt-3 pb-3.5 flex flex-col gap-2">
-        <p className="text-[13px] font-medium leading-snug text-foreground line-clamp-2 tracking-tight">
+        <p className="text-base font-medium leading-snug text-foreground line-clamp-2">
           {video.title}
         </p>
         <div className="flex items-center justify-between gap-2">
@@ -133,7 +135,7 @@ export function VideoCard({ video }: VideoCardProps) {
           <Button
             size="sm"
             onClick={handleCreate}
-            disabled={submitting}
+            disabled={submitting || !canCreate}
             className="h-7 px-3 rounded-full text-[10.5px] font-semibold gap-1 shrink-0"
             data-testid={`collection-create-${video.video_id}`}
           >
