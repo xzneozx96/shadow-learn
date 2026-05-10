@@ -283,7 +283,7 @@ def test_cache_refetches_after_ttl(monkeypatch):
 
 
 def test_build_video_list_merges_difficulty_by_video_id():
-    """build_video_list pairs yt-dlp entries with VideoConfig difficulty."""
+    """build_video_list pairs API entries with VideoConfig difficulty."""
     from app.collection.config import PlaylistConfig, VideoConfig
     from app.collection.service import build_video_list
 
@@ -353,8 +353,8 @@ def test_build_video_list_per_video_overrides_default_difficulty():
     assert result[0]["difficulty"] == "HSK 1"
 
 
-def test_build_video_list_skips_config_videos_missing_from_yt_dlp():
-    """VideoConfig entries not present in yt-dlp output are dropped silently."""
+def test_build_video_list_skips_config_videos_missing_from_api():
+    """VideoConfig entries not present in API output are dropped silently."""
     from app.collection.config import PlaylistConfig, VideoConfig
     from app.collection.service import build_video_list
 
@@ -366,8 +366,8 @@ def test_build_video_list_skips_config_videos_missing_from_yt_dlp():
     assert build_video_list(playlist, entries) == []
 
 
-def test_build_video_list_preserves_yt_dlp_order():
-    """Output order matches yt-dlp's entry order, not config order."""
+def test_build_video_list_preserves_api_order():
+    """Output order matches API entry order, not config order."""
     from app.collection.config import PlaylistConfig, VideoConfig
     from app.collection.service import build_video_list
 
