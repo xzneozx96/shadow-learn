@@ -1,9 +1,9 @@
-import type { CollectionResponse } from '@/types/collection'
+import type { HubResponse } from '@/types/collection'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/config'
 
 interface State {
-  data: CollectionResponse | null
+  data: HubResponse | null
   loading: boolean
   error: Error | null
 }
@@ -17,7 +17,7 @@ export function useCollection(): State {
       .then(async (res) => {
         if (!res.ok)
           throw new Error(`Server error: ${res.status}`)
-        const data = (await res.json()) as CollectionResponse
+        const data = (await res.json()) as HubResponse
         if (!cancelled)
           setState({ data, loading: false, error: null })
       })
