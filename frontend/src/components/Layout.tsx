@@ -1,4 +1,4 @@
-import { BookOpen, FileText, Library, Newspaper, Settings, Sparkles, Sprout, Zap } from 'lucide-react'
+import { BookOpen, FileText, Library, Newspaper, Play, Settings, Sparkles, Sprout, Zap } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { to: '/', label: t('nav.library'), icon: Library, active: location.pathname === '/' },
+    { to: '/collection', label: t('nav.collection'), icon: Play, active: location.pathname === '/collection' },
     { to: '/vocabulary', label: t('nav.workbook'), icon: BookOpen, active: location.pathname.startsWith('/vocabulary') },
     { to: '/docs', label: t('nav.documentation'), icon: FileText, active: location.pathname === '/docs' },
     { to: '/changelog', label: t('whatsNew.navLabel'), icon: Newspaper, active: location.pathname === '/changelog', badge: hasUnseen },
