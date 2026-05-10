@@ -14,11 +14,12 @@ function PlaylistPageSkeleton() {
   return (
     <div className="px-6 md:px-10 py-12 animate-pulse">
       <div className="h-5 w-32 rounded-md bg-muted mb-8" />
-      <div className="flex gap-6 mb-10">
-        <div className="w-52 aspect-video rounded-xl bg-muted shrink-0" />
-        <div className="flex flex-col gap-3 pt-2">
-          <div className="h-6 w-64 rounded-md bg-muted" />
-          <div className="h-4 w-32 rounded-md bg-muted/70" />
+      <div className="flex flex-col md:flex-row gap-8 mb-10">
+        <div className="w-full md:w-[420px] aspect-video rounded-2xl bg-muted shrink-0" />
+        <div className="flex flex-col gap-3 justify-center">
+          <div className="h-5 w-20 rounded-full bg-muted" />
+          <div className="h-8 w-72 rounded-md bg-muted" />
+          <div className="h-4 w-40 rounded-md bg-muted/70" />
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -81,25 +82,25 @@ export function PlaylistPage() {
                 {t('collection.backToCollection')}
               </Button>
 
-              <div className="flex flex-col sm:flex-row gap-6">
+              <div className="flex flex-col md:flex-row gap-8 items-start">
                 {data.thumbnail_url
                   ? (
                       <img
                         src={data.thumbnail_url}
                         alt={data.name}
-                        className="w-full sm:w-52 aspect-video object-cover rounded-xl shrink-0"
+                        className="w-full md:w-[420px] aspect-video object-cover rounded-2xl shrink-0"
                       />
                     )
                   : (
-                      <div className="w-full sm:w-52 aspect-video rounded-xl shrink-0 bg-linear-to-br from-secondary via-muted to-secondary" />
+                      <div className="w-full md:w-[420px] aspect-video rounded-2xl shrink-0 bg-linear-to-br from-secondary via-muted to-secondary" />
                     )}
-                <div className="flex flex-col gap-2 pt-1">
+                <div className="flex flex-col gap-3 justify-center md:pt-2">
                   {data.topic && (
-                    <span className="inline-flex w-fit items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-muted-foreground">
+                    <span className="inline-flex w-fit items-center px-3 py-1 rounded-full text-xs font-medium bg-secondary text-muted-foreground">
                       {data.topic}
                     </span>
                   )}
-                  <h1 className="text-2xl xl:text-3xl font-bold tracking-[-0.03em] leading-[0.95] text-foreground text-balance">
+                  <h1 className="text-3xl xl:text-4xl font-bold tracking-[-0.03em] leading-[1.05] text-foreground text-balance">
                     {data.name}
                   </h1>
                   <p className="text-sm text-muted-foreground">
