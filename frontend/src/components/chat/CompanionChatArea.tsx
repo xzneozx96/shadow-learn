@@ -3,8 +3,8 @@ import type { ChatStatus, FileUIPart } from 'ai'
 import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
-import { ArrowDownIcon, ImageIcon, Mic, X } from 'lucide-react'
-import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { ArrowDownIcon, AudioLines, ImageIcon, Mic, X } from 'lucide-react'
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import {
@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/contexts/I18nContext'
+import { useVoiceInput } from '@/hooks/useVoiceInput'
 import {
   EXERCISE_TOOLS,
   getToolName,
@@ -30,6 +31,7 @@ import {
 } from '@/lib/companion-utils'
 import { MessageItem, StreamingDots } from './ChatMessageItem'
 import { ContextChipBar } from './ContextChipBar'
+import { VoiceInputBridge } from './VoiceInputBridge'
 
 /** Attach-image button — must be rendered inside a <PromptInput> so the context is available. */
 function AttachImageButton({ label }: { label: string }) {
@@ -90,6 +92,7 @@ interface CompanionChatAreaProps {
   headerSlot?: ReactNode
   placeholder?: string
   onSpeakClick?: () => void
+  voiceLanguage?: string
 }
 
 export function CompanionChatArea({
@@ -105,8 +108,25 @@ export function CompanionChatArea({
   headerSlot,
   placeholder,
   onSpeakClick,
+  voiceLanguage,
 }: CompanionChatAreaProps) {
   const { t } = useI18n()
+  const [draftText, setDraftText] = useState('')
+  const [pendingConfirmed, setPendingConfirmed] = useState<string | null>(null)
+  const voice = useVoiceInput({
+    language: voiceLanguage,
+    onDraft: setDraftText,
+    onConfirmed: (text) => {
+      setDraftText('')
+      setPendingConfirmed(text)
+    },
+  })
+
+  useEffect(() => {
+    if (voice.error) {
+      toast.error(t(voice.error as Parameters<typeof t>[0]))
+    }
+  }, [voice.error, t])
   const chatStatus: ChatStatus = isLoading ? 'streaming' : 'ready'
   const inputAreaRef = useRef<HTMLDivElement>(null)
   // TODO: PAGINATION DISABLED — testing use-stick-to-bottom with full history
@@ -393,7 +413,7 @@ export function CompanionChatArea({
         )}
       </div>
 
-      <div ref={inputAreaRef} className="border-t border-border p-3">
+      <div ref={inputAreaRef} className="relative border-t border-border p-3">
         <PromptInput
           accept="image/jpeg,image/png,image/webp"
           maxFileSize={5 * 1024 * 1024}
@@ -401,6 +421,11 @@ export function CompanionChatArea({
           onError={handleAttachError}
           onSubmit={handlePromptSubmit}
         >
+          <VoiceInputBridge
+            draftText={draftText}
+            pendingConfirmed={pendingConfirmed}
+            onConfirmedFlushed={() => setPendingConfirmed(null)}
+          />
           <PromptInputHeader>
             {chips.length > 0 && <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />}
             <AttachmentPreviewBar />
@@ -411,13 +436,35 @@ export function CompanionChatArea({
           <PromptInputFooter>
             <PromptInputTools>
               {onSpeakClick && (
-                <PromptInputButton
-                  aria-label={t('speak.title')}
+                <button
+                  type="button"
                   onClick={onSpeakClick}
+                  aria-label={t('speak.title')}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                 >
-                  <Mic className="size-5" />
-                </PromptInputButton>
+                  <AudioLines className="size-3.5" />
+                  {t('speak.title')}
+                </button>
               )}
+              <PromptInputButton
+                aria-label="Voice input"
+                onClick={() => {
+                  if (voice.state === 'recording')
+                    voice.stop()
+                  else if (voice.state === 'idle')
+                    voice.start()
+                }}
+                disabled={voice.state === 'connecting' || voice.state === 'processing'}
+                className={voice.state === 'recording' ? 'animate-pulse ring-2 ring-destructive' : undefined}
+              >
+                {voice.state === 'connecting' || voice.state === 'processing'
+                  ? <Spinner className="size-4" />
+                  : (
+                      <Mic
+                        className={`size-5 ${voice.state === 'recording' ? 'text-destructive' : ''}`}
+                      />
+                    )}
+              </PromptInputButton>
               <AttachImageButton label={t('companion.attachImage')} />
             </PromptInputTools>
             <PromptInputSubmit status={chatStatus} onStop={onStop} />
