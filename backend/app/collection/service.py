@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timezone
 
 import yt_dlp
 
@@ -21,22 +20,6 @@ def format_duration(seconds: int | None) -> str:
     return f"{minutes}:{secs:02d}"
 
 
-def extract_release_date(entry: dict) -> str | None:
-    """Resolve a release date as ISO `YYYY-MM-DD` from yt-dlp entry, or None.
-
-    Tries `release_timestamp` (epoch seconds) first, then `upload_date`
-    (`YYYYMMDD` string). Both are often missing under `extract_flat=True`.
-    """
-    ts = entry.get("release_timestamp")
-    if ts:
-        try:
-            return datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d")
-        except (ValueError, OSError, OverflowError):
-            pass
-    upload = entry.get("upload_date")
-    if isinstance(upload, str) and len(upload) == 8 and upload.isdigit():
-        return f"{upload[:4]}-{upload[4:6]}-{upload[6:]}"
-    return None
 
 
 def fetch_playlist(playlist_id: str) -> list[dict]:
@@ -107,8 +90,8 @@ def build_video_list(playlist: PlaylistConfig, entries: list[dict]) -> list[dict
             "duration": format_duration(entry.get("duration")),
             "difficulty": difficulty,
             "view_count": entry.get("view_count"),
-            "like_count": entry.get("like_count"),
-            "release_date": extract_release_date(entry),
+            "channel": entry.get("channel") or entry.get("uploader"),
+            "description": entry.get("description"),
         })
     return result
 

@@ -1,6 +1,6 @@
 import type { LessonMeta } from '@/types'
 import type { CollectionVideo } from '@/types/collection'
-import { Calendar, Eye, Play, Sparkles, ThumbsUp } from 'lucide-react'
+import { CheckCheck, Eye, Play, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -52,24 +52,16 @@ function formatCount(n: number | null): string {
   return n.toLocaleString()
 }
 
-function formatReleaseDate(iso: string | null): string {
-  if (!iso)
-    return 'N/A'
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime()))
-    return 'N/A'
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
 export function VideoCard({ video }: VideoCardProps) {
   const { db, keys, trialMode } = useAuth()
   const { t } = useI18n()
-  const { updateLesson } = useLessons()
+  const { lessons, updateLesson } = useLessons()
   const navigate = useNavigate()
   const stagger = useCutoutContentStaggerVariants()
   const [submitting, setSubmitting] = useState(false)
   const [playing, setPlaying] = useState(false)
 
+  const alreadyCreated = lessons.some(l => l.sourceUrl?.includes(video.video_id))
   const canCreate = !!db && (!!keys || trialMode)
   const thumbnailUrl = `https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`
 
@@ -199,34 +191,49 @@ export function VideoCard({ video }: VideoCardProps) {
               {video.title}
             </motion.h3>
 
+            {video.description && (
+              <motion.p
+                className="line-clamp-2 text-[12px] leading-snug text-muted-foreground"
+                title={video.description}
+                variants={stagger.item}
+              >
+                {video.description}
+              </motion.p>
+            )}
+
             <motion.div
               className="mt-auto flex items-center justify-between gap-2"
               variants={stagger.item}
             >
-              <div className="flex items-center gap-2.5 min-w-0 text-[11px] text-muted-foreground tabular-nums">
-                <span className="inline-flex items-center gap-1" title={`${video.view_count?.toLocaleString() ?? 'N/A'} views`}>
+              <div className="flex items-center gap-2.5 min-w-0 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1 tabular-nums shrink-0" title={`${video.view_count?.toLocaleString() ?? 'N/A'} views`}>
                   <Eye className="size-3" />
                   {formatCount(video.view_count)}
                 </span>
-                <span className="inline-flex items-center gap-1" title={`${video.like_count?.toLocaleString() ?? 'N/A'} likes`}>
-                  <ThumbsUp className="size-3" />
-                  {formatCount(video.like_count)}
-                </span>
-                <span className="inline-flex items-center gap-1" title={video.release_date ?? 'N/A'}>
-                  <Calendar className="size-3" />
-                  {formatReleaseDate(video.release_date)}
+                <span className="inline-flex items-center gap-1 min-w-0" title={video.channel ?? 'N/A'}>
+                  <Tv className="size-3 shrink-0" />
+                  <span className="truncate">{video.channel ?? 'N/A'}</span>
                 </span>
               </div>
-              <Button
-                size="sm"
-                onClick={handleCreate}
-                disabled={submitting || !canCreate}
-                className="h-7 px-3 rounded-full text-[11px] font-semibold gap-1 shrink-0"
-                data-testid={`collection-create-${video.video_id}`}
-              >
-                <Sparkles className="size-3" />
-                {submitting ? t('collection.creating') : t('collection.createLesson')}
-              </Button>
+              {alreadyCreated
+                ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <CheckCheck className="size-3.5" />
+                      {t('collection.created')}
+                    </span>
+                  )
+                : (
+                    <Button
+                      size="sm"
+                      onClick={handleCreate}
+                      disabled={submitting || !canCreate}
+                      className="h-7 px-3 rounded-full text-[11px] font-semibold gap-1 shrink-0"
+                      data-testid={`collection-create-${video.video_id}`}
+                    >
+                      <Sparkles className="size-3" />
+                      {submitting ? t('collection.creating') : t('collection.createLesson')}
+                    </Button>
+                  )}
             </motion.div>
           </motion.div>
         </CutoutCardContent>

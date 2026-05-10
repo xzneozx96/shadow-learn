@@ -4,8 +4,8 @@ export interface CollectionVideo {
   duration: string
   difficulty: string | null
   view_count: number | null
-  like_count: number | null
-  release_date: string | null // ISO YYYY-MM-DD or null
+  channel: string | null
+  description: string | null
 }
 
 export interface CollectionPlaylist {
