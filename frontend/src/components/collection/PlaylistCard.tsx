@@ -70,12 +70,12 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
           )}
         </CutoutCardMedia>
 
-        <CutoutCardContent className="p-4 flex flex-col justify-between gap-2">
-          <p className="text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover/card:text-primary transition-colors duration-150">
+        <CutoutCardContent className="p-4 flex flex-row items-center gap-3">
+          <p className="flex-1 text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover/card:text-primary transition-colors duration-150">
             {playlist.name}
           </p>
           {playlist.topic && (
-            <Badge variant="secondary" className="w-fit text-[10px] font-medium">
+            <Badge variant="secondary" className="shrink-0 text-xs font-medium">
               {playlist.topic}
             </Badge>
           )}
