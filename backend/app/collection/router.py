@@ -9,6 +9,6 @@ router = APIRouter(prefix="/api")
 
 
 @router.get("/collection")
-async def get_collection_endpoint() -> list[dict]:
-    """Return curated playlists with merged video metadata."""
+async def get_collection_endpoint() -> dict:
+    """Return the Learning Hub response with materials and tips."""
     return await asyncio.to_thread(get_collection)

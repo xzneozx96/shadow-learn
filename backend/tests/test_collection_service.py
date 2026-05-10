@@ -386,23 +386,24 @@ def test_build_video_list_preserves_api_order():
     assert [v["video_id"] for v in result] == ["b", "a"]
 
 
-def test_get_collection_returns_one_entry_per_playlist(monkeypatch):
-    """get_collection returns the full curated list with merged videos."""
+def test_get_collection_returns_hub_response_shape(monkeypatch):
+    """get_collection returns a HubResponse dict with materials and tips keys."""
     from app.collection import service
-    from app.collection.config import PlaylistConfig, VideoConfig
+    from app.collection.config import PlaylistConfig
 
     fake_playlists = [
         PlaylistConfig(
             name="Foo", playlist_id="PL1",
-            videos=[VideoConfig(video_id="abc", difficulty="HSK 1")],
+            default_difficulty="HSK 1-2", default_topic="Daily Life",
         ),
         PlaylistConfig(
-            name="Bar", playlist_id="PL2", default_difficulty="HSK 2",
+            name="Bar", playlist_id="PL2",
+            default_difficulty="HSK 3-4", default_topic="Culture",
         ),
     ]
     fake_entries = {
-        "PL1": [{"id": "abc", "title": "Hi", "duration": 60}],
-        "PL2": [{"id": "xyz", "title": "Yo", "duration": 30}],
+        "PL1": [{"id": "abc", "title": "Hi", "duration": 60, "view_count": None, "channel": None, "description": None}],
+        "PL2": [{"id": "xyz", "title": "Yo", "duration": 30, "view_count": None, "channel": None, "description": None}],
     }
 
     monkeypatch.setattr(service, "PLAYLISTS", fake_playlists)
@@ -410,12 +411,16 @@ def test_get_collection_returns_one_entry_per_playlist(monkeypatch):
 
     result = service.get_collection()
 
-    assert len(result) == 2
-    assert result[0]["name"] == "Foo"
-    assert result[0]["playlist_id"] == "PL1"
-    assert result[0]["videos"][0]["video_id"] == "abc"
-    assert result[0]["videos"][0]["difficulty"] == "HSK 1"
-    assert result[1]["videos"][0]["difficulty"] == "HSK 2"  # from default_difficulty
+    assert "materials" in result
+    assert "tips" in result
+    groups = result["materials"]["groups"]
+    assert len(groups) == 2
+    difficulties = [g["difficulty"] for g in groups]
+    assert "HSK 1-2" in difficulties
+    assert "HSK 3-4" in difficulties
+    assert groups[0]["videos"][0]["content_type"] == "material"
+    assert "Daily Life" in result["materials"]["topics"]
+    assert "Culture" in result["materials"]["topics"]
 
 
 # ── bucket_difficulty ──────────────────────────────────────────────────────────

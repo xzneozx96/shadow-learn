@@ -336,14 +336,10 @@ def build_hub_response(
     }
 
 
-def get_collection() -> list[dict]:
-    """Build the full Collection response: each curated playlist with merged videos."""
-    out = []
-    for playlist in PLAYLISTS:
-        entries = get_cached_playlist(playlist.playlist_id)
-        out.append({
-            "name": playlist.name,
-            "playlist_id": playlist.playlist_id,
-            "videos": build_video_list(playlist, entries),
-        })
-    return out
+def get_collection() -> dict:
+    """Build the full Learning Hub response from curated playlists."""
+    entries_by_playlist_id = {
+        playlist.playlist_id: get_cached_playlist(playlist.playlist_id)
+        for playlist in PLAYLISTS
+    }
+    return build_hub_response(PLAYLISTS, entries_by_playlist_id)
