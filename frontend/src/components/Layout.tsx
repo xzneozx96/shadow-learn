@@ -1,5 +1,6 @@
 import { BookOpen, FileText, Library, Newspaper, Play, Settings, Sparkles, Sprout, Zap } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
+import { AmbientBackdrop } from '@/components/AmbientBackdrop'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,9 +12,10 @@ import { useHasUnseenAnnouncement } from '@/lib/whats-new'
 
 interface LayoutProps {
   children: React.ReactNode
+  ambientThumbnail?: string | null
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, ambientThumbnail }: LayoutProps) {
   const location = useLocation()
   const { t } = useI18n()
   const { trialMode } = useAuth()
@@ -127,8 +129,11 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Content area */}
       <div className="flex-1 min-w-0 flex overflow-hidden">
-        <main className="flex-1 min-w-0 h-full overflow-hidden">
-          {children}
+        <main className="relative flex-1 min-w-0 h-full overflow-hidden">
+          {ambientThumbnail && <AmbientBackdrop url={ambientThumbnail} />}
+          <div className="relative h-full">
+            {children}
+          </div>
         </main>
         {isGlobalPanelOpen ? <GlobalCompanionPanel /> : null}
       </div>

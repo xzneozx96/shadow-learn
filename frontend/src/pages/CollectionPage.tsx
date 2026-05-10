@@ -82,19 +82,9 @@ export function CollectionPage() {
   }
 
   return (
-    <Layout>
+    <Layout ambientThumbnail={heroThumbnail}>
       <div className="h-full overflow-y-auto">
-        <div className="relative px-6 md:px-10 py-12">
-          {heroThumbnail && (
-            <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[420px] overflow-hidden">
-              <img
-                src={heroThumbnail}
-                alt=""
-                className="w-full h-full object-cover scale-110 blur-3xl opacity-25 dark:opacity-20"
-              />
-              <div className="absolute inset-0 bg-linear-to-b from-background/40 via-background/85 to-background" />
-            </div>
-          )}
+        <div className="px-6 md:px-10 py-12">
           <div className="relative">
             <header>
               <h1 className="text-2xl xl:text-3xl font-bold tracking-[-0.03em] leading-[0.95] text-foreground text-balance">

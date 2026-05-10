@@ -61,7 +61,7 @@ export function PlaylistPage() {
   )
 
   return (
-    <Layout>
+    <Layout ambientThumbnail={data?.thumbnail_url}>
       <div className="h-full overflow-y-auto">
         {loading && <PlaylistPageSkeleton />}
 
@@ -75,20 +75,8 @@ export function PlaylistPage() {
 
         {!loading && !error && data && (
           <>
-            {/* Hero header with blurred ambient backdrop */}
-            <div className="relative overflow-hidden">
-              {data.thumbnail_url && (
-                <div aria-hidden className="pointer-events-none absolute inset-0">
-                  <img
-                    src={data.thumbnail_url}
-                    alt=""
-                    className="w-full h-full object-cover scale-110 blur-3xl opacity-25 dark:opacity-20"
-                  />
-                  <div className="absolute inset-0 bg-linear-to-b from-background/40 via-background/85 to-background" />
-                </div>
-              )}
-
-              <div className="relative px-6 md:px-10 pt-8 pb-14">
+            <div className="relative">
+              <div className="px-6 md:px-10 pt-8 pb-14">
                 <Button
                   variant="ghost"
                   size="sm"
