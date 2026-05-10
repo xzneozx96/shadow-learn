@@ -57,6 +57,21 @@ export function CollectionPage() {
     ? data.tips.groups.reduce((sum, g) => sum + g.items.length, 0)
     : null
 
+  const heroThumbnail = useMemo(() => {
+    if (!data)
+      return null
+    const groups = activeTab === 'materials' ? data.materials.groups : data.tips.groups
+    for (const g of groups) {
+      for (const item of g.items) {
+        if (item.type === 'playlist' && item.thumbnail_url)
+          return item.thumbnail_url
+        if (item.type === 'video')
+          return `https://i.ytimg.com/vi/${item.video_id}/maxresdefault.jpg`
+      }
+    }
+    return null
+  }, [data, activeTab])
+
   const handleTabSwitch = (tab: ActiveTab) => {
     setActiveTab(tab)
     setActiveTopic(null)
@@ -69,134 +84,146 @@ export function CollectionPage() {
   return (
     <Layout>
       <div className="h-full overflow-y-auto">
-        <div className="px-6 md:px-10 py-12">
-          <header>
-            <h1 className="text-2xl xl:text-3xl font-bold tracking-[-0.03em] leading-[0.95] text-foreground text-balance">
-              {t('collection.title')}
-            </h1>
-            <p className="mt-2 text-base md:text-lg leading-relaxed text-muted-foreground text-pretty max-w-2xl">
-              {activeTab === 'materials'
-                ? t('collection.materialsSubtitle')
-                : t('collection.tipsSubtitle')}
-            </p>
-          </header>
-
-          {/* Tab bar */}
-          <div className="mt-8 flex items-center gap-1 border-b border-border/60">
-            {(['materials', 'tips'] as const).map((tab) => {
-              const count = tab === 'materials' ? materialsCount : tipsCount
-              const label = tab === 'materials'
-                ? t('collection.tabMaterials')
-                : t('collection.tabTips')
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => handleTabSwitch(tab)}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors duration-150',
-                    activeTab === tab
-                      ? 'border-foreground text-foreground'
-                      : 'border-transparent text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  {label}
-                  <span
-                    className={cn(
-                      'inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium tabular-nums',
-                      activeTab === tab ? 'bg-foreground text-background' : 'bg-secondary text-muted-foreground',
-                    )}
-                  >
-                    {count ?? '—'}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          {loading && (
-            <>
-              <HubRowSkeleton />
-              <HubRowSkeleton />
-            </>
-          )}
-
-          {error && (
-            <div className="mt-10 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-              {t('collection.loadError')}
+        <div className="relative px-6 md:px-10 py-12">
+          {heroThumbnail && (
+            <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[420px] overflow-hidden">
+              <img
+                src={heroThumbnail}
+                alt=""
+                className="w-full h-full object-cover scale-110 blur-3xl opacity-25 dark:opacity-20"
+              />
+              <div className="absolute inset-0 bg-linear-to-b from-background/40 via-background/85 to-background" />
             </div>
           )}
+          <div className="relative">
+            <header>
+              <h1 className="text-2xl xl:text-3xl font-bold tracking-[-0.03em] leading-[0.95] text-foreground text-balance">
+                {t('collection.title')}
+              </h1>
+              <p className="mt-2 text-base md:text-lg leading-relaxed text-muted-foreground text-pretty max-w-2xl">
+                {activeTab === 'materials'
+                  ? t('collection.materialsSubtitle')
+                  : t('collection.tipsSubtitle')}
+              </p>
+            </header>
 
-          {!loading && !error && data && (
-            <>
-              {activeTab === 'materials' && (
-                <>
-                  {/* Topic chips */}
-                  {data.materials.topics.length > 0 && (
-                    <div className="mt-6 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTopic(null)}
-                        className={cn(
-                          'px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-150',
-                          activeTopic === null
-                            ? 'bg-foreground text-background'
-                            : 'bg-secondary text-muted-foreground hover:text-foreground',
-                        )}
-                      >
-                        {t('collection.allTopics')}
-                      </button>
-                      {data.materials.topics.map(topic => (
+            {/* Tab bar */}
+            <div className="mt-8 flex items-center gap-1 border-b border-border/60">
+              {(['materials', 'tips'] as const).map((tab) => {
+                const count = tab === 'materials' ? materialsCount : tipsCount
+                const label = tab === 'materials'
+                  ? t('collection.tabMaterials')
+                  : t('collection.tabTips')
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => handleTabSwitch(tab)}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors duration-150',
+                      activeTab === tab
+                        ? 'border-foreground text-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {label}
+                    <span
+                      className={cn(
+                        'inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium tabular-nums',
+                        activeTab === tab ? 'bg-foreground text-background' : 'bg-secondary text-muted-foreground',
+                      )}
+                    >
+                      {count ?? '—'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {loading && (
+              <>
+                <HubRowSkeleton />
+                <HubRowSkeleton />
+              </>
+            )}
+
+            {error && (
+              <div className="mt-10 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {t('collection.loadError')}
+              </div>
+            )}
+
+            {!loading && !error && data && (
+              <>
+                {activeTab === 'materials' && (
+                  <>
+                    {/* Topic chips */}
+                    {data.materials.topics.length > 0 && (
+                      <div className="mt-6 flex flex-wrap items-center gap-2">
                         <button
-                          key={topic}
                           type="button"
-                          onClick={() => handleTopicClick(topic)}
+                          onClick={() => setActiveTopic(null)}
                           className={cn(
                             'px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-150',
-                            activeTopic === topic
+                            activeTopic === null
                               ? 'bg-foreground text-background'
                               : 'bg-secondary text-muted-foreground hover:text-foreground',
                           )}
                         >
-                          {topic}
+                          {t('collection.allTopics')}
                         </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {data.materials.groups.map(g => (
-                    <HubRow
-                      key={g.difficulty}
-                      label={g.difficulty}
-                      items={g.items}
-                      activeTopic={activeTopic}
-                      createdSet={createdSet}
-                    />
-                  ))}
-                </>
-              )}
-
-              {activeTab === 'tips' && (
-                data.tips.groups.length === 0
-                  ? (
-                      <div className="mt-16 rounded-2xl border border-dashed border-border/80 bg-muted/20 px-8 py-16 text-center">
-                        <p className="text-sm text-muted-foreground">
-                          {t('collection.tipsEmpty')}
-                        </p>
+                        {data.materials.topics.map(topic => (
+                          <button
+                            key={topic}
+                            type="button"
+                            onClick={() => handleTopicClick(topic)}
+                            className={cn(
+                              'px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-150',
+                              activeTopic === topic
+                                ? 'bg-foreground text-background'
+                                : 'bg-secondary text-muted-foreground hover:text-foreground',
+                            )}
+                          >
+                            {topic}
+                          </button>
+                        ))}
                       </div>
-                    )
-                  : data.tips.groups.map(g => (
+                    )}
+
+                    {data.materials.groups.map(g => (
                       <HubRow
-                        key={g.skill}
-                        label={g.skill}
+                        key={g.difficulty}
+                        label={g.difficulty}
                         items={g.items}
-                        activeTopic={null}
+                        activeTopic={activeTopic}
                         createdSet={createdSet}
                       />
-                    ))
-              )}
-            </>
-          )}
+                    ))}
+                  </>
+                )}
+
+                {activeTab === 'tips' && (
+                  data.tips.groups.length === 0
+                    ? (
+                        <div className="mt-16 rounded-2xl border border-dashed border-border/80 bg-muted/20 px-8 py-16 text-center">
+                          <p className="text-sm text-muted-foreground">
+                            {t('collection.tipsEmpty')}
+                          </p>
+                        </div>
+                      )
+                    : data.tips.groups.map(g => (
+                        <HubRow
+                          key={g.skill}
+                          label={g.skill}
+                          items={g.items}
+                          activeTopic={null}
+                          createdSet={createdSet}
+                        />
+                      ))
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </Layout>
