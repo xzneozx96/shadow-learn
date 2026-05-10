@@ -35,14 +35,15 @@ import { ContextChipBar } from './ContextChipBar'
 import { VoiceInputBridge } from './VoiceInputBridge'
 
 /** Attach-image button — must be rendered inside a <PromptInput> so the context is available. */
-function AttachImageButton({ label }: { label: string }) {
+function AttachImageButton({ label, tooltip }: { label: string, tooltip: string }) {
   const attachments = usePromptInputAttachments()
   return (
     <PromptInputButton
-      tooltip={label}
+      tooltip={tooltip}
       onClick={attachments.openFileDialog}
     >
       <ImageIcon className="size-4" />
+      <span>{label}</span>
     </PromptInputButton>
   )
 }
@@ -434,7 +435,7 @@ export function CompanionChatArea({
             </PromptInputBody>
             <PromptInputFooter>
               <PromptInputTools>
-                <AttachImageButton label={t('companion.attachImage')} />
+                <AttachImageButton label={t('voice.attach')} tooltip={t('companion.attachImage')} />
                 {onSpeakClick && (
                   <PromptInputButton
                     onClick={onSpeakClick}
@@ -445,7 +446,7 @@ export function CompanionChatArea({
                   </PromptInputButton>
                 )}
                 <PromptInputButton
-                  tooltip="Voice input"
+                  tooltip={t('voice.dictate')}
                   onClick={() => {
                     if (voice.state === 'recording')
                       voice.stop()
@@ -458,6 +459,7 @@ export function CompanionChatArea({
                   {voice.state === 'connecting' || voice.state === 'processing'
                     ? <Spinner className="size-4" />
                     : <Mic className="size-4" />}
+                  <span>{t('voice.dictate')}</span>
                 </PromptInputButton>
               </PromptInputTools>
               <PromptInputSubmit status={chatStatus} onStop={onStop} />
