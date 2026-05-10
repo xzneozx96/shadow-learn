@@ -1,4 +1,6 @@
-export interface CollectionVideo {
+export type ContentType = 'material' | 'tip'
+
+export interface HubVideo {
   video_id: string
   title: string
   duration: string
@@ -6,12 +8,57 @@ export interface CollectionVideo {
   view_count: number | null
   channel: string | null
   description: string | null
+  published_at: string | null
+  topic: string | null
+  skill: string | null
+  content_type: ContentType
 }
 
-export interface CollectionPlaylist {
-  name: string
+export interface PlaylistItem {
+  type: 'playlist'
   playlist_id: string
-  videos: CollectionVideo[]
+  name: string
+  thumbnail_url: string | null
+  video_count: number | null
+  difficulty: string | null
+  topic: string | null
+  skill: string | null
+  content_type: ContentType
 }
 
-export type CollectionResponse = CollectionPlaylist[]
+export interface VideoItem extends HubVideo {
+  type: 'video'
+}
+
+export type HubItem = PlaylistItem | VideoItem
+
+export interface MaterialGroup {
+  difficulty: string
+  items: HubItem[]
+}
+
+export interface TipGroup {
+  skill: string
+  items: HubItem[]
+}
+
+export interface MaterialsSection {
+  topics: string[]
+  groups: MaterialGroup[]
+}
+
+export interface TipsSection {
+  groups: TipGroup[]
+}
+
+export interface HubResponse {
+  materials: MaterialsSection
+  tips: TipsSection
+}
+
+export interface PlaylistDetail {
+  name: string
+  thumbnail_url: string | null
+  topic: string | null
+  videos: HubVideo[]
+}

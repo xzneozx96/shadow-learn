@@ -1,6 +1,6 @@
 import type { LessonMeta } from '@/types'
-import type { CollectionVideo } from '@/types/collection'
-import { CheckCheck, Eye, Play, Sparkles, Tv } from 'lucide-react'
+import type { HubVideo } from '@/types/collection'
+import { Calendar, CheckCheck, Eye, Play, Sparkles, Tv } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useState } from 'react'
 import { toast } from 'sonner'
@@ -26,20 +26,41 @@ import { captureLessonCreated, captureLessonGenerationFailed } from '@/lib/posth
 import { cn } from '@/lib/utils'
 
 interface VideoCardProps {
-  video: CollectionVideo
+  video: HubVideo
   alreadyCreated: boolean
+  showCreateLesson: boolean
+  showTopic?: boolean
+  wrapperClassName?: string
 }
 
 const DIFFICULTY_TONE: Record<string, string> = {
-  'HSK 1': 'text-emerald-600 dark:text-emerald-400',
-  'HSK 2': 'text-blue-600 dark:text-blue-400',
+  'HSK 1-2': 'text-emerald-600 dark:text-emerald-400',
   'HSK 3-4': 'text-amber-600 dark:text-amber-400',
-  'HSK 4-5': 'text-orange-600 dark:text-orange-400',
   'HSK 5+': 'text-red-600 dark:text-red-400',
 }
 
 function difficultyTone(difficulty: string): string {
   return DIFFICULTY_TONE[difficulty] ?? 'text-muted-foreground'
+}
+
+function formatPublishedAt(iso: string | null): string | null {
+  if (!iso)
+    return null
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime()))
+    return null
+  const diffMs = Date.now() - date.getTime()
+  const day = 24 * 60 * 60 * 1000
+  const days = Math.floor(diffMs / day)
+  if (days < 1)
+    return 'today'
+  if (days < 7)
+    return `${days}d ago`
+  if (days < 30)
+    return `${Math.floor(days / 7)}w ago`
+  if (days < 365)
+    return `${Math.floor(days / 30)}mo ago`
+  return `${Math.floor(days / 365)}y ago`
 }
 
 function formatCount(n: number | null): string {
@@ -52,7 +73,7 @@ function formatCount(n: number | null): string {
   return n.toLocaleString()
 }
 
-function VideoCardImpl({ video, alreadyCreated }: VideoCardProps) {
+function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = true, wrapperClassName }: VideoCardProps) {
   const { db, keys, trialMode } = useAuth()
   const { t } = useI18n()
   const { updateLesson } = useLessons()
@@ -128,7 +149,10 @@ function VideoCardImpl({ video, alreadyCreated }: VideoCardProps) {
 
   return (
     <div
-      className="w-[calc(25%-15px)] min-w-[260px] shrink-0 flex flex-col [content-visibility:auto] [contain-intrinsic-size:260px_380px]"
+      className={cn(
+        'flex flex-col [content-visibility:auto] [contain-intrinsic-size:260px_380px]',
+        wrapperClassName ?? 'w-[calc(25%-15px)] min-w-[260px] shrink-0',
+      )}
     >
       <CutoutCard className={cn(cutoutCardSurfaceClassName, 'flex-1 grid grid-rows-[auto_1fr]')}>
         <CutoutCardMedia className="aspect-video">
@@ -159,7 +183,6 @@ function VideoCardImpl({ video, alreadyCreated }: VideoCardProps) {
                 </button>
               )}
 
-          {/* Difficulty badge — bottom-left inset cutout */}
           {video.difficulty && !playing && (
             <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-3 py-1.5">
               <span className={cn('font-bold text-xs uppercase tracking-widest', difficultyTone(video.difficulty))}>
@@ -170,7 +193,14 @@ function VideoCardImpl({ video, alreadyCreated }: VideoCardProps) {
             </CutoutCardInsetLabel>
           )}
 
-          {/* Duration pin — top-right cutout */}
+          {video.topic && !playing && showTopic && (
+            <CutoutCardInsetLabel className="bottom-0 right-0 rounded-tl-[20px] bg-card px-3 py-1.5">
+              <span className="text-xs text-muted-foreground">{video.topic}</span>
+              <CutoutCorner className="absolute -left-[31px] -bottom-px -rotate-90 text-card" />
+              <CutoutCorner className="absolute -top-[31px] -right-px -rotate-90 text-card" />
+            </CutoutCardInsetLabel>
+          )}
+
           {!playing && (
             <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-[11px] font-semibold text-card-foreground tabular-nums shadow-md ring-1 ring-border/40">
               {video.duration}
@@ -204,34 +234,42 @@ function VideoCardImpl({ video, alreadyCreated }: VideoCardProps) {
               className="mt-auto flex items-center justify-between gap-2"
               variants={stagger.item}
             >
-              <div className="flex items-center gap-2.5 min-w-0 flex-1 text-xs text-muted-foreground overflow-hidden">
+              <div className="flex items-center gap-3 min-w-0 flex-1 text-xs text-muted-foreground overflow-hidden">
                 <span className="flex items-center gap-1 tabular-nums shrink-0" title={`${video.view_count?.toLocaleString() ?? 'N/A'} views`}>
                   <Eye className="size-4" />
                   {formatCount(video.view_count)}
                 </span>
+                {formatPublishedAt(video.published_at) && (
+                  <span className="flex items-center gap-1 tabular-nums shrink-0" title={video.published_at ?? ''}>
+                    <Calendar className="size-4" />
+                    {formatPublishedAt(video.published_at)}
+                  </span>
+                )}
                 <span className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden" title={video.channel ?? 'N/A'}>
                   <Tv className="size-4 shrink-0" />
                   <span className="min-w-0 flex-1 line-clamp-1">{video.channel ?? 'N/A'}</span>
                 </span>
               </div>
-              {alreadyCreated
-                ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
-                      <CheckCheck className="size-4" />
-                      {t('collection.created')}
-                    </span>
-                  )
-                : (
-                    <Button
-                      onClick={handleCreate}
-                      disabled={submitting || !canCreate}
-                      className="shrink-0"
-                      data-testid={`collection-create-${video.video_id}`}
-                    >
-                      <Sparkles className="size-4" />
-                      {submitting ? t('collection.creating') : t('collection.createLesson')}
-                    </Button>
-                  )}
+              {showCreateLesson && (
+                alreadyCreated
+                  ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <CheckCheck className="size-4" />
+                        {t('collection.created')}
+                      </span>
+                    )
+                  : (
+                      <Button
+                        onClick={handleCreate}
+                        disabled={submitting || !canCreate}
+                        className="shrink-0"
+                        data-testid={`collection-create-${video.video_id}`}
+                      >
+                        <Sparkles className="size-4" />
+                        {submitting ? t('collection.creating') : t('collection.createLesson')}
+                      </Button>
+                    )
+              )}
             </motion.div>
           </motion.div>
         </CutoutCardContent>

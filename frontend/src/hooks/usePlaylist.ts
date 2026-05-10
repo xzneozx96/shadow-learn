@@ -1,23 +1,24 @@
-import type { HubResponse } from '@/types/collection'
+import type { PlaylistDetail } from '@/types/collection'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/config'
 
 interface State {
-  data: HubResponse | null
+  data: PlaylistDetail | null
   loading: boolean
   error: Error | null
 }
 
-export function useCollection(): State {
+export function usePlaylist(playlistId: string): State {
   const [state, setState] = useState<State>({ data: null, loading: true, error: null })
 
   useEffect(() => {
     let cancelled = false
-    fetch(`${API_BASE}/api/collection`)
+    setState({ data: null, loading: true, error: null })
+    fetch(`${API_BASE}/api/playlist/${encodeURIComponent(playlistId)}`)
       .then(async (res) => {
         if (!res.ok)
           throw new Error(`Server error: ${res.status}`)
-        const data = (await res.json()) as HubResponse
+        const data = (await res.json()) as PlaylistDetail
         if (!cancelled)
           setState({ data, loading: false, error: null })
       })
@@ -26,7 +27,7 @@ export function useCollection(): State {
           setState({ data: null, loading: false, error: err })
       })
     return () => { cancelled = true }
-  }, [])
+  }, [playlistId])
 
   return state
 }

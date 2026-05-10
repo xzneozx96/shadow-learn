@@ -1,37 +1,29 @@
-import type { CollectionPlaylist } from '@/types/collection'
+import type { HubItem, HubVideo } from '@/types/collection'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
-import { useLessons } from '@/contexts/LessonsContext'
 import { computeScrollState } from '@/lib/carousel'
+import { PlaylistCard } from './PlaylistCard'
 import { VideoCard } from './VideoCard'
 
-interface PlaylistRowProps {
-  playlist: CollectionPlaylist
+interface HubRowProps {
+  label: string
+  items: HubItem[]
+  activeTopic: string | null
+  createdSet: Set<string>
 }
 
-const YOUTUBE_ID_REGEX = /[?&]v=([^&]+)|youtu\.be\/([^?&]+)/
-
-export function PlaylistRow({ playlist }: PlaylistRowProps) {
+export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
   const { t } = useI18n()
-  const { lessons } = useLessons()
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(false)
 
-  const createdSet = useMemo(() => {
-    const set = new Set<string>()
-    for (const l of lessons) {
-      if (l.sourceUrl) {
-        const m = l.sourceUrl.match(YOUTUBE_ID_REGEX)
-        const id = m?.[1] ?? m?.[2]
-        if (id)
-          set.add(id)
-      }
-    }
-    return set
-  }, [lessons])
+  const filteredItems = useMemo(
+    () => activeTopic === null ? items : items.filter(item => item.topic === activeTopic),
+    [items, activeTopic],
+  )
 
   const updateScrollState = useCallback((el: HTMLDivElement) => {
     const s = computeScrollState(el.scrollLeft, el.clientWidth, el.scrollWidth)
@@ -62,7 +54,10 @@ export function PlaylistRow({ playlist }: PlaylistRowProps) {
       if (rafId)
         cancelAnimationFrame(rafId)
     }
-  }, [updateScrollState, playlist.videos.length])
+  }, [updateScrollState, filteredItems.length])
+
+  if (filteredItems.length === 0)
+    return null
 
   const scroll = (dir: 'prev' | 'next') => {
     scrollRef.current?.scrollBy({ left: dir === 'next' ? 600 : -600, behavior: 'smooth' })
@@ -73,11 +68,8 @@ export function PlaylistRow({ playlist }: PlaylistRowProps) {
       <header className="flex items-end justify-between gap-4 mb-5">
         <div className="flex items-baseline gap-3 min-w-0">
           <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground truncate">
-            {playlist.name}
+            {label}
           </h2>
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium tabular-nums bg-secondary text-muted-foreground shrink-0">
-            {t('collection.videoCount', { count: playlist.videos.length })}
-          </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Button
@@ -116,9 +108,20 @@ export function PlaylistRow({ playlist }: PlaylistRowProps) {
           ref={scrollRef}
           className="flex items-stretch gap-5 overflow-x-auto px-2 py-3 -my-3 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {playlist.videos.map((v, i) => (
-            <VideoCard key={`${v.video_id}-${i}`} video={v} alreadyCreated={createdSet.has(v.video_id)} />
-          ))}
+          {filteredItems.map((item, i) =>
+            item.type === 'playlist'
+              ? (
+                  <PlaylistCard key={item.playlist_id} playlist={item} />
+                )
+              : (
+                  <VideoCard
+                    key={`${item.video_id}-${i}`}
+                    video={item as HubVideo}
+                    alreadyCreated={createdSet.has(item.video_id)}
+                    showCreateLesson={item.content_type !== 'tip'}
+                  />
+                ),
+          )}
         </div>
       </div>
     </section>

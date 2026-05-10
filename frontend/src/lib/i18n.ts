@@ -173,9 +173,7 @@ export const TRANSLATIONS = {
     'library.chip.words': 'words',
 
     // Collection
-    'collection.eyebrow': 'Curated Content',
     'collection.title': 'Collection',
-    'collection.subtitle': 'High-quality channels for shadowing practice. Watch inline, then create a lesson.',
     'collection.videoCount': '{count} videos',
     'collection.createLesson': 'Create Lesson',
     'collection.creating': 'Creating…',
@@ -183,6 +181,15 @@ export const TRANSLATIONS = {
     'collection.scrollPrev': 'Scroll left',
     'collection.scrollNext': 'Scroll right',
     'collection.created': 'Lesson created',
+    'collection.tabMaterials': 'Practice Materials',
+    'collection.tabTips': 'Learning Tips',
+    'collection.allTopics': 'All Topics',
+    'collection.materialsSubtitle': 'Real videos to shadow. Pick your HSK level row, narrow by topic.',
+    'collection.tipsSubtitle': 'Strategy & technique videos. Browse by skill.',
+    'collection.tipsEmpty': 'No learning tips added yet. Check back soon.',
+    'collection.lessonList': 'Lesson List',
+    'collection.backToCollection': 'Collection',
+    'collection.playlistEmpty': 'No videos in this playlist yet.',
 
     // Lesson View
     'lesson.transcript': 'Transcript',
@@ -769,9 +776,7 @@ export const TRANSLATIONS = {
     'library.chip.words': 'từ',
 
     // Collection
-    'collection.eyebrow': 'Nội dung tuyển chọn',
     'collection.title': 'Bộ sưu tập',
-    'collection.subtitle': 'Các kênh chất lượng cao để luyện shadowing. Xem trực tiếp rồi tạo bài học.',
     'collection.videoCount': '{count} video',
     'collection.createLesson': 'Tạo bài học',
     'collection.creating': 'Đang tạo…',
@@ -779,6 +784,15 @@ export const TRANSLATIONS = {
     'collection.scrollPrev': 'Cuộn trái',
     'collection.scrollNext': 'Cuộn phải',
     'collection.created': 'Đã tạo bài học',
+    'collection.tabMaterials': 'Luyện tập Shadowing',
+    'collection.tabTips': 'Mẹo học tập',
+    'collection.allTopics': 'Tất cả chủ đề',
+    'collection.materialsSubtitle': 'Video thực tế để luyện shadowing. Chọn hàng theo cấp HSK, lọc theo chủ đề.',
+    'collection.tipsSubtitle': 'Video chiến lược và kỹ thuật học. Duyệt theo kỹ năng.',
+    'collection.tipsEmpty': 'Chưa có mẹo học tập nào. Hãy quay lại sau.',
+    'collection.lessonList': 'Danh sách bài học',
+    'collection.backToCollection': 'Bộ sưu tập',
+    'collection.playlistEmpty': 'Chưa có video trong playlist này.',
 
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',
@@ -1128,7 +1142,7 @@ export const TRANSLATIONS = {
     'common.no': 'Hủy bỏ',
 
     // Speak
-    'speak.title': 'Trò chuyện cùng AI',
+    'speak.title': 'Trò chuyện AI',
     'speak.selectSituation': 'Chọn tình huống',
     'speak.selectSituationDesc': 'Chọn một kịch bản để luyện tập',
     'speak.selectPersona': 'Chọn người để trò chuyện',
