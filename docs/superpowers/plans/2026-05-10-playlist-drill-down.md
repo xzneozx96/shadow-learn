@@ -572,17 +572,31 @@ def test_build_hub_response_content_type_defaults_to_material():
 # ── get_collection shape ───────────────────────────────────────────────────────
 
 def test_get_collection_returns_hub_response_shape(monkeypatch):
-    """get_collection returns {materials: {topics, groups}, tips: {groups}} shape."""
+    """get_collection wires PLAYLISTS + STANDALONE_VIDEOS through build_hub_response."""
     import app.collection.service as svc
+    from app.collection.config import PlaylistConfig, StandaloneVideoConfig
 
-    monkeypatch.setattr(svc, "get_cached_playlist_metadata", lambda ids: {i: {"thumbnail_url": None, "video_count": 0} for i in ids})
+    fake_playlists = [
+        PlaylistConfig(name="Test", playlist_id="PL_TEST", default_difficulty="HSK 1-2", default_topic="Daily Life"),
+    ]
+    monkeypatch.setattr(svc, "PLAYLISTS", fake_playlists)
+    monkeypatch.setattr(svc, "STANDALONE_VIDEOS", [])
+    monkeypatch.setattr(svc, "get_cached_playlist_metadata", lambda ids: {
+        i: {"thumbnail_url": "https://t.com/x.jpg", "video_count": 4} for i in ids
+    })
 
     result = svc.get_collection()
     assert "materials" in result
     assert "tips" in result
-    assert "topics" in result["materials"]
-    assert "groups" in result["materials"]
-    assert "groups" in result["tips"]
+    assert result["tips"]["groups"] == []
+    groups = result["materials"]["groups"]
+    assert len(groups) == 1
+    assert groups[0]["difficulty"] == "HSK 1-2"
+    item = groups[0]["items"][0]
+    assert item["type"] == "playlist"
+    assert item["playlist_id"] == "PL_TEST"
+    assert item["thumbnail_url"] == "https://t.com/x.jpg"
+    assert item["video_count"] == 4
 ```
 
 - [ ] **Step 2: Run tests to confirm they fail with old implementation**
@@ -595,7 +609,16 @@ Expected: many FAILs — `TypeError` about unexpected arguments or `KeyError: 'i
 
 - [ ] **Step 3: Replace `build_hub_response` and update `get_collection` in `service.py`**
 
-In `backend/app/collection/service.py`, replace the entire `build_hub_response` function and `get_collection` function with:
+First, update the top-level import in `backend/app/collection/service.py`:
+
+```python
+# Was:
+from app.collection.config import PlaylistConfig, PLAYLISTS
+# Now:
+from app.collection.config import PlaylistConfig, PLAYLISTS, STANDALONE_VIDEOS
+```
+
+Then replace the entire `build_hub_response` function and `get_collection` function with:
 
 ```python
 def build_hub_response(
@@ -717,8 +740,6 @@ def build_hub_response(
 
 def get_collection() -> dict:
     """Build the full Learning Hub response from curated playlists."""
-    from app.collection.config import STANDALONE_VIDEOS
-
     api_key = settings.youtube_api_key
     playlist_ids = [p.playlist_id for p in PLAYLISTS]
     playlist_meta = get_cached_playlist_metadata(playlist_ids) if api_key else {
@@ -1233,6 +1254,7 @@ In the English locale, after `'collection.tipsEmpty'`:
 ```typescript
 'collection.lessonList': 'Lesson List',
 'collection.backToCollection': 'Collection',
+'collection.playlistEmpty': 'No videos in this playlist yet.',
 ```
 
 In the Vietnamese locale, after `'collection.tipsEmpty'`:
@@ -1240,6 +1262,7 @@ In the Vietnamese locale, after `'collection.tipsEmpty'`:
 ```typescript
 'collection.lessonList': 'Danh sách bài học',
 'collection.backToCollection': 'Bộ sưu tập',
+'collection.playlistEmpty': 'Chưa có video trong playlist này.',
 ```
 
 - [ ] **Step 4: Update `frontend/tests/useCollection.test.ts`**
@@ -1373,9 +1396,6 @@ interface PlaylistCardProps {
 }
 
 export function PlaylistCard({ playlist }: PlaylistCardProps) {
-  const thumbnailUrl = playlist.thumbnail_url
-    ?? `https://i.ytimg.com/vi/default/hqdefault.jpg`
-
   return (
     <Link
       to={`/collection/${playlist.playlist_id}`}
@@ -1383,11 +1403,19 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
     >
       <CutoutCard className="h-full select-none group/card cursor-pointer">
         <CutoutCardMedia className="aspect-video">
-          <CutoutCardImage
-            src={thumbnailUrl}
-            alt={playlist.name}
-            className="object-cover w-full h-full transition-transform duration-300 group-hover/card:scale-[1.02]"
-          />
+          {playlist.thumbnail_url
+            ? (
+                <CutoutCardImage
+                  src={playlist.thumbnail_url}
+                  alt={playlist.name}
+                  className="object-cover w-full h-full transition-transform duration-300 group-hover/card:scale-[1.02]"
+                />
+              )
+            : (
+                <div className="absolute inset-0 bg-linear-to-br from-secondary via-muted to-secondary flex items-center justify-center">
+                  <ListVideo className="size-10 text-muted-foreground/50" />
+                </div>
+              )}
           {playlist.video_count !== null && (
             <CutoutCardPin className="top-0 right-0 rounded-bl-[20px]">
               <ListVideo className="size-3 shrink-0" />
@@ -1675,13 +1703,17 @@ export function PlaylistPage() {
               </Button>
 
               <div className="flex flex-col sm:flex-row gap-6">
-                {data.thumbnail_url && (
-                  <img
-                    src={data.thumbnail_url}
-                    alt={data.name}
-                    className="w-full sm:w-52 aspect-video object-cover rounded-xl shrink-0"
-                  />
-                )}
+                {data.thumbnail_url
+                  ? (
+                      <img
+                        src={data.thumbnail_url}
+                        alt={data.name}
+                        className="w-full sm:w-52 aspect-video object-cover rounded-xl shrink-0"
+                      />
+                    )
+                  : (
+                      <div className="w-full sm:w-52 aspect-video rounded-xl shrink-0 bg-linear-to-br from-secondary via-muted to-secondary" />
+                    )}
                 <div className="flex flex-col gap-2 pt-1">
                   {data.topic && (
                     <span className="inline-flex w-fit items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-muted-foreground">
@@ -1703,16 +1735,26 @@ export function PlaylistPage() {
               <h2 className="text-lg font-semibold tracking-[-0.02em] mb-5">
                 {t('collection.lessonList')}
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                {data.videos.map((v, i) => (
-                  <VideoCard
-                    key={`${v.video_id}-${i}`}
-                    video={v}
-                    alreadyCreated={createdSet.has(v.video_id)}
-                    showCreateLesson={v.content_type !== 'tip'}
-                  />
-                ))}
-              </div>
+              {data.videos.length === 0
+                ? (
+                    <div className="rounded-2xl border border-dashed border-border/80 bg-muted/20 px-8 py-16 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        {t('collection.playlistEmpty')}
+                      </p>
+                    </div>
+                  )
+                : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                      {data.videos.map((v, i) => (
+                        <VideoCard
+                          key={`${v.video_id}-${i}`}
+                          video={v}
+                          alreadyCreated={createdSet.has(v.video_id)}
+                          showCreateLesson={v.content_type !== 'tip'}
+                        />
+                      ))}
+                    </div>
+                  )}
             </div>
           </>
         )}
