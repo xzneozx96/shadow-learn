@@ -1,6 +1,7 @@
 import type { PlaylistItem } from '@/types/collection'
 import { ListVideo } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Badge } from '@/components/ui/badge'
 import {
   CutoutCard,
   CutoutCardContent,
@@ -68,11 +69,11 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
             </CutoutCardInsetLabel>
           )}
           {playlist.topic && (
-            <CutoutCardInsetLabel className="bottom-0 right-0 rounded-tl-[20px] bg-card px-3 py-1.5">
-              <span className="text-[10px] text-muted-foreground">{playlist.topic}</span>
-              <CutoutCorner className="absolute -left-[31px] -bottom-px -rotate-90 text-card" />
-              <CutoutCorner className="absolute -top-[31px] -right-px -rotate-90 text-card" />
-            </CutoutCardInsetLabel>
+            <div className="absolute bottom-2 right-2">
+              <Badge variant="secondary" className="text-[10px] font-medium shadow-sm">
+                {playlist.topic}
+              </Badge>
+            </div>
           )}
         </CutoutCardMedia>
 
