@@ -1,4 +1,4 @@
-import { ChevronLeft } from 'lucide-react'
+import { CheckCheck, ChevronLeft, ListVideo } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { VideoCard } from '@/components/collection/VideoCard'
@@ -14,12 +14,12 @@ function PlaylistPageSkeleton() {
   return (
     <div className="px-6 md:px-10 py-12 animate-pulse">
       <div className="h-5 w-32 rounded-md bg-muted mb-8" />
-      <div className="flex flex-col md:flex-row gap-8 mb-10">
-        <div className="w-full md:w-[420px] aspect-video rounded-2xl bg-muted shrink-0" />
-        <div className="flex flex-col gap-3 justify-center">
-          <div className="h-5 w-20 rounded-full bg-muted" />
-          <div className="h-8 w-72 rounded-md bg-muted" />
-          <div className="h-4 w-40 rounded-md bg-muted/70" />
+      <div className="flex flex-col md:flex-row gap-10 mb-12">
+        <div className="w-full md:w-[440px] aspect-video rounded-2xl bg-muted shrink-0" />
+        <div className="flex flex-col gap-4 justify-center pt-2">
+          <div className="h-4 w-24 rounded-full bg-muted" />
+          <div className="h-10 w-80 rounded-md bg-muted" />
+          <div className="h-4 w-48 rounded-md bg-muted/70" />
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -55,6 +55,11 @@ export function PlaylistPage() {
     return set
   }, [lessons])
 
+  const createdCount = useMemo(
+    () => data?.videos.filter(v => createdSet.has(v.video_id)).length ?? 0,
+    [data, createdSet],
+  )
+
   return (
     <Layout>
       <div className="h-full overflow-y-auto">
@@ -70,54 +75,94 @@ export function PlaylistPage() {
 
         {!loading && !error && data && (
           <>
-            {/* Header */}
-            <div className="px-6 md:px-10 pt-10 pb-8">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/collection')}
-                className="-ml-2 mb-6 text-muted-foreground hover:text-foreground gap-1.5"
-              >
-                <ChevronLeft className="size-4" />
-                {t('collection.backToCollection')}
-              </Button>
+            {/* Hero header with blurred ambient backdrop */}
+            <div className="relative overflow-hidden">
+              {data.thumbnail_url && (
+                <div aria-hidden className="pointer-events-none absolute inset-0">
+                  <img
+                    src={data.thumbnail_url}
+                    alt=""
+                    className="w-full h-full object-cover scale-110 blur-3xl opacity-25 dark:opacity-20"
+                  />
+                  <div className="absolute inset-0 bg-linear-to-b from-background/40 via-background/85 to-background" />
+                </div>
+              )}
 
-              <div className="flex flex-col md:flex-row gap-8 items-start">
-                {data.thumbnail_url
-                  ? (
-                      <img
-                        src={data.thumbnail_url}
-                        alt={data.name}
-                        className="w-full md:w-[420px] aspect-video object-cover rounded-2xl shrink-0"
-                      />
-                    )
-                  : (
-                      <div className="w-full md:w-[420px] aspect-video rounded-2xl shrink-0 bg-linear-to-br from-secondary via-muted to-secondary" />
+              <div className="relative px-6 md:px-10 pt-8 pb-14">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/collection')}
+                  className="-ml-2 mb-10 text-muted-foreground hover:text-foreground gap-1.5"
+                >
+                  <ChevronLeft className="size-4" />
+                  {t('collection.backToCollection')}
+                </Button>
+
+                <div className="flex flex-col md:flex-row gap-10 items-start">
+                  {data.thumbnail_url
+                    ? (
+                        <div className="w-full md:w-[440px] shrink-0 rounded-2xl overflow-hidden ring-1 ring-border/50 shadow-2xl shadow-black/20 dark:shadow-black/40">
+                          <img
+                            src={data.thumbnail_url}
+                            alt={data.name}
+                            className="w-full aspect-video object-cover"
+                          />
+                        </div>
+                      )
+                    : (
+                        <div className="w-full md:w-[440px] aspect-video rounded-2xl shrink-0 bg-linear-to-br from-secondary via-muted to-secondary ring-1 ring-border/50 shadow-2xl shadow-black/20 dark:shadow-black/40 flex items-center justify-center">
+                          <ListVideo className="size-16 text-muted-foreground/40" />
+                        </div>
+                      )}
+
+                  <div className="flex flex-col gap-5 justify-center md:pt-3 min-w-0 flex-1">
+                    {data.topic && (
+                      <span className="inline-flex w-fit items-center px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-semibold bg-secondary/80 text-muted-foreground ring-1 ring-border/40 backdrop-blur-sm">
+                        {data.topic}
+                      </span>
                     )}
-                <div className="flex flex-col gap-3 justify-center md:pt-2">
-                  {data.topic && (
-                    <span className="inline-flex w-fit items-center px-3 py-1 rounded-full text-xs font-medium bg-secondary text-muted-foreground">
-                      {data.topic}
-                    </span>
-                  )}
-                  <h1 className="text-3xl xl:text-4xl font-bold tracking-[-0.03em] leading-[1.05] text-foreground text-balance">
-                    {data.name}
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
-                    {t('collection.videoCount', { count: data.videos.length })}
-                  </p>
+                    <h1 className="text-3xl md:text-4xl xl:text-5xl font-bold tracking-[-0.035em] leading-[1.0] text-foreground text-balance">
+                      {data.name}
+                    </h1>
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1.5 tabular-nums">
+                        <ListVideo className="size-4" />
+                        {t('collection.videoCount', { count: data.videos.length })}
+                      </span>
+                      {createdCount > 0 && (
+                        <>
+                          <span aria-hidden className="size-1 rounded-full bg-muted-foreground/40" />
+                          <span className="flex items-center gap-1.5 tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
+                            <CheckCheck className="size-4" />
+                            {createdCount}
+                            {' / '}
+                            {data.videos.length}
+                            {' '}
+                            {t('collection.created')}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Video grid */}
-            <div className="px-6 md:px-10 pb-12">
-              <h2 className="text-lg font-semibold tracking-[-0.02em] mb-5">
-                {t('collection.lessonList')}
-              </h2>
+            <div className="px-6 md:px-10 pb-16">
+              <div className="flex items-baseline gap-3 mb-7">
+                <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+                  {t('collection.lessonList')}
+                </h2>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium tabular-nums bg-secondary text-muted-foreground">
+                  {data.videos.length}
+                </span>
+              </div>
               {data.videos.length === 0
                 ? (
-                    <div className="rounded-2xl border border-dashed border-border/80 bg-muted/20 px-8 py-16 text-center">
+                    <div className="rounded-2xl border border-dashed border-border/80 bg-muted/20 px-8 py-20 text-center">
+                      <ListVideo className="size-10 mx-auto mb-3 text-muted-foreground/50" />
                       <p className="text-sm text-muted-foreground">
                         {t('collection.playlistEmpty')}
                       </p>
