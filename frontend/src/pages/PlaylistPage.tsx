@@ -69,31 +69,28 @@ export function PlaylistPage() {
               <button
                 type="button"
                 onClick={() => navigate('/collection')}
-                className="group flex items-center gap-2 text-left transition-colors duration-150 hover:text-foreground"
+                className="group flex items-center gap-2 text-left transition-colors duration-150"
               >
                 <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                 <h1 className="text-xl md:text-2xl font-bold tracking-[-0.02em] text-foreground text-balance">
                   {data.name}
                 </h1>
+              </button>
+              <div className="mt-3 ml-7 flex items-center gap-2">
+                <Badge variant="secondary" className="inline-flex items-center gap-1 text-xs font-medium tabular-nums">
+                  <ListVideo className="size-3" />
+                  {data.videos.length}
+                </Badge>
                 {data.topic && (
-                  <Badge variant="secondary" className="ml-1 text-xs font-medium">
+                  <Badge variant="secondary" className="text-xs font-medium">
                     {data.topic}
                   </Badge>
                 )}
-              </button>
+              </div>
             </div>
 
             {/* Video grid */}
             <div className="px-6 md:px-10 pb-16">
-              <div className="flex items-center gap-3 mb-6">
-                <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">
-                  {t('collection.lessonList')}
-                </h2>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium tabular-nums bg-secondary text-muted-foreground">
-                  <ListVideo className="size-3" />
-                  {data.videos.length}
-                </span>
-              </div>
               {data.videos.length === 0
                 ? (
                     <div className="rounded-2xl border border-dashed border-border/80 bg-muted/20 px-8 py-20 text-center">
