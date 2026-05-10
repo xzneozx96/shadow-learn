@@ -435,7 +435,7 @@ export function CompanionChatArea({
               <PromptInputTextarea placeholder={placeholder ?? t('lesson.askAboutSegment')} />
             </PromptInputBody>
             <PromptInputFooter>
-              <PromptInputTools>
+              <PromptInputTools className="gap-2">
                 {onSpeakClick && (
                   <PromptInputButton
                     variant="default"
@@ -443,7 +443,7 @@ export function CompanionChatArea({
                     onClick={onSpeakClick}
                     title={t('speak.title')}
                     aria-label={t('speak.title')}
-                    className="bg-linear-to-br from-[#863bff] via-[#7e14ff] to-[#47bfff] text-white shadow-md shadow-[#7e14ff]/40 hover:from-[#9559ff] hover:via-[#8b2eff] hover:to-[#5fc8ff] hover:text-white"
+                    className="bg-linear-to-br from-[#7e14ff] via-[#5b6cff] to-[#47bfff] text-white shadow-sm shadow-[#5b6cff]/40 hover:from-[#9341ff] hover:via-[#7787ff] hover:to-[#5fc8ff] hover:text-white"
                   >
                     <AudioLines className="size-4" />
                   </PromptInputButton>
