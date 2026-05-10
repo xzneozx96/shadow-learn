@@ -1,14 +1,18 @@
-"""Service layer for the Collection page: yt-dlp playlist fetch + cache + merge."""
+"""Service layer for the Collection page: YouTube Data API playlist fetch + cache + merge."""
 from __future__ import annotations
 
 import logging
+import re
 import time
 
-import yt_dlp
+import httpx
 
 from app.collection.config import PlaylistConfig, PLAYLISTS
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
+
+YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
 
 
 def format_duration(seconds: int | None) -> str:
@@ -20,26 +24,127 @@ def format_duration(seconds: int | None) -> str:
     return f"{minutes}:{secs:02d}"
 
 
+def parse_iso8601_duration(duration: str | None) -> int | None:
+    """Convert ISO 8601 duration string (e.g. 'PT4M23S') to total seconds."""
+    if not duration:
+        return None
+    m = re.fullmatch(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)
+    if not m:
+        return None
+    hours = int(m.group(1) or 0)
+    minutes = int(m.group(2) or 0)
+    secs = int(m.group(3) or 0)
+    return hours * 3600 + minutes * 60 + secs
+
+
+def fetch_playlist_items(playlist_id: str, api_key: str) -> list[dict]:
+    """Fetch all items from a YouTube playlist via playlistItems.list.
+
+    Returns list of dicts: {video_id, title, description, channel}
+    Handles pagination. Returns [] on any error.
+    """
+    items: list[dict] = []
+    page_token: str | None = None
+    while True:
+        params: dict = {
+            "part": "snippet",
+            "playlistId": playlist_id,
+            "maxResults": 50,
+            "key": api_key,
+        }
+        if page_token:
+            params["pageToken"] = page_token
+        try:
+            resp = httpx.get(f"{YOUTUBE_API_BASE}/playlistItems", params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as exc:
+            logger.warning("YouTube API playlistItems failed for %s: %s", playlist_id, exc)
+            return []
+
+        for item in data.get("items", []):
+            snippet = item.get("snippet", {})
+            video_id = snippet.get("resourceId", {}).get("videoId")
+            if not video_id:
+                continue
+            items.append({
+                "video_id": video_id,
+                "title": snippet.get("title") or "Untitled",
+                "description": snippet.get("description") or None,
+                "channel": snippet.get("videoOwnerChannelTitle") or None,
+            })
+
+        page_token = data.get("nextPageToken")
+        if not page_token:
+            break
+
+    return items
+
+
+def fetch_video_details(video_ids: list[str], api_key: str) -> dict[str, dict]:
+    """Fetch duration and view_count for a batch of video IDs via videos.list.
+
+    Returns {video_id: {duration_seconds: int|None, view_count: int|None}}
+    Batches up to 50 IDs per request. Skips failed batches (logs warning).
+    """
+    result: dict[str, dict] = {}
+    for i in range(0, len(video_ids), 50):
+        batch = video_ids[i : i + 50]
+        params = {
+            "part": "contentDetails,statistics",
+            "id": ",".join(batch),
+            "key": api_key,
+        }
+        try:
+            resp = httpx.get(f"{YOUTUBE_API_BASE}/videos", params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as exc:
+            logger.warning("YouTube API videos.list failed for batch: %s", exc)
+            continue
+
+        for item in data.get("items", []):
+            vid = item.get("id")
+            if not vid:
+                continue
+            duration_str = item.get("contentDetails", {}).get("duration")
+            view_count_str = item.get("statistics", {}).get("viewCount")
+            result[vid] = {
+                "duration_seconds": parse_iso8601_duration(duration_str),
+                "view_count": int(view_count_str) if view_count_str else None,
+            }
+    return result
 
 
 def fetch_playlist(playlist_id: str) -> list[dict]:
-    """Fetch flat playlist metadata from YouTube via yt-dlp (no download).
+    """Fetch playlist metadata via YouTube Data API v3.
 
-    Returns list of entry dicts with keys: id, title, duration, ...
-    Returns [] if the playlist has no entries or yt-dlp fails (network,
-    extractor change, unavailable playlist, etc.). Failures are logged
-    but never propagate — a single broken playlist shouldn't break the
-    whole Collection response.
+    Returns list of entry dicts with keys: id, title, duration (raw seconds),
+    view_count, channel, description. Returns [] if API key missing or on error.
     """
-    opts = {"extract_flat": True, "quiet": True, "skip_download": True}
-    url = f"https://www.youtube.com/playlist?list={playlist_id}"
-    try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-        return info.get("entries", []) or []
-    except Exception as exc:
-        logger.warning("yt-dlp failed to fetch playlist %s: %s", playlist_id, exc)
+    api_key = settings.youtube_api_key
+    if not api_key:
+        logger.warning("SHADOWLEARN_YOUTUBE_API_KEY not set; collection unavailable")
         return []
+
+    items = fetch_playlist_items(playlist_id, api_key)
+    if not items:
+        return []
+
+    video_ids = [item["video_id"] for item in items]
+    details = fetch_video_details(video_ids, api_key)
+
+    return [
+        {
+            "id": item["video_id"],
+            "title": item["title"],
+            "duration": details.get(item["video_id"], {}).get("duration_seconds"),
+            "view_count": details.get(item["video_id"], {}).get("view_count"),
+            "channel": item["channel"],
+            "description": item["description"],
+        }
+        for item in items
+    ]
 
 
 CACHE_TTL_SECONDS = 3600        # successful fetches cached for 1h
@@ -47,17 +152,11 @@ EMPTY_CACHE_TTL_SECONDS = 60    # empty/failed fetches re-tried after 1m
 
 # {playlist_id: (fetched_at_epoch, entries)}
 # NOTE: in-memory and per-process. Assumes single uvicorn worker.
-# Multiple workers will fetch independently — fine for a curated playlist
-# of <10 entries, but switch to a shared store (Redis) if scaling out.
 _cache: dict[str, tuple[float, list[dict]]] = {}
 
 
 def get_cached_playlist(playlist_id: str) -> list[dict]:
-    """Fetch playlist with in-memory TTL cache.
-
-    Empty results use a shorter TTL so a transient YouTube hiccup doesn't
-    leave a playlist looking dead for an hour.
-    """
+    """Fetch playlist with in-memory TTL cache."""
     now = time.time()
     cached = _cache.get(playlist_id)
     if cached is not None:
@@ -71,11 +170,10 @@ def get_cached_playlist(playlist_id: str) -> list[dict]:
 
 
 def build_video_list(playlist: PlaylistConfig, entries: list[dict]) -> list[dict]:
-    """Merge yt-dlp entries with difficulty from PlaylistConfig.
+    """Merge API entries with difficulty from PlaylistConfig.
 
     Difficulty resolution order: per-video override → playlist default → None.
-    Output order matches yt-dlp entry order.
-    Videos missing from yt-dlp output are silently skipped.
+    Output order matches API entry order.
     """
     difficulty_by_id = {v.video_id: v.difficulty for v in playlist.videos}
     result = []
@@ -90,7 +188,7 @@ def build_video_list(playlist: PlaylistConfig, entries: list[dict]) -> list[dict
             "duration": format_duration(entry.get("duration")),
             "difficulty": difficulty,
             "view_count": entry.get("view_count"),
-            "channel": entry.get("channel") or entry.get("uploader"),
+            "channel": entry.get("channel"),
             "description": entry.get("description"),
         })
     return result

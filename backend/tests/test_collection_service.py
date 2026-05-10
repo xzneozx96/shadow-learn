@@ -1,5 +1,4 @@
 import time
-from unittest.mock import patch, MagicMock
 
 from app.collection.service import format_duration
 
@@ -24,49 +23,195 @@ def test_format_duration_none_returns_dash():
     assert format_duration(None) == "—"
 
 
-def test_fetch_playlist_returns_entries():
-    """fetch_playlist calls yt-dlp with extract_flat=True and returns entries."""
-    fake_info = {
-        "entries": [
-            {"id": "abc123", "title": "Hello", "duration": 60},
-            {"id": "def456", "title": "World", "duration": 120},
+# ── parse_iso8601_duration ────────────────────────────────────────────────────
+
+def test_parse_iso8601_duration_minutes_seconds():
+    from app.collection.service import parse_iso8601_duration
+    assert parse_iso8601_duration("PT4M23S") == 263
+
+
+def test_parse_iso8601_duration_hours():
+    from app.collection.service import parse_iso8601_duration
+    assert parse_iso8601_duration("PT1H2M3S") == 3723
+
+
+def test_parse_iso8601_duration_seconds_only():
+    from app.collection.service import parse_iso8601_duration
+    assert parse_iso8601_duration("PT30S") == 30
+
+
+def test_parse_iso8601_duration_none():
+    from app.collection.service import parse_iso8601_duration
+    assert parse_iso8601_duration(None) is None
+
+
+def test_parse_iso8601_duration_empty():
+    from app.collection.service import parse_iso8601_duration
+    assert parse_iso8601_duration("") is None
+
+
+def test_parse_iso8601_duration_invalid():
+    from app.collection.service import parse_iso8601_duration
+    assert parse_iso8601_duration("garbage") is None
+
+
+# ── fetch_playlist_items ──────────────────────────────────────────────────────
+
+def test_fetch_playlist_items_returns_normalized_entries(monkeypatch):
+    """fetch_playlist_items parses snippet fields and returns normalized dicts."""
+    from unittest.mock import MagicMock, patch
+
+    fake_response = MagicMock()
+    fake_response.raise_for_status.return_value = None
+    fake_response.json.return_value = {
+        "items": [
+            {
+                "snippet": {
+                    "title": "Hello",
+                    "description": "A video",
+                    "videoOwnerChannelTitle": "FooChannel",
+                    "resourceId": {"videoId": "abc123"},
+                }
+            },
+            {
+                "snippet": {
+                    "title": "World",
+                    "description": None,
+                    "videoOwnerChannelTitle": None,
+                    "resourceId": {"videoId": "def456"},
+                }
+            },
+        ]
+        # no nextPageToken → single page
+    }
+
+    with patch("app.collection.service.httpx.get", return_value=fake_response):
+        from app.collection.service import fetch_playlist_items
+        result = fetch_playlist_items("PLfake", "APIKEY")
+
+    assert len(result) == 2
+    assert result[0] == {
+        "video_id": "abc123",
+        "title": "Hello",
+        "description": "A video",
+        "channel": "FooChannel",
+    }
+    assert result[1]["channel"] is None
+    assert result[1]["description"] is None
+
+
+def test_fetch_playlist_items_paginates(monkeypatch):
+    """fetch_playlist_items follows nextPageToken to collect all pages."""
+    from unittest.mock import MagicMock, patch
+
+    page1 = MagicMock()
+    page1.raise_for_status.return_value = None
+    page1.json.return_value = {
+        "items": [
+            {"snippet": {"title": "V1", "description": None, "videoOwnerChannelTitle": None, "resourceId": {"videoId": "v1"}}}
+        ],
+        "nextPageToken": "TOKEN2",
+    }
+    page2 = MagicMock()
+    page2.raise_for_status.return_value = None
+    page2.json.return_value = {
+        "items": [
+            {"snippet": {"title": "V2", "description": None, "videoOwnerChannelTitle": None, "resourceId": {"videoId": "v2"}}}
         ]
     }
-    fake_ydl = MagicMock()
-    fake_ydl.__enter__.return_value.extract_info.return_value = fake_info
 
-    with patch("app.collection.service.yt_dlp.YoutubeDL", return_value=fake_ydl):
-        from app.collection.service import fetch_playlist
-        entries = fetch_playlist("PLfake")
+    with patch("app.collection.service.httpx.get", side_effect=[page1, page2]):
+        from app.collection.service import fetch_playlist_items
+        result = fetch_playlist_items("PLfake", "APIKEY")
 
-    assert len(entries) == 2
-    assert entries[0]["id"] == "abc123"
-    assert entries[1]["title"] == "World"
+    assert [r["video_id"] for r in result] == ["v1", "v2"]
 
 
-def test_fetch_playlist_uses_extract_flat_and_quiet():
-    """fetch_playlist passes extract_flat=True and quiet=True to yt-dlp."""
-    fake_ydl = MagicMock()
-    fake_ydl.__enter__.return_value.extract_info.return_value = {"entries": []}
+def test_fetch_playlist_items_returns_empty_on_error(monkeypatch):
+    """fetch_playlist_items returns [] and logs on HTTP error."""
+    from unittest.mock import patch
+    import httpx as _httpx
 
-    with patch("app.collection.service.yt_dlp.YoutubeDL") as mock_cls:
-        mock_cls.return_value = fake_ydl
-        from app.collection.service import fetch_playlist
-        fetch_playlist("PLfake")
-
-    opts = mock_cls.call_args[0][0]
-    assert opts.get("extract_flat") is True
-    assert opts.get("quiet") is True
+    with patch("app.collection.service.httpx.get", side_effect=_httpx.RequestError("timeout")):
+        from app.collection.service import fetch_playlist_items
+        assert fetch_playlist_items("PLfake", "APIKEY") == []
 
 
-def test_fetch_playlist_handles_missing_entries():
-    """fetch_playlist returns [] if yt-dlp returns no entries key."""
-    fake_ydl = MagicMock()
-    fake_ydl.__enter__.return_value.extract_info.return_value = {}
+# ── fetch_video_details ───────────────────────────────────────────────────────
 
-    with patch("app.collection.service.yt_dlp.YoutubeDL", return_value=fake_ydl):
-        from app.collection.service import fetch_playlist
-        assert fetch_playlist("PLfake") == []
+def test_fetch_video_details_returns_duration_and_view_count():
+    """fetch_video_details parses contentDetails.duration and statistics.viewCount."""
+    from unittest.mock import MagicMock, patch
+
+    fake_response = MagicMock()
+    fake_response.raise_for_status.return_value = None
+    fake_response.json.return_value = {
+        "items": [
+            {
+                "id": "abc123",
+                "contentDetails": {"duration": "PT4M23S"},
+                "statistics": {"viewCount": "98765"},
+            },
+            {
+                "id": "def456",
+                "contentDetails": {"duration": "PT1M30S"},
+                "statistics": {},  # no viewCount
+            },
+        ]
+    }
+
+    with patch("app.collection.service.httpx.get", return_value=fake_response):
+        from app.collection.service import fetch_video_details
+        result = fetch_video_details(["abc123", "def456"], "APIKEY")
+
+    assert result["abc123"] == {"duration_seconds": 263, "view_count": 98765}
+    assert result["def456"] == {"duration_seconds": 90, "view_count": None}
+
+
+def test_fetch_video_details_returns_empty_on_error():
+    """fetch_video_details returns {} and logs on HTTP error."""
+    from unittest.mock import patch
+    import httpx as _httpx
+
+    with patch("app.collection.service.httpx.get", side_effect=_httpx.RequestError("timeout")):
+        from app.collection.service import fetch_video_details
+        assert fetch_video_details(["abc123"], "APIKEY") == {}
+
+
+# ── fetch_playlist (integration of the two helpers) ──────────────────────────
+
+def test_fetch_playlist_combines_items_and_details(monkeypatch):
+    """fetch_playlist merges fetch_playlist_items + fetch_video_details output."""
+    from app.collection import service
+
+    monkeypatch.setattr(service, "fetch_playlist_items", lambda pid, key: [
+        {"video_id": "abc", "title": "Hello", "description": "desc", "channel": "Foo"},
+    ])
+    monkeypatch.setattr(service, "fetch_video_details", lambda ids, key: {
+        "abc": {"duration_seconds": 263, "view_count": 1000},
+    })
+    monkeypatch.setattr(service.settings, "youtube_api_key", "FAKEKEY")
+
+    result = service.fetch_playlist("PLfake")
+
+    assert result == [
+        {"id": "abc", "title": "Hello", "duration": 263, "view_count": 1000, "channel": "Foo", "description": "desc"},
+    ]
+
+
+def test_fetch_playlist_returns_empty_when_no_api_key(monkeypatch):
+    """fetch_playlist returns [] when youtube_api_key is not configured."""
+    from app.collection import service
+    monkeypatch.setattr(service.settings, "youtube_api_key", None)
+    assert service.fetch_playlist("PLfake") == []
+
+
+def test_fetch_playlist_returns_empty_when_items_empty(monkeypatch):
+    """fetch_playlist returns [] when playlistItems returns no items."""
+    from app.collection import service
+    monkeypatch.setattr(service, "fetch_playlist_items", lambda pid, key: [])
+    monkeypatch.setattr(service.settings, "youtube_api_key", "FAKEKEY")
+    assert service.fetch_playlist("PLfake") == []
 
 
 def test_cache_returns_fresh_within_ttl(monkeypatch):
@@ -125,7 +270,7 @@ def test_build_video_list_merges_difficulty_by_video_id():
     )
     entries = [
         {"id": "abc", "title": "Hello", "duration": 754, "view_count": 1000, "channel": "Foo", "description": "first"},
-        {"id": "def", "title": "World", "duration": 90, "uploader": "Bar"},
+        {"id": "def", "title": "World", "duration": 90, "channel": "Bar"},
     ]
 
     result = build_video_list(playlist, entries)
