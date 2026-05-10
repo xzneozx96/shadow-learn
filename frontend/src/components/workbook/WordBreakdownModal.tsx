@@ -235,7 +235,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
 
             {/* Anatomy Tree */}
             <section>
-              <h3 className="text-xs font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.components')}</h3>
+              <h3 className="text-xs font-bold text-foreground/40 uppercase tracking-[0.2em] mb-2">{t('breakdown.components')}</h3>
               <BreakdownTree
                 word={word}
                 pinyin={pinyin}

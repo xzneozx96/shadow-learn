@@ -2,8 +2,8 @@ import type { NodeProps } from '@xyflow/react'
 import type { CharNodeData, CompNodeData, NodeData, WordNodeData } from './breakdownTreeLayout'
 import type { CharData } from '@/lib/hanzi/types'
 import { Controls, Handle, Position, ReactFlow } from '@xyflow/react'
-import { Loader2 } from 'lucide-react'
-import { useMemo } from 'react'
+import { Loader2, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
 import { buildGraph } from './breakdownTreeLayout'
 import '@xyflow/react/dist/style.css'
@@ -59,8 +59,11 @@ function BreakdownNode({ data }: NodeProps) {
   const d = nodeData as CompNodeData
   const showName = d.name && d.name !== d.char
   const charRenderable = (d.char.codePointAt(0) ?? 0) < 0x20000
+  const clickable = !!(d.meaning || d.meaningVi)
   return (
-    <div className="bg-card/60 border border-border rounded-xl px-3 py-1.5 text-center min-w-[60px] shadow-sm">
+    <div
+      className={`bg-card/60 border border-border rounded-xl px-3 py-1.5 text-center min-w-[60px] shadow-sm transition-colors ${clickable ? 'cursor-pointer hover:border-primary/50 hover:bg-card' : ''}`}
+    >
       <Handle type="target" position={Position.Top} className={handleClass} />
       {charRenderable
         ? (
@@ -95,7 +98,8 @@ interface BreakdownTreeProps {
 }
 
 export function BreakdownTree({ word, pinyin, sinoVietnamese, characters, loading }: BreakdownTreeProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const [selectedComp, setSelectedComp] = useState<CompNodeData | null>(null)
 
   const { nodes, edges, height } = useMemo(
     () => buildGraph(word, pinyin, sinoVietnamese, characters),
@@ -114,31 +118,69 @@ export function BreakdownTree({ word, pinyin, sinoVietnamese, characters, loadin
   if (characters.length === 0)
     return null
 
+  const meaning = selectedComp
+    ? (locale === 'vi' && selectedComp.meaningVi ? selectedComp.meaningVi : selectedComp.meaning)
+    : null
+
   return (
-    <div
-      className="w-full rounded-xl overflow-hidden border border-border/30 [&_.react-flow__attribution]:hidden"
-      style={{ height: Math.max(height + 48, 320) }}
-    >
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.25 }}
-        minZoom={0.2}
-        maxZoom={2}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        proOptions={{ hideAttribution: true }}
-        className="bg-transparent!"
-        style={{ background: 'transparent' }}
+    <div className="space-y-3">
+      <p className="text-sm text-foreground/30 italic mt-1">{t('breakdown.clickHint')}</p>
+
+      <div
+        className="w-full rounded-xl overflow-hidden border border-border/30 [&_.react-flow__attribution]:hidden [&_.react-flow__node.selected]:shadow-none [&_.react-flow__node.selected]:outline-none"
+        style={{ height: Math.max(height + 48, 320) }}
       >
-        <Controls
-          showInteractive={false}
-          className="[&>button]:bg-card! [&>button]:border-border! [&>button]:text-foreground/70! [&>button:hover]:bg-secondary!"
-        />
-      </ReactFlow>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.25 }}
+          minZoom={0.2}
+          maxZoom={2}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={true}
+          onNodeClick={(_, node) => {
+            const d = node.data as NodeData
+            if (d.kind === 'comp' && (d.meaning || d.meaningVi))
+              setSelectedComp(prev => prev?.char === d.char ? null : d as CompNodeData)
+          }}
+          proOptions={{ hideAttribution: true }}
+          className="bg-transparent!"
+          style={{ background: 'transparent' }}
+        >
+          <Controls
+            showInteractive={false}
+            className="[&>button]:bg-card! [&>button]:border-border! [&>button]:text-foreground/70! [&>button:hover]:bg-secondary!"
+          />
+        </ReactFlow>
+      </div>
+
+      {selectedComp && meaning && (
+        <div className="flex items-center gap-3 bg-card border border-border/60 rounded-xl px-4 py-3 text-sm ">
+          <span className="text-2xl font-serif font-bold text-foreground leading-none mt-0.5 shrink-0">{selectedComp.char}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {selectedComp.pinyin && <span className="text-xs italic text-yellow-500">{selectedComp.pinyin}</span>}
+              {selectedComp.name && (
+                <>
+                  {selectedComp.pinyin && <span className="text-xs text-foreground/30">·</span>}
+                  <span className="text-xs font-bold text-emerald-500">{selectedComp.name}</span>
+                </>
+              )}
+            </div>
+            <p className="text-foreground/70 mt-1 leading-snug">{meaning}</p>
+          </div>
+          <button
+            onClick={() => setSelectedComp(null)}
+            className="text-foreground/30 hover:text-foreground/60 transition-colors shrink-0"
+            aria-label="Close"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

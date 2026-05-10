@@ -34,6 +34,9 @@ export interface CompNodeData {
   char: string
   pinyin: string
   name: string
+  meaning: string
+  meaningVi: string
+  onSelect?: () => void
   [key: string]: unknown
 }
 
@@ -57,6 +60,7 @@ export function buildGraph(
 
   const edgeStyle = { stroke: 'hsl(var(--border))', strokeWidth: 1.5 }
   const edgeType = 'default' // bezier — no horizontal segments unlike smoothstep
+  const edgeAnimated = true
 
   if (isSingle) {
     const c = characters[0]
@@ -81,7 +85,7 @@ export function buildGraph(
         id: compId,
         type: 'breakdownNode',
         position: { x: ci * (NODE_W_COMP + LEAF_GAP), y: ROW_GAP },
-        data: { kind: 'comp', char: comp.char, pinyin: comp.pinyin, name: comp.name } as CompNodeData,
+        data: { kind: 'comp', char: comp.char, pinyin: comp.pinyin, name: comp.name, meaning: comp.meaning, meaningVi: comp.meaningVi } as CompNodeData,
       })
       edges.push({
         id: `e-char-0-${compId}`,
@@ -89,6 +93,7 @@ export function buildGraph(
         target: compId,
         type: edgeType,
         style: edgeStyle,
+        animated: edgeAnimated,
       })
     })
 
@@ -156,6 +161,7 @@ export function buildGraph(
       target: charId,
       type: edgeType,
       style: edgeStyle,
+      animated: edgeAnimated,
     })
 
     for (let j = 0; j < c.components.length; j++) {
@@ -166,7 +172,7 @@ export function buildGraph(
         id: compId,
         type: 'breakdownNode',
         position: { x: compX, y: ROW_GAP * 2 },
-        data: { kind: 'comp', char: comp.char, pinyin: comp.pinyin, name: comp.name } as CompNodeData,
+        data: { kind: 'comp', char: comp.char, pinyin: comp.pinyin, name: comp.name, meaning: comp.meaning, meaningVi: comp.meaningVi } as CompNodeData,
       })
 
       edges.push({
@@ -175,6 +181,7 @@ export function buildGraph(
         target: compId,
         type: edgeType,
         style: edgeStyle,
+        animated: edgeAnimated,
       })
     }
   }

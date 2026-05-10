@@ -268,13 +268,13 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
   }
 
   return (
-    <div className="relative mx-auto max-w-5xl min-h-full">
+    <div className="relative mx-auto min-w-2xl max-w-5xl min-h-full">
       {/* Close button — always visible */}
       <button
         type="button"
         aria-label="Close"
         onClick={() => phase === 'session' && !disableLeaveGuard ? setConfirmLeave(true) : onClose()}
-        className="absolute right-4 top-4 z-10 rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
+        className="absolute right-3 top-3 z-10 rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
       >
         <X className="size-5" />
       </button>
