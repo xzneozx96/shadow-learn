@@ -36,6 +36,3 @@ export interface HubResponse {
   materials: MaterialsSection
   tips: TipsSection
 }
-
-// Deprecated alias — remove once all imports are updated
-export type CollectionVideo = HubVideo

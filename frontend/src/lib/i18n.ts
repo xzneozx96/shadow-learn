@@ -173,9 +173,7 @@ export const TRANSLATIONS = {
     'library.chip.words': 'words',
 
     // Collection
-    'collection.eyebrow': 'Curated Content',
     'collection.title': 'Collection',
-    'collection.subtitle': 'High-quality channels for shadowing practice. Watch inline, then create a lesson.',
     'collection.videoCount': '{count} videos',
     'collection.createLesson': 'Create Lesson',
     'collection.creating': 'Creating…',
@@ -775,9 +773,7 @@ export const TRANSLATIONS = {
     'library.chip.words': 'từ',
 
     // Collection
-    'collection.eyebrow': 'Nội dung tuyển chọn',
     'collection.title': 'Bộ sưu tập',
-    'collection.subtitle': 'Các kênh chất lượng cao để luyện shadowing. Xem trực tiếp rồi tạo bài học.',
     'collection.videoCount': '{count} video',
     'collection.createLesson': 'Tạo bài học',
     'collection.creating': 'Đang tạo…',
