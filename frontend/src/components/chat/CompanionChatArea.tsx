@@ -39,10 +39,10 @@ function AttachImageButton({ label }: { label: string }) {
   const attachments = usePromptInputAttachments()
   return (
     <PromptInputButton
-      aria-label={label}
+      tooltip={label}
       onClick={attachments.openFileDialog}
     >
-      <ImageIcon className="size-5" />
+      <ImageIcon className="size-4" />
     </PromptInputButton>
   )
 }
@@ -434,19 +434,18 @@ export function CompanionChatArea({
             </PromptInputBody>
             <PromptInputFooter>
               <PromptInputTools>
+                <AttachImageButton label={t('companion.attachImage')} />
                 {onSpeakClick && (
-                  <button
-                    type="button"
+                  <PromptInputButton
                     onClick={onSpeakClick}
-                    aria-label={t('speak.title')}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                    tooltip={t('speak.title')}
                   >
-                    <AudioLines className="size-3.5" />
-                    {t('speak.title')}
-                  </button>
+                    <AudioLines className="size-4" />
+                    <span>{t('speak.title')}</span>
+                  </PromptInputButton>
                 )}
                 <PromptInputButton
-                  aria-label="Voice input"
+                  tooltip="Voice input"
                   onClick={() => {
                     if (voice.state === 'recording')
                       voice.stop()
@@ -454,17 +453,12 @@ export function CompanionChatArea({
                       voice.start()
                   }}
                   disabled={voice.state === 'connecting' || voice.state === 'processing'}
-                  className={voice.state === 'recording' ? 'animate-pulse ring-2 ring-destructive' : undefined}
+                  className={voice.state === 'recording' ? 'text-destructive' : undefined}
                 >
                   {voice.state === 'connecting' || voice.state === 'processing'
                     ? <Spinner className="size-4" />
-                    : (
-                        <Mic
-                          className={`size-5 ${voice.state === 'recording' ? 'text-destructive' : ''}`}
-                        />
-                      )}
+                    : <Mic className="size-4" />}
                 </PromptInputButton>
-                <AttachImageButton label={t('companion.attachImage')} />
               </PromptInputTools>
               <PromptInputSubmit status={chatStatus} onStop={onStop} />
             </PromptInputFooter>
