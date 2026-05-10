@@ -39,7 +39,8 @@ function AttachImageButton({ tooltip }: { tooltip: string }) {
   const attachments = usePromptInputAttachments()
   return (
     <PromptInputButton
-      tooltip={tooltip}
+      size="icon-sm"
+      title={tooltip}
       aria-label={tooltip}
       onClick={attachments.openFileDialog}
     >
@@ -438,17 +439,20 @@ export function CompanionChatArea({
                 {onSpeakClick && (
                   <PromptInputButton
                     variant="default"
+                    size="icon-sm"
                     onClick={onSpeakClick}
-                    tooltip={t('speak.title')}
+                    title={t('speak.title')}
                     aria-label={t('speak.title')}
-                    className="bg-linear-to-br from-primary via-primary/90 to-primary/70 text-primary-foreground shadow-md shadow-primary/30 hover:from-primary/90 hover:via-primary/80 hover:to-primary/60 hover:text-primary-foreground"
+                    className="bg-linear-to-br from-[#863bff] via-[#7e14ff] to-[#47bfff] text-white shadow-md shadow-[#7e14ff]/40 hover:from-[#9559ff] hover:via-[#8b2eff] hover:to-[#5fc8ff] hover:text-white"
                   >
                     <AudioLines className="size-4" />
                   </PromptInputButton>
                 )}
                 <AttachImageButton tooltip={t('companion.attachImage')} />
                 <PromptInputButton
-                  tooltip={t('voice.dictate')}
+                  size="icon-sm"
+                  title={t('voice.dictate')}
+                  aria-label={t('voice.dictate')}
                   onClick={() => {
                     if (voice.state === 'recording')
                       voice.stop()
