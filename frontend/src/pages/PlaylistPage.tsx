@@ -1,9 +1,9 @@
-import { CheckCheck, ChevronLeft, ListVideo } from 'lucide-react'
+import { ChevronLeft, ListVideo } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { VideoCard } from '@/components/collection/VideoCard'
 import { Layout } from '@/components/Layout'
-import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { usePlaylist } from '@/hooks/usePlaylist'
@@ -12,16 +12,10 @@ const YOUTUBE_ID_REGEX = /[?&]v=([^&]+)|youtu\.be\/([^?&]+)/
 
 function PlaylistPageSkeleton() {
   return (
-    <div className="px-6 md:px-10 py-12 animate-pulse">
-      <div className="h-5 w-32 rounded-md bg-muted mb-8" />
-      <div className="flex flex-col md:flex-row gap-10 mb-12">
-        <div className="w-full md:w-[440px] aspect-video rounded-2xl bg-muted shrink-0" />
-        <div className="flex flex-col gap-4 justify-center pt-2">
-          <div className="h-4 w-24 rounded-full bg-muted" />
-          <div className="h-10 w-80 rounded-md bg-muted" />
-          <div className="h-4 w-48 rounded-md bg-muted/70" />
-        </div>
-      </div>
+    <div className="px-6 md:px-10 py-10 animate-pulse">
+      <div className="h-8 w-80 rounded-md bg-muted mb-3" />
+      <div className="h-5 w-24 rounded-full bg-muted mb-10" />
+      <div className="h-6 w-48 rounded-md bg-muted mb-6" />
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         {Array.from({ length: 8 }, (_, i) => i).map(i => (
           <div key={i}>
@@ -55,13 +49,8 @@ export function PlaylistPage() {
     return set
   }, [lessons])
 
-  const createdCount = useMemo(
-    () => data?.videos.filter(v => createdSet.has(v.video_id)).length ?? 0,
-    [data, createdSet],
-  )
-
   return (
-    <Layout ambientThumbnail={data?.thumbnail_url}>
+    <Layout>
       <div className="h-full overflow-y-auto">
         {loading && <PlaylistPageSkeleton />}
 
@@ -75,75 +64,33 @@ export function PlaylistPage() {
 
         {!loading && !error && data && (
           <>
-            <div className="relative">
-              <div className="px-6 md:px-10 pt-8 pb-14">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/collection')}
-                  className="-ml-2 mb-10 text-muted-foreground hover:text-foreground gap-1.5"
-                >
-                  <ChevronLeft className="size-4" />
-                  {t('collection.backToCollection')}
-                </Button>
-
-                <div className="flex flex-col md:flex-row gap-10 items-start">
-                  {data.thumbnail_url
-                    ? (
-                        <div className="w-full md:w-[440px] shrink-0 rounded-2xl overflow-hidden ring-1 ring-border/50 shadow-2xl shadow-black/20 dark:shadow-black/40">
-                          <img
-                            src={data.thumbnail_url}
-                            alt={data.name}
-                            className="w-full aspect-video object-cover"
-                          />
-                        </div>
-                      )
-                    : (
-                        <div className="w-full md:w-[440px] aspect-video rounded-2xl shrink-0 bg-linear-to-br from-secondary via-muted to-secondary ring-1 ring-border/50 shadow-2xl shadow-black/20 dark:shadow-black/40 flex items-center justify-center">
-                          <ListVideo className="size-16 text-muted-foreground/40" />
-                        </div>
-                      )}
-
-                  <div className="flex flex-col gap-5 justify-center md:pt-3 min-w-0 flex-1">
-                    {data.topic && (
-                      <span className="inline-flex w-fit items-center px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-semibold bg-secondary/80 text-muted-foreground ring-1 ring-border/40 backdrop-blur-sm">
-                        {data.topic}
-                      </span>
-                    )}
-                    <h1 className="text-3xl md:text-4xl xl:text-5xl font-bold tracking-[-0.035em] leading-[1.0] text-foreground text-balance">
-                      {data.name}
-                    </h1>
-                    <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1.5 tabular-nums">
-                        <ListVideo className="size-4" />
-                        {t('collection.videoCount', { count: data.videos.length })}
-                      </span>
-                      {createdCount > 0 && (
-                        <>
-                          <span aria-hidden className="size-1 rounded-full bg-muted-foreground/40" />
-                          <span className="flex items-center gap-1.5 tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
-                            <CheckCheck className="size-4" />
-                            {createdCount}
-                            {' / '}
-                            {data.videos.length}
-                            {' '}
-                            {t('collection.created')}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {/* Compact header */}
+            <div className="px-6 md:px-10 pt-8 pb-8">
+              <button
+                type="button"
+                onClick={() => navigate('/collection')}
+                className="group flex items-center gap-2 text-left transition-colors duration-150 hover:text-foreground"
+              >
+                <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+                <h1 className="text-xl md:text-2xl font-bold tracking-[-0.02em] text-foreground text-balance">
+                  {data.name}
+                </h1>
+                {data.topic && (
+                  <Badge variant="secondary" className="ml-1 text-xs font-medium">
+                    {data.topic}
+                  </Badge>
+                )}
+              </button>
             </div>
 
             {/* Video grid */}
             <div className="px-6 md:px-10 pb-16">
-              <div className="flex items-baseline gap-3 mb-7">
-                <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">
                   {t('collection.lessonList')}
                 </h2>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium tabular-nums bg-secondary text-muted-foreground">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium tabular-nums bg-secondary text-muted-foreground">
+                  <ListVideo className="size-3" />
                   {data.videos.length}
                 </span>
               </div>
