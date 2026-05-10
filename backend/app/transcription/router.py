@@ -91,6 +91,12 @@ async def create_session(
             "languages": [],
             "code_switching": True,
         },
+        "messages_config": {
+            # Stream partials so the textarea overlay shows live word-by-word
+            # transcripts. Without this, only finals arrive (UX feels laggy).
+            "receive_partial_transcripts": True,
+            "receive_final_transcripts": True,
+        },
     }
 
     async with httpx.AsyncClient(timeout=10.0) as client:
