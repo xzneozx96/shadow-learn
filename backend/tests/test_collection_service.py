@@ -108,3 +108,75 @@ def test_cache_refetches_after_ttl(monkeypatch):
     time.sleep(0.01)
     service.get_cached_playlist("PL1")
     assert calls["n"] == 2
+
+
+def test_build_video_list_merges_difficulty_by_video_id():
+    """build_video_list pairs yt-dlp entries with VideoConfig difficulty."""
+    from app.collection.config import PlaylistConfig, VideoConfig
+    from app.collection.service import build_video_list
+
+    playlist = PlaylistConfig(
+        name="Test",
+        icon="🎙️",
+        playlist_id="PL1",
+        videos=[
+            VideoConfig(video_id="abc", difficulty="HSK 2"),
+            VideoConfig(video_id="def", difficulty="HSK 4-5"),
+        ],
+    )
+    entries = [
+        {"id": "abc", "title": "Hello", "duration": 754},
+        {"id": "def", "title": "World", "duration": 90},
+    ]
+
+    result = build_video_list(playlist, entries)
+
+    assert result == [
+        {"video_id": "abc", "title": "Hello", "duration": "12:34", "difficulty": "HSK 2"},
+        {"video_id": "def", "title": "World", "duration": "1:30", "difficulty": "HSK 4-5"},
+    ]
+
+
+def test_build_video_list_video_not_in_config_has_null_difficulty():
+    """Videos returned by yt-dlp but absent from VideoConfig get difficulty=None."""
+    from app.collection.config import PlaylistConfig
+    from app.collection.service import build_video_list
+
+    playlist = PlaylistConfig(name="T", icon="x", playlist_id="PL1", videos=[])
+    entries = [{"id": "abc", "title": "Hi", "duration": 60}]
+
+    result = build_video_list(playlist, entries)
+    assert result[0]["difficulty"] is None
+
+
+def test_build_video_list_skips_config_videos_missing_from_yt_dlp():
+    """VideoConfig entries not present in yt-dlp output are dropped silently."""
+    from app.collection.config import PlaylistConfig, VideoConfig
+    from app.collection.service import build_video_list
+
+    playlist = PlaylistConfig(
+        name="T", icon="x", playlist_id="PL1",
+        videos=[VideoConfig(video_id="ghost", difficulty="HSK 1")],
+    )
+    entries: list[dict] = []
+    assert build_video_list(playlist, entries) == []
+
+
+def test_build_video_list_preserves_yt_dlp_order():
+    """Output order matches yt-dlp's entry order, not config order."""
+    from app.collection.config import PlaylistConfig, VideoConfig
+    from app.collection.service import build_video_list
+
+    playlist = PlaylistConfig(
+        name="T", icon="x", playlist_id="PL1",
+        videos=[
+            VideoConfig(video_id="a", difficulty="HSK 1"),
+            VideoConfig(video_id="b", difficulty="HSK 2"),
+        ],
+    )
+    entries = [
+        {"id": "b", "title": "B", "duration": 30},
+        {"id": "a", "title": "A", "duration": 60},
+    ]
+    result = build_video_list(playlist, entries)
+    assert [v["video_id"] for v in result] == ["b", "a"]

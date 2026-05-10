@@ -5,6 +5,8 @@ import time
 
 import yt_dlp
 
+from app.collection.config import PlaylistConfig
+
 
 def format_duration(seconds: int | None) -> str:
     """Format seconds as `m:ss`. Returns `—` for None/missing duration."""
@@ -45,3 +47,25 @@ def get_cached_playlist(playlist_id: str) -> list[dict]:
     entries = fetch_playlist(playlist_id)
     _cache[playlist_id] = (now, entries)
     return entries
+
+
+def build_video_list(playlist: PlaylistConfig, entries: list[dict]) -> list[dict]:
+    """Merge yt-dlp entries with per-video difficulty from PlaylistConfig.
+
+    Output order matches yt-dlp entry order.
+    Videos missing from yt-dlp output are silently skipped.
+    Videos missing from config get difficulty=None.
+    """
+    difficulty_by_id = {v.video_id: v.difficulty for v in playlist.videos}
+    result = []
+    for entry in entries:
+        vid = entry.get("id")
+        if not vid:
+            continue
+        result.append({
+            "video_id": vid,
+            "title": entry.get("title", "Untitled"),
+            "duration": format_duration(entry.get("duration")),
+            "difficulty": difficulty_by_id.get(vid),
+        })
+    return result
