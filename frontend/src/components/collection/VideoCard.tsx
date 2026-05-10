@@ -1,6 +1,6 @@
 import type { LessonMeta } from '@/types'
 import type { CollectionVideo } from '@/types/collection'
-import { Sparkles } from 'lucide-react'
+import { Play, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -17,16 +17,16 @@ interface VideoCardProps {
   video: CollectionVideo
 }
 
-const DIFFICULTY_CLASSES: Record<string, string> = {
-  'HSK 1': 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
-  'HSK 2': 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30',
-  'HSK 3-4': 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30',
-  'HSK 4-5': 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
-  'HSK 5+': 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
+const DIFFICULTY_DOTS: Record<string, number> = {
+  'HSK 1': 1,
+  'HSK 2': 2,
+  'HSK 3-4': 3,
+  'HSK 4-5': 4,
+  'HSK 5+': 5,
 }
 
-function difficultyClass(difficulty: string): string {
-  return DIFFICULTY_CLASSES[difficulty] ?? 'bg-muted text-muted-foreground border-border'
+function difficultyDots(difficulty: string): number {
+  return DIFFICULTY_DOTS[difficulty] ?? 0
 }
 
 export function VideoCard({ video }: VideoCardProps) {
@@ -35,8 +35,10 @@ export function VideoCard({ video }: VideoCardProps) {
   const { updateLesson } = useLessons()
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
+  const [playing, setPlaying] = useState(false)
 
   const canCreate = !!db && (!!keys || trialMode)
+  const thumbnailUrl = `https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`
 
   const handleCreate = async () => {
     if (!canCreate)
@@ -102,41 +104,68 @@ export function VideoCard({ video }: VideoCardProps) {
     }
   }
 
+  const dots = video.difficulty ? difficultyDots(video.difficulty) : 0
+
   return (
-    <div className="shrink-0 w-[calc(25%-12px)] min-w-[260px] rounded-xl bg-card text-card-foreground border border-border/80 overflow-hidden">
-      <div className="relative w-full aspect-video bg-muted">
-        <iframe
-          className="absolute inset-0 w-full h-full"
-          src={`https://www.youtube.com/embed/${video.video_id}?rel=0`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          loading="lazy"
-          title={video.title}
-        />
+    <div className="group/card shrink-0 w-[calc(25%-15px)] min-w-[260px] flex flex-col">
+      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-muted ring-1 ring-border/60 transition-all duration-300 group-hover/card:ring-border group-hover/card:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)]">
+        {playing
+          ? (
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src={`https://www.youtube.com/embed/${video.video_id}?rel=0&autoplay=1`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title={video.title}
+              />
+            )
+          : (
+              <button
+                type="button"
+                onClick={() => setPlaying(true)}
+                className="absolute inset-0 w-full h-full group/play cursor-pointer"
+                aria-label={`Play ${video.title}`}
+              >
+                <img
+                  src={thumbnailUrl}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/play:bg-black/20 transition-colors duration-200">
+                  <span className="flex items-center justify-center size-12 rounded-full bg-black/60 backdrop-blur-sm shadow-lg transition-transform duration-200 group-hover/play:scale-110">
+                    <Play className="size-5 text-white fill-white ml-0.5" />
+                  </span>
+                </div>
+              </button>
+            )}
       </div>
-      <div className="px-3.5 pt-3 pb-3.5 flex flex-col gap-2">
-        <p className="text-base font-medium leading-snug text-foreground line-clamp-2">
+      <div className="pt-3 px-1 flex flex-col gap-2 flex-1">
+        <p className="text-[15px] font-medium leading-snug tracking-[-0.005em] text-foreground line-clamp-2 text-pretty">
           {video.title}
         </p>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0 text-[10px] text-muted-foreground">
-            {video.difficulty && (
-              <span className={cn(
-                'inline-flex items-center px-1.5 py-[1.5px] rounded-full text-[9px] font-semibold tracking-wide border whitespace-nowrap',
-                difficultyClass(video.difficulty),
-              )}
-              >
-                {video.difficulty}
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+          <div className="flex items-center gap-2 min-w-0 text-[11px] text-muted-foreground tabular-nums">
+            {dots > 0 && (
+              <span className="inline-flex items-center gap-0.5" title={video.difficulty ?? undefined}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      'size-1.5 rounded-full',
+                      i < dots ? 'bg-primary/70' : 'bg-muted-foreground/20',
+                    )}
+                  />
+                ))}
               </span>
             )}
-            {video.difficulty && <span className="size-[2px] rounded-full bg-border" />}
             <span>{video.duration}</span>
           </div>
           <Button
             size="sm"
             onClick={handleCreate}
             disabled={submitting || !canCreate}
-            className="h-7 px-3 rounded-full text-[10.5px] font-semibold gap-1 shrink-0"
+            className="h-7 px-3 rounded-full text-[11px] font-semibold gap-1 shrink-0 transition-all duration-200 group-hover/card:shadow-sm"
             data-testid={`collection-create-${video.video_id}`}
           >
             <Sparkles className="size-3" />
