@@ -212,6 +212,10 @@ export const TRANSLATIONS = {
     'lesson.openOnYouTube': 'Open on YouTube',
     'lesson.downloadVideo': 'Download video',
     'lesson.downloadAudio': 'Download audio',
+    'voice.connectionLost': 'Connection lost — try again',
+    'voice.maxReached': 'Max 20s reached',
+    'voice.permissionDenied': 'Microphone permission denied',
+    'voice.unavailable': 'Voice input unavailable',
 
     // Study
     'study.check': 'Check',
@@ -788,6 +792,10 @@ export const TRANSLATIONS = {
     'lesson.openOnYouTube': 'Xem trên YouTube',
     'lesson.downloadVideo': 'Tải video về máy',
     'lesson.downloadAudio': 'Tải âm thanh về máy',
+    'voice.connectionLost': 'Mất kết nối — thử lại',
+    'voice.maxReached': 'Đã đạt 20 giây tối đa',
+    'voice.permissionDenied': 'Đã từ chối quyền micro',
+    'voice.unavailable': 'Voice input không khả dụng',
 
     // Study
     'study.check': 'Kiểm tra',
