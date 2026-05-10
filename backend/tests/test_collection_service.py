@@ -154,11 +154,13 @@ def test_fetch_video_details_returns_duration_and_view_count():
         "items": [
             {
                 "id": "abc123",
+                "snippet": {"publishedAt": "2024-01-15T10:00:00Z"},
                 "contentDetails": {"duration": "PT4M23S"},
                 "statistics": {"viewCount": "98765"},
             },
             {
                 "id": "def456",
+                "snippet": {},
                 "contentDetails": {"duration": "PT1M30S"},
                 "statistics": {},  # no viewCount
             },
@@ -169,8 +171,8 @@ def test_fetch_video_details_returns_duration_and_view_count():
         from app.collection.service import fetch_video_details
         result = fetch_video_details(["abc123", "def456"], "APIKEY")
 
-    assert result["abc123"] == {"duration_seconds": 263, "view_count": 98765}
-    assert result["def456"] == {"duration_seconds": 90, "view_count": None}
+    assert result["abc123"] == {"duration_seconds": 263, "view_count": 98765, "published_at": "2024-01-15T10:00:00Z"}
+    assert result["def456"] == {"duration_seconds": 90, "view_count": None, "published_at": None}
 
 
 def test_fetch_video_details_returns_empty_on_error():
@@ -215,14 +217,14 @@ def test_fetch_playlist_combines_items_and_details(monkeypatch):
         {"video_id": "abc", "title": "Hello", "description": "desc", "channel": "Foo"},
     ])
     monkeypatch.setattr(service, "fetch_video_details", lambda ids, key: {
-        "abc": {"duration_seconds": 263, "view_count": 1000},
+        "abc": {"duration_seconds": 263, "view_count": 1000, "published_at": "2024-01-15T10:00:00Z"},
     })
     monkeypatch.setattr(service.settings, "youtube_api_key", "FAKEKEY")
 
     result = service.fetch_playlist("PLfake")
 
     assert result == [
-        {"id": "abc", "title": "Hello", "duration": 263, "view_count": 1000, "channel": "Foo", "description": "desc"},
+        {"id": "abc", "title": "Hello", "duration": 263, "view_count": 1000, "channel": "Foo", "description": "desc", "published_at": "2024-01-15T10:00:00Z"},
     ]
 
 
@@ -305,11 +307,11 @@ def test_build_video_list_merges_difficulty_by_video_id():
     assert result == [
         {
             "video_id": "abc", "title": "Hello", "duration": "12:34", "difficulty": "HSK 2",
-            "view_count": 1000, "channel": "Foo", "description": "first",
+            "view_count": 1000, "channel": "Foo", "description": "first", "published_at": None,
         },
         {
             "video_id": "def", "title": "World", "duration": "1:30", "difficulty": "HSK 4-5",
-            "view_count": None, "channel": "Bar", "description": None,
+            "view_count": None, "channel": "Bar", "description": None, "published_at": None,
         },
     ]
 

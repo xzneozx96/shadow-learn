@@ -8,6 +8,7 @@ export interface HubVideo {
   view_count: number | null
   channel: string | null
   description: string | null
+  published_at: string | null
   topic: string | null
   skill: string | null
   content_type: ContentType

@@ -91,7 +91,7 @@ def fetch_video_details(video_ids: list[str], api_key: str) -> dict[str, dict]:
     for i in range(0, len(video_ids), 50):
         batch = video_ids[i : i + 50]
         params = {
-            "part": "contentDetails,statistics",
+            "part": "snippet,contentDetails,statistics",
             "id": ",".join(batch),
             "key": api_key,
         }
@@ -109,9 +109,11 @@ def fetch_video_details(video_ids: list[str], api_key: str) -> dict[str, dict]:
                 continue
             duration_str = item.get("contentDetails", {}).get("duration")
             view_count_str = item.get("statistics", {}).get("viewCount")
+            published_at = item.get("snippet", {}).get("publishedAt")
             result[vid] = {
                 "duration_seconds": parse_iso8601_duration(duration_str),
                 "view_count": int(view_count_str) if view_count_str else None,
+                "published_at": published_at,
             }
     return result
 
@@ -142,6 +144,7 @@ def fetch_playlist(playlist_id: str) -> list[dict]:
             "view_count": details.get(item["video_id"], {}).get("view_count"),
             "channel": item["channel"],
             "description": item["description"],
+            "published_at": details.get(item["video_id"], {}).get("published_at"),
         }
         for item in items
     ]
@@ -276,6 +279,7 @@ def fetch_standalone_video_entries(video_ids: list[str], api_key: str) -> dict[s
                 "channel": snippet.get("channelTitle") or None,
                 "duration_seconds": parse_iso8601_duration(duration_str),
                 "view_count": int(view_count_str) if view_count_str else None,
+                "published_at": snippet.get("publishedAt"),
             }
     return result
 
@@ -301,6 +305,7 @@ def build_video_list(playlist: PlaylistConfig, entries: list[dict]) -> list[dict
             "view_count": entry.get("view_count"),
             "channel": entry.get("channel"),
             "description": entry.get("description"),
+            "published_at": entry.get("published_at"),
         })
     return result
 
@@ -392,6 +397,7 @@ def build_hub_response(
             "view_count": entry.get("view_count"),
             "channel": entry.get("channel"),
             "description": entry.get("description"),
+            "published_at": entry.get("published_at"),
             "topic": topic,
             "skill": skill,
             "content_type": content_type,

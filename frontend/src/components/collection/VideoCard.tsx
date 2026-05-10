@@ -1,6 +1,6 @@
 import type { LessonMeta } from '@/types'
 import type { HubVideo } from '@/types/collection'
-import { CheckCheck, Eye, Play, Sparkles, Tv } from 'lucide-react'
+import { Calendar, CheckCheck, Eye, Play, Sparkles, Tv } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useState } from 'react'
 import { toast } from 'sonner'
@@ -41,6 +41,26 @@ const DIFFICULTY_TONE: Record<string, string> = {
 
 function difficultyTone(difficulty: string): string {
   return DIFFICULTY_TONE[difficulty] ?? 'text-muted-foreground'
+}
+
+function formatPublishedAt(iso: string | null): string | null {
+  if (!iso)
+    return null
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime()))
+    return null
+  const diffMs = Date.now() - date.getTime()
+  const day = 24 * 60 * 60 * 1000
+  const days = Math.floor(diffMs / day)
+  if (days < 1)
+    return 'today'
+  if (days < 7)
+    return `${days}d ago`
+  if (days < 30)
+    return `${Math.floor(days / 7)}w ago`
+  if (days < 365)
+    return `${Math.floor(days / 30)}mo ago`
+  return `${Math.floor(days / 365)}y ago`
 }
 
 function formatCount(n: number | null): string {
@@ -214,11 +234,17 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
               className="mt-auto flex items-center justify-between gap-2"
               variants={stagger.item}
             >
-              <div className="flex items-center gap-4 min-w-0 flex-1 text-xs text-muted-foreground overflow-hidden">
+              <div className="flex items-center gap-3 min-w-0 flex-1 text-xs text-muted-foreground overflow-hidden">
                 <span className="flex items-center gap-1 tabular-nums shrink-0" title={`${video.view_count?.toLocaleString() ?? 'N/A'} views`}>
                   <Eye className="size-4" />
                   {formatCount(video.view_count)}
                 </span>
+                {formatPublishedAt(video.published_at) && (
+                  <span className="flex items-center gap-1 tabular-nums shrink-0" title={video.published_at ?? ''}>
+                    <Calendar className="size-4" />
+                    {formatPublishedAt(video.published_at)}
+                  </span>
+                )}
                 <span className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden" title={video.channel ?? 'N/A'}>
                   <Tv className="size-4 shrink-0" />
                   <span className="min-w-0 flex-1 line-clamp-1">{video.channel ?? 'N/A'}</span>
