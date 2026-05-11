@@ -81,7 +81,7 @@ async def test_tts_minimax_returns_audio(mock_tts_provider):
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/api/tts",
-            json={"text": "你好", "minimax_api_key": "test-key"},
+            json={"text": "你好"},
         )
 
     assert response.status_code == 200

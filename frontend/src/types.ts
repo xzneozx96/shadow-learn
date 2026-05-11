@@ -54,7 +54,6 @@ export interface AppSettings {
 
 export interface DecryptedKeys {
   openrouterApiKey?: string
-  minimaxApiKey?: string
   azureSpeechKey?: string
   azureSpeechRegion?: string
   googleRealtimeKey?: string
