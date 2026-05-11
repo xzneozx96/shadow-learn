@@ -1,5 +1,5 @@
 import type { PlaylistItem } from '@/types/collection'
-import { ListVideo } from 'lucide-react'
+import { Calendar, ListVideo, Tv } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   CutoutCard,
@@ -12,6 +12,24 @@ import {
   CutoutCorner,
 } from '@/components/ui/cutout-card'
 import { cn } from '@/lib/utils'
+
+function formatPublishedAt(iso: string | null): string | null {
+  if (!iso)
+    return null
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime()))
+    return null
+  const days = Math.floor((Date.now() - date.getTime()) / 86400000)
+  if (days < 1)
+    return 'today'
+  if (days < 7)
+    return `${days}d ago`
+  if (days < 30)
+    return `${Math.floor(days / 7)}w ago`
+  if (days < 365)
+    return `${Math.floor(days / 30)}mo ago`
+  return `${Math.floor(days / 365)}y ago`
+}
 
 const DIFFICULTY_TONE: Record<string, string> = {
   'HSK 1-2': 'text-emerald-600 dark:text-emerald-400',
@@ -33,13 +51,13 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
   return (
     <Link
       to={`/collection/${playlist.playlist_id}`}
-      className="shrink-0 w-[calc(25%-15px)] min-w-[260px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
+      className="shrink-0 w-[calc(25%-15px)] min-w-[260px] flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
     >
-      <div className="relative pt-3">
+      <div className="relative pt-3 flex-1 flex flex-col">
         {/* Stacked cards: peek from behind main card at top */}
         <div className="absolute inset-x-5 top-0 bottom-3 rounded-2xl bg-muted ring-2 ring-border shadow-md" />
         <div className="absolute inset-x-2.5 top-1.5 bottom-1.5 rounded-2xl bg-card ring-2 ring-border/70 shadow-sm" />
-        <CutoutCard className={cn(cutoutCardSurfaceClassName, 'relative z-10 h-full select-none group/card cursor-pointer flex flex-col')}>
+        <CutoutCard className={cn(cutoutCardSurfaceClassName, 'relative z-10 flex-1 select-none group/card cursor-pointer grid grid-rows-[auto_1fr]')}>
           <CutoutCardMedia className="aspect-video">
             {playlist.thumbnail_url
               ? (
@@ -76,15 +94,31 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
 
           </CutoutCardMedia>
 
-          <CutoutCardContent className="p-4 flex items-center justify-between gap-3">
-            <p className="flex-1 text-sm font-semibold leading-snug line-clamp-2 text-foreground">
-              {playlist.name}
-            </p>
-            {playlist.topic && (
-              <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-secondary text-muted-foreground">
-                {playlist.topic}
-              </span>
-            )}
+          <CutoutCardContent className="p-4 flex flex-col gap-2">
+            <div className="flex items-start justify-between gap-3">
+              <p className="flex-1 text-sm font-semibold leading-snug line-clamp-2 text-foreground">
+                {playlist.name}
+              </p>
+              {playlist.topic && (
+                <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-secondary text-muted-foreground">
+                  {playlist.topic}
+                </span>
+              )}
+            </div>
+            <div className="mt-auto flex items-center gap-4 text-xs text-muted-foreground overflow-hidden">
+              {formatPublishedAt(playlist.published_at) && (
+                <span className="flex items-center gap-1 shrink-0" title={playlist.published_at ?? ''}>
+                  <Calendar className="size-3.5" />
+                  {formatPublishedAt(playlist.published_at)}
+                </span>
+              )}
+              {playlist.channel && (
+                <span className="flex items-center gap-1 min-w-0 overflow-hidden" title={playlist.channel}>
+                  <Tv className="size-3.5 shrink-0" />
+                  <span className="line-clamp-1">{playlist.channel}</span>
+                </span>
+              )}
+            </div>
           </CutoutCardContent>
         </CutoutCard>
       </div>

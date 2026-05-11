@@ -215,9 +215,12 @@ def fetch_playlist_metadata(playlist_ids: list[str], api_key: str) -> dict[str, 
                 or {}
             ).get("url")
             item_count = item.get("contentDetails", {}).get("itemCount")
+            snippet = item.get("snippet", {})
             result[pid] = {
                 "thumbnail_url": thumbnail_url,
                 "video_count": int(item_count) if item_count is not None else None,
+                "channel": snippet.get("channelTitle") or None,
+                "published_at": snippet.get("publishedAt") or None,
             }
     return result
 
@@ -369,6 +372,8 @@ def build_hub_response(
             "name": playlist.name,
             "thumbnail_url": meta.get("thumbnail_url"),
             "video_count": meta.get("video_count"),
+            "channel": meta.get("channel"),
+            "published_at": meta.get("published_at"),
             "difficulty": canonical_difficulty,
             "topic": topic,
             "skill": skill,
@@ -492,6 +497,8 @@ def get_playlist_videos(playlist_id: str) -> dict | None:
     return {
         "name": playlist.name,
         "thumbnail_url": meta.get("thumbnail_url"),
+        "channel": meta.get("channel"),
+        "published_at": meta.get("published_at"),
         "topic": playlist.default_topic,
         "videos": hub_videos,
     }

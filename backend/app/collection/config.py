@@ -81,6 +81,12 @@ PLAYLISTS: list[PlaylistConfig] = [
         default_topic="Daily Conversation",
     ),
     PlaylistConfig(
+        name="Shadowing Chinese Stories - HSK1",
+        playlist_id="PL0rjQvrpcbjdz9mO0hXM1ZVdEHLioui7f",
+        default_difficulty="HSK 1-2",
+        default_topic="Daily Conversation",
+    ),
+    PlaylistConfig(
         name="Slow Chinese Vlog",
         playlist_id="PLsAdFz_NCi383RWu8Pmh3Gn7dX3WYGZC9",
         default_difficulty="HSK 3-4",

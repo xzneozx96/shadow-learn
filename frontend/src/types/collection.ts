@@ -20,6 +20,8 @@ export interface PlaylistItem {
   name: string
   thumbnail_url: string | null
   video_count: number | null
+  channel: string | null
+  published_at: string | null
   difficulty: string | null
   topic: string | null
   skill: string | null
@@ -59,6 +61,8 @@ export interface HubResponse {
 export interface PlaylistDetail {
   name: string
   thumbnail_url: string | null
+  channel: string | null
+  published_at: string | null
   topic: string | null
   videos: HubVideo[]
 }
