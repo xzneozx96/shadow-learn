@@ -85,9 +85,7 @@ export function useTTS(
           body.azure_speech_key = currentKeys?.azureSpeechKey ?? ''
           body.azure_speech_region = currentKeys?.azureSpeechRegion ?? ''
         }
-        else if (currentProvider === 'minimax') {
-          body.minimax_api_key = currentKeys?.minimaxApiKey ?? ''
-        }
+        // minimax key is backend-only (env var), not sent from client
 
         const response = await fetch(`${API_BASE}/api/tts`, {
           method: 'POST',

@@ -46,7 +46,7 @@ async def text_to_speech(body: TTSRequest, request: Request) -> Response:
         az_region = _resolve_key(body.azure_speech_region, settings.azure_speech_region, "Azure Speech region")
         keys = {"azure_speech_key": az_key, "azure_speech_region": az_region}
     elif provider_name == "minimax":
-        mm_key = _resolve_key(body.minimax_api_key, settings.minimax_api_key, "MiniMax API key")
+        mm_key = _resolve_key(None, settings.minimax_api_key, "MiniMax API key")
         keys = {"minimax_api_key": mm_key}
 
     # Step 3: synthesize

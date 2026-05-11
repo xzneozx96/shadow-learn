@@ -54,6 +54,5 @@ class ChatRequest(BaseModel):
 class TTSRequest(BaseModel):
     text: str
     source_language: str = "zh-CN"
-    minimax_api_key: str | None = None
     azure_speech_key: str | None = None
     azure_speech_region: str | None = None
