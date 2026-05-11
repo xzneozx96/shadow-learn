@@ -10,11 +10,11 @@ export function captureStudySessionCompleted(data: {
   posthog.capture('study_session_completed', data)
 }
 
-export function captureLessonCreated(data: { source: 'youtube' | 'upload' }) {
+export function captureLessonCreated(data: { source: 'youtube' | 'upload' | 'blog' }) {
   posthog.capture('lesson_created', data)
 }
 
-export function captureLessonGenerationFailed(data: { source: 'youtube' | 'upload', error_message: string }) {
+export function captureLessonGenerationFailed(data: { source: 'youtube' | 'upload' | 'blog', error_message: string }) {
   posthog.capture('lesson_generation_failed', data)
 }
 

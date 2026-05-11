@@ -25,7 +25,7 @@ export interface Segment {
 export interface LessonMeta {
   id: string
   title: string
-  source: 'youtube' | 'upload'
+  source: 'youtube' | 'upload' | 'blog'
   sourceUrl: string | null
   duration?: number // optional: stub lessons don't have it yet
   segmentCount?: number // optional: stub lessons don't have it yet
