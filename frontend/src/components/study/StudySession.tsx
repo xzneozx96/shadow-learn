@@ -90,15 +90,24 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
     }
   }, [])
 
+  // Init session state when prebuiltQuestions changes (setState-during-render)
+  const [lastPrebuilt, setLastPrebuilt] = useState<SessionQuestion[] | undefined>(undefined)
+  if (lastPrebuilt !== prebuiltQuestions) {
+    setLastPrebuilt(prebuiltQuestions)
+    if (prebuiltQuestions && prebuiltQuestions.length > 0) {
+      setQuestions(prebuiltQuestions)
+      setCurrent(0)
+      setResults([])
+      setPhase('session')
+    }
+  }
+
+  // Analytics only — no setState here
   useEffect(() => {
     if (!prebuiltQuestions || prebuiltQuestions.length === 0)
       return
     captureStudySessionStarted({ lesson_id: lessonId ?? '', mode: 'ai_generated', count: prebuiltQuestions.length })
-    setQuestions(prebuiltQuestions)
-    setCurrent(0)
-    setResults([])
-    setPhase('session')
-  }, [prebuiltQuestions])
+  }, [prebuiltQuestions, lessonId])
 
   useEffect(() => {
     if (phase !== 'session' || disableLeaveGuard)

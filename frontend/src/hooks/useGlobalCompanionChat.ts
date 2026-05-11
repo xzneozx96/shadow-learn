@@ -185,12 +185,19 @@ export function useGlobalCompanionChat() {
     }
   }, [db, promptVersion])
 
+  // Reset loading state when db becomes available (setState-during-render)
+  const [lastDb, setLastDb] = useState<typeof db | undefined>(undefined)
+  if (lastDb !== db) {
+    setLastDb(db)
+    if (db !== null)
+      setIsHistoryLoading(true)
+  }
+
   // Load saved chat history on mount
   useEffect(() => {
     if (!db)
       return
     let cancelled = false
-    setIsHistoryLoading(true)
     getChatMessages(db, CHAT_KEY)
       .then((saved) => {
         if (cancelled)

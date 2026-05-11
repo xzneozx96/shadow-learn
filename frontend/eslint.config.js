@@ -28,6 +28,7 @@ export default antfu(
   {
     rules: {
       'style/max-statements-per-line': 'off',
+      'react/no-array-index-key': 'off',
     },
   },
 )

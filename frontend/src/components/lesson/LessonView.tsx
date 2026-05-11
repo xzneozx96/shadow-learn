@@ -61,49 +61,47 @@ function LessonViewContent() {
 
   const { pendingAction, clearAction } = useAgentActions()
 
-  // Handle agent-dispatched UI actions
+  // State updates from agent-dispatched actions (setState-during-render)
+  const [lastAction, setLastAction] = useState(pendingAction)
+  if (lastAction !== pendingAction) {
+    setLastAction(pendingAction)
+    if (pendingAction?.type === 'switch_tab') {
+      const tab = pendingAction.payload?.tab as string | undefined
+      if (tab === 'workbook')
+        setCompanionTab('workbook')
+      else if (tab === 'companion' || tab === 'ai')
+        setCompanionTab('ai')
+    }
+    else if (pendingAction?.type === 'start_shadowing') {
+      const idx = pendingAction.payload?.segmentIndex as number | undefined
+      const startIdx = idx !== undefined && segments[idx] ? idx : segments.findIndex(s => activeSegment && s.id === activeSegment.id)
+      const resolvedIdx = startIdx >= 0 ? startIdx : 0
+      if (segments[resolvedIdx])
+        setPickerSegment(segments[resolvedIdx])
+    }
+  }
+
+  // Imperative side effects (player calls, ref mutation) + clear action
   useEffect(() => {
     if (!pendingAction)
       return
-    switch (pendingAction.type) {
-      case 'switch_tab': {
-        const tab = pendingAction.payload?.tab as string | undefined
-        if (tab === 'workbook')
-          setCompanionTab('workbook')
-        else if (tab === 'companion' || tab === 'ai')
-          setCompanionTab('ai')
-        // transcript and study are in the left panel — no tab state to switch here
-        break
+    if (pendingAction.type === 'navigate_to_segment') {
+      const idx = pendingAction.payload?.segmentIndex as number | undefined
+      if (idx !== undefined && segments[idx] && player) {
+        player.seekTo(segments[idx].start)
+        player.play()
       }
-      case 'navigate_to_segment': {
-        const idx = pendingAction.payload?.segmentIndex as number | undefined
-        if (idx !== undefined && segments[idx] && player) {
-          player.seekTo(segments[idx].start)
-          player.play()
-        }
-        break
-      }
-      case 'start_shadowing': {
-        const idx = pendingAction.payload?.segmentIndex as number | undefined
-        const startIdx = idx !== undefined && segments[idx] ? idx : segments.findIndex(s => activeSegment && s.id === activeSegment.id)
-        const resolvedIdx = startIdx >= 0 ? startIdx : 0
-        if (segments[resolvedIdx]) {
-          setPickerSegment(segments[resolvedIdx])
-        }
-        break
-      }
-      case 'play_segment_audio': {
-        const idx = pendingAction.payload?.segmentIndex as number | undefined
-        if (idx !== undefined && segments[idx] && player) {
-          playSegmentStopAtRef.current = segments[idx].end
-          player.seekTo(segments[idx].start)
-          player.play()
-        }
-        break
+    }
+    else if (pendingAction.type === 'play_segment_audio') {
+      const idx = pendingAction.payload?.segmentIndex as number | undefined
+      if (idx !== undefined && segments[idx] && player) {
+        playSegmentStopAtRef.current = segments[idx].end
+        player.seekTo(segments[idx].start)
+        player.play()
       }
     }
     clearAction()
-  }, [pendingAction, clearAction, segments, player, activeSegment])
+  }, [pendingAction, clearAction, segments, player])
 
   // Load media blob (video for uploads, audio for YouTube lessons)
   useEffect(() => {

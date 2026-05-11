@@ -67,7 +67,7 @@ export function ErrorScreen({ error, onRetry }: Props) {
 
             {/* heading */}
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Something went wrong
+              Something went wrong.
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               An unexpected error interrupted this page. You can retry, reload, or head back home.

@@ -150,11 +150,11 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
   return (
     <div
       className={cn(
-        'flex flex-col [content-visibility:auto] [contain-intrinsic-size:260px_380px]',
+        'flex flex-col',
         wrapperClassName ?? 'w-[calc(25%-15px)] min-w-[260px] shrink-0',
       )}
     >
-      <CutoutCard className={cn(cutoutCardSurfaceClassName, 'flex-1 grid grid-rows-[auto_1fr]')}>
+      <CutoutCard className={cn(cutoutCardSurfaceClassName, 'flex-1 min-w-0 grid grid-rows-[auto_1fr]')}>
         <CutoutCardMedia className="aspect-video">
           {playing
             ? (
@@ -211,7 +211,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
 
         </CutoutCardMedia>
 
-        <CutoutCardContent className="p-4 flex flex-col gap-3">
+        <CutoutCardContent className="p-4 flex flex-col gap-3 min-w-0">
           <motion.div animate="show" className="contents" initial="hidden" variants={stagger.container}>
             <motion.h3
               className="line-clamp-2 font-semibold text-balance text-card-foreground text-base leading-snug tracking-[-0.005em]"
@@ -220,21 +220,21 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
               {video.title}
             </motion.h3>
 
-            {video.description && (
+            {/* {video.description && (
               <motion.p
-                className="line-clamp-2 text-sm leading-snug text-muted-foreground"
+                className="line-clamp-2 text-sm leading-snug text-muted-foreground wrap-break-word"
                 title={video.description}
                 variants={stagger.item}
               >
                 {video.description}
               </motion.p>
-            )}
+            )} */}
 
             <motion.div
-              className="mt-auto flex items-center justify-between gap-2"
+              className="mt-auto flex justify-between gap-4"
               variants={stagger.item}
             >
-              <div className="flex items-center gap-3 min-w-0 flex-1 text-xs text-muted-foreground overflow-hidden">
+              <div className="flex items-center gap-4 min-w-0 text-xs text-muted-foreground overflow-hidden">
                 <span className="flex items-center gap-1 tabular-nums shrink-0" title={`${video.view_count?.toLocaleString() ?? 'N/A'} views`}>
                   <Eye className="size-4" />
                   {formatCount(video.view_count)}
@@ -253,7 +253,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
               {showCreateLesson && (
                 alreadyCreated
                   ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 self-start">
                         <CheckCheck className="size-4" />
                         {t('collection.created')}
                       </span>
@@ -262,7 +262,6 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
                       <Button
                         onClick={handleCreate}
                         disabled={submitting || !canCreate}
-                        className="shrink-0"
                         data-testid={`collection-create-${video.video_id}`}
                       >
                         <Sparkles className="size-4" />

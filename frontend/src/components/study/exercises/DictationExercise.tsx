@@ -93,7 +93,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
             <div className="flex flex-wrap gap-1">
               {diff.map((tok, i) => (
                 <span
-                  // eslint-disable-next-line react/no-array-index-key
+
                   key={`${i}-${tok.text}`}
                   className={cn(
                     'text-xl font-semibold px-1.5 py-0.5 rounded-md',

@@ -89,7 +89,7 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
             <div className="flex flex-wrap gap-2">
               {diff.map((tok, i) => (
                 <span
-                  // eslint-disable-next-line react/no-array-index-key
+
                   key={i}
                   className={cn(
                     'text-base font-semibold px-2 py-0.5 rounded-md',

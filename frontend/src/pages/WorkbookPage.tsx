@@ -103,7 +103,7 @@ export function WorkbookPage() {
   return (
     <Layout>
       <div className="h-full overflow-y-auto">
-        <div className="container mx-auto px-6 py-9 pb-10">
+        <div className="container mx-auto px-6 md:px-10 py-12">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative z-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-7 gap-4">
               <div>

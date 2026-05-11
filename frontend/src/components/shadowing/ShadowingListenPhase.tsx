@@ -128,7 +128,7 @@ export function ShadowingListenPhase({
         <div className="flex items-center gap-0.5" style={{ height: 48 }} aria-hidden>
           {WAVE_HEIGHTS.map((h, i) => (
             <div
-              // eslint-disable-next-line react/no-array-index-key
+
               key={i}
               className="w-1 rounded-full bg-foreground/40 animate-[wave_1.3s_ease-in-out_infinite]"
               style={{ animationDelay: `${i * 0.08}s`, height: `${h}%` }}

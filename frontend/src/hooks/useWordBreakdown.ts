@@ -1,6 +1,6 @@
 import type { ShadowLearnDB } from '@/db'
 import type { CharData } from '@/lib/hanzi/types'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { deleteBreakdown, getBreakdown, saveBreakdown } from '@/db'
 import { fetchBreakdownStory } from '@/lib/api/breakdownStory'
 import { buildCharData } from '@/lib/hanzi/lookup'
@@ -37,8 +37,8 @@ interface UseWordBreakdownReturn {
 export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdownReturn {
   const { db, word, pinyin, meaning, sourceLanguage, openrouterApiKey, enabled = true } = input
 
-  const [characters, setCharacters] = useState<CharData[]>([])
-  const [charactersLoading, setCharactersLoading] = useState(false)
+  const [characters, setCharacters] = useState<CharData[] | null>(null)
+  const charactersLoading = enabled && characters === null
   const [story, setStory] = useState<string | null>(null)
   const [storyLoading, setStoryLoading] = useState(false)
   const [storyError, setStoryError] = useState<Error | null>(null)
@@ -50,7 +50,6 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
       return
     let cancel = false
 
-    setCharactersLoading(true)
     void (async () => {
       try {
         const chars = Array.from(word)
@@ -62,25 +61,31 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
       }
       catch (err) {
         console.error('[useWordBreakdown] buildCharData failed:', err)
-        if (!cancel)
+        if (!cancel) {
+          setCharacters([])
           setStoryError(err instanceof Error ? err : new Error(String(err)))
-      }
-      finally {
-        if (!cancel)
-          setCharactersLoading(false)
+        }
       }
     })()
 
     return () => { cancel = true }
   }, [word, enabled])
 
-  const sinoVietnamese = characters
+  // Reset characters to null when word changes so charactersLoading derives correctly
+  const [lastWord, setLastWord] = useState(word)
+  if (lastWord !== word) {
+    setLastWord(word)
+    setCharacters(null)
+  }
+
+  const resolvedChars = useMemo(() => characters ?? [], [characters])
+  const sinoVietnamese = resolvedChars
     .map(c => c.sinoVietnamese ?? '?')
     .join(' ')
 
   // Resolve story: IDB cache first, then LLM
   useEffect(() => {
-    if (!enabled || !db || characters.length === 0)
+    if (!enabled || !db || characters === null || characters.length === 0)
       return
     let cancel = false
 
@@ -115,7 +120,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
           pinyin,
           meaning,
           sinoVietnamese,
-          characters,
+          characters: resolvedChars,
           openrouterApiKey,
         })
 
@@ -128,7 +133,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
           await saveBreakdown(db, {
             word,
             sourceLanguage,
-            characters,
+            characters: resolvedChars,
             story: fresh,
             storyLanguage: 'vi',
             generatedAt: new Date().toISOString(),
@@ -183,7 +188,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
       await saveBreakdown(db, {
         word,
         sourceLanguage,
-        characters,
+        characters: resolvedChars,
         story: text,
         storyLanguage: 'vi',
         generatedAt: new Date().toISOString(),
@@ -192,10 +197,10 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     catch (err) {
       console.warn('[useWordBreakdown] saveCustomStory persist failed:', err)
     }
-  }, [db, word, sourceLanguage, characters])
+  }, [db, word, sourceLanguage, resolvedChars])
 
   return {
-    characters,
+    characters: resolvedChars,
     charactersLoading,
     sinoVietnamese,
     story,

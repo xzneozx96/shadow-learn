@@ -190,21 +190,26 @@ export function TranscriptPanel({
     })
   }, [segments, deferredSearch])
 
-  useEffect(() => {
+  // Reset visibleCount when filteredSegments changes, then ensure active
+  // segment is mounted (setState-during-render — replaces two useEffects)
+  const [lastFiltered, setLastFiltered] = useState(filteredSegments)
+  const filteredChanged = lastFiltered !== filteredSegments
+  if (filteredChanged) {
+    setLastFiltered(filteredSegments)
     setVisibleCount(SEGMENT_BATCH_SIZE)
-  }, [filteredSegments])
+  }
 
-  // Ensure the active segment is always mounted, even for long lessons where
-  // incremental rendering initially shows only the first batch.
-  useEffect(() => {
-    if (!activeSegment)
-      return
-    const activeIdx = filteredSegments.findIndex(s => s.id === activeSegment.id)
-    if (activeIdx === -1)
-      return
-    const minVisible = Math.ceil((activeIdx + 1) / SEGMENT_BATCH_SIZE) * SEGMENT_BATCH_SIZE
-    setVisibleCount(prev => (prev >= minVisible ? prev : Math.min(minVisible, filteredSegments.length)))
-  }, [activeSegment, filteredSegments])
+  const [lastActiveId, setLastActiveId] = useState<string | undefined>(activeSegment?.id)
+  if (lastActiveId !== activeSegment?.id || filteredChanged) {
+    setLastActiveId(activeSegment?.id)
+    if (activeSegment) {
+      const activeIdx = filteredSegments.findIndex(s => s.id === activeSegment.id)
+      if (activeIdx !== -1) {
+        const minVisible = Math.ceil((activeIdx + 1) / SEGMENT_BATCH_SIZE) * SEGMENT_BATCH_SIZE
+        setVisibleCount(prev => (prev >= minVisible ? prev : Math.min(minVisible, filteredSegments.length)))
+      }
+    }
+  }
 
   const visibleSegments = useMemo(
     () => filteredSegments.slice(0, visibleCount),

@@ -31,16 +31,23 @@ const PERSONA_ICONS: Record<string, LucideIcon> = {
 
 export function PersonaPicker({ targetLanguage, onSelect }: PersonaPickerProps) {
   const { t, locale } = useI18n()
-  const [personas, setPersonas] = useState<ApiPersona[]>([])
-  const [loading, setLoading] = useState(true)
+  const [personas, setPersonas] = useState<ApiPersona[] | null>(null)
+  const loading = personas === null
+
+  // Reset to loading state when deps change (setState-during-render)
+  const [lastLang, setLastLang] = useState(targetLanguage)
+  const [lastLocale, setLastLocale] = useState(locale)
+  if (lastLang !== targetLanguage || lastLocale !== locale) {
+    setLastLang(targetLanguage)
+    setLastLocale(locale)
+    setPersonas(null)
+  }
 
   useEffect(() => {
-    setLoading(true)
     fetch(`${API_BASE}/api/speak/personas?target_lang=${encodeURIComponent(targetLanguage)}&interface_lang=${encodeURIComponent(locale)}`)
       .then(r => r.json())
       .then((d: any) => setPersonas(d.personas ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+      .catch(() => setPersonas([]))
   }, [targetLanguage, locale])
 
   return (

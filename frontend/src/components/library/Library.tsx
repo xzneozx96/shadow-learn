@@ -66,15 +66,18 @@ export function Library() {
     scrollRef.current = el
     if (!el)
       return
-    const onScroll = () => updateScrollState(el)
-    const ro = new ResizeObserver(() => updateScrollState(el))
-    el.addEventListener('scroll', onScroll, { passive: true })
+    const onChange = () => updateScrollState(el)
+    const ro = new ResizeObserver(onChange)
+    const mo = new MutationObserver(onChange)
+    el.addEventListener('scroll', onChange, { passive: true })
     ro.observe(el)
+    mo.observe(el, { childList: true })
     cleanupRef.current = () => {
-      el.removeEventListener('scroll', onScroll)
+      el.removeEventListener('scroll', onChange)
       ro.disconnect()
+      mo.disconnect()
     }
-    updateScrollState(el)
+    onChange()
   }, [updateScrollState])
 
   function scrollCarousel(dir: 'prev' | 'next') {
@@ -139,11 +142,6 @@ export function Library() {
     })
   }, [lessons, search, sort])
 
-  useEffect(() => {
-    if (scrollRef.current)
-      updateScrollState(scrollRef.current)
-  }, [filtered, updateScrollState])
-
   const handleDelete = useCallback(async (id: string) => {
     await deleteLesson(id)
   }, [deleteLesson])
@@ -187,7 +185,7 @@ export function Library() {
   return (
     <Layout>
       <div className="h-full overflow-y-auto">
-        <div className="mx-auto w-full container px-6 py-9 pb-10">
+        <div className="mx-auto w-full container px-6 md:px-10 py-12">
           {/* ── Top: greeting ── */}
           <motion.header
             className="mb-4 flex items-baseline justify-between gap-4"

@@ -86,7 +86,7 @@ function RecordingPill({ onStop }: { onStop: () => void }) {
       <div className="relative z-10 flex items-center gap-[2px]">
         {barHeights.map((heights, i) => (
           <motion.div
-            // eslint-disable-next-line react/no-array-index-key
+
             key={i}
             animate={{ height: heights }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear', delay: i * 0.08 }}

@@ -215,7 +215,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
           <div className="space-y-1.5">
             {result.words.map((w, i) => (
               <div
-                // eslint-disable-next-line react/no-array-index-key
+
                 key={`${w.word}-${i}`}
                 className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2"
               >

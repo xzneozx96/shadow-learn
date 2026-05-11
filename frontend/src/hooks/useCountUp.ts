@@ -3,11 +3,17 @@ import { useEffect, useState } from 'react'
 export function useCountUp(target: number, duration = 600): number {
   const [value, setValue] = useState(0)
 
-  useEffect(() => {
-    if (target === 0) {
+  // Reset immediately when target drops to 0 (setState-during-render)
+  const [lastTarget, setLastTarget] = useState(target)
+  if (lastTarget !== target) {
+    setLastTarget(target)
+    if (target === 0)
       setValue(0)
+  }
+
+  useEffect(() => {
+    if (target === 0)
       return
-    }
     let start: number | null = null
     let raf = 0
     const step = (ts: number) => {

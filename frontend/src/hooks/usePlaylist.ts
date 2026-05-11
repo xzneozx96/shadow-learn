@@ -11,9 +11,15 @@ interface State {
 export function usePlaylist(playlistId: string): State {
   const [state, setState] = useState<State>({ data: null, loading: true, error: null })
 
+  // Reset to loading state when playlistId changes (setState-during-render)
+  const [lastId, setLastId] = useState(playlistId)
+  if (lastId !== playlistId) {
+    setLastId(playlistId)
+    setState({ data: null, loading: true, error: null })
+  }
+
   useEffect(() => {
     let cancelled = false
-    setState({ data: null, loading: true, error: null })
     fetch(`${API_BASE}/api/playlist/${encodeURIComponent(playlistId)}`)
       .then(async (res) => {
         if (!res.ok)

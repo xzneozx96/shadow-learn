@@ -1,6 +1,6 @@
 import type { HubItem, HubVideo } from '@/types/collection'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { computeScrollState } from '@/lib/carousel'
@@ -17,6 +17,7 @@ interface HubRowProps {
 export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
   const { t } = useI18n()
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const cleanupRef = useRef<(() => void) | null>(null)
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(false)
 
@@ -31,13 +32,14 @@ export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
     setCanScrollNext(s.canScrollNext)
   }, [])
 
-  useEffect(() => {
-    const el = scrollRef.current
+  const setScrollRef = useCallback((el: HTMLDivElement | null) => {
+    cleanupRef.current?.()
+    cleanupRef.current = null
+    scrollRef.current = el
     if (!el)
       return
-    updateScrollState(el)
     let rafId = 0
-    const onScroll = () => {
+    const onChange = () => {
       if (rafId)
         return
       rafId = requestAnimationFrame(() => {
@@ -45,16 +47,20 @@ export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
         updateScrollState(el)
       })
     }
-    el.addEventListener('scroll', onScroll, { passive: true })
-    const onResize = () => updateScrollState(el)
-    window.addEventListener('resize', onResize)
-    return () => {
-      el.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onResize)
+    const ro = new ResizeObserver(onChange)
+    const mo = new MutationObserver(onChange)
+    el.addEventListener('scroll', onChange, { passive: true })
+    ro.observe(el)
+    mo.observe(el, { childList: true })
+    cleanupRef.current = () => {
+      el.removeEventListener('scroll', onChange)
+      ro.disconnect()
+      mo.disconnect()
       if (rafId)
         cancelAnimationFrame(rafId)
     }
-  }, [updateScrollState, filteredItems.length])
+    updateScrollState(el)
+  }, [updateScrollState])
 
   if (filteredItems.length === 0)
     return null
@@ -105,7 +111,7 @@ export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
           className={`pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-linear-to-l from-background to-transparent transition-opacity duration-200 ${canScrollNext ? 'opacity-100' : 'opacity-0'}`}
         />
         <div
-          ref={scrollRef}
+          ref={setScrollRef}
           className="flex items-stretch gap-5 overflow-x-auto px-2 py-3 -my-3 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {filteredItems.map((item, i) =>

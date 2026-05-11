@@ -95,7 +95,7 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
         {chips.map((chip, i) => (
 
           <span
-            key={i} // eslint-disable-line react/no-array-index-key
+            key={i}
             className={cn(
               'px-3 py-1.5 rounded-md text-base font-semibold border border-border bg-secondary transition-opacity',
               !active[i] && 'opacity-25',
@@ -121,7 +121,7 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
       {diff && (
         <div className="mt-3 px-3 py-2 rounded-lg bg-muted/30 text-lg font-bold tracking-wider">
           {diff.map((d, i) => (
-            // eslint-disable-next-line react/no-array-index-key
+
             <span key={i} className={d.ok ? 'text-emerald-400' : 'text-destructive'}>{d.char}</span>
           ))}
         </div>

@@ -619,19 +619,19 @@ def test_build_hub_response_tip_playlist_goes_to_tips_section():
 
 
 def test_build_hub_response_tip_group_order():
-    """Tip groups ordered: Pronunciation < Vocabulary < Speaking < Study Methods."""
+    """Tip groups ordered: Pronunciation < Vocabulary < Speaking < Learning Tips."""
     from app.collection.config import PlaylistConfig
     from app.collection.service import build_hub_response
 
     playlists = [
-        PlaylistConfig(name="A", playlist_id="PL1", default_content_type="tip", default_skill="Study Methods"),
+        PlaylistConfig(name="A", playlist_id="PL1", default_content_type="tip", default_skill="Learning Tips"),
         PlaylistConfig(name="B", playlist_id="PL2", default_content_type="tip", default_skill="Speaking"),
         PlaylistConfig(name="C", playlist_id="PL3", default_content_type="tip", default_skill="Pronunciation"),
         PlaylistConfig(name="D", playlist_id="PL4", default_content_type="tip", default_skill="Vocabulary"),
     ]
     meta = {k: {"thumbnail_url": None, "video_count": 1} for k in ["PL1", "PL2", "PL3", "PL4"]}
     groups = build_hub_response(playlists, meta, [], {})["tips"]["groups"]
-    assert [g["skill"] for g in groups] == ["Pronunciation", "Vocabulary", "Speaking", "Study Methods"]
+    assert [g["skill"] for g in groups] == ["Pronunciation", "Vocabulary", "Speaking", "Learning Tips"]
 
 
 def test_build_hub_response_tip_with_no_skill_is_dropped():
