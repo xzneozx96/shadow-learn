@@ -356,6 +356,8 @@ async def _process_blog_lesson(
             tts_keys["azure_speech_key"] = request.azure_speech_key
         if request.azure_speech_region:
             tts_keys["azure_speech_region"] = request.azure_speech_region
+        if settings.minimax_api_key:
+            tts_keys["minimax_api_key"] = settings.minimax_api_key
         # TTS providers accept "zh" not "zh-CN" — strip the region suffix
         tts_lang = request.source_language.split("-")[0]
         audio_bytes = await tts_provider.synthesize(text, tts_keys, tts_lang)
