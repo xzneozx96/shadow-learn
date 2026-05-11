@@ -268,7 +268,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
   }
 
   return (
-    <div className="relative mx-auto min-h-full">
+    <div className="relative mx-auto w-full min-h-full">
       {/* Close button — always visible */}
       <button
         type="button"
