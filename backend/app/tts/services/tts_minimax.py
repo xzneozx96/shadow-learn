@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 
 # Voice IDs per language prefix. Chinese uses the legacy ID; Japanese and English use a dedicated voice.
 _VOICE_MAP: dict[str, str] = {
-    "zh": "Arrogant_Miss",
+    "zh": "Chinese (Mandarin)_Male_Announcer",
     "ja": "Japanese_GracefulMaiden",
     "en": "English_captivating_female1",
 }
+
 _DEFAULT_VOICE = _VOICE_MAP["zh"]
 
 
@@ -40,7 +41,7 @@ async def synthesize_speech(text: str, api_key: str, voice_id: str = _DEFAULT_VO
         raise ValueError("text exceeds the Minimax limit of 10,000 characters")
 
     payload = {
-        "model": "speech-2.6-turbo",
+        "model": "speech-2.8-turbo",
         "text": text,
         "voice_setting": {
             "voice_id": voice_id,

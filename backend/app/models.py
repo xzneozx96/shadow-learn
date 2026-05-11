@@ -22,6 +22,8 @@ class LessonRequest(BaseModel):
     source: str = Field(pattern=r"^(youtube|upload|blog)$")
     youtube_url: str | None = None
     blog_url: str | None = None
+    blog_text: str | None = None
+    blog_title: str | None = None
     translation_languages: list[str] = Field(min_length=1)
     openrouter_api_key: str | None = None
     azure_speech_key: str | None = None

@@ -10,6 +10,17 @@ import { cn } from '@/lib/utils'
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5]
 
+// Ambient background videos for blog lessons — add more YouTube IDs here
+const AMBIENT_VIDEOS = [
+  'bBQA7yy7EBU',
+  'GrG2-oX5z24',
+  'BYTxPFj44uo',
+  'e94hCLHEEsk',
+  'vvThzcBfnyc',
+  'Wo2G9740xyE',
+  'AhJ9-AtFje0',
+]
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = Math.floor(seconds % 60)
@@ -119,8 +130,11 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
     }
   }
 
-  const isAudioOnly = lesson.source === 'youtube' && (!videoBlob || videoBlob.type.startsWith('audio/'))
+  const isBlog = lesson.source === 'blog'
+  const isAudioOnly = !isBlog && lesson.source === 'youtube' && (!videoBlob || videoBlob.type.startsWith('audio/'))
   const youtubeVideoId = lesson.sourceUrl ? extractYouTubeVideoId(lesson.sourceUrl) : null
+
+  const [ambientIdx, setAmbientIdx] = useState(() => Math.floor(Math.random() * AMBIENT_VIDEOS.length))
 
   // Initialize HTML5 player for both YouTube (audio) and upload (video)
   useEffect(() => {
@@ -280,42 +294,106 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
 
       {/* Media area */}
       <div className="relative flex-1 overflow-hidden">
-        {isAudioOnly
+        {isBlog
           ? (
               <>
-                {/* YouTube thumbnail + link */}
-                <div className="flex size-full flex-col items-center justify-center gap-4 p-4">
-                  {youtubeVideoId && (
-                    <img
-                      src={`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`}
-                      alt="Video thumbnail"
-                      className="max-h-[60%] rounded-lg object-contain opacity-80"
-                    />
-                  )}
-                  {lesson.sourceUrl && (
-                    <a
-                      href={lesson.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-white/80"
+                {/* Ambient looping video — decorative, not synced to lesson audio */}
+                <iframe
+                  key={ambientIdx}
+                  className="pointer-events-none absolute inset-0 size-full scale-[1.5]"
+                  src={`https://www.youtube.com/embed/${AMBIENT_VIDEOS[ambientIdx]}?autoplay=1&mute=1&loop=1&playlist=${AMBIENT_VIDEOS[ambientIdx]}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1&disablekb=1&fs=0`}
+                  allow="autoplay; encrypted-media"
+                  title="ambient"
+                />
+                {/* Click-to-toggle lesson audio */}
+                <div className="absolute inset-0 cursor-pointer" onClick={togglePlayPause} />
+                {/* Source domain — bottom-left */}
+                {/* {lesson.sourceUrl && (
+                  <a
+                    href={lesson.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-4 left-3 flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-sm text-muted-foreground backdrop-blur-sm transition-colors duration-300 hover:text-foreground"
+                  >
+                    <ExternalLink className="size-3" strokeWidth={1.25} />
+                    {(() => {
+                      try { return new URL(lesson.sourceUrl).hostname }
+                      catch { return lesson.sourceUrl }
+                    })()}
+                  </a>
+                )} */}
+                {/* Thumbnail carousel — only when multiple videos available */}
+                {AMBIENT_VIDEOS.length > 1 && (
+                  // Outer: full-width anchor with horizontal padding
+                  <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
+                    {/* Inner: scrollable pill — inline so it doesn't stretch full width */}
+                    <div
+                      className="flex items-center gap-1.5 overflow-x-auto rounded-xl bg-black/60 p-1.5 backdrop-blur-md"
+                      style={{ scrollbarWidth: 'none' }}
                     >
-                      <ExternalLink className="size-4" />
-                      {t('lesson.openOnYouTube')}
-                    </a>
-                  )}
-                </div>
-                {/* Hidden audio element */}
+                      {AMBIENT_VIDEOS.map((id, i) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setAmbientIdx(i)}
+                          className={cn(
+                            'shrink-0 overflow-hidden rounded-sm transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+                            i === ambientIdx
+                              ? 'opacity-100 ring-2 ring-primary'
+                              : 'opacity-40 hover:scale-105 hover:opacity-80',
+                          )}
+                          aria-label={`Ambient video ${i + 1}`}
+                        >
+                          <img
+                            src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`}
+                            alt=""
+                            className="h-9 w-16 object-cover"
+                            draggable={false}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <audio ref={mediaRef as React.RefObject<HTMLAudioElement>} className="hidden" />
               </>
             )
-          : (
-              <video
-                ref={mediaRef as React.RefObject<HTMLVideoElement>}
-                className="size-full cursor-pointer object-contain"
-                playsInline
-                onClick={togglePlayPause}
-              />
-            )}
+          : isAudioOnly
+            ? (
+                <>
+                  {/* YouTube thumbnail + link */}
+                  <div className="flex size-full flex-col items-center justify-center gap-4 p-4">
+                    {youtubeVideoId && (
+                      <img
+                        src={`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`}
+                        alt="Video thumbnail"
+                        className="max-h-[60%] rounded-lg object-contain opacity-80"
+                      />
+                    )}
+                    {lesson.sourceUrl && (
+                      <a
+                        href={lesson.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-white/80"
+                      >
+                        <ExternalLink className="size-4" />
+                        {t('lesson.openOnYouTube')}
+                      </a>
+                    )}
+                  </div>
+                  {/* Hidden audio element */}
+                  <audio ref={mediaRef as React.RefObject<HTMLAudioElement>} className="hidden" />
+                </>
+              )
+            : (
+                <video
+                  ref={mediaRef as React.RefObject<HTMLVideoElement>}
+                  className="size-full cursor-pointer object-contain"
+                  playsInline
+                  onClick={togglePlayPause}
+                />
+              )}
       </div>
 
       {/* Controls */}

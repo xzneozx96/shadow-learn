@@ -32,6 +32,8 @@ export function CreateLesson() {
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [blogUrl, setBlogUrl] = useState('')
+  const [blogText, setBlogText] = useState('')
+  const [blogTitle, setBlogTitle] = useState('')
   const [language, setLanguage] = useState('en')
   const [sourceLanguage, setSourceLanguage] = useState('zh-CN')
   const [submitting, setSubmitting] = useState(false)
@@ -60,7 +62,7 @@ export function CreateLesson() {
       return
     if (tab === 'upload' && !file)
       return
-    if (tab === 'blog' && !blogUrl.trim())
+    if (tab === 'blog' && !blogUrl.trim() && !blogText.trim())
       return
 
     setSubmitting(true)
@@ -127,16 +129,25 @@ export function CreateLesson() {
         lessonTitle = file!.name.replace(FILE_EXTENSION_REGEX, '')
       }
       else if (tab === 'blog') {
+        const isPaste = !blogUrl.trim()
+        const body: Record<string, unknown> = {
+          source: 'blog',
+          translation_languages: [language],
+          source_language: sourceLanguage,
+          openrouter_api_key: keys?.openrouterApiKey ?? '',
+        }
+        if (isPaste) {
+          body.blog_text = blogText.trim()
+          if (blogTitle.trim())
+            body.blog_title = blogTitle.trim()
+        }
+        else {
+          body.blog_url = blogUrl
+        }
         const res = await fetch(`${API_BASE}/api/lessons/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            source: 'blog',
-            blog_url: blogUrl,
-            translation_languages: [language],
-            source_language: sourceLanguage,
-            openrouter_api_key: keys?.openrouterApiKey ?? '',
-          }),
+          body: JSON.stringify(body),
         })
         if (!res.ok) {
           const detail = await res.json().catch(() => null)
@@ -147,13 +158,19 @@ export function CreateLesson() {
         const data = await res.json()
         jobId = data.job_id
         lessonSource = 'blog'
-        try {
-          lessonTitle = new URL(blogUrl).hostname
+        if (isPaste) {
+          lessonTitle = blogTitle.trim() || 'Untitled'
+          lessonSourceUrl = undefined
         }
-        catch {
-          lessonTitle = blogUrl
+        else {
+          try {
+            lessonTitle = new URL(blogUrl).hostname
+          }
+          catch {
+            lessonTitle = blogUrl
+          }
+          lessonSourceUrl = blogUrl
         }
-        lessonSourceUrl = blogUrl
       }
 
       const lessonId = crypto.randomUUID()
@@ -184,6 +201,8 @@ export function CreateLesson() {
       setYoutubeUrl('')
       setFile(null)
       setBlogUrl('')
+      setBlogText('')
+      setBlogTitle('')
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
@@ -193,13 +212,13 @@ export function CreateLesson() {
     finally {
       setSubmitting(false)
     }
-  }, [db, keys, tab, youtubeUrl, file, blogUrl, language, sourceLanguage, updateLesson, sttProvider, trialMode])
+  }, [db, keys, tab, youtubeUrl, file, blogUrl, blogText, blogTitle, language, sourceLanguage, updateLesson, sttProvider, trialMode])
 
   const canGenerate = sttProvider !== null
     && (tab === 'youtube'
       ? !!youtubeUrl.trim()
       : tab === 'blog'
-        ? !!blogUrl.trim()
+        ? (!!blogUrl.trim() || !!blogText.trim())
         : !!file)
 
   if (queued) {
@@ -243,7 +262,14 @@ export function CreateLesson() {
                 <UploadTab file={file} onFileChange={setFile} />
               </TabsContent>
               <TabsContent value="blog">
-                <BlogTab url={blogUrl} onUrlChange={setBlogUrl} />
+                <BlogTab
+                  url={blogUrl}
+                  onUrlChange={setBlogUrl}
+                  text={blogText}
+                  onTextChange={setBlogText}
+                  title={blogTitle}
+                  onTitleChange={setBlogTitle}
+                />
               </TabsContent>
             </Tabs>
 

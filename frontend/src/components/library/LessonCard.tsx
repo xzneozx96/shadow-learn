@@ -58,6 +58,40 @@ function UploadPlaceholder() {
   )
 }
 
+function BlogPlaceholder() {
+  return (
+    <div
+      className="relative flex h-full w-full items-center justify-center overflow-hidden"
+      style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(16,185,129,0.07) 0%, transparent 70%), #0a0a0c' }}
+    >
+      {/* Subtle horizontal text-line pattern — suggests article content */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.045]"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(255,255,255,0.7) 11px)',
+        }}
+      />
+      {/* Ambient primary glow behind icon */}
+      <div className="absolute size-20 rounded-full bg-primary/10 blur-2xl" />
+      {/* Double-bezel icon container */}
+      <div
+        className="relative rounded-3xl p-1.5 ring-1 ring-white/8"
+        style={{ background: 'rgba(255,255,255,0.03)' }}
+      >
+        <div
+          className="flex size-15 items-center justify-center rounded-[calc(1.5rem-0.375rem)]"
+          style={{
+            background: 'linear-gradient(135deg, rgba(129,140,248,0.14) 0%, rgba(99,102,241,0.07) 100%)',
+            boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.10)',
+          }}
+        >
+          <BookOpen className="size-6 text-primary/65" strokeWidth={1.25} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardProps) {
   const { t } = useI18n()
   const { entriesByLesson } = useVocabulary()
@@ -67,13 +101,14 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
   const isProcessing = status === 'processing'
   const isError = status === 'error'
   const isYoutube = lesson.source === 'youtube'
+  const isBlog = lesson.source === 'blog'
 
   const progress = lesson.progressSegmentId && lesson.segmentCount
     ? Math.min(100, Math.round((Number.parseInt(lesson.progressSegmentId, 10) / lesson.segmentCount) * 100))
     : 0
 
   const thumbnailUrl = isYoutube ? getYoutubeThumbnail(lesson.sourceUrl) : null
-  const uploadThumbnail = useUploadThumbnail(lesson.id, !isYoutube)
+  const uploadThumbnail = useUploadThumbnail(lesson.id, !isYoutube && !isBlog)
 
   const [imgFailed, setImgFailed] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -118,8 +153,8 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
     }
   }
 
-  const showThumbnail = (isYoutube && thumbnailUrl && !imgFailed) || (!isYoutube && !!uploadThumbnail)
-  const sourceLabel = isYoutube ? 'YouTube' : t('library.uploadSource')
+  const showThumbnail = (isYoutube && thumbnailUrl && !imgFailed) || (!isYoutube && !isBlog && !!uploadThumbnail)
+  const sourceLabel = isYoutube ? 'YouTube' : isBlog ? t('library.blogSource') : t('library.uploadSource')
   const sourceTone = isYoutube
     ? 'text-red-400'
     : 'text-primary'
@@ -162,7 +197,9 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                       onError={() => setImgFailed(true)}
                     />
                   )
-                : <UploadPlaceholder />}
+                : isBlog
+                  ? <BlogPlaceholder />
+                  : <UploadPlaceholder />}
 
             <CutoutCardOverlay />
 

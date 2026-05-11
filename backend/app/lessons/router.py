@@ -343,12 +343,17 @@ async def _process_blog_lesson(
     tts_provider: TTSProvider,
     stt_provider: STTProvider,
 ) -> None:
-    """Background task: scrape URL → TTS audio → Gladia transcription → shared pipeline."""
+    """Background task: (scrape URL or use pasted text) → TTS audio → Gladia transcription → shared pipeline."""
     audio_path: Path | None = None
     try:
-        jobs[job_id].step = "scraping"
-        title, text = await scrape_article(request.blog_url, settings.max_article_chars)
-        logger.info("[pipeline] blog_lesson: scraped %d chars, title=%r", len(text), title)
+        if request.blog_text:
+            title = request.blog_title or "Untitled"
+            text = request.blog_text
+            logger.info("[pipeline] blog_lesson: using pasted text, %d chars, title=%r", len(text), title)
+        else:
+            jobs[job_id].step = "scraping"
+            title, text = await scrape_article(request.blog_url, settings.max_article_chars)
+            logger.info("[pipeline] blog_lesson: scraped %d chars, title=%r", len(text), title)
 
         jobs[job_id].step = "tts"
         tts_keys: TTSKeys = {}
@@ -393,7 +398,7 @@ async def _process_blog_lesson(
             openrouter_key,
             title,
             "blog",
-            request.blog_url,
+            request.blog_url or None,
             duration,
             source_language=request.source_language,
             media_filename=audio_path.name,
@@ -424,8 +429,8 @@ async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTa
         background_tasks.add_task(_process_youtube_lesson, request, video_id, job_id, stt_provider)
         return {"job_id": job_id}
     elif request.source == "blog":
-        if not request.blog_url:
-            raise HTTPException(status_code=400, detail="blog_url is required for source 'blog'")
+        if not request.blog_url and not request.blog_text:
+            raise HTTPException(status_code=400, detail="blog_url or blog_text is required for source 'blog'")
         tts_provider = req.app.state.tts_provider
         stt_provider = req.app.state.stt_provider
         job_id = str(uuid.uuid4())
