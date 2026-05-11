@@ -122,6 +122,13 @@ PLAYLISTS: list[PlaylistConfig] = [
         default_difficulty="HSK 3-4",
         default_topic="Cartoon",
     ),
+    # Tip playlists (content_type="tip", default_skill is set),
+    PlaylistConfig(
+        name="PHÁT ÂM TIẾNG TRUNG TỪ ĐẦU | Yangdexin",
+        playlist_id="PLbGRE6dBnYmJu18TL-omkDZxwqUejyYS7",
+        default_content_type="tip",
+        default_skill="Pronunciation",
+    ),
     PlaylistConfig(
         name="Chinese Pronunciation: These 12 EASY Tricks Will Change The Way You Speak",
         playlist_id="PLVy5hP5pUOSfx4IfW1JiujZj8PoGOvjYq",
