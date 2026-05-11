@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     max_video_duration_seconds: int = 1200  # 20 minutes
     max_upload_size_bytes: int = 2_147_483_648  # 2 GB
+    max_article_chars: int = 8000  # ~5 min of TTS audio at average reading speed
     allowed_media_formats: list[str] = [
         "mp4", "mkv", "webm", "mov",  # Video
         "wav", "mp3", "m4a", "aac", "flac", "ogg", "opus"  # Audio
