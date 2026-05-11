@@ -31,6 +31,8 @@ from app.translation.services.translation import translate_segments
 from app.lessons.services.validation import ValidationError, validate_upload_file, validate_youtube_url
 from app.shared.language_config import get_language_config
 from app.lessons.services.vocabulary import extract_vocabulary
+from app.lessons.services.blog_scraper import scrape_article
+from app.tts.services.tts_provider import TTSProvider, TTSKeys
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +116,10 @@ async def _shared_pipeline(
         }
     }
     if media_filename:
-        result["video_url"] = f"/api/lessons/video/{media_filename}"
+        if source == "blog":
+            result["audio_url"] = f"/api/lessons/audio/{media_filename}"
+        else:
+            result["video_url"] = f"/api/lessons/video/{media_filename}"
 
     jobs[job_id].status = "complete"
     jobs[job_id].step = "complete"
@@ -332,6 +337,74 @@ async def _process_upload_lesson(
             audio_path.unlink(missing_ok=True)
 
 
+async def _process_blog_lesson(
+    request: LessonRequest,
+    job_id: str,
+    tts_provider: TTSProvider,
+    stt_provider: STTProvider,
+) -> None:
+    """Background task: scrape URL → TTS audio → Gladia transcription → shared pipeline."""
+    audio_path: Path | None = None
+    try:
+        jobs[job_id].step = "scraping"
+        title, text = await scrape_article(request.blog_url, settings.max_article_chars)
+        logger.info("[pipeline] blog_lesson: scraped %d chars, title=%r", len(text), title)
+
+        jobs[job_id].step = "tts"
+        tts_keys: TTSKeys = {}
+        if request.azure_speech_key:
+            tts_keys["azure_speech_key"] = request.azure_speech_key
+        if request.azure_speech_region:
+            tts_keys["azure_speech_region"] = request.azure_speech_region
+        # TTS providers accept "zh" not "zh-CN" — strip the region suffix
+        tts_lang = request.source_language.split("-")[0]
+        audio_bytes = await tts_provider.synthesize(text, tts_keys, tts_lang)
+        if not audio_bytes:
+            raise ValueError("TTS synthesis returned empty audio.")
+
+        _TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        audio_path = _TEMP_DIR / f"{uuid.uuid4()}.mp3"
+        audio_path.write_bytes(audio_bytes)
+        logger.info("[pipeline] blog_lesson: TTS audio written to %s (%.1f KB)", audio_path.name, len(audio_bytes) / 1024)
+
+        jobs[job_id].step = "transcription"
+        stt_keys: TranscriptionKeys = {}
+        azure_key = request.azure_speech_key or settings.azure_speech_key
+        azure_region = request.azure_speech_region or settings.azure_speech_region
+        if azure_key:
+            stt_keys["azure_speech_key"] = azure_key
+        if azure_region:
+            stt_keys["azure_speech_region"] = azure_region
+        segments = await stt_provider.transcribe(audio_path, stt_keys, request.source_language)
+        if not segments:
+            raise ValueError("No speech detected in synthesized audio.")
+        logger.info("[pipeline] blog_lesson: %d segments from Gladia", len(segments))
+
+        openrouter_key = _resolve_key(
+            request.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key"
+        )
+        duration = segments[-1]["end"]
+        await _shared_pipeline(
+            job_id,
+            segments,
+            request.translation_languages,
+            openrouter_key,
+            title,
+            "blog",
+            request.blog_url,
+            duration,
+            source_language=request.source_language,
+            media_filename=audio_path.name,
+        )
+
+    except Exception as exc:
+        logger.exception("[pipeline] Blog lesson failed for job %s: %s", job_id, exc)
+        jobs[job_id].status = "error"
+        jobs[job_id].error = str(exc)
+        if audio_path and audio_path.exists():
+            audio_path.unlink(missing_ok=True)
+
+
 @router.post("/generate")
 async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTasks, req: Request) -> dict:
     """Accept a LessonRequest JSON body, start background pipeline, return job_id immediately."""
@@ -347,6 +420,15 @@ async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTa
         job_id = str(uuid.uuid4())
         jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
         background_tasks.add_task(_process_youtube_lesson, request, video_id, job_id, stt_provider)
+        return {"job_id": job_id}
+    elif request.source == "blog":
+        if not request.blog_url:
+            raise HTTPException(status_code=400, detail="blog_url is required for source 'blog'")
+        tts_provider = req.app.state.tts_provider
+        stt_provider = req.app.state.stt_provider
+        job_id = str(uuid.uuid4())
+        jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+        background_tasks.add_task(_process_blog_lesson, request, job_id, tts_provider, stt_provider)
         return {"job_id": job_id}
     else:
         raise HTTPException(
@@ -413,5 +495,30 @@ async def get_video(filename: str) -> StreamingResponse:
         headers={
             "Content-Disposition": f'attachment; filename="{safe_name}"',
             "Content-Length": str(video_path.stat().st_size),
+        },
+    )
+
+
+@router.get("/audio/{filename}")
+async def get_audio(filename: str) -> StreamingResponse:
+    """Serve a temporary TTS audio file and delete it after sending."""
+    safe_name = Path(filename).name
+    audio_path = _TEMP_DIR / safe_name
+
+    if not audio_path.exists() or not audio_path.is_file():
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    def iterfile():
+        with audio_path.open("rb") as f:
+            while chunk := f.read(1024 * 64):
+                yield chunk
+        audio_path.unlink(missing_ok=True)
+
+    return StreamingResponse(
+        iterfile(),
+        media_type="audio/mpeg",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}"',
+            "Content-Length": str(audio_path.stat().st_size),
         },
     )

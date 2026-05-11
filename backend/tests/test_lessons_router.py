@@ -437,3 +437,75 @@ async def test_generate_lesson_upload_returns_job_id():
     assert response.status_code == 200
     data = response.json()
     assert "job_id" in data
+
+
+@pytest.fixture()
+def mock_tts_provider():
+    from unittest.mock import AsyncMock
+    provider = AsyncMock()
+    provider.synthesize = AsyncMock(return_value=b"fake-mp3-bytes")
+    app.state.tts_provider = provider
+    yield provider
+    if hasattr(app.state, "tts_provider"):
+        del app.state.tts_provider
+
+
+@pytest.mark.asyncio
+async def test_generate_blog_lesson_missing_url():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/lessons/generate",
+            json={
+                "source": "blog",
+                "translation_languages": ["en"],
+                "openrouter_api_key": "key",
+            },
+        )
+    assert response.status_code == 400
+    assert "blog_url" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_generate_blog_lesson_returns_job_id(mock_tts_provider):
+    from unittest.mock import AsyncMock, patch
+
+    with patch("app.lessons.router._process_blog_lesson", new=AsyncMock()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/lessons/generate",
+                json={
+                    "source": "blog",
+                    "blog_url": "https://example.com/article",
+                    "translation_languages": ["en"],
+                    "openrouter_api_key": "sk-test",
+                },
+            )
+    assert response.status_code == 200
+    assert "job_id" in response.json()
+
+
+@pytest.mark.asyncio
+async def test_get_audio_returns_404_for_missing_file():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/lessons/audio/nonexistent.mp3")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_audio_streams_and_deletes_file(tmp_path):
+    from unittest.mock import patch
+
+    fake_audio = tmp_path / "test.mp3"
+    fake_audio.write_bytes(b"fake-audio-content")
+
+    with patch("app.lessons.router._TEMP_DIR", tmp_path):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/lessons/audio/test.mp3")
+
+    assert response.status_code == 200
+    assert response.content == b"fake-audio-content"
+    assert not fake_audio.exists()  # deleted after streaming
