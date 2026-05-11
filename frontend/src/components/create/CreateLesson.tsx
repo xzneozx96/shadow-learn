@@ -15,6 +15,7 @@ import { getSettings, saveVideo } from '@/db'
 import { API_BASE, getAppConfig } from '@/lib/config'
 import { LANGUAGES } from '@/lib/constants'
 import { captureLessonCreated, captureLessonGenerationFailed } from '@/lib/posthog-events'
+import { BlogTab } from './BlogTab'
 import { UploadTab } from './UploadTab'
 import { YouTubeTab } from './YouTubeTab'
 
@@ -30,6 +31,7 @@ export function CreateLesson() {
   const [tab, setTab] = useState('youtube')
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
+  const [blogUrl, setBlogUrl] = useState('')
   const [language, setLanguage] = useState('en')
   const [sourceLanguage, setSourceLanguage] = useState('zh-CN')
   const [submitting, setSubmitting] = useState(false)
@@ -56,7 +58,9 @@ export function CreateLesson() {
     const isYoutube = tab === 'youtube'
     if (isYoutube && !youtubeUrl.trim())
       return
-    if (!isYoutube && !file)
+    if (tab === 'upload' && !file)
+      return
+    if (tab === 'blog' && !blogUrl.trim())
       return
 
     setSubmitting(true)
@@ -64,7 +68,7 @@ export function CreateLesson() {
 
     try {
       let jobId: string
-      let lessonSource: 'youtube' | 'upload'
+      let lessonSource: 'youtube' | 'upload' | 'blog'
       let lessonSourceUrl: string | null = null
       let lessonTitle: string
       let capturedFile: File | null = null
@@ -98,7 +102,7 @@ export function CreateLesson() {
         lessonTitle = `YouTube Video (${videoId})`
         lessonSourceUrl = youtubeUrl
       }
-      else {
+      else if (tab === 'upload') {
         capturedFile = file!
         const formData = new FormData()
         formData.append('file', file!)
@@ -121,6 +125,30 @@ export function CreateLesson() {
         jobId = data.job_id
         lessonSource = 'upload'
         lessonTitle = file!.name.replace(FILE_EXTENSION_REGEX, '')
+      }
+      else if (tab === 'blog') {
+        const res = await fetch(`${API_BASE}/api/lessons/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            source: 'blog',
+            blog_url: blogUrl,
+            translation_languages: [language],
+            source_language: sourceLanguage,
+            openrouter_api_key: keys?.openrouterApiKey ?? '',
+          }),
+        })
+        if (!res.ok) {
+          const detail = await res.json().catch(() => null)
+          const msg = detail?.detail || `Server error: ${res.status}`
+          toast.error(msg)
+          throw new Error(msg)
+        }
+        const data = await res.json()
+        jobId = data.job_id
+        lessonSource = 'blog'
+        lessonTitle = new URL(blogUrl).hostname
+        lessonSourceUrl = blogUrl
       }
 
       const lessonId = crypto.randomUUID()
@@ -150,6 +178,7 @@ export function CreateLesson() {
       setQueued(true)
       setYoutubeUrl('')
       setFile(null)
+      setBlogUrl('')
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
@@ -159,10 +188,14 @@ export function CreateLesson() {
     finally {
       setSubmitting(false)
     }
-  }, [db, keys, tab, youtubeUrl, file, language, sourceLanguage, updateLesson, sttProvider, trialMode])
+  }, [db, keys, tab, youtubeUrl, file, blogUrl, language, sourceLanguage, updateLesson, sttProvider, trialMode])
 
   const canGenerate = sttProvider !== null
-    && (tab === 'youtube' ? !!youtubeUrl.trim() : !!file)
+    && (tab === 'youtube'
+      ? !!youtubeUrl.trim()
+      : tab === 'blog'
+        ? !!blogUrl.trim()
+        : !!file)
 
   if (queued) {
     return (
@@ -196,12 +229,16 @@ export function CreateLesson() {
               <TabsList>
                 <TabsTrigger value="youtube" data-testid="create-lesson-youtube-tab">{t('create.youtube')}</TabsTrigger>
                 <TabsTrigger value="upload" data-testid="create-lesson-upload-tab">{t('create.upload')}</TabsTrigger>
+                <TabsTrigger value="blog" data-testid="create-lesson-blog-tab">{t('create.blog')}</TabsTrigger>
               </TabsList>
               <TabsContent value="youtube">
                 <YouTubeTab url={youtubeUrl} onUrlChange={setYoutubeUrl} />
               </TabsContent>
               <TabsContent value="upload">
                 <UploadTab file={file} onFileChange={setFile} />
+              </TabsContent>
+              <TabsContent value="blog">
+                <BlogTab url={blogUrl} onUrlChange={setBlogUrl} />
               </TabsContent>
             </Tabs>
 
