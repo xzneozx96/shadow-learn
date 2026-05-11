@@ -62,7 +62,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
         const jobId = lesson.jobId
         // job.result has the nested shape { lesson: {...}, video_url? } —
         // matches the backend _shared_pipeline result dict.
-        const { lesson: resultLesson, video_url } = job.result
+        const { lesson: resultLesson, video_url, audio_url } = job.result
         await saveSegments(db, lesson.id, resultLesson.segments)
         if (lesson.source === 'youtube' && video_url) {
           try {
@@ -80,6 +80,20 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
             // Video fetch failed (network error, server restart, etc.).
             // Continue completing the lesson without a local video — the player will
             // fall back to the YouTube thumbnail + audio layout.
+          }
+        }
+        if (lesson.source === 'blog' && audio_url) {
+          try {
+            const absoluteUrl = audio_url.startsWith('http') ? audio_url : `${API_BASE}${audio_url}`
+            const audioRes = await fetch(absoluteUrl)
+            if (!audioRes.ok)
+              throw new Error(`Audio fetch failed: ${audioRes.status}`)
+            const audioBlob = await audioRes.blob()
+            await saveVideo(db, lesson.id, audioBlob)
+          }
+          catch {
+            // Audio fetch failed — lesson completes without local audio.
+            // Shadowing mode will fall back to re-synthesizing via /api/tts.
           }
         }
         await updateLesson({
