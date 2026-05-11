@@ -22,7 +22,7 @@ vi.mock('@/lib/config', () => ({
 }))
 
 const mockDb = {} as any
-const mockKeys = { openrouterApiKey: 'sk-test', minimaxApiKey: 'mm-test', azureSpeechKey: 'az-key', azureSpeechRegion: 'eastus' }
+const mockKeys = { openrouterApiKey: 'sk-test', azureSpeechKey: 'az-key', azureSpeechRegion: 'eastus' }
 
 function mockProvider(provider: string) {
   vi.mocked(getAppConfig).mockResolvedValue({ ttsProvider: provider, sttProvider: 'deepgram', freeTrialAvailable: false })
@@ -141,7 +141,7 @@ describe('useTTS', () => {
     expect(saveTTSCache).toHaveBeenCalledWith(mockDb, '你好', fakeBlob, 'zh-CN')
   })
 
-  it('fetches from API with MiniMax key on cache miss', async () => {
+  it('fetches from API without minimax key on cache miss (key is backend-only)', async () => {
     mockProvider('minimax')
     vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
     const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
@@ -156,7 +156,7 @@ describe('useTTS', () => {
 
     expect(globalThis.fetch).toHaveBeenCalledWith('/api/tts', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ text: '你好', source_language: 'zh-CN', minimax_api_key: 'mm-test' }),
+      body: JSON.stringify({ text: '你好', source_language: 'zh-CN' }),
     }))
   })
 
