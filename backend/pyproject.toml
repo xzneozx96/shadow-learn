@@ -13,6 +13,7 @@ dependencies = [
     "pykakasi>=2.2.1",
     "eng-to-ipa>=0.0.2",
     "httpx>=0.28.0",
+    "trafilatura>=1.12.0",
     "openai==2.6.0",
     "pydantic-settings>=2.7.0",
     "sse-starlette>=2.2.0",
