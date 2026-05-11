@@ -147,7 +147,12 @@ export function CreateLesson() {
         const data = await res.json()
         jobId = data.job_id
         lessonSource = 'blog'
-        lessonTitle = new URL(blogUrl).hostname
+        try {
+          lessonTitle = new URL(blogUrl).hostname
+        }
+        catch {
+          lessonTitle = blogUrl
+        }
         lessonSourceUrl = blogUrl
       }
 
@@ -182,7 +187,7 @@ export function CreateLesson() {
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
-      captureLessonGenerationFailed({ source: tab === 'youtube' ? 'youtube' : 'upload', error_message: msg })
+      captureLessonGenerationFailed({ source: tab === 'youtube' ? 'youtube' : tab === 'blog' ? 'blog' : 'upload', error_message: msg })
       setError(msg)
     }
     finally {
