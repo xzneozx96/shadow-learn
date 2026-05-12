@@ -1,5 +1,6 @@
 # backend/app/routers/pronunciation.py
 import asyncio
+import logging
 import subprocess
 import tempfile
 import time
@@ -9,7 +10,10 @@ from fastapi import APIRouter, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.settings import settings
+from app.shared._retry import RetryableError, http_retry
 from app.shared.utils import _resolve_key
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/pronunciation", tags=["pronunciation"])
 
@@ -83,6 +87,8 @@ def _run_assessment(
         if ev.reason == speechsdk.ResultReason.Canceled:
             cancellation = speechsdk.CancellationDetails(ev)
             print(f"[assess] CANCELED: reason={cancellation.reason}, details={cancellation.error_details}")
+            if cancellation.error_details and "timed out" in cancellation.error_details.lower():
+                raise RetryableError(f"Azure scoring timed out: {cancellation.error_details}")
             return {"error": f"Azure Speech canceled: {cancellation.reason} — {cancellation.error_details}"}
 
         if ev.reason != speechsdk.ResultReason.RecognizedSpeech:
@@ -131,9 +137,13 @@ async def assess_pronunciation(
     audio_bytes = await audio.read()
     print(f"[assess] upload read: {time.perf_counter() - t0:.2f}s ({len(audio_bytes)} bytes)")
 
-    data = await asyncio.to_thread(
-        _run_assessment, audio_bytes, reference_text, language, resolved_key, resolved_region,
-    )
+    @http_retry(logger, max_attempts=2)
+    async def _call() -> dict:
+        return await asyncio.to_thread(
+            _run_assessment, audio_bytes, reference_text, language, resolved_key, resolved_region,
+        )
+
+    data = await _call()
 
     if "error" in data:
         raise HTTPException(422 if "not recognized" in data["error"] else 500, data["error"])
