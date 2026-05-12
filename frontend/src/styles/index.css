@@ -383,3 +383,9 @@
   }
 
 }
+
+@layer utilities {
+  .border-input {
+    border-color: hsl(var(--border));
+  }
+}

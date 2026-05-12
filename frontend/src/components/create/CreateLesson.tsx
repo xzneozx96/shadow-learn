@@ -160,7 +160,7 @@ export function CreateLesson() {
         lessonSource = 'blog'
         if (isPaste) {
           lessonTitle = blogTitle.trim() || 'Untitled'
-          lessonSourceUrl = undefined
+          lessonSourceUrl = null
         }
         else {
           try {
@@ -171,6 +171,9 @@ export function CreateLesson() {
           }
           lessonSourceUrl = blogUrl
         }
+      }
+      else {
+        return
       }
 
       const lessonId = crypto.randomUUID()
@@ -224,7 +227,7 @@ export function CreateLesson() {
   if (queued) {
     return (
       <Layout>
-        <div className="mx-auto max-w-2xl p-4 pt-10">
+        <div className="relative z-5 mx-auto max-w-2xl p-4 pt-60">
           <Card>
             <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center" data-testid="create-lesson-queued-confirmation">
               <p className="text-sm text-white/65" data-testid="create-lesson-queued-message">
@@ -243,7 +246,7 @@ export function CreateLesson() {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-2xl p-4 pt-10">
+      <div className="relative z-5 mx-auto max-w-2xl p-4 pt-60">
         <Card>
           <CardHeader>
             <CardTitle>{t('create.title')}</CardTitle>

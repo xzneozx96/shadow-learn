@@ -1,7 +1,7 @@
 import type { TranslationKey } from '@/lib/i18n'
 import type { LessonStatusFilter } from '@/lib/lessonFilters'
 import type { LessonMeta } from '@/types'
-import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
+import { ArrowUpRight, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Compass, Plus, Search } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -284,24 +284,46 @@ export function Library() {
                   e.currentTarget.scrollLeft += e.deltaY
                 }}
               >
-                {/* Add new lesson card */}
-                <div className="group relative flex flex-col h-full" style={{ width: '340px' }}>
-                  <Link
-                    to="/create"
-                    className="absolute inset-0 z-10"
-                    aria-label={t('library.addNew')}
-                  />
-                  <div className="relative w-full h-full overflow-hidden rounded-xl">
-                    <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-dashed border-white/10 bg-card backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] group-hover:border-primary/30 group-hover:bg-card transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <div className="flex items-center justify-center size-10 rounded-full border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] group-hover:bg-primary/15 group-hover:border-primary/30 transition-all duration-300">
-                          <Plus className="size-4 text-foreground group-hover:text-primary transition-all duration-300 group-hover:rotate-90" />
+                {/* Create / Explore card */}
+                <div className="shrink-0 flex flex-col h-full" style={{ width: '340px' }}>
+                  <div
+                    className="w-full h-full overflow-hidden rounded-xl flex flex-col gap-3"
+                  >
+                    {/* Create new lesson */}
+                    <Link
+                      to="/create"
+                      className="group flex-1 flex flex-col items-start justify-between p-4 rounded-xl border bg-card"
+                      aria-label={t('library.addNew')}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center justify-center size-10 rounded-full border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] group-hover:bg-primary/15 group-hover:border-primary/30 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+                          <Plus className="size-4 text-muted-foreground group-hover:text-primary transition-all duration-500 group-hover:rotate-90 group-hover:scale-110" strokeWidth={1.75} />
                         </div>
-                        <span className="text-sm font-medium text-foreground group-hover:text-foreground transition-colors duration-200">
-                          {t('library.addNew')}
-                        </span>
+                        <ArrowUpRight className="size-4 text-white/25 group-hover:text-primary/70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-500" />
                       </div>
-                    </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground leading-none">{t('library.addNew')}</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1.5 leading-relaxed">{t('library.addNewHint')}</p>
+                      </div>
+                    </Link>
+
+                    {/* Explore collection */}
+                    <Link
+                      to="/collection"
+                      className="group flex-1 flex flex-col items-start justify-between p-4 rounded-xl border bg-card"
+                      aria-label={t('library.explore')}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center justify-center size-10 rounded-full border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] group-hover:bg-amber-400/10 group-hover:border-amber-400/30 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+                          <Compass className="size-4 text-muted-foreground group-hover:text-amber-400 transition-all duration-500 group-hover:scale-110 group-hover:rotate-12" strokeWidth={1.75} />
+                        </div>
+                        <ArrowUpRight className="size-4 text-white/25 group-hover:text-amber-400/70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{t('library.explore')}</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1.5 leading-relaxed">{t('library.exploreHint')}</p>
+                      </div>
+                    </Link>
                   </div>
                 </div>
 
