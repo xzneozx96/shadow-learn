@@ -39,6 +39,7 @@ export interface LessonMeta {
   jobId?: string
   errorMessage?: string
   currentStep?: string
+  isDone?: boolean
 }
 
 export interface ChatMessage {

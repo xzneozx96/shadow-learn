@@ -1,6 +1,6 @@
 import type { TranslationKey } from '@/lib/i18n'
 import type { LessonMeta } from '@/types'
-import { BookOpen, Clock, FileVideo, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { BookOpen, CheckCircle2, Clock, FileVideo, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -31,12 +31,14 @@ import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useUploadThumbnail } from '@/hooks/useUploadThumbnail'
 import { cn } from '@/lib/utils'
 import { getYoutubeThumbnail } from '@/lib/youtube'
+import { GlowIconPlaceholder } from './GlowIconPlaceholder'
 
 interface LessonCardProps {
   lesson: LessonMeta
   onDelete: (id: string) => void
   onRename: (lesson: LessonMeta, newTitle: string) => void
   onRetry?: (lesson: LessonMeta) => void
+  onToggleDone: (lesson: LessonMeta) => void
 }
 
 function formatDuration(seconds: number): string {
@@ -59,32 +61,14 @@ function UploadPlaceholder() {
 
 function BlogPlaceholder() {
   return (
-    <div
-      className="relative flex h-full w-full items-center justify-center overflow-hidden"
-      style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 70%), #0a0a0c' }}
-    >
-      {/* Ambient primary glow behind icon */}
-      <div className="absolute size-20 rounded-full bg-primary/10 blur-2xl" />
-      {/* Double-bezel icon container */}
-      <div
-        className="relative rounded-3xl p-1.5 ring-1 ring-white/8"
-        style={{ background: 'rgba(255,255,255,0.03)' }}
-      >
-        <div
-          className="flex size-15 items-center justify-center rounded-[calc(1.5rem-0.375rem)]"
-          style={{
-            background: 'linear-gradient(135deg, rgba(129,140,248,0.14) 0%, rgba(99,102,241,0.07) 100%)',
-            boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.10)',
-          }}
-        >
-          <BookOpen className="size-6 text-primary/65" strokeWidth={1.25} />
-        </div>
-      </div>
-    </div>
+    <GlowIconPlaceholder
+      className="h-full w-full"
+      icon={<BookOpen className="size-6 text-primary/65" strokeWidth={1.25} />}
+    />
   )
 }
 
-export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardProps) {
+export function LessonCard({ lesson, onDelete, onRename, onRetry, onToggleDone }: LessonCardProps) {
   const { t } = useI18n()
   const { entriesByLesson } = useVocabulary()
   const stagger = useCutoutContentStaggerVariants()
@@ -277,6 +261,10 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                             <Pencil className="size-4" />
                             {t('library.rename')}
                           </MenuItem>
+                          <MenuItem onClick={(e) => { e.preventDefault(); onToggleDone(lesson) }}>
+                            <CheckCircle2 className="size-4" />
+                            {lesson.isDone ? t('library.markInProgress') : t('library.markDone')}
+                          </MenuItem>
                           <MenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={(e) => { e.preventDefault(); setShowDeleteConfirm(true) }}
@@ -327,6 +315,9 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                     <Clock className="size-4 shrink-0" />
                     {formatDate(lesson.lastOpenedAt)}
                   </span>
+                  {lesson.isDone && (
+                    <CheckCircle2 className="size-4 shrink-0 text-green-400 ml-auto" aria-label="Done" />
+                  )}
                 </CutoutCardFooter>
               </motion.div>
             </motion.div>

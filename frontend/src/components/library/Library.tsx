@@ -1,6 +1,7 @@
 import type { TranslationKey } from '@/lib/i18n'
+import type { LessonStatusFilter } from '@/lib/lessonFilters'
 import type { LessonMeta } from '@/types'
-import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
+import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -15,11 +16,14 @@ import { useVocabulary } from '@/contexts/VocabularyContext'
 import { getAllSessionLogs } from '@/db'
 import { computeScrollState } from '@/lib/carousel'
 import { API_BASE, getAppConfig } from '@/lib/config'
+import { filterLessons } from '@/lib/lessonFilters'
+import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
 import { ActivityHeatmap } from './ActivityHeatmap'
 import { BentoCard } from './BentoCard'
 import { CurrentLessonHero } from './CurrentLessonHero'
 import { FirstLessonCTA } from './FirstLessonCTA'
+import { GlowIconPlaceholder } from './GlowIconPlaceholder'
 import { LessonCard } from './LessonCard'
 import { StreakCard } from './StreakCard'
 import { WordsCard } from './WordsCard'
@@ -45,6 +49,7 @@ export function Library() {
   const { entriesByLesson } = useVocabulary()
   const [search, setSearch] = useState('')
   const [sort] = useState<SortMode>('recent')
+  const [activeFilter, setActiveFilter] = useState<LessonStatusFilter>('inProgress')
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const [canScrollPrev, setCanScrollPrev] = useState(false)
@@ -119,28 +124,10 @@ export function Library() {
     [entriesByLesson],
   )
 
-  const filtered = useMemo(() => {
-    let result = lessons
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      result = result.filter(l => l.title.toLowerCase().includes(q))
-    }
-    return result.toSorted((a, b) => {
-      const aProcessing = a.status === 'processing'
-      const bProcessing = b.status === 'processing'
-      if (aProcessing && !bProcessing)
-        return -1
-      if (!aProcessing && bProcessing)
-        return 1
-      if (sort === 'recent')
-        return new Date(b.lastOpenedAt).getTime() - new Date(a.lastOpenedAt).getTime()
-      if (sort === 'alpha')
-        return a.title.localeCompare(b.title)
-      const pA = a.progressSegmentId && a.segmentCount ? Number.parseInt(a.progressSegmentId, 10) / a.segmentCount : 0
-      const pB = b.progressSegmentId && b.segmentCount ? Number.parseInt(b.progressSegmentId, 10) / b.segmentCount : 0
-      return pB - pA
-    })
-  }, [lessons, search, sort])
+  const filtered = useMemo(
+    () => filterLessons(lessons, activeFilter, search, sort),
+    [lessons, activeFilter, search, sort],
+  )
 
   const handleDelete = useCallback(async (id: string) => {
     await deleteLesson(id)
@@ -148,6 +135,10 @@ export function Library() {
 
   const handleRename = useCallback(async (lesson: LessonMeta, newTitle: string) => {
     await updateLesson({ ...lesson, title: newTitle })
+  }, [updateLesson])
+
+  const handleToggleDone = useCallback(async (lesson: LessonMeta) => {
+    await updateLesson({ ...lesson, isDone: !lesson.isDone })
   }, [updateLesson])
 
   const handleRetry = useCallback(async (lesson: LessonMeta) => {
@@ -227,40 +218,59 @@ export function Library() {
           {/* ── Library section ── */}
           {hasLessons && (
             <section className="mt-16">
-              <div className="mb-8 flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {t('library.collection')}
-                </h3>
-                <div className="flex items-center gap-2">
-                  <div className="group relative">
-                    <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
-                    <Input
-                      placeholder={t('nav.search')}
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                      className="transition-shadow duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.15)]"
-                    />
+              <div className="mb-8 flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {t('library.collection')}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <div className="group relative">
+                      <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                      <Input
+                        placeholder={t('nav.search')}
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="transition-shadow duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.15)]"
+                      />
+                    </div>
+                    <Button
+                      size="icon-lg"
+                      variant="outline"
+                      onClick={() => scrollCarousel('prev')}
+                      disabled={!canScrollPrev}
+                      aria-label="Scroll left"
+                      className="transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-110 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </Button>
+                    <Button
+                      size="icon-lg"
+                      variant="outline"
+                      onClick={() => scrollCarousel('next')}
+                      disabled={!canScrollNext}
+                      aria-label="Scroll right"
+                      className="transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-110 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
+                    >
+                      <ChevronRight className="size-4" />
+                    </Button>
                   </div>
-                  <Button
-                    size="icon-lg"
-                    variant="outline"
-                    onClick={() => scrollCarousel('prev')}
-                    disabled={!canScrollPrev}
-                    aria-label="Scroll left"
-                    className="transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-110 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </Button>
-                  <Button
-                    size="icon-lg"
-                    variant="outline"
-                    onClick={() => scrollCarousel('next')}
-                    disabled={!canScrollNext}
-                    aria-label="Scroll right"
-                    className="transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-110 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
-                  >
-                    <ChevronRight className="size-4" />
-                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(['inProgress', 'done', 'all'] as const).map(f => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setActiveFilter(f)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-150',
+                        activeFilter === f
+                          ? 'bg-foreground text-background'
+                          : 'bg-secondary text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {t(`library.filter.${f}` as TranslationKey)}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -308,15 +318,30 @@ export function Library() {
                       onDelete={handleDelete}
                       onRename={handleRename}
                       onRetry={handleRetry}
+                      onToggleDone={handleToggleDone}
                     />
                   </motion.div>
                 ))}
               </div>
-              {filtered.length === 0 && search.trim() && (
-                <div className="py-12 text-center">
-                  <p className="text-sm text-muted-foreground">{t('library.noSearchResults')}</p>
-                </div>
-              )}
+              {filtered.length === 0 && (() => {
+                const isSearch = search.trim()
+                const icon = isSearch
+                  ? <Search className="size-8 text-primary/65" strokeWidth={1.25} />
+                  : activeFilter === 'done'
+                    ? <CheckCircle2 className="size-8 text-primary/65" strokeWidth={1.25} />
+                    : <BookOpen className="size-8 text-primary/65" strokeWidth={1.25} />
+                const label = isSearch
+                  ? t('library.noSearchResults')
+                  : activeFilter === 'done'
+                    ? t('library.emptyDone')
+                    : t('library.emptyInProgress')
+                return (
+                  <div className="py-12 flex flex-col items-center gap-3 text-center">
+                    <GlowIconPlaceholder icon={icon} className="size-20 rounded-3xl" />
+                    <p className="text-sm text-muted-foreground">{label}</p>
+                  </div>
+                )
+              })()}
             </section>
           )}
         </div>
