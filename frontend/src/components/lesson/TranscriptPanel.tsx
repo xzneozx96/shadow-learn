@@ -1,5 +1,5 @@
 import type { LessonMeta, Segment, ShadowingBest, Word } from '@/types'
-import { Check, Copy, Languages, Search, Volume2 } from 'lucide-react'
+import { Check, Copy, Languages, Mic, Search, Volume2 } from 'lucide-react'
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -72,10 +72,10 @@ const SegmentRow = memo(({
       ref={isActive ? activeRef : undefined}
       className={cn(
         'p-3 transition-[background-color,border-color] duration-200 ease-out',
-        isActive && 'border-l-2 border-l-primary bg-primary/10',
+        isActive && 'border-l-2 border-l-primary bg-muted/60',
       )}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-stretch gap-4">
         {/* Text content */}
         <div className="min-w-0 flex-1 text-justify">
           <div className="text-foreground">
@@ -143,16 +143,17 @@ const SegmentRow = memo(({
             )}
           </div>
           {speakingBest && (
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-muted-foreground">🎤</span>
-              <span
-                className={cn(
-                  'text-[10px] font-semibold tabular-nums',
-                  speakingBest.score >= 80 ? 'text-emerald-400' : speakingBest.score >= 60 ? 'text-amber-400' : 'text-red-400',
-                )}
-              >
-                {speakingBest.score}
-              </span>
+            <div className={cn(
+              'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-xs font-bold tabular-nums',
+              speakingBest.score >= 80
+                ? 'border-emerald-500/25 bg-emerald-500/8 text-emerald-400'
+                : speakingBest.score >= 60
+                  ? 'border-amber-500/25 bg-amber-500/8 text-amber-400'
+                  : 'border-red-500/25 bg-red-500/8 text-red-400',
+            )}
+            >
+              <Mic className="size-3 shrink-0" />
+              {speakingBest.score}
             </div>
           )}
         </div>

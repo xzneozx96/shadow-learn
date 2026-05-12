@@ -418,6 +418,9 @@ export const TRANSLATIONS = {
     'shadowing.scoreNow': 'Now',
     'shadowing.scoreBest': 'Best',
     'shadowing.word': 'Word',
+    'shadowing.fluency': 'Fluency',
+    'shadowing.completeness': 'Complete',
+    'shadowing.prosody': 'Prosody',
     'shadowing.playPrev': '▶ Play',
     'shadowing.playingPrev': '▶ Playing…',
 
@@ -1047,7 +1050,10 @@ export const TRANSLATIONS = {
     'shadowing.scoreNow': 'Hiện tại',
     'shadowing.scoreBest': 'Tốt nhất',
     'shadowing.word': 'Từ',
-    'shadowing.playPrev': '▶ Phát',
+    'shadowing.fluency': 'Lưu loát',
+    'shadowing.completeness': 'Hoàn thành',
+    'shadowing.prosody': 'Ngữ điệu',
+    'shadowing.playPrev': '▶ Nghe lại',
     'shadowing.playingPrev': '▶ Đang phát…',
 
     // Workbook
