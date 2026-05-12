@@ -22,15 +22,17 @@ export function useSpeakingBests(lessonId: string): UseSpeakingBestsReturn {
   useEffect(() => {
     if (!db || !lessonId)
       return
-    getAllSpeakingBestsByLesson(db, lessonId).then((all) => {
-      setBests(new Map(all.map(b => [b.segmentId, b])))
-    })
+    let ignore = false
+    getAllSpeakingBestsByLesson(db, lessonId)
+      .then((all) => {
+        if (!ignore)
+          setBests(new Map(all.map(b => [b.segmentId, b])))
+      })
+      .catch(err => console.error('[useSpeakingBests] load failed', err))
+    return () => { ignore = true }
   }, [db, lessonId])
 
-  const getBest = useCallback(
-    (segmentId: string) => bests.get(segmentId),
-    [bests],
-  )
+  const getBest = (segmentId: string) => bests.get(segmentId)
 
   const saveBest = useCallback(
     async (best: ShadowingBest, blob: Blob) => {
