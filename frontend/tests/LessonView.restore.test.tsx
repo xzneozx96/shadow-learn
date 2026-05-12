@@ -74,6 +74,9 @@ vi.mock('@/db', () => ({
   getVideo: vi.fn().mockResolvedValue(null),
   saveLessonMeta: vi.fn().mockResolvedValue(undefined),
   getAllSpeakingBestsByLesson: vi.fn().mockResolvedValue([]),
+  saveSpeakingBest: vi.fn().mockResolvedValue(undefined),
+  saveSpeakingAudio: vi.fn().mockResolvedValue(undefined),
+  getSpeakingAudio: vi.fn().mockResolvedValue(undefined),
 }))
 
 // Stub heavy child components to avoid dependency chain
