@@ -88,7 +88,7 @@ export function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
 
   return (
     <Link to={`/lesson/${lesson.id}`} className="group block h-full">
-      <article className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-white/8 bg-card">
+      <article className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border bg-card">
         {/* Background image — full bleed (scale-110 crops baked-in YouTube letterbox bars) */}
         {showThumbnail
           ? (
@@ -105,10 +105,6 @@ export function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
                   className="absolute inset-0 overflow-hidden"
                   style={{ background: 'radial-gradient(ellipse 80% 80% at 75% 50%, rgba(129,140,248,0.10) 0%, transparent 70%), #0a0a0c' }}
                 >
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-[0.045]"
-                    style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(255,255,255,0.7) 11px)' }}
-                  />
                   {/* Icon anchored top-right corner */}
                   <div className="absolute right-14 top-30 -translate-y-1/2 flex items-center justify-center">
                     <div className="absolute size-56 rounded-full bg-primary/20 blur-3xl" />

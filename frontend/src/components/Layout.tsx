@@ -32,7 +32,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden text-foreground">
       {/* Sidebar */}
-      <aside className="w-48 xl:w-56 shrink-0 flex flex-col border-r border backdrop-blur-xl z-50">
+      <aside className="w-48 xl:w-56 shrink-0 flex flex-col border-r backdrop-blur-xl z-50">
         {trialMode && (
           <div className="flex items-start gap-2 border-b border-amber-400/20 bg-amber-400/8 px-3 py-2.5 text-[12px] leading-snug text-amber-200/90">
             <Sprout className="size-4 mt-0.5 shrink-0 text-amber-300" />

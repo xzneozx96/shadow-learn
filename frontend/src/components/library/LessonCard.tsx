@@ -12,7 +12,6 @@ import {
   CutoutCardImage,
   CutoutCardInsetLabel,
   CutoutCardMedia,
-  CutoutCardOverlay,
   CutoutCardPin,
   cutoutCardSurfaceClassName,
   CutoutCorner,
@@ -62,15 +61,8 @@ function BlogPlaceholder() {
   return (
     <div
       className="relative flex h-full w-full items-center justify-center overflow-hidden"
-      style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(16,185,129,0.07) 0%, transparent 70%), #0a0a0c' }}
+      style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 70%), #0a0a0c' }}
     >
-      {/* Subtle horizontal text-line pattern — suggests article content */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.045]"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(255,255,255,0.7) 11px)',
-        }}
-      />
       {/* Ambient primary glow behind icon */}
       <div className="absolute size-20 rounded-full bg-primary/10 blur-2xl" />
       {/* Double-bezel icon container */}
@@ -162,7 +154,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
   const navDisabled = isEditing || isProcessing
 
   return (
-    <div className="w-[340px] shrink-0" data-testid={`lesson-card-${lesson.id}`} data-status={status}>
+    <div className="w-[340px] shrink-0 flex flex-col h-full" data-testid={`lesson-card-${lesson.id}`} data-status={status}>
       <Link
         to={`/lesson/${lesson.id}`}
         aria-label={lesson.title}
@@ -171,11 +163,12 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
           if (navDisabled)
             e.preventDefault()
         }}
-        className="block"
+        className="flex flex-col h-full"
       >
         <CutoutCard
           className={cn(
             cutoutCardSurfaceClassName,
+            'flex-1 flex flex-col',
             isError && 'ring-1 ring-destructive/40',
           )}
         >
@@ -201,23 +194,21 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
                   ? <BlogPlaceholder />
                   : <UploadPlaceholder />}
 
-            <CutoutCardOverlay />
-
             {/* Source badge — bottom-left inset cutout */}
             <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-4 py-2">
               <span className={cn('font-bold text-xs uppercase tracking-widest', sourceTone)}>
                 {sourceLabel}
               </span>
-              <CutoutCorner className="absolute -right-[31px] -bottom-px rotate-90 text-card" />
-              <CutoutCorner className="absolute -top-[31px] -left-px rotate-90 text-card" />
+              <CutoutCorner className="absolute -right-5 -bottom-px rotate-90 text-card" size={20} />
+              <CutoutCorner className="absolute -top-5 -left-px rotate-90 text-card" size={20} />
             </CutoutCardInsetLabel>
 
             {/* Duration pin — top-right cutout (when available, not error) */}
             {!isProcessing && !isError && lesson.duration != null && (
-              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-3 py-1.5 text-xs font-semibold text-card-foreground tabular-nums shadow-md ring-1 ring-border/40">
+              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-3 py-1.5 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
                 {formatDuration(lesson.duration)}
-                <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
-                <CutoutCorner className="absolute right-0 -bottom-[23px] -rotate-90 text-card" size={24} />
+                <CutoutCorner className="absolute top-0 -left-4 -rotate-90 text-card" size={16} />
+                <CutoutCorner className="absolute right-0 -bottom-4 -rotate-90 text-card" size={16} />
               </CutoutCardPin>
             )}
 
@@ -241,7 +232,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
             )}
           </CutoutCardMedia>
 
-          <CutoutCardContent className="p-3">
+          <CutoutCardContent className="p-3 flex-1 flex flex-col">
             <motion.div animate="show" className="contents" initial="hidden" variants={stagger.container}>
               {/* Title row + action menu */}
               <motion.div className="flex items-center gap-2" variants={stagger.item}>
@@ -325,7 +316,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry }: LessonCardPr
               )}
 
               {/* Footer */}
-              <motion.div variants={stagger.item}>
+              <motion.div variants={stagger.item} className="mt-auto">
                 <CutoutCardFooter className="mt-2 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1.5">
                     <BookOpen className="size-4 shrink-0" />

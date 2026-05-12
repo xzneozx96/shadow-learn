@@ -12,46 +12,47 @@
     --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
-    /* Deep Navy / Slate neutrals matching new design */
-    --background: 180 3% 6%;
+    /* Daily.dev vibrant dark theme */
+    --background: 230 25% 8%;
     --foreground: 210 40% 98%;
-    --card: 225 3% 9.1%;
+    --card: 230 20% 13%;
     --card-foreground: 210 40% 98%;
-    --popover: 225 3% 9.1%;
+    --popover: 230 20% 13%;
     --popover-foreground: 210 40% 98%;
 
     /* Primary - bolder periwinkle blue for better contrast */
     --primary: 235 88% 73%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 225 2% 14%;
+    /* Secondary - Soft indigo gray for hovers and soft elements */
+    --secondary: 230 25% 18%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 225 3% 11%;
-    --muted-foreground: 230 18% 72%;
-    --accent: 225 2% 14%;
+    --muted: 230 20% 13%;
+    --muted-foreground: 230 20% 65%;
+    --accent: 230 25% 18%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 72% 52%;
+    --destructive: 348 100% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 224 28% 78% / 0.18;
-    --input: 225 2% 14%;
+    --border: 230 25% 18%;
+    --input: 230 25% 16%;
     --ring: 235 88% 73%;
 
     --radius: 0.75rem;
 
-    /* Sidebar matching deep navy */
-    --sidebar-background: 230 45% 4%;
-    --sidebar-foreground: 230 15% 65%;
+    /* Sidebar matching daily.dev sidebar */
+    --sidebar-background: 230 25% 8%;
+    --sidebar-foreground: 230 20% 65%;
     --sidebar-primary: 235 88% 73%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 28% 17%;
+    --sidebar-accent: 230 25% 24%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 224 28% 78% / 0.18;
+    --sidebar-border: 230 25% 28%;
     --sidebar-ring: 235 88% 73%;
 
-    /* Tags - soft slate */
-    --tag-bg: 230 28% 20%;
-    --tag-foreground: 210 40% 98%;
+    /* Tags - Indigo background with light blueish text */
+    --tag-bg: 230 25% 24%;
+    --tag-foreground: 220 80% 85%;
 
     --success: 142 76% 46%;
     --success-foreground: 0 0% 98%;
@@ -142,7 +143,7 @@
 @layer components {
 
   .elegant-card {
-    @apply bg-secondary/50 rounded-xl border border-border;
+    @apply bg-card rounded-xl border border-border;
     transition: all 0.2s var(--ease-spring);
     will-change: transform;
   }

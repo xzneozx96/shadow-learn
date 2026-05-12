@@ -7,7 +7,7 @@ export function BentoCard({ children, className, glow }: {
 }) {
   return (
     <div className={cn(
-      'group relative h-full overflow-hidden rounded-2xl border border-white/8 bg-card backdrop-blur-sm p-3 xl:p-6 transition-colors duration-300 hover:border-white/12',
+      'group relative h-full overflow-hidden rounded-2xl border bg-card backdrop-blur-sm p-3 xl:p-6',
       className,
     )}
     >

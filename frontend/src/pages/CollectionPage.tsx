@@ -83,7 +83,7 @@ export function CollectionPage() {
           </header>
 
           {/* Tab bar */}
-          <div className="mt-8 flex items-center gap-1 border-b border-border/60">
+          <div className="mt-8 flex items-center gap-1 border-b">
             {(['materials', 'tips'] as const).map((tab) => {
               const count = tab === 'materials' ? materialsCount : tipsCount
               const label = tab === 'materials'

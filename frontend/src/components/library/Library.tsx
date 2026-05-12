@@ -266,7 +266,7 @@ export function Library() {
 
               <div
                 ref={setScrollRef}
-                className="flex items-stretch gap-5 overflow-x-auto py-3 -my-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="grid grid-flow-col auto-cols-max items-stretch gap-5 overflow-x-auto py-3 -my-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 onWheel={(e) => {
                   if (e.deltaY === 0)
                     return
@@ -275,7 +275,7 @@ export function Library() {
                 }}
               >
                 {/* Add new lesson card */}
-                <div className="group relative flex shrink-0 flex-col rounded-xl p-2 -m-2 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-[1.02]" style={{ width: '340px' }}>
+                <div className="group relative flex flex-col h-full" style={{ width: '340px' }}>
                   <Link
                     to="/create"
                     className="absolute inset-0 z-10"
@@ -301,6 +301,7 @@ export function Library() {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.22, delay: Math.min(index, 8) * 0.04, ease: [0.16, 1, 0.3, 1] }}
+                    className="h-full flex flex-col"
                   >
                     <LessonCard
                       lesson={lesson}
