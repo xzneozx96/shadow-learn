@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
 import { AccuracyTrendChart } from '@/components/progress/AccuracyTrendChart'
 import { MistakesPanel } from '@/components/progress/MistakesPanel'
-import { OverallStatsPanel } from '@/components/progress/OverallStatsPanel'
+import { AccuracyPieCard, ExercisesCard, SessionsCard } from '@/components/progress/OverallStatsPanel'
 import { ReviewQueueBanner } from '@/components/progress/ReviewQueueBanner'
 import { SkillMasteryGrid } from '@/components/progress/SkillMasteryGrid'
 import { StudySession } from '@/components/study/StudySession'
@@ -219,22 +219,26 @@ export function WorkbookPage() {
                         )
                       : (
                           <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-min gap-4 md:gap-6 pt-4">
-                            {/* Overall Stats - taking up 12 cols */}
-                            <div className="md:col-span-12">
-                              <OverallStatsPanel stats={stats} />
-                            </div>
-
-                            {/* Accuracy Chart - taking up 8 cols */}
+                            {/* Row 1: Accuracy Trend (left) + Pie Chart (right) */}
                             <div className="md:col-span-8 flex flex-col">
                               <AccuracyTrendChart trend={stats?.accuracyTrend} />
                             </div>
+                            <div className="md:col-span-4 flex flex-col">
+                              <AccuracyPieCard stats={stats} />
+                            </div>
 
-                            {/* Mistakes Panel - taking up 4 cols */}
+                            {/* Row 2: Exercises + Sessions + Mistakes */}
+                            <div className="md:col-span-4 flex flex-col">
+                              <ExercisesCard stats={stats} />
+                            </div>
+                            <div className="md:col-span-4 flex flex-col">
+                              <SessionsCard stats={stats} />
+                            </div>
                             <div className="md:col-span-4 flex flex-col">
                               <MistakesPanel mistakes={mistakes} entries={entries} />
                             </div>
 
-                            {/* Skill Mastery Grid - taking up full width */}
+                            {/* Row 3: Skill Mastery Grid */}
                             <div className="md:col-span-12 mt-2">
                               <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1">
                                 {t('workbook.skillBreakdown')}

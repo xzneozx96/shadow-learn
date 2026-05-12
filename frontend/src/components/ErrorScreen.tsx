@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils'
 
 interface Props {
   error: unknown
-  onRetry?: () => void
 }
 
 function formatError(error: unknown): { title: string, message: string, stack?: string } {
@@ -26,7 +25,7 @@ function formatError(error: unknown): { title: string, message: string, stack?: 
   return { title: 'Error', message: String(error) }
 }
 
-export function ErrorScreen({ error, onRetry }: Props) {
+export function ErrorScreen({ error }: Props) {
   const [showStack, setShowStack] = useState(false)
   const { title, message, stack } = formatError(error)
   const isDev = import.meta.env.DEV
@@ -87,12 +86,6 @@ export function ErrorScreen({ error, onRetry }: Props) {
 
             {/* actions */}
             <div className="mt-6 flex flex-wrap gap-2">
-              {onRetry && (
-                <Button onClick={onRetry} className="gap-1.5 shadow-sm">
-                  <RotateCcw className="size-4" />
-                  Try again
-                </Button>
-              )}
               <Button
                 variant="outline"
                 onClick={() => window.location.reload()}

@@ -44,7 +44,7 @@ function GlobalSpeakModal() {
 
 function RouteErrorElement() {
   const error = useRouteError()
-  return <ErrorScreen error={error} onRetry={() => window.location.reload()} />
+  return <ErrorScreen error={error} />
 }
 
 function AppLayout() {

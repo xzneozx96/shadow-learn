@@ -440,6 +440,7 @@ export const TRANSLATIONS = {
     'progress.exercises': 'Exercises',
     'progress.completedExercises': 'Completed exercises',
     'progress.accuracy': 'Accuracy',
+    'progress.performance': 'Performance',
     'progress.overallPerformance': 'Overall Performance',
     'progress.correct': 'correct',
     'progress.wrong': 'wrong',
@@ -1059,7 +1060,8 @@ export const TRANSLATIONS = {
     // Progress
     'progress.exercises': 'Nội dung bài tập',
     'progress.completedExercises': 'Bài tập đã hoàn thành',
-    'progress.accuracy': 'Độ chính xác chung',
+    'progress.accuracy': 'Độ chính xác TB',
+    'progress.performance': 'Hiệu suất',
     'progress.overallPerformance': 'Hiệu suất luyện tập',
     'progress.correct': 'chính xác',
     'progress.wrong': 'đã sai',
