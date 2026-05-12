@@ -412,6 +412,14 @@ export const TRANSLATIONS = {
     'shadowing.errorWrong': 'Wrong',
     'shadowing.errorMissing': 'Missing',
     'shadowing.errorExtra': 'Extra',
+    'shadowing.thisAttempt': 'This Attempt',
+    'shadowing.previousBest': 'Previous Best',
+    'shadowing.newBest': 'New Best',
+    'shadowing.scoreNow': 'Now',
+    'shadowing.scoreBest': 'Best',
+    'shadowing.word': 'Word',
+    'shadowing.playPrev': '▶ Play',
+    'shadowing.playingPrev': '▶ Playing…',
 
     // Workbook
     'workbook.title': 'Learning & Progress',
@@ -1033,6 +1041,14 @@ export const TRANSLATIONS = {
     'shadowing.errorWrong': 'Sai',
     'shadowing.errorMissing': 'Thiếu',
     'shadowing.errorExtra': 'Thừa',
+    'shadowing.thisAttempt': 'Lần này',
+    'shadowing.previousBest': 'Kỷ lục trước',
+    'shadowing.newBest': 'Kỷ lục mới',
+    'shadowing.scoreNow': 'Hiện tại',
+    'shadowing.scoreBest': 'Tốt nhất',
+    'shadowing.word': 'Từ',
+    'shadowing.playPrev': '▶ Phát',
+    'shadowing.playingPrev': '▶ Đang phát…',
 
     // Workbook
     'workbook.title': 'Quản lý Học tập',

@@ -425,20 +425,22 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
                 {/* Hero: side-by-side scores */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-border/50 bg-muted/20 p-4 text-center">
-                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">This Attempt</div>
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{t('shadowing.thisAttempt')}</div>
                     <div className={cn('text-4xl font-bold tabular-nums leading-none', scoreColor(accuracy))}>
                       {Math.round(accuracy)}
                     </div>
                     {isNewBest && (
                       <div className="mt-2 text-xs font-semibold text-emerald-400">
-                        ▲ New Best
+                        ▲
+                        {' '}
+                        {t('shadowing.newBest')}
                         {' '}
                         {delta !== null && delta > 0 ? `+${delta}` : ''}
                       </div>
                     )}
                   </div>
                   <div className="rounded-xl border border-border/30 bg-muted/10 p-4 text-center">
-                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Previous Best</div>
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{t('shadowing.previousBest')}</div>
                     <div className="text-4xl font-bold tabular-nums leading-none text-muted-foreground">
                       {previousBest.score}
                     </div>
@@ -449,7 +451,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
                         disabled={playingPrev}
                         className="mt-2 text-xs text-muted-foreground border border-border/40 rounded-full px-2 py-0.5 hover:text-foreground disabled:opacity-50"
                       >
-                        {playingPrev ? '▶ Playing…' : '▶ Play'}
+                        {playingPrev ? t('shadowing.playingPrev') : t('shadowing.playPrev')}
                       </button>
                     )}
                   </div>
@@ -459,8 +461,8 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
                 <div className="rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
                   <div className="grid grid-cols-[100px_1fr_1fr] text-xs">
                     <div className="px-3 py-2 text-muted-foreground/50" />
-                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground border-l border-border/40">Now</div>
-                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground/50 border-l border-border/40">Best</div>
+                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground border-l border-border/40">{t('shadowing.scoreNow')}</div>
+                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground/50 border-l border-border/40">{t('shadowing.scoreBest')}</div>
                     {(['fluency', 'completeness', 'prosody'] as const).map(k => (
                       <React.Fragment key={k}>
                         <div className="px-3 py-2 capitalize text-muted-foreground border-t border-border/40">{k}</div>
@@ -474,9 +476,9 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
                 {/* Word breakdown comparison */}
                 <div className="rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
                   <div className="grid grid-cols-[1fr_60px_60px] text-xs">
-                    <div className="px-3 py-2 text-muted-foreground/50">Word</div>
-                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground border-l border-border/40">Now</div>
-                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground/50 border-l border-border/40">Best</div>
+                    <div className="px-3 py-2 text-muted-foreground/50">{t('shadowing.word')}</div>
+                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground border-l border-border/40">{t('shadowing.scoreNow')}</div>
+                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground/50 border-l border-border/40">{t('shadowing.scoreBest')}</div>
                     {result.words.map((w, i) => {
                       const prevWord = previousBest.breakdown.words[i]
                       return (
