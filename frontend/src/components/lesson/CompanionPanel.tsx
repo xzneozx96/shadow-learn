@@ -64,7 +64,7 @@ export function CompanionPanel({
         <TabsTrigger value="ai">{t('lesson.aiCompanion')}</TabsTrigger>
         <TabsTrigger value="workbook" className="gap-1.5">
           {t('lesson.workbook')}
-          {count > 0 && <Badge className="px-1.5 py-0 text-xs">{count}</Badge>}
+          {count > 0 && <Badge className="size-5 text-xs">{count}</Badge>}
         </TabsTrigger>
       </TabsList>
 

@@ -185,7 +185,7 @@ export function Library() {
   return (
     <Layout>
       <div className="h-full overflow-y-auto">
-        <div className="mx-auto w-full container px-6 md:px-10 py-12">
+        <div className="relative z-5 mx-auto w-full container px-6 md:px-10 py-12">
           {/* ── Top: greeting ── */}
           <motion.header
             className="mb-4 flex items-baseline justify-between gap-4"

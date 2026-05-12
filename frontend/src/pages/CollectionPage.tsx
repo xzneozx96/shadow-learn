@@ -70,7 +70,7 @@ export function CollectionPage() {
   return (
     <Layout>
       <div className="h-full overflow-y-auto">
-        <div className="px-6 md:px-10 py-12">
+        <div className="relative z-5 px-6 md:px-10 py-12">
           <header>
             <h1 className="text-2xl xl:text-3xl font-bold tracking-[-0.03em] leading-[0.95] text-foreground text-balance">
               {t('collection.title')}

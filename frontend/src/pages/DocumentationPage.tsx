@@ -125,7 +125,7 @@ export function DocumentationPage() {
 
   return (
     <Layout>
-      <div className="flex h-full w-full text-foreground font-sans overflow-hidden">
+      <div className="relative z-5 flex h-full w-full text-foreground font-sans overflow-hidden">
         {/* Left Sidebar - Navigation & TOC */}
         <aside className="w-80 shrink-0 border-r border-border flex flex-col h-full">
           {/* Search */}

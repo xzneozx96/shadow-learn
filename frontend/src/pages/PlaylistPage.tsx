@@ -51,7 +51,7 @@ export function PlaylistPage() {
 
   return (
     <Layout>
-      <div className="h-full overflow-y-auto">
+      <div className="relative z-5 h-full overflow-y-auto">
         {loading && <PlaylistPageSkeleton />}
 
         {error && (

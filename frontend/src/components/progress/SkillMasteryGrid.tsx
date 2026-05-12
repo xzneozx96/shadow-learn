@@ -3,6 +3,7 @@ import type { TranslationKey } from '@/lib/i18n'
 import { BookOpen, Ear, Edit3, MessageSquare, Type } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
+import { AmbientBackdrop } from '../AmbientBackdrop'
 
 interface Props {
   stats?: ProgressStats
@@ -44,6 +45,14 @@ export function SkillMasteryGrid({ stats }: Props) {
     listening: 'stroke-purple-400',
   }
 
+  const SKILL_TONES: Record<string, any> = {
+    writing: 'rose',
+    speaking: 'sky',
+    vocabulary: 'amber',
+    reading: 'emerald',
+    listening: 'violet',
+  }
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
       {Object.entries(skills).map(([skill, data]) => {
@@ -61,8 +70,9 @@ export function SkillMasteryGrid({ stats }: Props) {
         return (
           <div
             key={skill}
-            className="group rounded-xl border elegant-card backdrop-blur-xl p-6 flex flex-col items-center text-center justify-between shadow-xs transition-all duration-300 hover:border-white/10"
+            className="group relative rounded-xl border elegant-card backdrop-blur-xl p-6 flex flex-col items-center text-center justify-between shadow-xs transition-all duration-300 hover:border-white/10 overflow-hidden"
           >
+            <AmbientBackdrop tone={SKILL_TONES[skill]} />
             {/* Circular Progress Ring */}
             <div className="relative flex items-center justify-center size-16">
               <svg className="absolute size-full transform -rotate-90">
