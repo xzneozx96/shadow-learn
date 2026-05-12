@@ -72,10 +72,10 @@ export function PlaylistPage() {
                 className="group flex items-center gap-2 text-left transition-colors duration-150"
               >
                 <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
-                <h1 className="text-xl md:text-2xl font-bold tracking-[-0.02em] text-foreground text-balance">
+                <h3 className="text-lg md:text-xl font-bold tracking-[-0.02em] text-foreground text-balance">
                   {data.name}
-                </h1>
-                <div className="flex items-center gap-2 ml-4">
+                </h3>
+                <div className="flex items-center gap-2 ml-2">
                   <Badge variant="secondary" className="inline-flex items-center gap-1 text-xs font-medium tabular-nums">
                     <ListVideo className="size-4" />
                     {data.videos.length}
