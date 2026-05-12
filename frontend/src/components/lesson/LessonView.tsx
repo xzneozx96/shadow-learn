@@ -15,6 +15,7 @@ import { usePlayer } from '@/contexts/PlayerContext'
 import { getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
 import { useLesson } from '@/hooks/useLesson'
+import { useSpeakingBests } from '@/hooks/useSpeakingBests'
 import { useTimeEffect } from '@/hooks/useTimeEffect'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { CompanionPanel } from './CompanionPanel'
@@ -29,6 +30,7 @@ function LessonViewContent() {
   const { updateLesson } = useLessons()
   const { meta, segments, loading, error, updateMeta } = useLesson(db, id)
   const activeSegment = useActiveSegment(segments)
+  const { bests, getBest, saveBest, getAudio } = useSpeakingBests(id ?? '')
 
   const [videoBlob, setVideoBlob] = useState<Blob | undefined>()
   type ShadowingActiveMode = null | { mode: 'dictation' | 'speaking', segments: Segment[] }
@@ -275,6 +277,9 @@ function LessonViewContent() {
                   azureRegion={keys?.azureSpeechRegion ?? ''}
                   onExit={handleShadowingExit}
                   lesson={meta}
+                  getBest={getBest}
+                  saveBest={saveBest}
+                  getAudio={getAudio}
                 />
               )
             : (
@@ -285,6 +290,7 @@ function LessonViewContent() {
                   onSegmentClick={handleSegmentClick}
                   onProgressUpdate={handleProgressUpdate}
                   onShadowClick={handleShadowClick}
+                  speakingBests={bests}
                 />
               )}
         </div>
