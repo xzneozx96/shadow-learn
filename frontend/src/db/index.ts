@@ -1,10 +1,10 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
-import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, VocabEntry } from '../types'
+import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, ShadowingAudio, ShadowingBest, VocabEntry } from '../types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 12
+const DB_VERSION = 13
 
 export interface LearnerProfile {
   name: string
@@ -188,6 +188,16 @@ interface ShadowLearnSchema extends DBSchema {
     key: string
     value: import('../types').WordBreakdown
   }
+  'shadowing-bests': {
+    key: [string, string]
+    value: ShadowingBest
+    indexes: { 'by-lesson': string }
+  }
+  'shadowing-audio': {
+    key: [string, string]
+    value: ShadowingAudio
+    indexes: { 'by-lesson': string }
+  }
 }
 
 export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
@@ -298,6 +308,12 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
         if (!db.objectStoreNames.contains('word-breakdowns'))
           db.createObjectStore('word-breakdowns', { keyPath: 'word' })
       }
+      if (oldVersion < 13) {
+        const bestsStore = db.createObjectStore('shadowing-bests', { keyPath: ['lessonId', 'segmentId'] })
+        bestsStore.createIndex('by-lesson', 'lessonId', { unique: false })
+        const audioStore = db.createObjectStore('shadowing-audio', { keyPath: ['lessonId', 'segmentId'] })
+        audioStore.createIndex('by-lesson', 'lessonId', { unique: false })
+      }
     },
   })
 }
@@ -395,6 +411,8 @@ export async function deleteFullLesson(db: ShadowLearnDB, lessonId: string): Pro
     deleteSegments(db, lessonId),
     deleteVideo(db, lessonId),
     deleteChatMessages(db, lessonId),
+    deleteSpeakingBestsByLesson(db, lessonId),
+    deleteSpeakingAudioByLesson(db, lessonId),
   ])
 }
 
@@ -593,4 +611,37 @@ export async function getBreakdown(
 
 export async function deleteBreakdown(db: ShadowLearnDB, word: string): Promise<void> {
   await db.delete('word-breakdowns', word)
+}
+
+// Shadowing personal bests
+
+export async function getSpeakingBest(db: ShadowLearnDB, lessonId: string, segmentId: string): Promise<ShadowingBest | undefined> {
+  return db.get('shadowing-bests', [lessonId, segmentId])
+}
+
+export async function saveSpeakingBest(db: ShadowLearnDB, best: ShadowingBest): Promise<void> {
+  await db.put('shadowing-bests', best)
+}
+
+export async function getAllSpeakingBestsByLesson(db: ShadowLearnDB, lessonId: string): Promise<ShadowingBest[]> {
+  return db.getAllFromIndex('shadowing-bests', 'by-lesson', lessonId)
+}
+
+export async function deleteSpeakingBestsByLesson(db: ShadowLearnDB, lessonId: string): Promise<void> {
+  const all = await getAllSpeakingBestsByLesson(db, lessonId)
+  await Promise.all(all.map(b => db.delete('shadowing-bests', [b.lessonId, b.segmentId])))
+}
+
+export async function getSpeakingAudio(db: ShadowLearnDB, lessonId: string, segmentId: string): Promise<Blob | undefined> {
+  const record = await db.get('shadowing-audio', [lessonId, segmentId])
+  return record?.blob
+}
+
+export async function saveSpeakingAudio(db: ShadowLearnDB, lessonId: string, segmentId: string, blob: Blob): Promise<void> {
+  await db.put('shadowing-audio', { lessonId, segmentId, blob })
+}
+
+export async function deleteSpeakingAudioByLesson(db: ShadowLearnDB, lessonId: string): Promise<void> {
+  const all = await db.getAllFromIndex('shadowing-audio', 'by-lesson', lessonId)
+  await Promise.all(all.map(a => db.delete('shadowing-audio', [a.lessonId, a.segmentId])))
 }

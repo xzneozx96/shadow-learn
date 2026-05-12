@@ -1,4 +1,4 @@
-import type { VocabEntry } from '../src/types'
+import type { ShadowingBest, VocabEntry } from '../src/types'
 
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -7,18 +7,25 @@ import {
   deleteFullLesson,
   deleteLessonMeta,
   deleteSpacedRepetitionItem,
+  deleteSpeakingAudioByLesson,
+  deleteSpeakingBestsByLesson,
   getAllLessonMetas,
+  getAllSpeakingBestsByLesson,
   getChatMessages,
   getCryptoData,
   getLessonMeta,
   getSegments,
   getSettings,
+  getSpeakingAudio,
+  getSpeakingBest,
   initDB,
   saveChatMessages,
   saveCryptoData,
   saveLessonMeta,
   saveSegments,
   saveSettings,
+  saveSpeakingAudio,
+  saveSpeakingBest,
 } from '../src/db'
 
 // We'll use fake-indexeddb for testing
@@ -254,5 +261,74 @@ describe('vocabulary store', () => {
     const results = await db.getAllFromIndex('vocabulary', 'by-lesson', 'lesson_abc')
     expect(results).toHaveLength(1)
     expect(results[0].word).toBe('今天')
+  })
+})
+
+describe('shadowing-bests store', () => {
+  let db: Awaited<ReturnType<typeof initDB>>
+
+  beforeEach(async () => {
+    globalThis.indexedDB = new IDBFactory()
+    db = await initDB()
+  })
+
+  const makeBest = (lessonId: string, segmentId: string, score = 80): ShadowingBest => ({
+    lessonId,
+    segmentId,
+    score,
+    breakdown: {
+      overall: { accuracy: score, fluency: 90, completeness: 100, prosody: 70 },
+      words: [{ word: '你', accuracy: score, error_type: null, error_detail: null }],
+    },
+    recordedAt: new Date().toISOString(),
+  })
+
+  it('saves and retrieves a best', async () => {
+    const best = makeBest('lesson-1', 'seg-1', 88)
+    await saveSpeakingBest(db, best)
+    const retrieved = await getSpeakingBest(db, 'lesson-1', 'seg-1')
+    expect(retrieved?.score).toBe(88)
+  })
+
+  it('getAllSpeakingBestsByLesson returns only matching lesson', async () => {
+    await saveSpeakingBest(db, makeBest('lesson-1', 'seg-1'))
+    await saveSpeakingBest(db, makeBest('lesson-1', 'seg-2'))
+    await saveSpeakingBest(db, makeBest('lesson-2', 'seg-1'))
+    const bests = await getAllSpeakingBestsByLesson(db, 'lesson-1')
+    expect(bests).toHaveLength(2)
+    expect(bests.every(b => b.lessonId === 'lesson-1')).toBe(true)
+  })
+
+  it('deleteSpeakingBestsByLesson removes only matching lesson', async () => {
+    await saveSpeakingBest(db, makeBest('lesson-1', 'seg-1'))
+    await saveSpeakingBest(db, makeBest('lesson-2', 'seg-1'))
+    await deleteSpeakingBestsByLesson(db, 'lesson-1')
+    expect(await getSpeakingBest(db, 'lesson-1', 'seg-1')).toBeUndefined()
+    expect(await getSpeakingBest(db, 'lesson-2', 'seg-1')).toBeDefined()
+  })
+
+  it('saves and retrieves audio blob', async () => {
+    const blob = new Blob(['audio'], { type: 'audio/webm' })
+    await saveSpeakingAudio(db, 'lesson-1', 'seg-1', blob)
+    const retrieved = await getSpeakingAudio(db, 'lesson-1', 'seg-1')
+    expect(retrieved).toBeDefined()
+  })
+
+  it('deleteSpeakingAudioByLesson removes only matching lesson audio', async () => {
+    const blob = new Blob(['audio'], { type: 'audio/webm' })
+    await saveSpeakingAudio(db, 'lesson-1', 'seg-1', blob)
+    await saveSpeakingAudio(db, 'lesson-2', 'seg-1', blob)
+    await deleteSpeakingAudioByLesson(db, 'lesson-1')
+    expect(await getSpeakingAudio(db, 'lesson-1', 'seg-1')).toBeUndefined()
+    expect(await getSpeakingAudio(db, 'lesson-2', 'seg-1')).toBeDefined()
+  })
+
+  it('deleteFullLesson clears bests and audio', async () => {
+    const blob = new Blob(['audio'], { type: 'audio/webm' })
+    await saveSpeakingBest(db, makeBest('lesson-1', 'seg-1'))
+    await saveSpeakingAudio(db, 'lesson-1', 'seg-1', blob)
+    await deleteFullLesson(db, 'lesson-1')
+    expect(await getSpeakingBest(db, 'lesson-1', 'seg-1')).toBeUndefined()
+    expect(await getSpeakingAudio(db, 'lesson-1', 'seg-1')).toBeUndefined()
   })
 })
