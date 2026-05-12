@@ -1,4 +1,4 @@
-import type { LessonMeta, Segment, Word } from '@/types'
+import type { LessonMeta, Segment, ShadowingBest, Word } from '@/types'
 import { Check, Copy, Languages, Search, Volume2 } from 'lucide-react'
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -18,6 +18,7 @@ interface TranscriptPanelProps {
   onSegmentClick: (segment: Segment) => void
   onProgressUpdate: (segmentId: string) => void
   onShadowClick?: (segment: Segment) => void
+  speakingBests?: Map<string, ShadowingBest>
 }
 
 const SEGMENT_BATCH_SIZE = 20
@@ -45,6 +46,7 @@ interface SegmentRowProps {
   onSegmentClick: (segment: Segment) => void
   onCopy: (e: React.MouseEvent, segment: Segment) => void
   onShadowClick?: (segment: Segment) => void
+  speakingBest?: ShadowingBest
 }
 
 const SegmentRow = memo(({
@@ -63,6 +65,7 @@ const SegmentRow = memo(({
   onSegmentClick,
   onCopy,
   onShadowClick,
+  speakingBest,
 }: SegmentRowProps) => {
   return (
     <div
@@ -99,43 +102,58 @@ const SegmentRow = memo(({
         </div>
 
         {/* Action buttons */}
-        <div className="flex shrink-0 items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="size-8 text-muted-foreground hover:text-foreground"
-            aria-label="Play from here"
-            onClick={(e) => {
-              e.stopPropagation()
-              onSegmentClick(segment)
-            }}
-          >
-            <Volume2 className="size-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="size-8 text-muted-foreground hover:text-foreground"
-            aria-label="Copy transcription"
-            onClick={e => onCopy(e, segment)}
-          >
-            {copiedId === segment.id
-              ? <Check className="size-5 text-green-500" />
-              : <Copy className="size-5" />}
-          </Button>
-          {onShadowClick && (
+        <div className="flex shrink-0 flex-col items-end justify-between gap-1">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon-xs"
               className="size-8 text-muted-foreground hover:text-foreground"
-              aria-label="Shadow from this segment"
+              aria-label="Play from here"
               onClick={(e) => {
                 e.stopPropagation()
-                onShadowClick(segment)
+                onSegmentClick(segment)
               }}
             >
-              <span className="text-lg flex items-center justify-center">🎯</span>
+              <Volume2 className="size-5" />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="size-8 text-muted-foreground hover:text-foreground"
+              aria-label="Copy transcription"
+              onClick={e => onCopy(e, segment)}
+            >
+              {copiedId === segment.id
+                ? <Check className="size-5 text-green-500" />
+                : <Copy className="size-5" />}
+            </Button>
+            {onShadowClick && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="size-8 text-muted-foreground hover:text-foreground"
+                aria-label="Shadow from this segment"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onShadowClick(segment)
+                }}
+              >
+                <span className="text-lg flex items-center justify-center">🎯</span>
+              </Button>
+            )}
+          </div>
+          {speakingBest && (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-muted-foreground">🎤</span>
+              <span
+                className={cn(
+                  'text-[10px] font-semibold tabular-nums',
+                  speakingBest.score >= 80 ? 'text-emerald-400' : speakingBest.score >= 60 ? 'text-amber-400' : 'text-red-400',
+                )}
+              >
+                {speakingBest.score}
+              </span>
+            </div>
           )}
         </div>
       </div>
@@ -150,6 +168,7 @@ export function TranscriptPanel({
   onSegmentClick,
   onProgressUpdate,
   onShadowClick,
+  speakingBests,
 }: TranscriptPanelProps) {
   const { t } = useI18n()
   const { db, keys } = useAuth()
@@ -356,6 +375,7 @@ export function TranscriptPanel({
               onSegmentClick={onSegmentClick}
               onCopy={handleCopy}
               onShadowClick={onShadowClick}
+              speakingBest={speakingBests?.get(segment.id)}
             />
           ))}
         </div>
