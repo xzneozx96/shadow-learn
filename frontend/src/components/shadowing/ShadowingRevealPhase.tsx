@@ -1,9 +1,10 @@
 import type { DiffToken } from '@/lib/diff-utils'
 import type { TranslationKey } from '@/lib/i18n'
-import type { PronunciationAssessResult, Segment } from '@/types'
+import type { PronunciationAssessResult, Segment, ShadowingBest } from '@/types'
 import { X } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import * as React from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { API_BASE } from '@/lib/config'
@@ -33,6 +34,10 @@ interface SpeakingRevealProps {
   azureKey: string
   azureRegion: string
   language: string
+  lessonId: string
+  previousBest?: ShadowingBest
+  onSaveBest?: (best: ShadowingBest, blob: Blob) => Promise<void>
+  getAudio?: (segmentId: string) => Promise<Blob | undefined>
 }
 
 // ── Combined ──────────────────────────────────────────────────────────────
@@ -47,12 +52,13 @@ type ShadowingRevealPhaseProps = (DictationRevealProps | SpeakingRevealProps) & 
 
 export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
   const { t } = useI18n()
-  const { segment, segmentLabel, progress, onRetry, onNext, onExit } = props
+  const { segment, segmentLabel, progress, onRetry, onExit } = props
   const [loadingScore, setLoadingScore] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   // For speaking: store score from async Azure call
   const speakingScoreRef = useRef<number | null>(null)
+  const assessResultRef = useRef<PronunciationAssessResult | null>(null)
 
   // Compute dictation diff once and store in a ref so keyboard handler is never stale
   const dictationDiff = useMemo<DiffToken[] | null>(() => {
@@ -69,6 +75,26 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
     nextBtnRef.current?.focus()
   }, [])
 
+  const handleNext = useCallback(async () => {
+    const score = speakingScoreRef.current
+    if (
+      props.mode === 'speaking'
+      && props.onSaveBest
+      && assessResultRef.current
+      && Math.round(assessResultRef.current.overall.accuracy) > (props.previousBest?.score ?? -1)
+    ) {
+      const best: ShadowingBest = {
+        lessonId: props.lessonId,
+        segmentId: props.segment.id,
+        score: Math.round(assessResultRef.current.overall.accuracy),
+        breakdown: assessResultRef.current,
+        recordedAt: new Date().toISOString(),
+      }
+      await props.onSaveBest(best, props.blob)
+    }
+    props.onNext(score)
+  }, [props])
+
   // Keyboard: Enter = next, r = retry
   // Scoped: only fires when focus is within the ShadowingPanel container
   useEffect(() => {
@@ -78,10 +104,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
         return
       if (e.key === 'Enter') {
         e.preventDefault()
-        const score = props.mode === 'dictation'
-          ? (dictationDiffRef.current ? computeAccuracyScore(dictationDiffRef.current) : null)
-          : speakingScoreRef.current
-        onNext(score)
+        void handleNext()
       }
       if (e.key === 'r') {
         e.preventDefault()
@@ -203,6 +226,9 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           language={props.language}
           onLoading={setLoadingScore}
           onScore={(score) => { speakingScoreRef.current = score }}
+          onResult={(r) => { assessResultRef.current = r }}
+          previousBest={props.mode === 'speaking' ? props.previousBest : undefined}
+          getAudio={props.mode === 'speaking' ? props.getAudio : undefined}
           t={t}
         />
       )}
@@ -222,7 +248,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           ref={nextBtnRef}
           size="xl"
           className="flex-1 py-1.5 text-sm flex items-center justify-center gap-1.5"
-          onClick={() => onNext(props.mode === 'dictation' ? dictationScore : speakingScoreRef.current)}
+          onClick={() => void handleNext()}
           disabled={loadingScore}
         >
           {loadingScore && <div className="size-4 rounded-full border-2 border-current border-t-transparent animate-spin" />}
@@ -243,15 +269,45 @@ interface SpeakingScoresProps {
   language: string
   onScore: (score: number | null) => void
   onLoading?: (isLoading: boolean) => void
+  onResult?: (result: PronunciationAssessResult | null) => void
+  previousBest?: ShadowingBest
+  getAudio?: (segmentId: string) => Promise<Blob | undefined>
   t: (key: TranslationKey) => string
 }
 
-function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScore, onLoading, t }: SpeakingScoresProps) {
+function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScore, onLoading, onResult, previousBest, getAudio, t }: SpeakingScoresProps) {
   const [result, setResult] = useState<AssessResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [playingPrev, setPlayingPrev] = useState(false)
   const onScoreRef = useRef(onScore)
   onScoreRef.current = onScore
+  const onResultRef = useRef(onResult)
+  onResultRef.current = onResult
+  const prevAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  const handlePlayPrev = useCallback(async () => {
+    if (!getAudio || playingPrev)
+      return
+    setPlayingPrev(true)
+    const blob = await getAudio(segment.id)
+    if (!blob) {
+      setPlayingPrev(false)
+      return
+    }
+    const url = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    prevAudioRef.current = audio
+    audio.onended = () => {
+      URL.revokeObjectURL(url)
+      setPlayingPrev(false)
+    }
+    audio.onerror = () => {
+      URL.revokeObjectURL(url)
+      setPlayingPrev(false)
+    }
+    void audio.play()
+  }, [getAudio, segment.id, playingPrev])
 
   useEffect(() => {
     let cancelled = false
@@ -286,6 +342,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
         const data: AssessResult = await resp.json()
         setResult(data)
         onScoreRef.current(Math.round(data.overall.accuracy))
+        onResultRef.current?.(data)
       }
       catch (e) {
         if (cancelled)
@@ -293,6 +350,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
         const err = e as Error
         setError(err.name === 'AbortError' ? 'Scoring timed out' : 'Scoring unavailable')
         onScoreRef.current(null)
+        onResultRef.current?.(null)
       }
       finally {
         if (!cancelled) {
@@ -330,75 +388,163 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
   const scoreColor = (n: number) => n >= 80 ? 'text-emerald-400' : n >= 60 ? 'text-amber-400' : 'text-red-400'
   const barColor = (n: number) => n >= 80 ? 'bg-emerald-400' : n >= 60 ? 'bg-amber-400' : 'bg-red-400'
   const label = accuracy >= 90 ? 'Excellent' : accuracy >= 75 ? 'Good' : accuracy >= 60 ? 'Fair' : accuracy >= 40 ? 'Keep Practicing' : 'Needs Work'
+  const isNewBest = previousBest !== undefined && Math.round(accuracy) > previousBest.score
+  const delta = previousBest ? Math.round(accuracy) - previousBest.score : null
 
   return (
     <ScrollArea className="min-h-0 flex-1">
       <div className="p-4 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-        {/* Hero: accuracy score */}
-        <div className="rounded-xl border border-border/50 bg-muted/20 backdrop-blur-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-3 pb-2.5">
-            <div>
-              <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(accuracy))}>
-                {Math.round(accuracy)}
-              </div>
-              <div className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">Accuracy</div>
-            </div>
-            <div className={cn('text-sm font-semibold', scoreColor(accuracy))}>
-              {label}
-            </div>
-          </div>
-        </div>
 
-        {/* Breakdown */}
-        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* Secondary scores */}
-          <div className="grid grid-cols-3 rounded-xl border border-border/40 bg-muted/20">
-            {(['fluency', 'completeness', 'prosody'] as const).map((k, i) => (
-              <div key={k} className={cn('px-3 py-2 text-center', i < 2 && 'border-r border-border/40')}>
-                <div className={cn('text-base font-bold tabular-nums', scoreColor(result.overall[k]))}>
-                  {Math.round(result.overall[k])}
-                </div>
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{k}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Word breakdown */}
-          <div className="space-y-1.5">
-            {result.words.map(w => (
-              <div
-                key={w.word}
-                className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2 transition-colors hover:bg-muted/40"
-              >
-                <span className={cn('w-20 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
-                  {w.word}
-                </span>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/60">
-                  <div
-                    className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
-                    style={{ width: `${w.accuracy}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-end w-20 gap-2">
-                  <span className={cn('w-7 shrink-0 text-right text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
-                    {Math.round(w.accuracy)}
-                  </span>
-                  {w.error_type && (
-                    <span className={cn(
-                      'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
-                      w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
-                      w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
-                      w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+        {previousBest
+          ? (
+            // ── Comparison layout ────────────────────────────────────────
+              <>
+                {/* Hero: side-by-side scores */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-4 text-center">
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">This Attempt</div>
+                    <div className={cn('text-4xl font-bold tabular-nums leading-none', scoreColor(accuracy))}>
+                      {Math.round(accuracy)}
+                    </div>
+                    {isNewBest && (
+                      <div className="mt-2 text-xs font-semibold text-emerald-400">
+                        ▲ New Best
+                        {' '}
+                        {delta !== null && delta > 0 ? `+${delta}` : ''}
+                      </div>
                     )}
-                    >
-                      {w.error_type === 'Mispronunciation' ? t('shadowing.errorWrong') : w.error_type === 'Omission' ? t('shadowing.errorMissing') : t('shadowing.errorExtra')}
-                    </span>
-                  )}
+                  </div>
+                  <div className="rounded-xl border border-border/30 bg-muted/10 p-4 text-center">
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Previous Best</div>
+                    <div className="text-4xl font-bold tabular-nums leading-none text-muted-foreground">
+                      {previousBest.score}
+                    </div>
+                    {getAudio && (
+                      <button
+                        type="button"
+                        onClick={handlePlayPrev}
+                        disabled={playingPrev}
+                        className="mt-2 text-xs text-muted-foreground border border-border/40 rounded-full px-2 py-0.5 hover:text-foreground disabled:opacity-50"
+                      >
+                        {playingPrev ? '▶ Playing…' : '▶ Play'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
+
+                {/* Breakdown comparison table */}
+                <div className="rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
+                  <div className="grid grid-cols-[100px_1fr_1fr] text-xs">
+                    <div className="px-3 py-2 text-muted-foreground/50" />
+                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground border-l border-border/40">Now</div>
+                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground/50 border-l border-border/40">Best</div>
+                    {(['fluency', 'completeness', 'prosody'] as const).map(k => (
+                      <React.Fragment key={k}>
+                        <div className="px-3 py-2 capitalize text-muted-foreground border-t border-border/40">{k}</div>
+                        <div className={cn('px-3 py-2 text-center font-bold tabular-nums border-t border-l border-border/40', scoreColor(result.overall[k]))}>{Math.round(result.overall[k])}</div>
+                        <div className="px-3 py-2 text-center tabular-nums text-muted-foreground/60 border-t border-l border-border/40">{Math.round(previousBest.breakdown.overall[k])}</div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Word breakdown comparison */}
+                <div className="rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
+                  <div className="grid grid-cols-[1fr_60px_60px] text-xs">
+                    <div className="px-3 py-2 text-muted-foreground/50">Word</div>
+                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground border-l border-border/40">Now</div>
+                    <div className="px-3 py-2 text-center font-semibold text-muted-foreground/50 border-l border-border/40">Best</div>
+                    {result.words.map((w, i) => {
+                      const prevWord = previousBest.breakdown.words[i]
+                      return (
+                        <React.Fragment key={w.word}>
+                          <div className="px-3 py-2 text-base font-bold text-foreground border-t border-border/40">{w.word}</div>
+                          <div className={cn('px-3 py-2 text-center font-bold tabular-nums border-t border-l border-border/40', scoreColor(w.accuracy))}>
+                            {Math.round(w.accuracy)}
+                            {w.error_type && w.error_type !== 'None' && (
+                              <div className="text-[9px] font-normal opacity-70">{w.error_type === 'Mispronunciation' ? t('shadowing.errorWrong') : w.error_type === 'Omission' ? t('shadowing.errorMissing') : t('shadowing.errorExtra')}</div>
+                            )}
+                          </div>
+                          <div className="px-3 py-2 text-center tabular-nums text-muted-foreground/60 border-t border-l border-border/40">
+                            {prevWord ? Math.round(prevWord.accuracy) : '—'}
+                          </div>
+                        </React.Fragment>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )
+          : (
+            // ── Single result layout (existing UI) ────────────────────────
+              <>
+                {/* Hero: accuracy score */}
+                <div className="rounded-xl border border-border/50 bg-muted/20 backdrop-blur-sm overflow-hidden">
+                  <div className="flex items-center justify-between px-4 pt-3 pb-2.5">
+                    <div>
+                      <div className={cn('text-3xl font-bold tabular-nums tracking-tight leading-none', scoreColor(accuracy))}>
+                        {Math.round(accuracy)}
+                      </div>
+                      <div className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">Accuracy</div>
+                    </div>
+                    <div className={cn('text-sm font-semibold', scoreColor(accuracy))}>
+                      {label}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Breakdown */}
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {/* Secondary scores */}
+                  <div className="grid grid-cols-3 rounded-xl border border-border/40 bg-muted/20">
+                    {(['fluency', 'completeness', 'prosody'] as const).map((k, i) => (
+                      <div key={k} className={cn('px-3 py-2 text-center', i < 2 && 'border-r border-border/40')}>
+                        <div className={cn('text-base font-bold tabular-nums', scoreColor(result.overall[k]))}>
+                          {Math.round(result.overall[k])}
+                        </div>
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{k}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Word breakdown */}
+                  <div className="space-y-1.5">
+                    {result.words.map(w => (
+                      <div
+                        key={w.word}
+                        className="flex items-center gap-2.5 rounded-lg border border-border/30 bg-muted/20 px-3 py-2 transition-colors hover:bg-muted/40"
+                      >
+                        <span className={cn('w-20 shrink-0 text-base font-bold', scoreColor(w.accuracy))}>
+                          {w.word}
+                        </span>
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border/60">
+                          <div
+                            className={cn('h-full rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
+                            style={{ width: `${w.accuracy}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-end w-20 gap-2">
+                          <span className={cn('w-7 shrink-0 text-right text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
+                            {Math.round(w.accuracy)}
+                          </span>
+                          {w.error_type && (
+                            <span className={cn(
+                              'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
+                              w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+                              w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
+                              w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+                            )}
+                            >
+                              {w.error_type === 'Mispronunciation' ? t('shadowing.errorWrong') : w.error_type === 'Omission' ? t('shadowing.errorMissing') : t('shadowing.errorExtra')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
       </div>
     </ScrollArea>
   )
