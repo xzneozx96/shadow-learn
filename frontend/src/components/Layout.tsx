@@ -80,7 +80,7 @@ export function Layout({ children }: LayoutProps) {
                 {label}
               </Button>
               {badge && (
-                <span className="pointer-events-none absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm ring-2 ring-background">
+                <span className="pointer-events-none absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm ring-2 ring-background">
                   1
                 </span>
               )}
