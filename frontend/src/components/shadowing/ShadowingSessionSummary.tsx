@@ -19,7 +19,7 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
       role="region"
       aria-label="Session summary"
     >
-      <div className="w-full max-w-xs space-y-4">
+      <div className="w-full max-w-xs space-y-8">
         <div className="text-center">
           <div className="text-sm uppercase tracking-widest text-muted-foreground mb-1">
             {t('shadowing.sessionComplete')}
@@ -35,11 +35,11 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
         </div>
 
         <div className="flex gap-2">
-          <div className="flex-1 rounded-lg border border-border glass-surface p-3 text-center">
+          <div className="flex-1 rounded-lg border border-border bg-card p-3 text-center">
             <div className="text-lg font-semibold">{skipped}</div>
             <div className="text-sm text-muted-foreground">{t('shadowing.skipped')}</div>
           </div>
-          <div className="flex-1 rounded-lg border border-border glass-surface p-3 text-center">
+          <div className="flex-1 rounded-lg border border-border bg-card p-3 text-center">
             <div className="text-lg font-semibold">
               {averageScore !== null ? averageScore : '—'}
             </div>
@@ -58,7 +58,7 @@ export function ShadowingSessionSummary({ summary, segments, onDone }: Shadowing
                 return (
                   <div
                     key={segmentIndex}
-                    className="flex items-center justify-between rounded-md border border-border glass-surface px-3 py-2"
+                    className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2"
                   >
                     <span className="max-w-[70%] truncate text-sm">
                       {seg?.text ?? `Segment ${segmentIndex + 1}`}

@@ -83,6 +83,20 @@ export interface PronunciationAssessResult {
   words: PronunciationWordScore[]
 }
 
+export interface ShadowingBest {
+  lessonId: string
+  segmentId: string
+  score: number // Math.round(overall.accuracy)
+  breakdown: PronunciationAssessResult // full Azure result
+  recordedAt: string // ISO timestamp
+}
+
+export interface ShadowingAudio {
+  lessonId: string
+  segmentId: string
+  blob: Blob
+}
+
 export interface VocabEntry {
   id: string
   word: string

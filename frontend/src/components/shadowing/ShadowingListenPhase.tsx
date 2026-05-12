@@ -101,7 +101,7 @@ export function ShadowingListenPhase({
       tabIndex={0}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 h-16">
+      <div className="flex items-center justify-between px-4 h-12 xl:h-16">
         <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <Button
           variant="ghost"

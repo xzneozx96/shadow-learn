@@ -1,6 +1,6 @@
 import type { SessionLog } from '@/db'
 import type { SegmentResult } from '@/lib/shadowing-utils'
-import type { LessonMeta, Segment } from '@/types'
+import type { LessonMeta, Segment, ShadowingBest } from '@/types'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,9 +32,12 @@ interface ShadowingPanelProps {
   azureRegion: string
   onExit: () => void
   lesson: LessonMeta
+  getBest: (segmentId: string) => ShadowingBest | undefined
+  saveBest: (best: ShadowingBest, blob: Blob) => Promise<void>
+  getAudio: (segmentId: string) => Promise<Blob | undefined>
 }
 
-export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, lesson }: ShadowingPanelProps) {
+export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, lesson, getBest, saveBest, getAudio }: ShadowingPanelProps) {
   const { t } = useI18n()
   const { db } = useAuth()
   const resolvedCaps = getLanguageCaps(lesson.sourceLanguage)
@@ -232,6 +235,10 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
           onRetry={handleRetry}
           onNext={handleNext}
           onExit={handleExitRequest}
+          lessonId={lesson.id}
+          previousBest={getBest(segment.id)}
+          onSaveBest={saveBest}
+          getAudio={getAudio}
         />
       )}
 
