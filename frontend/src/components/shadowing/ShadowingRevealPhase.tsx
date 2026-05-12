@@ -76,7 +76,9 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
   }, [])
 
   const handleNext = useCallback(async () => {
-    const score = speakingScoreRef.current
+    const score = props.mode === 'dictation'
+      ? (dictationDiffRef.current ? computeAccuracyScore(dictationDiffRef.current) : null)
+      : speakingScoreRef.current
     if (
       props.mode === 'speaking'
       && props.onSaveBest
@@ -227,8 +229,8 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
           onLoading={setLoadingScore}
           onScore={(score) => { speakingScoreRef.current = score }}
           onResult={(r) => { assessResultRef.current = r }}
-          previousBest={props.mode === 'speaking' ? props.previousBest : undefined}
-          getAudio={props.mode === 'speaking' ? props.getAudio : undefined}
+          previousBest={props.previousBest}
+          getAudio={props.getAudio}
           t={t}
         />
       )}
@@ -285,6 +287,20 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
   const onResultRef = useRef(onResult)
   onResultRef.current = onResult
   const prevAudioRef = useRef<HTMLAudioElement | null>(null)
+  const prevAudioUrlRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (prevAudioRef.current) {
+        prevAudioRef.current.pause()
+        prevAudioRef.current = null
+      }
+      if (prevAudioUrlRef.current) {
+        URL.revokeObjectURL(prevAudioUrlRef.current)
+        prevAudioUrlRef.current = null
+      }
+    }
+  }, [])
 
   const handlePlayPrev = useCallback(async () => {
     if (!getAudio || playingPrev)
@@ -296,17 +312,24 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
       return
     }
     const url = URL.createObjectURL(blob)
+    prevAudioUrlRef.current = url
     const audio = new Audio(url)
     prevAudioRef.current = audio
     audio.onended = () => {
       URL.revokeObjectURL(url)
+      prevAudioUrlRef.current = null
       setPlayingPrev(false)
     }
     audio.onerror = () => {
       URL.revokeObjectURL(url)
+      prevAudioUrlRef.current = null
       setPlayingPrev(false)
     }
-    void audio.play()
+    audio.play().catch(() => {
+      URL.revokeObjectURL(url)
+      prevAudioUrlRef.current = null
+      setPlayingPrev(false)
+    })
   }, [getAudio, segment.id, playingPrev])
 
   useEffect(() => {
@@ -457,7 +480,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
                     {result.words.map((w, i) => {
                       const prevWord = previousBest.breakdown.words[i]
                       return (
-                        <React.Fragment key={w.word}>
+                        <React.Fragment key={i}>
                           <div className="px-3 py-2 text-base font-bold text-foreground border-t border-border/40">{w.word}</div>
                           <div className={cn('px-3 py-2 text-center font-bold tabular-nums border-t border-l border-border/40', scoreColor(w.accuracy))}>
                             {Math.round(w.accuracy)}
