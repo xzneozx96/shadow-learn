@@ -17,6 +17,7 @@ import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
 import { SpeakModalProvider, useSpeakModal } from '@/contexts/SpeakModalContext'
+import { StudyQueueProvider } from '@/contexts/StudyQueueContext'
 import { VocabularyProvider } from '@/contexts/VocabularyContext'
 import { ChangelogPage } from '@/pages/ChangelogPage'
 import { CollectionPage } from '@/pages/CollectionPage'
@@ -115,7 +116,9 @@ function AuthGate() {
     <ErrorBoundary>
       <VocabularyProvider>
         <LessonsProvider>
-          <RouterProvider router={router} />
+          <StudyQueueProvider>
+            <RouterProvider router={router} />
+          </StudyQueueProvider>
         </LessonsProvider>
       </VocabularyProvider>
     </ErrorBoundary>
