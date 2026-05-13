@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
+import { getSettings } from '@/db'
 import { useTTS } from '@/hooks/useTTS'
 import { cn } from '@/lib/utils'
 import { SegmentText } from './SegmentText'
@@ -173,7 +174,13 @@ export function TranscriptPanel({
 }: TranscriptPanelProps) {
   const { t } = useI18n()
   const { db, keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys, lesson.sourceLanguage ?? 'zh-CN')
+  const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    if (!db)
+      return
+    getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
+  }, [db])
+  const { playTTS, loadingText } = useTTS(db, keys, lesson.sourceLanguage ?? 'zh-CN', voiceId)
   const { entriesByLesson, save, remove, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
   // useDeferredValue keeps the text input responsive — the heavy list

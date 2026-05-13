@@ -1,6 +1,6 @@
 import type { ShadowLearnDB } from '@/db'
 import { Check, Loader2, Pencil, RefreshCw, Volume2, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { getSettings } from '@/db'
 import { useTTS } from '@/hooks/useTTS'
 import { useWordBreakdown } from '@/hooks/useWordBreakdown'
 import { BreakdownTree } from './BreakdownTree'
@@ -27,7 +28,13 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
   const { open, onClose, word, pinyin, meaning, sourceLanguage, db, openrouterApiKey } = props
   const { t } = useI18n()
   const { keys } = useAuth()
-  const { playTTS, loadingText } = useTTS(db, keys, sourceLanguage)
+  const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    if (!db)
+      return
+    getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
+  }, [db])
+  const { playTTS, loadingText } = useTTS(db, keys, sourceLanguage, voiceId)
   const ttsLoading = loadingText === word
   const {
     characters,
