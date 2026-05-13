@@ -67,9 +67,8 @@ export function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
   const { entriesByLesson } = useVocabulary()
   const { t, locale } = useI18n()
   const isYoutube = lesson.source === 'youtube'
-  const isBlog = lesson.source === 'blog'
   const thumbnailUrl = isYoutube ? getYoutubeThumbnail(lesson.sourceUrl) : null
-  const uploadThumbnail = useUploadThumbnail(lesson.id, !isYoutube && !isBlog)
+  const uploadThumbnail = useUploadThumbnail(lesson.id, !isYoutube && lesson.source !== 'blog')
   const [imgFailed, setImgFailed] = useState(false)
 
   const segmentsDone = lesson.progressSegmentId ? Number.parseInt(lesson.progressSegmentId, 10) : 0
@@ -79,7 +78,7 @@ export function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
     ? Math.min(100, Math.round((segmentsDone / segmentsTotal) * 100))
     : 0
 
-  const showThumbnail = (isYoutube && !!thumbnailUrl && !imgFailed) || (!isYoutube && !isBlog && !!uploadThumbnail)
+  const showThumbnail = (isYoutube && !!thumbnailUrl && !imgFailed) || (!isYoutube && lesson.source !== 'blog' && !!uploadThumbnail)
   const thumbSrc = isYoutube ? thumbnailUrl : uploadThumbnail
 
   const vocabCount = entriesByLesson[lesson.id]?.length ?? 0
@@ -99,34 +98,34 @@ export function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
                 onError={() => setImgFailed(true)}
               />
             )
-          : isBlog
-            ? (
-                <div
-                  className="absolute inset-0 overflow-hidden"
-                  style={{ background: 'radial-gradient(ellipse 80% 80% at 75% 50%, rgba(129,140,248,0.10) 0%, transparent 70%), #0a0a0c' }}
-                >
-                  {/* Icon anchored top-right corner */}
-                  <div className="absolute right-14 top-30 -translate-y-1/2 flex items-center justify-center">
-                    <div className="absolute size-56 rounded-full bg-primary/20 blur-3xl" />
-                    <div className="relative rounded-4xl p-2 ring-1 ring-white/15" style={{ background: 'rgba(129,140,248,0.08)' }}>
-                      <div
-                        className="flex size-28 items-center justify-center rounded-3xl"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(129,140,248,0.30) 0%, rgba(99,102,241,0.18) 100%)',
-                          boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.20)',
-                        }}
-                      >
-                        <BookOpen className="size-12 text-primary" strokeWidth={1.25} />
+          : !isYoutube
+              ? (
+                  <div
+                    className="absolute inset-0 overflow-hidden"
+                    style={{ background: 'radial-gradient(ellipse 80% 80% at 75% 50%, rgba(129,140,248,0.10) 0%, transparent 70%), #0a0a0c' }}
+                  >
+                    {/* Icon anchored top-right corner */}
+                    <div className="absolute right-14 top-30 -translate-y-1/2 flex items-center justify-center">
+                      <div className="absolute size-56 rounded-full bg-primary/20 blur-3xl" />
+                      <div className="relative rounded-4xl p-2 ring-1 ring-white/15" style={{ background: 'rgba(129,140,248,0.08)' }}>
+                        <div
+                          className="flex size-28 items-center justify-center rounded-3xl"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(129,140,248,0.30) 0%, rgba(99,102,241,0.18) 100%)',
+                            boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.20)',
+                          }}
+                        >
+                          <BookOpen className="size-12 text-primary" strokeWidth={1.25} />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )
-            : (
-                <div className="absolute inset-0 bg-muted flex items-center justify-center">
-                  <BookOpen className="size-12 text-muted-foreground" strokeWidth={1.25} />
-                </div>
-              )}
+                )
+              : (
+                  <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                    <BookOpen className="size-12 text-muted-foreground" strokeWidth={1.25} />
+                  </div>
+                )}
 
         {/* Left fade — solid card → transparent for text readability */}
         <div className="absolute inset-0 bg-linear-to-r from-card from-5% via-card/85 via-20% to-card/10" />
