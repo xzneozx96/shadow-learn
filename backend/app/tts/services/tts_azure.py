@@ -40,7 +40,7 @@ def _build_ssml(text: str, language: str = "zh") -> str:
 class AzureTTSProvider:
     """TTSProvider implementation backed by Azure Cognitive Services TTS REST API."""
 
-    async def synthesize(self, text: str, keys: TTSKeys, language: str = "zh") -> bytes:
+    async def synthesize(self, text: str, keys: TTSKeys, language: str = "zh", voice_id: str | None = None) -> bytes:
         """Synthesize text to MP3 using Azure TTS.
 
         Args:
