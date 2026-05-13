@@ -28,21 +28,21 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
               : `${count} study item${count !== 1 ? 's' : ''} remaining`
         }
         className={cn(
-          'group w-16 h-16 rounded-xl flex items-center justify-center',
+          'group w-16 h-16 rounded-full flex items-center justify-center',
           'transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
           'active:scale-[0.94] cursor-pointer',
           open
             ? 'bg-linear-to-br from-muted/60 to-muted/30 hover:from-muted/80'
             : allDone
               ? 'bg-linear-to-br from-success/10 to-success/5 animate-breathe-success hover:from-success/15 hover:to-success/8'
-              : 'bg-linear-to-br from-primary/10 to-primary/5 animate-breathe-primary hover:from-primary/15 hover:to-primary/8',
+              : 'bg-linear-to-br from-amber-400/10 to-amber-500/5 animate-breathe-amber hover:from-amber-400/15 hover:to-amber-500/8',
         )}
       >
         {open
           ? <X className="size-6 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-90 group-hover:scale-110" />
           : allDone
             ? <Check className="size-6 text-success transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110" />
-            : <ClipboardList className="size-6 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />}
+            : <ClipboardList className="size-6 text-amber-400 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />}
       </button>
 
       {!open && !allDone && count > 0 && (
