@@ -29,8 +29,9 @@ export async function findSegmentsForWords(
     const segments = await getSegments(db, lesson.id)
     if (!segments)
       continue
+    const wordSet = new Set(dueWords)
     for (const segment of segments) {
-      const matchCount = segment.words.filter(w => dueWords.includes(w.word)).length
+      const matchCount = segment.words.filter(w => wordSet.has(w.word)).length
       if (matchCount > 0)
         candidates.push({ lessonId: lesson.id, segment, matchCount })
     }
@@ -43,9 +44,10 @@ export async function findSegmentsForWords(
   for (const m of candidates) {
     if (result.length >= maxSegments)
       break
-    if (seen.has(m.segment.id))
+    const key = `${m.lessonId}:${m.segment.id}`
+    if (seen.has(key))
       continue
-    seen.add(m.segment.id)
+    seen.add(key)
     result.push(m)
   }
 
