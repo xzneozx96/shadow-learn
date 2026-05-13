@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
+import { VoiceSelector } from '@/components/voice/VoiceSelector'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
+import { MINIMAX_VOICES } from '@/lib/voices'
 
 interface BlogTabProps {
   url: string
@@ -10,17 +12,18 @@ interface BlogTabProps {
   onTextChange: (text: string) => void
   title: string
   onTitleChange: (title: string) => void
+  voiceId: string
+  onVoiceChange: (id: string) => void
 }
 
 type BlogMode = 'url' | 'text'
 
-export function BlogTab({ url, onUrlChange, text, onTextChange, title, onTitleChange }: BlogTabProps) {
+export function BlogTab({ url, onUrlChange, text, onTextChange, title, onTitleChange, voiceId, onVoiceChange }: BlogTabProps) {
   const { t } = useI18n()
   const [mode, setMode] = useState<BlogMode>('url')
 
   return (
     <div className="space-y-3">
-      {/* Mode toggle */}
       <div className="flex rounded-lg border border-border p-0.5 w-fit">
         {(['url', 'text'] as BlogMode[]).map(m => (
           <button
@@ -84,6 +87,11 @@ export function BlogTab({ url, onUrlChange, text, onTextChange, title, onTitleCh
               </div>
             </div>
           )}
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-white/65">Narrator Voice</label>
+        <VoiceSelector voices={MINIMAX_VOICES} selectedId={voiceId} onSelect={onVoiceChange} />
+      </div>
     </div>
   )
 }
