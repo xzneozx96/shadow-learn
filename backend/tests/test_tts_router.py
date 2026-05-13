@@ -176,3 +176,22 @@ async def test_tts_returns_502_on_provider_error(mock_tts_provider):
         )
 
     assert response.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_tts_endpoint_passes_minimax_voice_id_to_provider(mock_tts_provider):
+    """POST /api/tts threads minimax_voice_id into provider.synthesize()."""
+    fake_mp3 = b"\xff\xfb\x90\x00" * 10
+    mock_tts_provider.synthesize = AsyncMock(return_value=fake_mp3)
+    app.state.tts_provider_name = "minimax"
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/tts",
+            json={"text": "你好", "minimax_voice_id": "Chinese (Mandarin)_Crisp_Girl"},
+        )
+
+    assert response.status_code == 200
+    call_kwargs = mock_tts_provider.synthesize.call_args
+    assert call_kwargs.kwargs.get("voice_id") == "Chinese (Mandarin)_Crisp_Girl"
