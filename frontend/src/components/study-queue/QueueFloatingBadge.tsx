@@ -1,20 +1,11 @@
 import type { StudyQueueState } from '@/hooks/useStudyQueue'
-import { motion } from 'motion/react'
+import { Check, ClipboardList, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface Props {
   queue: StudyQueueState
   open: boolean
   onClick: () => void
-}
-
-// hsl(235 88% 73%) → approximate RGB for glow rgba values
-const PRIMARY_RGB = '110, 132, 247'
-const EMERALD_RGB = '52, 211, 153'
-
-function makeGlow(rgb: string, strong = false) {
-  return strong
-    ? `0 0 20px rgba(${rgb}, 0.85), 0 0 40px rgba(${rgb}, 0.55), 0 0 64px rgba(${rgb}, 0.28)`
-    : `0 0 14px rgba(${rgb}, 0.55), 0 0 28px rgba(${rgb}, 0.3), 0 0 48px rgba(${rgb}, 0.14)`
 }
 
 export function QueueFloatingBadge({ queue, open, onClick }: Props) {
@@ -24,28 +15,9 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
   const allDone = queue.allDoneToday
   const count = queue.incompleteCount
 
-  const glowRgb = allDone ? EMERALD_RGB : PRIMARY_RGB
-  // Tinted glass bg: primary tint when pending, emerald tint when done, neutral when open
-  const glassBg = open
-    ? 'rgba(255, 255, 255, 0.07)'
-    : allDone
-      ? 'rgba(52, 211, 153, 0.18)'
-      : 'rgba(110, 132, 247, 0.18)'
-
-  const baseGlow = open ? '0 4px 16px rgba(0,0,0,0.4)' : makeGlow(glowRgb)
-  const hoverGlow = open ? '0 4px 20px rgba(0,0,0,0.5)' : makeGlow(glowRgb, true)
-
   return (
     <div className="relative">
-      {/* Ambient ping ring */}
-      {!open && (
-        <div
-          className="absolute inset-0 rounded-full animate-ping opacity-20"
-          style={{ background: glassBg }}
-        />
-      )}
-
-      <motion.button
+      <button
         type="button"
         onClick={onClick}
         aria-label={
@@ -55,27 +27,41 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
               ? 'All done today'
               : `${count} study item${count !== 1 ? 's' : ''} remaining`
         }
-        className="relative w-12 h-12 rounded-full flex items-center justify-center text-white font-bold border border-white/20 overflow-hidden backdrop-blur-md"
-        style={{ background: glassBg }}
-        animate={{ boxShadow: baseGlow }}
-        whileHover={{ scale: 1.1, boxShadow: hoverGlow }}
-        whileTap={{ scale: 0.9 }}
-        transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+        className={cn(
+          'group relative w-12 h-12 rounded-xl flex items-center justify-center',
+          'border transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+          'active:scale-[0.94] cursor-pointer',
+          open
+            ? 'bg-linear-to-br from-muted/60 to-muted/30 border-border/40 hover:from-muted/80 hover:border-border/60'
+            : allDone
+              ? 'bg-linear-to-br from-success/10 to-success/5 border-success/25 animate-breathe-success hover:from-success/15 hover:to-success/8 hover:border-success/40'
+              : 'bg-linear-to-br from-primary/10 to-primary/5 border-primary/25 animate-breathe-primary hover:from-primary/15 hover:to-primary/8 hover:border-primary/40',
+        )}
       >
-        {/* Glass highlight shimmer */}
-        <div className="absolute inset-0 bg-linear-to-b from-white/20 to-transparent pointer-events-none" />
-
-        {/* Icon — rotates when opening */}
-        <motion.span
-          className="relative z-10 flex items-center justify-center text-xl leading-none"
-          animate={{ rotate: open ? 90 : 0 }}
-          transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+        <span
+          className={cn(
+            'flex size-7 items-center justify-center rounded-md ring-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] shrink-0',
+            open
+              ? 'bg-muted/50 ring-border/30'
+              : allDone
+                ? 'bg-success/20 ring-success/35'
+                : 'bg-primary/20 ring-primary/35',
+          )}
         >
-          {open ? '✕' : allDone ? '✓' : '📚'}
-        </motion.span>
-      </motion.button>
+          {open
+            ? (
+                <X className="size-4 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-90 group-hover:scale-110" />
+              )
+            : allDone
+              ? (
+                  <Check className="size-4 text-success transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110" />
+                )
+              : (
+                  <ClipboardList className="size-4 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />
+                )}
+        </span>
+      </button>
 
-      {/* Count badge */}
       {!open && !allDone && count > 0 && (
         <span className="absolute -top-1.5 -right-1.5 z-10 min-w-[18px] h-[18px] rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center px-1 border-2 border-background">
           {count}
