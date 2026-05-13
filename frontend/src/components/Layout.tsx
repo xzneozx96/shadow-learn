@@ -37,8 +37,8 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { to: '/', label: t('nav.library'), icon: Library, active: location.pathname === '/' },
-    { to: '/collection', label: t('nav.collection'), icon: Play, active: location.pathname === '/collection' },
     { to: '/vocabulary', label: t('nav.workbook'), icon: BookOpen, active: location.pathname.startsWith('/vocabulary') },
+    { to: '/collection', label: t('nav.collection'), icon: Play, active: location.pathname === '/collection' },
     { to: '/docs', label: t('nav.documentation'), icon: FileText, active: location.pathname === '/docs' },
     { to: '/changelog', label: t('whatsNew.navLabel'), icon: Newspaper, active: location.pathname === '/changelog', badge: hasUnseen },
   ]
@@ -123,7 +123,7 @@ export function Layout({ children }: LayoutProps) {
                 <Icon
                   className={cn(
                     'size-4 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
-                    !active && 'group-hover:scale-110 group-hover:translate-x-0.5',
+                    !active && 'group-hover:scale-110',
                   )}
                 />
                 {!collapsed && label}

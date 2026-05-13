@@ -76,7 +76,7 @@ const SegmentRow = memo(({
         isActive && 'border-l-2 border-l-primary bg-muted/60',
       )}
     >
-      <div className="flex items-stretch gap-4">
+      <div className="flex items-center gap-4">
         {/* Text content */}
         <div className="min-w-0 flex-1 text-justify">
           <div className="text-foreground">
@@ -97,13 +97,15 @@ const SegmentRow = memo(({
               forceSpoken={forceSpoken}
             />
           </div>
-          <p className="mt-1 text-muted-foreground italic">
-            {segment.translations[activeLang] ?? Object.values(segment.translations)[0]}
-          </p>
+          {showRomanization && (
+            <p className="mt-1 text-muted-foreground italic">
+              {segment.translations[activeLang] ?? Object.values(segment.translations)[0]}
+            </p>
+          )}
         </div>
 
         {/* Action buttons */}
-        <div className="flex shrink-0 flex-col items-end justify-between gap-1">
+        <div className="flex shrink-0 flex-col items-end justify-between gap-3">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -190,7 +192,7 @@ export function TranscriptPanel({
     lesson.translationLanguages[0] ?? 'en',
   )
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [showRomanization, setShowRomanization] = useState(true)
+  const [showRomanization, setShowRomanization] = useState(false)
   const [visibleCount, setVisibleCount] = useState(SEGMENT_BATCH_SIZE)
   const activeRef = useRef<HTMLDivElement>(null)
   const prevScrolledActiveIdRef = useRef<string | null>(null)
@@ -331,7 +333,7 @@ export function TranscriptPanel({
             />
           </div>
           <Button
-            variant={showRomanization ? 'secondary' : 'ghost'}
+            variant={showRomanization ? 'default' : 'ghost'}
             size="icon-lg"
             aria-label={showRomanization ? 'Hide romanization' : 'Show romanization'}
             onClick={() => setShowRomanization(v => !v)}

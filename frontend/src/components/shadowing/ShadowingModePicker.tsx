@@ -53,7 +53,7 @@ export function ShadowingModePicker({
             'rounded-lg border p-3 text-left transition-colors',
             selectedMode === 'dictation'
               ? 'border-primary bg-primary/8'
-              : 'border-border hover:bg-accent',
+              : 'border-border bg-input/50 hover:bg-accent',
           )}
           onClick={() => setSelectedMode('dictation')}
         >
@@ -72,7 +72,7 @@ export function ShadowingModePicker({
             !speakingAvailable && 'cursor-not-allowed opacity-40',
             selectedMode === 'speaking' && speakingAvailable
               ? 'border-primary bg-primary/8'
-              : 'border-border',
+              : 'border-border bg-input/50',
             speakingAvailable && 'hover:bg-accent',
           )}
           onClick={() => speakingAvailable && setSelectedMode('speaking')}
@@ -97,7 +97,7 @@ export function ShadowingModePicker({
           {COUNT_OPTIONS.map(n => (
             <Button
               key={n}
-              variant={count === n ? 'default' : 'outline'}
+              variant={count === n ? 'default' : 'secondary'}
               size="sm"
               className="min-w-12 h-8"
               disabled={totalRemaining < n}
@@ -108,7 +108,7 @@ export function ShadowingModePicker({
             </Button>
           ))}
           <Button
-            variant={count === 'all' ? 'secondary' : 'outline'}
+            variant={count === 'all' ? 'default' : 'secondary'}
             size="sm"
             className="h-8"
             data-selected={count === 'all' ? 'true' : 'false'}
