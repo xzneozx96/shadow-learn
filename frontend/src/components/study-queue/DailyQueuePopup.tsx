@@ -127,7 +127,8 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
       && (!queue.hasRoleplay || queue.roleplayDone)
 
   return (
-    <div className="relative w-[340px] bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
+    <div className="relative w-[340px] rounded-2xl overflow-hidden bg-black/20 backdrop-blur-2xl border border-white/10 flex flex-col bg-linear-to-br from-zinc-800/30 to-zinc-800/50 shadow-xl">
+      <div className="absolute inset-0 bg-linear-to-b from-white/3 to-transparent pointer-events-none rounded-2xl" />
 
       {/* Overlay: catches clicks outside the inline edit input, prevents them reaching other items */}
       {editingTaskId !== null && (
@@ -145,7 +146,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
       )}
 
       {/* Header */}
-      <div className="p-3 border-b border-border">
+      <div className="p-3 border-b border-white/10">
         {queue.allDoneToday
           ? (
               <>
@@ -204,7 +205,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
                   className="flex items-center"
                 >
-                  <ChevronDown className="size-4 text-muted-foreground/50" />
+                  <ChevronDown className="size-4.5 text-muted-foreground/50" />
                 </motion.span>
               </button>
 
@@ -250,10 +251,6 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              {(mostRecentLesson || queue.customTasks.length > 0) && (
-                <div className="h-px bg-border/30 mx-4 my-0.5" />
-              )}
             </>
           )}
 
@@ -336,7 +333,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 className="text-destructive hover:text-destructive"
                 onMouseDown={(e) => { e.preventDefault(); void queue.removeCustomTask(task.id) }}
               >
-                <Trash2 className="size-3" />
+                <Trash2 className="size-3.5" />
               </Button>
             </div>
           ))}
@@ -346,7 +343,6 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
 
       {/* Add custom task — always visible */}
       <div className="py-1">
-        <div className="h-px bg-border/30 mx-4 my-0.5" />
         {addingTask
           ? (
               <div className="flex items-center gap-3 px-4 py-2">
