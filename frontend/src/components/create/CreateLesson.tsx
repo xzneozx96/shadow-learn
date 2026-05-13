@@ -15,6 +15,7 @@ import { getSettings, saveVideo } from '@/db'
 import { API_BASE, getAppConfig } from '@/lib/config'
 import { LANGUAGES } from '@/lib/constants'
 import { captureLessonCreated, captureLessonGenerationFailed } from '@/lib/posthog-events'
+import { DEFAULT_VOICE_ID } from '@/lib/voices'
 import { BlogTab } from './BlogTab'
 import { UploadTab } from './UploadTab'
 import { YouTubeTab } from './YouTubeTab'
@@ -34,6 +35,7 @@ export function CreateLesson() {
   const [blogUrl, setBlogUrl] = useState('')
   const [blogText, setBlogText] = useState('')
   const [blogTitle, setBlogTitle] = useState('')
+  const [blogVoiceId, setBlogVoiceId] = useState(DEFAULT_VOICE_ID)
   const [language, setLanguage] = useState('en')
   const [sourceLanguage, setSourceLanguage] = useState('zh-CN')
   const [submitting, setSubmitting] = useState(false)
@@ -45,8 +47,11 @@ export function CreateLesson() {
     if (!db)
       return
     getSettings(db).then((s) => {
-      if (s)
+      if (s) {
         setLanguage(s.translationLanguage)
+        if (s.minimaxVoiceId)
+          setBlogVoiceId(s.minimaxVoiceId)
+      }
     })
   }, [db])
 
@@ -135,6 +140,7 @@ export function CreateLesson() {
           translation_languages: [language],
           source_language: sourceLanguage,
           openrouter_api_key: keys?.openrouterApiKey ?? '',
+          minimax_voice_id: blogVoiceId,
         }
         if (isPaste) {
           body.blog_text = blogText.trim()
@@ -215,7 +221,7 @@ export function CreateLesson() {
     finally {
       setSubmitting(false)
     }
-  }, [db, keys, tab, youtubeUrl, file, blogUrl, blogText, blogTitle, language, sourceLanguage, updateLesson, sttProvider, trialMode])
+  }, [db, keys, tab, youtubeUrl, file, blogUrl, blogText, blogTitle, blogVoiceId, language, sourceLanguage, updateLesson, sttProvider, trialMode])
 
   const canGenerate = sttProvider !== null
     && (tab === 'youtube'
@@ -266,6 +272,8 @@ export function CreateLesson() {
               </TabsContent>
               <TabsContent value="blog">
                 <BlogTab
+                  voiceId={blogVoiceId}
+                  onVoiceChange={setBlogVoiceId}
                   url={blogUrl}
                   onUrlChange={setBlogUrl}
                   text={blogText}
