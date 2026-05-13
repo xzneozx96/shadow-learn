@@ -1,5 +1,5 @@
 import type { SegmentMatch } from '@/lib/sentenceHunt'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -15,6 +15,12 @@ export function SentenceHuntSession({ segments, onComplete, onClose }: Props) {
   const { db, keys } = useAuth()
   const [index, setIndex] = useState(0)
   const [selfAssessResult, setSelfAssessResult] = useState<'got' | 'missed' | null>(null)
+
+  useEffect(() => {
+    if (segments.length === 0) {
+      onComplete()
+    }
+  }, [segments.length, onComplete])
 
   const hasAzure = !!keys?.azureSpeechKey
   const current = segments[index]
