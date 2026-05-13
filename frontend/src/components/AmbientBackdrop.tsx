@@ -21,7 +21,7 @@ export function AmbientBackdrop({ url, tone, height = 'h-[420px]' }: AmbientBack
     return null
 
   return (
-    <div aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 ${height} overflow-hidden z-2`}>
+    <div aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 ${height} z-2`} style={{ maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)' }}>
       {url
         ? (
             <>

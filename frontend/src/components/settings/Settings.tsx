@@ -155,7 +155,7 @@ export function Settings() {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-2xl space-y-6 p-4 pt-10">
+      <div className="relative z-5 mx-auto max-w-2xl space-y-6 p-4 pt-10">
         <Card>
           <CardHeader>
             <CardTitle>{t('settings.apiKeys')}</CardTitle>
