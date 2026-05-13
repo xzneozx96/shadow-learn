@@ -8,10 +8,11 @@ interface Props {
   onClick: () => void
 }
 
-const SHADOW_BASE = '0 0 20px rgba(110,132,247,0.7), 0 0 40px rgba(124,58,237,0.5), 0 0 60px rgba(109,40,217,0.3)'
-const SHADOW_HOVER = '0 0 30px rgba(110,132,247,0.9), 0 0 50px rgba(124,58,237,0.7), 0 0 70px rgba(109,40,217,0.5)'
-const SHADOW_DONE_BASE = '0 0 20px rgba(52,211,153,0.65), 0 0 40px rgba(16,185,129,0.45), 0 0 60px rgba(5,150,105,0.25)'
-const SHADOW_DONE_HOVER = '0 0 30px rgba(52,211,153,0.9), 0 0 50px rgba(16,185,129,0.65), 0 0 70px rgba(5,150,105,0.4)'
+// primary: hsl(235 88% 73%) = rgb(110,132,247)  success: hsl(142 76% 46%) = rgb(28,206,93)
+const SHADOW_BASE = '0 0 20px rgba(110,132,247,0.7), 0 0 40px rgba(110,132,247,0.45), 0 0 60px rgba(110,132,247,0.2)'
+const SHADOW_HOVER = '0 0 30px rgba(110,132,247,0.9), 0 0 50px rgba(110,132,247,0.65), 0 0 70px rgba(110,132,247,0.35)'
+const SHADOW_DONE_BASE = '0 0 20px rgba(28,206,93,0.65), 0 0 40px rgba(28,206,93,0.4), 0 0 60px rgba(28,206,93,0.2)'
+const SHADOW_DONE_HOVER = '0 0 30px rgba(28,206,93,0.9), 0 0 50px rgba(28,206,93,0.65), 0 0 70px rgba(28,206,93,0.35)'
 
 export function QueueFloatingBadge({ queue, open, onClick }: Props) {
   if (queue.loading)
@@ -21,8 +22,8 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
   const count = queue.incompleteCount
 
   const gradient = allDone
-    ? 'linear-gradient(135deg, rgba(52,211,153,0.75) 0%, rgba(16,185,129,0.75) 100%)'
-    : 'linear-gradient(135deg, rgba(110,132,247,0.8) 0%, rgba(168,85,247,0.8) 100%)'
+    ? 'linear-gradient(135deg, rgba(28,206,93,0.75) 0%, rgba(16,185,129,0.75) 100%)'
+    : 'linear-gradient(135deg, rgba(110,132,247,0.85) 0%, rgba(85,105,225,0.85) 100%)'
 
   const shadowBase = open ? 'none' : allDone ? SHADOW_DONE_BASE : SHADOW_BASE
   const shadowHover = open ? 'none' : allDone ? SHADOW_DONE_HOVER : SHADOW_HOVER
@@ -33,7 +34,7 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
       {!open && (
         <div
           className="absolute inset-0 rounded-full animate-ping opacity-20"
-          style={{ background: allDone ? 'rgba(52,211,153,1)' : 'rgba(99,102,241,1)' }}
+          style={{ background: allDone ? 'rgba(28,206,93,1)' : 'rgba(110,132,247,1)' }}
         />
       )}
 

@@ -123,10 +123,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
     <div className="w-[340px] bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
 
       {/* Header */}
-      <div className="px-5 pt-5 pb-4 border-b border-border">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </div>
+      <div className="p-4 border-b border-border">
         {queue.allDoneToday
           ? (
               <>
@@ -138,9 +135,9 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               <>
                 <div className="text-xl font-bold">Today's Practice</div>
                 <div className="text-sm text-muted-foreground mt-0.5">
-                  {queue.incompleteCount > 0
-                    ? `${queue.incompleteCount} item${queue.incompleteCount !== 1 ? 's' : ''} left`
-                    : 'Loading…'}
+                  {queue.loading
+                    ? null
+                    : `${queue.incompleteCount} item${queue.incompleteCount !== 1 ? 's' : ''} left`}
                 </div>
               </>
             )}
