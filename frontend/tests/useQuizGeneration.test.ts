@@ -277,5 +277,19 @@ describe('useQuizGeneration', () => {
 
       expect(data.translationSentences).toHaveLength(0)
     })
+
+    it('returns empty translationSentences when getSegments rejects', async () => {
+      mockGetSegments.mockRejectedValue(new Error('idb failure'))
+
+      const { result } = renderHook(() => useQuizGeneration())
+      const controller = new AbortController()
+
+      let data: any
+      await act(async () => {
+        data = await result.current.generateQuiz(['translation'], mockPool, controller.signal)
+      })
+
+      expect(data.translationSentences).toHaveLength(0)
+    })
   })
 })

@@ -66,8 +66,8 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
             })
           }
         }
-        catch {
-          // IDB failure — proceed with empty translationSentences
+        catch (err) {
+          console.warn('[useQuizGeneration] IDB segment lookup failed; proceeding without translation sentences', err)
         }
       }
 
