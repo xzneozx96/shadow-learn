@@ -160,6 +160,26 @@ describe('useTTS', () => {
     }))
   })
 
+  it('sends minimax_voice_id in POST body when voiceId is provided', async () => {
+    mockProvider('minimax')
+    vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
+    const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
+
+    const { result } = renderHook(() =>
+      useTTS(mockDb, mockKeys, 'zh-CN', 'Chinese (Mandarin)_Crisp_Girl'),
+    )
+    await waitFor(() => {}) // let provider settle
+
+    await act(async () => {
+      await result.current.playTTS('你好')
+    })
+
+    const [, options] = vi.mocked(globalThis.fetch).mock.calls[0]
+    const body = JSON.parse((options as RequestInit).body as string)
+    expect(body.minimax_voice_id).toBe('Chinese (Mandarin)_Crisp_Girl')
+  })
+
   it('is a no-op for empty text', async () => {
     mockProvider('azure')
     const { result } = renderHook(() => useTTS(mockDb, mockKeys))
