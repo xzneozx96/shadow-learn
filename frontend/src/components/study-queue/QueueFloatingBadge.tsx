@@ -28,38 +28,21 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
               : `${count} study item${count !== 1 ? 's' : ''} remaining`
         }
         className={cn(
-          'group relative w-12 h-12 rounded-xl flex items-center justify-center',
-          'border transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+          'group w-16 h-16 rounded-xl flex items-center justify-center',
+          'transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
           'active:scale-[0.94] cursor-pointer',
           open
-            ? 'bg-linear-to-br from-muted/60 to-muted/30 border-border/40 hover:from-muted/80 hover:border-border/60'
+            ? 'bg-linear-to-br from-muted/60 to-muted/30 hover:from-muted/80'
             : allDone
-              ? 'bg-linear-to-br from-success/10 to-success/5 border-success/25 animate-breathe-success hover:from-success/15 hover:to-success/8 hover:border-success/40'
-              : 'bg-linear-to-br from-primary/10 to-primary/5 border-primary/25 animate-breathe-primary hover:from-primary/15 hover:to-primary/8 hover:border-primary/40',
+              ? 'bg-linear-to-br from-success/10 to-success/5 animate-breathe-success hover:from-success/15 hover:to-success/8'
+              : 'bg-linear-to-br from-primary/10 to-primary/5 animate-breathe-primary hover:from-primary/15 hover:to-primary/8',
         )}
       >
-        <span
-          className={cn(
-            'flex size-7 items-center justify-center rounded-md ring-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] shrink-0',
-            open
-              ? 'bg-muted/50 ring-border/30'
-              : allDone
-                ? 'bg-success/20 ring-success/35'
-                : 'bg-primary/20 ring-primary/35',
-          )}
-        >
-          {open
-            ? (
-                <X className="size-4 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-90 group-hover:scale-110" />
-              )
-            : allDone
-              ? (
-                  <Check className="size-4 text-success transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110" />
-                )
-              : (
-                  <ClipboardList className="size-4 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />
-                )}
-        </span>
+        {open
+          ? <X className="size-6 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-90 group-hover:scale-110" />
+          : allDone
+            ? <Check className="size-6 text-success transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110" />
+            : <ClipboardList className="size-6 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />}
       </button>
 
       {!open && !allDone && count > 0 && (
