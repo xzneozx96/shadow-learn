@@ -1,5 +1,4 @@
 import type { StudyQueueState } from '@/hooks/useStudyQueue'
-import { X } from 'lucide-react'
 import { motion } from 'motion/react'
 
 interface Props {
@@ -26,20 +25,23 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
   const count = queue.incompleteCount
 
   const glowRgb = allDone ? EMERALD_RGB : PRIMARY_RGB
-  const gradient = allDone
-    ? 'linear-gradient(135deg, hsl(142, 76%, 38%) 0%, hsl(160, 70%, 48%) 100%)'
-    : 'linear-gradient(135deg, hsl(235, 88%, 62%) 0%, hsl(255, 80%, 65%) 100%)'
+  // Tinted glass bg: primary tint when pending, emerald tint when done, neutral when open
+  const glassBg = open
+    ? 'rgba(255, 255, 255, 0.07)'
+    : allDone
+      ? 'rgba(52, 211, 153, 0.18)'
+      : 'rgba(110, 132, 247, 0.18)'
 
   const baseGlow = open ? '0 4px 16px rgba(0,0,0,0.4)' : makeGlow(glowRgb)
   const hoverGlow = open ? '0 4px 20px rgba(0,0,0,0.5)' : makeGlow(glowRgb, true)
 
   return (
     <div className="relative">
-      {/* Ambient ping ring — only when closed */}
+      {/* Ambient ping ring */}
       {!open && (
         <div
-          className="absolute inset-0 rounded-2xl animate-ping opacity-25"
-          style={{ background: gradient }}
+          className="absolute inset-0 rounded-full animate-ping opacity-20"
+          style={{ background: glassBg }}
         />
       )}
 
@@ -53,15 +55,15 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
               ? 'All done today'
               : `${count} study item${count !== 1 ? 's' : ''} remaining`
         }
-        className="relative w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold border border-white/20 overflow-hidden"
-        style={{ background: open ? 'hsl(230, 20%, 20%)' : gradient }}
+        className="relative w-12 h-12 rounded-full flex items-center justify-center text-white font-bold border border-white/20 overflow-hidden backdrop-blur-md"
+        style={{ background: glassBg }}
         animate={{ boxShadow: baseGlow }}
         whileHover={{ scale: 1.1, boxShadow: hoverGlow }}
         whileTap={{ scale: 0.9 }}
         transition={{ type: 'spring', stiffness: 420, damping: 18 }}
       >
-        {/* Glass highlight on top half */}
-        <div className="absolute inset-0 bg-linear-to-b from-white/25 to-transparent pointer-events-none" />
+        {/* Glass highlight shimmer */}
+        <div className="absolute inset-0 bg-linear-to-b from-white/20 to-transparent pointer-events-none" />
 
         {/* Icon — rotates when opening */}
         <motion.span
@@ -69,7 +71,7 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
           animate={{ rotate: open ? 90 : 0 }}
           transition={{ type: 'spring', stiffness: 350, damping: 22 }}
         >
-          {open ? <X className="size-5" /> : allDone ? '✓' : '📚'}
+          {open ? '✕' : allDone ? '✓' : '📚'}
         </motion.span>
       </motion.button>
 
