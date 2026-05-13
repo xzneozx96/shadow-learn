@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { createBrowserRouter, Outlet, RouterProvider, useRouteError } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -10,6 +10,8 @@ import { Setup } from '@/components/onboarding/Setup'
 import { Unlock } from '@/components/onboarding/Unlock'
 import { Settings } from '@/components/settings/Settings'
 import { PracticeSpeakingModal } from '@/components/speak/PracticeSpeakingModal'
+import { DailyQueuePopup } from '@/components/study-queue/DailyQueuePopup'
+import { QueueFloatingBadge } from '@/components/study-queue/QueueFloatingBadge'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { GlobalCompanionProvider } from '@/contexts/GlobalCompanionContext'
@@ -17,7 +19,7 @@ import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
 import { SpeakModalProvider, useSpeakModal } from '@/contexts/SpeakModalContext'
-import { StudyQueueProvider } from '@/contexts/StudyQueueContext'
+import { StudyQueueProvider, useStudyQueueContext } from '@/contexts/StudyQueueContext'
 import { VocabularyProvider } from '@/contexts/VocabularyContext'
 import { ChangelogPage } from '@/pages/ChangelogPage'
 import { CollectionPage } from '@/pages/CollectionPage'
@@ -48,6 +50,17 @@ function RouteErrorElement() {
   return <ErrorScreen error={error} />
 }
 
+function StudyQueueUI() {
+  const queue = useStudyQueueContext()
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <QueueFloatingBadge queue={queue} onClick={() => setOpen(true)} />
+      {open && <DailyQueuePopup queue={queue} onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
 function AppLayout() {
   return (
     <PlayerProvider>
@@ -56,6 +69,7 @@ function AppLayout() {
           <Outlet />
           {/* <FeedbackButton /> */}
           <GlobalSpeakModal />
+          <StudyQueueUI />
         </SpeakModalProvider>
       </GlobalCompanionProvider>
     </PlayerProvider>

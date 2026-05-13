@@ -7,11 +7,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
+import { DailyQueuePopup } from '@/components/study-queue/DailyQueuePopup'
 import { Input } from '@/components/ui/input'
 import { WhatsNewDialog } from '@/components/whats-new/WhatsNewDialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
+import { useStudyQueueContext } from '@/contexts/StudyQueueContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { getAllSessionLogs } from '@/db'
 import { computeScrollState } from '@/lib/carousel'
@@ -90,6 +92,24 @@ export function Library() {
       return
     scrollRef.current.scrollBy({ left: dir === 'next' ? 600 : -600, behavior: 'smooth' })
   }
+
+  const queue = useStudyQueueContext()
+  const [popupOpen, setPopupOpen] = useState(false)
+  const autoOpenFiredRef = useRef(false)
+
+  useEffect(() => {
+    if (autoOpenFiredRef.current || queue.loading)
+      return
+    const today = new Date().toISOString().split('T')[0]
+    if (localStorage.getItem('study-queue-last-shown') === today)
+      return
+    autoOpenFiredRef.current = true
+    const timer = setTimeout(() => {
+      setPopupOpen(true)
+      localStorage.setItem('study-queue-last-shown', today)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [queue.loading])
 
   const [sttProvider, setSttProvider] = useState<string | null>(null)
 
@@ -369,6 +389,9 @@ export function Library() {
         </div>
       </div>
       <WhatsNewDialog />
+      {popupOpen && (
+        <DailyQueuePopup queue={queue} onClose={() => setPopupOpen(false)} />
+      )}
     </Layout>
   )
 }
