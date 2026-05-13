@@ -2,18 +2,79 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useQuizGeneration } from '@/hooks/useQuizGeneration'
 
-// Mock useAuth so hook can be tested without AuthContext provider
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ keys: { openrouterApiKey: 'sk-test' } }),
+const mockGetSegments = vi.fn()
+
+vi.mock('@/db', () => ({
+  getSegments: (...args: any[]) => mockGetSegments(...args),
 }))
 
+vi.mock('@/contexts/I18nContext', () => ({
+  useI18n: () => ({ locale: 'en' }),
+}))
+
+const mockDb = {} as any
+let mockAuth: any = { keys: { openrouterApiKey: 'sk-test' }, db: mockDb }
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => mockAuth,
+}))
+
+const mockSegments = [
+  {
+    id: 'seg-1',
+    start: 0,
+    end: 2,
+    text: '你好，世界',
+    romanization: 'nǐ hǎo shì jiè',
+    translations: { en: 'Hello, world', vi: 'Xin chào, thế giới' },
+    words: [],
+  },
+  {
+    id: 'seg-2',
+    start: 2,
+    end: 4,
+    text: '再见，朋友',
+    romanization: 'zài jiàn péng yǒu',
+    translations: { en: 'Goodbye, friend', vi: 'Tạm biệt, bạn bè' },
+    words: [],
+  },
+]
+
 const mockPool = [
-  { word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: 'greeting', sourceSegmentId: 's1', sourceSegmentText: '', sourceLessonTitle: '', sourceLessonId: '', id: '1', sourceLanguage: 'zh-CN', sourceSegmentTranslation: '', createdAt: '' },
-  { word: '再见', romanization: 'zài jiàn', meaning: 'goodbye', usage: 'farewell', sourceSegmentId: 's1', sourceSegmentText: '', sourceLessonTitle: '', sourceLessonId: '', id: '2', sourceLanguage: 'zh-CN', sourceSegmentTranslation: '', createdAt: '' },
+  {
+    id: '1',
+    word: '你好',
+    romanization: 'nǐ hǎo',
+    meaning: 'hello',
+    usage: 'greeting',
+    sourceLessonId: 'lesson-a',
+    sourceLessonTitle: 'Lesson A',
+    sourceSegmentId: 'seg-1',
+    sourceSegmentText: '你好，世界',
+    sourceSegmentTranslation: 'Hello, world',
+    sourceLanguage: 'zh-CN',
+    createdAt: '',
+  },
+  {
+    id: '2',
+    word: '再见',
+    romanization: 'zài jiàn',
+    meaning: 'goodbye',
+    usage: 'farewell',
+    sourceLessonId: 'lesson-a',
+    sourceLessonTitle: 'Lesson A',
+    sourceSegmentId: 'seg-2',
+    sourceSegmentText: '再见，朋友',
+    sourceSegmentTranslation: 'Goodbye, friend',
+    sourceLanguage: 'zh-CN',
+    createdAt: '',
+  },
 ]
 
 beforeEach(() => {
   vi.restoreAllMocks()
+  mockAuth = { keys: { openrouterApiKey: 'sk-test' }, db: mockDb }
+  mockGetSegments.mockResolvedValue(mockSegments)
 })
 
 describe('useQuizGeneration', () => {
@@ -115,5 +176,106 @@ describe('useQuizGeneration', () => {
     })
     // No extra fields like sourceSegmentId
     expect(body.words[0]).not.toHaveProperty('sourceSegmentId')
+  })
+
+  describe('translation sentences from IDB', () => {
+    it('does not call fetch for translation type', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ exercises: [] }) })
+      vi.stubGlobal('fetch', mockFetch)
+
+      const { result } = renderHook(() => useQuizGeneration())
+      const controller = new AbortController()
+
+      await act(async () => {
+        await result.current.generateQuiz(['translation'], mockPool, controller.signal)
+      })
+
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it('calls getSegments once for single-lesson pool', async () => {
+      const { result } = renderHook(() => useQuizGeneration())
+      const controller = new AbortController()
+
+      await act(async () => {
+        await result.current.generateQuiz(['translation'], mockPool, controller.signal)
+      })
+
+      expect(mockGetSegments).toHaveBeenCalledOnce()
+      expect(mockGetSegments).toHaveBeenCalledWith(mockDb, 'lesson-a')
+    })
+
+    it('builds translationSentences from segment data using current locale', async () => {
+      const { result } = renderHook(() => useQuizGeneration())
+      const controller = new AbortController()
+
+      let data: any
+      await act(async () => {
+        data = await result.current.generateQuiz(['translation', 'translation'], mockPool, controller.signal)
+      })
+
+      expect(data.translationSentences).toHaveLength(2)
+      expect(data.translationSentences[0]).toEqual({
+        text: '你好，世界',
+        romanization: 'nǐ hǎo shì jiè',
+        translation: 'Hello, world', // en locale (default in test mock via useI18n)
+      })
+      expect(data.translationSentences[1]).toEqual({
+        text: '再见，朋友',
+        romanization: 'zài jiàn péng yǒu',
+        translation: 'Goodbye, friend',
+      })
+    })
+
+    it('falls back to entry.sourceSegmentTranslation when segment not in IDB', async () => {
+      mockGetSegments.mockResolvedValue([]) // no segments returned
+
+      const { result } = renderHook(() => useQuizGeneration())
+      const controller = new AbortController()
+
+      let data: any
+      await act(async () => {
+        data = await result.current.generateQuiz(['translation'], mockPool, controller.signal)
+      })
+
+      expect(data.translationSentences[0]).toMatchObject({
+        text: '你好，世界',
+        romanization: '',
+        translation: 'Hello, world', // falls back to VocabEntry snapshot
+      })
+    })
+
+    it('calls getSegments once per unique lesson for multi-lesson pool', async () => {
+      const multiLessonPool = [
+        { ...mockPool[0], sourceLessonId: 'lesson-a', sourceSegmentId: 'seg-1' },
+        { ...mockPool[1], sourceLessonId: 'lesson-b', sourceSegmentId: 'seg-2' },
+      ]
+      mockGetSegments.mockResolvedValue([])
+
+      const { result } = renderHook(() => useQuizGeneration())
+      const controller = new AbortController()
+
+      await act(async () => {
+        await result.current.generateQuiz(['translation', 'translation'], multiLessonPool, controller.signal)
+      })
+
+      expect(mockGetSegments).toHaveBeenCalledTimes(2)
+      expect(mockGetSegments).toHaveBeenCalledWith(mockDb, 'lesson-a')
+      expect(mockGetSegments).toHaveBeenCalledWith(mockDb, 'lesson-b')
+    })
+
+    it('returns empty translationSentences when db is null', async () => {
+      mockAuth = { keys: { openrouterApiKey: 'sk-test' }, db: null }
+
+      const { result } = renderHook(() => useQuizGeneration())
+      const controller = new AbortController()
+
+      let data: any
+      await act(async () => {
+        data = await result.current.generateQuiz(['translation'], mockPool, controller.signal)
+      })
+
+      expect(data.translationSentences).toHaveLength(0)
+    })
   })
 })
