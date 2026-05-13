@@ -91,6 +91,7 @@ export function ShadowingDictationPhase({
         <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <Button
           variant="ghost"
+          size="icon-lg"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >

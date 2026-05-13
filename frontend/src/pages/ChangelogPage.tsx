@@ -50,7 +50,7 @@ function SidebarEntry({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left flex flex-col pl-4 pr-3 py-2 rounded-r-md transition-colors relative border-l-2 ${
+      className={`w-full text-left flex flex-col pl-4 pr-3 py-2 transition-colors relative border-r-2 ${
         isActive
           ? 'border-primary'
           : 'border-transparent hover:border-border hover:bg-white/5'
@@ -128,7 +128,7 @@ export function ChangelogPage() {
           </div>
 
           {/* Entry list */}
-          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5 scrollbar-hide">
+          <nav className="flex-1 overflow-y-auto space-y-0.5 scrollbar-hide">
             {entries.map(entry => (
               <SidebarEntry
                 key={entry.id}

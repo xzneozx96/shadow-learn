@@ -60,7 +60,13 @@ function StudyQueueUI() {
   useEffect(() => {
     if (queue.loading || location.pathname !== '/')
       return
-    const timer = setTimeout(setOpen, 300, true)
+    const today = new Date().toISOString().split('T')[0]
+    if (localStorage.getItem('study-queue-last-shown') === today)
+      return
+    const timer = setTimeout(() => {
+      localStorage.setItem('study-queue-last-shown', today)
+      setOpen(true)
+    }, 300)
     return () => clearTimeout(timer)
   }, [queue.loading, location.pathname])
 
