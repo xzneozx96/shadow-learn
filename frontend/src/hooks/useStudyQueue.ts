@@ -85,9 +85,10 @@ export function useStudyQueue(
     }
     setWordDrillsEntries(entries)
 
-    // ── Word Drills done: no due items remain ──────────────────────────────
+    // ── Word Drills done: no locked-set items remain due ──────────────────
     const stillDue = await getDueItems(db, today)
-    setWordDrillsDone(stillDue.length === 0 && vocabIds.length > 0)
+    const lockedDue = stillDue.filter(i => vocabIds.includes(i.itemId))
+    setWordDrillsDone(lockedDue.length === 0 && vocabIds.length > 0)
 
     // ── Sentence Hunt ──────────────────────────────────────────────────────
     const dueWords = entries.map(e => e.word)
@@ -142,15 +143,12 @@ export function useStudyQueue(
     if (!db)
       return
     const today = todayISO()
-    setCustomTasks(prev =>
-      prev.map((t) => {
-        if (t.id !== id)
-          return t
-        const updated = { ...t, completedDate: t.completedDate === today ? null : today }
-        void saveDailyTask(db, updated)
-        return updated
-      }),
-    )
+    const task = customTasks.find(t => t.id === id)
+    if (!task)
+      return
+    const updated = { ...task, completedDate: task.completedDate === today ? null : today }
+    await saveDailyTask(db, updated)
+    setCustomTasks(prev => prev.map(t => t.id === id ? updated : t))
   }
 
   async function removeCustomTask(id: string) {

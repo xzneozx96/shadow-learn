@@ -90,7 +90,7 @@ describe('useStudyQueue', () => {
     }
     const { result } = renderHook(() => useStudyQueue(db, null))
     await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.wordDrillsEntries.length).toBeLessThanOrEqual(20)
+    expect(result.current.wordDrillsEntries.length).toBe(20)
   })
 
   it('locks daily word list in localStorage on first load', async () => {
@@ -115,6 +115,36 @@ describe('useStudyQueue', () => {
     act(() => result.current.markRoleplayDone())
     expect(result.current.roleplayDone).toBe(true)
     expect(localStorage.getItem('roleplay-last-completed')).toBe('2026-05-13')
+  })
+
+  it('addCustomTask adds task to list', async () => {
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.customTasks).toHaveLength(0)
+    await act(() => result.current.addCustomTask('Test task'))
+    expect(result.current.customTasks).toHaveLength(1)
+    expect(result.current.customTasks[0].title).toBe('Test task')
+    expect(result.current.customTasks[0].completedDate).toBeNull()
+  })
+
+  it('toggleCustomTask marks task complete and back', async () => {
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    await act(() => result.current.addCustomTask('Test task'))
+    const id = result.current.customTasks[0].id
+    await act(() => result.current.toggleCustomTask(id))
+    expect(result.current.customTasks[0].completedDate).toBe('2026-05-13')
+    await act(() => result.current.toggleCustomTask(id))
+    expect(result.current.customTasks[0].completedDate).toBeNull()
+  })
+
+  it('removeCustomTask removes task from list', async () => {
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    await act(() => result.current.addCustomTask('Test task'))
+    const id = result.current.customTasks[0].id
+    await act(() => result.current.removeCustomTask(id))
+    expect(result.current.customTasks).toHaveLength(0)
   })
 
   it('refresh re-checks completion state', async () => {
