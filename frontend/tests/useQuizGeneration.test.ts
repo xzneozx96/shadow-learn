@@ -72,7 +72,7 @@ const mockPool = [
 ]
 
 beforeEach(() => {
-  vi.restoreAllMocks()
+  vi.clearAllMocks()
   mockAuth = { keys: { openrouterApiKey: 'sk-test' }, db: mockDb }
   mockGetSegments.mockResolvedValue(mockSegments)
 })
