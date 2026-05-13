@@ -253,11 +253,11 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
         </div>
 
         {hint.level > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex flex-wrap justify-center gap-2 mb-5">
             {wordBankItems.map(item => (
               <div
                 key={item.word}
-                className="flex flex-col items-center px-2.5 py-1.5 rounded-lg border border-border/60 bg-muted/20 text-center"
+                className="flex flex-col items-center px-2.5 py-1.5 rounded-lg border bg-input/50 text-center"
               >
                 <span className="text-base">{item.word}</span>
                 <span className="text-xs text-muted-foreground">{item.pinyin}</span>

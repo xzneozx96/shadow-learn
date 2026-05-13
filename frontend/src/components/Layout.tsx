@@ -194,7 +194,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Content area */}
       <div className="flex-1 min-w-0 flex overflow-hidden">
         <main className="flex-1 min-w-0 h-full overflow-hidden">
-          <AmbientBackdrop tone="indigo" />
+          <AmbientBackdrop tone="violet" />
           {children}
         </main>
         {isGlobalPanelOpen ? <GlobalCompanionPanel /> : null}

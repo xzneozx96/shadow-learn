@@ -155,10 +155,10 @@ export function ClozeExercise({ question, entries, caps, progress = '', onNext }
 
   const footer = (
     <div className="flex items-center justify-center gap-3 px-[18px] py-3">
-      <Button variant="ghost" size="sm" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
+      <Button variant="ghost" size="lg" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
       {!checked
-        ? <Button size="sm" onClick={() => setChecked(true)}>{t('study.checkButton')}</Button>
-        : <Button size="sm" onClick={handleNext}>{t('study.nextButton')}</Button>}
+        ? <Button size="lg" onClick={() => setChecked(true)}>{t('study.checkButton')}</Button>
+        : <Button size="lg" onClick={handleNext}>{t('study.nextButton')}</Button>}
     </div>
   )
 

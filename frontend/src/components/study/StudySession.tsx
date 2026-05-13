@@ -27,7 +27,7 @@ import { isWritingSupported } from '@/lib/hanzi-writer-chars'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { captureExerciseCompleted, captureStudySessionCompleted, captureStudySessionStarted } from '@/lib/posthog-events'
 import { buildSessionQuestions, buildStudyPool, distributeExercises, toFallbackType } from '@/lib/study-utils'
-import { cn } from '@/lib/utils'
+import { Button } from '../ui/button'
 
 type Phase = 'picker' | 'session' | 'summary'
 
@@ -284,7 +284,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
   }
 
   return (
-    <div className="relative mx-auto w-full min-h-full">
+    <div className="relative z-5 mx-auto w-full min-h-full">
       {/* Close button — always visible */}
       <button
         type="button"
@@ -305,33 +305,28 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
               handleCancelLeave()
           }}
         >
-          <div className="flex flex-col items-center gap-5 max-w-xs text-center px-6">
-            <p className="text-base font-semibold">{t('study.leaveSession')}</p>
-            <p className="text-sm text-muted-foreground">
-              {t('study.leaveSessionProgress')}
-            </p>
-            <div className="flex gap-3 w-full">
-              <button
-                type="button"
-                autoFocus
+          <div className="flex flex-col items-center gap-10 max-w-xs text-center px-6">
+            <div className="flex flex-col gap-1">
+              <p className="text-base font-semibold">{t('study.leaveSession')}</p>
+              <p className="text-sm text-muted-foreground">
+                {t('study.leaveSessionProgress')}
+              </p>
+            </div>
+            <div className="flex justify-center gap-3 w-full">
+              <Button
+                variant="outline"
+                size="lg"
                 onClick={handleCancelLeave}
-                className={cn(
-                  'flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium',
-                  'text-foreground hover:bg-secondary/40 transition-colors',
-                )}
               >
                 {t('study.keepGoing')}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 onClick={handleConfirmLeave}
-                className={cn(
-                  'flex-1 rounded-md px-4 py-2 text-sm font-medium',
-                  'bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors',
-                )}
+                variant="destructive"
+                size="lg"
               >
                 {t('study.leave')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
