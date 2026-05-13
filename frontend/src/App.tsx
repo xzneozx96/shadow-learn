@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createBrowserRouter, Outlet, RouterProvider, useLocation, useRouteError } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
@@ -55,6 +56,7 @@ function StudyQueueUI() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const autoOpenFiredRef = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (autoOpenFiredRef.current || queue.loading || location.pathname !== '/')
@@ -70,11 +72,35 @@ function StudyQueueUI() {
     return () => clearTimeout(timer)
   }, [queue.loading, location.pathname])
 
+  useEffect(() => {
+    if (!open)
+      return
+    function onMouseDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node))
+        setOpen(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [open])
+
   return (
-    <>
-      <QueueFloatingBadge queue={queue} onClick={() => setOpen(true)} />
-      {open && <DailyQueuePopup queue={queue} onClose={() => setOpen(false)} />}
-    </>
+    <div ref={containerRef} className="fixed bottom-6 right-6 z-50">
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="absolute bottom-full right-0 mb-3"
+            style={{ transformOrigin: 'bottom right' }}
+            initial={{ opacity: 0, scale: 0.88, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.88, y: 10 }}
+            transition={{ duration: 0.2, ease: [0.175, 0.885, 0.32, 1.275] }}
+          >
+            <DailyQueuePopup queue={queue} onClose={() => setOpen(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <QueueFloatingBadge queue={queue} open={open} onClick={() => setOpen(o => !o)} />
+    </div>
   )
 }
 
