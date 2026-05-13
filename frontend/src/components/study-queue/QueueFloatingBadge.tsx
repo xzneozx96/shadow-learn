@@ -1,6 +1,7 @@
 import type { StudyQueueState } from '@/hooks/useStudyQueue'
 import { Check, ClipboardList, X } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useI18n } from '@/contexts/I18nContext'
 
 interface Props {
   queue: StudyQueueState
@@ -15,6 +16,8 @@ const SHADOW_DONE_BASE = '0 0 20px rgba(28,206,93,0.65), 0 0 40px rgba(28,206,93
 const SHADOW_DONE_HOVER = '0 0 30px rgba(28,206,93,0.9), 0 0 50px rgba(28,206,93,0.65), 0 0 70px rgba(28,206,93,0.35)'
 
 export function QueueFloatingBadge({ queue, open, onClick }: Props) {
+  const { t } = useI18n()
+
   if (queue.loading)
     return null
 
@@ -43,10 +46,10 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
         onClick={onClick}
         aria-label={
           open
-            ? 'Close study queue'
+            ? t('queue.badge.close')
             : allDone
-              ? 'All done today'
-              : `${count} study item${count !== 1 ? 's' : ''} remaining`
+              ? t('queue.badge.allDone')
+              : t(count !== 1 ? 'queue.badge.remaining_plural' : 'queue.badge.remaining', { count })
         }
         className="relative w-16 h-16 rounded-full flex items-center justify-center cursor-pointer border-2 border-white/20 overflow-hidden"
         style={{ background: gradient, boxShadow: shadowBase }}
@@ -71,7 +74,7 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
       </motion.button>
 
       {!open && !allDone && count > 0 && (
-        <span className="absolute -top-1 -right-1 z-10 min-w-[20px] h-5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center px-1.5 border-2 border-background">
+        <span className="absolute -top-1 -right-1 z-10 size-5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center shadow-md">
           {count}
         </span>
       )}

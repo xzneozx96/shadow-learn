@@ -55,20 +55,12 @@ function StudyQueueUI() {
   const queue = useStudyQueueContext()
   const [open, setOpen] = useState(false)
   const location = useLocation()
-  const autoOpenFiredRef = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (autoOpenFiredRef.current || queue.loading || location.pathname !== '/')
+    if (queue.loading || location.pathname !== '/')
       return
-    const today = new Date().toISOString().split('T')[0]
-    if (localStorage.getItem('study-queue-last-shown') === today)
-      return
-    autoOpenFiredRef.current = true
-    localStorage.setItem('study-queue-last-shown', today)
-    const timer = setTimeout(() => {
-      setOpen(true)
-    }, 300)
+    const timer = setTimeout(setOpen, 300, true)
     return () => clearTimeout(timer)
   }, [queue.loading, location.pathname])
 
@@ -82,6 +74,9 @@ function StudyQueueUI() {
     document.addEventListener('mousedown', onMouseDown)
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [open])
+
+  if (location.pathname.startsWith('/lesson/'))
+    return null
 
   return (
     <div ref={containerRef} className="fixed bottom-6 right-6 z-50">

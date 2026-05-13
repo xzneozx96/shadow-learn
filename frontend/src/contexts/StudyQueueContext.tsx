@@ -3,12 +3,15 @@ import type { StudyQueueState } from '../hooks/useStudyQueue'
 import { createContext, use } from 'react'
 import { useStudyQueue } from '../hooks/useStudyQueue'
 import { useAuth } from './AuthContext'
+import { useLessons } from './LessonsContext'
 
 const StudyQueueContext = createContext<StudyQueueState | null>(null)
 
 export function StudyQueueProvider({ children }: { children: ReactNode }) {
   const { db, keys } = useAuth()
-  const queue = useStudyQueue(db, keys)
+  const { lessons } = useLessons()
+  const hasLesson = lessons.some(l => !l.status || l.status === 'complete')
+  const queue = useStudyQueue(db, keys, hasLesson)
   return (
     <StudyQueueContext value={queue}>
       {children}

@@ -35,6 +35,7 @@ export interface StudyQueueState {
   customTasks: DailyTask[]
   addCustomTask: (title: string) => Promise<void>
   toggleCustomTask: (id: string) => Promise<void>
+  updateCustomTask: (id: string, title: string) => Promise<void>
   removeCustomTask: (id: string) => Promise<void>
   refresh: () => Promise<void>
   allDoneToday: boolean
@@ -44,6 +45,7 @@ export interface StudyQueueState {
 export function useStudyQueue(
   db: ShadowLearnDB | null,
   keys: DecryptedKeys | null,
+  hasLesson: boolean,
 ): StudyQueueState {
   const [loading, setLoading] = useState(true)
   const [wordDrillsEntries, setWordDrillsEntries] = useState<VocabEntry[]>([])
@@ -151,6 +153,17 @@ export function useStudyQueue(
     setCustomTasks(prev => prev.map(t => t.id === id ? updated : t))
   }
 
+  async function updateCustomTask(id: string, title: string) {
+    if (!db)
+      return
+    const task = customTasks.find(t => t.id === id)
+    if (!task)
+      return
+    const updated = { ...task, title }
+    await saveDailyTask(db, updated)
+    setCustomTasks(prev => prev.map(t => t.id === id ? updated : t))
+  }
+
   async function removeCustomTask(id: string) {
     if (!db)
       return
@@ -172,7 +185,7 @@ export function useStudyQueue(
     = (hasWordDrills && !wordDrillsDone ? 1 : 0)
       + (hasSentenceHunt && !sentenceHuntDone ? 1 : 0)
       + (hasRoleplay && !roleplayDone ? 1 : 0)
-      + (!shadowingDone ? 1 : 0)
+      + (hasLesson && !shadowingDone ? 1 : 0)
       + customTasks.filter(t => t.completedDate !== today).length
 
   const allDoneToday
@@ -195,6 +208,7 @@ export function useStudyQueue(
     customTasks,
     addCustomTask,
     toggleCustomTask,
+    updateCustomTask,
     removeCustomTask,
     refresh,
     allDoneToday,

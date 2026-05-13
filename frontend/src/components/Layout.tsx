@@ -9,7 +9,6 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { cn } from '@/lib/utils'
 import { useHasUnseenAnnouncement } from '@/lib/whats-new'
-import { AmbientBackdrop } from './AmbientBackdrop'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -194,7 +193,6 @@ export function Layout({ children }: LayoutProps) {
       {/* Content area */}
       <div className="flex-1 min-w-0 flex overflow-hidden">
         <main className="flex-1 min-w-0 h-full overflow-hidden">
-          <AmbientBackdrop tone="violet" />
           {children}
         </main>
         {isGlobalPanelOpen ? <GlobalCompanionPanel /> : null}

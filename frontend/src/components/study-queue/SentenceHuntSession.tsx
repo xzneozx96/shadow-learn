@@ -1,8 +1,9 @@
 import type { SegmentMatch } from '@/lib/sentenceHunt'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { upsertExerciseStat } from '@/db'
 
 interface Props {
@@ -12,12 +13,15 @@ interface Props {
 }
 
 export function SentenceHuntSession({ segments, onComplete, onClose }: Props) {
+  const { t } = useI18n()
   const { db, keys } = useAuth()
   const [index, setIndex] = useState(0)
   const [selfAssessResult, setSelfAssessResult] = useState<'got' | 'missed' | null>(null)
+  const completedRef = useRef(false)
 
   useEffect(() => {
-    if (segments.length === 0) {
+    if (segments.length === 0 && !completedRef.current) {
+      completedRef.current = true
       onComplete()
     }
   }, [segments.length, onComplete])
@@ -28,7 +32,10 @@ export function SentenceHuntSession({ segments, onComplete, onClose }: Props) {
 
   async function advance() {
     if (index + 1 >= segments.length) {
-      onComplete()
+      if (!completedRef.current) {
+        completedRef.current = true
+        onComplete()
+      }
     }
     else {
       setIndex(i => i + 1)
@@ -57,8 +64,8 @@ export function SentenceHuntSession({ segments, onComplete, onClose }: Props) {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <span className="text-sm font-semibold text-muted-foreground">
-          Sentence Hunt ·
-          {' '}
+          {t('sentenceHunt.title')}
+          {' · '}
           {progress}
         </span>
         <Button variant="ghost" size="sm" onClick={onClose}>✕</Button>
@@ -94,22 +101,22 @@ export function SentenceHuntSession({ segments, onComplete, onClose }: Props) {
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
-                  Listen and repeat. Did you get it?
+                  {t('sentenceHunt.prompt')}
                 </p>
                 {selfAssessResult === null
                   ? (
                       <div className="flex gap-3 w-full max-w-xs">
                         <Button variant="outline" className="flex-1" onClick={() => void handleSelfAssess('missed')}>
-                          Missed it
+                          {t('sentenceHunt.missed')}
                         </Button>
                         <Button className="flex-1" onClick={() => void handleSelfAssess('got')}>
-                          Got it
+                          {t('sentenceHunt.got')}
                         </Button>
                       </div>
                     )
                   : (
                       <Button className="w-full max-w-xs" onClick={() => void advance()}>
-                        {index + 1 < segments.length ? 'Next →' : 'Done'}
+                        {index + 1 < segments.length ? t('sentenceHunt.next') : t('sentenceHunt.done')}
                       </Button>
                     )}
               </div>
