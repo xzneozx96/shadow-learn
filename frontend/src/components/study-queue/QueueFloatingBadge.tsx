@@ -8,15 +8,10 @@ interface Props {
   onClick: () => void
 }
 
-// amber-400 ≈ rgb(251,191,36)  |  success/emerald ≈ rgb(52,211,153)
-const AMBER_RGB = '251, 191, 36'
-const EMERALD_RGB = '52, 211, 153'
-
-function makeGlow(rgb: string, strong = false) {
-  return strong
-    ? `0 0 20px rgba(${rgb}, 0.85), 0 0 40px rgba(${rgb}, 0.55), 0 0 64px rgba(${rgb}, 0.28)`
-    : `0 0 14px rgba(${rgb}, 0.55), 0 0 28px rgba(${rgb}, 0.3), 0 0 48px rgba(${rgb}, 0.14)`
-}
+const SHADOW_BASE = '0 0 20px rgba(110,132,247,0.7), 0 0 40px rgba(124,58,237,0.5), 0 0 60px rgba(109,40,217,0.3)'
+const SHADOW_HOVER = '0 0 30px rgba(110,132,247,0.9), 0 0 50px rgba(124,58,237,0.7), 0 0 70px rgba(109,40,217,0.5)'
+const SHADOW_DONE_BASE = '0 0 20px rgba(52,211,153,0.65), 0 0 40px rgba(16,185,129,0.45), 0 0 60px rgba(5,150,105,0.25)'
+const SHADOW_DONE_HOVER = '0 0 30px rgba(52,211,153,0.9), 0 0 50px rgba(16,185,129,0.65), 0 0 70px rgba(5,150,105,0.4)'
 
 export function QueueFloatingBadge({ queue, open, onClick }: Props) {
   if (queue.loading)
@@ -25,14 +20,14 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
   const allDone = queue.allDoneToday
   const count = queue.incompleteCount
 
-  const glowRgb = allDone ? EMERALD_RGB : AMBER_RGB
-  const baseGlow = open ? '0 4px 16px rgba(0,0,0,0.4)' : makeGlow(glowRgb)
-  const hoverGlow = open ? '0 4px 20px rgba(0,0,0,0.5)' : makeGlow(glowRgb, true)
+  const gradient = open
+    ? 'linear-gradient(135deg, rgba(30,32,48,0.9) 0%, rgba(20,22,36,0.95) 100%)'
+    : allDone
+      ? 'linear-gradient(135deg, rgba(52,211,153,0.75) 0%, rgba(16,185,129,0.75) 100%)'
+      : 'linear-gradient(135deg, rgba(110,132,247,0.8) 0%, rgba(168,85,247,0.8) 100%)'
 
-  const bgOpen = 'hsl(230, 20%, 16%)'
-  const bgNormal = allDone
-    ? 'linear-gradient(135deg, rgba(52,211,153,0.12) 0%, rgba(52,211,153,0.05) 100%)'
-    : 'linear-gradient(135deg, rgba(251,191,36,0.12) 0%, rgba(251,191,36,0.05) 100%)'
+  const shadowBase = open ? 'none' : allDone ? SHADOW_DONE_BASE : SHADOW_BASE
+  const shadowHover = open ? 'none' : allDone ? SHADOW_DONE_HOVER : SHADOW_HOVER
 
   return (
     <div className="relative">
@@ -40,7 +35,7 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
       {!open && (
         <div
           className="absolute inset-0 rounded-full animate-ping opacity-20"
-          style={{ background: bgNormal }}
+          style={{ background: allDone ? 'rgba(52,211,153,1)' : 'rgba(99,102,241,1)' }}
         />
       )}
 
@@ -54,22 +49,30 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
               ? 'All done today'
               : `${count} study item${count !== 1 ? 's' : ''} remaining`
         }
-        className="group w-16 h-16 rounded-full flex items-center justify-center cursor-pointer"
-        style={{ background: open ? bgOpen : bgNormal }}
-        animate={{ boxShadow: baseGlow }}
-        whileHover={{ scale: 1.1, boxShadow: hoverGlow }}
-        whileTap={{ scale: 0.9 }}
-        transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+        className="relative w-16 h-16 rounded-full flex items-center justify-center cursor-pointer border-2 border-white/20 overflow-hidden"
+        style={{ background: gradient, boxShadow: shadowBase }}
+        animate={{ rotate: open ? 90 : 0, boxShadow: shadowBase }}
+        whileHover={{ scale: 1.1, rotate: open ? 90 : 5, boxShadow: shadowHover }}
+        whileTap={{ scale: 0.93 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 22 }}
       >
-        {open
-          ? <X className="size-6 text-muted-foreground transition-transform duration-300 group-hover:rotate-90 group-hover:scale-110" />
-          : allDone
-            ? <Check className="size-6 text-emerald-400 transition-transform duration-300 group-hover:scale-110" />
-            : <ClipboardList className="size-6 text-amber-400 transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-0.5" />}
+        {/* 3D top highlight */}
+        <div className="absolute inset-0 rounded-full bg-linear-to-b from-white/20 to-transparent opacity-30 pointer-events-none" />
+        {/* Inner glow ring */}
+        <div className="absolute inset-0 rounded-full border-2 border-white/10 pointer-events-none" />
+
+        {/* Icon */}
+        <div className="relative z-10">
+          {open
+            ? <X className="size-7 text-white/80" />
+            : allDone
+              ? <Check className="size-7 text-white" />
+              : <ClipboardList className="size-7 text-white" />}
+        </div>
       </motion.button>
 
       {!open && !allDone && count > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 z-10 min-w-[18px] h-[18px] rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center px-1 border-2 border-background">
+        <span className="absolute -top-1 -right-1 z-10 min-w-[20px] h-5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center px-1.5 border-2 border-background">
           {count}
         </span>
       )}
