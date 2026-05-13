@@ -80,10 +80,13 @@ async def synthesize_speech(text: str, api_key: str, voice_id: str = _DEFAULT_VO
 
 
 class MinimaxTTSProvider:
-    """TTSProvider implementation backed by Minimax speech-2.6-turbo."""
+    """TTSProvider implementation backed by Minimax speech-2.8-turbo."""
 
-    async def synthesize(self, text: str, keys: TTSKeys, language: str = "zh") -> bytes:
+    async def synthesize(
+        self, text: str, keys: TTSKeys, language: str = "zh",
+        voice_id: str | None = None,
+    ) -> bytes:
         lang_prefix = language.split("-")[0]
-        voice_id = _VOICE_MAP.get(lang_prefix, _DEFAULT_VOICE)
+        resolved_voice = voice_id or _VOICE_MAP.get(lang_prefix, _DEFAULT_VOICE)
         api_key = keys.get("minimax_api_key", "")
-        return await synthesize_speech(text, api_key, voice_id)
+        return await synthesize_speech(text, api_key, resolved_voice)
