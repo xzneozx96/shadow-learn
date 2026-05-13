@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
-import { saveSessionLog } from '@/db'
+import { saveSessionLog, upsertExerciseStat } from '@/db'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { captureShadowingSessionCompleted, captureShadowingSessionStarted } from '@/lib/posthog-events'
 import { computeSessionSummary } from '@/lib/shadowing-utils'
@@ -130,6 +130,9 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
   }
 
   function handleNext(score: number | null) {
+    if (db && mode === 'speaking' && segment && score !== null) {
+      void upsertExerciseStat(db, `${segment.id}:pronunciation`, score >= 70)
+    }
     setResults(prev => [...prev, {
       segmentIndex,
       attempted: true,
