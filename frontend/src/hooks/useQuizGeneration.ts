@@ -48,21 +48,26 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
       // Build translation sentences from lesson segments (no API call needed)
       const translationSentences: TranslationSentence[] = []
       if (translationCount > 0 && db) {
-        const lessonIds = [...new Set(pool.map(e => e.sourceLessonId))]
-        const segmentArrays = await Promise.all(
-          lessonIds.map(id => getSegments(db, id).then(segs => segs ?? [])),
-        )
-        const segmentMap = new Map<string, Segment>(
-          segmentArrays.flat().map(s => [s.id, s]),
-        )
-        for (let i = 0; i < translationCount; i++) {
-          const entry = pool[i % pool.length]
-          const seg = segmentMap.get(entry.sourceSegmentId)
-          translationSentences.push({
-            text: entry.sourceSegmentText,
-            romanization: seg?.romanization ?? '',
-            translation: seg?.translations?.[locale] ?? entry.sourceSegmentTranslation,
-          })
+        try {
+          const lessonIds = [...new Set(pool.map(e => e.sourceLessonId))]
+          const segmentArrays = await Promise.all(
+            lessonIds.map(id => getSegments(db, id).then(segs => segs ?? [])),
+          )
+          const segmentMap = new Map<string, Segment>(
+            segmentArrays.flat().map(s => [s.id, s]),
+          )
+          for (let i = 0; i < translationCount; i++) {
+            const entry = pool[i % pool.length]
+            const seg = segmentMap.get(entry.sourceSegmentId)
+            translationSentences.push({
+              text: entry.sourceSegmentText,
+              romanization: seg?.romanization ?? '',
+              translation: seg?.translations?.[locale] ?? entry.sourceSegmentTranslation,
+            })
+          }
+        }
+        catch {
+          // IDB failure — proceed with empty translationSentences
         }
       }
 
