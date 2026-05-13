@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react'
-import { lazy, Suspense, useState } from 'react'
-import { createBrowserRouter, Outlet, RouterProvider, useRouteError } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { createBrowserRouter, Outlet, RouterProvider, useLocation, useRouteError } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorScreen } from '@/components/ErrorScreen'
@@ -53,6 +53,23 @@ function RouteErrorElement() {
 function StudyQueueUI() {
   const queue = useStudyQueueContext()
   const [open, setOpen] = useState(false)
+  const location = useLocation()
+  const autoOpenFiredRef = useRef(false)
+
+  useEffect(() => {
+    if (autoOpenFiredRef.current || queue.loading || location.pathname !== '/')
+      return
+    const today = new Date().toISOString().split('T')[0]
+    if (localStorage.getItem('study-queue-last-shown') === today)
+      return
+    autoOpenFiredRef.current = true
+    localStorage.setItem('study-queue-last-shown', today)
+    const timer = setTimeout(() => {
+      setOpen(true)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [queue.loading, location.pathname])
+
   return (
     <>
       <QueueFloatingBadge queue={queue} onClick={() => setOpen(true)} />
