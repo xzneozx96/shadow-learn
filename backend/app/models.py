@@ -29,6 +29,7 @@ class LessonRequest(BaseModel):
     azure_speech_key: str | None = None
     azure_speech_region: str | None = None
     source_language: str = "zh-CN"
+    minimax_voice_id: str | None = None
 
 
 class LessonResponse(BaseModel):
@@ -58,3 +59,4 @@ class TTSRequest(BaseModel):
     source_language: str = "zh-CN"
     azure_speech_key: str | None = None
     azure_speech_region: str | None = None
+    minimax_voice_id: str | None = None

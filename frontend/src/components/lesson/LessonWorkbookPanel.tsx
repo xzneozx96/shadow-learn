@@ -1,6 +1,6 @@
 import type { VocabEntry } from '@/types'
 import { BookOpen, Loader2, Volume2, X } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { StudySession } from '@/components/study/StudySession'
@@ -11,6 +11,7 @@ import { WordBreakdownModal } from '@/components/workbook/WordBreakdownModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
+import { getSettings } from '@/db'
 import { useTTS } from '@/hooks/useTTS'
 import { RemoveVocabDialog } from './RemoveVocabDialog'
 
@@ -24,7 +25,13 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const { db, keys } = useAuth()
   const navigate = useNavigate()
   const entries = entriesByLesson[lessonId] ?? []
-  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN')
+  const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    if (!db)
+      return
+    getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
+  }, [db])
+  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
   const count = entries.length
   const [studyOpen, setStudyOpen] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)

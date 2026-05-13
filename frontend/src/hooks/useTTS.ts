@@ -17,6 +17,7 @@ export function useTTS(
   db: ShadowLearnDB | null,
   keys: DecryptedKeys | null,
   language: string = 'zh-CN',
+  voiceId?: string,
 ): UseTTSReturn {
   const [loadingText, setLoadingText] = useState<string | null>(null)
   // providerRef always holds the latest value — avoids stale closure in playTTS
@@ -26,6 +27,7 @@ export function useTTS(
   const dbRef = useRef(db)
   const keysRef = useRef(keys)
   const languageRef = useRef(language)
+  const voiceIdRef = useRef(voiceId)
 
   // Keep refs in sync with props
   useEffect(() => {
@@ -37,6 +39,9 @@ export function useTTS(
   useEffect(() => {
     languageRef.current = language
   }, [language])
+  useEffect(() => {
+    voiceIdRef.current = voiceId
+  }, [voiceId])
 
   // Fetch the active provider once on mount
   useEffect(() => {
@@ -84,6 +89,9 @@ export function useTTS(
         if (currentProvider === 'azure') {
           body.azure_speech_key = currentKeys?.azureSpeechKey ?? ''
           body.azure_speech_region = currentKeys?.azureSpeechRegion ?? ''
+        }
+        if (voiceIdRef.current) {
+          body.minimax_voice_id = voiceIdRef.current
         }
         // minimax key is backend-only (env var), not sent from client
 

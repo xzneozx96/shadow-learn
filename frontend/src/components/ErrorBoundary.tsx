@@ -26,10 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <ErrorScreen
-          error={this.state.error}
-          onRetry={() => this.setState({ hasError: false, error: null })}
-        />
+        <ErrorScreen error={this.state.error} />
       )
     }
     return this.props.children

@@ -156,3 +156,64 @@ async def test_minimax_provider_uses_chinese_voice_for_chinese():
         await provider.synthesize("你好", {"minimax_api_key": "key"}, language="zh-CN")
 
     assert "Japanese" not in captured["voice_id"]
+
+
+@pytest.mark.asyncio
+async def test_minimax_provider_uses_explicit_voice_id():
+    """MinimaxTTSProvider passes caller-supplied voice_id straight through."""
+    captured = {}
+
+    async def fake_post(url, *, json, headers):
+        captured["voice_id"] = json["voice_setting"]["voice_id"]
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "data": {"audio": (b"\xff\xfb" * 5).hex()},
+            "base_resp": {"status_code": 0, "status_msg": "success"},
+        }
+        return mock_response
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = fake_post
+
+    with patch("app.tts.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
+        from app.tts.services.tts_minimax import MinimaxTTSProvider
+        provider = MinimaxTTSProvider()
+        await provider.synthesize(
+            "你好", {"minimax_api_key": "key"}, language="zh-CN",
+            voice_id="Chinese (Mandarin)_Crisp_Girl",
+        )
+
+    assert captured["voice_id"] == "Chinese (Mandarin)_Crisp_Girl"
+
+
+@pytest.mark.asyncio
+async def test_minimax_provider_falls_back_to_voice_map_when_voice_id_is_none():
+    """MinimaxTTSProvider falls back to _VOICE_MAP when voice_id is None."""
+    captured = {}
+
+    async def fake_post(url, *, json, headers):
+        captured["voice_id"] = json["voice_setting"]["voice_id"]
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "data": {"audio": (b"\xff\xfb" * 5).hex()},
+            "base_resp": {"status_code": 0, "status_msg": "success"},
+        }
+        return mock_response
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.post = fake_post
+
+    with patch("app.tts.services.tts_minimax.httpx.AsyncClient", return_value=mock_client):
+        from app.tts.services.tts_minimax import MinimaxTTSProvider
+        provider = MinimaxTTSProvider()
+        await provider.synthesize("你好", {"minimax_api_key": "key"}, language="zh-CN", voice_id=None)
+
+    assert captured["voice_id"] == "Chinese (Mandarin)_Male_Announcer"

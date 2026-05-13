@@ -19,6 +19,7 @@ import { SessionSummary } from '@/components/study/SessionSummary'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
+import { getSettings } from '@/db'
 import { useQuizGeneration } from '@/hooks/useQuizGeneration'
 import { EXERCISE_TO_SKILL, useTracking } from '@/hooks/useTracking'
 import { useTTS } from '@/hooks/useTTS'
@@ -60,7 +61,13 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
     ? t('study.reviewSession')
     : (entries[0]?.sourceLessonTitle ?? t('study.unknownLesson'))
   const caps = getLanguageCaps(entries[0]?.sourceLanguage)
-  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN')
+  const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    if (!db)
+      return
+    getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
+  }, [db])
+  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
 
   const [phase, setPhase] = useState<Phase>('picker')
   const [mode, setMode] = useState<ExerciseMode>('mixed')

@@ -522,6 +522,7 @@ export const TRANSLATIONS = {
     'settings.failedToSaveKeys': 'Failed to save API keys',
     'settings.enterPinToSaveChanges': 'Enter your PIN to save key changes',
     'settings.incorrectPinOrFailed': 'Incorrect PIN or save failed',
+    'settings.narratorVoice': 'Narrator Voice',
 
     // What's New
     'whatsNew.navLabel': 'What\'s new',
@@ -1122,7 +1123,7 @@ export const TRANSLATIONS = {
     'settings.changePin': 'Thay đổi mã PIN',
     'settings.newPin': 'Mã PIN mới',
     'settings.confirmPin': 'Xác nhận mã PIN mới',
-    'settings.language': 'Ngôn ngữ bài',
+    'settings.language': 'Cài đặt ngôn ngữ',
     'settings.translationLanguage': 'Ngôn ngữ dịch',
     'settings.interfaceLanguage': 'Ngôn ngữ hệ thống',
     'settings.saveSettings': 'Lưu cấu hình',
@@ -1154,6 +1155,7 @@ export const TRANSLATIONS = {
     'settings.failedToSaveKeys': 'Lưu khóa API thất bại',
     'settings.enterPinToSaveChanges': 'Nhập mã PIN để lưu thay đổi',
     'settings.incorrectPinOrFailed': 'Mã PIN không đúng hoặc lưu thất bại',
+    'settings.narratorVoice': 'Giọng đọc AI',
 
     // Tool Display Names
     'tool.get_study_context': 'Tuyệt đỉnh Kungfu',

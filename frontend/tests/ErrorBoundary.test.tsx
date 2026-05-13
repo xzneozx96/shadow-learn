@@ -56,6 +56,5 @@ describe('errorBoundary', () => {
       </ErrorBoundary>,
     )
     expect(screen.getByText('Something went wrong.')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /try again/i })).toBeTruthy()
   })
 })

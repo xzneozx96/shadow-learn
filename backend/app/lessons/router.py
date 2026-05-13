@@ -365,7 +365,10 @@ async def _process_blog_lesson(
             tts_keys["minimax_api_key"] = settings.minimax_api_key
         # TTS providers accept "zh" not "zh-CN" — strip the region suffix
         tts_lang = request.source_language.split("-")[0]
-        audio_bytes = await tts_provider.synthesize(text, tts_keys, tts_lang)
+        audio_bytes = await tts_provider.synthesize(
+            text, tts_keys, tts_lang,
+            voice_id=request.minimax_voice_id,
+        )
         if not audio_bytes:
             raise ValueError("TTS synthesis returned empty audio.")
 

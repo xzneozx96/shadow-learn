@@ -1,10 +1,12 @@
 import type { PronunciationAssessResult } from '@/types'
 import { Loader2, Pause, Play, Volume2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
 import { HintButton } from '@/components/study/exercises/HintButton'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { getSettings } from '@/db'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useHint } from '@/hooks/useHint'
 import { usePronunciationAssessment } from '@/hooks/usePronunciationAssessment'
@@ -53,9 +55,15 @@ function useVerdict() {
 
 export function PronunciationReferee({ sentence, language, progress = '', onNext }: Props) {
   const { db, keys } = useAuth()
+  const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    if (!db)
+      return
+    getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
+  }, [db])
   const { t } = useI18n()
   const verdict = useVerdict()
-  const { playTTS, loadingText } = useTTS(db, keys, language)
+  const { playTTS, loadingText } = useTTS(db, keys, language, voiceId)
   const isTTSLoading = loadingText === sentence.sentence
   const hint = useHint(sentence.romanization ? 1 : 0)
   const showPinyin = hint.level > 0
