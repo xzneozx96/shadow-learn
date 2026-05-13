@@ -1,4 +1,4 @@
-import { BookOpen, FileText, Library, Newspaper, PanelLeft, PanelRight, Play, Settings, Sparkles, Sprout, Zap } from 'lucide-react'
+import { AudioLines, BookOpen, FileText, Library, Newspaper, PanelLeft, PanelRight, Play, Settings, Sparkles, Sprout } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
@@ -170,7 +170,7 @@ export function Layout({ children }: LayoutProps) {
             )}
           >
             <span className="flex size-7 items-center justify-center rounded-md bg-primary/20 ring-1 ring-primary/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] shrink-0">
-              <Zap className="size-4 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />
+              <AudioLines className="size-4 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />
             </span>
             {!collapsed && <span className="text-sm font-semibold text-foreground">{t('speak.title')}</span>}
           </button>

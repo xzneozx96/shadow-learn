@@ -1,6 +1,8 @@
 import type { VoiceOption } from '@/lib/voices'
+import { Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { Button } from '../ui/button'
 
 interface VoiceSelectorProps {
   voices: VoiceOption[]
@@ -26,7 +28,7 @@ export function VoiceSelector({ voices, selectedId, onSelect }: VoiceSelectorPro
       return
     }
     audioRef.current?.pause()
-    const audio = new Audio(voice.previewUrl)
+    const audio = new Audio(voice.sampleAudio)
     audioRef.current = audio
     setPlayingId(voice.id)
     audio.play().catch(() => {})
@@ -34,8 +36,8 @@ export function VoiceSelector({ voices, selectedId, onSelect }: VoiceSelectorPro
   }
 
   return (
-    <div className="rounded-lg border border-border overflow-hidden">
-      {voices.map((voice, i) => {
+    <div className="flex flex-col gap-3 bg-input/50">
+      {voices.map((voice) => {
         const isSelected = voice.id === selectedId
         const isPlaying = playingId === voice.id
         return (
@@ -45,15 +47,14 @@ export function VoiceSelector({ voices, selectedId, onSelect }: VoiceSelectorPro
             aria-selected={isSelected}
             onClick={() => onSelect(voice.id)}
             className={cn(
-              'flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none transition-colors duration-100',
-              i < voices.length - 1 && 'border-b border-border',
-              isSelected ? 'bg-indigo-500/15' : 'hover:bg-white/5',
+              'rounded-lg border flex items-center gap-3 p-2 cursor-pointer select-none transition-colors duration-100',
+              isSelected ? 'bg-primary/15' : 'hover:bg-secondary',
             )}
           >
             <img
               src={voice.avatarUrl}
               alt=""
-              className="size-[38px] rounded-full object-cover shrink-0"
+              className="size-[38px] rounded-md object-cover shrink-0"
             />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-foreground">{voice.label}</div>
@@ -61,23 +62,18 @@ export function VoiceSelector({ voices, selectedId, onSelect }: VoiceSelectorPro
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {isSelected && (
-                <div className="size-3.5 rounded-full bg-indigo-500 flex items-center justify-center">
-                  <div className="size-[5px] rounded-full bg-white" />
+                <div className="size-4 rounded-full bg-indigo-500 flex items-center justify-center">
+                  <div className="size-2 rounded-full bg-white" />
                 </div>
               )}
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="icon-lg"
                 aria-label={isPlaying ? 'stop preview' : 'play preview'}
                 onClick={e => handlePlay(e, voice)}
-                className={cn(
-                  'size-[26px] rounded-full border flex items-center justify-center text-[10px] transition-colors',
-                  isPlaying
-                    ? 'bg-indigo-500/30 border-indigo-400 text-indigo-300'
-                    : 'bg-white/6 border-white/15 text-muted-foreground hover:border-white/30',
-                )}
               >
-                {isPlaying ? '■' : '▶'}
-              </button>
+                {isPlaying ? <Pause className="size-3" /> : <Play className="size-3" />}
+              </Button>
             </div>
           </div>
         )
