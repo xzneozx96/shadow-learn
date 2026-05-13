@@ -20,11 +20,9 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
   const allDone = queue.allDoneToday
   const count = queue.incompleteCount
 
-  const gradient = open
-    ? 'linear-gradient(135deg, rgba(30,32,48,0.9) 0%, rgba(20,22,36,0.95) 100%)'
-    : allDone
-      ? 'linear-gradient(135deg, rgba(52,211,153,0.75) 0%, rgba(16,185,129,0.75) 100%)'
-      : 'linear-gradient(135deg, rgba(110,132,247,0.8) 0%, rgba(168,85,247,0.8) 100%)'
+  const gradient = allDone
+    ? 'linear-gradient(135deg, rgba(52,211,153,0.75) 0%, rgba(16,185,129,0.75) 100%)'
+    : 'linear-gradient(135deg, rgba(110,132,247,0.8) 0%, rgba(168,85,247,0.8) 100%)'
 
   const shadowBase = open ? 'none' : allDone ? SHADOW_DONE_BASE : SHADOW_BASE
   const shadowHover = open ? 'none' : allDone ? SHADOW_DONE_HOVER : SHADOW_HOVER
@@ -64,7 +62,7 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
         {/* Icon */}
         <div className="relative z-10">
           {open
-            ? <X className="size-7 text-white/80" />
+            ? <X className="size-7 text-white" />
             : allDone
               ? <Check className="size-7 text-white" />
               : <ClipboardList className="size-7 text-white" />}
