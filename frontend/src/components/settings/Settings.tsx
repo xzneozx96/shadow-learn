@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { VoiceSelector } from '@/components/voice/VoiceSelector'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { getCryptoData, getSettings, saveCryptoData, saveSettings } from '@/db'
 import { INTERFACE_LANGUAGES, LANGUAGES } from '@/lib/constants'
 import { decryptKeys, encryptKeys } from '@/lib/crypto'
+import { DEFAULT_VOICE_ID, MINIMAX_VOICES } from '@/lib/voices'
 
 export function Settings() {
   const { db, keys, lock, resetKeys, setup, trialMode } = useAuth()
@@ -24,6 +26,7 @@ export function Settings() {
   const [pinSuccess, setPinSuccess] = useState(false)
   const [showKeys, setShowKeys] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [voiceId, setVoiceId] = useState(DEFAULT_VOICE_ID)
   const [editOpenrouterKey, setEditOpenrouterKey] = useState(keys?.openrouterApiKey ?? '')
   const [editGeminiKey, setEditGeminiKey] = useState(keys?.googleRealtimeKey ?? '')
   const [keysPin, setKeysPin] = useState('')
@@ -38,6 +41,8 @@ export function Settings() {
     getSettings(db).then((s) => {
       if (s) {
         setLanguage(s.translationLanguage || locale)
+        if (s.minimaxVoiceId)
+          setVoiceId(s.minimaxVoiceId)
       }
     })
   }, [db, locale])
@@ -147,6 +152,7 @@ export function Settings() {
     await saveSettings(db, {
       ...(current ?? { translationLanguage: '' }),
       translationLanguage: language,
+      minimaxVoiceId: voiceId,
     })
     setSaved(true)
     toast.success(t('settings.saved'))
@@ -316,6 +322,18 @@ export function Settings() {
                 {t('settings.lockApp')}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Narrator Voice</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Default voice for blog lesson narration and vocabulary pronunciation.
+            </p>
+            <VoiceSelector voices={MINIMAX_VOICES} selectedId={voiceId} onSelect={setVoiceId} />
           </CardContent>
         </Card>
       </div>
