@@ -63,16 +63,16 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
       .join(', ')
     const systemPrompt = [
       'You are a Chinese conversation partner.',
-      `The learner is reviewing these words today: ${wordList}.`,
+      ...(wordList ? [`The learner is reviewing these words today: ${wordList}.`] : []),
       'Hold a natural conversation in the scene below.',
       'Naturally use and elicit these words.',
       'After 5–6 exchanges, note which target words the learner used successfully.',
       `Scene: ${scene}`,
     ].join('\n')
+    onClose()
     navigate(`/lesson/${mostRecentLesson.id}`, {
       state: { roleplaySystemPrompt: systemPrompt },
     })
-    onClose()
   }
 
   async function handleAddTask() {
@@ -91,8 +91,8 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
       <div className="fixed inset-0 z-50 bg-background">
         <StudySession
           preloadedEntries={queue.wordDrillsEntries}
-          onClose={() => { setActivePanel(null); void queue.refresh() }}
-          onSessionComplete={() => void queue.refresh()}
+          onClose={() => setActivePanel(null)}
+          onSessionComplete={() => { setActivePanel(null); void queue.refresh() }}
           disableLeaveGuard
         />
       </div>
@@ -168,7 +168,11 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 >
                   <CircleIndicator
                     done={dailyReviewDone}
-                    partial={!dailyReviewDone && (queue.wordDrillsDone || queue.sentenceHuntDone || queue.roleplayDone)}
+                    partial={!dailyReviewDone && (
+                      (queue.hasWordDrills && queue.wordDrillsDone)
+                      || (queue.hasSentenceHunt && queue.sentenceHuntDone)
+                      || (queue.hasRoleplay && queue.roleplayDone)
+                    )}
                   />
                   <span className={cn(
                     'flex-1 text-sm font-semibold',
@@ -201,7 +205,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                         onStart={() => setActivePanel('sentence-hunt')}
                       />
                     )}
-                    {queue.hasRoleplay && (
+                    {queue.hasRoleplay && !!mostRecentLesson && (
                       <SubtaskRow
                         label="Roleplay"
                         hint="Free conversation"
