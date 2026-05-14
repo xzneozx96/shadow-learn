@@ -1,18 +1,15 @@
+// frontend/src/components/study-queue/DailyQueuePopup.tsx
 import type { StudyQueueState } from '@/hooks/useStudyQueue'
-import { ArrowRight, Check, ChevronDown, Plus, Trash2, X } from 'lucide-react'
+import { BookOpen, Check, ChevronDown, Ear, FileText, Mic, PenLine, Plus, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SentenceHuntSession } from '@/components/study-queue/SentenceHuntSession'
-import { StudySession } from '@/components/study/StudySession'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { cn } from '@/lib/utils'
 
-const ROLEPLAY_SCENES = ['café', 'taxi', 'market', 'doctor', 'hotel']
-
-type ActivePanel = null | 'word-drills' | 'sentence-hunt'
+type ActivePanel = null | 'vocabulary' | 'listening' | 'speaking' | 'reading' | 'writing'
 
 interface Props {
   queue: StudyQueueState
@@ -35,51 +32,13 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
     .sort((a, b) => b.lastOpenedAt.localeCompare(a.lastOpenedAt))
     .find(l => !l.status || l.status === 'complete')
 
-  const hasAnyContent
-    = queue.hasWordDrills
-      || queue.hasSentenceHunt
-      || queue.hasRoleplay
-      || !!mostRecentLesson
-      || queue.customTasks.length > 0
-
-  // Determine which sub-task gets the primary (filled) CTA
-  function primarySubtask(): 'word-drills' | 'sentence-hunt' | 'roleplay' | null {
-    if (queue.hasWordDrills && !queue.wordDrillsDone)
-      return 'word-drills'
-    if (queue.hasSentenceHunt && !queue.sentenceHuntDone)
-      return 'sentence-hunt'
-    if (queue.hasRoleplay && !queue.roleplayDone)
-      return 'roleplay'
-    return null
-  }
+  const hasAnyContent = queue.hasDailyReview || !!mostRecentLesson || queue.customTasks.length > 0
 
   function handleStartShadowing() {
     if (!mostRecentLesson)
       return
     onClose()
     navigate(`/lesson/${mostRecentLesson.id}?shadowing=true`)
-  }
-
-  function handleStartRoleplay() {
-    if (!queue.hasRoleplay || !mostRecentLesson)
-      return
-    queue.markRoleplayDone() // optimistic — user will do it in companion
-    const scene = ROLEPLAY_SCENES[Math.floor(Math.random() * ROLEPLAY_SCENES.length)]
-    const wordList = queue.wordDrillsEntries
-      .map(e => `${e.word} (${e.meaning})`)
-      .join(', ')
-    const systemPrompt = [
-      'You are a Chinese conversation partner.',
-      ...(wordList ? [`The learner is reviewing these words today: ${wordList}.`] : []),
-      'Hold a natural conversation in the scene below.',
-      'Naturally use and elicit these words.',
-      'After 5–6 exchanges, note which target words the learner used successfully.',
-      `Scene: ${scene}`,
-    ].join('\n')
-    onClose()
-    navigate(`/lesson/${mostRecentLesson.id}`, {
-      state: { roleplaySystemPrompt: systemPrompt },
-    })
   }
 
   async function handleAddTask() {
@@ -91,46 +50,66 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
     setAddingTask(false)
   }
 
-  // ── Inline panels ──────────────────────────────────────────────────────────
+  const skills = [
+    {
+      key: 'vocabulary' as const,
+      label: t('queue.skill.vocabulary'),
+      hint: t('queue.skill.vocabulary.hint'),
+      done: queue.vocabularyDone,
+      icon: BookOpen,
+    },
+    {
+      key: 'listening' as const,
+      label: t('queue.skill.listening'),
+      hint: t('queue.skill.listening.hint'),
+      done: queue.listeningDone,
+      icon: Ear,
+    },
+    {
+      key: 'speaking' as const,
+      label: t('queue.skill.speaking'),
+      hint: t('queue.skill.speaking.hint'),
+      done: queue.speakingDone,
+      icon: Mic,
+    },
+    {
+      key: 'reading' as const,
+      label: t('queue.skill.reading'),
+      hint: t('queue.skill.reading.hint'),
+      done: queue.readingDone,
+      icon: FileText,
+    },
+    {
+      key: 'writing' as const,
+      label: t('queue.skill.writing'),
+      hint: t('queue.skill.writing.hint'),
+      done: queue.writingDone,
+      icon: PenLine,
+    },
+  ]
 
-  if (activePanel === 'word-drills') {
+  // Full-screen skill panel
+  if (activePanel !== null) {
+    // Skill sessions wired in Task 14 — placeholder for now
     return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <StudySession
-          preloadedEntries={queue.wordDrillsEntries}
-          onClose={() => setActivePanel(null)}
-          onSessionComplete={() => { setActivePanel(null); void queue.refresh() }}
-          disableLeaveGuard
-        />
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">
+          <div>
+            {activePanel}
+            {' '}
+            session — coming soon
+          </div>
+          <Button variant="ghost" onClick={() => { setActivePanel(null); void queue.refresh() }}>
+            Back
+          </Button>
+        </div>
       </div>
     )
   }
-
-  if (activePanel === 'sentence-hunt') {
-    return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <SentenceHuntSession
-          segments={queue.sentenceHuntSegments}
-          onComplete={() => { setActivePanel(null); void queue.refresh() }}
-          onClose={() => setActivePanel(null)}
-        />
-      </div>
-    )
-  }
-
-  // ── Popover card ───────────────────────────────────────────────────────────
-
-  const primary = primarySubtask()
-  const dailyReviewDone
-    = (!queue.hasWordDrills || queue.wordDrillsDone)
-      && (!queue.hasSentenceHunt || queue.sentenceHuntDone)
-      && (!queue.hasRoleplay || queue.roleplayDone)
 
   return (
-    <div className="relative w-[340px] rounded-2xl overflow-hidden bg-black/20 backdrop-blur-2xl border border-white/10 flex flex-col bg-linear-to-br from-zinc-800/30 to-zinc-800/50 shadow-xl">
-      <div className="absolute inset-0 bg-linear-to-b from-white/3 to-transparent pointer-events-none rounded-2xl" />
+    <div className="relative w-[340px] bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
 
-      {/* Overlay: catches clicks outside the inline edit input, prevents them reaching other items */}
       {editingTaskId !== null && (
         <div
           className="absolute inset-0 z-10"
@@ -146,7 +125,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
       )}
 
       {/* Header */}
-      <div className="p-3 border-b border-white/10">
+      <div className="p-3 border-b border-border">
         {queue.allDoneToday
           ? (
               <>
@@ -166,19 +145,18 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
             )}
       </div>
 
-      {/* Empty state (no lessons, no vocab) */}
-      {!hasAnyContent && !queue.loading && (
-        <div className="px-5 py-6 text-center text-sm text-muted-foreground">
-          {t('queue.empty')}
-        </div>
-      )}
+      {!hasAnyContent && !queue.loading
+        && (
+          <div className="px-5 py-6 text-center text-sm text-muted-foreground">
+            {t('queue.empty')}
+          </div>
+        )}
 
-      {/* Task list */}
       {hasAnyContent && (
         <div className="py-1">
 
-          {/* Daily Review (expandable) */}
-          {(queue.hasWordDrills || queue.hasSentenceHunt || queue.hasRoleplay) && (
+          {/* Daily Review (expandable parent) */}
+          {queue.hasDailyReview && (
             <>
               <button
                 type="button"
@@ -186,16 +164,12 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 onClick={() => setExpanded(e => !e)}
               >
                 <CircleIndicator
-                  done={dailyReviewDone}
-                  partial={!dailyReviewDone && (
-                    (queue.hasWordDrills && queue.wordDrillsDone)
-                    || (queue.hasSentenceHunt && queue.sentenceHuntDone)
-                    || (queue.hasRoleplay && queue.roleplayDone)
-                  )}
+                  done={queue.dailyReviewDone}
+                  partial={!queue.dailyReviewDone && skills.some(s => s.done)}
                 />
                 <span className={cn(
                   'flex-1 text-sm font-semibold',
-                  dailyReviewDone ? 'line-through text-muted-foreground' : '',
+                  queue.dailyReviewDone ? 'line-through text-muted-foreground' : '',
                 )}
                 >
                   {t('queue.dailyReview')}
@@ -205,7 +179,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
                   className="flex items-center"
                 >
-                  <ChevronDown className="size-4.5 text-muted-foreground/50" />
+                  <ChevronDown className="size-4 text-muted-foreground/50" />
                 </motion.span>
               </button>
 
@@ -219,46 +193,34 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                     className="overflow-hidden"
                   >
                     <div className="relative pl-4 mb-1">
-                      <div className="absolute left-6 top-0 bottom-0 w-px bg-primary/20" />
-                      {queue.hasWordDrills && (
-                        <SubtaskRow
-                          label={t('queue.wordDrills')}
-                          hint={t('queue.wordDrillsHint')}
-                          done={queue.wordDrillsDone}
-                          primary={primary === 'word-drills'}
-                          onStart={() => setActivePanel('word-drills')}
+                      <div className="absolute left-[27px] top-0 bottom-2 w-px bg-border/50" />
+                      {skills.map(skill => (
+                        <SkillRow
+                          key={skill.key}
+                          label={skill.label}
+                          hint={skill.hint}
+                          done={skill.done}
+                          doneLabel={t('queue.subtask.done')}
+                          Icon={skill.icon}
+                          onStart={() => setActivePanel(skill.key)}
                         />
-                      )}
-                      {queue.hasSentenceHunt && (
-                        <SubtaskRow
-                          label={t('queue.sentenceHunt')}
-                          hint={t('queue.sentenceHuntHint')}
-                          done={queue.sentenceHuntDone}
-                          primary={primary === 'sentence-hunt'}
-                          onStart={() => setActivePanel('sentence-hunt')}
-                        />
-                      )}
-                      {queue.hasRoleplay && !!mostRecentLesson && (
-                        <SubtaskRow
-                          label={t('queue.roleplay')}
-                          hint={t('queue.roleplayHint')}
-                          done={queue.roleplayDone}
-                          primary={primary === 'roleplay'}
-                          onStart={handleStartRoleplay}
-                        />
-                      )}
+                      ))}
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {(mostRecentLesson || queue.customTasks.length > 0) && (
+                <div className="h-px bg-border/30 mx-4 my-0.5" />
+              )}
             </>
           )}
 
-          {/* Shadowing Practice */}
+          {/* Shadowing */}
           {mostRecentLesson && (
             <button
               type="button"
-              className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left"
               onClick={handleStartShadowing}
             >
               <CircleIndicator done={queue.shadowingDone} partial={false} />
@@ -279,9 +241,9 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               <button
                 type="button"
                 className={cn(
-                  'size-4 rounded-full border-2 shrink-0 flex items-center justify-center text-xs font-bold transition-colors',
+                  'size-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors',
                   task.completedDate === today
-                    ? 'bg-primary border-primary text-white'
+                    ? 'bg-emerald-500 border-emerald-500 text-white'
                     : 'border-primary/50 hover:border-primary',
                 )}
                 onClick={() => void queue.toggleCustomTask(task.id)}
@@ -302,9 +264,8 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                             return
                           e.currentTarget.blur()
                         }
-                        if (e.key === 'Escape') {
+                        if (e.key === 'Escape')
                           setEditingTaskId(null)
-                        }
                       }}
                       onBlur={() => {
                         const title = editingTaskTitle.trim()
@@ -333,16 +294,16 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 className="text-destructive hover:text-destructive"
                 onMouseDown={(e) => { e.preventDefault(); void queue.removeCustomTask(task.id) }}
               >
-                <Trash2 className="size-3.5" />
+                <X className="size-3" />
               </Button>
             </div>
           ))}
-
         </div>
       )}
 
-      {/* Add custom task — always visible */}
+      {/* Add task */}
       <div className="py-1">
+        <div className="h-px bg-border/30 mx-4 my-0.5" />
         {addingTask
           ? (
               <div className="flex items-center gap-3 px-4 py-2">
@@ -357,26 +318,17 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter')
                       void handleAddTask()
-                    if (e.key === 'Escape') { setAddingTask(false); setNewTaskTitle('') }
+                    if (e.key === 'Escape') {
+                      setAddingTask(false)
+                      setNewTaskTitle('')
+                    }
                   }}
                 />
                 <div className="flex gap-1">
-                  <Button
-                    size="icon-xs"
-                    variant="default"
-                    type="button"
-                    className="rounded-full"
-                    onClick={() => void handleAddTask()}
-                  >
+                  <Button size="icon-xs" variant="default" type="button" className="rounded-full" onClick={() => void handleAddTask()}>
                     <Check className="size-3" />
                   </Button>
-                  <Button
-                    size="icon-xs"
-                    variant="ghost"
-                    type="button"
-                    className="text-muted-foreground hover:text-destructive-foreground text-xs rounded-full"
-                    onClick={() => { setAddingTask(false); setNewTaskTitle('') }}
-                  >
+                  <Button size="icon-xs" variant="ghost" type="button" className="rounded-full" onClick={() => { setAddingTask(false); setNewTaskTitle('') }}>
                     <X className="size-3" />
                   </Button>
                 </div>
@@ -385,7 +337,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
           : (
               <button
                 type="button"
-                className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left group"
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left group"
                 onClick={() => setAddingTask(true)}
               >
                 <div className="size-4 rounded-full border border-dashed border-border/40 group-hover:border-primary/40 flex items-center justify-center shrink-0 transition-colors">
@@ -397,22 +349,21 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               </button>
             )}
       </div>
-
     </div>
   )
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function CircleIndicator({ done, partial }: { done: boolean, partial: boolean }) {
   return (
     <div className={cn(
-      'size-4 rounded-full border-2 shrink-0 flex items-center justify-center text-[10px] font-bold',
+      'size-4 rounded-full border-2 shrink-0 flex items-center justify-center',
       done
-        ? 'bg-primary border-primary text-white'
+        ? 'bg-emerald-500 border-emerald-500 text-white'
         : partial
-          ? 'border-primary bg-primary/10'
-          : 'border-primary/50 hover:border-primary',
+          ? 'border-emerald-500 bg-emerald-500/10'
+          : 'border-border',
     )}
     >
       {done && <Check className="size-3" />}
@@ -421,27 +372,38 @@ function CircleIndicator({ done, partial }: { done: boolean, partial: boolean })
   )
 }
 
-interface SubtaskRowProps {
+interface SkillRowProps {
   label: string
   hint: string
   done: boolean
-  primary: boolean
+  doneLabel: string
+  Icon: React.ElementType
   onStart: () => void
 }
 
-function SubtaskRow({ label, hint, done, primary, onStart }: SubtaskRowProps) {
+function SkillRow({ label, hint, done, doneLabel, Icon, onStart }: SkillRowProps) {
   return (
     <div
       className="relative flex items-center gap-3 pl-6 pr-4 py-1.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
       onClick={done ? undefined : onStart}
     >
+      <div className="absolute left-0 top-1/2 w-2.5 h-px bg-border/50" />
+      <div className={cn(
+        'size-6 rounded-md flex items-center justify-center shrink-0',
+        done ? 'bg-emerald-500/10' : 'bg-primary/10',
+      )}
+      >
+        <Icon className={cn('size-3.5', done ? 'text-emerald-500' : 'text-primary')} />
+      </div>
       <div className="flex-1 min-w-0">
         <div className={cn('text-sm font-semibold', done ? 'line-through text-muted-foreground' : '')}>
           {label}
         </div>
         {!done && <div className="text-xs text-muted-foreground/50 mt-0.5">{hint}</div>}
       </div>
-      {done ? <Check className="size-4 text-primary" /> : <StartButton primary={primary} onClick={onStart} />}
+      {done
+        ? <span className="text-xs font-bold text-emerald-500 shrink-0">{doneLabel}</span>
+        : <StartButton primary={false} onClick={onStart} />}
     </div>
   )
 }
@@ -449,15 +411,16 @@ function SubtaskRow({ label, hint, done, primary, onStart }: SubtaskRowProps) {
 function StartButton({ primary, onClick }: { primary: boolean, onClick?: () => void }) {
   return (
     <button
+      type="button"
       className={cn(
-        'w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 transition-transform hover:scale-105',
+        'w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-transform hover:scale-105',
         primary
           ? 'bg-primary text-primary-foreground'
           : 'border border-primary/30 text-primary',
       )}
       onClick={(e) => { e.stopPropagation(); onClick?.() }}
     >
-      <ArrowRight className="size-3 -rotate-45" />
+      <span className="text-xs">›</span>
     </button>
   )
 }
