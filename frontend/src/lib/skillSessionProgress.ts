@@ -1,3 +1,7 @@
+import type { ShadowLearnDB } from '@/db'
+import { getSpacedRepetitionItem, saveSpacedRepetitionItem } from '@/db'
+import { createSpacedRepetitionItem, updateSpacedRepetition } from '@/lib/spacedRepetition'
+
 export type SkillName = 'vocabulary' | 'listening' | 'speaking' | 'writing'
 
 const SESSION_KEY = (skill: SkillName, date: string) => `skill-session-${date}-${skill}`
@@ -84,4 +88,21 @@ export function clearExpiredSessionKeys(today: string): void {
     }
   }
   keysToRemove.forEach(k => localStorage.removeItem(k))
+}
+
+export async function flushSM2Pending(db: ShadowLearnDB, date: string): Promise<void> {
+  const pending = getSM2Pending(date)
+  const vocabIds = Object.keys(pending)
+  if (vocabIds.length === 0)
+    return
+
+  for (const vocabId of vocabIds) {
+    const score = pending[vocabId]
+    const existing = await getSpacedRepetitionItem(db, vocabId)
+    const item = existing ?? createSpacedRepetitionItem(vocabId)
+    const updated = updateSpacedRepetition(item, score)
+    await saveSpacedRepetitionItem(db, updated)
+  }
+
+  clearSM2Pending(date)
 }

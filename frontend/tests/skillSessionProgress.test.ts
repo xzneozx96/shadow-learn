@@ -1,8 +1,12 @@
+import type { ShadowLearnDB } from '@/db'
+import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getSpacedRepetitionItem, initDB } from '@/db'
 import {
   bufferSM2Score,
   clearExpiredSessionKeys,
   clearSM2Pending,
+  flushSM2Pending,
   getSkillProgress,
   getSM2Pending,
   isReadingDone,
@@ -10,6 +14,7 @@ import {
   markReadingSubmitted,
   markWordComplete,
 } from '@/lib/skillSessionProgress'
+import 'fake-indexeddb/auto'
 
 beforeEach(() => {
   localStorage.clear()
@@ -120,5 +125,65 @@ describe('sM-2 buffer', () => {
     bufferSM2Score('v1', 20, '2026-05-14')
     const pending = getSM2Pending('2026-05-14')
     expect(pending).toEqual({ v1: 20, v2: 40 })
+  })
+})
+
+describe('flushSM2Pending', () => {
+  let db: ShadowLearnDB
+
+  beforeEach(async () => {
+    globalThis.indexedDB = new IDBFactory()
+    db = await initDB()
+    localStorage.clear()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
+  })
+
+  afterEach(async () => {
+    vi.useRealTimers()
+    localStorage.clear()
+    db.close()
+    globalThis.indexedDB = new IDBFactory()
+  })
+
+  it('writes SM-2 item with buffered worst score', async () => {
+    bufferSM2Score('v1', 80, '2026-05-14')
+    bufferSM2Score('v1', 20, '2026-05-14')
+    await flushSM2Pending(db, '2026-05-14')
+    const item = await getSpacedRepetitionItem(db, 'v1')
+    // score 20 → quality 1 → intervalDays 1, repetitions 0 (fail path resets)
+    // dueDate is set to today + intervalDays = 2026-05-15
+    expect(item).not.toBeUndefined()
+    expect(item?.dueDate).toBe('2026-05-15')
+  })
+
+  it('clears the pending key after flush', async () => {
+    bufferSM2Score('v1', 80, '2026-05-14')
+    await flushSM2Pending(db, '2026-05-14')
+    expect(getSM2Pending('2026-05-14')).toEqual({})
+  })
+
+  it('no-op when pending is empty', async () => {
+    await expect(flushSM2Pending(db, '2026-05-14')).resolves.not.toThrow()
+  })
+
+  it('flushes multiple words independently', async () => {
+    // First flush: both score high, both get intervalDays 1
+    bufferSM2Score('v1', 100, '2026-05-14')
+    bufferSM2Score('v2', 100, '2026-05-14')
+    await flushSM2Pending(db, '2026-05-14')
+
+    // Second flush (simulating a future review): v1 stays high, v2 fails
+    bufferSM2Score('v1', 100, '2026-05-14')
+    bufferSM2Score('v2', 0, '2026-05-14')
+    await flushSM2Pending(db, '2026-05-14')
+
+    const item1 = await getSpacedRepetitionItem(db, 'v1')
+    const item2 = await getSpacedRepetitionItem(db, 'v2')
+    expect(item1).not.toBeUndefined()
+    expect(item2).not.toBeUndefined()
+    // v1 has 2 successful reviews → intervalDays 6 (SM-2 progression)
+    // v2 failed on second review → intervalDays 1
+    expect((item1?.intervalDays ?? 0) > (item2?.intervalDays ?? 0)).toBe(true)
   })
 })
