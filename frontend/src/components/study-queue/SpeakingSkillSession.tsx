@@ -1,7 +1,7 @@
 import type { VocabEntry } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { Button } from '@/components/ui/button'
@@ -14,27 +14,31 @@ interface Props {
   entries: VocabEntry[]
   date: string
   onComplete: () => void
+  onProgress?: () => void
   onBack: () => void
   embedded?: boolean
 }
 
-export function SpeakingSkillSession({ entries, date, onComplete, onBack, embedded }: Props) {
+export function SpeakingSkillSession({ entries, date, onComplete, onProgress, onBack, embedded }: Props) {
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
   const sourceLanguage = entries[0]?.sourceLanguage ?? 'zh-CN'
   const caps = getLanguageCaps(sourceLanguage)
 
-  const completedIds = new Set(getSkillProgress('speaking', date))
-  const [skippedIds, setSkippedIds] = useState(new Set<string>())
+  const [completedIds, setCompletedIds] = useState(() => new Set(getSkillProgress('speaking', date)))
+  const [skippedIds, setSkippedIds] = useState(() => new Set<string>())
   const remaining = entries.filter(e => !completedIds.has(e.id) && !skippedIds.has(e.id))
 
   const total = entries.length
   const doneCount = completedIds.size + skippedIds.size
 
-  if (remaining.length === 0) {
-    onComplete()
+  useEffect(() => {
+    if (remaining.length === 0)
+      onComplete()
+  }, [remaining.length, onComplete])
+
+  if (remaining.length === 0)
     return null
-  }
 
   const current = remaining[0]
 
@@ -46,10 +50,14 @@ export function SpeakingSkillSession({ entries, date, onComplete, onBack, embedd
 
   function handleNext(score: number, opts?: { skipped?: boolean }) {
     void logExerciseResult({ vocabEntry: current, exerciseType: 'pronunciation', score })
-    if (opts?.skipped)
+    if (opts?.skipped) {
       setSkippedIds(prev => new Set([...prev, current.id]))
-    else
+    }
+    else {
       markWordComplete('speaking', date, current.id)
+      setCompletedIds(prev => new Set([...prev, current.id]))
+      onProgress?.()
+    }
   }
 
   const progress = `${doneCount + 1} / ${total}`

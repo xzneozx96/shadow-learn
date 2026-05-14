@@ -60,9 +60,9 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
   const skills = [
     { key: 'vocabulary' as const, label: t('queue.skill.vocabulary'), done: queue.vocabularyDone, icon: BookOpen },
     { key: 'listening' as const, label: t('queue.skill.listening'), done: queue.listeningDone, icon: Ear },
-    { key: 'speaking' as const, label: t('queue.skill.speaking'), done: queue.speakingDone, icon: Mic },
     { key: 'reading' as const, label: t('queue.skill.reading'), done: queue.readingDone, icon: FileText },
     { key: 'writing' as const, label: t('queue.skill.writing'), done: queue.writingDone, icon: PenLine },
+    { key: 'speaking' as const, label: t('queue.skill.speaking'), done: queue.speakingDone, icon: Mic },
   ]
 
   return (
@@ -116,10 +116,12 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
           {/* Daily Review (expandable parent) */}
           {queue.hasDailyReview && (
             <>
-              <button
-                type="button"
-                className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left"
+              <div
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 onClick={() => setExpanded(e => !e)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(ex => !ex) } }}
               >
                 <CircleIndicator
                   done={queue.dailyReviewDone}
@@ -147,7 +149,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 >
                   <ChevronDown className="size-4.5 text-muted-foreground/50" />
                 </motion.span>
-              </button>
+              </div>
 
               <AnimatePresence initial={false}>
                 {expanded && (
@@ -178,10 +180,12 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
 
           {/* Shadowing */}
           {mostRecentLesson && (
-            <button
-              type="button"
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left"
+            <div
+              role="button"
+              tabIndex={0}
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               onClick={handleStartShadowing}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStartShadowing() } }}
             >
               <CircleIndicator done={queue.shadowingDone} partial={false} />
               <span className={cn(
@@ -198,7 +202,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                     </Button>
                   )
                 : <StartButton />}
-            </button>
+            </div>
           )}
 
           {/* Custom tasks */}
@@ -345,7 +349,7 @@ function SkillRow({ label, done, onStart }: SkillRowProps) {
     <div
       role="button"
       tabIndex={done ? -1 : 0}
-      className="relative flex items-center gap-3 pl-6 pr-4 py-1.5 rounded-lg hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
+      className="relative flex items-center gap-3 pl-6 pr-4 py-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
       onClick={done ? undefined : onStart}
       onKeyDown={done ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStart() } }}
     >

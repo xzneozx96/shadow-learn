@@ -88,7 +88,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
 
       {checked && (
         <div className="mt-4 space-y-3">
-          <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
+          <div className="rounded-lg border border-border/50 bg-muted px-4 py-3">
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-3">{t('study.yourAnswer')}</p>
             <div className="flex flex-wrap gap-1">
               {diff.map((tok, i) => (
@@ -112,7 +112,7 @@ export function DictationExercise({ entry, progress = '', onNext, playTTS, loadi
             {t('study.accurate')}
           </p>
           {accuracyScore < 100 && (
-            <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
+            <div className="rounded-lg border border-border/50 bg-muted px-4 py-3">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-1">{t('study.correctAnswer')}</p>
               <p className="text-xl font-medium">{expected}</p>
             </div>

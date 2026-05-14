@@ -1,5 +1,5 @@
 import type { VocabEntry } from '@/types'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { CharacterWritingExercise } from '@/components/study/exercises/CharacterWritingExercise'
@@ -19,11 +19,12 @@ interface Props {
   entries: VocabEntry[]
   date: string
   onComplete: () => void
+  onProgress?: () => void
   onBack: () => void
   embedded?: boolean
 }
 
-export function WritingSkillSession({ entries, date, onComplete, onBack, embedded }: Props) {
+export function WritingSkillSession({ entries, date, onComplete, onProgress, onBack, embedded }: Props) {
   const { db, keys } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
@@ -31,39 +32,60 @@ export function WritingSkillSession({ entries, date, onComplete, onBack, embedde
   const { playTTS } = useTTS(db, keys, sourceLanguage)
   const caps = getLanguageCaps(sourceLanguage)
 
-  const completedIds = new Set(getSkillProgress('writing', date))
-  const [skippedIds, setSkippedIds] = useState(new Set<string>())
+  const [completedIds, setCompletedIds] = useState(() => new Set(getSkillProgress('writing', date)))
+  const [skippedIds, setSkippedIds] = useState(() => new Set<string>())
   const remaining = entries.filter(e => !completedIds.has(e.id) && !skippedIds.has(e.id))
   const [step, setStep] = useState<ExerciseStep>('character-writing')
-  const [hasStrokeData, setHasStrokeData] = useState(false)
+  const [strokeData, setStrokeData] = useState<boolean | null>(
+    caps.hasCharacterWriting ? null : false,
+  )
   const [characterSkipped, setCharacterSkipped] = useState(false)
 
   const total = entries.length
   const doneCount = completedIds.size + skippedIds.size
   const current = remaining[0]
 
+  // Reset stroke data when word or writing support changes (setState-during-render)
+  const [lastCurrentId, setLastCurrentId] = useState(current?.id)
+  const [lastHasWriting, setLastHasWriting] = useState(caps.hasCharacterWriting)
+  if (lastCurrentId !== current?.id || lastHasWriting !== caps.hasCharacterWriting) {
+    setLastCurrentId(current?.id)
+    setLastHasWriting(caps.hasCharacterWriting)
+    setStrokeData(current && caps.hasCharacterWriting ? null : false)
+  }
+
+  const hasStrokeData = strokeData === true
+  const strokeDataLoading = strokeData === null
+
   useEffect(() => {
-    if (!current || !caps.hasCharacterWriting) {
-      setHasStrokeData(false)
+    if (!current || !caps.hasCharacterWriting)
       return
-    }
     getDecomposition(current.word[0] ?? '').then((components) => {
-      setHasStrokeData(components.length > 0)
-    }).catch(() => setHasStrokeData(false))
+      setStrokeData(components.length > 0)
+    }).catch(() => {
+      setStrokeData(false)
+    })
   }, [current, caps.hasCharacterWriting])
 
-  if (remaining.length === 0) {
-    onComplete()
+  useEffect(() => {
+    if (remaining.length === 0)
+      onComplete()
+  }, [remaining.length, onComplete])
+
+  if (remaining.length === 0)
     return null
-  }
 
   const progress = `${doneCount + 1} / ${total}`
 
   function advanceWord(skipped = false) {
-    if (skipped)
+    if (skipped) {
       setSkippedIds(prev => new Set([...prev, current.id]))
-    else
+    }
+    else {
       markWordComplete('writing', date, current.id)
+      setCompletedIds(prev => new Set([...prev, current.id]))
+      onProgress?.()
+    }
     setStep('character-writing')
     setCharacterSkipped(false)
   }
@@ -90,33 +112,39 @@ export function WritingSkillSession({ entries, date, onComplete, onBack, embedde
   const content = (
     <AnimatePresence mode="wait">
       <motion.div
-        key={`${current.id}-${effectiveStep}`}
+        key={`${current.id}-${strokeDataLoading ? 'loading' : effectiveStep}`}
         className="flex-1 overflow-y-auto p-10"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
       >
-        {effectiveStep === 'character-writing'
+        {strokeDataLoading
           ? (
-              <CharacterWritingExercise
-                entry={current}
-                progress={progress}
-                caps={caps}
-                writingReps={2}
-                onNext={handleCharacterWritingNext}
-              />
+              <div className="h-full flex items-center justify-center">
+                <Loader2 className="size-8 animate-spin text-muted-foreground" />
+              </div>
             )
-          : (
-              <ReconstructionExercise
-                entry={current}
-                words={reconstructionWords}
-                caps={caps}
-                progress={progress}
-                onNext={handleReconstructionNext}
-                playTTS={playTTS}
-              />
-            )}
+          : effectiveStep === 'character-writing'
+            ? (
+                <CharacterWritingExercise
+                  entry={current}
+                  progress={progress}
+                  caps={caps}
+                  writingReps={2}
+                  onNext={handleCharacterWritingNext}
+                />
+              )
+            : (
+                <ReconstructionExercise
+                  entry={current}
+                  words={reconstructionWords}
+                  caps={caps}
+                  progress={progress}
+                  onNext={handleReconstructionNext}
+                  playTTS={playTTS}
+                />
+              )}
       </motion.div>
     </AnimatePresence>
   )

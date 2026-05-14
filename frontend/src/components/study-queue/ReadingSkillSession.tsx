@@ -1,6 +1,6 @@
 // frontend/src/components/study-queue/ReadingSkillSession.tsx
 import type { VocabEntry } from '@/types'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,6 +14,7 @@ import {
   setReadingPassage,
   setReadingPassagePinyin,
 } from '@/lib/skillSessionProgress'
+import { cn } from '@/lib/utils'
 
 type Phase = 'loading' | 'load-error' | 'reading' | 'translating' | 'grading' | 'result'
 
@@ -130,7 +131,10 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
   const content = (
     <div className="flex-1 overflow-y-auto p-10 flex flex-col gap-6">
       {phase === 'loading' && (
-        <p className="text-sm text-muted-foreground">{t('reading.generating')}</p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          {t('reading.generating')}
+        </div>
       )}
 
       {phase === 'load-error' && (
@@ -174,28 +178,41 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
           )}
 
           {phase === 'grading' && (
-            <p className="text-sm text-muted-foreground">{t('reading.grading')}</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              {t('reading.grading')}
+            </div>
           )}
 
           {phase === 'result' && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               {gradeResult
                 ? (
-                    <>
-                      {gradeResult.score && (
-                        <div className={`text-lg font-bold ${scoreColorMap[gradeResult.score] ?? ''}`}>
-                          {scoreLabelMap[gradeResult.score] ?? gradeResult.score}
-                        </div>
+                    <div className={cn(
+                      'rounded-xl border px-4 py-3',
+                      gradeResult.score === 'excellent'
+                        ? 'border-emerald-500/30 bg-emerald-500/10'
+                        : gradeResult.score === 'good'
+                          ? 'border-blue-500/30 bg-blue-500/10'
+                          : 'border-amber-500/30 bg-amber-500/10',
+                    )}
+                    >
+                      <span className={cn(
+                        'text-sm font-bold shrink-0 mt-0.5',
+                        scoreColorMap[gradeResult.score] ?? 'text-muted-foreground',
                       )}
+                      >
+                        {scoreLabelMap[gradeResult.score] ?? gradeResult.score}
+                      </span>
                       {gradeResult.feedback && (
-                        <p className="text-sm">{gradeResult.feedback}</p>
+                        <p className="text-sm leading-relaxed">{gradeResult.feedback}</p>
                       )}
-                    </>
+                    </div>
                   )
                 : (
                     <p className="text-sm text-muted-foreground">{t('reading.gradingFailed')}</p>
                   )}
-              <Button onClick={onComplete}>
+              <Button size="lg" onClick={onComplete}>
                 {t('vocab.makeASentence.continue')}
               </Button>
             </div>

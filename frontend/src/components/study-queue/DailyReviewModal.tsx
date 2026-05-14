@@ -1,10 +1,10 @@
 import type { StudyQueueState } from '@/hooks/useStudyQueue'
-import { AlertTriangle, BookOpen, Check, ChevronRight, Ear, FileText, Mic, PenLine } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AlertTriangle, ArrowLeft, BookOpen, Check, Ear, FileText, Mic, PenLine, Sparkles } from 'lucide-react'
+import { useState } from 'react'
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useI18n } from '@/contexts/I18nContext'
-import { getReadingPassage, getSkillProgress, isReadingDone } from '@/lib/skillSessionProgress'
+import { getSkillProgress, isReadingDone } from '@/lib/skillSessionProgress'
 import { cn } from '@/lib/utils'
 import { ListeningSkillSession } from './ListeningSkillSession'
 import { ReadingSkillSession } from './ReadingSkillSession'
@@ -28,7 +28,9 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
   const { t } = useI18n()
   const today = new Date().toISOString().split('T')[0]
   const [activeSkill, setActiveSkill] = useState<Skill | null>(null)
-  const [sessionVisited, setSessionVisited] = useState(new Set<Skill>())
+  const [sessionVisited, setSessionVisited] = useState(() => new Set<Skill>())
+  const [, setProgressTick] = useState(0)
+  const onProgress = () => setProgressTick(t => t + 1)
 
   const skillDone: Record<Skill, boolean> = {
     vocabulary: queue.vocabularyDone,
@@ -49,8 +51,6 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
         return 'done'
       if (visited)
         return 'alert'
-      if (getReadingPassage(today))
-        return 'partial'
       return 'pending'
     }
 
@@ -73,12 +73,15 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
     return SKILL_ORDER.find(s => !skillDone[s] && !sessionVisited.has(s)) ?? null
   }
 
-  useEffect(() => {
+  // Reset session state when modal opens (setState-during-render)
+  const [lastOpen, setLastOpen] = useState(open)
+  if (lastOpen !== open) {
+    setLastOpen(open)
     if (open) {
       setSessionVisited(new Set())
       setActiveSkill(initialSkill ?? firstIncomplete())
     }
-  }, [open])
+  }
 
   function handleSkillComplete(justCompleted: Skill) {
     void queue.refresh()
@@ -108,7 +111,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()} disablePointerDismissal>
-      <DialogContent className="p-0 gap-0 overflow-hidden flex w-full max-w-5xl! rounded-xl h-[90vh]">
+      <DialogContent className="p-0 gap-0 overflow-hidden flex w-full max-w-5xl! rounded-xl h-[80vh]">
         <DialogTitle className="sr-only">Daily Review</DialogTitle>
 
         {/* Sidebar */}
@@ -167,7 +170,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
                 : isAlert
                   ? <AlertTriangle className="size-3.5 text-amber-500 shrink-0" />
                   : isPartial
-                    ? <ChevronRight className="size-3.5 text-blue-400 shrink-0" />
+                    ? <span className="size-3.5 rounded-full border border-primary/60 bg-primary/10 shrink-0 flex items-center justify-center"><span className="size-1.5 rounded-full bg-primary/80" /></span>
                     : null
 
               return (
@@ -219,18 +222,21 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
             <VocabularySkillSession
               {...sessionProps}
               onComplete={() => handleSkillComplete('vocabulary')}
+              onProgress={onProgress}
             />
           )}
           {activeSkill === 'listening' && (
             <ListeningSkillSession
               {...sessionProps}
               onComplete={() => handleSkillComplete('listening')}
+              onProgress={onProgress}
             />
           )}
           {activeSkill === 'speaking' && (
             <SpeakingSkillSession
               {...sessionProps}
               onComplete={() => handleSkillComplete('speaking')}
+              onProgress={onProgress}
             />
           )}
           {activeSkill === 'reading' && (
@@ -243,13 +249,24 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
             <WritingSkillSession
               {...sessionProps}
               onComplete={() => handleSkillComplete('writing')}
+              onProgress={onProgress}
             />
           )}
           {!activeSkill && !allDone && (
-            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-              {t('queue.review.selectSkill')}
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+              <div className="size-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <Sparkles className="size-6 text-primary" />
+              </div>
+              <div>
+                <div className="text-base font-semibold">{t('queue.review.selectSkill')}</div>
+                <div className="text-sm text-muted-foreground mt-1 flex items-center justify-center gap-1">
+                  <ArrowLeft className="size-3.5" />
+                  {t('queue.review.selectSkillHint')}
+                </div>
+              </div>
             </div>
           )}
+
         </div>
       </DialogContent>
     </Dialog>
@@ -259,13 +276,13 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function RingProgress({ done, total }: { done: number, total: number }) {
-  const r = 16
+  const r = 19
   const circ = 2 * Math.PI * r
   const pct = total > 0 ? done / total : 0
   const dash = pct * circ
 
   return (
-    <svg width="44" height="44" viewBox="0 0 44 44" className="shrink-0">
+    <svg viewBox="0 0 44 44" className="size-11 shrink-0">
       <circle cx="22" cy="22" r={r} fill="none" stroke="currentColor" strokeWidth="3" className="text-muted/20" />
       <circle
         cx="22"

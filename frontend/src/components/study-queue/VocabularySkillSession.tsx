@@ -1,7 +1,7 @@
 import type { VocabEntry } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FlashcardExercise } from '@/components/study/exercises/FlashcardExercise'
 import { RomanizationRecallExercise } from '@/components/study/exercises/RomanizationRecallExercise'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { useTTS } from '@/hooks/useTTS'
 import { API_BASE } from '@/lib/config'
 import { getLanguageCaps } from '@/lib/language-caps'
 import { getSkillProgress, markWordComplete } from '@/lib/skillSessionProgress'
+import { cn } from '@/lib/utils'
 
 type ExerciseStep = 'flashcard' | 'romanization' | 'make-a-sentence'
 
@@ -24,11 +25,12 @@ interface Props {
   entries: VocabEntry[]
   date: string
   onComplete: () => void
+  onProgress?: () => void
   onBack: () => void
   embedded?: boolean
 }
 
-export function VocabularySkillSession({ entries, date, onComplete, onBack, embedded }: Props) {
+export function VocabularySkillSession({ entries, date, onComplete, onProgress, onBack, embedded }: Props) {
   const { db, keys } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
@@ -48,16 +50,20 @@ export function VocabularySkillSession({ entries, date, onComplete, onBack, embe
   const total = entries.length
   const completedCount = completedIds.size
 
-  if (remaining.length === 0) {
-    onComplete()
+  useEffect(() => {
+    if (remaining.length === 0)
+      onComplete()
+  }, [remaining.length, onComplete])
+
+  if (remaining.length === 0)
     return null
-  }
 
   const current = remaining[0]
   const progress = `${completedCount + 1} / ${total}`
 
   function advanceWord() {
     markWordComplete('vocabulary', date, current.id)
+    onProgress?.()
     setSentenceInput('')
     setSentenceResult(null)
     setSentenceError(false)
@@ -133,19 +139,24 @@ export function VocabularySkillSession({ entries, date, onComplete, onBack, embe
           />
         )}
         {step === 'make-a-sentence' && (
-          <div className="flex flex-col gap-4">
-            <div className="text-2xl font-bold">{current.word}</div>
-            <div className="text-sm text-muted-foreground">{current.meaning}</div>
-            <p className="text-sm">{t('vocab.makeASentence.prompt')}</p>
-            <textarea
-              className="w-full rounded-lg border border-border bg-muted/20 p-3 text-sm focus:outline-none focus:border-primary resize-none"
-              rows={3}
-              value={sentenceInput}
-              onChange={e => setSentenceInput(e.target.value)}
-              disabled={!!sentenceResult || sentenceGrading}
-            />
+          <div className="flex flex-col gap-8">
+            <div>
+              <h3 className="text-2xl font-bold">{current.word}</h3>
+              <p className="text-sm text-muted-foreground">{current.meaning}</p>
+            </div>
+            <div>
+              <p className="text-sm mb-2">{t('vocab.makeASentence.prompt')}</p>
+              <textarea
+                className="w-full rounded-lg border border-border bg-input/50 p-3 text-base focus:outline-none focus:border-primary resize-none"
+                rows={3}
+                value={sentenceInput}
+                onChange={e => setSentenceInput(e.target.value)}
+                disabled={!!sentenceResult || sentenceGrading}
+              />
+            </div>
             {!sentenceResult && !sentenceError && (
               <Button
+                size="lg"
                 onClick={() => void handleSentenceSubmit()}
                 disabled={sentenceGrading || !sentenceInput.trim()}
               >
@@ -159,12 +170,24 @@ export function VocabularySkillSession({ entries, date, onComplete, onBack, embe
               </div>
             )}
             {sentenceResult && (
-              <div className="flex flex-col gap-3">
-                <div className={sentenceResult.correct ? 'text-emerald-500 font-semibold' : 'text-destructive font-semibold'}>
-                  {sentenceResult.correct ? '✓' : '✗'}
+              <div className="flex flex-col gap-4">
+                <div className={cn(
+                  'rounded-xl border px-4 py-3 flex gap-3 items-start',
+                  sentenceResult.correct
+                    ? 'border-emerald-500/30 bg-emerald-500/10'
+                    : 'bg-destructive/8 border-destructive/20',
+                )}
+                >
+                  <span className={cn(
+                    'text-lg leading-none mt-0.5 shrink-0',
+                    sentenceResult.correct ? 'text-emerald-400' : 'text-destructive',
+                  )}
+                  >
+                    {sentenceResult.correct ? '✓' : '✗'}
+                  </span>
+                  <p className="text-sm leading-relaxed">{sentenceResult.feedback}</p>
                 </div>
-                <p className="text-sm">{sentenceResult.feedback}</p>
-                <Button onClick={advanceWord}>{t('vocab.makeASentence.continue')}</Button>
+                <Button onClick={advanceWord} size="lg" className="w-full">{t('vocab.makeASentence.continue')}</Button>
               </div>
             )}
           </div>
