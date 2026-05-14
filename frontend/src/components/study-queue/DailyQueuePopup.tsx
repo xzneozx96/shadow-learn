@@ -1,10 +1,17 @@
 // frontend/src/components/study-queue/DailyQueuePopup.tsx
 import type { StudyQueueState } from '@/hooks/useStudyQueue'
-import { BookOpen, Check, ChevronDown, Ear, FileText, Mic, PenLine, Plus, X } from 'lucide-react'
+import { BookOpen, Check, ChevronDown, Ear, FileText, Mic, PenLine, Plus, Trash2, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
+import { ListeningSkillSession } from '@/components/study-queue/ListeningSkillSession'
+import { ReadingSkillSession } from '@/components/study-queue/ReadingSkillSession'
+import { SpeakingSkillSession } from '@/components/study-queue/SpeakingSkillSession'
+import { VocabularySkillSession } from '@/components/study-queue/VocabularySkillSession'
+import { WritingSkillSession } from '@/components/study-queue/WritingSkillSession'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { cn } from '@/lib/utils'
@@ -33,6 +40,29 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
     .find(l => !l.status || l.status === 'complete')
 
   const hasAnyContent = queue.hasDailyReview || !!mostRecentLesson || queue.customTasks.length > 0
+
+  // Full-screen skill panel
+  const sessionProps = {
+    entries: queue.dailyEntries,
+    date: today,
+    onBack: () => setActivePanel(null),
+    onComplete: () => { setActivePanel(null); void queue.refresh() },
+  }
+
+  if (activePanel === 'vocabulary')
+    return <VocabularySkillSession {...sessionProps} />
+
+  if (activePanel === 'listening')
+    return <ListeningSkillSession {...sessionProps} />
+
+  if (activePanel === 'speaking')
+    return <SpeakingSkillSession {...sessionProps} />
+
+  if (activePanel === 'reading')
+    return <ReadingSkillSession {...sessionProps} />
+
+  if (activePanel === 'writing')
+    return <WritingSkillSession {...sessionProps} />
 
   function handleStartShadowing() {
     if (!mostRecentLesson)
@@ -87,25 +117,6 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
       icon: PenLine,
     },
   ]
-
-  // Full-screen skill panel
-  if (activePanel !== null) {
-    // Skill sessions wired in Task 14 — placeholder for now
-    return (
-      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">
-          <div>
-            {activePanel}
-            {' '}
-            session — coming soon
-          </div>
-          <Button variant="ghost" onClick={() => { setActivePanel(null); void queue.refresh() }}>
-            Back
-          </Button>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="relative w-[340px] bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
@@ -252,9 +263,8 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               </button>
               {editingTaskId === task.id
                 ? (
-                    <input
-                      type="text"
-                      className="flex-1 text-sm font-semibold bg-muted/40 rounded-lg px-2 py-1 border border-primary focus:outline-none transition-colors"
+                    <Input
+                      className="h-8"
                       value={editingTaskTitle}
                       autoFocus
                       onChange={e => setEditingTaskTitle(e.target.value)}
@@ -291,10 +301,9 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 size="icon-xs"
                 variant="ghost"
                 type="button"
-                className="text-destructive hover:text-destructive"
-                onMouseDown={(e) => { e.preventDefault(); void queue.removeCustomTask(task.id) }}
+                className="text-red-400 hover:text-red-500"
               >
-                <X className="size-3" />
+                <Trash2 className="size-3" />
               </Button>
             </div>
           ))}
@@ -303,14 +312,12 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
 
       {/* Add task */}
       <div className="py-1">
-        <div className="h-px bg-border/30 mx-4 my-0.5" />
         {addingTask
           ? (
               <div className="flex items-center gap-3 px-4 py-2">
                 <div className="size-4 rounded-full border-2 border-dashed border-primary/40 shrink-0" />
-                <input
-                  type="text"
-                  className="flex-1 text-sm font-semibold bg-muted/40 rounded-lg px-2.5 py-1.5 border border-border focus:border-primary focus:outline-none placeholder:text-muted-foreground/40 transition-colors"
+                <Input
+                  className="h-8"
                   placeholder={t('queue.addTaskPlaceholder')}
                   value={newTaskTitle}
                   autoFocus
@@ -340,9 +347,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left group"
                 onClick={() => setAddingTask(true)}
               >
-                <div className="size-4 rounded-full border border-dashed border-border/40 group-hover:border-primary/40 flex items-center justify-center shrink-0 transition-colors">
-                  <Plus className="size-2.5 text-muted-foreground/50 group-hover:text-primary/60 transition-colors" />
-                </div>
+                <Plus className="size-4 text-muted-foreground/50 group-hover:text-primary/60 transition-colors" />
                 <span className="text-sm font-semibold text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
                   {t('queue.addTask')}
                 </span>
