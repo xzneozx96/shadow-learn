@@ -101,22 +101,6 @@ describe('useStudyQueue', () => {
     expect(localStorage.getItem('daily-review-words-2026-05-13')).not.toBeNull()
   })
 
-  it('roleplayDone true when localStorage flag matches today', async () => {
-    localStorage.setItem('roleplay-last-completed', '2026-05-13')
-    const { result } = renderHook(() => useStudyQueue(db, null))
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.roleplayDone).toBe(true)
-  })
-
-  it('markRoleplayDone sets localStorage and updates state', async () => {
-    const { result } = renderHook(() => useStudyQueue(db, null))
-    await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.roleplayDone).toBe(false)
-    act(() => result.current.markRoleplayDone())
-    expect(result.current.roleplayDone).toBe(true)
-    expect(localStorage.getItem('roleplay-last-completed')).toBe('2026-05-13')
-  })
-
   it('addCustomTask adds task to list', async () => {
     const { result } = renderHook(() => useStudyQueue(db, null))
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -150,12 +134,55 @@ describe('useStudyQueue', () => {
   it('refresh re-checks completion state', async () => {
     await saveVocabEntry(db, makeVocab('v1'))
     await saveSpacedRepetitionItem(db, makeSRItem('v1', '2026-05-13'))
+    localStorage.setItem('daily-review-words-2026-05-13', JSON.stringify(['v1']))
     const { result } = renderHook(() => useStudyQueue(db, null))
     await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.wordDrillsDone).toBe(false)
-    // Simulate Word Drills completing by clearing due items
-    await db.delete('spaced-repetition', 'v1')
+    expect(result.current.vocabularyDone).toBe(false)
+    // Simulate vocabulary skill completing
+    localStorage.setItem('skill-session-2026-05-13-vocabulary', JSON.stringify(['v1']))
     await act(() => result.current.refresh())
-    expect(result.current.wordDrillsDone).toBe(true)
+    expect(result.current.vocabularyDone).toBe(true)
+  })
+
+  it('vocabularyDone false when skill-session key missing', async () => {
+    await saveVocabEntry(db, makeVocab('v1'))
+    await saveSpacedRepetitionItem(db, makeSRItem('v1', '2026-05-13'))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.vocabularyDone).toBe(false)
+  })
+
+  it('vocabularyDone true when all words in skill-session key', async () => {
+    await saveVocabEntry(db, makeVocab('v1'))
+    await saveSpacedRepetitionItem(db, makeSRItem('v1', '2026-05-13'))
+    localStorage.setItem('daily-review-words-2026-05-13', JSON.stringify(['v1']))
+    localStorage.setItem('skill-session-2026-05-13-vocabulary', JSON.stringify(['v1']))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.vocabularyDone).toBe(true)
+  })
+
+  it('readingDone true when reading key is "submitted"', async () => {
+    await saveVocabEntry(db, makeVocab('v1'))
+    await saveSpacedRepetitionItem(db, makeSRItem('v1', '2026-05-13'))
+    localStorage.setItem('daily-review-words-2026-05-13', JSON.stringify(['v1']))
+    localStorage.setItem('skill-session-2026-05-13-reading', 'submitted')
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.readingDone).toBe(true)
+  })
+
+  it('dailyReviewDone true only when all 5 skills done', async () => {
+    await saveVocabEntry(db, makeVocab('v1'))
+    await saveSpacedRepetitionItem(db, makeSRItem('v1', '2026-05-13'))
+    localStorage.setItem('daily-review-words-2026-05-13', JSON.stringify(['v1']))
+    localStorage.setItem('skill-session-2026-05-13-vocabulary', JSON.stringify(['v1']))
+    localStorage.setItem('skill-session-2026-05-13-listening', JSON.stringify(['v1']))
+    localStorage.setItem('skill-session-2026-05-13-speaking', JSON.stringify(['v1']))
+    localStorage.setItem('skill-session-2026-05-13-writing', JSON.stringify(['v1']))
+    localStorage.setItem('skill-session-2026-05-13-reading', 'submitted')
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.dailyReviewDone).toBe(true)
   })
 })
