@@ -36,7 +36,6 @@ export function VocabularySkillSession({ entries, date, onComplete, onBack }: Pr
 
   const completedIds = new Set(getSkillProgress('vocabulary', date))
   const remaining = entries.filter(e => !completedIds.has(e.id))
-  const [currentIndex, setCurrentIndex] = useState(0)
   const [step, setStep] = useState<ExerciseStep>('flashcard')
 
   const [sentenceInput, setSentenceInput] = useState('')
@@ -52,21 +51,15 @@ export function VocabularySkillSession({ entries, date, onComplete, onBack }: Pr
     return null
   }
 
-  const current = remaining[currentIndex]
-  const progress = `${completedCount + currentIndex + 1} / ${total}`
+  const current = remaining[0]
+  const progress = `${completedCount + 1} / ${total}`
 
   function advanceWord() {
     markWordComplete('vocabulary', date, current.id)
     setSentenceInput('')
     setSentenceResult(null)
     setSentenceError(false)
-    if (currentIndex + 1 >= remaining.length) {
-      onComplete()
-    }
-    else {
-      setCurrentIndex(i => i + 1)
-      setStep('flashcard')
-    }
+    setStep('flashcard')
   }
 
   function handleFlashcardNext(score: number) {

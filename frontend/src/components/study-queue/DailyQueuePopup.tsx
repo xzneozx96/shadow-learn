@@ -1,6 +1,6 @@
 // frontend/src/components/study-queue/DailyQueuePopup.tsx
 import type { StudyQueueState } from '@/hooks/useStudyQueue'
-import { BookOpen, Check, ChevronDown, Ear, FileText, Mic, PenLine, Plus, Trash2, X } from 'lucide-react'
+import { ArrowRight, BookOpen, Check, ChevronDown, Ear, FileText, Mic, PenLine, Plus, Trash2, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -81,41 +81,11 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
   }
 
   const skills = [
-    {
-      key: 'vocabulary' as const,
-      label: t('queue.skill.vocabulary'),
-      hint: t('queue.skill.vocabulary.hint'),
-      done: queue.vocabularyDone,
-      icon: BookOpen,
-    },
-    {
-      key: 'listening' as const,
-      label: t('queue.skill.listening'),
-      hint: t('queue.skill.listening.hint'),
-      done: queue.listeningDone,
-      icon: Ear,
-    },
-    {
-      key: 'speaking' as const,
-      label: t('queue.skill.speaking'),
-      hint: t('queue.skill.speaking.hint'),
-      done: queue.speakingDone,
-      icon: Mic,
-    },
-    {
-      key: 'reading' as const,
-      label: t('queue.skill.reading'),
-      hint: t('queue.skill.reading.hint'),
-      done: queue.readingDone,
-      icon: FileText,
-    },
-    {
-      key: 'writing' as const,
-      label: t('queue.skill.writing'),
-      hint: t('queue.skill.writing.hint'),
-      done: queue.writingDone,
-      icon: PenLine,
-    },
+    { key: 'vocabulary' as const, label: t('queue.skill.vocabulary'), done: queue.vocabularyDone, icon: BookOpen },
+    { key: 'listening' as const, label: t('queue.skill.listening'), done: queue.listeningDone, icon: Ear },
+    { key: 'speaking' as const, label: t('queue.skill.speaking'), done: queue.speakingDone, icon: Mic },
+    { key: 'reading' as const, label: t('queue.skill.reading'), done: queue.readingDone, icon: FileText },
+    { key: 'writing' as const, label: t('queue.skill.writing'), done: queue.writingDone, icon: PenLine },
   ]
 
   return (
@@ -204,12 +174,12 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                     className="overflow-hidden"
                   >
                     <div className="relative pl-4 mb-1">
-                      <div className="absolute left-[27px] top-0 bottom-2 w-px bg-border/50" />
+                      <div className="absolute left-6 top-0 bottom-0 w-px bg-primary/20" />
                       {skills.map(skill => (
                         <SkillRow
                           key={skill.key}
                           label={skill.label}
-                          hint={skill.hint}
+
                           done={skill.done}
                           doneLabel={t('queue.subtask.done')}
                           Icon={skill.icon}
@@ -242,7 +212,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               >
                 {t('queue.shadowing')}
               </span>
-              {!queue.shadowingDone && <StartButton primary={false} />}
+              {!queue.shadowingDone && <StartButton />}
             </button>
           )}
 
@@ -300,7 +270,6 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               <Button
                 size="icon-xs"
                 variant="ghost"
-                type="button"
                 className="text-destructive"
                 onClick={() => void queue.removeCustomTask(task.id)}
               >
@@ -369,7 +338,7 @@ function CircleIndicator({ done, partial }: { done: boolean, partial: boolean })
         ? 'bg-emerald-500 border-emerald-500 text-white'
         : partial
           ? 'border-emerald-500 bg-emerald-500/10'
-          : 'border-border',
+          : 'border-primary/50 hover:border-primary',
     )}
     >
       {done && <Check className="size-3" />}
@@ -380,14 +349,13 @@ function CircleIndicator({ done, partial }: { done: boolean, partial: boolean })
 
 interface SkillRowProps {
   label: string
-  hint: string
   done: boolean
   doneLabel: string
   Icon: React.ElementType
   onStart: () => void
 }
 
-function SkillRow({ label, hint, done, doneLabel, Icon, onStart }: SkillRowProps) {
+function SkillRow({ label, done, doneLabel, Icon, onStart }: SkillRowProps) {
   return (
     <div
       role="button"
@@ -402,34 +370,28 @@ function SkillRow({ label, hint, done, doneLabel, Icon, onStart }: SkillRowProps
         done ? 'bg-emerald-500/10' : 'bg-primary/10',
       )}
       >
-        <Icon className={cn('size-3.5', done ? 'text-emerald-500' : 'text-primary')} />
+        <Icon className={cn('size-3', done ? 'text-emerald-500' : 'text-primary')} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className={cn('text-sm font-semibold', done ? 'line-through text-muted-foreground' : '')}>
+        <div className={cn('text-sm text-muted-foreground font-semibold', done ? 'line-through text-muted-foreground/50' : '')}>
           {label}
         </div>
-        {!done && <div className="text-xs text-muted-foreground/50 mt-0.5">{hint}</div>}
       </div>
       {done
         ? <span className="text-xs font-bold text-emerald-500 shrink-0">{doneLabel}</span>
-        : <StartButton primary={false} onClick={onStart} />}
+        : <StartButton onClick={onStart} />}
     </div>
   )
 }
 
-function StartButton({ primary, onClick }: { primary: boolean, onClick?: () => void }) {
+function StartButton({ onClick }: { onClick?: () => void }) {
   return (
-    <button
-      type="button"
-      className={cn(
-        'w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-transform hover:scale-105',
-        primary
-          ? 'bg-primary text-primary-foreground'
-          : 'border border-primary/30 text-primary',
-      )}
+    <Button
+      size="icon-xs"
+      variant="outline"
       onClick={(e) => { e.stopPropagation(); onClick?.() }}
     >
-      <span className="text-xs">›</span>
-    </button>
+      <ArrowRight className="text-primary size-3 -rotate-45" />
+    </Button>
   )
 }

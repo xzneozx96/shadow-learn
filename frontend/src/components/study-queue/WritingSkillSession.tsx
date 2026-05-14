@@ -31,14 +31,12 @@ export function WritingSkillSession({ entries, date, onComplete, onBack }: Props
 
   const completedIds = new Set(getSkillProgress('writing', date))
   const remaining = entries.filter(e => !completedIds.has(e.id))
-  const [currentIndex, setCurrentIndex] = useState(0)
   const [step, setStep] = useState<ExerciseStep>('character-writing')
   const [hasStrokeData, setHasStrokeData] = useState(false)
 
   const total = entries.length
   const completedCount = completedIds.size
-
-  const current = remaining[currentIndex]
+  const current = remaining[0]
 
   useEffect(() => {
     if (!current || !caps.hasCharacterWriting) {
@@ -55,17 +53,11 @@ export function WritingSkillSession({ entries, date, onComplete, onBack }: Props
     return null
   }
 
-  const progress = `${completedCount + currentIndex + 1} / ${total}`
+  const progress = `${completedCount + 1} / ${total}`
 
   function advanceWord() {
     markWordComplete('writing', date, current.id)
-    if (currentIndex + 1 >= remaining.length) {
-      onComplete()
-    }
-    else {
-      setCurrentIndex(i => i + 1)
-      setStep('character-writing')
-    }
+    setStep('character-writing')
   }
 
   function handleCharacterWritingNext(score: number) {

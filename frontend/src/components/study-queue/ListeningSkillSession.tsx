@@ -1,6 +1,6 @@
 import type { VocabEntry } from '@/types'
 import { ArrowLeft } from 'lucide-react'
-import { useState } from 'react'
+
 import { DictationExercise } from '@/components/study/exercises/DictationExercise'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,7 +27,6 @@ export function ListeningSkillSession({ entries, date, onComplete, onBack }: Pro
 
   const completedIds = new Set(getSkillProgress('listening', date))
   const remaining = entries.filter(e => !completedIds.has(e.id))
-  const [currentIndex, setCurrentIndex] = useState(0)
 
   const total = entries.length
   const completedCount = completedIds.size
@@ -37,21 +36,14 @@ export function ListeningSkillSession({ entries, date, onComplete, onBack }: Pro
     return null
   }
 
-  const current = remaining[currentIndex]
+  const current = remaining[0]
 
   function handleNext(score: number) {
     void logExerciseResult({ vocabEntry: current, exerciseType: 'dictation', score })
     markWordComplete('listening', date, current.id)
-
-    if (currentIndex + 1 >= remaining.length) {
-      onComplete()
-    }
-    else {
-      setCurrentIndex(i => i + 1)
-    }
   }
 
-  const progress = `${completedCount + currentIndex + 1} / ${total}`
+  const progress = `${completedCount + 1} / ${total}`
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">

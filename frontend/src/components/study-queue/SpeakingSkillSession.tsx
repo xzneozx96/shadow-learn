@@ -1,6 +1,6 @@
 import type { VocabEntry } from '@/types'
 import { ArrowLeft } from 'lucide-react'
-import { useState } from 'react'
+
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
@@ -23,7 +23,6 @@ export function SpeakingSkillSession({ entries, date, onComplete, onBack }: Prop
 
   const completedIds = new Set(getSkillProgress('speaking', date))
   const remaining = entries.filter(e => !completedIds.has(e.id))
-  const [currentIndex, setCurrentIndex] = useState(0)
 
   const total = entries.length
   const completedCount = completedIds.size
@@ -33,7 +32,7 @@ export function SpeakingSkillSession({ entries, date, onComplete, onBack }: Prop
     return null
   }
 
-  const current = remaining[currentIndex]
+  const current = remaining[0]
 
   const sentence = {
     sentence: current.sourceSegmentText || current.word,
@@ -44,16 +43,9 @@ export function SpeakingSkillSession({ entries, date, onComplete, onBack }: Prop
   function handleNext(score: number) {
     void logExerciseResult({ vocabEntry: current, exerciseType: 'pronunciation', score })
     markWordComplete('speaking', date, current.id)
-
-    if (currentIndex + 1 >= remaining.length) {
-      onComplete()
-    }
-    else {
-      setCurrentIndex(i => i + 1)
-    }
   }
 
-  const progress = `${completedCount + currentIndex + 1} / ${total}`
+  const progress = `${completedCount + 1} / ${total}`
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
