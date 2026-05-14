@@ -49,6 +49,7 @@ export function useAgentChat(
   lessonId: string,
   activeSegment: Segment | null,
   lessonTitle?: string,
+  roleplaySystemPrompt?: string,
 ) {
   const { db, keys } = useAuth()
   const { t, locale } = useI18n()
@@ -137,7 +138,7 @@ export function useAgentChat(
           })
 
           const ctx = promptContextRef.current
-          const systemPrompt = ctx
+          const baseSystemPrompt = ctx
             ? buildSystemPrompt({
                 ...ctx,
                 currentTime: new Date().toLocaleString(),
@@ -151,6 +152,9 @@ export function useAgentChat(
                 deferredToolNames: getDeferredToolNames(keys?.openrouterApiKey ?? '', locale),
               })
             : ''
+          const systemPrompt = roleplaySystemPrompt
+            ? `${roleplaySystemPrompt}\n\n---\n\n${baseSystemPrompt}`
+            : baseSystemPrompt
           // When tool loop is exhausted, append recovery instruction and strip
           // tools so the LLM is forced to respond in text only.
           const isExhausted = exhaustionSentForRef.current !== null
@@ -171,7 +175,7 @@ export function useAgentChat(
           }
         },
       }),
-    [keys?.openrouterApiKey, locale, toolPool],
+    [keys?.openrouterApiKey, locale, toolPool, roleplaySystemPrompt],
   )
 
   const { messages, setMessages, sendMessage, addToolResult, stop, status, error } = useChat({

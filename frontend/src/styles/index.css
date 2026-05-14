@@ -34,7 +34,7 @@
 
     --destructive: 348 100% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 230 25% 18%;
+    --border: 230 25% 22%;
     --input: 230 25% 16%;
     --ring: 235 88% 73%;
 
@@ -220,6 +220,11 @@
     animation: breathe-primary 6s ease-in-out infinite;
     animation-delay: 3s;
   }
+
+  .animate-breathe-success {
+    animation: breathe-success 6s ease-in-out infinite;
+    animation-delay: 1.5s;
+  }
 }
 
 /* YouTube iframe must fill its container */
@@ -271,6 +276,18 @@
 
   50% {
     box-shadow: 0 0 28px -4px hsl(var(--primary) / 0.75);
+  }
+}
+
+@keyframes breathe-success {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px -8px hsl(var(--success) / 0.45);
+  }
+
+  50% {
+    box-shadow: 0 0 28px -4px hsl(var(--success) / 0.75);
   }
 }
 

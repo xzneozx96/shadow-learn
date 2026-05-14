@@ -19,6 +19,7 @@ interface CompanionPanelProps {
   lessonTitle?: string
   activeTab?: string
   onTabChange?: (tab: string) => void
+  roleplaySystemPrompt?: string
 }
 
 export function CompanionPanel({
@@ -27,12 +28,13 @@ export function CompanionPanel({
   lessonTitle,
   activeTab,
   onTabChange,
+  roleplaySystemPrompt,
 }: CompanionPanelProps) {
   const { t } = useI18n()
   const { entriesByLesson } = useVocabulary()
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
-  const { messages, isLoading, isHistoryLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle)
+  const { messages, isLoading, isHistoryLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle, roleplaySystemPrompt)
   const { openSpeakModal } = useSpeakModal()
 
   useEffect(() => {

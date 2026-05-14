@@ -1,8 +1,9 @@
 import type { VoiceOption } from '@/lib/voices'
-import { Pause, Play } from 'lucide-react'
+import { Check, ChevronsUpDown, Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 
 interface VoiceSelectorProps {
   voices: VoiceOption[]
@@ -13,6 +14,7 @@ interface VoiceSelectorProps {
 export function VoiceSelector({ voices, selectedId, onSelect }: VoiceSelectorProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playingId, setPlayingId] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -35,49 +37,83 @@ export function VoiceSelector({ voices, selectedId, onSelect }: VoiceSelectorPro
     audio.addEventListener('ended', () => setPlayingId(null), { once: true })
   }
 
+  function handleSelect(id: string) {
+    onSelect(id)
+    setOpen(false)
+  }
+
+  const selected = voices.find(v => v.id === selectedId)
+
   return (
-    <div className="flex flex-col gap-3 bg-input/50">
-      {voices.map((voice) => {
-        const isSelected = voice.id === selectedId
-        const isPlaying = playingId === voice.id
-        return (
-          <div
-            key={voice.id}
-            role="option"
-            aria-selected={isSelected}
-            onClick={() => onSelect(voice.id)}
-            className={cn(
-              'rounded-lg border flex items-center gap-3 p-2 cursor-pointer select-none transition-colors duration-100',
-              isSelected ? 'bg-primary/15' : 'hover:bg-secondary',
-            )}
-          >
-            <img
-              src={voice.avatarUrl}
-              alt=""
-              className="size-[38px] rounded-md object-cover shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-foreground">{voice.label}</div>
-              <div className="text-xs text-muted-foreground">{voice.description}</div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {isSelected && (
-                <div className="size-4 rounded-full bg-indigo-500 flex items-center justify-center">
-                  <div className="size-2 rounded-full bg-white" />
-                </div>
-              )}
-              <Button
-                variant="secondary"
-                size="icon-lg"
-                aria-label={isPlaying ? 'stop preview' : 'play preview'}
-                onClick={e => handlePlay(e, voice)}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className={cn(
+          'flex w-full items-center gap-3 rounded-lg border bg-input/50 px-3 py-2 cursor-pointer select-none',
+          'hover:bg-secondary transition-colors duration-100',
+        )}
+      >
+        {selected && (
+          <img
+            src={selected.avatarUrl}
+            alt=""
+            className="size-8 rounded-md object-cover shrink-0"
+          />
+        )}
+        <div className="flex-1 min-w-0 text-left">
+          <div className="text-sm font-semibold text-foreground truncate">{selected?.label ?? '—'}</div>
+          <div className="text-xs text-muted-foreground truncate">{selected?.description ?? ''}</div>
+        </div>
+        <ChevronsUpDown className="size-4 text-muted-foreground shrink-0" />
+      </PopoverTrigger>
+
+      <PopoverContent
+        className="w-(--anchor-width) p-1.5 min-w-[280px]"
+        side="bottom"
+        align="start"
+        sideOffset={6}
+      >
+        <div className="flex flex-col gap-0.5">
+          {voices.map((voice) => {
+            const isSelected = voice.id === selectedId
+            const isPlaying = playingId === voice.id
+            return (
+              <div
+                key={voice.id}
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => handleSelect(voice.id)}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-2 py-1.5 cursor-pointer select-none transition-colors duration-100',
+                  isSelected ? 'bg-primary/10' : 'hover:bg-input',
+                )}
               >
-                {isPlaying ? <Pause className="size-3" /> : <Play className="size-3" />}
-              </Button>
-            </div>
-          </div>
-        )
-      })}
-    </div>
+                <img
+                  src={voice.avatarUrl}
+                  alt=""
+                  className="size-8 rounded-md object-cover shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-foreground">{voice.label}</div>
+                  <div className="text-xs text-muted-foreground">{voice.description}</div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {isSelected && (
+                    <Check className="size-5 text-primary" />
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    aria-label={isPlaying ? 'stop preview' : 'play preview'}
+                    onClick={e => handlePlay(e, voice)}
+                  >
+                    {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

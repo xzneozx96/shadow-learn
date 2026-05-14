@@ -135,7 +135,7 @@ export function DocumentationPage() {
               <input
                 type="text"
                 placeholder={t('docs.search.placeholder')}
-                className="w-full bg-input text-sm rounded-md py-2 pl-9 pr-4 outline-none focus:ring-1 focus:ring-primary/50 transition-all text-foreground placeholder:text-muted-foreground border border-transparent focus:border-border/50"
+                className="w-full bg-input/50 text-sm rounded-md py-2 pl-9 pr-4 outline-none focus:ring-1 focus:ring-primary/50 transition-all text-foreground placeholder:text-muted-foreground border focus:border-border/50"
               />
             </div>
           </div>

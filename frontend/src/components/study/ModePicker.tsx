@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
-export type ExerciseMode = 'cloze' | 'dictation' | 'romanization-recall' | 'pronunciation' | 'reconstruction' | 'writing' | 'translation' | 'mixed'
+export type ExerciseMode = 'cloze' | 'dictation' | 'romanization-recall' | 'pronunciation' | 'reconstruction' | 'writing' | 'translation' | 'flashcard' | 'mixed'
 
 interface ModePickerProps {
   selected: ExerciseMode

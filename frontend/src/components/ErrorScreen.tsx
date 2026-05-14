@@ -87,7 +87,7 @@ export function ErrorScreen({ error }: Props) {
             {/* actions */}
             <div className="mt-6 flex flex-wrap gap-2">
               <Button
-                variant="outline"
+                size="lg"
                 onClick={() => window.location.reload()}
                 className="gap-1.5"
               >
@@ -95,6 +95,7 @@ export function ErrorScreen({ error }: Props) {
                 Reload page
               </Button>
               <Button
+                size="lg"
                 variant="ghost"
                 onClick={() => { window.location.href = '/' }}
                 className="gap-1.5"

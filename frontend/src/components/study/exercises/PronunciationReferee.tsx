@@ -121,7 +121,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
       info={t('study.exercise.pronunciation.info')}
     >
       {/* Sentence display */}
-      <div className="relative rounded-lg border border-border bg-muted/20 p-4 text-center mb-4">
+      <div className="relative rounded-lg border border-border bg-muted p-4 text-center mb-4">
         {showPinyin && sentence.romanization && (
           <p className="text-sm text-muted-foreground text-center mb-1 tracking-wide">
             {sentence.romanization}

@@ -4,7 +4,7 @@ import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluati
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 13
+const DB_VERSION = 14
 
 export interface LearnerProfile {
   name: string
@@ -96,6 +96,13 @@ export interface ExerciseStat {
   lastAttempt: string // ISO date string
 }
 
+export interface DailyTask {
+  id: string
+  title: string
+  createdDate: string // ISO date 'YYYY-MM-DD'
+  completedDate: string | null // null = never; === todayISO() means done today
+}
+
 export interface AgentLog {
   id?: number // auto-increment primary key
   lessonId: string
@@ -174,6 +181,10 @@ interface ShadowLearnSchema extends DBSchema {
   'exercise-stats': {
     key: string // 'vocabId:exerciseType'
     value: ExerciseStat
+  }
+  'daily-tasks': {
+    key: string
+    value: DailyTask
   }
   'agent-logs': {
     key: number // autoincrement
@@ -313,6 +324,9 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
         bestsStore.createIndex('by-lesson', 'lessonId', { unique: false })
         const audioStore = db.createObjectStore('shadowing-audio', { keyPath: ['lessonId', 'segmentId'] })
         audioStore.createIndex('by-lesson', 'lessonId', { unique: false })
+      }
+      if (oldVersion < 14) {
+        db.createObjectStore('daily-tasks', { keyPath: 'id' })
       }
     },
   })
@@ -644,4 +658,18 @@ export async function saveSpeakingAudio(db: ShadowLearnDB, lessonId: string, seg
 export async function deleteSpeakingAudioByLesson(db: ShadowLearnDB, lessonId: string): Promise<void> {
   const all = await db.getAllFromIndex('shadowing-audio', 'by-lesson', lessonId)
   await Promise.all(all.map(a => db.delete('shadowing-audio', [a.lessonId, a.segmentId])))
+}
+
+// Daily Tasks
+
+export async function getDailyTasks(db: ShadowLearnDB): Promise<DailyTask[]> {
+  return db.getAll('daily-tasks')
+}
+
+export async function saveDailyTask(db: ShadowLearnDB, task: DailyTask): Promise<void> {
+  await db.put('daily-tasks', task)
+}
+
+export async function deleteDailyTask(db: ShadowLearnDB, id: string): Promise<void> {
+  await db.delete('daily-tasks', id)
 }

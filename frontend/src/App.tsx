@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react'
-import { lazy, Suspense } from 'react'
-import { createBrowserRouter, Outlet, RouterProvider, useRouteError } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { createBrowserRouter, Outlet, RouterProvider, useLocation, useRouteError } from 'react-router-dom'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorScreen } from '@/components/ErrorScreen'
@@ -10,13 +11,18 @@ import { Setup } from '@/components/onboarding/Setup'
 import { Unlock } from '@/components/onboarding/Unlock'
 import { Settings } from '@/components/settings/Settings'
 import { PracticeSpeakingModal } from '@/components/speak/PracticeSpeakingModal'
+import { DailyQueuePopup } from '@/components/study-queue/DailyQueuePopup'
+import { DailyReviewModal } from '@/components/study-queue/DailyReviewModal'
+import { QueueFloatingBadge } from '@/components/study-queue/QueueFloatingBadge'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { DailyReviewProvider, useDailyReview } from '@/contexts/DailyReviewContext'
 import { GlobalCompanionProvider } from '@/contexts/GlobalCompanionContext'
 import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
 import { SpeakModalProvider, useSpeakModal } from '@/contexts/SpeakModalContext'
+import { StudyQueueProvider, useStudyQueueContext } from '@/contexts/StudyQueueContext'
 import { VocabularyProvider } from '@/contexts/VocabularyContext'
 import { ChangelogPage } from '@/pages/ChangelogPage'
 import { CollectionPage } from '@/pages/CollectionPage'
@@ -42,9 +48,76 @@ function GlobalSpeakModal() {
   return <PracticeSpeakingModal open={isOpen} onClose={closeSpeakModal} />
 }
 
+function GlobalDailyReview() {
+  const { isOpen, initialSkill, closeReviewModal } = useDailyReview()
+  const queue = useStudyQueueContext()
+  return (
+    <DailyReviewModal
+      open={isOpen}
+      onClose={() => { closeReviewModal(); void queue.refresh() }}
+      queue={queue}
+      initialSkill={initialSkill}
+    />
+  )
+}
+
 function RouteErrorElement() {
   const error = useRouteError()
   return <ErrorScreen error={error} />
+}
+
+function StudyQueueUI() {
+  const queue = useStudyQueueContext()
+  const [open, setOpen] = useState(false)
+  const location = useLocation()
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (queue.loading || location.pathname !== '/')
+      return
+    const today = new Date().toISOString().split('T')[0]
+    if (localStorage.getItem('study-queue-last-shown') === today)
+      return
+    const timer = setTimeout(() => {
+      localStorage.setItem('study-queue-last-shown', today)
+      setOpen(true)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [queue.loading, location.pathname])
+
+  useEffect(() => {
+    if (!open)
+      return
+    function onMouseDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node))
+        setOpen(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [open])
+
+  if (location.pathname.startsWith('/lesson/'))
+    return null
+
+  return (
+    <div ref={containerRef} className="fixed bottom-6 right-6 z-50">
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="absolute bottom-full right-0 mb-3"
+            style={{ transformOrigin: 'bottom right' }}
+            initial={{ opacity: 0, scale: 0.88, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.88, y: 10 }}
+            transition={{ duration: 0.2, ease: [0.175, 0.885, 0.32, 1.275] }}
+          >
+            <DailyQueuePopup queue={queue} onClose={() => setOpen(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <QueueFloatingBadge queue={queue} open={open} onClick={() => setOpen(o => !o)} />
+    </div>
+  )
 }
 
 function AppLayout() {
@@ -55,6 +128,8 @@ function AppLayout() {
           <Outlet />
           {/* <FeedbackButton /> */}
           <GlobalSpeakModal />
+          <GlobalDailyReview />
+          <StudyQueueUI />
         </SpeakModalProvider>
       </GlobalCompanionProvider>
     </PlayerProvider>
@@ -115,7 +190,11 @@ function AuthGate() {
     <ErrorBoundary>
       <VocabularyProvider>
         <LessonsProvider>
-          <RouterProvider router={router} />
+          <StudyQueueProvider>
+            <DailyReviewProvider>
+              <RouterProvider router={router} />
+            </DailyReviewProvider>
+          </StudyQueueProvider>
         </LessonsProvider>
       </VocabularyProvider>
     </ErrorBoundary>

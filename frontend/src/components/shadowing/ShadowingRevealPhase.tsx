@@ -131,6 +131,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
         <span className="text-sm uppercase tracking-widest text-foreground/70">{segmentLabel}</span>
         <Button
           variant="ghost"
+          size="icon-lg"
           onClick={onExit}
           aria-label="Exit shadowing mode"
         >
@@ -516,7 +517,6 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
 
                 {/* Word breakdown comparison */}
                 <div className="rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
-                  {/* Word rows — compact single-line */}
                   <div className="divide-y divide-border/30">
                     {result.words.map((w, i) => {
                       const prevWord = previousBest.breakdown.words[i]
@@ -525,29 +525,50 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
                       const wordDelta = prevWord ? currentScore - bestScore : null
 
                       return (
-                        <div key={i} className="flex items-center gap-3 p-3">
-                          {/* Word + error badge */}
-                          <div className="flex items-center gap-1.5 w-14 shrink-0">
-                            <span className={cn('text-lg font-bold tracking-tight leading-none', scoreColor(w.accuracy))}>
-                              {w.word}
-                            </span>
-                            {w.error_type && (
-                              <span className={cn(
-                                'shrink-0 rounded px-1 py-0.5 text-[7px] font-bold uppercase border',
-                                w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
-                                w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
-                                w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
-                              )}
-                              >
-                                {w.error_type === 'Mispronunciation' ? t('shadowing.errorWrong') : w.error_type === 'Omission' ? t('shadowing.errorMissing') : t('shadowing.errorExtra')}
+                        <div key={i} className="flex flex-col gap-2 px-3 py-3">
+                          {/* Row 1: word + scores */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn('text-base font-bold tracking-tight leading-none', scoreColor(w.accuracy))}>
+                                {w.word}
                               </span>
-                            )}
+                              {w.error_type && (
+                                <span className={cn(
+                                  'shrink-0 rounded px-1 py-0.5 text-[7px] font-bold uppercase border',
+                                  w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+                                  w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
+                                  w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+                                )}
+                                >
+                                  {w.error_type === 'Mispronunciation' ? t('shadowing.errorWrong') : w.error_type === 'Omission' ? t('shadowing.errorMissing') : t('shadowing.errorExtra')}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className={cn('text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
+                                {currentScore}
+                              </span>
+                              {wordDelta !== null && (
+                                <span className={cn(
+                                  'text-xs font-bold tabular-nums',
+                                  wordDelta > 0 && 'text-emerald-400 border-emerald-400/20',
+                                  wordDelta < 0 && 'text-red-400 border-red-400/20',
+                                  wordDelta === 0 && 'text-muted-foreground/40 bg-transparent border-transparent',
+                                )}
+                                >
+                                  {wordDelta > 0 ? `(+${wordDelta})` : wordDelta < 0 ? `(${wordDelta})` : '—'}
+                                </span>
+                              )}
+                              <span className="text-sm font-bold tabular-nums text-sky-400/70 pl-1.5 border-l border-border">
+                                {prevWord ? bestScore : '—'}
+                              </span>
+                            </div>
                           </div>
-                          {/* Bar */}
-                          <div className="relative flex-1 h-1.5 overflow-hidden rounded-full bg-border/20">
+                          {/* Row 2: progress bar */}
+                          <div className="relative h-1.5 overflow-hidden rounded-full bg-secondary/40">
                             {prevWord && (
                               <div
-                                className="absolute inset-y-0 left-0 bg-sky-500/20 border-r border-sky-400/60 z-0 transition-all duration-1000 ease-out"
+                                className="absolute inset-y-0 left-0 bg-sky-500/20 border-r-2 border-sky-400/50 z-0 transition-all duration-1000 ease-out"
                                 style={{ width: `${bestScore}%` }}
                               />
                             )}
@@ -555,26 +576,6 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
                               className={cn('absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out z-10', barColor(w.accuracy))}
                               style={{ width: `${w.accuracy}%` }}
                             />
-                          </div>
-                          {/* Scores */}
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className={cn('text-sm font-bold tabular-nums w-6 text-right', scoreColor(w.accuracy))}>
-                              {currentScore}
-                            </span>
-                            {wordDelta !== null && (
-                              <span className={cn(
-                                'text-xs font-bold tabular-nums px-1 py-0.5 rounded',
-                                wordDelta > 0 && 'text-emerald-400 bg-emerald-400/10',
-                                wordDelta < 0 && 'text-red-400 bg-red-400/10',
-                                wordDelta === 0 && 'text-muted-foreground/50',
-                              )}
-                              >
-                                {wordDelta > 0 ? `+${wordDelta}` : `${wordDelta}`}
-                              </span>
-                            )}
-                            <span className="text-xs font-bold tabular-nums text-sky-400 w-6 text-right border-l border-border pl-1.5">
-                              {prevWord ? bestScore : '—'}
-                            </span>
                           </div>
                         </div>
                       )
@@ -623,41 +624,38 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
                   </div>
 
                   {/* Word breakdown */}
-                  <div className="space-y-1.5">
-                    {result.words.map((w, i) => (
-                      <div
-                        key={i}
-                        className="group relative flex flex-col gap-2 rounded-xl border border-border/40 bg-muted/20 px-3 py-2.5"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className={cn('text-lg font-bold tracking-tight', scoreColor(w.accuracy))}>
+                  <div className="rounded-xl border border-border/40 bg-muted/20 overflow-hidden">
+                    <div className="divide-y divide-border/30">
+                      {result.words.map((w, i) => (
+                        <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+                          <div className="flex items-center gap-1.5 w-14 shrink-0">
+                            <span className={cn('text-lg font-bold tracking-tight leading-none', scoreColor(w.accuracy))}>
                               {w.word}
                             </span>
                             {w.error_type && (
                               <span className={cn(
-                                'rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-tighter border',
+                                'shrink-0 rounded px-1 py-0.5 text-[7px] font-bold uppercase border',
                                 w.error_type === 'Mispronunciation' && 'border-amber-500/30 bg-amber-500/10 text-amber-400',
                                 w.error_type === 'Omission' && 'border-red-500/30 bg-red-500/10 text-red-400',
-                                w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-red-400',
+                                w.error_type === 'Insertion' && 'border-blue-500/30 bg-blue-500/10 text-blue-400',
                               )}
                               >
                                 {w.error_type === 'Mispronunciation' ? t('shadowing.errorWrong') : w.error_type === 'Omission' ? t('shadowing.errorMissing') : t('shadowing.errorExtra')}
                               </span>
                             )}
                           </div>
-                          <span className={cn('text-sm font-bold tabular-nums', scoreColor(w.accuracy))}>
+                          <div className="relative flex-1 h-1.5 overflow-hidden rounded-full bg-secondary/40">
+                            <div
+                              className={cn('absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out', barColor(w.accuracy))}
+                              style={{ width: `${w.accuracy}%` }}
+                            />
+                          </div>
+                          <span className={cn('text-sm font-bold tabular-nums w-6 text-right shrink-0', scoreColor(w.accuracy))}>
                             {Math.round(w.accuracy)}
                           </span>
                         </div>
-                        <div className="relative h-2 w-full overflow-hidden rounded-full bg-border/20">
-                          <div
-                            className={cn('absolute inset-0 h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(0,0,0,0.2)]', barColor(w.accuracy))}
-                            style={{ width: `${w.accuracy}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </>

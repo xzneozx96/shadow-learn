@@ -4,7 +4,7 @@ import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth } from '@/contexts/AuthContext'
 import { initDB } from '@/db'
-import { useTracking } from '@/hooks/useTracking'
+import { EXERCISE_TO_SKILL, useTracking } from '@/hooks/useTracking'
 import 'fake-indexeddb/auto'
 
 // Mock useAuth to return our test db
@@ -31,30 +31,69 @@ describe('useTracking', () => {
   let db: Awaited<ReturnType<typeof initDB>>
 
   beforeEach(async () => {
+    localStorage.clear()
     globalThis.indexedDB = new IDBFactory()
     db = await initDB()
     vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
   })
 
-  it('creates a new SM-2 item on first logExerciseResult call', async () => {
-    const { result } = renderHook(() => useTracking())
-    const updated = await result.current.logExerciseResult({
-      vocabEntry: mockVocabEntry,
-      exerciseType: 'dictation',
-      score: 100,
-    })
-    expect(updated).not.toBeNull()
-    expect(updated?.itemId).toBe('entry-1')
-    expect(updated?.repetitions).toBe(1)
-    expect(updated?.intervalDays).toBe(1)
-  })
-
-  it('updates an existing SM-2 item on subsequent calls', async () => {
+  it('buffers SM-2 on first logExerciseResult call', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
     const { result } = renderHook(() => useTracking())
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 100 })
-    const second = await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 100 })
-    expect(second?.repetitions).toBe(2)
-    expect(second?.intervalDays).toBe(6)
+    const pending = JSON.parse(localStorage.getItem('sm2-pending-2026-05-14') ?? '{}')
+    expect(pending['entry-1']).toBe(100)
+    vi.useRealTimers()
+  })
+
+  it('sm2 buffer holds minimum across two calls', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
+    const { result } = renderHook(() => useTracking())
+    await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 80 })
+    await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 40 })
+    const pending = JSON.parse(localStorage.getItem('sm2-pending-2026-05-14') ?? '{}')
+    expect(pending['entry-1']).toBe(40)
+    vi.useRealTimers()
+  })
+
+  it('buffers SM-2 score instead of updating SR immediately', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
+    const { result } = renderHook(() => useTracking())
+    await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 80 })
+    // SM-2 should NOT be written to IDB yet
+    const srItem = await db.get('spaced-repetition', 'entry-1')
+    expect(srItem).toBeUndefined()
+    // But pending buffer should have the score
+    const pending = JSON.parse(localStorage.getItem('sm2-pending-2026-05-14') ?? '{}')
+    expect(pending['entry-1']).toBe(80)
+    vi.useRealTimers()
+  })
+
+  it('sm2 buffer keeps minimum score across multiple calls', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
+    const { result } = renderHook(() => useTracking())
+    await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 80 })
+    await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'pronunciation', score: 20 })
+    await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'cloze', score: 100 })
+    const pending = JSON.parse(localStorage.getItem('sm2-pending-2026-05-14') ?? '{}')
+    expect(pending['entry-1']).toBe(20)
+    vi.useRealTimers()
+  })
+
+  it('eXERCISE_TO_SKILL maps flashcard to vocabulary', () => {
+    expect(EXERCISE_TO_SKILL.flashcard).toBe('vocabulary')
+  })
+
+  it('eXERCISE_TO_SKILL maps romanization-recall to vocabulary (not speaking)', () => {
+    expect(EXERCISE_TO_SKILL['romanization-recall']).toBe('vocabulary')
+  })
+
+  it('eXERCISE_TO_SKILL maps reconstruction to writing (not reading)', () => {
+    expect(EXERCISE_TO_SKILL.reconstruction).toBe('writing')
   })
 
   it('creates progress-db entry with correct stats', async () => {
@@ -87,7 +126,7 @@ describe('useTracking', () => {
       vocabEntry: mockVocabEntry,
       exerciseType: 'dictation',
       score: 100,
-    })).resolves.toBeNull()
+    })).resolves.toBeUndefined()
   })
 
   it('writes exercise-stats entry after logExerciseResult', async () => {
@@ -173,8 +212,8 @@ interface ExerciseCase {
 
 const EXERCISE_CASES: ExerciseCase[] = [
   { exerciseType: 'dictation', skill: 'listening' },
-  { exerciseType: 'romanization-recall', skill: 'speaking' },
-  { exerciseType: 'reconstruction', skill: 'reading' },
+  { exerciseType: 'romanization-recall', skill: 'vocabulary' },
+  { exerciseType: 'reconstruction', skill: 'writing' },
   { exerciseType: 'writing', skill: 'writing' },
   { exerciseType: 'pronunciation', skill: 'speaking' },
   { exerciseType: 'cloze', skill: 'vocabulary' },
@@ -199,11 +238,6 @@ describe('exercise-type → skill routing', () => {
         exerciseType,
         score: 100,
       })
-
-      // SM-2 persisted
-      const item = await db.get('spaced-repetition', 'entry-1')
-      expect(item?.itemId).toBe('entry-1')
-      expect(item?.repetitions).toBe(1)
 
       // Correct skill bucket incremented; all others remain 0
       const stats = await db.get('progress-db', 'global')
@@ -230,11 +264,6 @@ describe('exercise-type → skill routing', () => {
         score: 0,
         mistakes: [mistake],
       })
-
-      // SM-2: score 0 → quality 0, should not increment repetitions beyond initial
-      const item = await db.get('spaced-repetition', 'entry-1')
-      expect(item).not.toBeNull()
-      expect(item?.consecutiveIncorrect).toBeGreaterThanOrEqual(1)
 
       // progress-db: counted as incorrect
       const stats = await db.get('progress-db', 'global')

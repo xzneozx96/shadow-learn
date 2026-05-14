@@ -74,10 +74,9 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: L
             <Button
               variant="ghost"
               size="icon"
-              className="text-red-400/70 hover:text-red-400 hover:bg-red-400/10 shrink-0 h-9 w-9"
               onClick={() => setShowDeleteConfirm(true)}
             >
-              <Trash2 className="size-4" />
+              <Trash2 className="size-4 text-destructive" />
             </Button>
           )}
           <Button

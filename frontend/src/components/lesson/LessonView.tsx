@@ -2,7 +2,7 @@ import type { Segment } from '@/types'
 import { Loader2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { ShadowingModePicker } from '@/components/shadowing/ShadowingModePicker'
 import { ShadowingPanel } from '@/components/shadowing/ShadowingPanel'
 import { Button } from '@/components/ui/button'
@@ -182,6 +182,9 @@ function LessonViewContent() {
     = typeof MediaRecorder !== 'undefined'
       && getLanguageCaps(meta?.sourceLanguage).azurePronunciationLocale !== null
 
+  const location = useLocation()
+  const roleplaySystemPrompt = (location.state as { roleplaySystemPrompt?: string } | null)?.roleplaySystemPrompt
+
   const [searchParams] = useSearchParams()
   const deepLinkSegmentId = searchParams.get('segmentId')
 
@@ -304,6 +307,7 @@ function LessonViewContent() {
           lessonTitle={meta.title}
           activeTab={companionTab}
           onTabChange={setCompanionTab}
+          roleplaySystemPrompt={roleplaySystemPrompt}
         />
       </div>
 

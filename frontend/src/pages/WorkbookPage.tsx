@@ -150,9 +150,10 @@ export function WorkbookPage() {
 
               {/* Empty state */}
               {sortedLessonIds.length === 0 && (
-                <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/4 px-8 py-16 text-center">
-                  <div className="mb-4 flex size-12 items-center justify-center rounded-xl border border-white/10 bg-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                    <Bookmark className="size-5 text-foreground/70" />
+                <div className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-dashed border-primary/30 bg-primary/3 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] flex flex-col items-center justify-center text-center">
+                  <div className="pointer-events-none absolute -top-16 left-1/2 size-56 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl" />
+                  <div className="mb-4 flex size-12 items-center justify-center rounded-xl border border-primary/40 bg-primary/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                    <Bookmark className="size-5 text-primary" />
                   </div>
                   <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
                     {t('workbook.noWords')}
