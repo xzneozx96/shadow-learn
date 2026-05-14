@@ -384,8 +384,11 @@ interface SkillRowProps {
 function SkillRow({ label, hint, done, doneLabel, Icon, onStart }: SkillRowProps) {
   return (
     <div
-      className="relative flex items-center gap-3 pl-6 pr-4 py-1.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+      role="button"
+      tabIndex={done ? -1 : 0}
+      className="relative flex items-center gap-3 pl-6 pr-4 py-1.5 rounded-lg hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
       onClick={done ? undefined : onStart}
+      onKeyDown={done ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStart() } }}
     >
       <div className="absolute left-0 top-1/2 w-2.5 h-px bg-border/50" />
       <div className={cn(
