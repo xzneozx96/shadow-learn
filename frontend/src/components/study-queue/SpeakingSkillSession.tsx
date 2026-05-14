@@ -1,5 +1,7 @@
 import type { VocabEntry } from '@/types'
 import { ArrowLeft } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useState } from 'react'
 
 import { PronunciationReferee } from '@/components/study/exercises/PronunciationReferee'
 import { Button } from '@/components/ui/button'
@@ -13,19 +15,21 @@ interface Props {
   date: string
   onComplete: () => void
   onBack: () => void
+  embedded?: boolean
 }
 
-export function SpeakingSkillSession({ entries, date, onComplete, onBack }: Props) {
+export function SpeakingSkillSession({ entries, date, onComplete, onBack, embedded }: Props) {
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
   const sourceLanguage = entries[0]?.sourceLanguage ?? 'zh-CN'
   const caps = getLanguageCaps(sourceLanguage)
 
   const completedIds = new Set(getSkillProgress('speaking', date))
-  const remaining = entries.filter(e => !completedIds.has(e.id))
+  const [skippedIds, setSkippedIds] = useState(new Set<string>())
+  const remaining = entries.filter(e => !completedIds.has(e.id) && !skippedIds.has(e.id))
 
   const total = entries.length
-  const completedCount = completedIds.size
+  const doneCount = completedIds.size + skippedIds.size
 
   if (remaining.length === 0) {
     onComplete()
@@ -40,22 +44,26 @@ export function SpeakingSkillSession({ entries, date, onComplete, onBack }: Prop
     romanization: current.romanization,
   }
 
-  function handleNext(score: number) {
+  function handleNext(score: number, opts?: { skipped?: boolean }) {
     void logExerciseResult({ vocabEntry: current, exerciseType: 'pronunciation', score })
-    markWordComplete('speaking', date, current.id)
+    if (opts?.skipped)
+      setSkippedIds(prev => new Set([...prev, current.id]))
+    else
+      markWordComplete('speaking', date, current.id)
   }
 
-  const progress = `${completedCount + 1} / ${total}`
+  const progress = `${doneCount + 1} / ${total}`
 
-  return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
-      <div className="flex items-center gap-2 p-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="size-4" />
-        </Button>
-        <span className="text-sm font-semibold">{t('queue.skill.speaking')}</span>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4">
+  const content = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={current.id}
+        className="flex-1 overflow-y-auto p-10"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+      >
         {caps.azurePronunciationLocale
           ? (
               <PronunciationReferee
@@ -70,7 +78,22 @@ export function SpeakingSkillSession({ entries, date, onComplete, onBack }: Prop
                 Pronunciation assessment is not supported for this language.
               </div>
             )}
+      </motion.div>
+    </AnimatePresence>
+  )
+
+  if (embedded)
+    return content
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      <div className="flex items-center gap-2 p-4 border-b border-border">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="size-4" />
+        </Button>
+        <span className="text-sm font-semibold">{t('queue.skill.speaking')}</span>
       </div>
+      {content}
     </div>
   )
 }

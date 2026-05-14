@@ -29,6 +29,7 @@ export function ReviewQueueBanner({ count, onStartReview }: Props) {
               </p>
             </div>
             <Button
+              size="lg"
               className="relative z-10 bg-emerald-600 hover:bg-emerald-500 text-white shadow duration-300"
               onClick={onStartReview}
             >

@@ -27,17 +27,26 @@ interface Props {
   date: string
   onComplete: () => void
   onBack: () => void
+  embedded?: boolean
 }
 
-export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props) {
+export function ReadingSkillSession({ entries, date, onComplete, onBack, embedded }: Props) {
   const { keys } = useAuth()
   const { t } = useI18n()
   const [phase, setPhase] = useState<Phase>('loading')
   const [passage, setPassage] = useState('')
   const [translation, setTranslation] = useState(() => getReadingDraft(date))
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null)
+  const [regenKey, setRegenKey] = useState(0)
 
   const sourceLanguage = entries[0]?.sourceLanguage ?? 'zh-CN'
+
+  function handleRegenerate() {
+    setReadingPassage(date, '')
+    setPassage('')
+    setPhase('loading')
+    setRegenKey(k => k + 1)
+  }
 
   useEffect(() => {
     const cachedPassage = getReadingPassage(date)
@@ -71,7 +80,7 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props
         setPhase('translating')
       })
       .catch(() => setPhase('load-error'))
-  }, [date, entries, keys, sourceLanguage])
+  }, [date, entries, keys, sourceLanguage, regenKey])
 
   function handleTranslationChange(value: string) {
     setTranslation(value)
@@ -118,6 +127,87 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props
     'needs-work': 'text-amber-500',
   }
 
+  const content = (
+    <div className="flex-1 overflow-y-auto p-10 flex flex-col gap-6">
+      {phase === 'loading' && (
+        <p className="text-sm text-muted-foreground">{t('reading.generating')}</p>
+      )}
+
+      {phase === 'load-error' && (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-destructive">Failed to generate passage.</p>
+          <Button variant="outline" onClick={() => setPhase('loading')}>
+            {t('reading.retryGenerate')}
+          </Button>
+        </div>
+      )}
+
+      {(phase === 'translating' || phase === 'grading' || phase === 'result') && (
+        <>
+          <div className="rounded-lg border border-border bg-muted p-4 text-lg leading-relaxed whitespace-pre-wrap">
+            {passage}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">{t('reading.translatePrompt')}</label>
+            <textarea
+              className="w-full rounded-lg border border-border bg-input/50 p-3 text-base focus:outline-none focus:border-primary resize-none"
+              rows={5}
+              value={translation}
+              onChange={e => handleTranslationChange(e.target.value)}
+              disabled={phase === 'grading' || phase === 'result'}
+            />
+          </div>
+
+          {phase === 'translating' && (
+            <div className="flex gap-3 justify-center">
+              <Button variant="ghost" size="lg" onClick={onComplete}>{t('reading.skip')}</Button>
+              <Button variant="outline" size="lg" onClick={handleRegenerate}>{t('reading.regenerate')}</Button>
+              <Button
+                size="lg"
+                onClick={() => void handleSubmit()}
+                disabled={!translation.trim()}
+              >
+                {t('reading.submit')}
+              </Button>
+            </div>
+          )}
+
+          {phase === 'grading' && (
+            <p className="text-sm text-muted-foreground">{t('reading.grading')}</p>
+          )}
+
+          {phase === 'result' && (
+            <div className="flex flex-col gap-3">
+              {gradeResult
+                ? (
+                    <>
+                      {gradeResult.score && (
+                        <div className={`text-lg font-bold ${scoreColorMap[gradeResult.score] ?? ''}`}>
+                          {scoreLabelMap[gradeResult.score] ?? gradeResult.score}
+                        </div>
+                      )}
+                      {gradeResult.feedback && (
+                        <p className="text-sm">{gradeResult.feedback}</p>
+                      )}
+                    </>
+                  )
+                : (
+                    <p className="text-sm text-muted-foreground">{t('reading.gradingFailed')}</p>
+                  )}
+              <Button onClick={onComplete}>
+                {t('vocab.makeASentence.continue')}
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+
+  if (embedded)
+    return content
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       <div className="flex items-center gap-2 p-4 border-b border-border">
@@ -126,77 +216,7 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props
         </Button>
         <span className="text-sm font-semibold">{t('queue.skill.reading')}</span>
       </div>
-
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-        {phase === 'loading' && (
-          <p className="text-sm text-muted-foreground">{t('reading.generating')}</p>
-        )}
-
-        {phase === 'load-error' && (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm text-destructive">Failed to generate passage.</p>
-            <Button variant="outline" onClick={() => setPhase('loading')}>
-              {t('reading.retryGenerate')}
-            </Button>
-          </div>
-        )}
-
-        {(phase === 'translating' || phase === 'grading' || phase === 'result') && (
-          <>
-            <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm leading-relaxed whitespace-pre-wrap">
-              {passage}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">{t('reading.translatePrompt')}</label>
-              <textarea
-                className="w-full rounded-lg border border-border bg-muted/20 p-3 text-sm focus:outline-none focus:border-primary resize-none"
-                rows={5}
-                value={translation}
-                onChange={e => handleTranslationChange(e.target.value)}
-                disabled={phase === 'grading' || phase === 'result'}
-              />
-            </div>
-
-            {phase === 'translating' && (
-              <Button
-                onClick={() => void handleSubmit()}
-                disabled={!translation.trim()}
-              >
-                {t('reading.submit')}
-              </Button>
-            )}
-
-            {phase === 'grading' && (
-              <p className="text-sm text-muted-foreground">{t('reading.grading')}</p>
-            )}
-
-            {phase === 'result' && (
-              <div className="flex flex-col gap-3">
-                {gradeResult
-                  ? (
-                      <>
-                        {gradeResult.score && (
-                          <div className={`text-lg font-bold ${scoreColorMap[gradeResult.score] ?? ''}`}>
-                            {scoreLabelMap[gradeResult.score] ?? gradeResult.score}
-                          </div>
-                        )}
-                        {gradeResult.feedback && (
-                          <p className="text-sm">{gradeResult.feedback}</p>
-                        )}
-                      </>
-                    )
-                  : (
-                      <p className="text-sm text-muted-foreground">{t('reading.gradingFailed')}</p>
-                    )}
-                <Button onClick={onComplete}>
-                  {t('vocab.makeASentence.continue')}
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      {content}
     </div>
   )
 }

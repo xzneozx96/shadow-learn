@@ -147,8 +147,8 @@ async def generate_passage(req: PassageRequest):
     messages = [
         {"role": "system", "content": "You are a Chinese teacher creating reading passages for Vietnamese learners."},
         {"role": "user", "content": (
-            f"Write a short Chinese story or dialogue (8–12 sentences) naturally incorporating these words: {word_list}. "
-            "Level: HSK 3–4. The story should feel natural, not a vocabulary list. "
+            f"Write a short Chinese story or dialogue (2–3 sentences) naturally incorporating these words: {word_list}. "
+            "Level: HSK 2–3. The story should feel natural, not a vocabulary list. "
             "Return JSON with fields: passage (the Chinese text) and pinyin (full pinyin of the passage, one pinyin string matching the passage)."
         )},
     ]
@@ -181,7 +181,8 @@ async def grade_sentence(req: GradeSentenceRequest):
             f"Word: {req.hanzi} — meaning: {req.meaning}\n"
             f"Learner's sentence: {req.user_sentence}\n\n"
             "Does the learner use the word correctly in context? "
-            "Return JSON: correct (boolean) and feedback (1–2 sentences in Vietnamese)."
+            "Return JSON: correct (boolean) and feedback (1–2 sentences in Vietnamese). "
+            "If incorrect, include the corrected sentence written in Chinese characters (not translated)."
         )},
     ]
     result = await _call_openrouter(api_key, messages, _GRADE_SENTENCE_JSON_SCHEMA)

@@ -63,6 +63,7 @@ vi.mock('@/lib/language-caps', () => ({
 vi.mock('react-router-dom', () => ({
   useParams: () => ({ id: 'lesson-1' }),
   useSearchParams: () => [new URLSearchParams()],
+  useLocation: () => ({ pathname: '/', search: '', hash: '', state: null, key: 'default' }),
   Link: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 

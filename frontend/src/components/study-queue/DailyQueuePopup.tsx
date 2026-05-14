@@ -5,13 +5,9 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { ListeningSkillSession } from '@/components/study-queue/ListeningSkillSession'
-import { ReadingSkillSession } from '@/components/study-queue/ReadingSkillSession'
-import { SpeakingSkillSession } from '@/components/study-queue/SpeakingSkillSession'
-import { VocabularySkillSession } from '@/components/study-queue/VocabularySkillSession'
-import { WritingSkillSession } from '@/components/study-queue/WritingSkillSession'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useDailyReview } from '@/contexts/DailyReviewContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { cn } from '@/lib/utils'
@@ -27,7 +23,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
   const { t } = useI18n()
   const { lessons } = useLessons()
   const navigate = useNavigate()
-  const [activePanel, setActivePanel] = useState<ActivePanel>(null)
+  const { openReviewModal } = useDailyReview()
   const [expanded, setExpanded] = useState(true)
   const [addingTask, setAddingTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
@@ -41,28 +37,9 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
 
   const hasAnyContent = queue.hasDailyReview || !!mostRecentLesson || queue.customTasks.length > 0
 
-  // Full-screen skill panel
-  const sessionProps = {
-    entries: queue.dailyEntries,
-    date: today,
-    onBack: () => setActivePanel(null),
-    onComplete: () => { setActivePanel(null); void queue.refresh() },
+  function openSkill(skill: ActivePanel) {
+    openReviewModal(skill ?? undefined)
   }
-
-  if (activePanel === 'vocabulary')
-    return <VocabularySkillSession {...sessionProps} />
-
-  if (activePanel === 'listening')
-    return <ListeningSkillSession {...sessionProps} />
-
-  if (activePanel === 'speaking')
-    return <SpeakingSkillSession {...sessionProps} />
-
-  if (activePanel === 'reading')
-    return <ReadingSkillSession {...sessionProps} />
-
-  if (activePanel === 'writing')
-    return <WritingSkillSession {...sessionProps} />
 
   function handleStartShadowing() {
     if (!mostRecentLesson)
@@ -148,19 +125,27 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                   done={queue.dailyReviewDone}
                   partial={!queue.dailyReviewDone && skills.some(s => s.done)}
                 />
-                <span className={cn(
-                  'flex-1 text-sm font-semibold',
-                  queue.dailyReviewDone ? 'line-through text-muted-foreground' : '',
-                )}
-                >
-                  {t('queue.dailyReview')}
-                </span>
+                <div className="flex-1 min-w-0">
+                  <div className={cn(
+                    'text-sm font-semibold',
+                    queue.dailyReviewDone ? 'line-through text-muted-foreground' : '',
+                  )}
+                  >
+                    {t('queue.dailyReview')}
+                    {' '}
+                    {!queue.dailyReviewDone && queue.dailyEntries.length > 0 && (
+                      <span className="text-amber-400">
+                        {t('queue.wordsDue', { count: queue.dailyEntries.length })}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <motion.span
                   animate={{ rotate: expanded ? 0 : -90 }}
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
                   className="flex items-center"
                 >
-                  <ChevronDown className="size-4 text-muted-foreground/50" />
+                  <ChevronDown className="size-4.5 text-muted-foreground/50" />
                 </motion.span>
               </button>
 
@@ -179,21 +164,15 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                         <SkillRow
                           key={skill.key}
                           label={skill.label}
-
                           done={skill.done}
-                          doneLabel={t('queue.subtask.done')}
                           Icon={skill.icon}
-                          onStart={() => setActivePanel(skill.key)}
+                          onStart={() => openSkill(skill.key)}
                         />
                       ))}
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              {(mostRecentLesson || queue.customTasks.length > 0) && (
-                <div className="h-px bg-border/30 mx-4 my-0.5" />
-              )}
             </>
           )}
 
@@ -212,7 +191,13 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               >
                 {t('queue.shadowing')}
               </span>
-              {!queue.shadowingDone && <StartButton />}
+              {queue.shadowingDone
+                ? (
+                    <Button size="icon-xs" variant="ghost" className="text-emerald-500 pointer-events-none">
+                      <Check className="size-3" />
+                    </Button>
+                  )
+                : <StartButton />}
             </button>
           )}
 
@@ -229,7 +214,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 )}
                 onClick={() => void queue.toggleCustomTask(task.id)}
               >
-                {task.completedDate === today && <Check className="size-3" />}
+                {task.completedDate === today && <Check className="size-2.5" />}
               </button>
               {editingTaskId === task.id
                 ? (
@@ -324,6 +309,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               </button>
             )}
       </div>
+
     </div>
   )
 }
@@ -337,12 +323,12 @@ function CircleIndicator({ done, partial }: { done: boolean, partial: boolean })
       done
         ? 'bg-emerald-500 border-emerald-500 text-white'
         : partial
-          ? 'border-emerald-500 bg-emerald-500/10'
+          ? 'border-primary bg-primary/10'
           : 'border-primary/50 hover:border-primary',
     )}
     >
-      {done && <Check className="size-3" />}
-      {partial && !done && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+      {done && <Check className="size-2.5" />}
+      {partial && !done && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
     </div>
   )
 }
@@ -350,12 +336,11 @@ function CircleIndicator({ done, partial }: { done: boolean, partial: boolean })
 interface SkillRowProps {
   label: string
   done: boolean
-  doneLabel: string
   Icon: React.ElementType
   onStart: () => void
 }
 
-function SkillRow({ label, done, doneLabel, Icon, onStart }: SkillRowProps) {
+function SkillRow({ label, done, onStart }: SkillRowProps) {
   return (
     <div
       role="button"
@@ -365,20 +350,17 @@ function SkillRow({ label, done, doneLabel, Icon, onStart }: SkillRowProps) {
       onKeyDown={done ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStart() } }}
     >
       <div className="absolute left-0 top-1/2 w-2.5 h-px bg-border/50" />
-      <div className={cn(
-        'size-6 rounded-md flex items-center justify-center shrink-0',
-        done ? 'bg-emerald-500/10' : 'bg-primary/10',
-      )}
-      >
-        <Icon className={cn('size-3', done ? 'text-emerald-500' : 'text-primary')} />
-      </div>
       <div className="flex-1 min-w-0">
         <div className={cn('text-sm text-muted-foreground font-semibold', done ? 'line-through text-muted-foreground/50' : '')}>
           {label}
         </div>
       </div>
       {done
-        ? <span className="text-xs font-bold text-emerald-500 shrink-0">{doneLabel}</span>
+        ? (
+            <Button size="icon-xs" variant="ghost" className="text-emerald-500 pointer-events-none">
+              <Check className="size-3" />
+            </Button>
+          )
         : <StartButton onClick={onStart} />}
     </div>
   )
@@ -389,6 +371,7 @@ function StartButton({ onClick }: { onClick?: () => void }) {
     <Button
       size="icon-xs"
       variant="outline"
+      className="rounded-full"
       onClick={(e) => { e.stopPropagation(); onClick?.() }}
     >
       <ArrowRight className="text-primary size-3 -rotate-45" />

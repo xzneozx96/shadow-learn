@@ -12,9 +12,11 @@ import { Unlock } from '@/components/onboarding/Unlock'
 import { Settings } from '@/components/settings/Settings'
 import { PracticeSpeakingModal } from '@/components/speak/PracticeSpeakingModal'
 import { DailyQueuePopup } from '@/components/study-queue/DailyQueuePopup'
+import { DailyReviewModal } from '@/components/study-queue/DailyReviewModal'
 import { QueueFloatingBadge } from '@/components/study-queue/QueueFloatingBadge'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { DailyReviewProvider, useDailyReview } from '@/contexts/DailyReviewContext'
 import { GlobalCompanionProvider } from '@/contexts/GlobalCompanionContext'
 import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
@@ -44,6 +46,19 @@ function PageLoader() {
 function GlobalSpeakModal() {
   const { isOpen, closeSpeakModal } = useSpeakModal()
   return <PracticeSpeakingModal open={isOpen} onClose={closeSpeakModal} />
+}
+
+function GlobalDailyReview() {
+  const { isOpen, initialSkill, closeReviewModal } = useDailyReview()
+  const queue = useStudyQueueContext()
+  return (
+    <DailyReviewModal
+      open={isOpen}
+      onClose={() => { closeReviewModal(); void queue.refresh() }}
+      queue={queue}
+      initialSkill={initialSkill}
+    />
+  )
 }
 
 function RouteErrorElement() {
@@ -113,6 +128,7 @@ function AppLayout() {
           <Outlet />
           {/* <FeedbackButton /> */}
           <GlobalSpeakModal />
+          <GlobalDailyReview />
           <StudyQueueUI />
         </SpeakModalProvider>
       </GlobalCompanionProvider>
@@ -175,7 +191,9 @@ function AuthGate() {
       <VocabularyProvider>
         <LessonsProvider>
           <StudyQueueProvider>
-            <RouterProvider router={router} />
+            <DailyReviewProvider>
+              <RouterProvider router={router} />
+            </DailyReviewProvider>
           </StudyQueueProvider>
         </LessonsProvider>
       </VocabularyProvider>

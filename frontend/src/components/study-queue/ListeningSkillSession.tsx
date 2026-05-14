@@ -1,5 +1,7 @@
 import type { VocabEntry } from '@/types'
 import { ArrowLeft } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useState } from 'react'
 
 import { DictationExercise } from '@/components/study/exercises/DictationExercise'
 import { Button } from '@/components/ui/button'
@@ -15,9 +17,10 @@ interface Props {
   date: string
   onComplete: () => void
   onBack: () => void
+  embedded?: boolean
 }
 
-export function ListeningSkillSession({ entries, date, onComplete, onBack }: Props) {
+export function ListeningSkillSession({ entries, date, onComplete, onBack, embedded }: Props) {
   const { db, keys } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
@@ -26,10 +29,11 @@ export function ListeningSkillSession({ entries, date, onComplete, onBack }: Pro
   const caps = getLanguageCaps(sourceLanguage)
 
   const completedIds = new Set(getSkillProgress('listening', date))
-  const remaining = entries.filter(e => !completedIds.has(e.id))
+  const [skippedIds, setSkippedIds] = useState(new Set<string>())
+  const remaining = entries.filter(e => !completedIds.has(e.id) && !skippedIds.has(e.id))
 
   const total = entries.length
-  const completedCount = completedIds.size
+  const doneCount = completedIds.size + skippedIds.size
 
   if (remaining.length === 0) {
     onComplete()
@@ -38,12 +42,40 @@ export function ListeningSkillSession({ entries, date, onComplete, onBack }: Pro
 
   const current = remaining[0]
 
-  function handleNext(score: number) {
+  function handleNext(score: number, opts?: { skipped?: boolean }) {
     void logExerciseResult({ vocabEntry: current, exerciseType: 'dictation', score })
-    markWordComplete('listening', date, current.id)
+    if (opts?.skipped)
+      setSkippedIds(prev => new Set([...prev, current.id]))
+    else
+      markWordComplete('listening', date, current.id)
   }
 
-  const progress = `${completedCount + 1} / ${total}`
+  const progress = `${doneCount + 1} / ${total}`
+
+  const content = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={current.id}
+        className="flex-1 overflow-y-auto p-10"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <DictationExercise
+          entry={current}
+          progress={progress}
+          onNext={handleNext}
+          playTTS={playTTS}
+          loadingText={loadingText}
+          caps={caps}
+        />
+      </motion.div>
+    </AnimatePresence>
+  )
+
+  if (embedded)
+    return content
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -53,16 +85,7 @@ export function ListeningSkillSession({ entries, date, onComplete, onBack }: Pro
         </Button>
         <span className="text-sm font-semibold">{t('queue.skill.listening')}</span>
       </div>
-      <div className="flex-1 overflow-y-auto p-4">
-        <DictationExercise
-          entry={current}
-          progress={progress}
-          onNext={handleNext}
-          playTTS={playTTS}
-          loadingText={loadingText}
-          caps={caps}
-        />
-      </div>
+      {content}
     </div>
   )
 }

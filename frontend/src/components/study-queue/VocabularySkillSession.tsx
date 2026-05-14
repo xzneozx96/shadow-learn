@@ -1,5 +1,6 @@
 import type { VocabEntry } from '@/types'
 import { ArrowLeft } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { FlashcardExercise } from '@/components/study/exercises/FlashcardExercise'
 import { RomanizationRecallExercise } from '@/components/study/exercises/RomanizationRecallExercise'
@@ -24,9 +25,10 @@ interface Props {
   date: string
   onComplete: () => void
   onBack: () => void
+  embedded?: boolean
 }
 
-export function VocabularySkillSession({ entries, date, onComplete, onBack }: Props) {
+export function VocabularySkillSession({ entries, date, onComplete, onBack, embedded }: Props) {
   const { db, keys } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
@@ -104,15 +106,16 @@ export function VocabularySkillSession({ entries, date, onComplete, onBack }: Pr
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
-      <div className="flex items-center gap-2 p-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="size-4" />
-        </Button>
-        <span className="text-sm font-semibold">{t('queue.skill.vocabulary')}</span>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4">
+  const content = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={`${current.id}-${step}`}
+        className="flex-1 overflow-y-auto p-10"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+      >
         {step === 'flashcard' && (
           <FlashcardExercise
             entry={current}
@@ -166,7 +169,22 @@ export function VocabularySkillSession({ entries, date, onComplete, onBack }: Pr
             )}
           </div>
         )}
+      </motion.div>
+    </AnimatePresence>
+  )
+
+  if (embedded)
+    return content
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      <div className="flex items-center gap-2 p-4 border-b border-border">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="size-4" />
+        </Button>
+        <span className="text-sm font-semibold">{t('queue.skill.vocabulary')}</span>
       </div>
+      {content}
     </div>
   )
 }

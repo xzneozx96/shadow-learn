@@ -29,6 +29,7 @@ def _mock_httpx(response_data):
 def test_generate_passage_returns_passage():
     with patch("httpx.AsyncClient", return_value=_mock_httpx(PASSAGE_RESP)):
         resp = client.post("/api/daily-review/passage", json={
+            "openrouter_api_key": "test-key",
             "words": [{"hanzi": "你好", "pinyin": "nǐ hǎo", "meaning": "hello"}],
             "source_language": "zh-CN",
         })
@@ -41,6 +42,7 @@ def test_generate_passage_returns_passage():
 def test_grade_passage_returns_score():
     with patch("httpx.AsyncClient", return_value=_mock_httpx(GRADE_RESP)):
         resp = client.post("/api/daily-review/grade-passage", json={
+            "openrouter_api_key": "test-key",
             "passage": "你好世界。",
             "user_translation": "Hello world.",
             "source_language": "zh-CN",
@@ -54,6 +56,7 @@ def test_grade_passage_returns_score():
 def test_grade_sentence_returns_correct():
     with patch("httpx.AsyncClient", return_value=_mock_httpx(SENTENCE_GRADE_RESP)):
         resp = client.post("/api/daily-review/grade-sentence", json={
+            "openrouter_api_key": "test-key",
             "hanzi": "你好",
             "meaning": "hello",
             "user_sentence": "Tôi nói 你好 với anh ấy.",
