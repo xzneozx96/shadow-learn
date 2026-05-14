@@ -3,9 +3,11 @@ import type { LanguageCapabilities } from '@/lib/language-caps'
 import type { VocabEntry } from '@/types'
 import { useState } from 'react'
 import { ExerciseCard } from '@/components/study/exercises/ExerciseCard'
+import { HintButton } from '@/components/study/exercises/HintButton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useI18n } from '@/contexts/I18nContext'
+import { useHint } from '@/hooks/useHint'
 import { computeAccuracyScore, computePinyinDiff } from '@/lib/diff-utils'
 import { compareRomanization } from '@/lib/romanization-utils'
 import { cn } from '@/lib/utils'
@@ -22,6 +24,7 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
   const { t } = useI18n()
   const [value, setValue] = useState('')
   const [checked, setChecked] = useState(false)
+  const hint = useHint(1)
   const correct = compareRomanization(value, entry.romanization, caps.romanizationSystem)
   const diff = checked ? computePinyinDiff(value.trim(), entry.romanization?.trim() ?? '') : []
   const accuracyScore = checked ? computeAccuracyScore(diff) : 0
@@ -37,6 +40,7 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
   const footer = (
     <div className="flex items-center justify-center gap-3 p-3">
       <Button variant="ghost" size="lg" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
+      <HintButton level={hint.level} totalLevels={1} exhausted={hint.exhausted} onHint={hint.revealNext} />
       {!checked
         ? <Button size="lg" onClick={handleCheck}>{t('study.checkButton')}</Button>
         : (
@@ -67,7 +71,9 @@ export function RomanizationRecallExercise({ entry, progress = '', onNext, playT
         <div className="text-[52px] font-extrabold tracking-widest leading-none text-foreground">
           {entry.word}
         </div>
-        <p className="text-sm text-muted-foreground mt-3">{entry.meaning}</p>
+        {hint.level > 0 && (
+          <p className="text-sm text-muted-foreground mt-3">{entry.meaning}</p>
+        )}
       </div>
 
       <Input
