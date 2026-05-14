@@ -57,12 +57,12 @@ export function AmbientBackdrop({ url, tone, height = 'h-[420px]' }: AmbientBack
                 />
 
                 {/* Grain Texture */}
-                {/* <svg className="absolute inset-0 h-full w-full opacity-[0.15] mix-blend-overlay pointer-events-none">
+                <svg className="absolute inset-0 h-full w-full opacity-[0.15] mix-blend-overlay pointer-events-none">
                   <filter id="noiseFilter">
                     <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" stitchTiles="stitch" />
                   </filter>
                   <rect width="100%" height="100%" filter="url(#noiseFilter)" />
-                </svg> */}
+                </svg>
                 <div className="absolute inset-0 bg-linear-to-b from-transparent via-background/40 to-background" />
               </>
             )
