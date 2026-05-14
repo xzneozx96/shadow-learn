@@ -7,27 +7,26 @@ import {
   getErrorPattern,
   getMasteryData,
   getProgressStats,
-  getSpacedRepetitionItem,
   saveErrorPattern,
   saveMasteryData,
   saveProgressStats,
   saveSessionLog,
-  saveSpacedRepetitionItem,
   upsertExerciseStat,
 } from '@/db'
-import { createSpacedRepetitionItem, updateSpacedRepetition } from '@/lib/spacedRepetition'
+import { bufferSM2Score } from '@/lib/skillSessionProgress'
 
 export type Skill = 'writing' | 'speaking' | 'vocabulary' | 'reading' | 'listening'
 export type ExerciseType = Exclude<ExerciseMode, 'mixed'>
 
 export const EXERCISE_TO_SKILL: Record<ExerciseType, Skill> = {
   'dictation': 'listening',
-  'romanization-recall': 'speaking',
-  'reconstruction': 'reading',
+  'romanization-recall': 'vocabulary',
+  'reconstruction': 'writing',
   'writing': 'writing',
   'pronunciation': 'speaking',
   'cloze': 'vocabulary',
   'translation': 'writing',
+  'flashcard': 'vocabulary',
 }
 
 function defaultProgressStats() {
@@ -72,15 +71,12 @@ export async function logExerciseCompletion(
     score: number
     mistakes?: MistakeExample[]
   },
-): Promise<SpacedRepetitionItem> {
+): Promise<void> {
   const today = new Date().toISOString().split('T')[0]
   const isCorrect = score >= 60
 
-  // 1. Upsert SM-2 item
-  const existing = await getSpacedRepetitionItem(db, vocabEntry.id)
-  const item = existing ?? createSpacedRepetitionItem(vocabEntry.id)
-  const updated = updateSpacedRepetition(item, score)
-  await saveSpacedRepetitionItem(db, updated)
+  // 1. Buffer SM-2 score (worst-score-wins; flushed on app open or after session)
+  bufferSM2Score(vocabEntry.id, score, today)
 
   // Update exercise-stats (difficulty tracking per vocabId:exerciseType)
   const statKey = `${vocabEntry.id}:${exerciseType}`
@@ -119,7 +115,6 @@ export async function logExerciseCompletion(
 
   // 3. Update mastery-db
   const mastery = (await getMasteryData(db)) ?? defaultMasteryData()
-  mastery[skill].masteryLevel = updated.masteryLevel
   mastery[skill].lastPracticed = today
   await saveMasteryData(db, mastery)
 
@@ -136,8 +131,6 @@ export async function logExerciseCompletion(
     pattern.examples = [...pattern.examples, ...mistakes].slice(-10)
     await saveErrorPattern(db, pattern)
   }
-
-  return updated
 }
 
 // -------------------------------------------------------------------------- //
@@ -152,9 +145,9 @@ export function useTracking() {
     exerciseType: ExerciseType
     score: number
     mistakes?: MistakeExample[]
-  }): Promise<SpacedRepetitionItem | null> {
+  }): Promise<void> {
     if (!db)
-      return null
+      return
     return logExerciseCompletion(db, args)
   }
 
