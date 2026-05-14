@@ -301,7 +301,8 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 size="icon-xs"
                 variant="ghost"
                 type="button"
-                className="text-red-400 hover:text-red-500"
+                className="text-destructive"
+                onClick={() => void queue.removeCustomTask(task.id)}
               >
                 <Trash2 className="size-3" />
               </Button>

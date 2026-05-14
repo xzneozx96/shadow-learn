@@ -3,6 +3,7 @@ import type { VocabEntry } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { API_BASE } from '@/lib/config'
 import {
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props) {
+  const { keys } = useAuth()
   const { t } = useI18n()
   const [phase, setPhase] = useState<Phase>('loading')
   const [passage, setPassage] = useState('')
@@ -51,10 +53,13 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props
       meaning: e.meaning,
     }))
 
+    if (!keys)
+      return
+
     void fetch(`${API_BASE}/api/daily-review/passage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ words, source_language: sourceLanguage }),
+      body: JSON.stringify({ words, openrouter_api_key: keys.openrouterApiKey, source_language: sourceLanguage }),
     })
       .then(async (resp) => {
         if (!resp.ok)
@@ -66,7 +71,7 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props
         setPhase('translating')
       })
       .catch(() => setPhase('load-error'))
-  }, [date, entries, sourceLanguage])
+  }, [date, entries, keys, sourceLanguage])
 
   function handleTranslationChange(value: string) {
     setTranslation(value)
@@ -76,13 +81,16 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props
   async function handleSubmit() {
     setPhase('grading')
     try {
+      if (!keys)
+        return
       const resp = await fetch(`${API_BASE}/api/daily-review/grade-passage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          openrouter_api_key: keys.openrouterApiKey,
           passage,
-          user_translation: translation,
           source_language: sourceLanguage,
+          user_translation: translation,
         }),
       })
       if (!resp.ok)
@@ -95,7 +103,6 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props
     catch {
       markReadingSubmitted(date)
       setPhase('result')
-      setGradeResult({ score: 'good', feedback: '' })
     }
   }
 
@@ -164,16 +171,24 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack }: Props
               <p className="text-sm text-muted-foreground">{t('reading.grading')}</p>
             )}
 
-            {phase === 'result' && gradeResult && (
+            {phase === 'result' && (
               <div className="flex flex-col gap-3">
-                {gradeResult.score && (
-                  <div className={`text-lg font-bold ${scoreColorMap[gradeResult.score] ?? ''}`}>
-                    {scoreLabelMap[gradeResult.score] ?? gradeResult.score}
-                  </div>
-                )}
-                {gradeResult.feedback && (
-                  <p className="text-sm">{gradeResult.feedback}</p>
-                )}
+                {gradeResult
+                  ? (
+                      <>
+                        {gradeResult.score && (
+                          <div className={`text-lg font-bold ${scoreColorMap[gradeResult.score] ?? ''}`}>
+                            {scoreLabelMap[gradeResult.score] ?? gradeResult.score}
+                          </div>
+                        )}
+                        {gradeResult.feedback && (
+                          <p className="text-sm">{gradeResult.feedback}</p>
+                        )}
+                      </>
+                    )
+                  : (
+                      <p className="text-sm text-muted-foreground">{t('reading.gradingFailed')}</p>
+                    )}
                 <Button onClick={onComplete}>
                   {t('vocab.makeASentence.continue')}
                 </Button>

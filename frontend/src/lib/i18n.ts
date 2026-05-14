@@ -699,6 +699,7 @@ export const TRANSLATIONS = {
     'reading.excellent': 'Excellent',
     'reading.good': 'Good',
     'reading.needsWork': 'Needs work',
+    'reading.gradingFailed': 'Unable to grade — tap to continue',
     // Make-a-sentence
     'vocab.makeASentence.prompt': 'Write a sentence using this word:',
     'vocab.makeASentence.submit': 'Submit',
@@ -1412,6 +1413,7 @@ export const TRANSLATIONS = {
     'reading.excellent': 'Xuất sắc',
     'reading.good': 'Tốt',
     'reading.needsWork': 'Cần cải thiện',
+    'reading.gradingFailed': 'Không thể chấm điểm — nhấn để tiếp tục',
     // Make-a-sentence
     'vocab.makeASentence.prompt': 'Đặt câu sử dụng từ này:',
     'vocab.makeASentence.submit': 'Nộp',

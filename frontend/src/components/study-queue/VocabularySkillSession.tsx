@@ -86,12 +86,15 @@ export function VocabularySkillSession({ entries, date, onComplete, onBack }: Pr
     setSentenceGrading(true)
     setSentenceError(false)
     try {
+      if (!keys)
+        return
       const resp = await fetch(`${API_BASE}/api/daily-review/grade-sentence`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           hanzi: current.word,
           meaning: current.meaning,
+          openrouter_api_key: keys.openrouterApiKey,
           user_sentence: sentence,
         }),
       })
