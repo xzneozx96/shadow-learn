@@ -51,16 +51,18 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
         try {
           const lessonIds = [...new Set(pool.map(e => e.sourceLessonId))]
           const segmentArrays = await Promise.all(
-            lessonIds.map(id => getSegments(db, id).then(segs => segs ?? [])),
+            lessonIds.map(id => getSegments(db, id).then(segs => (segs ?? []).map(s => ({ ...s, _lessonId: id })))),
           )
+          // Segment IDs are per-lesson integers (0,1,2...) — not globally unique.
+          // Key by lessonId+segmentId to prevent cross-lesson collisions.
           const segmentMap = new Map<string, Segment>(
-            segmentArrays.flat().map(s => [s.id, s]),
+            segmentArrays.flat().map(s => [`${s._lessonId}:${s.id}`, s]),
           )
           for (let i = 0; i < translationCount; i++) {
             const entry = pool[i % pool.length]
-            const seg = segmentMap.get(entry.sourceSegmentId)
+            const seg = segmentMap.get(`${entry.sourceLessonId}:${entry.sourceSegmentId}`)
             translationSentences.push({
-              text: entry.sourceSegmentText,
+              text: seg?.text ?? entry.sourceSegmentText,
               romanization: seg?.romanization ?? '',
               translation: seg?.translations?.[locale] ?? entry.sourceSegmentTranslation,
             })

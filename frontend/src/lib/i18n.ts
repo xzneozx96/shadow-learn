@@ -359,7 +359,6 @@ export const TRANSLATIONS = {
     'study.exercise.reconstruction.info': 'Rearrange the scrambled word chips into the correct sentence. Tests grammar and word order.',
     'study.exercise.writing.info': 'Trace each character first, then draw from memory on a blank canvas.',
     'study.exercise.pronunciation.info': 'Read the sentence aloud and get AI-scored feedback on accuracy, fluency, and prosody.',
-    'study.translation.placeholder.toEnglish': 'Type your English translation…',
     'study.translation.placeholder.toLanguage': 'Type your {language} translation…',
 
     // Shadowing
@@ -992,7 +991,6 @@ export const TRANSLATIONS = {
     'study.exercise.reconstruction.info': 'Ghép các từ bị đảo lộn thành câu hoàn chỉnh. Nắm vững cấu trúc bài.',
     'study.exercise.writing.info': 'Tô từng chữ một lần, sau đó vẽ lại từ trí nhớ trên ô trống.',
     'study.exercise.pronunciation.info': 'Đọc to câu và nhận nhận xét từ AI về độ chuẩn xác, trôi chảy.',
-    'study.translation.placeholder.toEnglish': 'Nhập bản dịch tiếng Anh của bạn…',
     'study.translation.placeholder.toLanguage': 'Nhập bản dịch {language} của bạn…',
 
     // Shadowing

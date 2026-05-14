@@ -13,7 +13,7 @@ export interface SessionQuestion {
   reconstructionTokens?: string[]
   translationData?: {
     sentence: { text: string, romanization: string, translation: string }
-    direction: 'en-to-zh' | 'zh-to-en'
+    direction: 'native-to-source' | 'source-to-native'
   }
 }
 
@@ -84,7 +84,7 @@ export function buildSessionQuestions(
   clozeExercises: { story: string, blanks: string[] }[],
   pronExercises: { sentence: string, translation: string, romanization?: string }[],
   translationSentences: { text: string, romanization: string, translation: string }[],
-  getDirection: () => 'en-to-zh' | 'zh-to-en' = () => Math.random() < 0.5 ? 'en-to-zh' : 'zh-to-en',
+  getDirection: () => 'native-to-source' | 'source-to-native' = () => Math.random() < 0.5 ? 'native-to-source' : 'source-to-native',
 ): SessionQuestion[] {
   let clozeIdx = 0
   let pronIdx = 0

@@ -38,7 +38,7 @@ interface EvaluateResult {
 
 interface Props {
   sentence: Sentence
-  direction: 'en-to-zh' | 'zh-to-en'
+  direction: 'native-to-source' | 'source-to-native'
   progress?: string
   onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
   caps: LanguageCapabilities
@@ -117,7 +117,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<EvaluateResult | null>(null)
 
-  const hint = useHint(direction === 'en-to-zh' ? 1 : 0)
+  const hint = useHint(direction === 'native-to-source' ? 1 : 0)
 
   const wordBankItems: { word: string, pinyin: string }[] = (() => {
     const words = sentence.text.split(WHITESPACE_RE).filter(Boolean)
@@ -128,13 +128,12 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
   })()
 
   const nativeLang = nativeCaps.languageName
-  const source = direction === 'zh-to-en' ? sentence.text : sentence.translation
-  const reference = direction === 'zh-to-en' ? sentence.translation : sentence.text
-  const sourceLang = direction === 'zh-to-en' ? caps.languageName.toLowerCase() : nativeLang.toLowerCase()
-  const targetLang = direction === 'zh-to-en' ? nativeLang.toLowerCase() : caps.languageName.toLowerCase()
-  const placeholder = direction === 'zh-to-en'
-    ? t('study.translation.placeholder.toEnglish').replace('English', nativeLang)
-    : t('study.translation.placeholder.toLanguage').replace('{language}', caps.languageName)
+  const source = direction === 'source-to-native' ? sentence.text : sentence.translation
+  const reference = direction === 'source-to-native' ? sentence.translation : sentence.text
+  const sourceLang = direction === 'source-to-native' ? caps.languageName.toLowerCase() : nativeLang.toLowerCase()
+  const targetLang = direction === 'source-to-native' ? nativeLang.toLowerCase() : caps.languageName.toLowerCase()
+  const targetLangName = direction === 'source-to-native' ? nativeLang : caps.languageName
+  const placeholder = t('study.translation.placeholder.toLanguage').replace('{language}', targetLangName)
 
   async function handleSubmit() {
     if (!value.trim())
@@ -173,7 +172,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
 
           {/* Source + answer/reference comparison */}
           <div className="rounded-lg border border-border/50 bg-muted/20 overflow-hidden text-sm">
-            <div className="px-4 py-3 border-b border-border/40">
+            <div className="px-4 py-3 border-b border-border">
               <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">{t('study.questionToTranslate')}</p>
               <p className="font-medium leading-snug">{source}</p>
             </div>
@@ -185,7 +184,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
               <div className="px-3 py-2.5">
                 <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/50 mb-2">{t('study.modelAnswer')}</p>
                 <p className="text-sm text-foreground leading-relaxed">{reference}</p>
-                {direction === 'en-to-zh' && (
+                {direction === 'native-to-source' && (
                   <p className="text-sm text-muted-foreground mt-1">{sentence.romanization}</p>
                 )}
               </div>
@@ -243,11 +242,11 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
           <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">
             {t('study.translateTo')}
             {' '}
-            {direction === 'zh-to-en' ? nativeLang : caps.languageName}
+            {direction === 'source-to-native' ? nativeLang : caps.languageName}
             :
           </p>
           <p className="text-2xl font-medium leading-snug">{source}</p>
-          {direction === 'zh-to-en' && (
+          {direction === 'source-to-native' && (
             <p className="text-sm text-muted-foreground mt-1">{sentence.romanization}</p>
           )}
         </div>
@@ -267,7 +266,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
         )}
 
         <LanguageInput
-          langInputMode={direction === 'en-to-zh' ? caps.inputMode : 'standard'}
+          langInputMode={direction === 'native-to-source' ? caps.inputMode : 'standard'}
           value={value}
           onChange={e => setValue(e.target.value)}
           onKeyDown={(e) => {
@@ -279,7 +278,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
         />
 
         <div className="flex items-center justify-center gap-3">
-          {direction === 'en-to-zh' && (
+          {direction === 'native-to-source' && (
             <HintButton
               level={hint.level}
               totalLevels={1}

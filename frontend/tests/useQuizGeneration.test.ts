@@ -227,6 +227,28 @@ describe('useQuizGeneration', () => {
       })
     })
 
+    it('uses seg.text not entry.sourceSegmentText so all three fields come from same segment', async () => {
+      // Simulate stale vocab entry: sourceSegmentText diverged from actual segment text
+      const stalePool = [{
+        ...mockPool[0],
+        sourceSegmentText: '旧的文字', // stale cached text on vocab entry
+        sourceSegmentId: 'seg-1', // but ID still points to seg-1
+      }]
+
+      const { result } = renderHook(() => useQuizGeneration())
+      const controller = new AbortController()
+
+      let data: any
+      await act(async () => {
+        data = await result.current.generateQuiz(['translation'], stalePool, controller.signal)
+      })
+
+      // Must use seg.text, not the stale entry.sourceSegmentText
+      expect(data.translationSentences[0].text).toBe('你好，世界')
+      expect(data.translationSentences[0].romanization).toBe('nǐ hǎo shì jiè')
+      expect(data.translationSentences[0].translation).toBe('Hello, world')
+    })
+
     it('falls back to entry.sourceSegmentTranslation when segment not in IDB', async () => {
       mockGetSegments.mockResolvedValue([]) // no segments returned
 
@@ -262,6 +284,34 @@ describe('useQuizGeneration', () => {
       expect(mockGetSegments).toHaveBeenCalledTimes(2)
       expect(mockGetSegments).toHaveBeenCalledWith(mockDb, 'lesson-a')
       expect(mockGetSegments).toHaveBeenCalledWith(mockDb, 'lesson-b')
+    })
+
+    it('does not mix up segments when two lessons share the same segment id integers', async () => {
+      // Both lessons have a segment with id "0" — classic per-lesson integer collision
+      const lessonASegs = [{ id: '0', text: '你好', romanization: 'nǐ hǎo', translations: { en: 'Hello' }, words: [] }]
+      const lessonBSegs = [{ id: '0', text: '再见', romanization: 'zài jiàn', translations: { en: 'Goodbye' }, words: [] }]
+
+      mockGetSegments.mockImplementation((_db: any, lessonId: string) =>
+        Promise.resolve(lessonId === 'lesson-a' ? lessonASegs : lessonBSegs),
+      )
+
+      const multiLessonPool = [
+        { ...mockPool[0], sourceLessonId: 'lesson-a', sourceSegmentId: '0', sourceSegmentText: '你好' },
+        { ...mockPool[1], sourceLessonId: 'lesson-b', sourceSegmentId: '0', sourceSegmentText: '再见' },
+      ]
+
+      const { result } = renderHook(() => useQuizGeneration())
+      const controller = new AbortController()
+
+      let data: any
+      await act(async () => {
+        data = await result.current.generateQuiz(['translation', 'translation'], multiLessonPool, controller.signal)
+      })
+
+      expect(data.translationSentences[0].text).toBe('你好')
+      expect(data.translationSentences[0].translation).toBe('Hello')
+      expect(data.translationSentences[1].text).toBe('再见')
+      expect(data.translationSentences[1].translation).toBe('Goodbye')
     })
 
     it('returns empty translationSentences when db is null', async () => {

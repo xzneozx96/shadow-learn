@@ -189,15 +189,15 @@ describe('buildSessionQuestions — pronunciation', () => {
 
 describe('buildSessionQuestions — translation', () => {
   it('includes translation question when data is present', () => {
-    const qs = buildSessionQuestions(['translation'], pool, [], [], [translation(1)], () => 'en-to-zh')
+    const qs = buildSessionQuestions(['translation'], pool, [], [], [translation(1)], () => 'native-to-source')
     expect(qs).toHaveLength(1)
     expect(qs[0].type).toBe('translation')
     expect(qs[0].translationData?.sentence).toEqual(translation(1))
-    expect(qs[0].translationData?.direction).toBe('en-to-zh')
+    expect(qs[0].translationData?.direction).toBe('native-to-source')
   })
 
   it('uses getDirection to assign direction per question', () => {
-    const directions: ('en-to-zh' | 'zh-to-en')[] = ['en-to-zh', 'zh-to-en']
+    const directions: ('native-to-source' | 'source-to-native')[] = ['native-to-source', 'source-to-native']
     let i = 0
     const qs = buildSessionQuestions(
       ['translation', 'translation'],
@@ -207,8 +207,8 @@ describe('buildSessionQuestions — translation', () => {
       [translation(1), translation(2)],
       () => directions[i++],
     )
-    expect(qs[0].translationData?.direction).toBe('en-to-zh')
-    expect(qs[1].translationData?.direction).toBe('zh-to-en')
+    expect(qs[0].translationData?.direction).toBe('native-to-source')
+    expect(qs[1].translationData?.direction).toBe('source-to-native')
   })
 
   it('skips translation question when AI returned fewer items than requested', () => {
@@ -218,7 +218,7 @@ describe('buildSessionQuestions — translation', () => {
       [],
       [],
       [translation(1)], // only 1, not 3
-      () => 'en-to-zh',
+      () => 'native-to-source',
     )
     expect(qs).toHaveLength(1)
   })
@@ -258,7 +258,7 @@ describe('buildSessionQuestions — mixed', () => {
       [cloze(1)], // only 1 of 2 cloze
       [pron(1)], // 1 of 1 pron — ok
       [translation(1)], // 1 of 1 translation — ok
-      () => 'en-to-zh',
+      () => 'native-to-source',
     )
     expect(qs).toHaveLength(3) // 1 cloze + 1 pron + 1 translation; second cloze dropped
     expect(qs.map(q => q.type)).toEqual(['cloze', 'pronunciation', 'translation'])
