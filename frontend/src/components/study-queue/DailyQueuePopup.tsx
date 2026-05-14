@@ -119,7 +119,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
   ]
 
   return (
-    <div className="relative w-[340px] bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
+    <div className="relative w-[340px] rounded-2xl overflow-hidden bg-black/20 backdrop-blur-2xl border border-white/10 flex flex-col bg-linear-to-br from-zinc-800/30 to-zinc-800/50 shadow-xl">
 
       {editingTaskId !== null && (
         <div
@@ -136,7 +136,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
       )}
 
       {/* Header */}
-      <div className="p-3 border-b border-border">
+      <div className="p-3 border-b border-white/10">
         {queue.allDoneToday
           ? (
               <>
