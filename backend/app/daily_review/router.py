@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Literal
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -22,7 +23,7 @@ class WordInput(BaseModel):
 class PassageRequest(BaseModel):
     openrouter_api_key: str | None = None
     words: list[WordInput]
-    source_language: str = "zh-CN"
+    source_language: str = "zh-CN"  # accepted for API consistency; endpoints are Chinese-only
 
 
 class PassageResponse(BaseModel):
@@ -34,11 +35,11 @@ class GradePassageRequest(BaseModel):
     openrouter_api_key: str | None = None
     passage: str
     user_translation: str
-    source_language: str = "zh-CN"
+    source_language: str = "zh-CN"  # accepted for API consistency; endpoints are Chinese-only
 
 
 class GradePassageResponse(BaseModel):
-    score: str   # "excellent" | "good" | "needs-work"
+    score: Literal["excellent", "good", "needs-work"]
     feedback: str
 
 
@@ -126,6 +127,7 @@ async def _call_openrouter(api_key: str, messages: list[dict], response_format: 
         resp.raise_for_status()
         body = resp.json()
         if "error" in body or "choices" not in body:
+            logger.error("[daily-review] OpenRouter unexpected response: %s", body)
             raise HTTPException(500, f"OpenRouter error: {body.get('error', body)}")
         choice = body["choices"][0]
         if choice.get("finish_reason") == "length":
