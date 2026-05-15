@@ -75,3 +75,6 @@ ai-agent-research/
 
 # Remotion intro video (local only)
 intro-video/
+
+# Generated data from backend/scripts/ pipeline — reproducible, not source of truth
+backend/scripts/*

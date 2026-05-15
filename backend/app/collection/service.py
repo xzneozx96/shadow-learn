@@ -7,7 +7,7 @@ import time
 
 import httpx
 
-from app.collection.config import PlaylistConfig, PLAYLISTS, STANDALONE_VIDEOS
+from app.collection.config import PlaylistConfig, VideoConfig, PLAYLISTS, STANDALONE_VIDEOS
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -346,9 +346,9 @@ def bucket_difficulty(raw: str | None) -> str | None:
 
 
 def build_hub_response(
-    playlists: list,
+    playlists: list[PlaylistConfig],
     playlist_meta_by_id: dict[str, dict],
-    standalone_videos: list,
+    standalone_videos: list[VideoConfig],
     standalone_entries: dict[str, dict],
 ) -> dict:
     """Build the HubResponse dict.
