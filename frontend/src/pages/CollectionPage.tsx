@@ -75,7 +75,7 @@ export function CollectionPage() {
             <h1 className="text-2xl xl:text-3xl font-bold tracking-[-0.03em] leading-[0.95] text-foreground text-balance">
               {t('collection.title')}
             </h1>
-            <p className="mt-2 text-base md:text-lg leading-relaxed text-muted-foreground text-pretty max-w-2xl">
+            <p className="mt-2 text-base md:text-lg leading-relaxed text-muted-foreground text-pretty max-w-3xl">
               {activeTab === 'materials'
                 ? t('collection.materialsSubtitle')
                 : t('collection.tipsSubtitle')}

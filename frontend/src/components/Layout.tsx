@@ -1,4 +1,4 @@
-import { AudioLines, BookOpen, FileText, Library, Newspaper, PanelLeft, PanelRight, Play, Settings, Sparkles, Sprout } from 'lucide-react'
+import { AudioLines, BookOpenText, FileText, Library, Newspaper, PanelLeft, PanelRight, Settings, Sparkles, Sprout, TvMinimalPlay } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
@@ -37,8 +37,8 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { to: '/', label: t('nav.library'), icon: Library, active: location.pathname === '/' },
-    { to: '/vocabulary', label: t('nav.workbook'), icon: BookOpen, active: location.pathname.startsWith('/vocabulary') },
-    { to: '/collection', label: t('nav.collection'), icon: Play, active: location.pathname === '/collection' },
+    { to: '/vocabulary', label: t('nav.workbook'), icon: BookOpenText, active: location.pathname.startsWith('/vocabulary') },
+    { to: '/collection', label: t('nav.collection'), icon: TvMinimalPlay, active: location.pathname === '/collection' },
     { to: '/docs', label: t('nav.documentation'), icon: FileText, active: location.pathname === '/docs' },
     { to: '/changelog', label: t('whatsNew.navLabel'), icon: Newspaper, active: location.pathname === '/changelog', badge: hasUnseen },
   ]

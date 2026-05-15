@@ -122,6 +122,12 @@ PLAYLISTS: list[PlaylistConfig] = [
         default_difficulty="HSK 3-4",
         default_topic="Cartoon",
     ),
+    PlaylistConfig(
+        name="Nhật Ký Trưởng Thành Của Thiên Thiên",
+        playlist_id="PLyRw_Xs7qLxVXHuOrTtGy9iLSHKxN5i28",
+        default_difficulty="HSK 3-4",
+        default_topic="Cartoon",
+    ),
     # Tip playlists (content_type="tip", default_skill is set),
     PlaylistConfig(
         name="PHÁT ÂM TIẾNG TRUNG TỪ ĐẦU | Yangdexin",
