@@ -1,11 +1,16 @@
 import type { SpacedRepetitionItem } from '@/db'
+import { todayISO } from '@/lib/date'
 
 export function scoreToQuality(score: number): number {
   return Math.min(5, Math.floor(Math.min(score, 100) / 20))
 }
 
+function localDateString(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function createSpacedRepetitionItem(itemId: string): SpacedRepetitionItem {
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayISO()
   return {
     itemId,
     itemType: 'vocabulary',
@@ -26,7 +31,7 @@ export function updateSpacedRepetition(
   performanceScore: number,
 ): SpacedRepetitionItem {
   const quality = scoreToQuality(performanceScore)
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayISO()
 
   let { repetitions, intervalDays, easinessFactor, consecutiveCorrect, consecutiveIncorrect, masteryLevel } = item
 
@@ -72,7 +77,7 @@ export function updateSpacedRepetition(
     consecutiveCorrect,
     consecutiveIncorrect,
     masteryLevel,
-    dueDate: dueDate.toISOString().split('T')[0],
+    dueDate: localDateString(dueDate),
     lastReviewed: today,
     reviewHistory: [
       ...item.reviewHistory,
@@ -82,6 +87,5 @@ export function updateSpacedRepetition(
 }
 
 export function isItemDueToday(item: SpacedRepetitionItem): boolean {
-  const today = new Date().toISOString().split('T')[0]
-  return item.dueDate <= today
+  return item.dueDate <= todayISO()
 }

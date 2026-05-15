@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useI18n } from '@/contexts/I18nContext'
+import { todayISO } from '@/lib/date'
 import { getSkillProgress, isReadingDone } from '@/lib/skillSessionProgress'
 import { cn } from '@/lib/utils'
 import { ListeningSkillSession } from './ListeningSkillSession'
@@ -26,7 +27,7 @@ interface Props {
 
 export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) {
   const { t } = useI18n()
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayISO()
   const [activeSkill, setActiveSkill] = useState<Skill | null>(null)
   const [sessionVisited, setSessionVisited] = useState(() => new Set<Skill>())
   const [, setProgressTick] = useState(0)

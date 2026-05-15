@@ -13,6 +13,7 @@ import {
   saveSessionLog,
   upsertExerciseStat,
 } from '@/db'
+import { todayISO } from '@/lib/date'
 import { bufferSM2Score } from '@/lib/skillSessionProgress'
 
 export type Skill = 'writing' | 'speaking' | 'vocabulary' | 'reading' | 'listening'
@@ -72,7 +73,7 @@ export async function logExerciseCompletion(
     mistakes?: MistakeExample[]
   },
 ): Promise<void> {
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayISO()
   const isCorrect = score >= 60
 
   // 1. Buffer SM-2 score (worst-score-wins; flushed on app open or after session)
@@ -154,7 +155,7 @@ export function useTracking() {
   async function getDueItemsList(): Promise<SpacedRepetitionItem[]> {
     if (!db)
       return []
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayISO()
     return getDueItems(db, today)
   }
 

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { useDailyReview } from '@/contexts/DailyReviewContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
+import { todayISO } from '@/lib/date'
 import { cn } from '@/lib/utils'
 
 type ActivePanel = null | 'vocabulary' | 'listening' | 'speaking' | 'reading' | 'writing'
@@ -30,7 +31,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingTaskTitle, setEditingTaskTitle] = useState('')
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayISO()
   const mostRecentLesson = [...lessons]
     .sort((a, b) => b.lastOpenedAt.localeCompare(a.lastOpenedAt))
     .find(l => !l.status || l.status === 'complete')
@@ -183,7 +184,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
             <div
               role="button"
               tabIndex={0}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="w-full flex items-center gap-3 px-4 py-2.5 pr-3 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               onClick={handleStartShadowing}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStartShadowing() } }}
             >
@@ -349,11 +350,10 @@ function SkillRow({ label, done, onStart }: SkillRowProps) {
     <div
       role="button"
       tabIndex={done ? -1 : 0}
-      className="relative flex items-center gap-3 pl-6 pr-4 py-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
+      className="relative flex items-center gap-3 pl-6 pr-3 py-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
       onClick={done ? undefined : onStart}
       onKeyDown={done ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStart() } }}
     >
-      <div className="absolute left-0 top-1/2 w-2.5 h-px bg-border/50" />
       <div className="flex-1 min-w-0">
         <div className={cn('text-sm text-muted-foreground font-semibold', done ? 'line-through text-muted-foreground/50' : '')}>
           {label}

@@ -24,6 +24,7 @@ import { PlayerProvider } from '@/contexts/PlayerContext'
 import { SpeakModalProvider, useSpeakModal } from '@/contexts/SpeakModalContext'
 import { StudyQueueProvider, useStudyQueueContext } from '@/contexts/StudyQueueContext'
 import { VocabularyProvider } from '@/contexts/VocabularyContext'
+import { todayISO } from '@/lib/date'
 import { ChangelogPage } from '@/pages/ChangelogPage'
 import { CollectionPage } from '@/pages/CollectionPage'
 import { DocumentationPage } from '@/pages/DocumentationPage'
@@ -75,7 +76,7 @@ function StudyQueueUI() {
   useEffect(() => {
     if (queue.loading || location.pathname !== '/')
       return
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayISO()
     if (localStorage.getItem('study-queue-last-shown') === today)
       return
     const timer = setTimeout(() => {
