@@ -9,16 +9,13 @@ import {
   getVocabEntryById,
   saveDailyTask,
 } from '../db'
+import { todayISO } from '../lib/date'
 import {
   clearExpiredSessionKeys,
   flushSM2Pending,
   isReadingDone,
   isSkillDone,
 } from '../lib/skillSessionProgress'
-
-function todayISO(): string {
-  return new Date().toISOString().split('T')[0]
-}
 
 const DAILY_WORDS_KEY = (date: string) => `daily-review-words-${date}`
 const MAX_WORDS = 20
