@@ -224,7 +224,7 @@ export const SegmentText = memo(({
                   {span.word.romanization}
                 </span>
               )}
-              <span className={cn('decoration-white/30 decoration-dotted underline-offset-4 text-xl mt-1', fullySpoken && 'text-yellow-400')}>
+              <span className={cn('underline decoration-primary/60 decoration-dotted underline-offset-8 text-xl mt-1', fullySpoken && 'text-yellow-400')}>
                 {textNode}
               </span>
             </PopoverTrigger>

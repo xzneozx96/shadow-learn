@@ -16,7 +16,7 @@ function formatTimestamp(seconds: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
-const COUNT_OPTIONS = [5, 10, 15, 20] as const
+const COUNT_OPTIONS = [3, 5, 10, 15, 20] as const
 
 interface ShadowingModePickerProps {
   startSegment: Segment

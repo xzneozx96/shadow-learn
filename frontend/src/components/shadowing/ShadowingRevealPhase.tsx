@@ -397,7 +397,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
 
   if (error) {
     return (
-      <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-3 text-center text-sm text-destructive">
+      <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-3 text-center text-sm text-destructive mx-8">
         {error}
       </div>
     )

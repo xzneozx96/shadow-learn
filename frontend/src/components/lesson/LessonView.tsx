@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { usePlayer } from '@/contexts/PlayerContext'
+import { useStudyQueueContext } from '@/contexts/StudyQueueContext'
 import { getVideo, saveLessonMeta } from '@/db'
 import { useActiveSegment } from '@/hooks/useActiveSegment'
 import { useLesson } from '@/hooks/useLesson'
@@ -31,6 +32,7 @@ function LessonViewContent() {
   const { meta, segments, loading, error, updateMeta } = useLesson(db, id)
   const activeSegment = useActiveSegment(segments)
   const { bests, getBest, saveBest, getAudio } = useSpeakingBests(id ?? '')
+  const { refresh: refreshQueue } = useStudyQueueContext()
 
   const [videoBlob, setVideoBlob] = useState<Blob | undefined>()
   type ShadowingActiveMode = null | { mode: 'dictation' | 'speaking', segments: Segment[] }
@@ -176,7 +178,8 @@ function LessonViewContent() {
 
   const handleShadowingExit = useCallback(() => {
     setShadowingMode(null)
-  }, [])
+    void refreshQueue()
+  }, [refreshQueue])
 
   const speakingAvailable
     = typeof MediaRecorder !== 'undefined'

@@ -97,7 +97,6 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
   }
 
   function handleConfirmedExit() {
-    logActivityIfPracticed()
     onExit()
   }
 
