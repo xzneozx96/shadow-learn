@@ -1,6 +1,6 @@
 import type { VocabEntry } from '@/types'
 import { Check, ChevronDown, Minus } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -30,17 +30,18 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set())
 
-  // Reset state every time the dialog opens.
-  useEffect(() => {
-    if (!open)
-      return
-    const init = getInitialPickerState(groups)
-    setSelectedIds(init.selectedIds)
-    setExpandedKeys(init.expandedKeys)
-    // groups is recomputed on each render; we intentionally key only on `open`
-    // so user edits inside one dialog session are preserved.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  // Reset state every time the dialog opens (setState-during-render).
+  // groups is intentionally read only on the open transition so user edits
+  // inside one dialog session are preserved.
+  const [lastOpen, setLastOpen] = useState(open)
+  if (lastOpen !== open) {
+    setLastOpen(open)
+    if (open) {
+      const init = getInitialPickerState(groups)
+      setSelectedIds(init.selectedIds)
+      setExpandedKeys(init.expandedKeys)
+    }
+  }
 
   const totalSaved = entries.length
   const selectedCount = selectedIds.size
@@ -50,10 +51,6 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
       return
     const selected = entries.filter(e => selectedIds.has(e.id))
     onConfirm(selected)
-  }
-
-  function handleSelectAll() {
-    setSelectedIds(new Set(entries.map(e => e.id)))
   }
 
   function handleToggleExpand(key: string) {
@@ -82,17 +79,6 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
           </div>
         </div>
 
-        {/* Toolbar */}
-        <div className="flex items-center justify-end px-4 py-2 border-b border-border">
-          <button
-            type="button"
-            className="text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
-            onClick={handleSelectAll}
-          >
-            {t('lesson.workbook.pickerSelectAll', { count: totalSaved })}
-          </button>
-        </div>
-
         {/* Body */}
         {totalSaved === 0
           ? (
@@ -102,13 +88,13 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
             )
           : (
               <ScrollArea className="min-h-0 flex-1">
-                <div className="flex flex-col gap-2 p-3">
+                <div className="flex flex-col gap-4 p-4">
                   {groups.map((group) => {
                     const tri = getGroupTriState(group, selectedIds)
                     const expanded = expandedKeys.has(group.key)
                     return (
                       <div key={group.key} className="rounded-lg border border-border bg-card">
-                        <div className="flex items-center gap-2 px-3 py-2">
+                        <div className="flex items-center gap-2 p-4">
                           <TriStateCheckbox
                             state={tri}
                             data-testid={`group-checkbox-${group.label}`}
@@ -121,15 +107,19 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
                             aria-expanded={expanded}
                             className="flex flex-1 items-center justify-between text-left"
                           >
-                            <span className="flex items-center gap-2 text-sm font-medium">
+                            <span className="flex items-center gap-1 text-sm font-medium">
                               {group.label}
-                              <span className="text-xs text-muted-foreground">{group.entries.length}</span>
+                              <span className="text-sm text-muted-foreground">
+                                (
+                                {group.entries.length}
+                                )
+                              </span>
                             </span>
                             <ChevronDown className={cn('size-4 text-muted-foreground/60 transition-transform', expanded ? 'rotate-0' : '-rotate-90')} />
                           </button>
                         </div>
                         {expanded && group.entries.length > 0 && (
-                          <div className="grid grid-cols-2 gap-2 p-3 pt-0">
+                          <div className="grid grid-cols-2 gap-3 p-4 pt-0">
                             {group.entries.map((entry) => {
                               const checked = selectedIds.has(entry.id)
                               return (

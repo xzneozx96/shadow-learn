@@ -108,12 +108,12 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
 
         {/* Sidebar */}
         <div className="flex w-60 shrink-0 flex-col border-r">
-          <div className="space-y-3 border-b px-4 py-5">
+          <div className="space-y-4 border-b px-4 py-5">
             <div>
               <div className="text-xl font-bold leading-none tracking-tight">
                 {t('lesson.workbook.practiceTitle')}
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">{lessonTitle}</div>
+              <div className="mt-2 text-sm text-muted-foreground">{lessonTitle}</div>
             </div>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground/80">

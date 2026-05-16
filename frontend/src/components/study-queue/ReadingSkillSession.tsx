@@ -163,7 +163,7 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
                 disabled={phase === 'grading' || phase === 'result'}
               />
               {phase === 'grading' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg backdrop-blur-[2px]">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg backdrop-blur-sm">
                   <div className="relative flex size-12 items-center justify-center">
                     <span className="absolute inset-0 rounded-full bg-primary/15 animate-ping" />
                     <span className="absolute inset-1 rounded-full bg-primary/25 animate-pulse" />
