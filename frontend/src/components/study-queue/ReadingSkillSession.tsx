@@ -66,21 +66,30 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
     if (!keys)
       return
 
+    const controller = new AbortController()
     void fetch(`${API_BASE}/api/daily-review/passage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ words, openrouter_api_key: keys.openrouterApiKey, source_language: sourceLanguage }),
+      signal: controller.signal,
     })
       .then(async (resp) => {
         if (!resp.ok)
           throw new Error('passage generation failed')
         const data = await resp.json() as { passage: string, pinyin: string }
+        if (controller.signal.aborted)
+          return
         setReadingPassage(date, data.passage)
         setReadingPassagePinyin(date, data.pinyin)
         setPassage(data.passage)
         setPhase('translating')
       })
-      .catch(() => setPhase('load-error'))
+      .catch((err) => {
+        if (err?.name === 'AbortError')
+          return
+        setPhase('load-error')
+      })
+    return () => controller.abort()
   }, [date, entries, keys, sourceLanguage, regenKey])
 
   function handleTranslationChange(value: string) {
