@@ -163,16 +163,13 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
                 disabled={phase === 'grading' || phase === 'result'}
               />
               {phase === 'grading' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg border border-primary/30 bg-card shadow-lg">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg border border-primary/30 bg-card/40 backdrop-blur-md shadow-lg">
                   <div className="relative flex size-12 items-center justify-center">
                     <span className="absolute inset-0 rounded-full bg-primary/15 animate-ping" />
                     <span className="absolute inset-1 rounded-full bg-primary/25 animate-pulse" />
                     <Sparkles className="relative size-6 text-primary" />
                   </div>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-sm font-semibold tracking-tight text-foreground">{t('reading.grading')}</span>
-                    <span className="text-xs text-muted-foreground">AI</span>
-                  </div>
+                  <span className="text-sm font-semibold tracking-tight text-foreground">{t('reading.grading')}</span>
                 </div>
               )}
             </div>
