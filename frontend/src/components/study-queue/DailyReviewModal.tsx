@@ -42,6 +42,19 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
   }
 
   const total = queue.dailyEntries.length
+  const entryIds = new Set(queue.dailyEntries.map(e => e.id))
+
+  function getSkillProgressForEntries(key: Skill): number {
+    if (key === 'reading')
+      return 0
+    const completed = getSkillProgress(key as Exclude<Skill, 'reading'>, today)
+    let count = 0
+    for (const id of completed) {
+      if (entryIds.has(id))
+        count++
+    }
+    return count
+  }
 
   function getSkillStatus(key: Skill): SkillStatus {
     const persisted = skillDone[key]
@@ -55,7 +68,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
       return 'pending'
     }
 
-    const progress = getSkillProgress(key, today).length
+    const progress = getSkillProgressForEntries(key)
     if (persisted)
       return 'done'
     if (visited)
@@ -143,7 +156,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
 
               const progressCount = key === 'reading'
                 ? (isReadingDone(today) ? 1 : 0)
-                : getSkillProgress(key, today).length
+                : getSkillProgressForEntries(key)
 
               let countLabel: string
               if (key === 'reading') {

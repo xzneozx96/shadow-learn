@@ -46,6 +46,18 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
     }
   }
 
+  const entryIds = new Set(entries.map(e => e.id))
+
+  function getSkillProgressForEntries(key: SkillName): number {
+    const completed = getSkillProgress(key, today)
+    let count = 0
+    for (const id of completed) {
+      if (entryIds.has(id))
+        count++
+    }
+    return count
+  }
+
   function getSkillStatus(key: Skill): SkillStatus {
     const wasVisited = visited.has(key)
     if (key === 'reading') {
@@ -55,7 +67,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
         return 'alert'
       return 'pending'
     }
-    const progress = getSkillProgress(key as SkillName, today).length
+    const progress = getSkillProgressForEntries(key as SkillName)
     if (wasVisited)
       return progress >= total && total > 0 ? 'done' : 'alert'
     if (progress > 0)
@@ -89,7 +101,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
   function getSkillCountLabel(key: Skill): string {
     if (key === 'reading')
       return ''
-    const progress = getSkillProgress(key as SkillName, today).length
+    const progress = getSkillProgressForEntries(key as SkillName)
     return `${progress} / ${total}`
   }
 
