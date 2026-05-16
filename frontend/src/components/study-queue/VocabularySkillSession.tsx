@@ -38,7 +38,8 @@ export function VocabularySkillSession({ entries, date, onComplete, onProgress, 
   const { playTTS } = useTTS(db, keys, sourceLanguage)
   const caps = getLanguageCaps(sourceLanguage)
 
-  const completedIds = new Set(getSkillProgress('vocabulary', date))
+  const entryIds = new Set(entries.map(e => e.id))
+  const completedIds = new Set(getSkillProgress('vocabulary', date).filter(id => entryIds.has(id)))
   const remaining = entries.filter(e => !completedIds.has(e.id))
   const [step, setStep] = useState<ExerciseStep>('flashcard')
 

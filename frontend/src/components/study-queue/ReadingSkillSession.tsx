@@ -1,6 +1,6 @@
 // frontend/src/components/study-queue/ReadingSkillSession.tsx
 import type { VocabEntry } from '@/types'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -66,21 +66,30 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
     if (!keys)
       return
 
+    const controller = new AbortController()
     void fetch(`${API_BASE}/api/daily-review/passage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ words, openrouter_api_key: keys.openrouterApiKey, source_language: sourceLanguage }),
+      signal: controller.signal,
     })
       .then(async (resp) => {
         if (!resp.ok)
           throw new Error('passage generation failed')
         const data = await resp.json() as { passage: string, pinyin: string }
+        if (controller.signal.aborted)
+          return
         setReadingPassage(date, data.passage)
         setReadingPassagePinyin(date, data.pinyin)
         setPassage(data.passage)
         setPhase('translating')
       })
-      .catch(() => setPhase('load-error'))
+      .catch((err) => {
+        if (err?.name === 'AbortError')
+          return
+        setPhase('load-error')
+      })
+    return () => controller.abort()
   }, [date, entries, keys, sourceLanguage, regenKey])
 
   function handleTranslationChange(value: string) {
@@ -154,13 +163,25 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">{t('reading.translatePrompt')}</label>
-            <textarea
-              className="w-full rounded-lg border border-border bg-input/50 p-3 text-base focus:outline-none focus:border-primary resize-none"
-              rows={5}
-              value={translation}
-              onChange={e => handleTranslationChange(e.target.value)}
-              disabled={phase === 'grading' || phase === 'result'}
-            />
+            <div className="relative">
+              <textarea
+                className="w-full rounded-lg border border-border bg-input/50 p-3 text-base focus:outline-none focus:border-primary resize-none"
+                rows={5}
+                value={translation}
+                onChange={e => handleTranslationChange(e.target.value)}
+                disabled={phase === 'grading' || phase === 'result'}
+              />
+              {phase === 'grading' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg backdrop-blur-sm">
+                  <div className="relative flex size-12 items-center justify-center">
+                    <span className="absolute inset-0 rounded-full bg-primary/15 animate-ping" />
+                    <span className="absolute inset-1 rounded-full bg-primary/25 animate-pulse" />
+                    <Sparkles className="relative size-6 text-primary" />
+                  </div>
+                  <span className="text-sm font-semibold tracking-tight text-foreground">{t('reading.grading')}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {phase === 'translating' && (
@@ -174,13 +195,6 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
               >
                 {t('reading.submit')}
               </Button>
-            </div>
-          )}
-
-          {phase === 'grading' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              {t('reading.grading')}
             </div>
           )}
 
