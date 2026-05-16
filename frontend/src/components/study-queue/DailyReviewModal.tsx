@@ -65,10 +65,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
     return 'pending'
   }
 
-  const doneCount = SKILL_ORDER.filter((s) => {
-    const st = getSkillStatus(s)
-    return st === 'done' || st === 'alert'
-  }).length
+  const doneCount = SKILL_ORDER.filter(s => getSkillStatus(s) === 'done').length
 
   function firstIncomplete(): Skill | null {
     return SKILL_ORDER.find(s => !skillDone[s] && !sessionVisited.has(s)) ?? null
