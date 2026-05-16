@@ -116,6 +116,7 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
                             type="button"
                             data-testid={`group-toggle-${group.label}`}
                             onClick={() => handleToggleExpand(group.key)}
+                            aria-expanded={expanded}
                             className="flex flex-1 items-center justify-between text-left"
                           >
                             <span className="flex items-center gap-2 text-sm font-medium">
@@ -152,7 +153,7 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
                                   <div className="absolute top-2 right-2">
                                     <TriStateCheckbox
                                       state={checked ? 'all' : 'none'}
-                                      onClick={() => setSelectedIds(toggleWord(entry.id, selectedIds))}
+                                      interactive={false}
                                     />
                                   </div>
                                   <p className="pr-7 text-base font-bold leading-tight">{entry.word}</p>
@@ -193,32 +194,50 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
 
 interface TriStateCheckboxProps {
   'state': 'all' | 'some' | 'none'
-  'onClick': () => void
+  'onClick'?: () => void
+  'interactive'?: boolean
   'data-testid'?: string
 }
 
-function TriStateCheckbox({ state, onClick, ...rest }: TriStateCheckboxProps) {
+function TriStateCheckbox({ state, onClick, interactive = true, ...rest }: TriStateCheckboxProps) {
+  const className = cn(
+    'flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors',
+    state === 'all'
+      ? 'border-primary bg-primary text-primary-foreground'
+      : state === 'some'
+        ? 'border-primary bg-primary/20'
+        : interactive ? 'border-border hover:border-primary/60' : 'border-border',
+  )
+  const content = (
+    <>
+      {state === 'all' && <Check className="size-3" />}
+      {state === 'some' && <Minus className="size-2.5 text-primary" />}
+    </>
+  )
+  if (!interactive) {
+    return (
+      <span
+        data-testid={rest['data-testid']}
+        className={className}
+        aria-hidden="true"
+      >
+        {content}
+      </span>
+    )
+  }
   return (
     <button
       type="button"
       onClick={(e) => {
         e.stopPropagation()
-        onClick()
+        onClick?.()
       }}
       data-testid={rest['data-testid']}
-      className={cn(
-        'flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors',
-        state === 'all'
-          ? 'border-primary bg-primary text-primary-foreground'
-          : state === 'some'
-            ? 'border-primary bg-primary/20'
-            : 'border-border hover:border-primary/60',
-      )}
+      className={className}
       aria-checked={state === 'all' ? 'true' : state === 'some' ? 'mixed' : 'false'}
       role="checkbox"
     >
-      {state === 'all' && <Check className="size-3" />}
-      {state === 'some' && <Minus className="size-2.5 text-primary" />}
+      {content}
     </button>
   )
 }
