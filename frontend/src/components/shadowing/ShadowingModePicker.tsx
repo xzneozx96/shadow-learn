@@ -1,4 +1,6 @@
 import type { Segment } from '@/types'
+import { Lightbulb, Sparkles } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,6 +19,8 @@ function formatTimestamp(seconds: number): string {
 }
 
 const COUNT_OPTIONS = [3, 5, 10, 15, 20] as const
+
+const STEP_NUMBER_REGEX = /^\d\.\s*/
 
 interface ShadowingModePickerProps {
   startSegment: Segment
@@ -121,7 +125,52 @@ export function ShadowingModePicker({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-6">
+      {/* Practice tips callout */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border border-amber-500/20 bg-amber-500/8 p-3 shadow-sm"
+      >
+        <div className="flex items-center gap-2 mb-2.5">
+          <Lightbulb className="size-3.5 text-amber-500" />
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-500/90">{t('shadowing.tipsToggle')}</span>
+        </div>
+
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((step) => {
+            const fullText = t(`shadowing.tips.step${step}` as any)
+            const [title, ...rest] = fullText.includes(' — ') ? fullText.split(' — ') : [fullText, '']
+            const desc = rest.join(' — ')
+
+            return (
+              <div key={step} className="flex gap-2.5 items-start">
+                <span className="flex size-4 shrink-0 mt-0.5 items-center justify-center rounded-full bg-amber-500/15 text-[9px] font-bold text-amber-500 border border-amber-500/20">
+                  {step}
+                </span>
+                <div className="leading-tight">
+                  <span className="text-xs font-semibold text-amber-200/90">
+                    {title.replace(STEP_NUMBER_REGEX, '').split(' — ')[0]}
+                  </span>
+                  {desc && (
+                    <span className="text-xs text-muted-foreground ml-1.5">
+                      {desc}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="mt-3 pt-2.5 border-t border-amber-500/10 flex items-start gap-1.5">
+          <Sparkles className="size-2.5 text-amber-500/60 mt-0.5 shrink-0" />
+          <p className="text-xs font-medium leading-tight text-amber-500/70 italic">
+            {t('shadowing.tips.note')}
+          </p>
+        </div>
+      </motion.div>
+
+      <div className="flex justify-end gap-2 mt-4">
         <Button size="lg" variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
         <Button size="lg" onClick={() => onStart(selectedMode, count)}>{t('shadowing.startArrow')}</Button>
       </div>

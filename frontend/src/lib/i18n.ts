@@ -422,6 +422,13 @@ export const TRANSLATIONS = {
     'shadowing.prosody': 'Prosody',
     'shadowing.playPrev': '▶ Play',
     'shadowing.playingPrev': '▶ Playing…',
+    'shadowing.tipsToggle': 'How to practice effectively?',
+    'shadowing.tips.step1': '1. Passive listen — run through segments; look up unknown words first',
+    'shadowing.tips.step2': '2. Study vocab — review new words in your Workbook until familiar',
+    'shadowing.tips.step3': '3. Shadow with transcript — repeat 3–4× while reading the text',
+    'shadowing.tips.step4': '4. Shadow without transcript — repeat 3–4× ears-only (the real work)',
+    'shadowing.tips.step5': '5. Dictation — final check: type exactly what you hear',
+    'shadowing.tips.note': 'Comprehension first, shadowing second. Vocab before speaking.',
 
     // Workbook
     'workbook.title': 'Learning & Progress',
@@ -1131,6 +1138,13 @@ export const TRANSLATIONS = {
     'shadowing.prosody': 'Ngữ điệu',
     'shadowing.playPrev': '▶ Nghe lại',
     'shadowing.playingPrev': '▶ Đang phát…',
+    'shadowing.tipsToggle': 'Cách luyện tập hiệu quả?',
+    'shadowing.tips.step1': '1. Nghe thụ động — chạy qua các đoạn; tra từ mới trước',
+    'shadowing.tips.step2': '2. Học từ vựng — ôn từ mới trong Sổ từ đến khi quen thuộc',
+    'shadowing.tips.step3': '3. Shadowing có transcript — nhắc lại 3–4 lần trong khi đọc theo',
+    'shadowing.tips.step4': '4. Shadowing không transcript — nhắc lại 3–4 lần chỉ nghe (quan trọng nhất)',
+    'shadowing.tips.step5': '5. Chính tả — kiểm tra cuối: gõ lại chính xác những gì nghe được',
+    'shadowing.tips.note': 'Học từ vựng trước khi shadow.',
 
     // Workbook
     'workbook.title': 'Quản lý Học tập',

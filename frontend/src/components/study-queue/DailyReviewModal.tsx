@@ -116,13 +116,22 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
         <DialogTitle className="sr-only">Daily Review</DialogTitle>
 
         {/* Sidebar */}
-        <div className="w-60 shrink-0 border-r border-border flex flex-col">
-          <div className="p-4 border-b border-border/30 flex items-center gap-3">
-            <RingProgress done={doneCount} total={5} />
-            <div>
-              <div className="text-sm font-semibold">{t('queue.review.title')}</div>
-              <div className="text-xs text-muted-foreground">
-                {t('queue.review.progress', { done: doneCount, total: 5 })}
+        <div className="w-60 shrink-0 border-r flex flex-col">
+          <div className="px-4 py-6 border-b space-y-4">
+            <div className="text-xl font-bold tracking-tight leading-none">{t('queue.review.title')}</div>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-sm font-semibold text-muted-foreground/80">
+                <span>{t('queue.review.progress', { done: doneCount, total: 5 })}</span>
+                <span className="tabular-nums">
+                  {Math.round((doneCount / 5) * 100)}
+                  %
+                </span>
+              </div>
+              <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden border border-border/50">
+                <div
+                  className="h-full bg-success/80 transition-all duration-700 ease-in-out"
+                  style={{ width: `${(doneCount / 5) * 100}%` }}
+                />
               </div>
             </div>
           </div>
@@ -275,35 +284,6 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
-
-function RingProgress({ done, total }: { done: number, total: number }) {
-  const r = 19
-  const circ = 2 * Math.PI * r
-  const pct = total > 0 ? done / total : 0
-  const dash = pct * circ
-
-  return (
-    <svg viewBox="0 0 44 44" className="size-11 shrink-0">
-      <circle cx="22" cy="22" r={r} fill="none" stroke="currentColor" strokeWidth="3" className="text-muted/20" />
-      <circle
-        cx="22"
-        cy="22"
-        r={r}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        className="text-primary"
-        strokeDasharray={`${dash} ${circ}`}
-        strokeLinecap="round"
-        transform="rotate(-90 22 22)"
-      />
-      <text x="22" y="26" textAnchor="middle" fontSize="10" fontWeight="bold" fill="currentColor" className="text-foreground">
-        {Math.round(pct * 100)}
-        %
-      </text>
-    </svg>
-  )
-}
 
 interface AllDoneViewProps {
   skills: Array<{ key: Skill, label: string, Icon: React.ElementType }>

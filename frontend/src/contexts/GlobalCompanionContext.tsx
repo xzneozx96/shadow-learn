@@ -3,6 +3,8 @@ import type { ContextChip } from '@/components/chat/ContextChipBar'
 import { createContext, use, useCallback, useEffect, useRef, useState } from 'react'
 import { SelectionMenu } from '@/components/chat/SelectionMenu'
 
+const CJK_REGEX = /[\u4E00-\u9FFF]/
+
 interface GlobalCompanionContextValue {
   chips: ContextChip[]
   isGlobalPanelOpen: boolean
@@ -44,42 +46,65 @@ export function GlobalCompanionProvider({ children }: { children: ReactNode }) {
   addChipRef.current = addChip
 
   useEffect(() => {
-    function handleSelectionChange() {
+    let isMouseDown = false
+    let pendingSelection: SelectionState | null = null
+
+    function readSelection(): SelectionState | null {
       const selection = window.getSelection()
       const text = selection?.toString().trim()
-
-      if (!text) {
-        setSelectionState(null)
-        return
-      }
-
-      // Ignore selections inside inputs/textareas/contenteditable
+      if (!text)
+        return null
       const anchorNode = selection?.anchorNode
-      if (anchorNode?.parentElement?.closest('input, textarea, [contenteditable]')) {
-        setSelectionState(null)
-        return
-      }
-
+      if (anchorNode?.parentElement?.closest('input, textarea, [contenteditable]'))
+        return null
       try {
         const range = selection?.getRangeAt(0)
-        if (!range) {
-          setSelectionState(null)
-          return
-        }
+        if (!range)
+          return null
         const rect = range.getBoundingClientRect()
-        if (rect.width === 0 && rect.height === 0) {
-          setSelectionState(null)
-          return
-        }
-        setSelectionState({ text, rect })
+        if (rect.width === 0 && rect.height === 0)
+          return null
+        return { text, rect }
       }
       catch {
-        setSelectionState(null)
+        return null
       }
     }
 
+    function handleMouseDown(e: MouseEvent) {
+      if ((e.target as Element).closest?.('[data-selection-menu]'))
+        return
+      isMouseDown = true
+      pendingSelection = null
+      setSelectionState(null)
+    }
+
+    function handleMouseUp() {
+      isMouseDown = false
+      if (pendingSelection) {
+        setSelectionState(pendingSelection)
+        pendingSelection = null
+      }
+    }
+
+    function handleSelectionChange() {
+      const state = readSelection()
+      if (isMouseDown) {
+        pendingSelection = state
+      }
+      else {
+        setSelectionState(state)
+      }
+    }
+
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('mouseup', handleMouseUp)
     document.addEventListener('selectionchange', handleSelectionChange)
-    return () => document.removeEventListener('selectionchange', handleSelectionChange)
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('selectionchange', handleSelectionChange)
+    }
   }, [])
 
   const handleAddChipFromSelection = useCallback(() => {
@@ -111,6 +136,8 @@ export function GlobalCompanionProvider({ children }: { children: ReactNode }) {
         ? (
             <SelectionMenu
               rect={selectionState.rect}
+              selectedText={selectionState.text}
+              isChinese={CJK_REGEX.test(selectionState.text)}
               onAddChip={handleAddChipFromSelection}
               onDismiss={handleDismissSelection}
             />
