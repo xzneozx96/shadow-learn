@@ -76,7 +76,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
         </span>
         <Link
           to="/vocabulary"
-          className="text-sm text-foreground/70 transition-colors hover:text-foreground"
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           {t('lesson.workbook.viewAll')}
         </Link>
