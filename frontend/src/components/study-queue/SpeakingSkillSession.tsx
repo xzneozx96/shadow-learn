@@ -25,7 +25,8 @@ export function SpeakingSkillSession({ entries, date, onComplete, onProgress, on
   const sourceLanguage = entries[0]?.sourceLanguage ?? 'zh-CN'
   const caps = getLanguageCaps(sourceLanguage)
 
-  const [completedIds, setCompletedIds] = useState(() => new Set(getSkillProgress('speaking', date)))
+  const entryIds = new Set(entries.map(e => e.id))
+  const [completedIds, setCompletedIds] = useState(() => new Set(getSkillProgress('speaking', date).filter(id => entryIds.has(id))))
   const [skippedIds, setSkippedIds] = useState(() => new Set<string>())
   const remaining = entries.filter(e => !completedIds.has(e.id) && !skippedIds.has(e.id))
 
