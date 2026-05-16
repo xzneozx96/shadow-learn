@@ -77,10 +77,10 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
 
   const doneCount = SKILL_ORDER.filter(s => getSkillStatus(s) === 'done').length
 
-  // allDone is independent of fully-completed count — it fires when the user
-  // has visited every skill (even if some were skipped), so the all-done view
-  // still shows after the user finishes (or skips through) every skill.
-  const allDone = visited.size === SKILL_ORDER.length
+  // allDone requires every skill to be fully completed (status 'done').
+  // Skipped/partial skills (status 'alert') keep the modal open so the user
+  // can revisit them.
+  const allDone = doneCount === SKILL_ORDER.length
 
   function handleComplete(justCompleted: Skill) {
     setVisited((prev) => {

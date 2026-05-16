@@ -107,7 +107,10 @@ describe('lessonPracticeModal', () => {
     expect(screen.getByTestId('skill-listening')).toBeInTheDocument()
   })
 
-  it('shows the all-done view after every skill completes', () => {
+  it('does NOT show the all-done view when skills are merely visited (not completed)', () => {
+    // The all-done view requires every skill to be fully completed (status
+    // 'done'), not just visited. Skipped/partial skills (status 'alert')
+    // keep the modal open so the user can revisit them.
     render(
       <LessonPracticeModal
         open
@@ -121,6 +124,6 @@ describe('lessonPracticeModal', () => {
     act(() => { onCompleteSpies.reading() })
     act(() => { onCompleteSpies.writing() })
     act(() => { onCompleteSpies.speaking() })
-    expect(screen.getByText(/lesson\.workbook\.practiceAllDone$/i)).toBeInTheDocument()
+    expect(screen.queryByText(/lesson\.workbook\.practiceAllDone$/i)).toBeNull()
   })
 })
