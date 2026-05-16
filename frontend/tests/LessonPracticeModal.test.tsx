@@ -1,5 +1,5 @@
 import type { VocabEntry } from '@/types'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { LessonPracticeModal } from '@/components/lesson/LessonPracticeModal'
@@ -103,7 +103,7 @@ describe('lessonPracticeModal', () => {
       />,
     )
     expect(screen.getByTestId('skill-vocabulary')).toBeInTheDocument()
-    onCompleteSpies.vocabulary()
+    act(() => { onCompleteSpies.vocabulary() })
     expect(screen.getByTestId('skill-listening')).toBeInTheDocument()
   })
 
@@ -116,11 +116,11 @@ describe('lessonPracticeModal', () => {
         lessonTitle="Lesson 1"
       />,
     )
-    onCompleteSpies.vocabulary()
-    onCompleteSpies.listening()
-    onCompleteSpies.reading()
-    onCompleteSpies.writing()
-    onCompleteSpies.speaking()
+    act(() => { onCompleteSpies.vocabulary() })
+    act(() => { onCompleteSpies.listening() })
+    act(() => { onCompleteSpies.reading() })
+    act(() => { onCompleteSpies.writing() })
+    act(() => { onCompleteSpies.speaking() })
     expect(screen.getByText(/lesson\.workbook\.practiceAllDone$/i)).toBeInTheDocument()
   })
 })

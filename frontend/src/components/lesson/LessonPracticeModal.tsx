@@ -1,7 +1,6 @@
 import type { VocabEntry } from '@/types'
 import { BookOpen, Check, Ear, FileText, Mic, PenLine, Sparkles } from 'lucide-react'
 import { useState } from 'react'
-import { flushSync } from 'react-dom'
 import { ListeningSkillSession } from '@/components/study-queue/ListeningSkillSession'
 import { ReadingSkillSession } from '@/components/study-queue/ReadingSkillSession'
 import { SpeakingSkillSession } from '@/components/study-queue/SpeakingSkillSession'
@@ -44,16 +43,10 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
   const allDone = doneCount === SKILL_ORDER.length
 
   function handleComplete(justCompleted: Skill) {
-    const newVisited = new Set([...visited, justCompleted])
-    const next = SKILL_ORDER.find(s => !newVisited.has(s)) ?? null
-    // flushSync ensures the active skill switch is observable to children
-    // (the SkillSession components) before their `onComplete` callback returns,
-    // so an immediately-following programmatic complete on the next skill
-    // operates against the freshly mounted session.
-    // eslint-disable-next-line react-dom/no-flush-sync
-    flushSync(() => {
-      setVisited(newVisited)
-      setActiveSkill(next)
+    setVisited((prev) => {
+      const next = new Set([...prev, justCompleted])
+      setActiveSkill(SKILL_ORDER.find(s => !next.has(s)) ?? null)
+      return next
     })
   }
 
