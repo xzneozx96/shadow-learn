@@ -3,9 +3,7 @@ import { BookOpen, Loader2, Volume2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { StudySession } from '@/components/study/StudySession'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WordBreakdownModal } from '@/components/workbook/WordBreakdownModal'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,7 +12,9 @@ import { useVocabulary } from '@/contexts/VocabularyContext'
 import { getSettings } from '@/db'
 import { useTTS } from '@/hooks/useTTS'
 import { groupVocabByDay } from '@/lib/vocabGrouping'
+import { LessonPracticeModal } from './LessonPracticeModal'
 import { RemoveVocabDialog } from './RemoveVocabDialog'
+import { WordPickerDialog } from './WordPickerDialog'
 
 interface LessonWorkbookPanelProps {
   lessonId: string
@@ -38,10 +38,13 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   }, [db])
   const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
   const count = entries.length
-  const [studyOpen, setStudyOpen] = useState(false)
-  const [sessionActive, setSessionActive] = useState(false)
+
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [practiceEntries, setPracticeEntries] = useState<VocabEntry[] | null>(null)
   const [pendingRemove, setPendingRemove] = useState<VocabEntry | null>(null)
   const [breakdownEntry, setBreakdownEntry] = useState<VocabEntry | null>(null)
+
+  const lessonTitle = entries[0]?.sourceLessonTitle ?? ''
 
   const handleConfirmRemove = useCallback(
     async (entry: VocabEntry) => {
@@ -56,28 +59,13 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
     [remove, t],
   )
 
+  function handleStartPractice(selected: VocabEntry[]) {
+    setPickerOpen(false)
+    setPracticeEntries(selected)
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <Dialog
-        open={studyOpen}
-        disablePointerDismissal={sessionActive}
-        onOpenChange={(open, _eventDetails) => {
-          if (!open && sessionActive)
-            return
-          setStudyOpen(open)
-        }}
-      >
-        <DialogContent
-          className="max-h-[95vh] overflow-y-auto p-0 sm:max-w-2xl"
-          showCloseButton={false}
-        >
-          <StudySession
-            lessonId={lessonId}
-            onClose={() => setStudyOpen(false)}
-            onActiveChange={setSessionActive}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Sub-header: count + "View all" link */}
       <div className="flex h-14 items-center justify-between border-b border-border px-3 py-2">
@@ -107,7 +95,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
             <ScrollArea className="min-h-0 flex-1 p-3">
               <div className="flex flex-col gap-4">
                 {dayGroups.map(group => (
-                  <div key={group.label}>
+                  <div key={group.key}>
                     <p className="mb-2 pl-2 text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
                       {group.label}
                     </p>
@@ -148,15 +136,12 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
                             </button>
                           </div>
 
-                          {/* Word — hero, confident tracking */}
                           <p className="pr-12 text-2xl font-bold leading-tight tracking-tight text-foreground">{entry.word}</p>
 
-                          {/* Pinyin — phonetic guide, tracking-wide */}
                           {entry.romanization && (
                             <p className="mt-1 text-sm font-medium tracking-wide text-foreground/55">{entry.romanization}</p>
                           )}
 
-                          {/* Translation + volume inline */}
                           <div className="mt-3 flex items-end justify-between gap-2">
                             <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-muted-foreground">{entry.meaning}</p>
                             <button
@@ -188,11 +173,24 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
           size="lg"
           className="w-full"
           disabled={count === 0}
-          onClick={() => setStudyOpen(true)}
+          onClick={() => setPickerOpen(true)}
         >
           {t('lesson.studyThisLesson')}
         </Button>
       </div>
+
+      <WordPickerDialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        entries={entries}
+        onConfirm={handleStartPractice}
+      />
+      <LessonPracticeModal
+        open={practiceEntries !== null}
+        onClose={() => setPracticeEntries(null)}
+        entries={practiceEntries ?? []}
+        lessonTitle={lessonTitle}
+      />
 
       <RemoveVocabDialog
         entry={pendingRemove}
