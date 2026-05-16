@@ -1,6 +1,6 @@
 // frontend/src/components/study-queue/ReadingSkillSession.tsx
 import type { VocabEntry } from '@/types'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -154,13 +154,24 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">{t('reading.translatePrompt')}</label>
-            <textarea
-              className="w-full rounded-lg border border-border bg-input/50 p-3 text-base focus:outline-none focus:border-primary resize-none"
-              rows={5}
-              value={translation}
-              onChange={e => handleTranslationChange(e.target.value)}
-              disabled={phase === 'grading' || phase === 'result'}
-            />
+            <div className="relative">
+              <textarea
+                className="w-full rounded-lg border border-border bg-input/50 p-3 text-base focus:outline-none focus:border-primary resize-none"
+                rows={5}
+                value={translation}
+                onChange={e => handleTranslationChange(e.target.value)}
+                disabled={phase === 'grading' || phase === 'result'}
+              />
+              {phase === 'grading' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg bg-background/70 backdrop-blur-sm">
+                  <div className="relative flex size-10 items-center justify-center">
+                    <Sparkles className="size-6 text-primary animate-pulse" />
+                    <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground/80">{t('reading.grading')}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {phase === 'translating' && (
@@ -174,13 +185,6 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
               >
                 {t('reading.submit')}
               </Button>
-            </div>
-          )}
-
-          {phase === 'grading' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              {t('reading.grading')}
             </div>
           )}
 
