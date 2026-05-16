@@ -121,6 +121,6 @@ describe('lessonPracticeModal', () => {
     onCompleteSpies.reading()
     onCompleteSpies.writing()
     onCompleteSpies.speaking()
-    expect(screen.getByText(/lesson.workbook.practiceAllDone/i)).toBeInTheDocument()
+    expect(screen.getByText(/lesson\.workbook\.practiceAllDone$/i)).toBeInTheDocument()
   })
 })

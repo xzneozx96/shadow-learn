@@ -152,6 +152,9 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">{t('lesson.workbook.practiceAllDone')}</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {t('lesson.workbook.practiceAllDoneSubtitle')}
+                </div>
               </div>
             </div>
           )}
