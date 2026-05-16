@@ -1,6 +1,6 @@
 import type { SkillName } from '@/lib/skillSessionProgress'
 import type { VocabEntry } from '@/types'
-import { BookOpen, Check, Ear, FileText, Mic, PenLine, Sparkles } from 'lucide-react'
+import { AlertTriangle, BookOpen, Check, Ear, FileText, Mic, PenLine, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { ListeningSkillSession } from '@/components/study-queue/ListeningSkillSession'
 import { ReadingSkillSession } from '@/components/study-queue/ReadingSkillSession'
@@ -10,10 +10,11 @@ import { WritingSkillSession } from '@/components/study-queue/WritingSkillSessio
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useI18n } from '@/contexts/I18nContext'
 import { todayISO } from '@/lib/date'
-import { getSkillProgress } from '@/lib/skillSessionProgress'
+import { getSkillProgress, isReadingDone } from '@/lib/skillSessionProgress'
 import { cn } from '@/lib/utils'
 
 type Skill = 'vocabulary' | 'listening' | 'reading' | 'writing' | 'speaking'
+type SkillStatus = 'pending' | 'partial' | 'alert' | 'done'
 
 const SKILL_ORDER: Skill[] = ['vocabulary', 'listening', 'reading', 'writing', 'speaking']
 
@@ -43,7 +44,27 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
     }
   }
 
-  const doneCount = visited.size
+  function getSkillStatus(key: Skill): SkillStatus {
+    const wasVisited = visited.has(key)
+    if (key === 'reading') {
+      if (wasVisited && isReadingDone(today))
+        return 'done'
+      if (wasVisited)
+        return 'alert'
+      return 'pending'
+    }
+    const progress = getSkillProgress(key as SkillName, today).length
+    if (wasVisited)
+      return progress >= total && total > 0 ? 'done' : 'alert'
+    if (progress > 0)
+      return 'partial'
+    return 'pending'
+  }
+
+  const doneCount = SKILL_ORDER.filter((s) => {
+    const st = getSkillStatus(s)
+    return st === 'done' || st === 'alert'
+  }).length
   const allDone = doneCount === SKILL_ORDER.length
 
   function handleComplete(justCompleted: Skill) {
@@ -110,8 +131,30 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
 
           <div className="flex-1 overflow-y-auto py-2">
             {skills.map(({ key, label, Icon }) => {
+              const status = getSkillStatus(key)
               const isActive = activeSkill === key
-              const isDone = visited.has(key)
+              const isDone = status === 'done'
+              const isAlert = status === 'alert'
+              const isPartial = status === 'partial'
+
+              const iconBg = isActive
+                ? 'bg-primary/20 text-primary'
+                : isDone
+                  ? 'bg-emerald-500/10 text-emerald-500'
+                  : isAlert
+                    ? 'bg-amber-500/10 text-amber-500'
+                    : isPartial
+                      ? 'bg-blue-500/10 text-blue-500'
+                      : 'bg-card text-muted-foreground'
+
+              const TrailingIcon = isDone
+                ? <Check className="size-3.5 shrink-0 text-emerald-500" />
+                : isAlert
+                  ? <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
+                  : isPartial
+                    ? <span className="flex size-3.5 shrink-0 items-center justify-center rounded-full border border-primary/60 bg-primary/10"><span className="size-1.5 rounded-full bg-primary/80" /></span>
+                    : null
+
               return (
                 <button
                   key={key}
@@ -121,30 +164,28 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
                   className={cn(
                     'flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors',
                     isActive ? 'border-r-2 border-primary bg-primary/10' : 'hover:bg-muted/30',
-                    isDone && !isActive ? 'opacity-60' : '',
+                    (isDone || isAlert) && !isActive ? 'opacity-60' : '',
                   )}
                 >
-                  <div
-                    className={cn(
-                      'flex size-8 shrink-0 items-center justify-center rounded-full',
-                      isActive
-                        ? 'bg-primary/20 text-primary'
-                        : isDone
-                          ? 'bg-emerald-500/10 text-emerald-500'
-                          : 'bg-card text-muted-foreground',
-                    )}
-                  >
+                  <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-full', iconBg)}>
                     <Icon className="size-3.5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className={cn('text-sm font-semibold', isDone && !isActive ? 'text-muted-foreground line-through' : '')}>
+                    <div className={cn(
+                      'text-sm font-semibold',
+                      isDone && !isActive ? 'text-muted-foreground line-through' : '',
+                      isAlert && !isActive ? 'text-amber-500/80' : '',
+                    )}
+                    >
                       {label}
                     </div>
                     {getSkillCountLabel(key) && (
-                      <div className="mt-0.5 text-xs text-muted-foreground/70">{getSkillCountLabel(key)}</div>
+                      <div className={cn('mt-0.5 text-xs', isAlert ? 'text-amber-500/60' : 'text-muted-foreground/70')}>
+                        {getSkillCountLabel(key)}
+                      </div>
                     )}
                   </div>
-                  {isDone && <Check className="size-3.5 shrink-0 text-emerald-500" />}
+                  {TrailingIcon}
                 </button>
               )
             })}
