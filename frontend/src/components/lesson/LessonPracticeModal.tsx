@@ -9,7 +9,6 @@ import { VocabularySkillSession } from '@/components/study-queue/VocabularySkill
 import { WritingSkillSession } from '@/components/study-queue/WritingSkillSession'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useI18n } from '@/contexts/I18nContext'
-import { todayISO } from '@/lib/date'
 import { getSkillProgress, isReadingDone } from '@/lib/skillSessionProgress'
 import { cn } from '@/lib/utils'
 
@@ -27,29 +26,45 @@ interface LessonPracticeModalProps {
 
 export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: LessonPracticeModalProps) {
   const { t } = useI18n()
-  const today = todayISO()
 
   const [activeSkill, setActiveSkill] = useState<Skill | null>('vocabulary')
   const [visited, setVisited] = useState<Set<Skill>>(() => new Set())
   const [, setProgressTick] = useState(0)
   const total = entries.length
   const lessonId = entries[0]?.sourceLessonId ?? ''
-  const readingDate = `lesson-${lessonId}-${today}`
+  const [sessionDate, setSessionDate] = useState<string>(() => `lesson-${lessonId}-${crypto.randomUUID()}`)
+
+  function cleanupSessionStorage(scope: string) {
+    const prefix = `skill-session-${scope}-`
+    const toRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(prefix))
+        toRemove.push(key)
+    }
+    toRemove.forEach(k => localStorage.removeItem(k))
+  }
 
   // Reset on open transition (setState-during-render pattern, mirrors DailyReviewModal).
+  // Each open generates a fresh sessionDate so progress is isolated per session.
+  // On close, we clean up the prior session's localStorage keys.
   const [lastOpen, setLastOpen] = useState(open)
   if (lastOpen !== open) {
     setLastOpen(open)
     if (open) {
       setActiveSkill('vocabulary')
       setVisited(new Set())
+      setSessionDate(`lesson-${lessonId}-${crypto.randomUUID()}`)
+    }
+    else {
+      cleanupSessionStorage(sessionDate)
     }
   }
 
   const entryIds = new Set(entries.map(e => e.id))
 
   function getSkillProgressForEntries(key: SkillName): number {
-    const completed = getSkillProgress(key, today)
+    const completed = getSkillProgress(key, sessionDate)
     let count = 0
     for (const id of completed) {
       if (entryIds.has(id))
@@ -61,7 +76,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
   function getSkillStatus(key: Skill): SkillStatus {
     const wasVisited = visited.has(key)
     if (key === 'reading') {
-      if (wasVisited && isReadingDone(readingDate))
+      if (wasVisited && isReadingDone(sessionDate))
         return 'done'
       if (wasVisited)
         return 'alert'
@@ -92,7 +107,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
 
   const sessionProps = {
     entries,
-    date: today,
+    date: sessionDate,
     onBack: () => setActiveSkill(null),
     onProgress: () => setProgressTick(t => t + 1),
     embedded: true as const,
@@ -229,7 +244,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
             <ListeningSkillSession {...sessionProps} onComplete={() => handleComplete('listening')} />
           )}
           {activeSkill === 'reading' && (
-            <ReadingSkillSession {...sessionProps} date={readingDate} onComplete={() => handleComplete('reading')} />
+            <ReadingSkillSession {...sessionProps} onComplete={() => handleComplete('reading')} />
           )}
           {activeSkill === 'writing' && (
             <WritingSkillSession {...sessionProps} onComplete={() => handleComplete('writing')} />
