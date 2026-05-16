@@ -22,7 +22,6 @@ export function ShadowingSpeakingPhase({
   segmentLabel,
   progress,
   onSubmit,
-  onSkip,
   onExit,
 }: ShadowingSpeakingPhaseProps) {
   const { t } = useI18n()
@@ -83,11 +82,6 @@ export function ShadowingSpeakingPhase({
     return () => document.removeEventListener('keydown', handleKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingState, blob])
-
-  function handleSkip() {
-    cancel()
-    onSkip()
-  }
 
   return (
     <div
@@ -213,15 +207,6 @@ export function ShadowingSpeakingPhase({
           </div>
         </div>
       </div>
-
-      <Button
-        variant="ghost"
-        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground hover:bg-transparent h-auto p-0"
-        onClick={handleSkip}
-        aria-label="Skip this segment"
-      >
-        {t('shadowing.skip')}
-      </Button>
     </div>
   )
 }

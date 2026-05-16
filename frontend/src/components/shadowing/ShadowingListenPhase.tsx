@@ -22,7 +22,6 @@ export function ShadowingListenPhase({
   segmentLabel,
   progress,
   onAutoTransition,
-  onSkip,
   onExit,
 }: ShadowingListenPhaseProps) {
   const { t } = useI18n()
@@ -148,16 +147,6 @@ export function ShadowingListenPhase({
           {t('shadowing.replay')}
         </Button>
       </div>
-
-      <Button
-        size="lg"
-        variant="ghost"
-        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground hover:bg-transparent h-auto p-0"
-        onClick={onSkip}
-        aria-label="Skip this segment"
-      >
-        {t('shadowing.skip')}
-      </Button>
     </div>
   )
 }

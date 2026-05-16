@@ -24,7 +24,6 @@ export function ShadowingDictationPhase({
   segmentLabel,
   progress,
   onSubmit,
-  onSkip,
   onExit,
   caps,
 }: ShadowingDictationPhaseProps) {
@@ -152,15 +151,6 @@ export function ShadowingDictationPhase({
           </div>
         </div>
       </div>
-
-      <Button
-        variant="ghost"
-        className="self-end text-sm text-muted-foreground/50 transition-colors hover:text-muted-foreground hover:bg-transparent h-auto p-0"
-        onClick={onSkip}
-        aria-label="Skip this segment"
-      >
-        {t('shadowing.skip')}
-      </Button>
     </div>
   )
 }

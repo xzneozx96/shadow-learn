@@ -11,6 +11,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { getSettings } from '@/db'
 import { useTTS } from '@/hooks/useTTS'
 import { useWordBreakdown } from '@/hooks/useWordBreakdown'
+import { cn } from '@/lib/utils'
 import { BreakdownTree } from './BreakdownTree'
 
 interface WordBreakdownModalProps {
@@ -146,7 +147,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
             {/* Mnemonic / Explanation */}
             <section className="w-full">
               <h3 className="text-xs font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.story')}</h3>
-              <div className="relative bg-card rounded-xl p-4 border border-primary/10 pr-16 min-h-[80px]">
+              <div className={cn('relative bg-card rounded-xl p-4 border border-primary/10 min-h-[80px]', !editing && 'pr-16')}>
                 {/* Action icons (top-right) — hidden in edit mode (action buttons render below textarea) */}
                 {!editing && (
                   <div className="absolute top-2 right-2 flex items-center gap-1">
