@@ -33,6 +33,8 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
   const [visited, setVisited] = useState<Set<Skill>>(() => new Set())
   const [, setProgressTick] = useState(0)
   const total = entries.length
+  const lessonId = entries[0]?.sourceLessonId ?? ''
+  const readingDate = `lesson-${lessonId}-${today}`
 
   // Reset on open transition (setState-during-render pattern, mirrors DailyReviewModal).
   const [lastOpen, setLastOpen] = useState(open)
@@ -47,7 +49,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
   function getSkillStatus(key: Skill): SkillStatus {
     const wasVisited = visited.has(key)
     if (key === 'reading') {
-      if (wasVisited && isReadingDone(today))
+      if (wasVisited && isReadingDone(readingDate))
         return 'done'
       if (wasVisited)
         return 'alert'
@@ -215,7 +217,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
             <ListeningSkillSession {...sessionProps} onComplete={() => handleComplete('listening')} />
           )}
           {activeSkill === 'reading' && (
-            <ReadingSkillSession {...sessionProps} onComplete={() => handleComplete('reading')} />
+            <ReadingSkillSession {...sessionProps} date={readingDate} onComplete={() => handleComplete('reading')} />
           )}
           {activeSkill === 'writing' && (
             <WritingSkillSession {...sessionProps} onComplete={() => handleComplete('writing')} />
