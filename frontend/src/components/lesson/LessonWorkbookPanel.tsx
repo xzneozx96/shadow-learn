@@ -13,6 +13,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { getSettings } from '@/db'
 import { useTTS } from '@/hooks/useTTS'
+import { groupVocabByDay } from '@/lib/vocabGrouping'
 import { RemoveVocabDialog } from './RemoveVocabDialog'
 
 interface LessonWorkbookPanelProps {
@@ -24,7 +25,11 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const { t } = useI18n()
   const { db, keys } = useAuth()
   const navigate = useNavigate()
-  const entries = entriesByLesson[lessonId] ?? []
+  const rawEntries = entriesByLesson[lessonId] ?? []
+  const entries = [...rawEntries].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
+  const dayGroups = groupVocabByDay(entries)
   const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
   useEffect(() => {
     if (!db)
@@ -100,67 +105,76 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
           )
         : (
             <ScrollArea className="min-h-0 flex-1 p-3">
-              <div className="grid grid-cols-2 gap-2">
-                {entries.map(entry => (
-                  <div
-                    key={entry.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() =>
-                      navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
-                    onKeyDown={e => e.key === 'Enter' && navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
-                    className="group/card relative flex cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left transition-colors duration-200 hover:border-primary/30"
-                  >
-                    {/* Actions — top right */}
-                    <div className="absolute top-2 right-2 flex items-center gap-0.5">
-                      {entry.sourceLanguage?.startsWith('zh') && (
-                        <button
-                          aria-label={t('breakdown.button.show', { word: entry.word })}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setBreakdownEntry(entry)
-                          }}
-                          className="rounded-md p-1 text-foreground/55 transition-colors hover:bg-foreground/6 hover:text-foreground"
+              <div className="flex flex-col gap-4">
+                {dayGroups.map(group => (
+                  <div key={group.label}>
+                    <p className="mb-2 pl-2 text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+                      {group.label}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {group.entries.map(entry => (
+                        <div
+                          key={entry.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() =>
+                            navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
+                          onKeyDown={e => e.key === 'Enter' && navigate(`/lesson/${lessonId}?segmentId=${entry.sourceSegmentId}`)}
+                          className="group/card relative flex cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left transition-colors duration-200 hover:border-primary/30"
                         >
-                          <BookOpen className="size-4" />
-                        </button>
-                      )}
-                      <button
-                        aria-label={t('lesson.removeFromWorkbook')}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setPendingRemove(entry)
-                        }}
-                        className="rounded-md p-1 text-foreground/55 transition-colors hover:bg-foreground/6 hover:text-foreground"
-                      >
-                        <X className="size-4" />
-                      </button>
-                    </div>
+                          {/* Actions — top right */}
+                          <div className="absolute top-2 right-2 flex items-center gap-0.5">
+                            {entry.sourceLanguage?.startsWith('zh') && (
+                              <button
+                                aria-label={t('breakdown.button.show', { word: entry.word })}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setBreakdownEntry(entry)
+                                }}
+                                className="rounded-md p-1 text-foreground/55 transition-colors hover:bg-foreground/6 hover:text-foreground"
+                              >
+                                <BookOpen className="size-4" />
+                              </button>
+                            )}
+                            <button
+                              aria-label={t('lesson.removeFromWorkbook')}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setPendingRemove(entry)
+                              }}
+                              className="rounded-md p-1 text-foreground/55 transition-colors hover:bg-foreground/6 hover:text-foreground"
+                            >
+                              <X className="size-4" />
+                            </button>
+                          </div>
 
-                    {/* Word — hero, confident tracking */}
-                    <p className="pr-12 text-2xl font-bold leading-tight tracking-tight text-foreground">{entry.word}</p>
+                          {/* Word — hero, confident tracking */}
+                          <p className="pr-12 text-2xl font-bold leading-tight tracking-tight text-foreground">{entry.word}</p>
 
-                    {/* Pinyin — phonetic guide, tracking-wide */}
-                    {entry.romanization && (
-                      <p className="mt-1 text-sm font-medium tracking-wide text-foreground/55">{entry.romanization}</p>
-                    )}
+                          {/* Pinyin — phonetic guide, tracking-wide */}
+                          {entry.romanization && (
+                            <p className="mt-1 text-sm font-medium tracking-wide text-foreground/55">{entry.romanization}</p>
+                          )}
 
-                    {/* Translation + volume inline */}
-                    <div className="mt-3 flex items-end justify-between gap-2">
-                      <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-muted-foreground">{entry.meaning}</p>
-                      <button
-                        aria-label={t('lesson.workbook.playPronunciation', { word: entry.word })}
-                        disabled={loadingText === entry.word}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          playTTS(entry.word)
-                        }}
-                        className="-mr-1 -mb-1 shrink-0 rounded-md p-1.5 text-foreground/55 transition-colors hover:bg-foreground/6 hover:text-foreground disabled:opacity-50"
-                      >
-                        {loadingText === entry.word
-                          ? <Loader2 className="size-4 animate-spin" />
-                          : <Volume2 className="size-4" />}
-                      </button>
+                          {/* Translation + volume inline */}
+                          <div className="mt-3 flex items-end justify-between gap-2">
+                            <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-muted-foreground">{entry.meaning}</p>
+                            <button
+                              aria-label={t('lesson.workbook.playPronunciation', { word: entry.word })}
+                              disabled={loadingText === entry.word}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                playTTS(entry.word)
+                              }}
+                              className="-mr-1 -mb-1 shrink-0 rounded-md p-1.5 text-foreground/55 transition-colors hover:bg-foreground/6 hover:text-foreground disabled:opacity-50"
+                            >
+                              {loadingText === entry.word
+                                ? <Loader2 className="size-4 animate-spin" />
+                                : <Volume2 className="size-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
