@@ -86,4 +86,19 @@ describe('groupVocabByDay', () => {
     expect(groups[0].entries[0].id).toBe('late')
     expect(groups[0].entries[1].id).toBe('early')
   })
+
+  it('assigns a stable key per day group', () => {
+    const a = makeEntry({ id: 'a', createdAt: TODAY_NOON })
+    const b = makeEntry({ id: 'b', createdAt: YESTERDAY_NOON })
+    const groups = groupVocabByDay([a, b], NOW)
+    expect(groups[0].key).toBeTruthy()
+    expect(groups[1].key).toBeTruthy()
+    expect(groups[0].key).not.toBe(groups[1].key)
+  })
+
+  it('returns the same key for entries on the same local day', () => {
+    const groups1 = groupVocabByDay([makeEntry({ createdAt: TODAY_NOON })], NOW)
+    const groups2 = groupVocabByDay([makeEntry({ createdAt: TODAY_MORNING })], NOW)
+    expect(groups1[0].key).toBe(groups2[0].key)
+  })
 })

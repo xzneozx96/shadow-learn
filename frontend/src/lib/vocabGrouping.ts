@@ -1,6 +1,7 @@
 import type { VocabEntry } from '@/types'
 
 export interface VocabDayGroup {
+  key: string
   label: string
   entries: VocabEntry[]
 }
@@ -28,7 +29,7 @@ export function groupVocabByDay(entries: VocabEntry[], now = new Date()): VocabD
         label = 'Yesterday'
       else
         label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-      map.set(key, { label, entries: [] })
+      map.set(key, { key, label, entries: [] })
     }
     map.get(key)!.entries.push(entry)
   }
