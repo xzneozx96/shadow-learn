@@ -1,3 +1,4 @@
+import type { SkillName } from '@/lib/skillSessionProgress'
 import type { VocabEntry } from '@/types'
 import { BookOpen, Check, Ear, FileText, Mic, PenLine, Sparkles } from 'lucide-react'
 import { useState } from 'react'
@@ -9,6 +10,7 @@ import { WritingSkillSession } from '@/components/study-queue/WritingSkillSessio
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { useI18n } from '@/contexts/I18nContext'
 import { todayISO } from '@/lib/date'
+import { getSkillProgress } from '@/lib/skillSessionProgress'
 import { cn } from '@/lib/utils'
 
 type Skill = 'vocabulary' | 'listening' | 'reading' | 'writing' | 'speaking'
@@ -28,6 +30,8 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
 
   const [activeSkill, setActiveSkill] = useState<Skill | null>('vocabulary')
   const [visited, setVisited] = useState<Set<Skill>>(() => new Set())
+  const [, setProgressTick] = useState(0)
+  const total = entries.length
 
   // Reset on open transition (setState-during-render pattern, mirrors DailyReviewModal).
   const [lastOpen, setLastOpen] = useState(open)
@@ -54,7 +58,15 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
     entries,
     date: today,
     onBack: () => setActiveSkill(null),
+    onProgress: () => setProgressTick(t => t + 1),
     embedded: true as const,
+  }
+
+  function getSkillCountLabel(key: Skill): string {
+    if (key === 'reading')
+      return ''
+    const progress = getSkillProgress(key as SkillName, today).length
+    return `${progress} / ${total}`
   }
 
   const skills: Array<{ key: Skill, label: string, Icon: React.ElementType }> = [
@@ -128,6 +140,9 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
                     <div className={cn('text-sm font-semibold', isDone && !isActive ? 'text-muted-foreground line-through' : '')}>
                       {label}
                     </div>
+                    {getSkillCountLabel(key) && (
+                      <div className="mt-0.5 text-xs text-muted-foreground/70">{getSkillCountLabel(key)}</div>
+                    )}
                   </div>
                   {isDone && <Check className="size-3.5 shrink-0 text-emerald-500" />}
                 </button>

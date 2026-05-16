@@ -1,6 +1,6 @@
 import type { VocabEntry } from '@/types'
 import { Check, ChevronDown, Minus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -25,7 +25,7 @@ interface WordPickerDialogProps {
 
 export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: WordPickerDialogProps) {
   const { t } = useI18n()
-  const groups = groupVocabByDay(entries, now)
+  const groups = useMemo(() => groupVocabByDay(entries, now), [entries, now])
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set())
@@ -76,7 +76,9 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
         <div className="border-b border-border px-4 py-3">
           <div className="text-base font-semibold">{t('lesson.workbook.pickerTitle')}</div>
           <div className="mt-0.5 text-xs text-muted-foreground">
-            {t('lesson.workbook.pickerSubtitle', { count: totalSaved })}
+            {totalSaved === 1
+              ? t('lesson.workbook.pickerSubtitleSingular')
+              : t('lesson.workbook.pickerSubtitle', { count: totalSaved })}
           </div>
         </div>
 
@@ -182,7 +184,9 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
             onClick={handleConfirm}
             data-testid="picker-start"
           >
-            {t('lesson.workbook.pickerStart', { count: selectedCount })}
+            {selectedCount === 1
+              ? t('lesson.workbook.pickerStartSingular')
+              : t('lesson.workbook.pickerStart', { count: selectedCount })}
           </Button>
         </div>
       </DialogContent>
