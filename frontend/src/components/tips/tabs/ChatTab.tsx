@@ -1,5 +1,6 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { FileUIPart } from 'ai'
+import type { TipChatKind } from '@/types/tips'
 import { ImageIcon, MessageSquareDashed, Mic, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useState } from 'react'
@@ -36,6 +37,8 @@ interface Props {
   lessonTitle: string
   transcript: string
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
+  kind?: TipChatKind
+  systemPrompt?: string
 }
 
 const BURST_DURATION_S = 30
@@ -204,7 +207,7 @@ function messageText(message: UIMessage): string {
     .join('')
 }
 
-export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus }: Props) {
+export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt }: Props) {
   const { locale, t } = useI18n()
   const chat = useTipChat({
     courseId,
@@ -212,6 +215,8 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
     lessonTitle,
     transcript,
     uiLanguage: locale === 'vi' ? 'vi' : 'en',
+    kind,
+    systemPrompt,
   })
 
   const [draftText, setDraftText] = useState('')
