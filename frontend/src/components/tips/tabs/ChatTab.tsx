@@ -258,11 +258,6 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-border shrink-0">
-        <div className="text-sm font-bold text-foreground">Ask the Tutor</div>
-        <div className="text-[11px] text-muted-foreground">Knows the transcript · gives hints, not answers</div>
-      </div>
-
       <Conversation className="flex-1">
         <ConversationContent className="gap-3">
           {chat.messages.length === 0 && chat.status === 'ready' && (
