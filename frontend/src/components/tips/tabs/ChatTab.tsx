@@ -1,8 +1,11 @@
 import type { UIMessage } from '@ai-sdk/react'
-import { MessageSquareDashed } from 'lucide-react'
-import { memo } from 'react'
+import type { FileUIPart } from 'ai'
+import { ImageIcon, MessageSquareDashed, Mic, X } from 'lucide-react'
+import { motion } from 'motion/react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { toast } from 'sonner'
 import {
   Conversation,
   ConversationContent,
@@ -13,13 +16,20 @@ import { Message, MessageContent } from '@/components/ai-elements/message'
 import {
   PromptInput,
   PromptInputBody,
+  PromptInputButton,
   PromptInputFooter,
+  PromptInputHeader,
   PromptInputProvider,
   PromptInputSubmit,
   PromptInputTextarea,
+  PromptInputTools,
+  usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
+import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipChat } from '@/hooks/useTipChat'
+import { useVoiceInput } from '@/hooks/useVoiceInput'
+import { VoiceInputBridge } from '../../chat/VoiceInputBridge'
 
 interface Props {
   courseId: string
@@ -27,6 +37,106 @@ interface Props {
   lessonTitle: string
   transcript: string
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
+}
+
+const BURST_DURATION_S = 30
+const WAVE_BAR_COUNT = 4
+
+function generateBarHeights(): number[][] {
+  // eslint-disable-next-line e18e/prefer-array-fill -- callback uses Math.random() per call
+  return Array.from({ length: WAVE_BAR_COUNT }, () => [
+    4 + Math.random() * 3,
+    10 + Math.random() * 4,
+    6 + Math.random() * 3,
+    14 + Math.random() * 4,
+    5 + Math.random() * 3,
+  ])
+}
+
+function RecordingPill({ onStop }: { onStop: () => void }) {
+  const [barHeights] = useState(generateBarHeights)
+  return (
+    <motion.button
+      type="button"
+      onClick={onStop}
+      aria-label="Stop recording"
+      initial={{ scale: 0.7, opacity: 0.6 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-destructive/15 text-destructive focus-visible:outline-none"
+    >
+      <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
+        <motion.circle
+          cx="50%"
+          cy="50%"
+          r="16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          pathLength={1}
+          strokeDasharray="1"
+          strokeLinecap="round"
+          initial={{ strokeDashoffset: 1 }}
+          animate={{ strokeDashoffset: 0 }}
+          transition={{ duration: BURST_DURATION_S, ease: 'linear' }}
+        />
+      </svg>
+      <div className="relative z-10 flex items-center gap-[2px]">
+        {barHeights.map((heights, i) => (
+          <motion.div
+            // eslint-disable-next-line react/no-array-index-key -- static keyframes per slot
+            key={i}
+            animate={{ height: heights }}
+            transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: 'linear', delay: i * 0.08 }}
+            style={{ originY: 1 }}
+            className="w-[2.5px] rounded-full bg-destructive"
+          />
+        ))}
+      </div>
+    </motion.button>
+  )
+}
+
+function AttachImageButton({ tooltip, muted }: { tooltip: string, muted?: boolean }) {
+  const attachments = usePromptInputAttachments()
+  return (
+    <PromptInputButton
+      size="icon-sm"
+      title={tooltip}
+      aria-label={tooltip}
+      onClick={muted ? undefined : attachments.openFileDialog}
+      className={muted ? 'pointer-events-none opacity-50' : undefined}
+    >
+      <ImageIcon className="size-4" />
+    </PromptInputButton>
+  )
+}
+
+function AttachmentPreviewBar() {
+  const { files, remove } = usePromptInputAttachments()
+  if (files.length === 0)
+    return null
+  return (
+    <div className="flex flex-wrap gap-2 px-1 pb-1">
+      {files.map(f => (
+        <div key={f.id} className="relative size-14 shrink-0">
+          <img
+            src={f.url}
+            alt={f.filename ?? 'Attached image'}
+            className="size-full rounded-md object-cover border border-border"
+          />
+          <button
+            type="button"
+            aria-label="Remove image"
+            onClick={() => remove(f.id)}
+            className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow"
+          >
+            <X className="size-2.5" />
+          </button>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 const MemoMarkdown = memo(({ text }: { text: string }) => (
@@ -43,8 +153,44 @@ function messageText(message: UIMessage): string {
 }
 
 export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus }: Props) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const chat = useTipChat(courseId, videoId, lessonTitle, transcript, locale === 'vi' ? 'vi' : 'en')
+
+  const [draftText, setDraftText] = useState('')
+  const [pendingConfirmed, setPendingConfirmed] = useState<string | null>(null)
+  const [restoreBase, setRestoreBase] = useState(false)
+  const handleRestoreHandled = useCallback(() => setRestoreBase(false), [])
+
+  const voice = useVoiceInput({
+    onDraft: setDraftText,
+    onConfirmed: (text) => {
+      setDraftText('')
+      setPendingConfirmed(text)
+    },
+    onCancel: () => {
+      setDraftText('')
+      setRestoreBase(true)
+    },
+  })
+
+  useEffect(() => {
+    if (voice.error)
+      toast.error(t(voice.error as Parameters<typeof t>[0]))
+  }, [voice.error, t])
+
+  const handleSubmit = useCallback((message: { text: string, files: FileUIPart[] }) => {
+    if (voice.state !== 'idle')
+      throw new Error('voice-active')
+    const trimmed = message.text.trim()
+    const hasFiles = message.files.length > 0
+    if ((!trimmed && !hasFiles) || chat.disabled)
+      return
+    chat.sendMessage({ text: trimmed, ...(hasFiles ? { files: message.files } : {}) } as Parameters<typeof chat.sendMessage>[0])
+  }, [voice.state, chat])
+
+  const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept', message: string }) => {
+    toast.error(err.message)
+  }
 
   if (transcriptStatus === 'pending')
     return null
@@ -91,13 +237,23 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
       <div className="shrink-0 border-t border-border p-3">
         <PromptInputProvider>
           <PromptInput
-            onSubmit={({ text }) => {
-              const trimmed = text.trim()
-              if (!trimmed || chat.disabled)
-                return
-              chat.sendMessage({ text: trimmed })
-            }}
+            accept="image/jpeg,image/png,image/webp"
+            maxFileSize={5 * 1024 * 1024}
+            maxFiles={1}
+            onError={handleAttachError}
+            onSubmit={handleSubmit}
           >
+            <VoiceInputBridge
+              voiceState={voice.state}
+              draftText={draftText}
+              pendingConfirmed={pendingConfirmed}
+              onConfirmedFlushed={() => setPendingConfirmed(null)}
+              restoreBase={restoreBase}
+              onRestoreHandled={handleRestoreHandled}
+            />
+            <PromptInputHeader>
+              <AttachmentPreviewBar />
+            </PromptInputHeader>
             <PromptInputBody>
               <PromptInputTextarea
                 placeholder={chat.disabledReason ?? 'Ask anything about this lesson…'}
@@ -105,8 +261,29 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
               />
             </PromptInputBody>
             <PromptInputFooter>
-              <div className="flex-1" />
-              <PromptInputSubmit status={chat.status} disabled={chat.disabled} />
+              <PromptInputTools className="gap-2">
+                <AttachImageButton tooltip={t('companion.attachImage')} muted={voice.state !== 'idle'} />
+                {voice.state === 'recording'
+                  ? <RecordingPill onStop={() => voice.stop()} />
+                  : (
+                      <PromptInputButton
+                        size="icon-sm"
+                        title={t('voice.dictate')}
+                        aria-label={t('voice.dictate')}
+                        onClick={() => voice.state === 'idle' && voice.start()}
+                        disabled={voice.state === 'connecting' || voice.state === 'processing'}
+                      >
+                        {voice.state === 'connecting' || voice.state === 'processing'
+                          ? <Spinner className="size-4" />
+                          : <Mic className="size-4" />}
+                      </PromptInputButton>
+                    )}
+              </PromptInputTools>
+              <PromptInputSubmit
+                status={chat.status}
+                disabled={chat.disabled}
+                className={voice.state !== 'idle' ? 'pointer-events-none opacity-50' : undefined}
+              />
             </PromptInputFooter>
           </PromptInput>
         </PromptInputProvider>

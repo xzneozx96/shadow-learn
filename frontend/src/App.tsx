@@ -98,7 +98,7 @@ function StudyQueueUI() {
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [open])
 
-  if (location.pathname.startsWith('/lesson/'))
+  if (location.pathname.startsWith('/lesson/') || location.pathname.startsWith('/tips/'))
     return null
 
   return (
