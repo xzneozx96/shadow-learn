@@ -12,7 +12,6 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation'
-import { Message, MessageContent } from '@/components/ai-elements/message'
 import {
   PromptInput,
   PromptInputBody,
@@ -84,7 +83,7 @@ function RecordingPill({ onStop }: { onStop: () => void }) {
       <div className="relative z-10 flex items-center gap-[2px]">
         {barHeights.map((heights, i) => (
           <motion.div
-            // eslint-disable-next-line react/no-array-index-key -- static keyframes per slot
+
             key={i}
             animate={{ height: heights }}
             transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: 'linear', delay: i * 0.08 }}
@@ -144,6 +143,59 @@ const MemoMarkdown = memo(({ text }: { text: string }) => (
     <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
   </div>
 ))
+
+function StreamingDots() {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:0ms]" />
+      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:150ms]" />
+      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:300ms]" />
+    </span>
+  )
+}
+
+function ChatBubble({ message }: { message: UIMessage }) {
+  const text = messageText(message)
+  if (message.role === 'user') {
+    return (
+      <motion.div
+        className="flex justify-end"
+        initial={{ opacity: 0, x: 16, y: 4 }}
+        animate={{ opacity: 1, x: 0, y: 0 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-primary text-primary-foreground">
+          <p className="whitespace-pre-wrap">{text}</p>
+          {message.parts.filter(p => p.type === 'file').map((p: any, i) => (
+            p.url && typeof p.mediaType === 'string' && p.mediaType.startsWith('image/')
+              ? (
+                  <img
+
+                    key={i}
+                    src={p.url}
+                    alt={p.filename ?? 'Attached image'}
+                    className="max-h-48 max-w-full rounded-md object-contain mt-2"
+                  />
+                )
+              : null
+          ))}
+        </div>
+      </motion.div>
+    )
+  }
+  return (
+    <motion.div
+      className="flex justify-start w-full"
+      initial={{ opacity: 0, x: -16, y: 4 }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
+        <MemoMarkdown text={text} />
+      </div>
+    </motion.div>
+  )
+}
 
 function messageText(message: UIMessage): string {
   return message.parts
@@ -212,24 +264,26 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
       </div>
 
       <Conversation className="flex-1">
-        <ConversationContent className="gap-4">
-          {chat.messages.length === 0
-            ? (
-                <ConversationEmptyState
-                  icon={<MessageSquareDashed className="size-8" />}
-                  title="Ask anything about this lesson"
-                  description="The tutor has the transcript. Ask for a summary, a drill, or a tone check."
-                />
-              )
-            : (
-                chat.messages.map(m => (
-                  <Message key={m.id} from={m.role}>
-                    <MessageContent>
-                      <MemoMarkdown text={messageText(m)} />
-                    </MessageContent>
-                  </Message>
-                ))
-              )}
+        <ConversationContent className="gap-3">
+          {chat.messages.length === 0 && chat.status === 'ready' && (
+            <ConversationEmptyState
+              icon={<MessageSquareDashed className="size-8" />}
+              title="Ask anything about this lesson"
+              description="The tutor has the transcript. Ask for a summary, a drill, or a tone check."
+            />
+          )}
+          {chat.messages.map(m => <ChatBubble key={m.id} message={m} />)}
+          {(chat.status === 'submitted' || chat.status === 'streaming')
+            && (chat.messages.length === 0
+              || chat.messages.at(-1)?.role === 'user'
+              || !messageText(chat.messages.at(-1)!).trim())
+            && (
+              <div className="flex justify-start">
+                <div className="rounded-lg bg-muted px-3 py-2">
+                  <StreamingDots />
+                </div>
+              </div>
+            )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
