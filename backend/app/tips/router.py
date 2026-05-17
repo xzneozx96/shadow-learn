@@ -7,9 +7,24 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+import app.tips.services.studio as _studio_svc
 import app.tips.services.transcript as _transcript_svc
+from app.tips.schemas import (
+    StudioCards,
+    StudioRequest,
+    StudioStudyGuide,
+    StudioSummary,
+)
 
 router = APIRouter(prefix="/api/tips", tags=["tips"])
+
+_VALID_KINDS = {"summary", "study_guide", "cards"}
+
+_KIND_TO_MODEL = {
+    "summary": StudioSummary,
+    "study_guide": StudioStudyGuide,
+    "cards": StudioCards,
+}
 
 _YOUTUBE_ID = re.compile(r"^[A-Za-z0-9_-]{6,32}$")
 
@@ -50,3 +65,31 @@ async def get_transcript(video_id: str):
         status_code=404,
         content=TranscriptUnavailable(status="unavailable").model_dump(),
     )
+
+
+@router.post("/studio/{kind}")
+async def post_studio(kind: str, req: StudioRequest):
+    if kind not in _VALID_KINDS:
+        raise HTTPException(status_code=400, detail=f"invalid kind: {kind}")
+
+    try:
+        raw = await _studio_svc.generate_studio_artifact(
+            kind=kind,  # type: ignore[arg-type]
+            transcript=req.transcript,
+            locale=req.locale,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=f"upstream error: {e}") from e
+
+    # Validate the LLM output against the per-kind Pydantic model. If the
+    # LLM returned malformed JSON, surface a 502 (we cannot trust the
+    # response and the client cannot recover by retrying with the same input).
+    model = _KIND_TO_MODEL[kind]
+    try:
+        validated = model.model_validate(raw)
+    except Exception as e:  # pydantic ValidationError
+        raise HTTPException(
+            status_code=502,
+            detail=f"upstream returned invalid schema: {e}",
+        ) from e
+    return validated.model_dump()
