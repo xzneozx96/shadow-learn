@@ -30,8 +30,7 @@ from app.lessons.services.youtube_subtitles import (
     parse_vtt_to_segments,
     pick_manual_subtitle,
 )
-from app.settings import settings
-from app.transcription.services.transcription_factory import get_stt_provider
+from app.transcription.services.transcription_deepgram import DeepgramSTTProvider
 from app.transcription.services.transcription_provider import TranscriptionKeys
 
 logger = logging.getLogger(__name__)
@@ -91,11 +90,14 @@ async def kick_off_stt_job(video_id: str) -> str | None:
     Returns None if no STT provider is configured (caller should treat as
     unavailable rather than raising).
     """
+    # Tips always use Deepgram, regardless of the global SHADOWLEARN_STT_PROVIDER
+    # setting — Deepgram is the cheapest + fastest path for Tips short-form content,
+    # and we want Tips behavior to stay predictable even when lessons swap providers.
     try:
-        stt_provider = get_stt_provider(settings)
+        stt_provider = DeepgramSTTProvider()
     except Exception:
         logger.warning(
-            "kick_off_stt_job: no STT provider configured, cannot transcribe video_id=%s",
+            "kick_off_stt_job: Deepgram unavailable, cannot transcribe video_id=%s",
             video_id,
             exc_info=True,
         )

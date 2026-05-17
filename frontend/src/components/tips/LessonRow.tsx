@@ -30,7 +30,21 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
       }}
       tabIndex={0}
     >
-      <div className="relative size-14 shrink-0 rounded bg-gradient-to-br from-muted to-muted-foreground/20">
+      <div className="relative w-20 aspect-video shrink-0 rounded overflow-hidden bg-linear-to-br from-muted to-muted-foreground/20">
+        <img
+          src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 size-full object-cover"
+          onError={(e) => {
+            // Fallback chain: mqdefault → hqdefault → hidden (gradient shows through)
+            const img = e.currentTarget
+            if (img.src.includes('mqdefault'))
+              img.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+            else
+              img.style.display = 'none'
+          }}
+        />
         {isCompleted && (
           <span
             aria-label="Completed"
