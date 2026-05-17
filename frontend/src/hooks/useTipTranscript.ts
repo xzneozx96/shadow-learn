@@ -5,7 +5,7 @@ import { getTipTranscript, putTipTranscript } from '@/db'
 import { API_BASE } from '@/lib/config'
 
 const POLL_INTERVAL_MS = 1500
-const POLL_TIMEOUT_MS = 120_000
+const POLL_TIMEOUT_MS = 300_000
 
 export type WarmingStep = 'video_download' | 'audio_extraction' | 'transcription' | 'indexing'
 
@@ -117,6 +117,11 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
           return
         if (res.status === 404) {
           setResult(r => ({ ...r, status: 'unavailable', warming: null }))
+          return
+        }
+        if (res.status >= 400) {
+          // 404 handled above; any other 4xx/5xx surfaces as error.
+          setResult(r => ({ ...r, status: 'error', error: new Error(`transcript fetch failed: ${res.status}`), warming: null }))
           return
         }
         const body = (await res.json()) as ServerResponse

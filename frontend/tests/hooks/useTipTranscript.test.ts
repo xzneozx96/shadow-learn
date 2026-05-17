@@ -170,6 +170,16 @@ describe('useTipTranscript', () => {
       expect(result.current.error).toBeNull()
       expect(result.current.warming).toBeNull()
     })
+
+    it('sets status to error on a 5xx server response', async () => {
+      mockFetch({ status: 503 })
+
+      const { result } = renderHook(() => useTipTranscript('vid-down'))
+
+      await waitFor(() => expect(result.current.status).toBe('error'))
+      expect(result.current.error).toBeInstanceOf(Error)
+      expect(result.current.error?.message).toMatch(/503/)
+    })
   })
 
   describe('behavior 5: abort on videoId change', () => {
