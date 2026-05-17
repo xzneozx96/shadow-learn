@@ -33,10 +33,10 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
       <div className="relative size-14 shrink-0 rounded bg-gradient-to-br from-muted to-muted-foreground/20">
         {isCompleted && (
           <span
+            aria-label="Completed"
             className="absolute bottom-0.5 right-0.5 flex items-center justify-center size-3.5 rounded-full bg-success text-white"
-            aria-hidden="true"
           >
-            <Check className="size-2.5" />
+            <Check className="size-2.5" aria-hidden />
           </span>
         )}
       </div>

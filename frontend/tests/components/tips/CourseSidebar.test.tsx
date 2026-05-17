@@ -34,7 +34,6 @@ describe('courseSidebar', () => {
   it('renders a completion checkmark for completed lessons', () => {
     render(<CourseSidebar courseName="P" topic={null} lessons={lessons} activeVideoId="v3" completedVideoIds={new Set(['v1', 'v2'])} onSelect={() => {}} />)
     const v1Row = screen.getByText('Welcome').closest('[role="listitem"]')!
-    const svg = v1Row.querySelector('svg')
-    expect(svg).toBeInTheDocument()
+    expect(within(v1Row as HTMLElement).getByLabelText(/completed/i)).toBeInTheDocument()
   })
 })
