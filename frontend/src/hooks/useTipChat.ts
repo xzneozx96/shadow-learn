@@ -58,7 +58,9 @@ export function useTipChat(
       api: `${API_BASE}/api/agent`,
       body: () => ({
         system_prompt: systemPrompt,
-        openrouter_api_key: keys?.openrouterApiKey,
+        // Match useAgentChat: always send a string. Backend falls back to
+        // SHADOWLEARN_OPENROUTER_API_KEY when the field is empty.
+        openrouter_api_key: keys?.openrouterApiKey ?? '',
         tools: [],
       }),
     }),
@@ -81,11 +83,13 @@ export function useTipChat(
     },
   })
 
+  // Only gate on transcript. The OpenRouter key is not required from the user —
+  // backend falls back to its own server key (matches useAgentChat / Companion
+  // pattern). Frontend lets the user chat; if the backend has no fallback key
+  // either, the request errors and surfaces via chat.status === 'error'.
   const disabledReason: string | null = !transcript
     ? 'AI tutor needs a transcript. Try another lesson.'
-    : !keys?.openrouterApiKey
-        ? 'Add your OpenRouter key in Settings to chat with the tutor.'
-        : null
+    : null
 
   return {
     ready: hydrated,
