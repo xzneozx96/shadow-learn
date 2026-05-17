@@ -1,7 +1,6 @@
 import type { TipLesson } from '@/types'
 import { ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
 import { LessonRow } from './LessonRow'
 
 interface Props {
@@ -16,11 +15,11 @@ interface Props {
 export function CourseSidebar({ courseName, lessons, activeVideoId, completedVideoIds, onSelect }: Props) {
   const completed = lessons.reduce((n, l) => n + (completedVideoIds.has(l.videoId) ? 1 : 0), 0)
   const pct = lessons.length === 0 ? 0 : Math.round((completed / lessons.length) * 100)
-  const lessonCount = `${lessons.length} lessons`
   const progressCount = `${completed} / ${lessons.length}`
+  const progressPct = `${pct}%`
 
   return (
-    <nav aria-label="Course lessons" className="flex flex-col h-full bg-background border-r border-border overflow-y-auto">
+    <nav aria-label="Course lessons" className="flex flex-col h-full border-r border-border overflow-y-auto">
       <header className="px-4 pt-4 pb-4 border-b border-border">
         <Link
           to="/collection?tab=tips"
@@ -31,12 +30,12 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
           Back
         </Link>
         <h2 className="text-base font-bold text-foreground leading-tight mb-2">{courseName}</h2>
-        <Badge variant="secondary" className="text-[10px] font-semibold">
-          {lessonCount}
-        </Badge>
       </header>
       <div className="px-4 py-3 border-b border-border">
-        <div className="text-[11px] text-muted-foreground mb-1.5 tabular-nums">{progressCount}</div>
+        <div className="flex justify-between text-[11px] text-muted-foreground mb-1.5 tabular-nums">
+          <span>{progressCount}</span>
+          <span>{progressPct}</span>
+        </div>
         <div className="h-[5px] rounded bg-muted overflow-hidden">
           <div className="h-full bg-primary rounded transition-all" style={{ width: `${pct}%` }} />
         </div>
