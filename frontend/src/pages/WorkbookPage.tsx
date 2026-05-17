@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LessonGroup } from '@/components/workbook/LessonGroup'
 import { useAuth } from '@/contexts/AuthContext'
+import { useDailyReview } from '@/contexts/DailyReviewContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
 import { getProgressStats, getRecentMistakes } from '@/db'
@@ -24,6 +25,7 @@ export function WorkbookPage() {
   const { t } = useI18n()
   const { entries, entriesByLesson, removeGroup } = useVocabulary()
   const { db } = useAuth()
+  const { isOpen: dailyReviewOpen } = useDailyReview()
   const { getDueItemsList } = useTracking()
 
   // Workbook State
@@ -47,9 +49,11 @@ export function WorkbookPage() {
     }
     if (db)
       void fetchDue()
-    // getDueItemsList is an inline fn in useTracking, not stable — intentionally excluded
+    // getDueItemsList is an inline fn in useTracking, not stable — intentionally excluded.
+    // dailyReviewOpen + reviewOpen included so closing either modal refetches the
+    // due list (pending SM2 scores from those sessions filter out completed words).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, entries])
+  }, [db, entries, dailyReviewOpen, reviewOpen])
 
   // Fetch Progress Stats
   useEffect(() => {

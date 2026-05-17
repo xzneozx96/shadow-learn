@@ -3,7 +3,6 @@ import type { MistakeExample, SessionLog, ShadowLearnDB, SpacedRepetitionItem } 
 import type { VocabEntry } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 import {
-  getDueItems,
   getErrorPattern,
   getMasteryData,
   getProgressStats,
@@ -14,7 +13,7 @@ import {
   upsertExerciseStat,
 } from '@/db'
 import { todayISO } from '@/lib/date'
-import { bufferSM2Score } from '@/lib/skillSessionProgress'
+import { bufferSM2Score, getEffectiveDueItems } from '@/lib/skillSessionProgress'
 
 export type Skill = 'writing' | 'speaking' | 'vocabulary' | 'reading' | 'listening'
 export type ExerciseType = Exclude<ExerciseMode, 'mixed'>
@@ -155,8 +154,7 @@ export function useTracking() {
   async function getDueItemsList(): Promise<SpacedRepetitionItem[]> {
     if (!db)
       return []
-    const today = todayISO()
-    return getDueItems(db, today)
+    return getEffectiveDueItems(db)
   }
 
   async function getDueItemCount(): Promise<number> {

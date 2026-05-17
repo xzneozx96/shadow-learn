@@ -17,11 +17,12 @@ import { toast } from 'sonner'
 import { useAgentActions } from '@/contexts/AgentActionsContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
-import { appendAgentLog, getChatMessages, getDueItems, getExerciseAccuracy, getLearnerProfile, getLessonMeta, getRecentMistakes, saveChatMessages } from '@/db'
+import { appendAgentLog, getChatMessages, getExerciseAccuracy, getLearnerProfile, getLessonMeta, getRecentMistakes, saveChatMessages } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
 import { buildSystemPrompt, clearSystemPromptCache } from '@/lib/agent-system-prompt'
 import { isToolPart, normalizeMessagesForBackend, PAGE_SIZE, toolName } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
+import { getEffectiveDueItems } from '@/lib/skillSessionProgress'
 import { ToolExecutor } from '@/lib/tools/executor'
 import { getActiveToolPool, getAllBaseTools, getDeferredToolNames, getToolDefinitions } from '@/lib/tools/index'
 
@@ -267,12 +268,11 @@ export function useAgentChat(
     let cancelled = false
 
     async function fetchContext() {
-      const today = new Date().toISOString().split('T')[0]
       const [profile, memories, lessonMeta, dueItems, recentMistakes, accuracy] = await Promise.all([
         getLearnerProfile(db!),
         getMemorySummary(db!),
         lessonId ? getLessonMeta(db!, lessonId) : undefined,
-        getDueItems(db!, today),
+        getEffectiveDueItems(db!),
         getRecentMistakes(db!, 5),
         getExerciseAccuracy(db!),
       ])

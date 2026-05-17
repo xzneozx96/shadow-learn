@@ -1,5 +1,6 @@
-import type { ShadowLearnDB } from '@/db'
-import { getSpacedRepetitionItem, saveSpacedRepetitionItem } from '@/db'
+import type { ShadowLearnDB, SpacedRepetitionItem } from '@/db'
+import { getDueItems, getSpacedRepetitionItem, saveSpacedRepetitionItem } from '@/db'
+import { todayISO } from '@/lib/date'
 import { createSpacedRepetitionItem, updateSpacedRepetition } from '@/lib/spacedRepetition'
 
 export type SkillName = 'vocabulary' | 'listening' | 'speaking' | 'writing'
@@ -88,6 +89,21 @@ export function clearExpiredSessionKeys(today: string): void {
     }
   }
   keysToRemove.forEach(k => localStorage.removeItem(k))
+}
+
+/**
+ * Returns due items minus any vocab already scored today (still in pending buffer).
+ * IDB `dueDate` only advances after `flushSM2Pending` runs on the next day, so
+ * raw `getDueItems` would show already-completed words as still due. Use this
+ * instead of `getDueItems` for any UI/agent surface that asks "what's due now?".
+ * The seed query in `useStudyQueue.load()` should keep using raw `getDueItems`
+ * so that newly-due items can populate the daily lock.
+ */
+export async function getEffectiveDueItems(db: ShadowLearnDB, date?: string): Promise<SpacedRepetitionItem[]> {
+  const today = date ?? todayISO()
+  const items = await getDueItems(db, today)
+  const pending = getSM2Pending(today)
+  return items.filter(i => !(i.itemId in pending))
 }
 
 export async function flushSM2Pending(db: ShadowLearnDB, date: string): Promise<void> {

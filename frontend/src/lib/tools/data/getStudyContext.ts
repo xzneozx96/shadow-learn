@@ -1,21 +1,20 @@
 import type { ShadowLearnDB } from '@/db'
 import { z } from 'zod'
 import {
-  getDueItems,
   getMasteryData,
   getProgressStats,
   getRecentMistakes,
   getVocabEntriesByLesson,
 } from '@/db'
+import { getEffectiveDueItems } from '@/lib/skillSessionProgress'
 import { buildTool } from '@/lib/tools/types'
 
 export async function executeGetStudyContext(
   db: ShadowLearnDB,
   args: { lessonId?: string },
 ) {
-  const today = new Date().toISOString().split('T')[0]
   const [dueItems, recentMistakes, masteryScores, progressStats] = await Promise.all([
-    getDueItems(db, today),
+    getEffectiveDueItems(db),
     getRecentMistakes(db, 5),
     getMasteryData(db),
     getProgressStats(db),
