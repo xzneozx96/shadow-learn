@@ -122,15 +122,17 @@ export function TipCoursePage() {
 
   return (
     <Layout>
-      <div className="grid h-full grid-cols-[280px_1fr_440px]">
-        <CourseSidebar
-          courseName={course.name}
-          topic={course.topic}
-          lessons={lessons}
-          activeVideoId={activeVideoId}
-          completedVideoIds={completedSet}
-          onSelect={handleSelectLesson}
-        />
+      <div className="grid h-full grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[280px_1fr_360px] 2xl:grid-cols-[280px_1fr_440px]">
+        <div className="border-b border-border lg:border-b-0 max-h-[40vh] lg:max-h-none overflow-y-auto">
+          <CourseSidebar
+            courseName={course.name}
+            topic={course.topic}
+            lessons={lessons}
+            activeVideoId={activeVideoId}
+            completedVideoIds={completedSet}
+            onSelect={handleSelectLesson}
+          />
+        </div>
         <main className="flex flex-col overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -162,15 +164,23 @@ export function TipCoursePage() {
             onEnded={() => { void progress.markComplete() }}
           />
           <OverviewBlock disabled={transcript.status !== 'ready'} />
+          <div className="xl:hidden mt-4 rounded-xl border border-border bg-card p-4 text-center">
+            <div className="text-sm font-bold text-foreground mb-1">AI Tutor available on wider screens</div>
+            <div className="text-xs text-muted-foreground">
+              Open this page on a desktop or larger tablet to chat with the tutor about this lesson.
+            </div>
+          </div>
         </main>
-        <UtilityPane
-          courseId={course.id}
-          videoId={activeVideoId}
-          lessonTitle={activeLesson.title}
-          transcript={transcriptText}
-          transcriptStatus={transcript.status}
-          warmingStep={transcript.warming?.step}
-        />
+        <div className="hidden xl:block h-full overflow-hidden">
+          <UtilityPane
+            courseId={course.id}
+            videoId={activeVideoId}
+            lessonTitle={activeLesson.title}
+            transcript={transcriptText}
+            transcriptStatus={transcript.status}
+            warmingStep={transcript.warming?.step}
+          />
+        </div>
       </div>
     </Layout>
   )
