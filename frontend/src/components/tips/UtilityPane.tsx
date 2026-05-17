@@ -23,7 +23,7 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
     <aside className="flex flex-col h-full bg-card border-l border-border overflow-hidden">
       <Tabs value={tab} onValueChange={v => setTab(v as TabValue)} className="flex flex-col h-full">
         <TabsList className="grid grid-cols-5 gap-0.5 m-2 bg-background">
-          <TabsTrigger value="notes" disabled aria-label="Notes">
+          <TabsTrigger value="notes" aria-label="Notes">
             <NotebookPen className="size-4" aria-hidden />
             <span className="hidden xl:inline ml-1.5 text-[11px]">Notes</span>
           </TabsTrigger>
@@ -31,15 +31,15 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
             <MessageSquare className="size-4" aria-hidden />
             <span className="hidden xl:inline ml-1.5 text-[11px]">Chat</span>
           </TabsTrigger>
-          <TabsTrigger value="cards" disabled aria-label="Cards">
+          <TabsTrigger value="cards" aria-label="Cards">
             <BookOpen className="size-4" aria-hidden />
             <span className="hidden xl:inline ml-1.5 text-[11px]">Cards</span>
           </TabsTrigger>
-          <TabsTrigger value="script" disabled aria-label="Script">
+          <TabsTrigger value="script" aria-label="Script">
             <FileText className="size-4" aria-hidden />
             <span className="hidden xl:inline ml-1.5 text-[11px]">Script</span>
           </TabsTrigger>
-          <TabsTrigger value="studio" disabled aria-label="Studio">
+          <TabsTrigger value="studio" aria-label="Studio">
             <Sparkles className="size-4" aria-hidden />
             <span className="hidden xl:inline ml-1.5 text-[11px]">Studio</span>
           </TabsTrigger>

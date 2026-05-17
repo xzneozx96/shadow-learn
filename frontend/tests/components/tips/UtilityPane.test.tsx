@@ -33,22 +33,18 @@ describe('utilityPane', () => {
     expect(screen.getByRole('tab', { name: /chat/i })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('notes/Cards/Script/Studio tabs are disabled in B1', () => {
-    render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
-    // base-ui disabled tab carries aria-disabled='true' or the DOM `disabled` attribute.
-    // Accept either:
-    function isDisabled(el: HTMLElement): boolean {
-      return el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true'
-    }
-    expect(isDisabled(screen.getByRole('tab', { name: /notes/i }))).toBe(true)
-    expect(isDisabled(screen.getByRole('tab', { name: /cards/i }))).toBe(true)
-    expect(isDisabled(screen.getByRole('tab', { name: /script/i }))).toBe(true)
-    expect(isDisabled(screen.getByRole('tab', { name: /studio/i }))).toBe(true)
-  })
-
-  it('clicking a disabled tab does not switch selection', async () => {
+  it('b2/B3 placeholder tabs are clickable and reveal coming-soon copy', async () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
     await userEvent.click(screen.getByRole('tab', { name: /notes/i }))
+    expect(screen.getByRole('tab', { name: /notes/i })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText(/notes coming in b2/i)).toBeInTheDocument()
+  })
+
+  it('user can navigate back to Chat from a placeholder tab', async () => {
+    render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
+    await userEvent.click(screen.getByRole('tab', { name: /studio/i }))
+    expect(screen.getByRole('tab', { name: /studio/i })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(screen.getByRole('tab', { name: /chat/i }))
     expect(screen.getByRole('tab', { name: /chat/i })).toHaveAttribute('aria-selected', 'true')
   })
 })
