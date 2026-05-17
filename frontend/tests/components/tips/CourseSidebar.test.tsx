@@ -1,8 +1,13 @@
 import type { TipLesson } from '../../../src/types/tips'
-import { render, screen, within } from '@testing-library/react'
+import { render as rtlRender, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { CourseSidebar } from '../../../src/components/tips/CourseSidebar'
+
+function render(ui: React.ReactElement) {
+  return rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
+}
 
 const lessons: TipLesson[] = [
   { videoId: 'v1', title: 'Welcome', duration: '3:42', thumbnailUrl: null, durationSec: 222 },
