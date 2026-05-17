@@ -14,6 +14,7 @@ import {
   PromptInput,
   PromptInputBody,
   PromptInputFooter,
+  PromptInputProvider,
   PromptInputSubmit,
   PromptInputTextarea,
 } from '@/components/ai-elements/prompt-input'
@@ -87,26 +88,29 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
         <ConversationScrollButton />
       </Conversation>
 
-      <PromptInput
-        onSubmit={({ text }) => {
-          const trimmed = text.trim()
-          if (!trimmed || chat.disabled)
-            return
-          chat.sendMessage({ text: trimmed })
-        }}
-        className="shrink-0 border-t border-border"
-      >
-        <PromptInputBody>
-          <PromptInputTextarea
-            placeholder={chat.disabledReason ?? 'Ask anything about this lesson…'}
-            disabled={chat.disabled}
-          />
-          <PromptInputFooter>
-            <div className="flex-1" />
-            <PromptInputSubmit status={chat.status} disabled={chat.disabled} />
-          </PromptInputFooter>
-        </PromptInputBody>
-      </PromptInput>
+      <div className="shrink-0 border-t border-border p-3">
+        <PromptInputProvider>
+          <PromptInput
+            onSubmit={({ text }) => {
+              const trimmed = text.trim()
+              if (!trimmed || chat.disabled)
+                return
+              chat.sendMessage({ text: trimmed })
+            }}
+          >
+            <PromptInputBody>
+              <PromptInputTextarea
+                placeholder={chat.disabledReason ?? 'Ask anything about this lesson…'}
+                disabled={chat.disabled}
+              />
+            </PromptInputBody>
+            <PromptInputFooter>
+              <div className="flex-1" />
+              <PromptInputSubmit status={chat.status} disabled={chat.disabled} />
+            </PromptInputFooter>
+          </PromptInput>
+        </PromptInputProvider>
+      </div>
     </div>
   )
 }
