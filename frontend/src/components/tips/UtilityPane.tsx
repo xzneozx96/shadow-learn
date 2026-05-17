@@ -3,8 +3,10 @@ import { BookOpen, FileText, MessageSquare, NotebookPen, Sparkles } from 'lucide
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useI18n } from '@/contexts/I18nContext'
+import { CardsTab } from './tabs/CardsTab'
 import { ChatTab } from './tabs/ChatTab'
 import { DisabledTab } from './tabs/DisabledTab'
+import { StudioTab } from './tabs/StudioTab'
 import { WarmingState } from './WarmingState'
 
 interface Props {
@@ -54,14 +56,20 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
         <TabsContent value="notes" className="flex-1">
           <DisabledTab Icon={NotebookPen} labelKey="tips.placeholder.label.notes" reasonKey="tips.placeholder.notes" />
         </TabsContent>
-        <TabsContent value="cards" className="flex-1">
-          <DisabledTab Icon={BookOpen} labelKey="tips.placeholder.label.cards" reasonKey="tips.placeholder.cards" />
+        <TabsContent value="cards" className="flex-1 overflow-y-auto">
+          <CardsTab videoId={videoId} transcript={transcript} transcriptStatus={transcriptStatus} />
         </TabsContent>
         <TabsContent value="script" className="flex-1">
           <DisabledTab Icon={FileText} labelKey="tips.placeholder.label.script" reasonKey="tips.placeholder.script" />
         </TabsContent>
-        <TabsContent value="studio" className="flex-1">
-          <DisabledTab Icon={Sparkles} labelKey="tips.placeholder.label.studio" reasonKey="tips.placeholder.studio" />
+        <TabsContent value="studio" className="flex-1 overflow-y-auto">
+          <StudioTab
+            courseId={courseId}
+            videoId={videoId}
+            lessonTitle={lessonTitle}
+            transcript={transcript}
+            transcriptStatus={transcriptStatus}
+          />
         </TabsContent>
       </Tabs>
     </aside>

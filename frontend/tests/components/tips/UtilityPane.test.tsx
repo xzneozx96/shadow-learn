@@ -43,9 +43,24 @@ describe('utilityPane', () => {
 
   it('user can navigate back to Chat from a placeholder tab', async () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
-    await userEvent.click(screen.getByRole('tab', { name: /studio/i }))
-    expect(screen.getByRole('tab', { name: /studio/i })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(screen.getByRole('tab', { name: /script/i }))
+    expect(screen.getByRole('tab', { name: /script/i })).toHaveAttribute('aria-selected', 'true')
     await userEvent.click(screen.getByRole('tab', { name: /chat/i }))
     expect(screen.getByRole('tab', { name: /chat/i })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('clicking Studio tab shows the tile grid (not the coming-soon placeholder)', async () => {
+    render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="x" transcriptStatus="ready" />)
+    await userEvent.click(screen.getByRole('tab', { name: /studio/i }))
+    expect(screen.getByRole('heading', { level: 3, name: /summary/i })).toBeInTheDocument()
+    expect(screen.queryByText(/coming in b2/i)).not.toBeInTheDocument()
+  })
+
+  it('clicking Cards tab shows the deck UI (not the coming-soon placeholder)', async () => {
+    render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="x" transcriptStatus="ready" />)
+    await userEvent.click(screen.getByRole('tab', { name: /cards/i }))
+    const ctas = await screen.findAllByText(/generate cards|concept cards/i)
+    expect(ctas.length).toBeGreaterThan(0)
+    expect(screen.queryByText(/coming in b2/i)).not.toBeInTheDocument()
   })
 })
