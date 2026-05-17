@@ -1,9 +1,16 @@
 import type { LucideIcon } from 'lucide-react'
+import type { TranslationKey } from '@/lib/i18n'
 import { Lock } from 'lucide-react'
+import { useI18n } from '@/contexts/I18nContext'
 
-interface Props { Icon: LucideIcon, label: string, reason: string }
+interface Props {
+  Icon: LucideIcon
+  labelKey: TranslationKey
+  reasonKey: TranslationKey
+}
 
-export function DisabledTab({ Icon, label, reason }: Props) {
+export function DisabledTab({ Icon, labelKey, reasonKey }: Props) {
+  const { t } = useI18n()
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 text-center text-muted-foreground">
       <div className="relative mb-4">
@@ -11,11 +18,9 @@ export function DisabledTab({ Icon, label, reason }: Props) {
         <Lock className="absolute -bottom-1 -right-1 size-4 text-muted-foreground" />
       </div>
       <div className="text-sm font-bold text-foreground mb-1">
-        {label}
-        {' '}
-        coming in B2
+        {t('tips.placeholder.comingIn', { label: t(labelKey) })}
       </div>
-      <div className="text-xs max-w-[260px]">{reason}</div>
+      <div className="text-xs max-w-[260px]">{t(reasonKey)}</div>
     </div>
   )
 }

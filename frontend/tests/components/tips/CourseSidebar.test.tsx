@@ -5,6 +5,11 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { CourseSidebar } from '../../../src/components/tips/CourseSidebar'
 
+vi.mock('@/contexts/I18nContext', async () => {
+  const { getTranslation } = await import('@/lib/i18n')
+  return { useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }) }
+})
+
 function render(ui: React.ReactElement) {
   return rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
 }

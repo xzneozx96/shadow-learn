@@ -1,5 +1,6 @@
 import { ChevronDown, Sparkles } from 'lucide-react'
 import { useState } from 'react'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -7,14 +8,13 @@ interface Props {
 }
 
 export function OverviewBlock({ disabled = false }: Props) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(true)
-  const caption = disabled ? 'unlocks when transcript is ready' : '3 key takeaways'
-  const body = disabled
-    ? 'The tutor will summarize this lesson once the transcript is ready.'
-    : '(B2 will render the AI summary and key takeaways here.)'
+  const caption = disabled ? t('tips.overview.locked') : t('tips.overview.ready')
+  const body = disabled ? t('tips.overview.locked_body') : t('tips.overview.ready_body')
 
   return (
-    <section aria-label="AI lesson overview" className="mt-4 rounded-xl border border-border bg-card overflow-hidden">
+    <section aria-label={t('tips.overview.aria')} className="mt-4 rounded-xl border border-border bg-card overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -23,7 +23,7 @@ export function OverviewBlock({ disabled = false }: Props) {
       >
         <span className="inline-flex items-center gap-1.5 text-[11px] text-primary bg-primary/10 px-2.5 py-1 rounded-full font-bold">
           <Sparkles className="size-3" aria-hidden />
-          AI overview
+          {t('tips.overview.badge')}
         </span>
         <span className="text-xs font-bold text-muted-foreground">{caption}</span>
         <ChevronDown

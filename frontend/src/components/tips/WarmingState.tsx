@@ -1,13 +1,15 @@
 import type { WarmingStep } from '@/hooks/useTipTranscript'
+import type { TranslationKey } from '@/lib/i18n'
 import { Check, Loader2 } from 'lucide-react'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
 type UiStep = 'fetch' | 'transcribe' | 'index'
 
-const UI_STEPS: { id: UiStep, label: string, eta: string }[] = [
-  { id: 'fetch', label: 'Fetching media', eta: '~10s' },
-  { id: 'transcribe', label: 'Transcribing', eta: '~25s' },
-  { id: 'index', label: 'Indexing for tutor', eta: '~3s' },
+const UI_STEPS: { id: UiStep, labelKey: TranslationKey, eta: string }[] = [
+  { id: 'fetch', labelKey: 'tips.warming.step.fetch', eta: '~10s' },
+  { id: 'transcribe', labelKey: 'tips.warming.step.transcribe', eta: '~25s' },
+  { id: 'index', labelKey: 'tips.warming.step.index', eta: '~3s' },
 ]
 
 function backendToUi(step: WarmingStep): UiStep {
@@ -32,13 +34,14 @@ function stateFor(ui: UiStep, current: UiStep, complete: boolean): 'done' | 'act
 }
 
 export function WarmingState({ step, complete = false }: { step: WarmingStep, complete?: boolean }) {
+  const { t } = useI18n()
   const current = backendToUi(step)
   return (
     <div className="rounded-xl border border-border bg-muted p-4">
       <div className="text-center mb-4">
         <div className="text-2xl mb-2" aria-hidden>✦</div>
-        <div className="text-sm font-bold text-foreground">Reading the lesson</div>
-        <div className="text-xs text-muted-foreground">About 30 seconds. Studio + Flashcards unlock when ready.</div>
+        <div className="text-sm font-bold text-foreground">{t('tips.warming.headline')}</div>
+        <div className="text-xs text-muted-foreground">{t('tips.warming.eta')}</div>
       </div>
       <ol className="space-y-2" role="list">
         {UI_STEPS.map((s) => {
@@ -66,7 +69,7 @@ export function WarmingState({ step, complete = false }: { step: WarmingStep, co
                 state === 'active' && 'font-bold',
               )}
               >
-                {s.label}
+                {t(s.labelKey)}
               </span>
               <span className="text-[10px] text-muted-foreground tabular-nums">{s.eta}</span>
             </li>

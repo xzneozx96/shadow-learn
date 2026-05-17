@@ -8,10 +8,11 @@ vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ db: null, keys: null }),
 }))
 
-// Stub I18nContext for locale.
-vi.mock('@/contexts/I18nContext', () => ({
-  useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: (k: string) => k }),
-}))
+// Stub I18nContext with real EN translations so assertions match user-facing text.
+vi.mock('@/contexts/I18nContext', async () => {
+  const { getTranslation } = await import('@/lib/i18n')
+  return { useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }) }
+})
 
 // Stub @ai-sdk/react and ai so useTipChat doesn't try to make a real transport.
 vi.mock('@ai-sdk/react', () => ({

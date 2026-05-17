@@ -1,6 +1,11 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { WarmingState } from '@/components/tips/WarmingState'
+
+vi.mock('@/contexts/I18nContext', async () => {
+  const { getTranslation } = await import('@/lib/i18n')
+  return { useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }) }
+})
 
 function rowState(label: string | RegExp): string | null {
   const el = screen.getByText(label).closest('[data-step]')

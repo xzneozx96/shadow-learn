@@ -52,13 +52,13 @@ function generateBarHeights(): number[][] {
   ])
 }
 
-function RecordingPill({ onStop }: { onStop: () => void }) {
+function RecordingPill({ onStop, label }: { onStop: () => void, label: string }) {
   const [barHeights] = useState(generateBarHeights)
   return (
     <motion.button
       type="button"
       onClick={onStop}
-      aria-label="Stop recording"
+      aria-label={label}
       initial={{ scale: 0.7, opacity: 0.6 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
@@ -111,7 +111,7 @@ function AttachImageButton({ tooltip, muted }: { tooltip: string, muted?: boolea
   )
 }
 
-function AttachmentPreviewBar() {
+function AttachmentPreviewBar({ altFallback, removeLabel }: { altFallback: string, removeLabel: string }) {
   const { files, remove } = usePromptInputAttachments()
   if (files.length === 0)
     return null
@@ -121,12 +121,12 @@ function AttachmentPreviewBar() {
         <div key={f.id} className="relative size-14 shrink-0">
           <img
             src={f.url}
-            alt={f.filename ?? 'Attached image'}
+            alt={f.filename ?? altFallback}
             className="size-full rounded-md object-cover border border-border"
           />
           <button
             type="button"
-            aria-label="Remove image"
+            aria-label={removeLabel}
             onClick={() => remove(f.id)}
             className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow"
           >
@@ -154,7 +154,7 @@ function StreamingDots() {
   )
 }
 
-function ChatBubble({ message }: { message: UIMessage }) {
+function ChatBubble({ message, imageAlt }: { message: UIMessage, imageAlt: string }) {
   const text = messageText(message)
   if (message.role === 'user') {
     return (
@@ -173,7 +173,7 @@ function ChatBubble({ message }: { message: UIMessage }) {
 
                     key={i}
                     src={p.url}
-                    alt={p.filename ?? 'Attached image'}
+                    alt={p.filename ?? imageAlt}
                     className="max-h-48 max-w-full rounded-md object-contain mt-2"
                   />
                 )
@@ -250,8 +250,8 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
   if (transcriptStatus === 'unavailable') {
     return (
       <div className="p-6 text-center text-sm text-muted-foreground">
-        <p className="font-bold text-foreground mb-1">AI tutor unavailable</p>
-        <p>This video has no transcript and STT fallback failed. Try another lesson.</p>
+        <p className="font-bold text-foreground mb-1">{t('tips.chat.unavailable.title')}</p>
+        <p>{t('tips.chat.unavailable.body')}</p>
       </div>
     )
   }
@@ -263,11 +263,11 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
           {chat.messages.length === 0 && chat.status === 'ready' && (
             <ConversationEmptyState
               icon={<MessageSquareDashed className="size-8" />}
-              title="Ask anything about this lesson"
-              description="The tutor has the transcript. Ask for a summary, a drill, or a tone check."
+              title={t('tips.chat.empty.title')}
+              description={t('tips.chat.empty.body')}
             />
           )}
-          {chat.messages.map(m => <ChatBubble key={m.id} message={m} />)}
+          {chat.messages.map(m => <ChatBubble key={m.id} message={m} imageAlt={t('tips.chat.imageAlt')} />)}
           {(chat.status === 'submitted' || chat.status === 'streaming')
             && (chat.messages.length === 0
               || chat.messages.at(-1)?.role === 'user'
@@ -301,11 +301,11 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
               onRestoreHandled={handleRestoreHandled}
             />
             <PromptInputHeader>
-              <AttachmentPreviewBar />
+              <AttachmentPreviewBar altFallback={t('tips.chat.imageAlt')} removeLabel={t('tips.chat.removeImage')} />
             </PromptInputHeader>
             <PromptInputBody>
               <PromptInputTextarea
-                placeholder={chat.disabledReason ?? 'Ask anything about this lesson…'}
+                placeholder={chat.disabledReason === 'no-transcript' ? t('tips.chat.disabled.transcript') : t('tips.chat.placeholder')}
                 disabled={chat.disabled}
               />
             </PromptInputBody>
@@ -313,7 +313,7 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
               <PromptInputTools className="gap-2">
                 <AttachImageButton tooltip={t('companion.attachImage')} muted={voice.state !== 'idle'} />
                 {voice.state === 'recording'
-                  ? <RecordingPill onStop={() => voice.stop()} />
+                  ? <RecordingPill onStop={() => voice.stop()} label={t('tips.chat.stopRecording')} />
                   : (
                       <PromptInputButton
                         size="icon-sm"

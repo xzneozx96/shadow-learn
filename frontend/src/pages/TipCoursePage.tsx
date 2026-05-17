@@ -6,7 +6,9 @@ import { CourseSidebar } from '@/components/tips/CourseSidebar'
 import { LessonPlayer } from '@/components/tips/LessonPlayer'
 import { OverviewBlock } from '@/components/tips/OverviewBlock'
 import { UtilityPane } from '@/components/tips/UtilityPane'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/contexts/I18nContext'
 import { listTipProgressForCourse } from '@/db'
 import { useTipCourse } from '@/hooks/useTipCourse'
 import { useTipProgress } from '@/hooks/useTipProgress'
@@ -25,6 +27,7 @@ export function TipCoursePage() {
   const safeSource: TipSource = source === 'video' ? 'video' : 'playlist'
   const safeId = id ?? ''
   const { db } = useAuth()
+  const { t } = useI18n()
 
   const { course, lessons, loading, error } = useTipCourse(safeSource, safeId)
 
@@ -95,7 +98,7 @@ export function TipCoursePage() {
     return (
       <Layout>
         <div className="h-full flex items-center justify-center text-muted-foreground">
-          Loading course…
+          {t('tips.loading')}
         </div>
       </Layout>
     )
@@ -104,25 +107,24 @@ export function TipCoursePage() {
     return (
       <Layout>
         <div className="h-full flex items-center justify-center text-destructive">
-          Course unavailable.
+          {t('tips.unavailable')}
           <button
             type="button"
             className="underline ml-2"
             onClick={() => navigate(-1)}
           >
-            Go back
+            {t('tips.goBack')}
           </button>
         </div>
       </Layout>
     )
   }
 
-  const lessonNumber = lessons.findIndex(l => l.videoId === activeVideoId) + 1
   const hasNext = lessons.findIndex(l => l.videoId === activeVideoId) < lessons.length - 1
 
   return (
     <Layout>
-      <div className="grid h-full grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[280px_1fr_360px] 2xl:grid-cols-[280px_1fr_440px]">
+      <div className="relative z-5 grid h-full grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[280px_1fr_360px] 2xl:grid-cols-[280px_1fr_440px]">
         <div className="border-b border-border lg:border-b-0 max-h-[40vh] lg:max-h-none overflow-y-auto">
           <CourseSidebar
             courseName={course.name}
@@ -135,26 +137,14 @@ export function TipCoursePage() {
         </div>
         <main className="flex flex-col overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
-                Lesson
-                {' '}
-                {lessonNumber}
-                {' '}
-                of
-                {' '}
-                {lessons.length}
-              </div>
-              <h1 className="text-xl font-bold text-foreground">{activeLesson.title}</h1>
-            </div>
-            <button
-              type="button"
+            <h1 className="text-xl font-bold text-foreground">{activeLesson.title}</h1>
+            <Button
               onClick={handleNextLesson}
               disabled={!hasNext}
-              className="border border-primary text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg text-xs font-bold transition-colors"
+              size="lg"
             >
-              Next lesson →
-            </button>
+              {t('tips.nextLesson')}
+            </Button>
           </div>
           <LessonPlayer
             key={activeVideoId}
@@ -165,10 +155,8 @@ export function TipCoursePage() {
           />
           <OverviewBlock disabled={transcript.status !== 'ready'} />
           <div className="xl:hidden mt-4 rounded-xl border border-border bg-card p-4 text-center">
-            <div className="text-sm font-bold text-foreground mb-1">AI Tutor available on wider screens</div>
-            <div className="text-xs text-muted-foreground">
-              Open this page on a desktop or larger tablet to chat with the tutor about this lesson.
-            </div>
+            <div className="text-sm font-bold text-foreground mb-1">{t('tips.responsive.title')}</div>
+            <div className="text-xs text-muted-foreground">{t('tips.responsive.body')}</div>
           </div>
         </main>
         <div className="hidden xl:block h-full overflow-hidden">

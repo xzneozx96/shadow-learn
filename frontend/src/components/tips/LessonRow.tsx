@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react'
 import { memo } from 'react'
+import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -12,13 +13,14 @@ interface Props {
 }
 
 function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSelect }: Props) {
+  const { t } = useI18n()
   return (
     <li
       role="listitem"
       aria-current={isActive ? 'true' : undefined}
       className={cn(
-        'flex gap-2.5 px-4 py-2.5 cursor-pointer border-l-[3px] border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded',
-        isActive && 'bg-primary/10 border-l-primary',
+        'flex gap-2.5 px-4 py-2.5 cursor-pointer border-r-[3px] border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        isActive && 'bg-primary/10 border-r-primary',
         !isActive && 'hover:bg-card',
       )}
       onClick={() => onSelect(videoId)}
@@ -47,7 +49,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
         />
         {isCompleted && (
           <span
-            aria-label="Completed"
+            aria-label={t('tips.lesson.completed')}
             className="absolute bottom-0.5 right-0.5 flex items-center justify-center size-3.5 rounded-full bg-success text-white"
           >
             <Check className="size-2.5" aria-hidden />
@@ -56,7 +58,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
       </div>
       <div className="flex-1 min-w-0">
         <div className={cn('text-xs font-semibold line-clamp-2 leading-snug', isCompleted ? 'text-muted-foreground' : 'text-foreground')}>{title}</div>
-        <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">{duration}</div>
+        <div className="text-xs text-amber-500 mt-1 tabular-nums">{duration}</div>
       </div>
     </li>
   )

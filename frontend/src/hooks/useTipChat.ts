@@ -16,7 +16,7 @@ export interface UseTipChatResult {
   sendMessage: (message: { text: string }) => void
   status: 'ready' | 'submitted' | 'streaming' | 'error'
   disabled: boolean
-  disabledReason: string | null
+  disabledReason: 'no-transcript' | null
 }
 
 export function useTipChat(
@@ -87,9 +87,8 @@ export function useTipChat(
   // backend falls back to its own server key (matches useAgentChat / Companion
   // pattern). Frontend lets the user chat; if the backend has no fallback key
   // either, the request errors and surfaces via chat.status === 'error'.
-  const disabledReason: string | null = !transcript
-    ? 'AI tutor needs a transcript. Try another lesson.'
-    : null
+  // Reason is exposed as a stable code; consumer translates via i18n.
+  const disabledReason: 'no-transcript' | null = !transcript ? 'no-transcript' : null
 
   return {
     ready: hydrated,
