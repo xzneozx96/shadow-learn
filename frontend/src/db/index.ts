@@ -700,3 +700,41 @@ export async function saveDailyTask(db: ShadowLearnDB, task: DailyTask): Promise
 export async function deleteDailyTask(db: ShadowLearnDB, id: string): Promise<void> {
   await db.delete('daily-tasks', id)
 }
+
+// Tips LMS accessors
+
+export async function putTipCourse(db: ShadowLearnDB, course: TipCourse): Promise<void> {
+  await db.put('tip-courses', course)
+}
+
+export async function getTipCourse(db: ShadowLearnDB, courseId: string): Promise<TipCourse | undefined> {
+  return db.get('tip-courses', courseId)
+}
+
+export async function putTipProgress(db: ShadowLearnDB, progress: TipProgress): Promise<void> {
+  await db.put('tip-progress', progress)
+}
+
+export async function getTipProgress(db: ShadowLearnDB, key: string): Promise<TipProgress | undefined> {
+  return db.get('tip-progress', key)
+}
+
+export async function listTipProgressForCourse(db: ShadowLearnDB, courseId: string): Promise<TipProgress[]> {
+  return db.getAllFromIndex('tip-progress', 'by-course', courseId)
+}
+
+export async function putTipTranscript(db: ShadowLearnDB, record: TipTranscriptRecord): Promise<void> {
+  await db.put('tip-transcripts', record)
+}
+
+export async function getTipTranscript(db: ShadowLearnDB, videoId: string): Promise<TipTranscriptRecord | undefined> {
+  return db.get('tip-transcripts', videoId)
+}
+
+export async function putTipChat(db: ShadowLearnDB, chat: TipChatRecord): Promise<void> {
+  await db.put('tip-chats', chat)
+}
+
+export async function getTipChat(db: ShadowLearnDB, key: string): Promise<TipChatRecord | undefined> {
+  return db.get('tip-chats', key)
+}
