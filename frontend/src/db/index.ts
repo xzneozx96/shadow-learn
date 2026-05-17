@@ -1,11 +1,11 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
 import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, ShadowingAudio, ShadowingBest, VocabEntry } from '../types'
-import type { TipChatRecord, TipCourse, TipProgress, TipTranscriptRecord } from '../types/tips'
+import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse, TipProgress, TipStudioRecord, TipTranscriptRecord } from '../types/tips'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 15
+const DB_VERSION = 16
 
 export interface LearnerProfile {
   name: string
@@ -228,6 +228,14 @@ interface ShadowLearnSchema extends DBSchema {
     value: TipChatRecord
     indexes: { 'by-course': string }
   }
+  'tip-studio': {
+    key: string
+    value: TipStudioRecord
+  }
+  'tip-cards': {
+    key: string
+    value: TipCardsRecord
+  }
 }
 
 export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
@@ -354,6 +362,28 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
         db.createObjectStore('tip-transcripts', { keyPath: 'videoId' })
         const tc = db.createObjectStore('tip-chats', { keyPath: 'key' })
         tc.createIndex('by-course', 'courseId', { unique: false })
+      }
+      if (oldVersion < 16) {
+        db.createObjectStore('tip-studio', { keyPath: 'key' })
+        db.createObjectStore('tip-cards', { keyPath: 'key' })
+
+        // Migrate existing tip-chats rows: add kind='tutor' and rewrite key
+        // from `${courseId}:${videoId}` to `${courseId}:${videoId}:tutor`
+        // so future Quiz chat (kind='quiz') will not overwrite tutor history.
+        const chatStore = transaction.objectStore('tip-chats')
+        let cursor = await chatStore.openCursor()
+        const migrated: Array<{ oldKey: string, row: any }> = []
+        while (cursor) {
+          const row = cursor.value as any
+          if (!row.kind)
+            migrated.push({ oldKey: cursor.key as string, row })
+          cursor = await cursor.continue()
+        }
+        for (const { oldKey, row } of migrated) {
+          await chatStore.delete(oldKey)
+          const newKey = `${row.courseId}:${row.videoId}:tutor`
+          await chatStore.put({ ...row, key: newKey, kind: 'tutor' })
+        }
       }
     },
   })
@@ -737,4 +767,34 @@ export async function putTipChat(db: ShadowLearnDB, chat: TipChatRecord): Promis
 
 export async function getTipChat(db: ShadowLearnDB, key: string): Promise<TipChatRecord | undefined> {
   return db.get('tip-chats', key)
+}
+
+// Tips B2 — composite-key helpers and accessors for tip-studio + tip-cards.
+
+export function studioKey(videoId: string, kind: StudioKind, locale: StudioLocale): string {
+  return `${videoId}:${kind}:${locale}`
+}
+
+export function cardsKey(videoId: string, locale: StudioLocale): string {
+  return `${videoId}:${locale}`
+}
+
+export function chatKey(courseId: string, videoId: string, kind: 'tutor' | 'quiz'): string {
+  return `${courseId}:${videoId}:${kind}`
+}
+
+export async function getTipStudio(db: ShadowLearnDB, key: string): Promise<TipStudioRecord | undefined> {
+  return db.get('tip-studio', key)
+}
+
+export async function putTipStudio(db: ShadowLearnDB, record: TipStudioRecord): Promise<void> {
+  await db.put('tip-studio', record)
+}
+
+export async function getTipCards(db: ShadowLearnDB, key: string): Promise<TipCardsRecord | undefined> {
+  return db.get('tip-cards', key)
+}
+
+export async function putTipCards(db: ShadowLearnDB, record: TipCardsRecord): Promise<void> {
+  await db.put('tip-cards', record)
 }

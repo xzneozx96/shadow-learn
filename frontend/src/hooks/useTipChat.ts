@@ -4,7 +4,7 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getTipChat, putTipChat } from '@/db'
+import { chatKey, getTipChat, putTipChat } from '@/db'
 import { API_BASE } from '@/lib/config'
 import { buildTipSystemPrompt } from '@/lib/tipChatPrompt'
 
@@ -43,7 +43,7 @@ export function useTipChat(
           setHydrated(true)
         return
       }
-      const record = await getTipChat(db, `${courseId}:${videoId}`)
+      const record = await getTipChat(db, chatKey(courseId, videoId, 'tutor'))
       if (!cancelled) {
         setInitialMessages(record?.messages ?? [])
         setHydrated(true)
@@ -74,9 +74,10 @@ export function useTipChat(
       if (!db)
         return
       await putTipChat(db, {
-        key: `${courseId}:${videoId}`,
+        key: chatKey(courseId, videoId, 'tutor'),
         courseId,
         videoId,
+        kind: 'tutor',
         messages,
         updatedAt: new Date().toISOString(),
       })

@@ -58,11 +58,58 @@ export interface TipTranscriptRecord {
 }
 
 export interface TipChatRecord {
-  // Composite key `${courseId}:${videoId}` so a single video discussed
-  // under two course contexts keeps separate threads.
+  // Composite key `${courseId}:${videoId}:${kind}` so quiz chats do not
+  // overwrite tutor chats for the same course/video pair.
   key: string
   courseId: string
   videoId: string
+  kind: TipChatKind
   messages: UIMessage[]
   updatedAt: string
 }
+
+// --- B2 additions ---
+
+export type StudioKind = 'summary' | 'study_guide' | 'cards'
+
+export type StudioLocale = 'en' | 'vi'
+
+export interface StudioSummaryData {
+  abstract: string
+  takeaways: string[]
+}
+
+export interface StudioStudyGuideData {
+  items: Array<{ question: string, answer: string }>
+}
+
+export interface ConceptCard {
+  id: string
+  front: string
+  rule: string
+  example: string
+  trap: string | null
+  state: 'new' | 'known' | 'learning'
+  updatedAt: string
+}
+
+export interface StudioCardsData {
+  cards: ConceptCard[]
+}
+
+// Discriminated union for tip-studio rows
+export type TipStudioRecord
+  = | { key: string, kind: 'summary', videoId: string, locale: StudioLocale, data: StudioSummaryData, generatedAt: string }
+    | { key: string, kind: 'study_guide', videoId: string, locale: StudioLocale, data: StudioStudyGuideData, generatedAt: string }
+    | { key: string, kind: 'cards', videoId: string, locale: StudioLocale, data: StudioCardsData, generatedAt: string }
+
+export interface TipCardsRecord {
+  key: string
+  videoId: string
+  locale: StudioLocale
+  cards: ConceptCard[]
+  generatedAt: string
+}
+
+// Quiz chat kind discriminator (D1)
+export type TipChatKind = 'tutor' | 'quiz'

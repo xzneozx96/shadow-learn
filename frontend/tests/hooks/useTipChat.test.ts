@@ -117,9 +117,10 @@ describe('useTipChat', () => {
     }
 
     await putTipChat(db, {
-      key: 'c1:v1',
+      key: 'c1:v1:tutor',
       courseId: 'c1',
       videoId: 'v1',
+      kind: 'tutor',
       messages: [seededMessage],
       updatedAt: new Date().toISOString(),
     })
