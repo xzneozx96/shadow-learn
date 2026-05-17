@@ -1,6 +1,22 @@
 import type { UIMessage } from '@ai-sdk/react'
-import { Send } from 'lucide-react'
-import { useState } from 'react'
+import { MessageSquareDashed } from 'lucide-react'
+import { memo } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from '@/components/ai-elements/conversation'
+import { Message, MessageContent } from '@/components/ai-elements/message'
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputSubmit,
+  PromptInputTextarea,
+} from '@/components/ai-elements/prompt-input'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipChat } from '@/hooks/useTipChat'
 
@@ -12,10 +28,22 @@ interface Props {
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
 }
 
+const MemoMarkdown = memo(({ text }: { text: string }) => (
+  <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed">
+    <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+  </div>
+))
+
+function messageText(message: UIMessage): string {
+  return message.parts
+    .filter(p => p.type === 'text')
+    .map((p: any) => p.text as string)
+    .join('')
+}
+
 export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus }: Props) {
   const { locale } = useI18n()
   const chat = useTipChat(courseId, videoId, lessonTitle, transcript, locale === 'vi' ? 'vi' : 'en')
-  const [input, setInput] = useState('')
 
   if (transcriptStatus === 'pending')
     return null
@@ -31,70 +59,54 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-border">
+      <div className="px-4 py-3 border-b border-border shrink-0">
         <div className="text-sm font-bold text-foreground">Ask the Tutor</div>
         <div className="text-[11px] text-muted-foreground">Knows the transcript · gives hints, not answers</div>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" role="log" aria-live="polite">
-        {chat.messages.length === 0 && (
-          <div className="text-xs text-muted-foreground italic">Ask anything about this lesson.</div>
-        )}
-        {chat.messages.map((m: UIMessage) => (
-          <ChatMessage key={m.id} message={m} />
-        ))}
-      </div>
-      <form
-        className="px-4 py-3 border-t border-border"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (!input.trim() || chat.disabled)
+
+      <Conversation className="flex-1">
+        <ConversationContent className="gap-4">
+          {chat.messages.length === 0
+            ? (
+                <ConversationEmptyState
+                  icon={<MessageSquareDashed className="size-8" />}
+                  title="Ask anything about this lesson"
+                  description="The tutor has the transcript. Ask for a summary, a drill, or a tone check."
+                />
+              )
+            : (
+                chat.messages.map(m => (
+                  <Message key={m.id} from={m.role}>
+                    <MessageContent>
+                      <MemoMarkdown text={messageText(m)} />
+                    </MessageContent>
+                  </Message>
+                ))
+              )}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
+
+      <PromptInput
+        onSubmit={({ text }) => {
+          const trimmed = text.trim()
+          if (!trimmed || chat.disabled)
             return
-          chat.sendMessage({ text: input })
-          setInput('')
+          chat.sendMessage({ text: trimmed })
         }}
+        className="shrink-0 border-t border-border"
       >
-        <label htmlFor="tip-chat-input" className="sr-only">Ask the tutor</label>
-        <div className={`flex gap-2 bg-muted border border-border rounded-lg px-3 py-2.5 ${chat.disabled ? 'opacity-50' : ''}`}>
-          <input
-            id="tip-chat-input"
-            className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground"
+        <PromptInputBody>
+          <PromptInputTextarea
             placeholder={chat.disabledReason ?? 'Ask anything about this lesson…'}
-            value={input}
-            onChange={e => setInput(e.target.value)}
             disabled={chat.disabled}
           />
-          <button
-            type="submit"
-            className="bg-primary text-white size-7 rounded-md flex items-center justify-center disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
-            disabled={chat.disabled || !input.trim()}
-            aria-label="Send message"
-          >
-            <Send className="size-3.5" aria-hidden />
-          </button>
-        </div>
-        {chat.disabledReason && <div className="text-[10px] text-muted-foreground mt-2 text-center">{chat.disabledReason}</div>}
-      </form>
-    </div>
-  )
-}
-
-function ChatMessage({ message }: { message: UIMessage }) {
-  const text = message.parts
-    .filter(p => p.type === 'text')
-    .map((p: any) => p.text as string)
-    .join('')
-  if (message.role === 'user') {
-    return (
-      <div>
-        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">You</div>
-        <div className="text-sm text-foreground whitespace-pre-wrap">{text}</div>
-      </div>
-    )
-  }
-  return (
-    <div className="bg-primary/10 border border-primary/20 rounded-lg px-3.5 py-3">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1.5">✦ Tutor</div>
-      <div className="text-sm text-foreground whitespace-pre-wrap">{text}</div>
+          <PromptInputFooter>
+            <div className="flex-1" />
+            <PromptInputSubmit status={chat.status} disabled={chat.disabled} />
+          </PromptInputFooter>
+        </PromptInputBody>
+      </PromptInput>
     </div>
   )
 }
