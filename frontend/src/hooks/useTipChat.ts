@@ -1,5 +1,6 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { ChatUiLanguage } from '@/lib/tipChatPrompt'
+import type { TipChatKind } from '@/types/tips'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useEffect, useMemo, useState } from 'react'
@@ -19,20 +20,33 @@ export interface UseTipChatResult {
   disabledReason: 'no-transcript' | null
 }
 
-export function useTipChat(
-  courseId: string,
-  videoId: string,
-  lessonTitle: string,
-  transcript: string,
-  uiLanguage: ChatUiLanguage,
-): UseTipChatResult {
+export interface UseTipChatArgs {
+  courseId: string
+  videoId: string
+  lessonTitle: string
+  transcript: string
+  uiLanguage: ChatUiLanguage
+  kind?: TipChatKind
+  systemPrompt?: string
+}
+
+export function useTipChat(args: UseTipChatArgs): UseTipChatResult {
+  const {
+    courseId,
+    videoId,
+    lessonTitle,
+    transcript,
+    uiLanguage,
+    kind = 'tutor',
+    systemPrompt: systemPromptOverride,
+  } = args
   const { db, keys } = useAuth()
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([])
   const [hydrated, setHydrated] = useState(false)
 
   const systemPrompt = useMemo(
-    () => buildTipSystemPrompt({ lessonTitle, transcript, uiLanguage }),
-    [lessonTitle, transcript, uiLanguage],
+    () => systemPromptOverride ?? buildTipSystemPrompt({ lessonTitle, transcript, uiLanguage }),
+    [systemPromptOverride, lessonTitle, transcript, uiLanguage],
   )
 
   useEffect(() => {
@@ -43,7 +57,7 @@ export function useTipChat(
           setHydrated(true)
         return
       }
-      const record = await getTipChat(db, chatKey(courseId, videoId, 'tutor'))
+      const record = await getTipChat(db, chatKey(courseId, videoId, kind))
       if (!cancelled) {
         setInitialMessages(record?.messages ?? [])
         setHydrated(true)
@@ -51,7 +65,7 @@ export function useTipChat(
     }
     void hydrate()
     return () => { cancelled = true }
-  }, [db, courseId, videoId])
+  }, [db, courseId, videoId, kind])
 
   const transport = useMemo(
     () => new DefaultChatTransport({
@@ -74,10 +88,10 @@ export function useTipChat(
       if (!db)
         return
       await putTipChat(db, {
-        key: chatKey(courseId, videoId, 'tutor'),
+        key: chatKey(courseId, videoId, kind),
         courseId,
         videoId,
-        kind: 'tutor',
+        kind,
         messages,
         updatedAt: new Date().toISOString(),
       })

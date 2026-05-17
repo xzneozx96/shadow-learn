@@ -206,7 +206,13 @@ function messageText(message: UIMessage): string {
 
 export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus }: Props) {
   const { locale, t } = useI18n()
-  const chat = useTipChat(courseId, videoId, lessonTitle, transcript, locale === 'vi' ? 'vi' : 'en')
+  const chat = useTipChat({
+    courseId,
+    videoId,
+    lessonTitle,
+    transcript,
+    uiLanguage: locale === 'vi' ? 'vi' : 'en',
+  })
 
   const [draftText, setDraftText] = useState('')
   const [pendingConfirmed, setPendingConfirmed] = useState<string | null>(null)

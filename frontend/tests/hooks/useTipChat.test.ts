@@ -3,7 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth } from '@/contexts/AuthContext'
-import { initDB, putTipChat } from '@/db'
+import { chatKey, initDB, putTipChat } from '@/db'
 import { useTipChat } from '@/hooks/useTipChat'
 import 'fake-indexeddb/auto'
 
@@ -80,7 +80,7 @@ describe('useTipChat', () => {
     }
 
     const { result, rerender } = renderHook(() =>
-      useTipChat(props.courseId, props.videoId, props.lessonTitle, props.transcript, props.uiLanguage),
+      useTipChat(props),
     )
 
     await waitFor(() => expect(result.current.ready).toBe(true))
@@ -99,7 +99,13 @@ describe('useTipChat', () => {
 
   it('exposes disabled=true when transcript is empty', async () => {
     const { result } = renderHook(() =>
-      useTipChat('c1', 'v1', 'My Lesson', '', 'en'),
+      useTipChat({
+        courseId: 'c1',
+        videoId: 'v1',
+        lessonTitle: 'My Lesson',
+        transcript: '',
+        uiLanguage: 'en',
+      }),
     )
 
     await waitFor(() => expect(result.current.ready).toBe(true))
@@ -126,12 +132,28 @@ describe('useTipChat', () => {
     })
 
     const { result } = renderHook(() =>
-      useTipChat('c1', 'v1', 'My Lesson', 'Some transcript', 'en'),
+      useTipChat({
+        courseId: 'c1',
+        videoId: 'v1',
+        lessonTitle: 'My Lesson',
+        transcript: 'Some transcript',
+        uiLanguage: 'en',
+      }),
     )
 
     await waitFor(() => expect(result.current.ready).toBe(true))
 
     expect(result.current.initialMessages.length).toBe(1)
     expect(result.current.initialMessages[0].id).toBe('msg-1')
+  })
+})
+
+describe('useTipChat kind discriminator', () => {
+  it('tutor and quiz read different IDB keys for the same course+video', () => {
+    const k1 = chatKey('course-1', 'vid-1', 'tutor')
+    const k2 = chatKey('course-1', 'vid-1', 'quiz')
+    expect(k1).toBe('course-1:vid-1:tutor')
+    expect(k2).toBe('course-1:vid-1:quiz')
+    expect(k1).not.toBe(k2)
   })
 })
