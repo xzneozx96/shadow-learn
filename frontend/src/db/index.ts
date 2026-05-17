@@ -1,10 +1,11 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
 import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, ShadowingAudio, ShadowingBest, VocabEntry } from '../types'
+import type { TipChatRecord, TipCourse, TipProgress, TipTranscriptRecord } from '../types/tips'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 14
+const DB_VERSION = 15
 
 export interface LearnerProfile {
   name: string
@@ -209,6 +210,24 @@ interface ShadowLearnSchema extends DBSchema {
     value: ShadowingAudio
     indexes: { 'by-lesson': string }
   }
+  'tip-courses': {
+    key: string
+    value: TipCourse
+  }
+  'tip-progress': {
+    key: string
+    value: TipProgress
+    indexes: { 'by-course': string }
+  }
+  'tip-transcripts': {
+    key: string
+    value: TipTranscriptRecord
+  }
+  'tip-chats': {
+    key: string
+    value: TipChatRecord
+    indexes: { 'by-course': string }
+  }
 }
 
 export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
@@ -327,6 +346,14 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
       }
       if (oldVersion < 14) {
         db.createObjectStore('daily-tasks', { keyPath: 'id' })
+      }
+      if (oldVersion < 15) {
+        db.createObjectStore('tip-courses', { keyPath: 'id' })
+        const tp = db.createObjectStore('tip-progress', { keyPath: 'key' })
+        tp.createIndex('by-course', 'courseId', { unique: false })
+        db.createObjectStore('tip-transcripts', { keyPath: 'videoId' })
+        const tc = db.createObjectStore('tip-chats', { keyPath: 'key' })
+        tc.createIndex('by-course', 'courseId', { unique: false })
       }
     },
   })
