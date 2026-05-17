@@ -11,6 +11,7 @@ import {
   isToolPart,
   isWidePart,
 } from '@/lib/companion-utils'
+import { isSessionCompletePayload } from '@/lib/study-utils'
 import {
   EXERCISE_TOOLS,
   SILENT_TOOLS,
@@ -21,6 +22,7 @@ import {
   VocabCardRenderer,
 } from '../lesson/AgentRenderers'
 import { ExerciseRenderer } from '../lesson/ExerciseRenderer'
+import { SessionResultsCard } from './SessionResultsCard'
 
 // Memoized so that already-streamed text parts are not re-parsed by ReactMarkdown
 // on every new token. Only the part whose text actually changed re-renders.
@@ -154,6 +156,16 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
       const partKey = `text-${i}`
       if (msg.role === 'assistant') {
         return <MemoMarkdown key={partKey} text={part.text} />
+      }
+      if (part.text.trimStart().startsWith('{')) {
+        try {
+          const parsed: unknown = JSON.parse(part.text)
+          if (isSessionCompletePayload(parsed))
+            return <SessionResultsCard key={partKey} payload={parsed} />
+        }
+        catch {
+          // fallthrough to plain text
+        }
       }
       return <p key={partKey} className="whitespace-pre-wrap">{part.text}</p>
     }

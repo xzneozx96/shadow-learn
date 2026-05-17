@@ -217,3 +217,27 @@ export function distributeExercises(
   }
   return result.slice(0, count)
 }
+
+export interface ExerciseResult {
+  type: 'exercise_result'
+  exercise: string
+  vocabId: string
+  word: string
+  score: number
+  correct: boolean
+  mistakes?: { userAnswer: string, correctAnswer: string, context?: string }[]
+}
+
+export interface SessionCompletePayload {
+  type: 'study_session_complete'
+  results: ExerciseResult[]
+}
+
+export function isSessionCompletePayload(value: unknown): value is SessionCompletePayload {
+  return (
+    typeof value === 'object'
+    && value !== null
+    && (value as { type?: unknown }).type === 'study_session_complete'
+    && Array.isArray((value as { results?: unknown }).results)
+  )
+}

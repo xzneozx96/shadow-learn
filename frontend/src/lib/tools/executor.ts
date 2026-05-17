@@ -1,10 +1,103 @@
 // frontend/src/lib/tools/executor.ts
+import type { z } from 'zod'
 import type { AgentTool, ToolContext } from '@/lib/tools/types'
 
 export interface ToolCall {
   toolCallId: string
   toolName: string
   args: unknown
+}
+
+function getAtPath(root: unknown, path: ReadonlyArray<string | number>): unknown {
+  let cur: unknown = root
+  for (const key of path) {
+    if (cur == null || typeof cur !== 'object')
+      return undefined
+    cur = (cur as Record<string | number, unknown>)[key as string | number]
+  }
+  return cur
+}
+
+function setAtPath(root: unknown, path: ReadonlyArray<string | number>, value: unknown): void {
+  if (path.length === 0)
+    return
+  let cur: unknown = root
+  for (let i = 0; i < path.length - 1; i++) {
+    if (cur == null || typeof cur !== 'object')
+      return
+    cur = (cur as Record<string | number, unknown>)[path[i] as string | number]
+  }
+  if (cur == null || typeof cur !== 'object') {
+    return
+  }(cur as Record<string | number, unknown>)[path.at(-1) as string | number] = value
+}
+
+/**
+ * Coerce stringified args from LLMs that double-encode structured tool arguments
+ * (e.g. emit `"itemIds": "[\"a\",\"b\"]"` instead of `"itemIds": ["a","b"]`).
+ *
+ * Strategy: run safeParse; for each `invalid_type` issue where received=string
+ * and expected is array/object/number/boolean, coerce the value at that path
+ * and retry. Bounded by MAX_PASSES to guard against pathological nesting.
+ */
+export function coerceStringifiedArgs(schema: z.ZodType, input: unknown): unknown {
+  const MAX_PASSES = 5
+  let current: unknown = input
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    const result = schema.safeParse(current)
+    if (result.success)
+      return current
+
+    let changed = false
+    const draft = current && typeof current === 'object'
+      ? structuredClone(current)
+      : current
+
+    for (const issue of result.error.issues) {
+      if (issue.code !== 'invalid_type')
+        continue
+      const expected = (issue as { expected?: string }).expected
+      if (!expected || !['array', 'object', 'number', 'boolean'].includes(expected))
+        continue
+
+      const val = getAtPath(draft, issue.path as (string | number)[])
+      if (typeof val !== 'string')
+        continue
+
+      let coerced: unknown
+      if (expected === 'number') {
+        const n = Number(val)
+        if (!Number.isFinite(n))
+          continue
+        coerced = n
+      }
+      else if (expected === 'boolean') {
+        if (val === 'true')
+          coerced = true
+        else if (val === 'false')
+          coerced = false
+        else
+          continue
+      }
+      else {
+        // array or object
+        try {
+          coerced = JSON.parse(val)
+        }
+        catch {
+          continue
+        }
+      }
+
+      setAtPath(draft, issue.path as (string | number)[], coerced)
+      changed = true
+    }
+
+    if (!changed)
+      return current
+    current = draft
+  }
+  return current
 }
 
 export interface ToolResult {
@@ -63,7 +156,8 @@ export class ToolExecutor {
       return { output: { error: `Unknown tool: ${call.toolName}` }, isError: true }
     }
 
-    const parsed = tool.inputSchema.safeParse(call.args)
+    const coercedArgs = coerceStringifiedArgs(tool.inputSchema, call.args)
+    const parsed = tool.inputSchema.safeParse(coercedArgs)
     if (!parsed.success) {
       return {
         output: { error: `Invalid input for ${call.toolName}: ${parsed.error.message}` },
