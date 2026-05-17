@@ -17,7 +17,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
       role="listitem"
       aria-current={isActive ? 'true' : undefined}
       className={cn(
-        'flex gap-2.5 px-4 py-2.5 cursor-pointer border-l-[3px] border-transparent transition-colors',
+        'flex gap-2.5 px-4 py-2.5 cursor-pointer border-l-[3px] border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded',
         isActive && 'bg-primary/10 border-l-primary',
         !isActive && 'hover:bg-card',
       )}
@@ -33,8 +33,8 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
       <div className="relative size-14 shrink-0 rounded bg-gradient-to-br from-muted to-muted-foreground/20">
         {isCompleted && (
           <span
-            aria-label="Completed"
             className="absolute bottom-0.5 right-0.5 flex items-center justify-center size-3.5 rounded-full bg-success text-white"
+            aria-hidden="true"
           >
             <Check className="size-2.5" />
           </span>

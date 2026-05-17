@@ -19,7 +19,7 @@ export function OverviewBlock({ disabled = false }: Props) {
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className="w-full flex items-center gap-2.5 px-4 py-3 cursor-pointer"
+        className="w-full flex items-center gap-2.5 px-4 py-3 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
       >
         <span className="inline-flex items-center gap-1.5 text-[11px] text-primary bg-primary/10 px-2.5 py-1 rounded-full font-bold">
           <Sparkles className="size-3" aria-hidden />

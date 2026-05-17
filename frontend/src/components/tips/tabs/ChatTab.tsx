@@ -65,7 +65,7 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
           />
           <button
             type="submit"
-            className="bg-primary text-white size-7 rounded-md flex items-center justify-center disabled:opacity-50"
+            className="bg-primary text-white size-7 rounded-md flex items-center justify-center disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
             disabled={chat.disabled || !input.trim()}
             aria-label="Send message"
           >
