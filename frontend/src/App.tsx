@@ -29,6 +29,7 @@ import { ChangelogPage } from '@/pages/ChangelogPage'
 import { CollectionPage } from '@/pages/CollectionPage'
 import { DocumentationPage } from '@/pages/DocumentationPage'
 import { PlaylistPage } from '@/pages/PlaylistPage'
+import { TipCoursePage } from '@/pages/TipCoursePage'
 import { WorkbookPage } from '@/pages/WorkbookPage'
 
 // Lazy-loaded: pulls in `hanzi` (~7.7 MB dictionary) only when user enters study flow.
@@ -147,6 +148,7 @@ const router = createBrowserRouter([
       { path: '/changelog', element: <ChangelogPage /> },
       { path: '/collection', element: <CollectionPage /> },
       { path: '/collection/:playlistId', element: <PlaylistPage /> },
+      { path: '/tips/:source/:id', element: <TipCoursePage /> },
       { path: '/docs', element: <DocumentationPage /> },
       { path: '/lesson/:id', element: <LessonView /> },
       { path: '/settings', element: <Settings /> },

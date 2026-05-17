@@ -48,9 +48,13 @@ interface PlaylistCardProps {
 }
 
 export function PlaylistCard({ playlist }: PlaylistCardProps) {
+  const target = playlist.content_type === 'tip'
+    ? `/tips/playlist/${playlist.playlist_id}`
+    : `/collection/${playlist.playlist_id}`
+
   return (
     <Link
-      to={`/collection/${playlist.playlist_id}`}
+      to={target}
       className="shrink-0 w-[calc(25%-15px)] min-w-[260px] flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
     >
       <div className="relative pt-3 flex-1 flex flex-col">
