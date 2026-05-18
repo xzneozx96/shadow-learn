@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request, Up
 from fastapi.responses import StreamingResponse
 
 from app.settings import settings
-from app.job_store import Job, jobs
+from app.job_store import jobs, register_job
 from app.models import LessonRequest
 from app.shared.utils import _resolve_key
 from app.lessons.services.audio import (
@@ -427,8 +427,7 @@ async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTa
             raise HTTPException(status_code=400, detail=exc.message)
 
         stt_provider = req.app.state.stt_provider
-        job_id = str(uuid.uuid4())
-        jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+        job_id = register_job(id_prefix="lesson")
         background_tasks.add_task(_process_youtube_lesson, request, video_id, job_id, stt_provider)
         return {"job_id": job_id}
     elif request.source == "blog":
@@ -436,8 +435,7 @@ async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTa
             raise HTTPException(status_code=400, detail="blog_url or blog_text is required for source 'blog'")
         tts_provider = req.app.state.tts_provider
         stt_provider = req.app.state.stt_provider
-        job_id = str(uuid.uuid4())
-        jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+        job_id = register_job(id_prefix="lesson")
         background_tasks.add_task(_process_blog_lesson, request, job_id, tts_provider, stt_provider)
         return {"job_id": job_id}
     else:
@@ -464,8 +462,7 @@ async def generate_lesson_upload(
         raise HTTPException(status_code=400, detail="translation_languages must not be empty")
 
     stt_provider = req.app.state.stt_provider
-    job_id = str(uuid.uuid4())
-    jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    job_id = register_job(id_prefix="lesson")
     background_tasks.add_task(
         _process_upload_lesson,
         file,

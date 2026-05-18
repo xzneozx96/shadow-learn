@@ -14,12 +14,10 @@ functions are called by the Tips transcript router (Task 7).
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import uuid
 from typing import Any
 
-from app.job_store import Job, jobs
+from app.job_store import get_job_for_key, jobs, kick_off_keyed_job
 from app.lessons.services.audio import (
     download_youtube_video,
     extract_audio_from_upload,
@@ -145,52 +143,28 @@ async def fetch_youtube_subtitles(
         return (None, None)
 
 
-# video_id → job_id index. Lets repeat requests for the same video resume
-# polling instead of spawning a fresh Deepgram job (Deepgram audio
-# transcription is expensive — if the user navigates away mid-process and
-# comes back, we must continue the in-flight job rather than restart).
-# Stale entries are cleared lazily when the underlying jobs[] row is gone.
-_tip_video_jobs: dict[str, str] = {}
+def _stt_key(video_id: str) -> str:
+    """Namespaced key for the shared keyed-job index."""
+    return f"tip-stt:{video_id}"
 
 
 def _existing_job_for_video(video_id: str) -> str | None:
-    """Return job_id of a still-usable job for *video_id*, or None.
+    """Return job_id of a still-usable STT job for *video_id*, or None.
 
-    Treats 'error' status as non-usable so the caller spawns a fresh job.
-    Clears the index entry if the underlying job has been pruned out of
-    jobs[] (jobs are pruned after 1 hour).
+    Thin shim around :func:`app.job_store.get_job_for_key` that preserves
+    the legacy call sites' namespace.
     """
-    job_id = _tip_video_jobs.get(video_id)
-    if job_id is None:
-        return None
-    job = jobs.get(job_id)
-    if job is None:
-        # Pruned — stale index entry. Forget it.
-        _tip_video_jobs.pop(video_id, None)
-        return None
-    if job.status == "error":
-        # Don't resume errored jobs; let caller spawn fresh.
-        _tip_video_jobs.pop(video_id, None)
-        return None
-    return job_id
+    return get_job_for_key(_stt_key(video_id))
 
 
 async def kick_off_stt_job(video_id: str) -> str | None:
     """Spawn a background STT job for *video_id* and return the job_id.
 
     Returns None if no STT provider is configured (caller should treat as
-    unavailable rather than raising). De-dupes by video_id: if a job is
-    already processing or complete for this video, returns its job_id
-    instead of spawning a duplicate.
+    unavailable rather than raising). De-dupes by video_id via the shared
+    keyed-job index: if a job is already processing or complete for this
+    video, returns its job_id instead of spawning a duplicate.
     """
-    existing = _existing_job_for_video(video_id)
-    if existing is not None:
-        logger.info(
-            "kick_off_stt_job: reusing existing job_id=%s for video_id=%s (status=%s)",
-            existing, video_id, jobs[existing].status,
-        )
-        return existing
-
     # Tips always use Deepgram, regardless of the global SHADOWLEARN_STT_PROVIDER
     # setting — Deepgram is the cheapest + fastest path for Tips short-form content,
     # and we want Tips behavior to stay predictable even when lessons swap providers.
@@ -204,11 +178,7 @@ async def kick_off_stt_job(video_id: str) -> str | None:
         )
         return None
 
-    job_id = f"tip-stt-{uuid.uuid4().hex[:12]}"
-    jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
-    _tip_video_jobs[video_id] = job_id
-
-    async def _run() -> None:
+    async def _run(job_id: str) -> None:
         audio_path = None
         try:
             # Detect video language up-front so STT can target it.
@@ -259,5 +229,4 @@ async def kick_off_stt_job(video_id: str) -> str | None:
                 except Exception:
                     pass
 
-    asyncio.create_task(_run())
-    return job_id
+    return kick_off_keyed_job(_stt_key(video_id), _run, id_prefix="tip-stt")

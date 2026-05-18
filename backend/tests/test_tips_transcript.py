@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.job_store import _keyed_jobs
 from app.main import app
 from app.tips.services.transcript import fetch_youtube_subtitles
 
@@ -136,7 +137,7 @@ async def test_kick_off_stt_job_dedupes_same_video(monkeypatch):
 
     # Reset module-level state.
     jobs.clear()
-    svc._tip_video_jobs.clear()
+    _keyed_jobs.clear()
 
     # Stub DeepgramSTTProvider so we don't try to call out.
     class FakeProvider:
@@ -146,11 +147,13 @@ async def test_kick_off_stt_job_dedupes_same_video(monkeypatch):
 
     # Block the background _run coroutine from actually executing — we just
     # care that kick_off_stt_job returns the right job_id and registers it.
-    monkeypatch.setattr(svc.asyncio, "create_task", lambda coro: coro.close() or None)
+    # Suppress the actual background task — we only care about id minting + dedupe.
+    import app.job_store as _js
+    monkeypatch.setattr(_js.asyncio, "create_task", lambda coro: coro.close() or None)
 
     job_id_1 = await svc.kick_off_stt_job("abc123")
     assert job_id_1 is not None
-    assert svc._tip_video_jobs["abc123"] == job_id_1
+    assert _keyed_jobs["tip-stt:abc123"] == job_id_1
 
     job_id_2 = await svc.kick_off_stt_job("abc123")
     assert job_id_2 == job_id_1, "second call must reuse the in-flight job"
@@ -165,13 +168,15 @@ async def test_kick_off_stt_job_spawns_fresh_after_error(monkeypatch):
     from app.tips.services import transcript as svc
 
     jobs.clear()
-    svc._tip_video_jobs.clear()
+    _keyed_jobs.clear()
 
     class FakeProvider:
         async def transcribe(self, *a, **kw):
             return []
     monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: FakeProvider())
-    monkeypatch.setattr(svc.asyncio, "create_task", lambda coro: coro.close() or None)
+    # Suppress the actual background task — we only care about id minting + dedupe.
+    import app.job_store as _js
+    monkeypatch.setattr(_js.asyncio, "create_task", lambda coro: coro.close() or None)
 
     first = await svc.kick_off_stt_job("abc123")
     # Simulate the background task erroring out.
@@ -190,13 +195,15 @@ async def test_kick_off_stt_job_spawns_fresh_after_prune(monkeypatch):
     from app.tips.services import transcript as svc
 
     jobs.clear()
-    svc._tip_video_jobs.clear()
+    _keyed_jobs.clear()
 
     class FakeProvider:
         async def transcribe(self, *a, **kw):
             return []
     monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: FakeProvider())
-    monkeypatch.setattr(svc.asyncio, "create_task", lambda coro: coro.close() or None)
+    # Suppress the actual background task — we only care about id minting + dedupe.
+    import app.job_store as _js
+    monkeypatch.setattr(_js.asyncio, "create_task", lambda coro: coro.close() or None)
 
     first = await svc.kick_off_stt_job("abc123")
     # Simulate pruning.
@@ -206,7 +213,7 @@ async def test_kick_off_stt_job_spawns_fresh_after_prune(monkeypatch):
     assert second is not None
     assert second != first
     # Index cleaned up to point at the new job.
-    assert svc._tip_video_jobs["abc123"] == second
+    assert _keyed_jobs["tip-stt:abc123"] == second
 
 
 def test_get_transcript_fast_path_for_completed_job(client, monkeypatch):
@@ -216,7 +223,7 @@ def test_get_transcript_fast_path_for_completed_job(client, monkeypatch):
     from app.tips.services import transcript as svc
 
     jobs.clear()
-    svc._tip_video_jobs.clear()
+    _keyed_jobs.clear()
 
     # Plant a complete job for the video.
     job_id = "tip-stt-cached"
@@ -231,7 +238,7 @@ def test_get_transcript_fast_path_for_completed_job(client, monkeypatch):
         },
         error=None,
     )
-    svc._tip_video_jobs["abc123"] = job_id
+    _keyed_jobs["tip-stt:abc123"] = job_id
 
     # Sabotage yt-dlp — if the fast path doesn't kick in, this will throw.
     def boom(*a, **kw):
@@ -255,7 +262,7 @@ def test_get_transcript_fast_path_resumes_in_flight_job(client, monkeypatch):
     from app.tips.services import transcript as svc
 
     jobs.clear()
-    svc._tip_video_jobs.clear()
+    _keyed_jobs.clear()
 
     job_id = "tip-stt-inflight"
     jobs[job_id] = Job(
@@ -264,7 +271,7 @@ def test_get_transcript_fast_path_resumes_in_flight_job(client, monkeypatch):
         result=None,
         error=None,
     )
-    svc._tip_video_jobs["abc123"] = job_id
+    _keyed_jobs["tip-stt:abc123"] = job_id
 
     def boom(*a, **kw):
         raise AssertionError("fast path failed — yt-dlp was called")
