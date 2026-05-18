@@ -52,3 +52,28 @@ def test_studio_mind_map_validates_depth(monkeypatch):
     )
     assert resp.status_code == 502
     assert "schema" in resp.json()["detail"].lower()
+
+
+def test_studio_mind_map_full_validation_chain(monkeypatch):
+    """Service returns a tree at the validator boundary — must pass validation."""
+    async def fake_generate(*, kind, transcript, locale):
+        # Exactly 60 nodes: 1 root + 59 children
+        return {
+            "root": {
+                "label": "root",
+                "summary": "x",
+                "children": [
+                    {"label": f"c{i}", "summary": "x", "children": []}
+                    for i in range(59)
+                ],
+            }
+        }
+
+    monkeypatch.setattr("app.tips.router._studio_svc.generate_studio_artifact", fake_generate)
+    client = TestClient(app)
+    resp = client.post(
+        "/api/tips/studio/mind_map",
+        json={"video_id": "abc123", "transcript": "hi", "locale": "en"},
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()["root"]["children"]) == 59
