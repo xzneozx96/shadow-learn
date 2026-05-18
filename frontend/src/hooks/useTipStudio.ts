@@ -3,6 +3,7 @@ import type {
   StudioCardsData,
   StudioKind,
   StudioLocale,
+  StudioMindMapData,
   StudioStudyGuideData,
   StudioSummaryData,
 } from '@/types/tips'
@@ -15,7 +16,8 @@ type DataFor<K extends StudioKind>
   = K extends 'summary' ? StudioSummaryData
     : K extends 'study_guide' ? StudioStudyGuideData
       : K extends 'cards' ? StudioCardsData
-        : never
+        : K extends 'mind_map' ? StudioMindMapData
+          : never
 
 export type StudioStatus = 'idle' | 'loading' | 'ready' | 'error'
 

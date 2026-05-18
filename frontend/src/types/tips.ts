@@ -72,7 +72,7 @@ export interface TipChatRecord {
 
 // --- B2 additions ---
 
-export type StudioKind = 'summary' | 'study_guide' | 'cards'
+export type StudioKind = 'summary' | 'study_guide' | 'cards' | 'mind_map'
 
 export type StudioLocale = 'en' | 'vi'
 
@@ -99,11 +99,22 @@ export interface StudioCardsData {
   cards: ConceptCard[]
 }
 
+export interface MindMapNode {
+  label: string
+  summary: string
+  children: MindMapNode[]
+}
+
+export interface StudioMindMapData {
+  root: MindMapNode
+}
+
 // Discriminated union for tip-studio rows
 export type TipStudioRecord
   = | { key: string, kind: 'summary', videoId: string, locale: StudioLocale, data: StudioSummaryData, generatedAt: string }
     | { key: string, kind: 'study_guide', videoId: string, locale: StudioLocale, data: StudioStudyGuideData, generatedAt: string }
     | { key: string, kind: 'cards', videoId: string, locale: StudioLocale, data: StudioCardsData, generatedAt: string }
+    | { key: string, kind: 'mind_map', videoId: string, locale: StudioLocale, data: StudioMindMapData, generatedAt: string }
 
 export interface TipCardsRecord {
   key: string
