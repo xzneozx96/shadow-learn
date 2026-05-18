@@ -181,3 +181,15 @@ export interface SpeakSituation {
   userGoal: string
   target_vocab?: VocabItem[]
 }
+
+export type {
+  TipChatRecord,
+  TipCourse,
+  TipLesson,
+  TipProgress,
+  TipSegment,
+  TipSource,
+  TipTranscriptRecord,
+  TipTranscriptSource,
+  TipTranscriptStatus,
+} from './types/tips'

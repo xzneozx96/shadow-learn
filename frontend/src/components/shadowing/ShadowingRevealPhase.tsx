@@ -594,7 +594,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
                       <div className={cn('text-4xl font-bold tabular-nums tracking-tight leading-none', scoreColor(accuracy))}>
                         {Math.round(accuracy)}
                       </div>
-                      <div className="mt-1.5 text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Accuracy</div>
+                      <div className="mt-1.5 text-xs uppercase tracking-widest text-muted-foreground font-medium">Accuracy</div>
                     </div>
                     <div className={cn('text-sm font-bold px-2 py-0.5 rounded-md border', accuracy >= 90
                       ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'

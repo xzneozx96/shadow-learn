@@ -48,9 +48,13 @@ interface PlaylistCardProps {
 }
 
 export function PlaylistCard({ playlist }: PlaylistCardProps) {
+  const target = playlist.content_type === 'tip'
+    ? `/tips/playlist/${playlist.playlist_id}`
+    : `/collection/${playlist.playlist_id}`
+
   return (
     <Link
-      to={`/collection/${playlist.playlist_id}`}
+      to={target}
       className="shrink-0 w-[calc(25%-15px)] min-w-[260px] flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
     >
       <div className="relative pt-3 flex-1 flex flex-col">
@@ -74,7 +78,7 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
                 )}
 
             {playlist.video_count !== null && (
-              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-[11px] font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40 flex items-center gap-1">
+              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40 flex items-center gap-1">
                 <ListVideo className="size-3 shrink-0" />
                 <span>{playlist.video_count}</span>
                 <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
@@ -108,13 +112,13 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
             <div className="mt-auto flex items-center gap-4 text-xs text-muted-foreground overflow-hidden">
               {formatPublishedAt(playlist.published_at) && (
                 <span className="flex items-center gap-1 shrink-0" title={playlist.published_at ?? ''}>
-                  <Calendar className="size-3.5" />
+                  <Calendar className="size-4" />
                   {formatPublishedAt(playlist.published_at)}
                 </span>
               )}
               {playlist.channel && (
                 <span className="flex items-center gap-1 min-w-0 overflow-hidden" title={playlist.channel}>
-                  <Tv className="size-3.5 shrink-0" />
+                  <Tv className="size-4 shrink-0" />
                   <span className="line-clamp-1">{playlist.channel}</span>
                 </span>
               )}

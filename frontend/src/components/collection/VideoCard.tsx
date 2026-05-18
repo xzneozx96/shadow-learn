@@ -3,6 +3,7 @@ import type { HubVideo } from '@/types/collection'
 import { Calendar, CheckCheck, Eye, Play, Sparkles, Tv } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -82,6 +83,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
   const [playing, setPlaying] = useState(false)
 
   const canCreate = !!db && (!!keys || trialMode)
+  const isTip = video.content_type === 'tip'
   const thumbnailUrl = `https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`
 
   const handleCreate = async () => {
@@ -156,22 +158,12 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
     >
       <CutoutCard className={cn(cutoutCardSurfaceClassName, 'flex-1 min-w-0 grid grid-rows-[auto_1fr]')}>
         <CutoutCardMedia className="aspect-video">
-          {playing
+          {isTip
             ? (
-                <iframe
-                  className="absolute inset-0 w-full h-full"
-                  src={`https://www.youtube.com/embed/${video.video_id}?rel=0&autoplay=1`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title={video.title}
-                />
-              )
-            : (
-                <button
-                  type="button"
-                  onClick={() => setPlaying(true)}
-                  className="absolute inset-0 w-full h-full group/play cursor-pointer"
-                  aria-label={`Play ${video.title}`}
+                <Link
+                  to={`/tips/video/${video.video_id}`}
+                  className="absolute inset-0 w-full h-full group/play"
+                  aria-label={`Open ${video.title}`}
                 >
                   <CutoutCardImage src={thumbnailUrl} alt={video.title} loading="lazy" />
                   <CutoutCardOverlay />
@@ -180,8 +172,34 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
                       <Play className="size-5 text-white fill-white ml-0.5" />
                     </span>
                   </div>
-                </button>
-              )}
+                </Link>
+              )
+            : playing
+              ? (
+                  <iframe
+                    className="absolute inset-0 w-full h-full"
+                    src={`https://www.youtube.com/embed/${video.video_id}?rel=0&autoplay=1`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={video.title}
+                  />
+                )
+              : (
+                  <button
+                    type="button"
+                    onClick={() => setPlaying(true)}
+                    className="absolute inset-0 w-full h-full group/play cursor-pointer"
+                    aria-label={`Play ${video.title}`}
+                  >
+                    <CutoutCardImage src={thumbnailUrl} alt={video.title} loading="lazy" />
+                    <CutoutCardOverlay />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/play:bg-black/20 transition-colors duration-200">
+                      <span className="flex items-center justify-center size-12 rounded-full bg-black/70 shadow-lg transition-transform duration-200 group-hover/play:scale-110">
+                        <Play className="size-5 text-white fill-white ml-0.5" />
+                      </span>
+                    </div>
+                  </button>
+                )}
 
           {video.difficulty && !playing && (
             <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-3 py-1.5">
@@ -202,7 +220,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
           )}
 
           {!playing && (
-            <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-[11px] font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
+            <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
               {video.duration}
               <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
               <CutoutCorner className="absolute right-0 -bottom-[23px] -rotate-90 text-card" size={24} />

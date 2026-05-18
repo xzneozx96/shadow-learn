@@ -81,7 +81,7 @@ export function SessionResultsCard({ payload }: { payload: SessionCompletePayloa
           <div className={cn('text-lg font-semibold tabular-nums leading-none', scoreTone(avgScore))}>
             {avgScore}
           </div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{t('study.results.avg')}</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{t('study.results.avg')}</div>
         </div>
       </div>
 
@@ -128,7 +128,7 @@ export function SessionResultsCard({ payload }: { payload: SessionCompletePayloa
                 {r.correct ? <Check className="size-3" strokeWidth={3} /> : <X className="size-3" strokeWidth={3} />}
               </div>
               {isMixed && (
-                <Icon className="size-3.5 text-muted-foreground shrink-0" />
+                <Icon className="size-4 text-muted-foreground shrink-0" />
               )}
               <span className="flex-1 truncate text-sm font-medium">{r.word}</span>
               <span className={cn('text-xs font-semibold tabular-nums', scoreTone(r.score))}>

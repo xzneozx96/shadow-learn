@@ -245,6 +245,27 @@
   }
 }
 
+/* Ready-badge halo: a soft expanding ring behind the corner dot on filled
+   StudioTiles. Slower + less amplitude than tailwind's animate-ping so
+   multiple filled tiles in the same column don't feel like spam. The dot
+   itself stays static (solid), the halo provides the motion. */
+@keyframes studio-ready-pulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+
+  60% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -405,4 +426,25 @@
   .border-input {
     border-color: hsl(var(--border));
   }
+}
+
+/* react-flow Controls — theme-match dark mode. Defaults are white-on-white,
+   invisible against our card background. */
+.react-flow__controls {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.1);
+}
+.react-flow__controls-button {
+  background-color: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+.react-flow__controls-button:hover {
+  background-color: hsl(var(--accent));
+}
+.react-flow__controls-button svg {
+  fill: currentColor;
+  max-width: 14px;
+  max-height: 14px;
 }

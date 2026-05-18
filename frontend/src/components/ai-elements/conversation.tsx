@@ -61,8 +61,8 @@ export function ConversationEmptyState({
       {children ?? (
         <>
           {icon && <div className="text-muted-foreground">{icon}</div>}
-          <div className="space-y-1">
-            <h3 className="font-medium text-sm">{title}</h3>
+          <div className="space-y-2">
+            <h3 className="font-bold text-base">{title}</h3>
             {description && (
               <p className="text-muted-foreground text-sm">{description}</p>
             )}

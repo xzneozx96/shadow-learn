@@ -32,8 +32,11 @@ export function WordPickerDialog({ open, onClose, entries, onConfirm, now }: Wor
 
   // Reset state every time the dialog opens (setState-during-render).
   // groups is intentionally read only on the open transition so user edits
-  // inside one dialog session are preserved.
-  const [lastOpen, setLastOpen] = useState(open)
+  // inside one dialog session are preserved. Start lastOpen as `false` so a
+  // first render with open=true still trips the init branch — the previous
+  // `useState(open)` form quietly skipped pre-selection when the dialog
+  // mounted already-open.
+  const [lastOpen, setLastOpen] = useState(false)
   if (lastOpen !== open) {
     setLastOpen(open)
     if (open) {

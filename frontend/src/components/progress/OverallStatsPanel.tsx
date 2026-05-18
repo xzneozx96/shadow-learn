@@ -112,7 +112,7 @@ export function AccuracyPieCard({ stats }: Props) {
           <span className="text-3xl font-black text-emerald-400">
             {`${accuracy}%`}
           </span>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/50">
+          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">
             {t('progress.performance')}
           </span>
         </div>

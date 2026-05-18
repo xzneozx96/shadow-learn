@@ -62,7 +62,7 @@ export function CompanionPanel({
 
   return (
     <Tabs defaultValue="ai" value={activeTab} onValueChange={onTabChange} className="flex h-full flex-col gap-0">
-      <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3 rounded-none h-[65px]!">
+      <TabsList variant="line" className="w-full shrink-0 border-b border-border rounded-none h-12!">
         <TabsTrigger value="ai">{t('lesson.aiCompanion')}</TabsTrigger>
         <TabsTrigger value="workbook" className="gap-1.5">
           {t('lesson.workbook')}

@@ -132,7 +132,7 @@ export function ShadowingModePicker({
         className="rounded-xl border border-amber-500/20 bg-amber-500/8 p-3 shadow-sm"
       >
         <div className="flex items-center gap-2 mb-2.5">
-          <Lightbulb className="size-3.5 text-amber-500" />
+          <Lightbulb className="size-4 text-amber-500" />
           <span className="text-xs font-bold uppercase tracking-wider text-amber-500/90">{t('shadowing.tipsToggle')}</span>
         </div>
 

@@ -115,7 +115,7 @@ export function ErrorScreen({ error }: Props) {
                 >
                   <ChevronDown
                     className={cn(
-                      'size-3.5 transition-transform duration-200',
+                      'size-4 transition-transform duration-200',
                       showStack && 'rotate-180',
                     )}
                   />
@@ -127,7 +127,7 @@ export function ErrorScreen({ error }: Props) {
                   </span>
                 </button>
                 {showStack && (
-                  <pre className="mt-3 max-h-72 overflow-auto rounded-lg border border-border/50 bg-muted/40 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                  <pre className="mt-3 max-h-72 overflow-auto rounded-lg border border-border/50 bg-muted/40 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
                     {stack}
                   </pre>
                 )}
@@ -137,7 +137,7 @@ export function ErrorScreen({ error }: Props) {
         </div>
 
         {/* footer hint */}
-        <p className="mt-4 text-center text-[11px] text-muted-foreground/70">
+        <p className="mt-4 text-center text-xs text-muted-foreground/70">
           If this keeps happening, your data is safe — try reloading.
         </p>
       </div>

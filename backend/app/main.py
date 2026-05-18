@@ -18,6 +18,7 @@ from app.config.router import router as config_router
 from app.vocab.router import router as vocab_router
 from app.collection.router import router as collection_router
 from app.daily_review.router import router as daily_review_router
+from app.tips.router import router as tips_router
 from app.tts.services.tts_factory import get_tts_provider
 from app.transcription.services.transcription_factory import get_stt_provider
 
@@ -57,6 +58,7 @@ app.include_router(speak_router)
 app.include_router(vocab_router)
 app.include_router(collection_router)
 app.include_router(daily_review_router)
+app.include_router(tips_router)
 
 
 @app.get("/api/health")
