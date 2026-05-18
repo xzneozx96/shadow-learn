@@ -89,7 +89,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
               )}
               {badge === 'in_progress' && (
                 <span className="flex items-center justify-center size-7 rounded-full bg-amber-500 text-white shadow-lg">
-                  <Clock className="size-4" aria-hidden strokeWidth={2.5} />
+                  <Clock className="size-3.5" aria-hidden />
                 </span>
               )}
             </span>

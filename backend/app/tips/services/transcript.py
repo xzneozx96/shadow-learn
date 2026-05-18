@@ -94,33 +94,47 @@ async def fetch_youtube_subtitles(
 
         lang_pref = _build_lang_preference(detected_lang)
 
-        # Phase 1: try manual subtitles in preferred order.
-        yt_lang: str | None = None
+        # Build the list of candidate (lang, kind) pairs to try in order.
+        # Manual subtitles in preferred order first, then auto-captions in the
+        # video's detected language only (auto-translated tracks distort meaning,
+        # e.g. Vietnamese video with auto-English captions).
+        candidates: list[str] = []
         for lang in lang_pref:
-            yt_lang = pick_manual_subtitle(raw_subtitles, lang)
-            if yt_lang is not None:
-                break
+            picked = pick_manual_subtitle(raw_subtitles, lang)
+            if picked is not None and picked not in candidates:
+                candidates.append(picked)
+        if detected_lang and detected_lang in raw_auto and detected_lang not in candidates:
+            candidates.append(detected_lang)
 
-        # Phase 2: if no manual, try auto-captions in the video's detected
-        # language only (we never want auto-translated captions — those distort
-        # meaning, e.g. Vietnamese video with auto-English captions).
-        if yt_lang is None and detected_lang and detected_lang in raw_auto:
-            yt_lang = detected_lang
-
-        if yt_lang is None:
+        if not candidates:
             return (None, None)
 
-        vtt = await download_subtitle_vtt(video_id, yt_lang)
-        segments = parse_vtt_to_segments(vtt, yt_lang)
+        # Try each candidate. yt-dlp can report a subtitle exists in metadata
+        # but still fail to produce a VTT (broken upstream, region-locked,
+        # transient yt-dlp issue). Fall through to the next candidate on any
+        # download/parse error rather than giving up on subtitles entirely.
+        for yt_lang in candidates:
+            try:
+                vtt = await download_subtitle_vtt(video_id, yt_lang)
+                segments = parse_vtt_to_segments(vtt, yt_lang)
+            except Exception:
+                logger.info(
+                    "fetch_youtube_subtitles: download/parse failed for video_id=%s lang=%s, trying next candidate",
+                    video_id,
+                    yt_lang,
+                )
+                continue
 
-        if not segments:
-            return (None, None)
+            if not segments:
+                continue
 
-        plain_segments = [
-            {"start": s["start"], "end": s["end"], "text": s["text"]}
-            for s in segments
-        ]
-        return (yt_lang, plain_segments)
+            plain_segments = [
+                {"start": s["start"], "end": s["end"], "text": s["text"]}
+                for s in segments
+            ]
+            return (yt_lang, plain_segments)
+
+        return (None, None)
 
     except Exception:
         logger.warning(
