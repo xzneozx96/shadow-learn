@@ -7,6 +7,16 @@ import { API_BASE } from '@/lib/config'
 const POLL_INTERVAL_MS = 1500
 const POLL_TIMEOUT_MS = 300_000
 
+// Debug logging for the warming-state jumping bug. Strip after diagnosis.
+// Toggle by setting localStorage.setItem('debug:tipTranscript', '1') in console.
+function dbg(tag: string, payload: Record<string, unknown> = {}) {
+  if (typeof window !== 'undefined' && window.localStorage?.getItem('debug:tipTranscript') !== '1')
+    return
+  const t = new Date().toISOString().slice(11, 23) // HH:MM:SS.mmm
+  // eslint-disable-next-line no-console
+  console.log(`[tipTr ${t}] ${tag}`, payload)
+}
+
 export type WarmingStep = 'video_download' | 'audio_extraction' | 'transcription' | 'indexing'
 
 export interface WarmingState {
@@ -90,20 +100,38 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
   dbRef.current = db
 
   const isStale = entry.key !== key
-  if (isStale)
+  if (isStale) {
+    dbg('RENDER stale-reset', { from: entry.key, to: key, prevResult: entry.result })
     setEntry({ key, result: makeInitial(retry) })
+  }
 
   const visible = isStale ? makeInitial(retry) : entry.result
+  dbg('RENDER', {
+    key,
+    isStale,
+    db: db ? 'present' : 'null',
+    visible_status: visible.status,
+    visible_warming: visible.warming?.step ?? null,
+  })
 
   type Updater = UseTipTranscriptResult | ((r: UseTipTranscriptResult) => UseTipTranscriptResult)
   function setResult(updater: Updater): void {
     setEntry((prev) => {
       // Defend against late writes from the previous video's async tasks.
-      if (prev.key !== key)
+      if (prev.key !== key) {
+        dbg('setResult STALE-GUARD-DROP', { prev_key: prev.key, current_key: key })
         return prev
+      }
       const nextResult = typeof updater === 'function'
         ? (updater as (r: UseTipTranscriptResult) => UseTipTranscriptResult)(prev.result)
         : updater
+      dbg('setResult APPLY', {
+        key,
+        from_status: prev.result.status,
+        from_warming: prev.result.warming?.step ?? null,
+        to_status: nextResult.status,
+        to_warming: nextResult.warming?.step ?? null,
+      })
       return { key: prev.key, result: nextResult }
     })
   }
@@ -111,6 +139,8 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
   useEffect(() => {
     if (!videoId)
       return
+
+    dbg('EFFECT RUN', { videoId, tick, db: dbRef.current ? 'present' : 'null' })
 
     const controller = new AbortController()
     const state = { cancelled: false }
@@ -130,11 +160,15 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
     }
 
     async function load() {
+      dbg('LOAD start', { videoId })
       const d = dbRef.current
       if (d) {
         const cached = await getTipTranscript(d, videoId)
-        if (state.cancelled)
+        if (state.cancelled) {
+          dbg('LOAD cancelled-after-cache-read', { videoId })
           return
+        }
+        dbg('LOAD cache', { videoId, cached: cached?.status ?? 'none' })
         if (cached && cached.status === 'ready') {
           setResult({
             status: 'ready',
@@ -166,9 +200,13 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
       }
 
       try {
+        dbg('LOAD fetch transcript', { videoId })
         const res = await fetch(`${API_BASE}/api/tips/transcript/${encodeURIComponent(videoId)}`, { signal: controller.signal })
-        if (state.cancelled)
+        dbg('LOAD fetch returned', { videoId, status: res.status })
+        if (state.cancelled) {
+          dbg('LOAD cancelled-after-fetch', { videoId })
           return
+        }
         if (res.status === 404) {
           setResult(r => ({ ...r, status: 'unavailable', warming: null }))
           return
@@ -226,6 +264,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
           return
         }
         if (body.status === 'pending') {
+          dbg('LOAD got 202 pending', { videoId, jobId: body.jobId })
           setResult(r => ({
             ...r,
             status: 'pending',
@@ -243,6 +282,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
     }
 
     async function pollJob(jobId: string) {
+      dbg('POLL start', { videoId, jobId })
       const startedAt = Date.now()
       while (!state.cancelled && !controller.signal.aborted) {
         if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
@@ -259,6 +299,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
           if (!res.ok)
             continue
           const job = (await res.json()) as JobShape
+          dbg('POLL tick', { videoId, jobId, job_step: job.step, job_status: job.status })
           setResult(r => r.status === 'pending'
             ? { ...r, warming: { step: job.step, jobId } }
             : r,
@@ -293,6 +334,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
 
     void load()
     return () => {
+      dbg('EFFECT CLEANUP', { videoId, tick })
       state.cancelled = true
       controller.abort()
       if (pollTimerRef.current) {
