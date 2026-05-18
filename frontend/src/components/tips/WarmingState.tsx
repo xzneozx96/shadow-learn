@@ -4,33 +4,28 @@ import { Check, Loader2 } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
-type UiStep = 'fetch' | 'transcribe' | 'index'
+type UiStep = 'fetch' | 'transcribe'
 
 const UI_STEPS: { id: UiStep, labelKey: TranslationKey, eta: string }[] = [
   { id: 'fetch', labelKey: 'tips.warming.step.fetch', eta: '~10s' },
   { id: 'transcribe', labelKey: 'tips.warming.step.transcribe', eta: '~25s' },
-  { id: 'index', labelKey: 'tips.warming.step.index', eta: '~3s' },
 ]
 
 function backendToUi(step: WarmingStep): UiStep {
-  // Treat 'queued' as fetch — backend sets it briefly after kick_off
-  // before the first real step takes over. Anything earlier than
-  // transcription falls under the visible 'fetch' phase.
+  // 'queued' / 'video_download' / 'audio_extraction' all map to the
+  // visible 'fetch' phase. 'transcription' is its own row. 'indexing'
+  // is a phantom backend step (no real work happens — the transcript is
+  // already in memory when it fires, and status flips to complete on
+  // the next poll), so we keep the user on 'transcribe' through it.
   if (step === 'queued' || step === 'video_download' || step === 'audio_extraction')
     return 'fetch'
-  if (step === 'transcription')
-    return 'transcribe'
-  if (step === 'indexing')
-    return 'index'
-  // Unknown future step: stay in fetch rather than jumping to the last
-  // step. Keeps progress monotonic-looking.
-  return 'fetch'
+  return 'transcribe'
 }
 
 function stateFor(ui: UiStep, current: UiStep, complete: boolean): 'done' | 'active' | 'pending' {
   if (complete)
     return 'done'
-  const order: UiStep[] = ['fetch', 'transcribe', 'index']
+  const order: UiStep[] = ['fetch', 'transcribe']
   const currentIdx = order.indexOf(current)
   const idx = order.indexOf(ui)
   if (idx < currentIdx)
