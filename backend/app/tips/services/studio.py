@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from typing import Any, Literal
 
 import httpx
 
 from app.settings import settings
+
+logger = logging.getLogger(__name__)
 
 StudioKind = Literal["summary", "study_guide", "cards"]
 StudioLocale = Literal["en", "vi"]
@@ -104,6 +107,12 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
         try:
             return json.loads(stripped)
         except json.JSONDecodeError as e:
+            # Log a preview so operators can see what the model actually returned.
+            preview = stripped[:500] + ("…" if len(stripped) > 500 else "")
+            logger.warning(
+                "openrouter returned non-JSON content (schema=%s, model=%s): %s — content preview: %r",
+                schema_name, body.get("model"), e, preview,
+            )
             raise RuntimeError(f"openrouter returned non-JSON content: {e}") from e
 
 
@@ -126,6 +135,11 @@ async def generate_studio_artifact(
             return await _call_openrouter(prompt=prompt, schema_name=kind)
         except RuntimeError as e:
             last_err = e
+            logger.warning(
+                "studio: attempt %d/%d failed for kind=%s locale=%s model=%s: %s",
+                attempt + 1, _MAX_ATTEMPTS, kind, locale,
+                settings.openrouter_structured_model, e,
+            )
             # Last attempt: give up.
             if attempt == _MAX_ATTEMPTS - 1:
                 break
@@ -133,4 +147,8 @@ async def generate_studio_artifact(
             await asyncio.sleep(0.5 * (2 ** attempt))
 
     assert last_err is not None
+    logger.error(
+        "studio: all %d attempts failed for kind=%s, giving up. Last error: %s",
+        _MAX_ATTEMPTS, kind, last_err,
+    )
     raise last_err
