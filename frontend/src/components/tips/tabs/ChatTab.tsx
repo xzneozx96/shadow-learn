@@ -166,12 +166,19 @@ const MemoMarkdown = memo(({ text, onSeek }: { text: string, onSeek: (sec: numbe
       remarkPlugins={[remarkGfm]}
       components={{
         a: ({ href, children }) => {
-          if (typeof href === 'string' && href.startsWith('timestamp:')) {
-            const sec = Number.parseInt(href.slice('timestamp:'.length), 10)
+          // ReactMarkdown URL-encodes the colon in custom schemes, so
+          // `timestamp:83` arrives as `timestamp%3A83`. Decode before testing.
+          const decoded = typeof href === 'string' ? decodeURIComponent(href) : ''
+          if (decoded.startsWith('timestamp:')) {
+            const sec = Number.parseInt(decoded.slice('timestamp:'.length), 10)
             return (
               <button
                 type="button"
-                onClick={() => onSeek(sec)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onSeek(sec)
+                }}
                 className="inline-flex items-center rounded bg-primary/15 px-1.5 py-0.5 text-[0.7rem] font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer not-prose tabular-nums"
               >
                 {children}
