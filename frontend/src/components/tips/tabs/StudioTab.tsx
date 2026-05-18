@@ -1,4 +1,4 @@
-import { BookOpen, GraduationCap, Layers, Sparkles } from 'lucide-react'
+import { BookOpen, ChevronLeft, GraduationCap, Layers, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
@@ -41,14 +41,21 @@ export function StudioTab(props: Props) {
     )
   }
 
+  const backButton = (
+    <button
+      type="button"
+      onClick={() => setSurface('grid')}
+      className="inline-flex items-center gap-1 text-xs text-primary font-bold cursor-pointer hover:underline"
+    >
+      <ChevronLeft className="size-3.5" aria-hidden />
+      {t('tips.studio.title')}
+    </button>
+  )
+
   if (surface === 'study_guide' && guide.data) {
     return (
       <div className="p-4 space-y-3">
-        <button type="button" onClick={() => setSurface('grid')} className="text-xs text-primary font-bold cursor-pointer">
-          ←
-          {' '}
-          {t('tips.studio.title')}
-        </button>
+        {backButton}
         <StudyGuideArtifact data={guide.data} />
       </div>
     )
@@ -56,11 +63,7 @@ export function StudioTab(props: Props) {
   if (surface === 'quiz') {
     return (
       <div className="flex flex-col h-full">
-        <button type="button" onClick={() => setSurface('grid')} className="text-xs text-primary font-bold cursor-pointer px-4 pt-3">
-          ←
-          {' '}
-          {t('tips.studio.title')}
-        </button>
+        <div className="px-4 pt-3">{backButton}</div>
         <QuizArtifact courseId={courseId} videoId={videoId} lessonTitle={lessonTitle} transcript={transcript} transcriptStatus={transcriptStatus} />
       </div>
     )
@@ -68,11 +71,7 @@ export function StudioTab(props: Props) {
   if (surface === 'cards') {
     return (
       <div className="flex flex-col h-full">
-        <button type="button" onClick={() => setSurface('grid')} className="text-xs text-primary font-bold cursor-pointer px-4 pt-3">
-          ←
-          {' '}
-          {t('tips.studio.title')}
-        </button>
+        <div className="px-4 pt-3">{backButton}</div>
         <div className="flex-1 overflow-y-auto">
           <CardsTab videoId={videoId} transcript={transcript} transcriptStatus={transcriptStatus} />
         </div>
