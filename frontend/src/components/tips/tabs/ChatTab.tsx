@@ -236,6 +236,11 @@ function ChatBubble({ message, imageAlt, onSeek }: { message: UIMessage, imageAl
       </motion.div>
     )
   }
+  // Assistant message with no text content (e.g. tool-call / reasoning parts
+  // only) would render as an empty bubble. Skip — StreamingDots below covers
+  // the in-flight state.
+  if (!text.trim())
+    return null
   return (
     <motion.div
       className="flex justify-start w-full"
