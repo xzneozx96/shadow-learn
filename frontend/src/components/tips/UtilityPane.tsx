@@ -1,4 +1,5 @@
 import type { WarmingStep } from '@/hooks/useTipTranscript'
+import type { TipSegment } from '@/types/tips'
 import { BookOpen, FileText, MessageSquare, NotebookPen, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -6,6 +7,7 @@ import { useI18n } from '@/contexts/I18nContext'
 import { CardsTab } from './tabs/CardsTab'
 import { ChatTab } from './tabs/ChatTab'
 import { DisabledTab } from './tabs/DisabledTab'
+import { ScriptTab } from './tabs/ScriptTab'
 import { StudioTab } from './tabs/StudioTab'
 import { WarmingState } from './WarmingState'
 
@@ -14,13 +16,14 @@ interface Props {
   videoId: string
   lessonTitle: string
   transcript: string
+  segments?: TipSegment[]
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
   warmingStep?: WarmingStep
 }
 
 type TabValue = 'notes' | 'chat' | 'cards' | 'script' | 'studio'
 
-export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transcriptStatus, warmingStep }: Props) {
+export function UtilityPane({ courseId, videoId, lessonTitle, transcript, segments = [], transcriptStatus, warmingStep }: Props) {
   const { t } = useI18n()
   const [tab, setTab] = useState<TabValue>('chat')
   return (
@@ -59,8 +62,8 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
         <TabsContent value="cards" className="flex-1 overflow-y-auto">
           <CardsTab videoId={videoId} transcript={transcript} transcriptStatus={transcriptStatus} />
         </TabsContent>
-        <TabsContent value="script" className="flex-1">
-          <DisabledTab Icon={FileText} labelKey="tips.placeholder.label.script" reasonKey="tips.placeholder.script" />
+        <TabsContent value="script" className="flex-1 flex flex-col overflow-hidden">
+          <ScriptTab segments={segments} transcriptStatus={transcriptStatus} />
         </TabsContent>
         <TabsContent value="studio" className="flex-1 overflow-y-auto">
           <StudioTab

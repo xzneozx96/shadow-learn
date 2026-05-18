@@ -43,10 +43,21 @@ describe('utilityPane', () => {
 
   it('user can navigate back to Chat from a placeholder tab', async () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
-    await userEvent.click(screen.getByRole('tab', { name: /script/i }))
-    expect(screen.getByRole('tab', { name: /script/i })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(screen.getByRole('tab', { name: /notes/i }))
+    expect(screen.getByRole('tab', { name: /notes/i })).toHaveAttribute('aria-selected', 'true')
     await userEvent.click(screen.getByRole('tab', { name: /chat/i }))
     expect(screen.getByRole('tab', { name: /chat/i })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('script tab renders transcript segments and supports click-to-seek', async () => {
+    const segs = [
+      { start: 0, end: 5, text: 'hello' },
+      { start: 5, end: 10, text: 'world' },
+    ]
+    render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="x" segments={segs} transcriptStatus="ready" />)
+    await userEvent.click(screen.getByRole('tab', { name: /script/i }))
+    expect(screen.getByText('hello')).toBeInTheDocument()
+    expect(screen.getByText('world')).toBeInTheDocument()
   })
 
   it('clicking Studio tab shows the tile grid (not the coming-soon placeholder)', async () => {
