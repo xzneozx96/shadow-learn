@@ -3,7 +3,7 @@ import type { FileUIPart } from 'ai'
 import type { TipChatKind } from '@/types/tips'
 import { ImageIcon, MessageSquareDashed, Mic, X } from 'lucide-react'
 import { motion } from 'motion/react'
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { toast } from 'sonner'
@@ -39,6 +39,7 @@ interface Props {
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
   kind?: TipChatKind
   systemPrompt?: string
+  initialUserMessage?: string
 }
 
 const BURST_DURATION_S = 30
@@ -207,7 +208,7 @@ function messageText(message: UIMessage): string {
     .join('')
 }
 
-export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt }: Props) {
+export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt, initialUserMessage }: Props) {
   const { locale, t } = useI18n()
   const chat = useTipChat({
     courseId,
@@ -240,6 +241,18 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
     if (voice.error)
       toast.error(t(voice.error as Parameters<typeof t>[0]))
   }, [voice.error, t])
+
+  const lastSeededRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!initialUserMessage)
+      return
+    if (lastSeededRef.current === initialUserMessage)
+      return
+    if (!chat.ready || chat.disabled)
+      return
+    lastSeededRef.current = initialUserMessage
+    chat.sendMessage({ text: initialUserMessage })
+  }, [initialUserMessage, chat.ready, chat.disabled, chat.sendMessage])
 
   const handleSubmit = useCallback((message: { text: string, files: FileUIPart[] }) => {
     if (voice.state !== 'idle')
