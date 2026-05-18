@@ -59,6 +59,19 @@ def test_validates_video_id_format(client: TestClient) -> None:
     assert resp.status_code == 400
 
 
+def test_get_transcript_blocks_over_30_min_video(client: TestClient) -> None:
+    async def fake_check(_video_id: str) -> tuple[float, bool]:
+        return (35 * 60, True)
+
+    with patch("app.tips.services.transcript.check_video_duration", new=fake_check):
+        resp = client.get("/api/tips/transcript/abc123")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "too_long"
+    assert body["durationSec"] == 35 * 60
+    assert body["limitSec"] == 30 * 60
+
+
 @pytest.mark.asyncio
 async def test_fetch_subtitles_prefers_detected_language_over_english(monkeypatch):
     """Vietnamese video with EN manual track should still pick VI."""

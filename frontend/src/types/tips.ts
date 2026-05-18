@@ -43,7 +43,7 @@ export interface TipProgress {
   lastSeenAt: string
 }
 
-export type TipTranscriptStatus = 'pending' | 'ready' | 'unavailable' | 'error'
+export type TipTranscriptStatus = 'pending' | 'ready' | 'unavailable' | 'error' | 'too_long'
 
 export type TipTranscriptSource = 'subtitle' | 'stt'
 
@@ -55,6 +55,8 @@ export interface TipTranscriptRecord {
   segments: TipSegment[]
   fetchedAt: string | null
   errorMessage?: string
+  durationSec?: number
+  limitSec?: number
 }
 
 export interface TipChatRecord {

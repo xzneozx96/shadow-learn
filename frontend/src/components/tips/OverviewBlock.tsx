@@ -8,7 +8,7 @@ import { SummaryArtifact } from './studio/SummaryArtifact'
 interface Props {
   videoId: string
   transcript: string
-  transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
+  transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error' | 'too_long'
 }
 
 export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) {
@@ -16,6 +16,7 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
   const { db } = useAuth()
   const studioLocale: 'en' | 'vi' = locale === 'vi' ? 'vi' : 'en'
 
+  const tooLong = transcriptStatus === 'too_long'
   const noTranscript = transcriptStatus === 'unavailable' || transcriptStatus === 'error'
   const transcriptReady = transcriptStatus === 'ready' && transcript.trim().length > 0
 
@@ -67,15 +68,19 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
         )}
       </div>
       <div className="px-4 py-4">
-        {noTranscript && (
+        {tooLong && (
+          <div className="text-sm text-muted-foreground">{t('tips.video.tooLong.body')}</div>
+        )}
+
+        {!tooLong && noTranscript && (
           <div className="text-sm text-muted-foreground">{t('tips.studio.disabled.transcript')}</div>
         )}
 
-        {!noTranscript && !transcriptReady && (
+        {!tooLong && !noTranscript && !transcriptReady && (
           <div className="text-sm text-muted-foreground">{t('tips.overview.locked_body')}</div>
         )}
 
-        {transcriptReady && !summary.data && summary.status !== 'loading' && (
+        {!tooLong && transcriptReady && !summary.data && summary.status !== 'loading' && (
           <div className="flex flex-col gap-3">
             <div className="text-sm text-muted-foreground">{t('tips.overview.empty_body')}</div>
             <div>

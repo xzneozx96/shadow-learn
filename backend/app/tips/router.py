@@ -45,10 +45,29 @@ class TranscriptUnavailable(BaseModel):
     status: str
 
 
+class TranscriptTooLong(BaseModel):
+    status: str
+    durationSec: float
+    limitSec: int
+
+
 @router.get("/transcript/{video_id}")
 async def get_transcript(video_id: str):
     if not _YOUTUBE_ID.match(video_id):
         raise HTTPException(status_code=400, detail="invalid video_id")
+
+    try:
+        duration, too_long = await _transcript_svc.check_video_duration(video_id)
+    except Exception:
+        # If yt-dlp metadata fails, fall through to the normal subtitle path
+        # (which has its own error handling). Don't block on a flaky probe.
+        duration, too_long = 0.0, False
+    if too_long:
+        return TranscriptTooLong(
+            status="too_long",
+            durationSec=duration,
+            limitSec=_transcript_svc.MAX_TIP_VIDEO_DURATION_SEC,
+        )
 
     lang, segments = await _transcript_svc.fetch_youtube_subtitles(video_id)
     if segments is not None:

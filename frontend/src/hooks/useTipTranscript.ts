@@ -21,6 +21,8 @@ export interface UseTipTranscriptResult {
   segments: TipSegment[]
   warming: WarmingState | null
   error: Error | null
+  durationSec: number | null
+  limitSec: number | null
   retry: () => void
 }
 
@@ -32,7 +34,8 @@ interface ServerReady {
 }
 interface ServerPending { status: 'pending', jobId: string }
 interface ServerUnavailable { status: 'unavailable' }
-type ServerResponse = ServerReady | ServerPending | ServerUnavailable
+interface ServerTooLong { status: 'too_long', durationSec: number, limitSec: number }
+type ServerResponse = ServerReady | ServerPending | ServerUnavailable | ServerTooLong
 
 interface JobShape {
   id?: string
@@ -49,6 +52,8 @@ const INITIAL: UseTipTranscriptResult = {
   segments: [],
   warming: null,
   error: null,
+  durationSec: null,
+  limitSec: null,
   retry: () => {},
 }
 
@@ -105,6 +110,22 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
             segments: cached.segments,
             warming: null,
             error: null,
+            durationSec: null,
+            limitSec: null,
+            retry,
+          })
+          return
+        }
+        if (cached && cached.status === 'too_long') {
+          setResult({
+            status: 'too_long',
+            source: null,
+            lang: null,
+            segments: [],
+            warming: null,
+            error: null,
+            durationSec: cached.durationSec ?? null,
+            limitSec: cached.limitSec ?? null,
             retry,
           })
           return
@@ -136,6 +157,36 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
             segments: body.segments,
             warming: null,
             error: null,
+            durationSec: null,
+            limitSec: null,
+            retry,
+          })
+          return
+        }
+        if (body.status === 'too_long') {
+          if (db) {
+            await putTipTranscript(db, {
+              videoId,
+              status: 'too_long',
+              source: null,
+              lang: null,
+              segments: [],
+              fetchedAt: new Date().toISOString(),
+              durationSec: body.durationSec,
+              limitSec: body.limitSec,
+            })
+          }
+          if (state.cancelled)
+            return
+          setResult({
+            status: 'too_long',
+            source: null,
+            lang: null,
+            segments: [],
+            warming: null,
+            error: null,
+            durationSec: body.durationSec,
+            limitSec: body.limitSec,
             retry,
           })
           return

@@ -38,6 +38,24 @@ logger = logging.getLogger(__name__)
 # Default fallback preference order if we can't detect the video's language.
 _FALLBACK_LANG_PREFERENCE: list[str] = ["en", "vi", "zh-CN"]
 
+# Hard cap on Tips video duration. Beyond this, we never run STT or LLM
+# Summary — both scale linearly with audio length and the LLM prompts include
+# the full transcript. 30 minutes is a comfortable upper bound for "tip"
+# content (most are 3–10 min).
+MAX_TIP_VIDEO_DURATION_SEC: int = 30 * 60
+
+
+async def check_video_duration(video_id: str) -> tuple[float, bool]:
+    """Return (duration_sec, is_over_limit) for *video_id*.
+
+    Uses yt-dlp metadata. If duration can't be determined, returns 0.0 and
+    treats the video as within the limit (callers fall through to the normal
+    subtitle/STT path, which has its own failure handling).
+    """
+    meta = await get_youtube_metadata(video_id)
+    duration = float(meta.get("duration") or 0.0)
+    return duration, duration > MAX_TIP_VIDEO_DURATION_SEC
+
 
 def _build_lang_preference(detected: str | None) -> list[str]:
     """Build subtitle preference: detected language first, then fallback order."""

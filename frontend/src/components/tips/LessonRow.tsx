@@ -57,7 +57,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
               aria-label={t('tips.lesson.completed')}
               className="absolute inset-0 flex items-center justify-center"
             >
-              <span className="flex items-center justify-center size-7 rounded-full bg-success text-white shadow-lg ring-2 ring-background">
+              <span className="flex items-center justify-center size-7 rounded-full bg-success text-white shadow-lg">
                 <Check className="size-4" aria-hidden strokeWidth={3} />
               </span>
             </span>

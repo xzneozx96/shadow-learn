@@ -1,5 +1,5 @@
 import type { WarmingStep } from '@/hooks/useTipTranscript'
-import { BookOpen, MessageSquare, NotebookPen, Sparkles } from 'lucide-react'
+import { BookOpen, Clock, MessageSquare, NotebookPen, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useI18n } from '@/contexts/I18nContext'
@@ -14,7 +14,7 @@ interface Props {
   videoId: string
   lessonTitle: string
   transcript: string
-  transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
+  transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error' | 'too_long'
   warmingStep?: WarmingStep
 }
 
@@ -23,6 +23,20 @@ type TabValue = 'notes' | 'chat' | 'cards' | 'studio'
 export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transcriptStatus, warmingStep }: Props) {
   const { t } = useI18n()
   const [tab, setTab] = useState<TabValue>('chat')
+
+  // Video too long: no transcript will ever exist. Take over the pane with
+  // a clear explanation rather than showing tabs that all silently disable.
+  if (transcriptStatus === 'too_long') {
+    return (
+      <aside className="flex flex-col h-full border-l border-border overflow-hidden">
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+          <Clock className="size-10 text-muted-foreground" aria-hidden />
+          <div className="text-sm font-bold text-foreground">{t('tips.video.tooLong.title')}</div>
+          <div className="text-xs text-muted-foreground max-w-[280px]">{t('tips.video.tooLong.body')}</div>
+        </div>
+      </aside>
+    )
+  }
 
   // While the transcript pipeline is processing, the right pane shows ONLY
   // the warming state. Tabs would all be non-functional (no transcript →

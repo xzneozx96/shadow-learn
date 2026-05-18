@@ -63,4 +63,10 @@ describe('utilityPane', () => {
     expect(ctas.length).toBeGreaterThan(0)
     expect(screen.queryByText(/coming in b2/i)).not.toBeInTheDocument()
   })
+
+  it('shows too-long takeover when transcriptStatus is too_long', () => {
+    render(<UtilityPane courseId="c" videoId="v" lessonTitle="t" transcript="" transcriptStatus="too_long" />)
+    expect(screen.getByText(/too long/i)).toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+  })
 })
