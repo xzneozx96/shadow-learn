@@ -93,6 +93,8 @@ export function StudioTab(props: Props) {
           onRegen={summary.regenerate}
           busy={summary.inFlightByOther}
           busyLabel={t('tips.studio.busy')}
+          loading={summary.status === 'loading'}
+          loadingLabel={t('tips.studio.loading')}
           errorLabel={summary.status === 'error' ? t('tips.studio.error') : undefined}
         />
         <StudioTile
@@ -110,6 +112,8 @@ export function StudioTab(props: Props) {
           onRegen={guide.regenerate}
           busy={guide.inFlightByOther}
           busyLabel={t('tips.studio.busy')}
+          loading={guide.status === 'loading'}
+          loadingLabel={t('tips.studio.loading')}
           errorLabel={guide.status === 'error' ? t('tips.studio.error') : undefined}
         />
         <StudioTile

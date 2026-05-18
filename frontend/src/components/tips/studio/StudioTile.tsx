@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { TranslationKey } from '@/lib/i18n'
-import { Lock } from 'lucide-react'
+import { Loader2, Lock } from 'lucide-react'
 import { useI18n } from '@/contexts/I18nContext'
 
 interface Props {
@@ -17,6 +17,8 @@ interface Props {
   busy?: boolean
   busyLabel?: string
   errorLabel?: string
+  loading?: boolean
+  loadingLabel?: string
   children?: ReactNode
 }
 
@@ -33,6 +35,8 @@ export function StudioTile({
   busy,
   busyLabel,
   errorLabel,
+  loading,
+  loadingLabel,
   children,
 }: Props) {
   const { t } = useI18n()
@@ -72,21 +76,22 @@ export function StudioTile({
         {!isLocked && primaryLabel && onPrimary && (
           <button
             type="button"
-            disabled={isDisabled || busy}
+            disabled={isDisabled || busy || loading}
             title={busy ? busyLabel : undefined}
             onClick={onPrimary}
             className={[
-              'px-3.5 py-2 rounded-lg text-xs font-extrabold',
+              'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold',
               state === 'filled'
                 ? 'bg-transparent border border-primary text-primary'
                 : 'bg-primary text-primary-foreground',
-              isDisabled || busy ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+              isDisabled || busy || loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
             ].join(' ')}
           >
-            {primaryLabel}
+            {loading && <Loader2 className="size-3.5 animate-spin" />}
+            <span>{loading ? (loadingLabel ?? t('tips.studio.loading')) : primaryLabel}</span>
           </button>
         )}
-        {state === 'filled' && onRegen && (
+        {state === 'filled' && onRegen && !loading && (
           <button type="button" onClick={onRegen} className="text-[11px] font-bold text-primary cursor-pointer">
             ↻
             {' '}

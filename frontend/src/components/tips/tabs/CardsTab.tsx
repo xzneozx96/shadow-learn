@@ -1,3 +1,4 @@
+import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipCards } from '@/hooks/useTipCards'
@@ -30,9 +31,10 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
           type="button"
           disabled={deck.disabled || deck.status === 'loading' || deck.inFlightByOther}
           onClick={deck.generate}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-extrabold cursor-pointer disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-extrabold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {t('tips.cards.generate')}
+          {deck.status === 'loading' && <Loader2 className="size-4 animate-spin" />}
+          <span>{deck.status === 'loading' ? t('tips.studio.loading') : t('tips.cards.generate')}</span>
         </button>
       </div>
     )
