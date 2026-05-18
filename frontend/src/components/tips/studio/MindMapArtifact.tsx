@@ -1,6 +1,6 @@
-import type { Edge, Node } from '@xyflow/react'
+import type { Edge, Node, NodeProps, NodeTypes } from '@xyflow/react'
 import type { MindMapNode, StudioMindMapData } from '@/types/tips'
-import { Background, Controls, MiniMap, ReactFlow } from '@xyflow/react'
+import { Background, Controls, Handle, Position, ReactFlow } from '@xyflow/react'
 import dagre from 'dagre'
 import { ChevronLeft } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -24,6 +24,22 @@ interface FlatNode {
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 44
+
+function MindNode({ data }: NodeProps) {
+  const { label } = data as { label: string }
+  return (
+    <div
+      className="rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-foreground shadow-sm hover:border-primary transition-colors"
+      style={{ width: NODE_WIDTH, height: NODE_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Handle type="target" position={Position.Left} className="bg-border! border-0! w-1.5! h-1.5!" />
+      <span className="truncate px-1">{label}</span>
+      <Handle type="source" position={Position.Right} className="bg-border! border-0! w-1.5! h-1.5!" />
+    </div>
+  )
+}
+
+const nodeTypes: NodeTypes = { mind: MindNode }
 
 function flatten(root: MindMapNode): FlatNode[] {
   const out: FlatNode[] = []
@@ -52,6 +68,7 @@ function layout(flat: FlatNode[]): { nodes: Node[], edges: Edge[] } {
     const { x, y } = g.node(f.id)
     return {
       id: f.id,
+      type: 'mind',
       data: { label: f.label },
       position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 },
     }
@@ -110,6 +127,7 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         onNodeClick={(_, node) => {
           const label = (node.data as { label: string }).label
           setPendingPrompt(t('tips.studio.mindmap.prefill', { label }))
@@ -118,10 +136,10 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable
+        proOptions={{ hideAttribution: true }}
       >
-        <Background />
+        <Background color="var(--border)" gap={20} />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable />
       </ReactFlow>
     </div>
   )
