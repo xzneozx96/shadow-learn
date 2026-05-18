@@ -46,11 +46,13 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
 
   const current = deck.cards[deck.index]
   const total = deck.cards.length
+  const progressCount = `${deck.index + 1} / ${total}`
   const progressPct = Math.round(((deck.index + 1) / total) * 100)
+  const progressPctLabel = `${progressPct}%`
 
   return (
     <div className="p-4 flex flex-col gap-4">
-      <ProgressHeader progressPct={progressPct} />
+      <ProgressHeader count={progressCount} pctLabel={progressPctLabel} pct={progressPct} />
 
       <FlipCard
         card={current}
@@ -88,15 +90,15 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
   )
 }
 
-function ProgressHeader({ progressPct }: { progressPct: number }) {
+function ProgressHeader({ count, pctLabel, pct }: { count: string, pctLabel: string, pct: number }) {
   return (
-    <div className="flex items-center gap-3 px-0.5">
-      <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground tabular-nums">
-        {String(progressPct).padStart(2, '0')}
-        %
-      </span>
-      <div className="flex-1 h-2 rounded bg-secondary overflow-hidden">
-        <div className="h-full bg-primary rounded transition-all" style={{ width: `${progressPct}%` }} />
+    <div className="px-0.5">
+      <div className="flex justify-between text-sm font-bold text-muted-foreground mb-1.5 tabular-nums">
+        <span>{count}</span>
+        <span>{pctLabel}</span>
+      </div>
+      <div className="h-2 rounded bg-secondary overflow-hidden">
+        <div className="h-full bg-primary rounded transition-all" style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
