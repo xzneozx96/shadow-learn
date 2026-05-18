@@ -23,10 +23,10 @@ vi.mock('ai', () => ({
 }))
 
 describe('utilityPane', () => {
-  it('renders a tablist with five tabs', () => {
+  it('renders a tablist with four tabs', () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
     expect(screen.getByRole('tablist')).toBeInTheDocument()
-    expect(screen.getAllByRole('tab')).toHaveLength(5)
+    expect(screen.getAllByRole('tab')).toHaveLength(4)
   })
 
   it('chat tab is selected by default in B1', () => {
@@ -47,17 +47,6 @@ describe('utilityPane', () => {
     expect(screen.getByRole('tab', { name: /notes/i })).toHaveAttribute('aria-selected', 'true')
     await userEvent.click(screen.getByRole('tab', { name: /chat/i }))
     expect(screen.getByRole('tab', { name: /chat/i })).toHaveAttribute('aria-selected', 'true')
-  })
-
-  it('script tab renders transcript segments and supports click-to-seek', async () => {
-    const segs = [
-      { start: 0, end: 5, text: 'hello' },
-      { start: 5, end: 10, text: 'world' },
-    ]
-    render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="x" segments={segs} transcriptStatus="ready" />)
-    await userEvent.click(screen.getByRole('tab', { name: /script/i }))
-    expect(screen.getByText('hello')).toBeInTheDocument()
-    expect(screen.getByText('world')).toBeInTheDocument()
   })
 
   it('clicking Studio tab shows the tile grid (not the coming-soon placeholder)', async () => {

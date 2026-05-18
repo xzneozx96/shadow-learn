@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { publishTime, registerSeek } from '@/lib/tipPlayerStore'
 
 interface YTPlayer {
   destroy: () => void
@@ -63,17 +62,14 @@ export function LessonPlayer({ videoId, resumeSec, onTimeUpdate, onEnded }: Prop
           },
         },
       })
-      registerSeek((sec) => { playerRef.current?.seekTo(sec, true) })
       intervalRef.current = setInterval(() => {
-        if (!playerRef.current)
+        if (!playerRef.current || !onTimeUpdate)
           return
         try {
           const cur = playerRef.current.getCurrentTime()
           const dur = playerRef.current.getDuration()
-          if (Number.isFinite(cur) && Number.isFinite(dur) && dur > 0) {
-            onTimeUpdate?.(cur, dur)
-            publishTime(cur)
-          }
+          if (Number.isFinite(cur) && Number.isFinite(dur) && dur > 0)
+            onTimeUpdate(cur, dur)
         }
         catch {
           // noop
@@ -84,7 +80,6 @@ export function LessonPlayer({ videoId, resumeSec, onTimeUpdate, onEnded }: Prop
       destroyed = true
       if (intervalRef.current)
         clearInterval(intervalRef.current)
-      registerSeek(null)
       try {
         playerRef.current?.destroy()
       }

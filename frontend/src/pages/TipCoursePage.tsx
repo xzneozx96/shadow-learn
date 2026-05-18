@@ -169,7 +169,6 @@ export function TipCoursePage() {
             videoId={activeVideoId}
             lessonTitle={activeLesson.title}
             transcript={transcriptText}
-            segments={transcript.segments}
             transcriptStatus={transcript.status}
             warmingStep={transcript.warming?.step}
           />
