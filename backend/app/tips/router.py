@@ -56,6 +56,30 @@ async def get_transcript(video_id: str):
     if not _YOUTUBE_ID.match(video_id):
         raise HTTPException(status_code=400, detail="invalid video_id")
 
+    # Fast path: if a previous STT job for this video already completed and
+    # is still in memory, return its result immediately. Skips ~5s of yt-dlp
+    # metadata + subtitle probing on every repeat request. The frontend then
+    # caches to IDB so future opens are instant even after the in-memory
+    # job is pruned.
+    cached_job_id = _transcript_svc._existing_job_for_video(video_id)
+    if cached_job_id is not None:
+        from app.job_store import jobs as _jobs
+        cached = _jobs.get(cached_job_id)
+        if cached is not None and cached.status == "complete" and cached.result is not None:
+            result = cached.result
+            return TranscriptReady(
+                status="ready",
+                source=result.get("source", "stt"),
+                lang=result.get("lang"),
+                segments=result.get("segments", []),
+            )
+        # Job still processing — frontend can resume polling it.
+        if cached is not None and cached.status == "processing":
+            return JSONResponse(
+                status_code=202,
+                content=TranscriptPending(status="pending", jobId=cached_job_id).model_dump(),
+            )
+
     try:
         duration, too_long = await _transcript_svc.check_video_duration(video_id)
     except Exception:

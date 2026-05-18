@@ -207,3 +207,72 @@ async def test_kick_off_stt_job_spawns_fresh_after_prune(monkeypatch):
     assert second != first
     # Index cleaned up to point at the new job.
     assert svc._tip_video_jobs["abc123"] == second
+
+
+def test_get_transcript_fast_path_for_completed_job(client, monkeypatch):
+    """If a complete STT job already exists for the video, return its
+    cached result without running any yt-dlp metadata probe."""
+    from app.job_store import Job, jobs
+    from app.tips.services import transcript as svc
+
+    jobs.clear()
+    svc._tip_video_jobs.clear()
+
+    # Plant a complete job for the video.
+    job_id = "tip-stt-cached"
+    jobs[job_id] = Job(
+        status="complete",
+        step="indexing",
+        result={
+            "status": "ready",
+            "source": "stt",
+            "lang": "vi",
+            "segments": [{"start": 0.0, "end": 1.0, "text": "xin chào"}],
+        },
+        error=None,
+    )
+    svc._tip_video_jobs["abc123"] = job_id
+
+    # Sabotage yt-dlp — if the fast path doesn't kick in, this will throw.
+    def boom(*a, **kw):
+        raise AssertionError("fast path failed — yt-dlp was called")
+    monkeypatch.setattr(svc, "check_video_duration", boom)
+    monkeypatch.setattr(svc, "fetch_youtube_subtitles", boom)
+
+    resp = client.get("/api/tips/transcript/abc123")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ready"
+    assert body["source"] == "stt"
+    assert body["lang"] == "vi"
+    assert len(body["segments"]) == 1
+
+
+def test_get_transcript_fast_path_resumes_in_flight_job(client, monkeypatch):
+    """If an STT job is still processing for the video, return 202 with
+    the existing jobId — frontend resumes polling."""
+    from app.job_store import Job, jobs
+    from app.tips.services import transcript as svc
+
+    jobs.clear()
+    svc._tip_video_jobs.clear()
+
+    job_id = "tip-stt-inflight"
+    jobs[job_id] = Job(
+        status="processing",
+        step="transcription",
+        result=None,
+        error=None,
+    )
+    svc._tip_video_jobs["abc123"] = job_id
+
+    def boom(*a, **kw):
+        raise AssertionError("fast path failed — yt-dlp was called")
+    monkeypatch.setattr(svc, "check_video_duration", boom)
+    monkeypatch.setattr(svc, "fetch_youtube_subtitles", boom)
+
+    resp = client.get("/api/tips/transcript/abc123")
+    assert resp.status_code == 202
+    body = resp.json()
+    assert body["status"] == "pending"
+    assert body["jobId"] == job_id
