@@ -1,4 +1,4 @@
-import { Check, Hourglass, Play } from 'lucide-react'
+import { Check, Clock, Play } from 'lucide-react'
 import { memo } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
@@ -78,7 +78,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
               className="absolute inset-0 flex items-center justify-center"
             >
               {badge === 'playing' && (
-                <span className="flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground shadow-lg animate-pulse">
+                <span className="flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground shadow-lg">
                   <Play className="size-3.5 ml-0.5" aria-hidden fill="currentColor" />
                 </span>
               )}
@@ -89,7 +89,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
               )}
               {badge === 'in_progress' && (
                 <span className="flex items-center justify-center size-7 rounded-full bg-amber-500 text-white shadow-lg">
-                  <Hourglass className="size-3.5" aria-hidden strokeWidth={2.5} />
+                  <Clock className="size-4" aria-hidden strokeWidth={2.5} />
                 </span>
               )}
             </span>
