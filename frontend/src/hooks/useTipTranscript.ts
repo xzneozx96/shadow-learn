@@ -71,11 +71,17 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
   const [result, setResult] = useState<UseTipTranscriptResult>(() => makeInitial(retry))
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Reset state synchronously during render when videoId or tick changes
-  if (lastKey !== key) {
+  // Reset state synchronously during render when videoId or tick changes.
+  // We must compute the *visible* result inline because setResult only
+  // affects the NEXT render — without this, the first render after a
+  // video switch flashes the previous video's warming.step (e.g. step
+  // 3 'indexing' active) before flipping to the initial step 1 state.
+  const isStale = lastKey !== key
+  if (isStale) {
     setLastKey(key)
     setResult(makeInitial(retry))
   }
+  const visible = isStale ? makeInitial(retry) : result
 
   useEffect(() => {
     if (!videoId)
@@ -268,5 +274,5 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
     }
   }, [videoId, db, tick])
 
-  return result
+  return visible
 }
