@@ -25,10 +25,13 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
 
   if (deck.cards.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 p-6 text-center h-full">
-        <div className="text-sm font-bold text-foreground">{t('tips.cards.empty.title')}</div>
-        <div className="text-xs text-muted-foreground max-w-[260px]">{t('tips.cards.empty.body')}</div>
+      <div className="flex flex-col items-center justify-center gap-6 p-6 text-center h-full">
+        <div>
+          <h4 className="text-base font-bold text-foreground">{t('tips.cards.empty.title')}</h4>
+          <div className="text-sm text-muted-foreground max-w-[260px] mt-1">{t('tips.cards.empty.body')}</div>
+        </div>
         <Button
+          size="lg"
           disabled={deck.disabled || deck.status === 'loading' || deck.inFlightByOther}
           onClick={deck.generate}
         >

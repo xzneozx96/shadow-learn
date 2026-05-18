@@ -1,6 +1,7 @@
 """Studio artifact generation: prompt building + OpenRouter call + retry."""
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any, Literal
 
@@ -74,23 +75,62 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
             raise RuntimeError(f"openrouter transient {resp.status_code}")
         resp.raise_for_status()
         body = resp.json()
-        content = body["choices"][0]["message"]["content"]
-        return json.loads(content)
+
+        # Defensive parsing — OpenRouter can return:
+        #  - content: None (model refused, hit a filter, or doesn't honor
+        #    response_format=json_object and dropped the body)
+        #  - content: "" empty string
+        #  - content: a JSON-shaped string wrapped in markdown fences
+        # Any of these should be retryable rather than crashing.
+        choices = body.get("choices") or []
+        if not choices:
+            raise RuntimeError(f"openrouter empty choices: {body}")
+        message = choices[0].get("message") or {}
+        content = message.get("content")
+        if not content or not isinstance(content, str):
+            raise RuntimeError(
+                f"openrouter empty content (finish_reason={choices[0].get('finish_reason')}, "
+                f"model={body.get('model')})",
+            )
+
+        # Strip markdown fences if the model wrapped the JSON in them.
+        stripped = content.strip()
+        if stripped.startswith("```"):
+            # Remove fence and optional language tag (```json ... ```).
+            stripped = stripped.removeprefix("```json").removeprefix("```").strip()
+            if stripped.endswith("```"):
+                stripped = stripped.removesuffix("```").strip()
+
+        try:
+            return json.loads(stripped)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"openrouter returned non-JSON content: {e}") from e
+
+
+_MAX_ATTEMPTS = 3  # 1 try + 2 retries
 
 
 async def generate_studio_artifact(
     *, kind: StudioKind, transcript: str, locale: StudioLocale,
 ) -> dict[str, Any]:
-    """Generate one studio artifact. Retries once on transient errors."""
+    """Generate one studio artifact. Retries on transient errors.
+
+    Retryable: 5xx, empty/None content, malformed JSON, timeouts.
+    Non-retryable: 4xx (caller config issue), missing API key.
+    """
     prompt = build_prompt(kind=kind, transcript=transcript, locale=locale)
 
     last_err: Exception | None = None
-    for _attempt in range(2):  # 1 try + 1 retry
+    for attempt in range(_MAX_ATTEMPTS):
         try:
             return await _call_openrouter(prompt=prompt, schema_name=kind)
         except RuntimeError as e:
             last_err = e
-            continue
+            # Last attempt: give up.
+            if attempt == _MAX_ATTEMPTS - 1:
+                break
+            # Tiny exponential backoff to give the upstream a breath.
+            await asyncio.sleep(0.5 * (2 ** attempt))
 
     assert last_err is not None
     raise last_err
