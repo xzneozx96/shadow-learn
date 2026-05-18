@@ -15,6 +15,7 @@ interface Props {
   videoId: string
   lessonTitle: string
   transcript: string
+  onBackToGrid: () => void
 }
 
 interface FlatNode {
@@ -100,17 +101,31 @@ function layout(flat: FlatNode[], onSeek: (sec: number) => void): { nodes: Node[
   return { nodes, edges }
 }
 
-export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcript }: Props) {
+export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcript, onBackToGrid }: Props) {
   const { t } = useI18n()
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
 
   const flat = useMemo(() => flatten(data.root), [data])
   const { nodes, edges } = useMemo(() => layout(flat, seekTip), [flat])
 
+  const studioBack = (
+    <button
+      type="button"
+      onClick={onBackToGrid}
+      className="inline-flex items-center gap-1 text-xs text-primary font-bold cursor-pointer hover:underline"
+    >
+      <ChevronLeft className="size-3.5" aria-hidden />
+      {t('tips.studio.title')}
+    </button>
+  )
+
   if (flat.length <= 2) {
     return (
-      <div className="p-6 text-center text-sm text-muted-foreground">
-        {t('tips.studio.mindmap.tooShort')}
+      <div className="flex flex-col h-full">
+        <div className="px-4 pt-3">{studioBack}</div>
+        <div className="flex-1 p-6 text-center text-sm text-muted-foreground">
+          {t('tips.studio.mindmap.tooShort')}
+        </div>
       </div>
     )
   }
@@ -123,7 +138,7 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
             type="button"
             data-testid="mindmap-back-to-tree"
             onClick={() => setPendingPrompt(null)}
-            className="inline-flex items-center gap-1 text-xs text-primary font-bold cursor-pointer hover:underline"
+            className="inline-flex items-center gap-1 text-sm text-primary font-bold cursor-pointer hover:underline"
           >
             <ChevronLeft className="size-3.5" aria-hidden />
             {t('tips.studio.mindmap.backToTree')}
@@ -144,24 +159,27 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
   }
 
   return (
-    <div className="h-full w-full">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodeClick={(_, node) => {
-          const label = (node.data as { label: string }).label
-          setPendingPrompt(t('tips.studio.mindmap.prefill', { label }))
-        }}
-        fitView
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background color="var(--border)" gap={20} />
-        <Controls showInteractive={false} />
-      </ReactFlow>
+    <div className="flex flex-col h-full">
+      <div className="px-4 pt-3">{studioBack}</div>
+      <div className="flex-1">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onNodeClick={(_, node) => {
+            const label = (node.data as { label: string }).label
+            setPendingPrompt(t('tips.studio.mindmap.prefill', { label }))
+          }}
+          fitView
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background color="var(--border)" gap={20} />
+          <Controls showInteractive={false} />
+        </ReactFlow>
+      </div>
     </div>
   )
 }

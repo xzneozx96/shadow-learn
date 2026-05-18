@@ -60,6 +60,7 @@ const tree: StudioMindMapData = {
 }
 
 const baseProps = {
+  onBackToGrid: () => {},
   data: tree,
   courseId: 'c1',
   videoId: 'v1',

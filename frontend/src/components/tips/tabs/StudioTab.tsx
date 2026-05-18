@@ -50,7 +50,7 @@ export function StudioTab(props: Props) {
     <button
       type="button"
       onClick={() => setSurface('grid')}
-      className="inline-flex items-center gap-1 text-xs text-primary font-bold cursor-pointer hover:underline"
+      className="inline-flex items-center gap-1 text-sm text-primary font-bold cursor-pointer hover:underline"
     >
       <ChevronLeft className="size-3.5" aria-hidden />
       {t('tips.studio.title')}
@@ -85,20 +85,16 @@ export function StudioTab(props: Props) {
   }
   if (surface === 'mind_map' && mindmap.data) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="px-4 pt-3">{backButton}</div>
-        <div className="flex-1">
-          <Suspense fallback={<div className="p-6 text-center text-sm text-muted-foreground">{t('tips.studio.loading')}</div>}>
-            <MindMapArtifact
-              data={mindmap.data}
-              courseId={courseId}
-              videoId={videoId}
-              lessonTitle={lessonTitle}
-              transcript={transcript}
-            />
-          </Suspense>
-        </div>
-      </div>
+      <Suspense fallback={<div className="p-6 text-center text-sm text-muted-foreground">{t('tips.studio.loading')}</div>}>
+        <MindMapArtifact
+          data={mindmap.data}
+          courseId={courseId}
+          videoId={videoId}
+          lessonTitle={lessonTitle}
+          transcript={transcript}
+          onBackToGrid={() => setSurface('grid')}
+        />
+      </Suspense>
     )
   }
 
