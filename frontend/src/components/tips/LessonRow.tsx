@@ -1,4 +1,4 @@
-import { Check, Clock, Play } from 'lucide-react'
+import { Check, Ellipsis, Play } from 'lucide-react'
 import { memo } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
@@ -89,7 +89,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
               )}
               {badge === 'in_progress' && (
                 <span className="flex items-center justify-center size-7 rounded-full bg-amber-500 text-white shadow-lg">
-                  <Clock className="size-4 -translate-y-[0.5px]" aria-hidden />
+                  <Ellipsis className="size-4" aria-hidden strokeWidth={3} />
                 </span>
               )}
             </span>
