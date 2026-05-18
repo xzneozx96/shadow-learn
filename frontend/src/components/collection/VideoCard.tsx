@@ -220,7 +220,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
           )}
 
           {!playing && (
-            <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-[11px] font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
+            <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
               {video.duration}
               <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
               <CutoutCorner className="absolute right-0 -bottom-[23px] -rotate-90 text-card" size={24} />

@@ -55,7 +55,7 @@ export function WarmingState({ step, complete = false }: { step: WarmingStep, co
               aria-current={state === 'active' ? 'step' : undefined}
             >
               <span className={cn(
-                'flex items-center justify-center size-[18px] rounded-full text-[11px] font-bold shrink-0',
+                'flex items-center justify-center size-[18px] rounded-full text-xs font-bold shrink-0',
                 state === 'done' && 'bg-success text-white',
                 state === 'active' && 'bg-primary text-white',
                 state === 'pending' && 'border border-dashed border-border text-muted-foreground',

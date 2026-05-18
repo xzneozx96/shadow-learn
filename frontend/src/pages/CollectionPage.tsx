@@ -104,7 +104,7 @@ export function CollectionPage() {
                   {label}
                   <span
                     className={cn(
-                      'inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium tabular-nums',
+                      'inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium tabular-nums',
                       activeTab === tab ? 'bg-foreground text-background' : 'bg-secondary text-muted-foreground',
                     )}
                   >

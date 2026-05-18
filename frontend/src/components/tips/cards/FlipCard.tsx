@@ -48,7 +48,7 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev }: Props) {
       {!flipped
         ? (
             <div className="flex flex-col justify-center h-full">
-              <div className="text-[11px] font-extrabold text-primary uppercase tracking-wider mb-3">{t('tips.cards.subtitle')}</div>
+              <div className="text-xs font-extrabold text-primary uppercase tracking-wider mb-3">{t('tips.cards.subtitle')}</div>
               <div className="text-lg font-bold text-foreground leading-snug">{card.front}</div>
               <div className="text-[10px] text-muted-foreground mt-auto pt-4 text-center">{t('tips.cards.flipHint')}</div>
             </div>

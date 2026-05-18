@@ -48,7 +48,7 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
   return (
     <section aria-label={t('tips.overview.aria')} className="mt-4 rounded-xl border border-border bg-card overflow-hidden">
       <div className="px-4 py-3 flex items-center gap-2.5 border-b border-border">
-        <span className="inline-flex items-center gap-1.5 text-[11px] text-primary bg-primary/10 px-2.5 py-1 rounded-full font-bold">
+        <span className="inline-flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-2.5 py-1 rounded-full font-bold">
           <Sparkles className="size-3" aria-hidden />
           {t('tips.overview.badge')}
         </span>
@@ -57,7 +57,7 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
             type="button"
             onClick={summary.regenerate}
             disabled={summary.status === 'loading' || summary.inFlightByOther}
-            className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-bold text-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {summary.status === 'loading' && <Loader2 className="size-3 animate-spin" />}
             ↻
@@ -88,7 +88,7 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
                 {t('tips.studio.generate')}
               </button>
               {summary.status === 'error' && (
-                <span className="ml-3 text-[11px] text-destructive">{t('tips.studio.error')}</span>
+                <span className="ml-3 text-xs text-destructive">{t('tips.studio.error')}</span>
               )}
             </div>
           </div>

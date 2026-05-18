@@ -56,19 +56,19 @@ export function StudioTile({
         isDisabled ? 'opacity-60' : '',
       ].join(' ')}
     >
-      <div className="flex items-start gap-2">
-        <div className="size-7 rounded-md bg-primary/15 text-primary flex items-center justify-center relative">
-          <Icon className="size-4" />
-          {isLocked && <Lock className="absolute -bottom-1 -right-1 size-3" />}
-        </div>
+      <div className="size-7 rounded-md bg-primary/15 text-primary flex items-center justify-center relative">
+        <Icon className="size-4" />
+        {isLocked && <Lock className="absolute -bottom-1 -right-1 size-3" />}
+      </div>
+      <div className="mt-2">
         <h3 className="text-sm font-bold text-foreground leading-tight flex items-center gap-1.5">
           {title}
           {badge && (
             <span className="text-[9px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded-full font-bold">{badge}</span>
           )}
         </h3>
+        <p className="text-xs text-muted-foreground leading-snug mt-1">{blurb}</p>
       </div>
-      <p className="text-xs text-muted-foreground leading-snug">{blurb}</p>
       {preview && (
         <div className="text-xs text-foreground border-t border-dashed border-border pt-1.5 line-clamp-2">{preview}</div>
       )}
@@ -97,14 +97,14 @@ export function StudioTile({
           )
         })()}
         {state === 'filled' && onRegen && !loading && !busy && (
-          <button type="button" onClick={onRegen} className="text-[11px] font-bold text-primary cursor-pointer">
+          <button type="button" onClick={onRegen} className="text-xs font-bold text-primary cursor-pointer">
             ↻
             {' '}
             {t('tips.studio.regenerate')}
           </button>
         )}
       </div>
-      {errorLabel && <p className="text-[11px] text-destructive">{errorLabel}</p>}
+      {errorLabel && <p className="text-xs text-destructive">{errorLabel}</p>}
       {children}
     </div>
   )

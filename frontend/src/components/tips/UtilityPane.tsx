@@ -23,6 +23,21 @@ type TabValue = 'notes' | 'chat' | 'cards' | 'studio'
 export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transcriptStatus, warmingStep }: Props) {
   const { t } = useI18n()
   const [tab, setTab] = useState<TabValue>('chat')
+
+  // While the transcript pipeline is processing, the right pane shows ONLY
+  // the warming state. Tabs would all be non-functional (no transcript →
+  // chat disabled, studio/cards disabled, notes is a B3 placeholder). Hiding
+  // them removes the "why is this empty" confusion.
+  if (transcriptStatus === 'pending' && warmingStep) {
+    return (
+      <aside className="flex flex-col h-full border-l border-border overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4">
+          <WarmingState step={warmingStep} />
+        </div>
+      </aside>
+    )
+  }
+
   return (
     <aside className="flex flex-col h-full border-l border-border overflow-hidden">
       <Tabs value={tab} onValueChange={v => setTab(v as TabValue)} className="flex flex-col h-full">
@@ -45,9 +60,7 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
           </TabsTrigger>
         </TabsList>
         <TabsContent value="chat" className="flex-1 overflow-hidden">
-          {transcriptStatus === 'pending' && warmingStep
-            ? <div className="p-4"><WarmingState step={warmingStep} /></div>
-            : <ChatTab courseId={courseId} videoId={videoId} lessonTitle={lessonTitle} transcript={transcript} transcriptStatus={transcriptStatus} />}
+          <ChatTab courseId={courseId} videoId={videoId} lessonTitle={lessonTitle} transcript={transcript} transcriptStatus={transcriptStatus} />
         </TabsContent>
         <TabsContent value="notes" className="flex-1">
           <DisabledTab Icon={NotebookPen} labelKey="tips.placeholder.label.notes" reasonKey="tips.placeholder.notes" />
