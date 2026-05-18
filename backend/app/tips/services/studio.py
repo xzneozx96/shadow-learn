@@ -6,9 +6,23 @@ import logging
 from typing import Any, Literal
 
 import httpx
+from pydantic import BaseModel, ValidationError
 
 from app.settings import settings
 from app.shared._retry import RetryableError, http_retry
+from app.tips.schemas import (
+    StudioCards,
+    StudioMindMap,
+    StudioStudyGuide,
+    StudioSummary,
+)
+
+_KIND_TO_MODEL: dict[str, type[BaseModel]] = {
+    "summary": StudioSummary,
+    "study_guide": StudioStudyGuide,
+    "cards": StudioCards,
+    "mind_map": StudioMindMap,
+}
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +153,7 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
                 stripped = stripped.removesuffix("```").strip()
 
         try:
-            return json.loads(stripped)
+            raw = json.loads(stripped)
         except json.JSONDecodeError as e:
             preview = stripped[:500] + ("…" if len(stripped) > 500 else "")
             logger.warning(
@@ -147,6 +161,22 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
                 schema_name, body.get("model"), e, preview,
             )
             raise RetryableError(f"openrouter returned non-JSON content: {e}") from e
+
+        # Validate against the target schema INSIDE the retry boundary so a
+        # malformed/over-limit LLM response gets another attempt instead of
+        # surfacing as 502 to the user after one shot.
+        model = _KIND_TO_MODEL.get(schema_name)
+        if model is not None:
+            try:
+                validated = model.model_validate(raw)
+            except ValidationError as e:
+                logger.warning(
+                    "openrouter response failed %s schema (model=%s): %s",
+                    schema_name, body.get("model"), e,
+                )
+                raise RetryableError(f"openrouter response failed {schema_name} schema: {e}") from e
+            return validated.model_dump()
+        return raw
 
     return await _call()
 

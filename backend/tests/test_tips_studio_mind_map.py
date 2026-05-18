@@ -59,3 +59,33 @@ def test_accepts_60_node_boundary():
 def test_root_label_required():
     with pytest.raises(ValidationError):
         StudioMindMap.model_validate({"root": {"label": "", "summary": "x", "children": []}})
+
+
+def test_start_sec_coerces_mm_ss_string():
+    payload = {"root": {"label": "r", "summary": "s", "start_sec": "01:23", "children": []}}
+    tree = StudioMindMap.model_validate(payload)
+    assert tree.root.start_sec == 83
+
+
+def test_start_sec_coerces_hh_mm_ss_string():
+    payload = {"root": {"label": "r", "summary": "s", "start_sec": "01:02:03", "children": []}}
+    tree = StudioMindMap.model_validate(payload)
+    assert tree.root.start_sec == 3723
+
+
+def test_start_sec_coerces_bare_numeric_string():
+    payload = {"root": {"label": "r", "summary": "s", "start_sec": "42", "children": []}}
+    tree = StudioMindMap.model_validate(payload)
+    assert tree.root.start_sec == 42
+
+
+def test_start_sec_null_passthrough():
+    payload = {"root": {"label": "r", "summary": "s", "start_sec": None, "children": []}}
+    tree = StudioMindMap.model_validate(payload)
+    assert tree.root.start_sec is None
+
+
+def test_start_sec_string_null_passthrough():
+    payload = {"root": {"label": "r", "summary": "s", "start_sec": "null", "children": []}}
+    tree = StudioMindMap.model_validate(payload)
+    assert tree.root.start_sec is None

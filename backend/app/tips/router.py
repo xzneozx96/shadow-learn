@@ -125,6 +125,14 @@ async def post_studio(kind: str, req: StudioRequest):
         )
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail=f"upstream error: {e}") from e
+    except Exception as e:
+        # Tenacity raises after retries exhaust — wraps the last RetryableError /
+        # httpx error. Service-side schema validation inside the retry boundary
+        # also surfaces here when the LLM repeatedly emits invalid trees.
+        raise HTTPException(
+            status_code=502,
+            detail=f"upstream failed after retries: {e}",
+        ) from e
 
     # Validate the LLM output against the per-kind Pydantic model. If the
     # LLM returned malformed JSON, surface a 502 (we cannot trust the

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 StudioLocale = Literal["en", "vi"]
 StudioKind = Literal["summary", "study_guide", "cards", "mind_map"]
@@ -49,6 +49,35 @@ class MindMapNode(BaseModel):
     # from the transcript prompt. None = no anchor (root nodes / abstract concepts).
     start_sec: float | None = Field(default=None, ge=0)
     children: list["MindMapNode"] = Field(default_factory=list)
+
+    @field_validator("start_sec", mode="before")
+    @classmethod
+    def _coerce_start_sec(cls, v: object) -> object:
+        """Accept int/float, null, or 'MM:SS'/'HH:MM:SS' strings the LLM sometimes
+        emits despite the prompt asking for integer seconds."""
+        if v is None or isinstance(v, (int, float)):
+            return v
+        if isinstance(v, str):
+            s = v.strip()
+            if not s or s.lower() in {"null", "none"}:
+                return None
+            if ":" in s:
+                parts = s.split(":")
+                try:
+                    nums = [int(p) for p in parts]
+                except ValueError:
+                    return v  # let downstream validation reject
+                if len(nums) == 2:
+                    return nums[0] * 60 + nums[1]
+                if len(nums) == 3:
+                    return nums[0] * 3600 + nums[1] * 60 + nums[2]
+                return v
+            # bare numeric string
+            try:
+                return float(s)
+            except ValueError:
+                return v
+        return v
 
 
 class StudioMindMap(BaseModel):
