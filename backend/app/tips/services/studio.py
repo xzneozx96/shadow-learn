@@ -65,19 +65,16 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
         # 8000 covers Qwen3-style reasoning + a long Study Guide / Cards
         # payload. Lower cap caused finish_reason=length with empty content.
         "max_tokens": 8000,
-        # Fully disable thinking-mode reasoning for structured JSON output.
-        # `enabled: false` tells OpenRouter to instruct the provider to skip
-        # reasoning entirely (not just drop it from the response). `exclude:
-        # true` is belt-and-suspenders in case a provider ignores `enabled`.
-        # Without this, Qwen3 / DeepSeek-R1 / o1-style models burn the entire
-        # token budget on internal reasoning and return content="" with
-        # finish_reason=length.
-        "reasoning": {"enabled": False, "exclude": True},
+        # Project-standard reasoning toggle used by translation, vocab, quiz,
+        # daily_review, and agent routers. Without it, thinking-mode models
+        # (Qwen3, DeepSeek-R1, o1) burn the token budget on internal reasoning
+        # and return content="" with finish_reason=length.
+        "reasoning": {"effort": "none"},
     }
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(
-            "https://openrouter.ai/api/v1/chat/completions",
+            settings.openrouter_chat_url,
             headers={
                 "Authorization": f"Bearer {settings.openrouter_api_key}",
                 "Content-Type": "application/json",
