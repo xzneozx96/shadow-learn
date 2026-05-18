@@ -40,18 +40,15 @@ export function WarmingState({ step, complete = false }: { step: WarmingStep, co
   const { t } = useI18n()
   const current = backendToUi(step)
   return (
-    <div className="rounded-xl border border-border bg-muted p-4">
+    <div className="rounded-xl border border-border bg-secondary/60 p-4">
       <div className="text-center mb-4">
         <div className="text-2xl mb-2" aria-hidden>✦</div>
-        <TextShimmer
-          className="text-sm font-bold"
-          duration={2}
-        >
+        <h4 className="text-base font-bold">
           {t('tips.warming.headline')}
-        </TextShimmer>
-        <div className="text-xs text-muted-foreground mt-1">{t('tips.warming.eta')}</div>
+        </h4>
+        <div className="text-sm text-muted-foreground mt-1">{t('tips.warming.eta')}</div>
       </div>
-      <ol className="space-y-2" role="list">
+      <ol className="space-y-3" role="list">
         {UI_STEPS.map((s) => {
           const state = stateFor(s.id, current, complete)
           const label = t(s.labelKey)
@@ -60,7 +57,7 @@ export function WarmingState({ step, complete = false }: { step: WarmingStep, co
               key={s.id}
               data-step={s.id}
               data-state={state}
-              className="flex items-center gap-3 text-xs"
+              className="flex items-center gap-3 text-sm"
               aria-current={state === 'active' ? 'step' : undefined}
             >
               <span className={cn(
@@ -74,7 +71,7 @@ export function WarmingState({ step, complete = false }: { step: WarmingStep, co
               </span>
               {state === 'active'
                 ? (
-                    <TextShimmer className="flex-1 font-bold" duration={1.5}>{label}</TextShimmer>
+                    <TextShimmer className="flex-1 font-bold" duration={2}>{label}</TextShimmer>
                   )
                 : (
                     <span className={cn(
@@ -85,7 +82,7 @@ export function WarmingState({ step, complete = false }: { step: WarmingStep, co
                       {label}
                     </span>
                   )}
-              <span className="text-[10px] text-muted-foreground tabular-nums">{s.eta}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">{s.eta}</span>
             </li>
           )
         })}

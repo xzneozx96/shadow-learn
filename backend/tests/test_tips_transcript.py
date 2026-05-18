@@ -125,3 +125,85 @@ async def test_fetch_subtitles_no_auto_translate(monkeypatch):
     lang, segments = await fetch_youtube_subtitles("abc123")
     assert lang is None
     assert segments is None
+
+
+@pytest.mark.asyncio
+async def test_kick_off_stt_job_dedupes_same_video(monkeypatch):
+    """Two calls for the same video_id while the first job is still processing
+    must return the same job_id and only spawn one background task."""
+    from app.job_store import jobs
+    from app.tips.services import transcript as svc
+
+    # Reset module-level state.
+    jobs.clear()
+    svc._tip_video_jobs.clear()
+
+    # Stub DeepgramSTTProvider so we don't try to call out.
+    class FakeProvider:
+        async def transcribe(self, *a, **kw):
+            return []
+    monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: FakeProvider())
+
+    # Block the background _run coroutine from actually executing — we just
+    # care that kick_off_stt_job returns the right job_id and registers it.
+    monkeypatch.setattr(svc.asyncio, "create_task", lambda coro: coro.close() or None)
+
+    job_id_1 = await svc.kick_off_stt_job("abc123")
+    assert job_id_1 is not None
+    assert svc._tip_video_jobs["abc123"] == job_id_1
+
+    job_id_2 = await svc.kick_off_stt_job("abc123")
+    assert job_id_2 == job_id_1, "second call must reuse the in-flight job"
+    # Only one entry in jobs[] for this video.
+    assert sum(1 for j in jobs.values() if j is jobs[job_id_1]) == 1
+
+
+@pytest.mark.asyncio
+async def test_kick_off_stt_job_spawns_fresh_after_error(monkeypatch):
+    """If the previous job for a video failed, a new call must spawn fresh."""
+    from app.job_store import jobs
+    from app.tips.services import transcript as svc
+
+    jobs.clear()
+    svc._tip_video_jobs.clear()
+
+    class FakeProvider:
+        async def transcribe(self, *a, **kw):
+            return []
+    monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: FakeProvider())
+    monkeypatch.setattr(svc.asyncio, "create_task", lambda coro: coro.close() or None)
+
+    first = await svc.kick_off_stt_job("abc123")
+    # Simulate the background task erroring out.
+    jobs[first].status = "error"
+    jobs[first].error = "deepgram blew up"
+
+    second = await svc.kick_off_stt_job("abc123")
+    assert second is not None
+    assert second != first, "errored job must NOT be reused"
+
+
+@pytest.mark.asyncio
+async def test_kick_off_stt_job_spawns_fresh_after_prune(monkeypatch):
+    """If the stored job_id is no longer in jobs[] (pruned by TTL), spawn fresh."""
+    from app.job_store import jobs
+    from app.tips.services import transcript as svc
+
+    jobs.clear()
+    svc._tip_video_jobs.clear()
+
+    class FakeProvider:
+        async def transcribe(self, *a, **kw):
+            return []
+    monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: FakeProvider())
+    monkeypatch.setattr(svc.asyncio, "create_task", lambda coro: coro.close() or None)
+
+    first = await svc.kick_off_stt_job("abc123")
+    # Simulate pruning.
+    del jobs[first]
+
+    second = await svc.kick_off_stt_job("abc123")
+    assert second is not None
+    assert second != first
+    # Index cleaned up to point at the new job.
+    assert svc._tip_video_jobs["abc123"] == second
