@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.tips.services.transcript import fetch_youtube_subtitles
 
 
 @pytest.fixture
@@ -56,3 +57,58 @@ def test_returns_404_when_neither_subtitle_nor_stt_available(client: TestClient)
 def test_validates_video_id_format(client: TestClient) -> None:
     resp = client.get("/api/tips/transcript/" + "x" * 64)
     assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_fetch_subtitles_prefers_detected_language_over_english(monkeypatch):
+    """Vietnamese video with EN manual track should still pick VI."""
+    fake_meta = {
+        "duration": 600.0,
+        "language": "vi",
+        "subtitles": {"vi": [{"ext": "vtt"}], "en": [{"ext": "vtt"}]},
+        "automatic_captions": {},
+    }
+    monkeypatch.setattr(
+        "app.tips.services.transcript.get_youtube_metadata",
+        AsyncMock(return_value=fake_meta),
+    )
+    monkeypatch.setattr(
+        "app.tips.services.transcript.pick_manual_subtitle",
+        lambda subs, lang: lang if lang in subs else None,
+    )
+    monkeypatch.setattr(
+        "app.tips.services.transcript.download_subtitle_vtt",
+        AsyncMock(return_value="WEBVTT\n\n00:00.000 --> 00:01.000\nxin chào"),
+    )
+    monkeypatch.setattr(
+        "app.tips.services.transcript.parse_vtt_to_segments",
+        lambda vtt, lang: [{"start": 0.0, "end": 1.0, "text": "xin chào"}],
+    )
+
+    lang, segments = await fetch_youtube_subtitles("abc123")
+    assert lang == "vi"
+    assert segments == [{"start": 0.0, "end": 1.0, "text": "xin chào"}]
+
+
+@pytest.mark.asyncio
+async def test_fetch_subtitles_no_auto_translate(monkeypatch):
+    """Vietnamese video with only EN auto-captions should fall through to STT
+    rather than serving auto-translated EN."""
+    fake_meta = {
+        "duration": 600.0,
+        "language": "vi",
+        "subtitles": {},
+        "automatic_captions": {"en": [{"ext": "vtt"}]},
+    }
+    monkeypatch.setattr(
+        "app.tips.services.transcript.get_youtube_metadata",
+        AsyncMock(return_value=fake_meta),
+    )
+    monkeypatch.setattr(
+        "app.tips.services.transcript.pick_manual_subtitle",
+        lambda subs, lang: lang if lang in subs else None,
+    )
+
+    lang, segments = await fetch_youtube_subtitles("abc123")
+    assert lang is None
+    assert segments is None

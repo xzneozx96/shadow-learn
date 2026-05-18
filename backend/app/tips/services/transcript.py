@@ -35,30 +35,59 @@ from app.transcription.services.transcription_provider import TranscriptionKeys
 
 logger = logging.getLogger(__name__)
 
-# Language preference order for Tips videos (English-explaining-Chinese content).
-_SUBTITLE_LANG_PREFERENCE: list[str] = ["en", "vi", "zh-CN"]
+# Default fallback preference order if we can't detect the video's language.
+_FALLBACK_LANG_PREFERENCE: list[str] = ["en", "vi", "zh-CN"]
+
+
+def _build_lang_preference(detected: str | None) -> list[str]:
+    """Build subtitle preference: detected language first, then fallback order."""
+    if not detected:
+        return _FALLBACK_LANG_PREFERENCE
+    # Normalize common forms (vi-VN → vi, zh-Hans → zh-CN-ish; just take prefix).
+    norm = detected.split("-")[0].lower() if "-" not in detected.lower() else detected
+    short = detected.split("-")[0].lower()
+    pref = [detected, norm, short]
+    # De-dupe while preserving order, then append fallbacks not yet in the list.
+    seen: set[str] = set()
+    out: list[str] = []
+    for x in [*pref, *_FALLBACK_LANG_PREFERENCE]:
+        if x and x not in seen:
+            out.append(x)
+            seen.add(x)
+    return out
 
 
 async def fetch_youtube_subtitles(
     video_id: str,
 ) -> tuple[str | None, list[dict[str, Any]] | None]:
-    """Try to fetch manual YouTube subtitles for *video_id*.
+    """Try to fetch YouTube subtitles for *video_id* in the video's language.
 
     Returns (yt_lang, segments) on success, or (None, None) when no suitable
-    subtitle track exists or any error occurs.  The caller treats (None, None)
-    as a signal to fall through to STT.
+    subtitle track exists.
     """
     try:
         meta = await get_youtube_metadata(video_id)
-        raw_subtitles = meta.get("subtitles")
-        if not raw_subtitles:
+        detected_lang: str | None = meta.get("language")
+        raw_subtitles = meta.get("subtitles") or {}
+        raw_auto = meta.get("automatic_captions") or {}
+
+        if not raw_subtitles and not raw_auto:
             return (None, None)
 
+        lang_pref = _build_lang_preference(detected_lang)
+
+        # Phase 1: try manual subtitles in preferred order.
         yt_lang: str | None = None
-        for lang in _SUBTITLE_LANG_PREFERENCE:
+        for lang in lang_pref:
             yt_lang = pick_manual_subtitle(raw_subtitles, lang)
             if yt_lang is not None:
                 break
+
+        # Phase 2: if no manual, try auto-captions in the video's detected
+        # language only (we never want auto-translated captions — those distort
+        # meaning, e.g. Vietnamese video with auto-English captions).
+        if yt_lang is None and detected_lang and detected_lang in raw_auto:
+            yt_lang = detected_lang
 
         if yt_lang is None:
             return (None, None)
@@ -109,6 +138,15 @@ async def kick_off_stt_job(video_id: str) -> str | None:
     async def _run() -> None:
         audio_path = None
         try:
+            # Detect video language up-front so STT can target it.
+            meta = await get_youtube_metadata(video_id)
+            detected_lang = (meta.get("language") or "en").split("-")[0].lower()
+            # Deepgram supports common ISO 639-1 codes directly; map outliers if needed.
+            deepgram_lang = detected_lang if detected_lang in {
+                "en", "vi", "zh", "zh-CN", "ja", "ko", "es", "fr", "de", "pt",
+                "ru", "it", "id", "th", "ar", "tr", "pl", "nl",
+            } else "en"
+
             jobs[job_id].step = "video_download"
             video_path = await download_youtube_video(video_id)
 
@@ -117,13 +155,13 @@ async def kick_off_stt_job(video_id: str) -> str | None:
 
             jobs[job_id].step = "transcription"
             keys: TranscriptionKeys = {}
-            segments = await stt_provider.transcribe(audio_path, keys, "en")
+            segments = await stt_provider.transcribe(audio_path, keys, deepgram_lang)
 
             jobs[job_id].step = "indexing"
             result_dict: dict[str, Any] = {
                 "status": "ready",
                 "source": "stt",
-                "lang": "en",
+                "lang": deepgram_lang,
                 "segments": [
                     {"start": s["start"], "end": s["end"], "text": s["text"]}
                     for s in segments

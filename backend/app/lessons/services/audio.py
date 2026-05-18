@@ -122,6 +122,8 @@ def _get_youtube_metadata_blocking(video_id: str) -> dict:
         return {
             "duration": float(info.get("duration", 0) or 0),
             "subtitles": dict(info.get("subtitles") or {}),
+            "automatic_captions": dict(info.get("automatic_captions") or {}),
+            "language": info.get("language") or info.get("original_language"),
         }
 
 
@@ -150,8 +152,8 @@ async def get_youtube_metadata(video_id: str) -> dict:
     t0 = time.monotonic()
     meta = await asyncio.to_thread(_get_youtube_metadata_blocking, video_id)
     logger.info(
-        "[pipeline] get_youtube_metadata: duration=%.1fs subs=%d langs in %.1fs",
-        meta["duration"], len(meta["subtitles"]), time.monotonic() - t0,
+        "[pipeline] get_youtube_metadata: duration=%.1fs subs=%d langs lang=%s in %.1fs",
+        meta["duration"], len(meta["subtitles"]), meta.get("language"), time.monotonic() - t0,
     )
     return meta
 
