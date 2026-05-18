@@ -11,6 +11,7 @@ import app.tips.services.studio as _studio_svc
 import app.tips.services.transcript as _transcript_svc
 from app.tips.schemas import (
     StudioCards,
+    StudioMindMap,
     StudioRequest,
     StudioStudyGuide,
     StudioSummary,
@@ -18,12 +19,13 @@ from app.tips.schemas import (
 
 router = APIRouter(prefix="/api/tips", tags=["tips"])
 
-_VALID_KINDS = {"summary", "study_guide", "cards"}
+_VALID_KINDS = {"summary", "study_guide", "cards", "mind_map"}
 
 _KIND_TO_MODEL = {
     "summary": StudioSummary,
     "study_guide": StudioStudyGuide,
     "cards": StudioCards,
+    "mind_map": StudioMindMap,
 }
 
 _YOUTUBE_ID = re.compile(r"^[A-Za-z0-9_-]{6,32}$")
