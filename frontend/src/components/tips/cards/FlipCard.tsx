@@ -14,7 +14,7 @@ interface Props {
 
 const FLIP_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 
-export function FlipCard({ card, flipped, onFlip, onNext, onPrev, index, total }: Props) {
+export function FlipCard({ card, flipped, onFlip, onNext, onPrev }: Props) {
   const { t } = useI18n()
   const ref = useRef<HTMLDivElement>(null)
 
@@ -47,7 +47,7 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev, index, total }
       role="button"
       aria-label={t('tips.cards.flipHint')}
       onClick={onFlip}
-      className="group relative outline-none rounded-[1.75rem] focus-visible:ring-2 focus-visible:ring-primary/60 cursor-pointer"
+      className="group relative outline-none rounded-lg focus-visible:ring-2 focus-visible:ring-primary/60 cursor-pointer"
       style={{ perspective: '1500px' }}
     >
       <div
@@ -59,17 +59,7 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev, index, total }
         }}
       >
         <CardFace>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <Eyebrow>{t('tips.cards.subtitle')}</Eyebrow>
-              <span className="text-[10px] font-medium tabular-nums text-muted-foreground tracking-[0.18em]">
-                {String(index + 1).padStart(2, '0')}
-                {' '}
-                /
-                {' '}
-                {String(total).padStart(2, '0')}
-              </span>
-            </div>
+          <div className="h-full flex flex-col gap-4">
             <div className="text-[1.2rem] font-bold text-foreground leading-[1.3] tracking-[-0.01em]">
               {card.front}
             </div>
@@ -79,7 +69,6 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev, index, total }
 
         <CardFace back>
           <div className="flex flex-col gap-3">
-            <Eyebrow>{t('tips.cards.subtitle')}</Eyebrow>
             <div className="text-[0.9rem] font-medium text-foreground leading-[1.55]">
               {card.rule}
             </div>
@@ -97,7 +86,7 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev, index, total }
 function CardFace({ children, back = false }: { children: React.ReactNode, back?: boolean }) {
   return (
     <div
-      className="rounded-[1.75rem] p-1.5 ring-1 ring-border/60 bg-linear-to-br from-secondary/40 via-background to-secondary/20"
+      className="rounded-lg bg-secondary border"
       style={{
         gridArea: '1 / 1',
         backfaceVisibility: 'hidden',
@@ -105,8 +94,7 @@ function CardFace({ children, back = false }: { children: React.ReactNode, back?
       }}
     >
       <div
-        className="rounded-[calc(1.75rem-0.375rem)] bg-card px-5 py-5"
-        style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 60px -32px rgba(0,0,0,0.6)' }}
+        className="h-full rounded-lg px-5 py-5"
       >
         {children}
       </div>
@@ -114,20 +102,12 @@ function CardFace({ children, back = false }: { children: React.ReactNode, back?
   )
 }
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-      {children}
-    </span>
-  )
-}
-
 function FlipHint({ label }: { label: string }) {
   return (
-    <div className="mt-auto pt-4 flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.22em] text-muted-foreground/70">
-      <span className="h-px w-6 bg-border" />
+    <div className="mt-auto italic pt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+      <span className="h-px w-6 bg-white/10" />
       <span>{label}</span>
-      <span className="h-px w-6 bg-border" />
+      <span className="h-px w-6 bg-white/10" />
     </div>
   )
 }
@@ -136,10 +116,10 @@ function DetailRow({ tone, label, children }: { tone: 'success' | 'warning', lab
   const accent = tone === 'success' ? 'bg-success/60' : 'bg-destructive/60'
   const labelClr = tone === 'success' ? 'text-success' : 'text-destructive'
   return (
-    <div className="relative rounded-xl bg-secondary/40 ring-1 ring-border/50 pl-3.5 pr-3 py-2.5 overflow-hidden">
+    <div className="relative bg-card ring-1 ring-border/50 pl-3.5 pr-3 py-2.5 overflow-hidden">
       <span className={`absolute left-0 top-2 bottom-2 w-[2px] rounded-full ${accent}`} />
-      <div className={`text-[9px] font-bold uppercase tracking-[0.22em] ${labelClr} mb-1`}>{label}</div>
-      <div className="text-[0.8rem] text-foreground/85 leading-[1.55]">{children}</div>
+      <div className={`text-xs font-bold uppercase ${labelClr} mb-1`}>{label}</div>
+      <div className="text-xs text-foreground/85 leading-[1.55]">{children}</div>
     </div>
   )
 }

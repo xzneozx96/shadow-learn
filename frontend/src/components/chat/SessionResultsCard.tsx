@@ -81,7 +81,7 @@ export function SessionResultsCard({ payload }: { payload: SessionCompletePayloa
           <div className={cn('text-lg font-semibold tabular-nums leading-none', scoreTone(avgScore))}>
             {avgScore}
           </div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{t('study.results.avg')}</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{t('study.results.avg')}</div>
         </div>
       </div>
 

@@ -74,7 +74,7 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
       </motion.button>
 
       {!open && !allDone && count > 0 && (
-        <span className="absolute -top-1 -right-1 z-10 size-5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center shadow-md">
+        <span className="absolute -top-1 -right-1 z-10 size-5 rounded-full bg-red-500 text-xs font-bold text-white flex items-center justify-center shadow-md">
           {count}
         </span>
       )}
