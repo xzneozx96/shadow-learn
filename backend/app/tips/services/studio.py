@@ -12,7 +12,7 @@ from app.shared._retry import RetryableError, http_retry
 
 logger = logging.getLogger(__name__)
 
-StudioKind = Literal["summary", "study_guide", "cards"]
+StudioKind = Literal["summary", "study_guide", "cards", "mind_map"]
 StudioLocale = Literal["en", "vi"]
 
 
@@ -39,7 +39,7 @@ def build_prompt(*, kind: StudioKind, transcript: str, locale: StudioLocale) -> 
             "{question, answer} objects. Questions should test the concrete "
             "grammar/pronunciation/learning points actually covered in the transcript."
         )
-    else:  # cards
+    elif kind == "cards":
         instructions = (
             f"Extract up to 8 concept-cards in {locale_name} from this lesson. "
             "Each card teaches one rule, with a concrete example and a common trap. "
@@ -48,6 +48,18 @@ def build_prompt(*, kind: StudioKind, transcript: str, locale: StudioLocale) -> 
             "'le-vs-guo'. `front` is the cue/question. `rule` is 1-2 sentences. "
             "`example` is one Chinese sentence with translation. `trap` is the "
             "common mistake (or null if none). Do not invent rules not in the transcript."
+        )
+    else:  # mind_map
+        instructions = (
+            f"Build a Mind Map of this Chinese-learning lesson in {locale_name}. "
+            "Return JSON with one field `root`, a single tree node of shape "
+            "{label, summary, children}. `label` is a short 1-6 word concept name. "
+            "`summary` is one short sentence elaborating the node. `children` is an "
+            "array of child nodes (same shape, recursive). Hard limits: tree depth "
+            "<= 4 (root counts as depth 1) and total nodes <= 60. Aim for 15-30 "
+            "nodes on a typical 5-minute lesson. Leaf nodes have `children: []`. "
+            "Stay grounded in the transcript — do not invent concepts the lesson "
+            "does not actually cover."
         )
 
     return f"{instructions}\n\n{transcript_block}"
