@@ -13,9 +13,16 @@ vi.mock('@/contexts/I18nContext', () => ({
   useI18n: () => ({
     locale: 'en',
     t: (k: string, params?: Record<string, string>) => {
+      // Stand-in translations matching what Task 8 will define in i18n.ts.
+      const dict: Record<string, string> = {
+        'tips.studio.mindmap.tooShort': 'This Tip is too short for a Mind Map. Try a longer video.',
+        'tips.studio.mindmap.backToTree': 'Back to tree',
+        'tips.studio.mindmap.prefill': 'Explain \'{label}\' from this video.',
+      }
+      let text = dict[k] ?? k
       if (params)
-        return Object.entries(params).reduce((s, [key, v]) => s.split(`{${key}}`).join(v), k)
-      return k
+        Object.entries(params).forEach(([key, v]) => { text = text.split(`{${key}}`).join(String(v)) })
+      return text
     },
   }),
 }))

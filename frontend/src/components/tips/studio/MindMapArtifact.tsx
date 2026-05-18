@@ -72,8 +72,7 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
   if (flat.length <= 2) {
     return (
       <div className="p-6 text-center text-sm text-muted-foreground">
-        {/* Task 8 will wire the i18n key; hardcode until translation exists. */}
-        Video is too short to build a mind map.
+        {t('tips.studio.mindmap.tooShort')}
       </div>
     )
   }
@@ -113,9 +112,7 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
         edges={edges}
         onNodeClick={(_, node) => {
           const label = (node.data as { label: string }).label
-          // Task 8 will add the i18n key; hardcoding avoids an unsatisfiable
-          // t() call until the translation value exists.
-          setPendingPrompt(`Tell me more about ${label} from this video.`)
+          setPendingPrompt(t('tips.studio.mindmap.prefill', { label }))
         }}
         fitView
         nodesDraggable={false}
