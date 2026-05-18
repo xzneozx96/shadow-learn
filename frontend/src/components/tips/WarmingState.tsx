@@ -13,11 +13,18 @@ const UI_STEPS: { id: UiStep, labelKey: TranslationKey, eta: string }[] = [
 ]
 
 function backendToUi(step: WarmingStep): UiStep {
-  if (step === 'video_download' || step === 'audio_extraction')
+  // Treat 'queued' as fetch — backend sets it briefly after kick_off
+  // before the first real step takes over. Anything earlier than
+  // transcription falls under the visible 'fetch' phase.
+  if (step === 'queued' || step === 'video_download' || step === 'audio_extraction')
     return 'fetch'
   if (step === 'transcription')
     return 'transcribe'
-  return 'index'
+  if (step === 'indexing')
+    return 'index'
+  // Unknown future step: stay in fetch rather than jumping to the last
+  // step. Keeps progress monotonic-looking.
+  return 'fetch'
 }
 
 function stateFor(ui: UiStep, current: UiStep, complete: boolean): 'done' | 'active' | 'pending' {
@@ -58,7 +65,7 @@ export function WarmingState({ step, complete = false }: { step: WarmingStep, co
                 'flex items-center justify-center size-[18px] rounded-full text-xs font-bold shrink-0',
                 state === 'done' && 'bg-success text-white',
                 state === 'active' && 'bg-primary text-white',
-                state === 'pending' && 'border border-dashed border-border text-muted-foreground',
+                state === 'pending' && 'border border-dashed border-primary',
               )}
               >
                 {state === 'done' ? <Check className="size-3" /> : state === 'active' ? <Loader2 className="size-3 motion-safe:animate-spin" /> : ''}

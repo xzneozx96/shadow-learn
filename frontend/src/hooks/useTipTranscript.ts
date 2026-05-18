@@ -17,7 +17,7 @@ function dbg(tag: string, payload: Record<string, unknown> = {}) {
   console.log(`[tipTr ${t}] ${tag}`, payload)
 }
 
-export type WarmingStep = 'video_download' | 'audio_extraction' | 'transcription' | 'indexing'
+export type WarmingStep = 'queued' | 'video_download' | 'audio_extraction' | 'transcription' | 'indexing'
 
 export interface WarmingState {
   step: WarmingStep

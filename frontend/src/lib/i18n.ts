@@ -1653,7 +1653,7 @@ export const TRANSLATIONS = {
     'tips.chat.imageAlt': 'Hình đính kèm',
     'tips.chat.removeImage': 'Xóa hình',
     // --- Tips LMS B2 ---
-    'tips.studio.title': 'Xưởng',
+    'tips.studio.title': 'Studio',
     'tips.studio.subtitle': 'Tạo theo yêu cầu · lưu cache sau lần đầu',
     'tips.studio.footnote': 'Dùng phần phụ đề của bạn · lưu cache sau lần tạo đầu',
     'tips.studio.tile.summary.title': 'Tóm tắt',

@@ -49,8 +49,8 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
           />
         ))}
       </ol>
-      <footer className="px-3 py-3 border-t border-border bg-card/40 shrink-0">
-        <div className="flex justify-between text-xs text-muted-foreground mb-1.5 tabular-nums">
+      <footer className="px-3 py-5 border-t border-border bg-card/40 shrink-0">
+        <div className="flex justify-between text-sm font-bold text-muted-foreground mb-1.5 tabular-nums">
           <span>{progressCount}</span>
           <span>{progressPct}</span>
         </div>
