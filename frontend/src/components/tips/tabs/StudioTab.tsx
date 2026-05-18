@@ -1,5 +1,5 @@
 import { BookOpen, ChevronLeft, GraduationCap, Layers, Sparkles } from 'lucide-react'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipCards } from '@/hooks/useTipCards'
@@ -38,6 +38,21 @@ export function StudioTab(props: Props) {
   // The actual deck UI re-mounts useTipCards itself inside CardsTab.
   const cardsPeek = useTipCards({ db, videoId, transcript, locale: studioLocale })
 
+  // When the user returns from an inner surface (cards / study_guide / etc.)
+  // to the grid, the in-tab view may have just kicked off a generation that
+  // the always-mounted peek hooks never saw. Re-probe the backend on
+  // re-entry so tiles reflect the live job state.
+  const prevSurfaceRef = useRef<Surface>(surface)
+  useEffect(() => {
+    const prev = prevSurfaceRef.current
+    if (prev !== 'grid' && surface === 'grid') {
+      guide.refresh()
+      mindmap.refresh()
+      cardsPeek.refresh()
+    }
+    prevSurfaceRef.current = surface
+  }, [surface, guide, mindmap, cardsPeek])
+
   if (noTranscript) {
     return (
       <div className="p-6 text-center text-muted-foreground text-sm">
@@ -50,7 +65,7 @@ export function StudioTab(props: Props) {
     <button
       type="button"
       onClick={() => setSurface('grid')}
-      className="inline-flex items-center gap-1 text-sm text-primary font-bold cursor-pointer hover:underline"
+      className="inline-flex items-center gap-1 text-sm text-muted-foreground font-bold cursor-pointer hover:underline"
     >
       <ChevronLeft className="size-3.5" aria-hidden />
       {t('tips.studio.title')}
@@ -100,60 +115,84 @@ export function StudioTab(props: Props) {
 
   const cardsHasDeck = cardsPeek.cards.length > 0
 
+  const tiles = [
+    <StudioTile
+      key="study_guide"
+      Icon={BookOpen}
+      accent="blue"
+      titleKey="tips.studio.tile.studyGuide.title"
+      blurbKey="tips.studio.tile.studyGuide.blurb"
+      state={guide.data ? 'filled' : 'empty'}
+      primaryLabel={guide.data ? t('tips.studio.open') : t('tips.studio.generate')}
+      onPrimary={async () => {
+        if (!guide.data)
+          await guide.generate()
+        setSurface('study_guide')
+      }}
+      onRegen={guide.regenerate}
+      loading={guide.status === 'loading'}
+      loadingLabel={t('tips.studio.loading')}
+      errorLabel={guide.status === 'error' ? t('tips.studio.error') : undefined}
+      hydrated={guide.hydrated}
+    />,
+    <StudioTile
+      key="mind_map"
+      Icon={Sparkles}
+      accent="violet"
+      titleKey="tips.studio.tile.mindMap.title"
+      blurbKey="tips.studio.tile.mindMap.blurb"
+      state={mindmap.data ? 'filled' : 'empty'}
+      primaryLabel={mindmap.data ? t('tips.studio.open') : t('tips.studio.generate')}
+      onPrimary={async () => {
+        if (!mindmap.data)
+          await mindmap.generate()
+        setSurface('mind_map')
+      }}
+      onRegen={mindmap.regenerate}
+      loading={mindmap.status === 'loading'}
+      loadingLabel={t('tips.studio.loading')}
+      errorLabel={mindmap.status === 'error' ? t('tips.studio.error') : undefined}
+      hydrated={mindmap.hydrated}
+    />,
+    <StudioTile
+      key="cards"
+      Icon={Layers}
+      accent="emerald"
+      titleKey="tips.studio.tile.cards.title"
+      blurbKey="tips.studio.tile.cards.blurb"
+      state={cardsHasDeck ? 'filled' : 'empty'}
+      primaryLabel={cardsHasDeck ? t('tips.studio.open') : t('tips.studio.generate')}
+      onPrimary={() => setSurface('cards')}
+      onRegen={cardsPeek.regenerate}
+      loading={cardsPeek.status === 'loading'}
+      loadingLabel={t('tips.studio.loading')}
+      errorLabel={cardsPeek.status === 'error' ? t('tips.studio.error') : undefined}
+      hydrated={cardsPeek.hydrated}
+    />,
+    <StudioTile
+      key="quiz"
+      Icon={GraduationCap}
+      accent="amber"
+      titleKey="tips.studio.tile.quiz.title"
+      blurbKey="tips.studio.tile.quiz.blurb"
+      state="empty"
+      primaryLabel={t('tips.studio.start')}
+      onPrimary={() => setSurface('quiz')}
+    />,
+  ]
+
   return (
     <div className="p-3 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <StudioTile
-          Icon={BookOpen}
-          titleKey="tips.studio.tile.studyGuide.title"
-          blurbKey="tips.studio.tile.studyGuide.blurb"
-          state={guide.data ? 'filled' : 'empty'}
-          preview={guide.data ? guide.data.items[0]?.question ?? null : null}
-          primaryLabel={guide.data ? t('tips.studio.open') : t('tips.studio.generate')}
-          onPrimary={async () => {
-            if (!guide.data)
-              await guide.generate()
-            setSurface('study_guide')
-          }}
-          onRegen={guide.regenerate}
-          loading={guide.status === 'loading'}
-          loadingLabel={t('tips.studio.loading')}
-          errorLabel={guide.status === 'error' ? t('tips.studio.error') : undefined}
-        />
-        <StudioTile
-          Icon={Layers}
-          titleKey="tips.studio.tile.cards.title"
-          blurbKey="tips.studio.tile.cards.blurb"
-          state={cardsHasDeck ? 'filled' : 'empty'}
-          preview={cardsHasDeck ? cardsPeek.cards[0].front : null}
-          primaryLabel={cardsHasDeck ? t('tips.studio.open') : t('tips.studio.generate')}
-          onPrimary={() => setSurface('cards')}
-        />
-        <StudioTile
-          Icon={GraduationCap}
-          titleKey="tips.studio.tile.quiz.title"
-          blurbKey="tips.studio.tile.quiz.blurb"
-          state="empty"
-          primaryLabel={t('tips.studio.start')}
-          onPrimary={() => setSurface('quiz')}
-        />
-        <StudioTile
-          Icon={Sparkles}
-          titleKey="tips.studio.tile.mindMap.title"
-          blurbKey="tips.studio.tile.mindMap.blurb"
-          state={mindmap.data ? 'filled' : 'empty'}
-          preview={mindmap.data ? mindmap.data.root.label : null}
-          primaryLabel={mindmap.data ? t('tips.studio.open') : t('tips.studio.generate')}
-          onPrimary={async () => {
-            if (!mindmap.data)
-              await mindmap.generate()
-            setSurface('mind_map')
-          }}
-          onRegen={mindmap.regenerate}
-          loading={mindmap.status === 'loading'}
-          loadingLabel={t('tips.studio.loading')}
-          errorLabel={mindmap.status === 'error' ? t('tips.studio.error') : undefined}
-        />
+      <div className="flex flex-col gap-3">
+        {tiles.map((tile, i) => (
+          <div
+            key={tile.key}
+            className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            style={{ animationDelay: `${i * 70}ms`, animationFillMode: 'both' }}
+          >
+            {tile}
+          </div>
+        ))}
       </div>
     </div>
   )

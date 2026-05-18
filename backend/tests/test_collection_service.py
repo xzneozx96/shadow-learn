@@ -529,10 +529,10 @@ def test_build_hub_response_hsk5plus_group_after_hsk34():
 
 def test_build_hub_response_standalone_video_item_shape():
     """Standalone video appears as a 'video' item with all HubVideo fields plus type."""
-    from app.collection.config import StandaloneVideoConfig
+    from app.collection.config import VideoConfig
     from app.collection.service import build_hub_response
 
-    standalone = [StandaloneVideoConfig(
+    standalone = [VideoConfig(
         video_id="vid1", difficulty="HSK 1-2", topic="Business", content_type="material",
     )]
     entries = {
@@ -558,12 +558,12 @@ def test_build_hub_response_standalone_video_item_shape():
 
 def test_build_hub_response_standalone_video_in_same_group_as_playlist():
     """Standalone video and playlist with same difficulty land in same group."""
-    from app.collection.config import PlaylistConfig, StandaloneVideoConfig
+    from app.collection.config import PlaylistConfig, VideoConfig
     from app.collection.service import build_hub_response
 
     playlists = [PlaylistConfig(name="PL", playlist_id="PL1", default_difficulty="HSK 1-2")]
     meta = {"PL1": {"thumbnail_url": None, "video_count": 5}}
-    standalone = [StandaloneVideoConfig(video_id="v1", difficulty="HSK 1-2")]
+    standalone = [VideoConfig(video_id="v1", difficulty="HSK 1-2")]
     entries = {"v1": {"title": "T", "description": None, "channel": None, "duration_seconds": 60, "view_count": None}}
 
     result = build_hub_response(playlists, meta, standalone, entries)

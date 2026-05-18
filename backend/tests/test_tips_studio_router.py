@@ -134,10 +134,10 @@ def test_post_studio_cards_returns_valid_cards(monkeypatch):
 # ---- Status probe (GET) tests -----------------------------------------------
 
 
-def test_get_studio_status_no_job_returns_404():
+def test_get_studio_status_no_job_returns_200_none():
     _reset_jobs()
     resp = client.get("/api/tips/studio/summary/abc123", params={"locale": "en"})
-    assert resp.status_code == 404
+    assert resp.status_code == 200
     assert resp.json()["status"] == "none"
 
 

@@ -8,7 +8,7 @@ from typing import Any, Literal
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from app.job_store import jobs, kick_off_keyed_job
+from app.job_store import clear_keyed_job, get_job_for_key, jobs, kick_off_keyed_job
 from app.settings import settings
 from app.shared._retry import RetryableError, http_retry
 from app.tips.schemas import (
@@ -104,7 +104,7 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
         # daily_review, and agent routers. Thinking-mode models (Qwen3,
         # DeepSeek-R1, o1) otherwise burn the token budget on internal
         # reasoning and return content="" with finish_reason=length.
-        # "reasoning": {"effort": "none"},
+        "reasoning": {"effort": "none"},
     }
 
     @http_retry(logger)
@@ -234,6 +234,14 @@ def kick_off_studio_job(
             jobs[job_id].status = "error"
             jobs[job_id].error = str(exc)
 
-    return kick_off_keyed_job(
-        studio_job_key(kind, video_id, locale), _run, id_prefix="tip-studio",
-    )
+    # Regen semantics: a POST means "I want fresh content." If the existing
+    # keyed entry points at a *complete* (cached) job, drop it so a new
+    # asyncio runner spawns instead of the shared helper handing back the
+    # stale result. We only fast-path joins to *processing* work — that's
+    # the actual concurrency win.
+    key = studio_job_key(kind, video_id, locale)
+    existing_id = get_job_for_key(key)
+    if existing_id is not None and jobs[existing_id].status == "complete":
+        clear_keyed_job(key)
+
+    return kick_off_keyed_job(key, _run, id_prefix="tip-studio")

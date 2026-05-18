@@ -43,11 +43,11 @@ describe('studioTab', () => {
     expect(screen.queryByRole('heading', { level: 3, name: /^summary$/i })).not.toBeInTheDocument()
   })
 
-  it('mind Map tile is locked and shows B3 badge', () => {
+  it('mind Map tile renders in empty (unlocked) state when no artifact is cached', () => {
     render(<StudioTab {...baseProps} />)
     const mindMapTile = screen.getByRole('heading', { level: 3, name: /mind map/i }).closest('[data-tile]')
-    expect(mindMapTile).toHaveAttribute('data-locked', 'true')
-    expect(screen.getByText('B3')).toBeInTheDocument()
+    expect(mindMapTile).toHaveAttribute('data-locked', 'false')
+    expect(mindMapTile).toHaveAttribute('data-state', 'empty')
   })
 
   it('shows disabled state on tiles when transcriptStatus = unavailable', () => {
@@ -62,7 +62,8 @@ describe('studioTab', () => {
       json: async () => ({ items: [{ question: 'q', answer: 'a' }, { question: 'q2', answer: 'a2' }, { question: 'q3', answer: 'a3' }] }),
     })
     render(<StudioTab {...baseProps} />)
-    const guideGen = screen.getAllByRole('button', { name: /^generate$/i })[0]
+    // New tile is a single button whose aria-label combines title + action.
+    const guideGen = screen.getByRole('button', { name: /study guide.*generate/i })
     await userEvent.click(guideGen)
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledWith(

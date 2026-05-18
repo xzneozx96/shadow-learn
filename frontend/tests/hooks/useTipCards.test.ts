@@ -11,7 +11,13 @@ beforeEach(async () => {
   const { deleteDB } = await import('idb')
   await deleteDB('shadowlearn')
   db = await initDB()
-  globalThis.fetch = vi.fn() as any
+  // Default probe response: backend has no live job. Tests that exercise
+  // the regen path override this with a more specific mockResolvedValue.
+  globalThis.fetch = vi.fn().mockResolvedValue({
+    ok: false,
+    status: 404,
+    json: async () => ({ status: 'none' }),
+  }) as any
 })
 
 afterEach(() => {

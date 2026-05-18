@@ -25,13 +25,13 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
 
   return (
     <nav aria-label={navLabel} className="flex flex-col h-full border-r border-border">
-      <header className="px-3 py-5 border-b border-border shrink-0">
+      <header className="px-3 py-3.5 border-b border-border shrink-0">
         <Link
           to="/collection?tab=tips"
           aria-label={backLabel}
-          className="group flex items-center gap-1.5 text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors"
+          className="group flex items-center gap-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors"
         >
-          <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden />
+          <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-foreground" aria-hidden />
           <h4 className="text-sm font-bold leading-snug">{courseName}</h4>
         </Link>
       </header>
@@ -49,13 +49,13 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
           />
         ))}
       </ol>
-      <footer className="px-3 py-5 border-t border-border bg-card/40 shrink-0">
-        <div className="flex justify-between text-sm font-bold text-muted-foreground mb-1.5 tabular-nums">
+      <footer className="px-3 py-3 border-t border-border bg-card/40 shrink-0">
+        <div className="flex justify-between text-[11px] font-bold text-muted-foreground mb-1.5 tabular-nums">
           <span>{progressCount}</span>
           <span>{progressPct}</span>
         </div>
-        <div className="h-2 rounded bg-secondary overflow-hidden">
-          <div className="h-full bg-primary rounded transition-all" style={{ width: `${pct}%` }} />
+        <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
         </div>
       </footer>
     </nav>

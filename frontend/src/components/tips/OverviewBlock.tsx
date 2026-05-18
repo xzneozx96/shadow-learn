@@ -1,9 +1,31 @@
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2, RotateCw, Sparkles } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipStudio } from '@/hooks/useTipStudio'
+import { Button } from '../ui/button'
+import { TextShimmer } from '../ui/text-shimmer'
 import { SummaryArtifact } from './studio/SummaryArtifact'
+
+function SummarySkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="space-y-2">
+        <div className="h-3 w-[92%] rounded-full bg-foreground/[0.07]" />
+        <div className="h-3 w-[88%] rounded-full bg-foreground/[0.07]" />
+        <div className="h-3 w-[70%] rounded-full bg-foreground/[0.07]" />
+      </div>
+      <ul className="mt-6 border-y border-foreground/6 divide-y divide-foreground/6">
+        {[78, 64, 84, 70].map((w, i) => (
+          <li key={i} className="flex gap-4 py-3">
+            <span className="h-3 w-4 rounded-full bg-foreground/[0.07] mt-0.5" />
+            <span className="h-3 rounded-full bg-foreground/[0.07]" style={{ width: `${w}%` }} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 interface Props {
   videoId: string
@@ -28,13 +50,17 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
     locale: studioLocale,
   })
 
-  // Auto-generate the Summary the first time transcript becomes ready and
-  // there is no cached row for this (videoId, locale). The ref guard prevents
-  // a retry loop on error and prevents double-fire if the effect re-runs.
   const autoFiredRef = useRef<string | null>(null)
   useEffect(() => {
     const sig = `${videoId}:${studioLocale}`
     if (!transcriptReady)
+      return
+    // Wait for IDB hydration to settle before deciding nothing is cached.
+    // Without this gate, a tab switch (which unmounts via Radix Tabs) or a
+    // video switch re-mounts the hook at status='idle' + data=null and the
+    // auto-fire racing the cache read causes a spurious regeneration even
+    // though the result is already in IDB.
+    if (!summary.hydrated)
       return
     if (summary.status !== 'idle')
       return
@@ -45,72 +71,74 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
     autoFiredRef.current = sig
     void summary.generate()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transcriptReady, summary.status, summary.data, summary.generate, videoId, studioLocale])
+  }, [transcriptReady, summary.hydrated, summary.status, summary.data, summary.generate, videoId, studioLocale])
 
   return (
-    <section aria-label={t('tips.overview.aria')} className="mt-4 rounded-xl border border-border bg-card overflow-hidden">
-      <div className="px-4 py-3 flex items-center gap-2.5 border-b border-border">
-        <span className="inline-flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-2.5 py-1 rounded-full font-bold">
-          <Sparkles className="size-3" aria-hidden />
-          {t('tips.overview.badge')}
+    <section
+      aria-label={t('tips.overview.aria')}
+      className="px-1 py-2 animate-in fade-in slide-in-from-bottom-2 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+    >
+      <header className="mb-5 flex items-center justify-between">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase text-muted-foreground">
+          <Sparkles className="size-4 text-primary" aria-hidden />
+          {summary.status === 'loading'
+            ? (
+                <TextShimmer as="span" className="text-xs font-semibold uppercase" duration={1.6}>
+                  {t('tips.overview.badge')}
+                </TextShimmer>
+              )
+            : t('tips.overview.badge')}
         </span>
         {summary.data && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={summary.regenerate}
             disabled={summary.status === 'loading'}
-            className="ml-auto inline-flex items-center gap-1 text-xs font-bold text-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={t('tips.studio.regenerate')}
+            title={t('tips.studio.regenerate')}
+            className="group text-muted-foreground"
           >
-            {summary.status === 'loading' && <Loader2 className="size-3 animate-spin" />}
-            ↻
-            {' '}
-            {t('tips.studio.regenerate')}
+            {summary.status === 'loading'
+              ? <Loader2 className="size-4 animate-spin" />
+              : <RotateCw className="size-4 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-180" />}
+          </Button>
+        )}
+      </header>
+
+      {tooLong && (
+        <p className="text-sm text-muted-foreground leading-relaxed">{t('tips.video.tooLong.body')}</p>
+      )}
+
+      {!tooLong && noTranscript && (
+        <p className="text-sm text-muted-foreground leading-relaxed">{t('tips.studio.disabled.transcript')}</p>
+      )}
+
+      {!tooLong && !noTranscript && !transcriptReady && (
+        <p className="text-sm text-muted-foreground leading-relaxed">{t('tips.overview.locked_body')}</p>
+      )}
+
+      {!tooLong && transcriptReady && !summary.data && summary.status !== 'loading' && (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground leading-relaxed">{t('tips.overview.empty_body')}</p>
+          <button
+            type="button"
+            onClick={summary.generate}
+            disabled={summary.disabled}
+            className="self-start inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:gap-2.5 transition-all duration-400 ease-[cubic-bezier(0.32,0.72,0,1)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {t('tips.studio.generate')}
+            <span aria-hidden>→</span>
           </button>
-        )}
-      </div>
-      <div className="px-4 py-4">
-        {tooLong && (
-          <div className="text-sm text-muted-foreground">{t('tips.video.tooLong.body')}</div>
-        )}
+          {summary.status === 'error' && (
+            <span className="text-xs text-destructive">{t('tips.studio.error')}</span>
+          )}
+        </div>
+      )}
 
-        {!tooLong && noTranscript && (
-          <div className="text-sm text-muted-foreground">{t('tips.studio.disabled.transcript')}</div>
-        )}
-
-        {!tooLong && !noTranscript && !transcriptReady && (
-          <div className="text-sm text-muted-foreground">{t('tips.overview.locked_body')}</div>
-        )}
-
-        {!tooLong && transcriptReady && !summary.data && summary.status !== 'loading' && (
-          <div className="flex flex-col gap-3">
-            <div className="text-sm text-muted-foreground">{t('tips.overview.empty_body')}</div>
-            <div>
-              <button
-                type="button"
-                onClick={summary.generate}
-                disabled={summary.disabled}
-                className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-3.5 py-2 rounded-lg text-xs font-extrabold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {t('tips.studio.generate')}
-              </button>
-              {summary.status === 'error' && (
-                <span className="ml-3 text-xs text-destructive">{t('tips.studio.error')}</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {transcriptReady && summary.status === 'loading' && !summary.data && (
-          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin text-primary" />
-            {t('tips.studio.loading')}
-          </div>
-        )}
-
-        {summary.data && (
-          <SummaryArtifact data={summary.data} />
-        )}
-      </div>
+      {transcriptReady && summary.status === 'loading'
+        ? <SummarySkeleton />
+        : summary.data && <SummaryArtifact data={summary.data} />}
     </section>
   )
 }

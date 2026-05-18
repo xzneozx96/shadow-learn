@@ -15,9 +15,6 @@ interface Props {
 
 function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInProgress = false, onSelect }: Props) {
   const { t } = useI18n()
-  // Badge priority: Playing > Completed > InProgress. A playing lesson that
-  // is also marked complete still shows the Playing badge so the user can
-  // see where they are.
   let badge: 'playing' | 'completed' | 'in_progress' | null = null
   if (isActive)
     badge = 'playing'
@@ -39,7 +36,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
       role="listitem"
       aria-current={isActive ? 'true' : undefined}
       className={cn(
-        'flex gap-2.5 px-4 py-2.5 cursor-pointer border-r-[3px] border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'flex items-center gap-2.5 px-2.5 py-2 cursor-pointer border-r-[3px] border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
         isActive && 'bg-primary/10 border-r-primary',
         !isActive && 'hover:bg-card',
       )}
@@ -52,50 +49,22 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
       }}
       tabIndex={0}
     >
-      <div className="relative w-20 aspect-video shrink-0 rounded overflow-hidden bg-linear-to-br from-muted to-muted-foreground/20">
-        <img
-          src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`}
-          alt=""
-          loading="lazy"
-          className={cn(
-            'absolute inset-0 size-full object-cover',
-            badge && 'opacity-50',
-          )}
-          onError={(e) => {
-            // Fallback chain: mqdefault → hqdefault → hidden (gradient shows through)
-            const img = e.currentTarget
-            if (img.src.includes('mqdefault'))
-              img.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
-            else
-              img.style.display = 'none'
-          }}
-        />
-        {badge && (
-          <>
-            <span aria-hidden className="absolute inset-0 bg-black/40" />
-            <span
-              aria-label={badgeLabel}
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              {badge === 'playing' && (
-                <span className="flex items-center justify-center size-6 rounded-full bg-primary text-primary-foreground shadow-lg">
-                  <Play className="size-3" aria-hidden fill="currentColor" />
-                </span>
-              )}
-              {badge === 'completed' && (
-                <span className="flex items-center justify-center size-6 rounded-full bg-success text-white shadow-lg">
-                  <Check className="size-3" aria-hidden strokeWidth={3} />
-                </span>
-              )}
-              {badge === 'in_progress' && (
-                <span className="flex items-center justify-center size-6 rounded-full bg-amber-500 text-white shadow-lg">
-                  <ClockFading className="size-3" aria-hidden />
-                </span>
-              )}
-            </span>
-          </>
+      <span
+        aria-label={badgeLabel || undefined}
+        className={cn(
+          'flex items-center justify-center size-6 shrink-0 rounded-full ring-1 ring-inset',
+          badge === 'playing' && 'bg-primary text-primary-foreground ring-primary/40',
+          badge === 'completed' && 'bg-success text-white ring-success/40',
+          badge === 'in_progress' && 'bg-amber-500 text-white ring-amber-500/40',
+          !badge && 'bg-muted/60 text-muted-foreground ring-border',
         )}
-      </div>
+      >
+        {badge === 'playing' && <Play className="size-3" aria-hidden fill="currentColor" />}
+        {badge === 'completed' && <Check className="size-3" aria-hidden strokeWidth={3} />}
+        {badge === 'in_progress' && <ClockFading className="size-3" aria-hidden />}
+        {!badge && <span className="size-1.5 rounded-full bg-muted-foreground/50" aria-hidden />}
+      </span>
+
       <div className="flex-1 min-w-0">
         <div className={cn(
           'text-xs font-semibold line-clamp-2 leading-snug',
@@ -104,8 +73,8 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
         >
           {title}
         </div>
-        <div className="text-xs text-amber-500 mt-1 tabular-nums">{duration}</div>
       </div>
+      <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{duration}</span>
     </li>
   )
 }

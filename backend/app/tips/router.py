@@ -167,5 +167,8 @@ async def get_studio_status(kind: str, video_id: str, locale: str = "en"):
     key = _studio_svc.studio_job_key(kind, video_id, locale)  # type: ignore[arg-type]
     job_id = get_job_for_key(key)
     if job_id is None:
-        return JSONResponse(status_code=404, content={"status": "none"})
+        # 200 instead of 404 so the absence of an in-flight job doesn't
+        # show as a network error in devtools. The hook treats both the
+        # same; this is purely cosmetic on the client console.
+        return JSONResponse(status_code=200, content={"status": "none"})
     return _studio_response_for_job(job_id)

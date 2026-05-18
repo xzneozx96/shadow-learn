@@ -32,17 +32,35 @@ interface Returns<K extends StudioKind> {
   status: StudioStatus
   data: DataFor<K> | null
   disabled: boolean
-  /** Deprecated. Always false now that each artifact runs its own job. Kept
-   *  on the return type so call-sites referencing it still type-check. */
+  /**
+   * False until the first IDB read settles. Lets callers render a
+   *  neutral skeleton during the brief async hydration window, instead
+   *  of flashing the wrong default branch (empty tile → filled tile)
+   *  before the cached data lands.
+   */
+  hydrated: boolean
+  /**
+   * Deprecated. Always false now that each artifact runs its own job. Kept
+   *  on the return type so call-sites referencing it still type-check.
+   */
   inFlightByOther: boolean
   generate: () => Promise<void>
   regenerate: () => Promise<void>
+  /**
+   * Force a re-probe against the backend. Callers use this when a sibling
+   *  hook instance is known to have kicked off a job for the same artifact
+   *  key (e.g. the in-tab generate flow triggered work and the grid view
+   *  needs to pick up the loading state on return).
+   */
+  refresh: () => void
 }
 
-// Poll cadence for an in-flight job. 1s tracks completion latency closely
-// without hammering the server — typical artifacts finish in 10–40s and the
-// probe is a single in-memory dict lookup on the backend.
-const POLL_INTERVAL_MS = 1000
+// Poll cadence for an in-flight job. 5s is a good fit for artifact
+// generation latency (typically 10-40s) — fast enough that completion
+// surfaces within one tick, slow enough that a tab with 3-4 concurrent
+// jobs doesn't flood the network panel. The status check is a single
+// in-memory dict lookup so backend cost is negligible either way.
+const POLL_INTERVAL_MS = 5000
 
 interface StatusReady<K extends StudioKind> {
   status: 'ready'
@@ -80,6 +98,9 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
   const { db, kind, videoId, transcript, locale } = args
   const [status, setStatus] = useState<StudioStatus>('idle')
   const [data, setData] = useState<DataFor<K> | null>(null)
+  const [hydrated, setHydrated] = useState(false)
+  // See useTipCards: bumped by refresh() to force a re-probe.
+  const [probeNonce, setProbeNonce] = useState(0)
   const cancelledRef = useRef(false)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -160,12 +181,22 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
     pollTimerRef.current = setTimeout(tick, 0)
   }, [persistData])
 
+  // Reset state on key change (setState-during-render).
+  // Resets hydrated on key change so a navigation between videos shows the
+  // skeleton again rather than briefly painting the previous tile's data.
+  const keySig = `${db ? '1' : '0'}|${cacheKey}|${probeNonce}`
+  const [lastKeySig, setLastKeySig] = useState(keySig)
+  if (lastKeySig !== keySig) {
+    setLastKeySig(keySig)
+    setStatus('idle')
+    setData(null)
+    setHydrated(false)
+  }
+
   // Mount / key-change effect. Reads IDB cache → probes backend → drives state.
   useEffect(() => {
     cancelledRef.current = false
     clearPoll()
-    setStatus('idle')
-    setData(null)
     if (!db)
       return
 
@@ -173,15 +204,24 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       const cached = await getTipStudio(db, cacheKey)
       if (cancelledRef.current)
         return
+      setHydrated(true)
       if (cached) {
+        // Paint the IDB cache immediately so the tile doesn't flash empty,
+        // then fall through to the backend probe. The probe is an
+        // in-memory dict lookup on the backend (cheap), and skipping it
+        // hides in-flight regen jobs from cold remounts — e.g. a tab
+        // switch that fully unmounts StudioTab and brings up new hook
+        // instances. Without the probe, the new instance would show
+        // 'ready' over a still-running job and the user couldn't tell.
         setData(cached.data as DataFor<K>)
         setStatus('ready')
-        return
       }
+      // probeNonce is only here so refresh() can force a re-run; the
+      // probe itself runs every mount.
+      void probeNonce
 
-      // No final cache — ask backend if anything is in flight (or freshly
-      // completed but not yet written to IDB by another tab / a prior mount
-      // that was unmounted before the response landed).
+      // No final cache (or refreshing) — ask backend if anything is in
+      // flight or freshly completed.
       let res: Response
       try {
         res = await fetch(
@@ -222,7 +262,9 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
   // persistData / pollJob / clearPoll are stable per key set; explicit deps
   // mirror the key inputs to keep behavior predictable across remounts.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, cacheKey])
+  }, [db, cacheKey, probeNonce])
+
+  const refresh = useCallback(() => setProbeNonce(n => n + 1), [])
 
   const doFetch = useCallback(async () => {
     if (disabled || !db)
@@ -274,7 +316,9 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
     data,
     disabled,
     inFlightByOther: false,
+    hydrated,
     generate: doFetch,
     regenerate: doFetch,
+    refresh,
   }
 }

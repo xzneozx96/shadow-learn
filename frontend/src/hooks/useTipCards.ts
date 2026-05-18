@@ -14,7 +14,9 @@ interface Args {
 type Status = 'idle' | 'loading' | 'ready' | 'error'
 type RawCard = Omit<ConceptCard, 'state' | 'updatedAt'>
 
-const POLL_INTERVAL_MS = 1000
+// See useTipStudio for cadence rationale — 5s balances responsiveness
+// against network noise on the dev panel when multiple jobs run.
+const POLL_INTERVAL_MS = 5000
 
 interface StatusReady { status: 'ready', jobId: string, data: { cards: RawCard[] } }
 interface StatusPending { status: 'pending', jobId: string }
@@ -34,6 +36,14 @@ export function useTipCards(args: Args) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
+  // False until the first IDB read settles. Same intent as useTipStudio:
+  // lets callers render a skeleton during hydration so the tile doesn't
+  // flash an empty state before the cached deck arrives.
+  const [hydrated, setHydrated] = useState(false)
+  // probeNonce is bumped by refresh() so other hook instances observing the
+  // same artifact key can force a re-probe after a sibling kicks off a job.
+  // Pure counter — value doesn't matter, only the change.
+  const [probeNonce, setProbeNonce] = useState(0)
   const cancelledRef = useRef(false)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cardsRef = useRef<ConceptCard[]>([])
@@ -50,11 +60,15 @@ export function useTipCards(args: Args) {
     }
   }, [])
 
-  const persistDeck = useCallback(async (raw: RawCard[]) => {
+  const persistDeck = useCallback(async (raw: RawCard[], priorCards?: ConceptCard[]) => {
     if (!db)
       return [] as ConceptCard[]
     // Preserve known/learning state on regen — match by front-question text.
-    const existingByFront = new Map(cardsRef.current.map(c => [c.front, c]))
+    // Caller can pass an explicit `priorCards` to dodge a race when this
+    // runs right after a setCards(...) that hasn't committed yet (mount
+    // effect probe is the typical case).
+    const source = priorCards ?? cardsRef.current
+    const existingByFront = new Map(source.map(c => [c.front, c]))
     const now = new Date().toISOString()
     const merged: ConceptCard[] = raw.map((nc) => {
       const prior = existingByFront.get(nc.front)
@@ -115,13 +129,21 @@ export function useTipCards(args: Args) {
     pollTimerRef.current = setTimeout(tick, 0)
   }, [persistDeck])
 
-  useEffect(() => {
-    cancelledRef.current = false
-    clearPoll()
+  // Reset state on key change (setState-during-render)
+  const keySig = `${db ? '1' : '0'}|${key}|${probeNonce}`
+  const [lastKeySig, setLastKeySig] = useState(keySig)
+  if (lastKeySig !== keySig) {
+    setLastKeySig(keySig)
     setCards([])
     setIndex(0)
     setFlipped(false)
     setStatus('idle')
+    setHydrated(false)
+  }
+
+  useEffect(() => {
+    cancelledRef.current = false
+    clearPoll()
     if (!db)
       return
 
@@ -129,11 +151,18 @@ export function useTipCards(args: Args) {
       const cached = await getTipCards(db, key)
       if (cancelledRef.current)
         return
+      setHydrated(true)
       if (cached) {
+        // Paint IDB cache for instant feedback, then always probe
+        // backend so an in-flight regen surfaces even after a cold
+        // remount (tab switch unmounts the parent and resets probeNonce).
         setCards(cached.cards)
         setStatus('ready')
-        return
       }
+      // Track the prior deck explicitly so a probe-driven persistDeck
+      // can preserve state without depending on cardsRef having committed.
+      const priorCards = cached?.cards
+      void probeNonce
       let res: Response
       try {
         res = await fetch(
@@ -151,7 +180,7 @@ export function useTipCards(args: Args) {
       if (cancelledRef.current)
         return
       if (body.status === 'ready') {
-        const merged = await persistDeck(body.data.cards)
+        const merged = await persistDeck(body.data.cards, priorCards)
         if (cancelledRef.current)
           return
         setCards(merged)
@@ -169,7 +198,9 @@ export function useTipCards(args: Args) {
       clearPoll()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, key])
+  }, [db, key, probeNonce])
+
+  const refresh = useCallback(() => setProbeNonce(n => n + 1), [])
 
   const flip = useCallback(() => setFlipped(f => !f), [])
   const next = useCallback(() => {
@@ -252,6 +283,7 @@ export function useTipCards(args: Args) {
     disabled,
     /** Deprecated. Concurrency is per-artifact now; always false. */
     inFlightByOther: false,
+    hydrated,
     flip,
     next,
     prev,
@@ -259,5 +291,6 @@ export function useTipCards(args: Args) {
     markLearning,
     generate: doGenerate,
     regenerate: doGenerate,
+    refresh,
   }
 }

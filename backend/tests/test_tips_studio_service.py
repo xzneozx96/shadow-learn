@@ -143,7 +143,7 @@ async def test_call_openrouter_strips_markdown_fences(monkeypatch):
                 "choices": [
                     {
                         "finish_reason": "stop",
-                        "message": {"content": '```json\n{"cards": []}\n```'},
+                        "message": {"content": '```json\n{"cards": [{"id": "le-guo", "front": "f", "rule": "r", "example": "e", "trap": null}]}\n```'},
                     },
                 ],
             }
@@ -162,4 +162,4 @@ async def test_call_openrouter_strips_markdown_fences(monkeypatch):
     monkeypatch.setattr(svc.settings, "openrouter_api_key", "fake-key", raising=False)
 
     result = await svc._call_openrouter(prompt="x", schema_name="cards")
-    assert result == {"cards": []}
+    assert result["cards"][0]["id"] == "le-guo"

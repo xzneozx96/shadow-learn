@@ -51,7 +51,7 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
   const progressPctLabel = `${progressPct}%`
 
   return (
-    <div className="p-4 flex flex-col gap-4">
+    <div className="p-4 flex flex-col gap-6">
       <ProgressHeader count={progressCount} pctLabel={progressPctLabel} pct={progressPct} />
 
       <FlipCard

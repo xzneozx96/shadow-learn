@@ -5,7 +5,6 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
 import { CourseSidebar } from '@/components/tips/CourseSidebar'
 import { LessonPlayer } from '@/components/tips/LessonPlayer'
-import { OverviewBlock } from '@/components/tips/OverviewBlock'
 import { UtilityPane } from '@/components/tips/UtilityPane'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -150,8 +149,16 @@ export function TipCoursePage() {
 
   return (
     <Layout>
-      <div className="relative z-5 grid h-full grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[280px_1fr_360px] 2xl:grid-cols-[280px_1fr_440px]">
-        <div className="border-b border-border lg:border-b-0 max-h-[40vh] lg:max-h-none overflow-hidden">
+      <div
+        className="
+          relative z-5 grid h-full
+          grid-cols-1
+          lg:grid-cols-[200px_1fr] lg:grid-rows-[minmax(0,1fr)_minmax(0,2fr)]
+          xl:grid-cols-[240px_1fr_380px] xl:grid-rows-1
+          2xl:grid-cols-[260px_1fr_640px]
+        "
+      >
+        <div className="border-b border-border lg:border-b-0 max-h-[40vh] lg:max-h-none overflow-hidden lg:row-span-2 xl:row-span-1">
           <CourseSidebar
             courseName={course.name}
             topic={course.topic}
@@ -162,8 +169,8 @@ export function TipCoursePage() {
             onSelect={handleSelectLesson}
           />
         </div>
-        <main className="flex flex-col overflow-y-auto p-6">
-          <div className="flex items-center justify-between gap-4 mb-8">
+        <main className="flex flex-col p-6 min-h-0 overflow-y-auto lg:overflow-hidden xl:overflow-y-auto lg:col-start-2 lg:row-start-1 xl:row-span-1">
+          <div className="flex items-center justify-between gap-4 mb-4 shrink-0 lg:hidden xl:flex">
             <h3 className="xl:text-xl text-lg font-bold text-foreground text-balance">{activeLesson.title}</h3>
             <Button
               onClick={handleNextLesson}
@@ -173,24 +180,27 @@ export function TipCoursePage() {
               {t('tips.nextLesson')}
             </Button>
           </div>
-          <LessonPlayer
-            key={activeVideoId}
-            videoId={activeVideoId}
-            resumeSec={progress.watchedSec || undefined}
-            onTimeUpdate={(cur, dur) => { void progress.recordPosition(cur, dur) }}
-            onEnded={() => { void progress.markComplete() }}
-          />
-          <OverviewBlock
-            videoId={activeVideoId}
-            transcript={transcriptText}
-            transcriptStatus={transcript.status}
-          />
-          <div className="xl:hidden mt-4 rounded-xl border border-border bg-card p-4 text-center">
+          <div className="flex-1 min-h-0 flex justify-center items-start lg:[&>div]:h-full lg:[&>div]:w-auto lg:[&>div]:max-w-full xl:[&>div]:h-auto xl:[&>div]:w-full">
+            <LessonPlayer
+              key={activeVideoId}
+              videoId={activeVideoId}
+              resumeSec={progress.watchedSec || undefined}
+              onTimeUpdate={(cur, dur) => { void progress.recordPosition(cur, dur) }}
+              onEnded={() => { void progress.markComplete() }}
+            />
+          </div>
+          <div className="lg:hidden mt-4 rounded-xl border border-border bg-card p-4 text-center">
             <div className="text-sm font-bold text-foreground mb-1">{t('tips.responsive.title')}</div>
             <div className="text-xs text-muted-foreground">{t('tips.responsive.body')}</div>
           </div>
         </main>
-        <div className="hidden xl:block h-full overflow-hidden">
+        <div
+          className="
+            hidden lg:block overflow-hidden min-h-0
+            lg:col-start-2 lg:row-start-2 lg:border-t lg:border-border
+            xl:col-start-3 xl:row-start-1 xl:border-t-0
+          "
+        >
           <UtilityPane
             courseId={course.id}
             videoId={activeVideoId}
@@ -198,6 +208,7 @@ export function TipCoursePage() {
             transcript={transcriptText}
             transcriptStatus={transcript.status}
             warmingStep={transcript.warming?.step}
+            transcriptHydrated={transcript.hydrated}
           />
         </div>
       </div>

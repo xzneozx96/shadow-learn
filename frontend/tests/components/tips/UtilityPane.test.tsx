@@ -23,16 +23,17 @@ vi.mock('ai', () => ({
 }))
 
 describe('utilityPane', () => {
-  it('renders a tablist with three tabs (Notes/Chat/Studio)', () => {
+  it('renders a tablist with four tabs (Summary/Notes/Chat/Studio)', () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
     expect(screen.getByRole('tablist')).toBeInTheDocument()
-    expect(screen.getAllByRole('tab')).toHaveLength(3)
+    expect(screen.getAllByRole('tab')).toHaveLength(4)
     expect(screen.queryByRole('tab', { name: /cards/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /summary/i })).toBeInTheDocument()
   })
 
-  it('chat tab is selected by default in B1', () => {
+  it('summary tab is selected by default', () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
-    expect(screen.getByRole('tab', { name: /chat/i })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /summary/i })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('b2/B3 placeholder tabs are clickable and reveal coming-soon copy', async () => {

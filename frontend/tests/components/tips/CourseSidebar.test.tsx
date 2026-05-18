@@ -23,7 +23,7 @@ const lessons: TipLesson[] = [
 describe('courseSidebar', () => {
   it('renders course title and progress count/percentage', () => {
     render(<CourseSidebar courseName="Pronunciation" topic="Pronunciation" lessons={lessons} activeVideoId="v1" completedVideoIds={new Set(['v1'])} onSelect={() => {}} />)
-    expect(screen.getByRole('heading', { level: 2, name: /pronunciation/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 4, name: /pronunciation/i })).toBeInTheDocument()
     expect(screen.getByText(/1 \/ 3/)).toBeInTheDocument()
     expect(screen.getByText(/33%/)).toBeInTheDocument()
   })

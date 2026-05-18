@@ -4,16 +4,23 @@ interface Props { data: StudioSummaryData }
 
 export function SummaryArtifact({ data }: Props) {
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-foreground leading-relaxed">{data.abstract}</p>
-      <ul className="space-y-1.5">
+    <div>
+      <p className="text-[15px] text-foreground leading-[1.7] tracking-[-0.005em]">
+        {data.abstract}
+      </p>
+
+      <ol className="mt-6 divide-y divide-foreground/6 border-y border-foreground/6">
         {data.takeaways.map((t, i) => (
-          <li key={i} className="flex gap-2 text-sm text-foreground">
-            <span className="size-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-extrabold flex-shrink-0">{i + 1}</span>
-            <span>{t}</span>
+          <li key={i} className="flex items-center gap-4 py-3">
+            <span className="w-5 shrink-0 text-xs font-semibold tabular-nums text-muted-foreground tracking-wider">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <span className="text-[14px] text-foreground leading-[1.65] tracking-[-0.005em]">
+              {t}
+            </span>
           </li>
         ))}
-      </ul>
+      </ol>
     </div>
   )
 }

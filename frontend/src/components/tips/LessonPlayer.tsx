@@ -56,7 +56,7 @@ export function LessonPlayer({ videoId, resumeSec, onTimeUpdate, onEnded }: Prop
         return
       playerRef.current = new window.YT.Player(hostRef.current, {
         videoId,
-        playerVars: { autoplay: 1, modestbranding: 1, rel: 0, start: resumeSec ?? 0 },
+        playerVars: { autoplay: 0, modestbranding: 1, rel: 0, start: resumeSec ?? 0 },
         events: {
           onStateChange: (e: { data: number }) => {
             if (e.data === 0)

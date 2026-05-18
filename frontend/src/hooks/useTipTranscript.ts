@@ -23,6 +23,14 @@ export interface UseTipTranscriptResult {
   error: Error | null
   durationSec: number | null
   limitSec: number | null
+  /**
+   * False until the first IDB read for the active video settles. Callers
+   * use this to suppress the WarmingState flash on cached videos — the
+   * default status is 'pending' before hydration, which would otherwise
+   * render the warming UI for one frame even when IDB already has a
+   * complete transcript.
+   */
+  hydrated: boolean
   retry: () => void
 }
 
@@ -54,6 +62,7 @@ const INITIAL: UseTipTranscriptResult = {
   error: null,
   durationSec: null,
   limitSec: null,
+  hydrated: false,
   retry: () => {},
 }
 
@@ -148,6 +157,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
             error: null,
             durationSec: null,
             limitSec: null,
+            hydrated: true,
             retry,
           })
           return
@@ -162,6 +172,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
             error: null,
             durationSec: cached.durationSec ?? null,
             limitSec: cached.limitSec ?? null,
+            hydrated: true,
             retry,
           })
           return
@@ -174,12 +185,12 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
           return
         }
         if (res.status === 404) {
-          setResult(r => ({ ...r, status: 'unavailable', warming: null }))
+          setResult(r => ({ ...r, status: 'unavailable', warming: null, hydrated: true }))
           return
         }
         if (res.status >= 400) {
           // 404 handled above; any other 4xx/5xx surfaces as error.
-          setResult(r => ({ ...r, status: 'error', error: new Error(`transcript fetch failed: ${res.status}`), warming: null }))
+          setResult(r => ({ ...r, status: 'error', error: new Error(`transcript fetch failed: ${res.status}`), warming: null, hydrated: true }))
           return
         }
         const body = (await res.json()) as ServerResponse
@@ -196,6 +207,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
             error: null,
             durationSec: null,
             limitSec: null,
+            hydrated: true,
             retry,
           })
           return
@@ -225,6 +237,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
             error: null,
             durationSec: body.durationSec,
             limitSec: body.limitSec,
+            hydrated: true,
             retry,
           })
           return
@@ -234,6 +247,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
             ...r,
             status: 'pending',
             warming: { step: 'video_download', jobId: body.jobId },
+            hydrated: true,
             retry,
           }))
           await pollJob(body.jobId)
@@ -280,6 +294,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
               error: null,
               durationSec: null,
               limitSec: null,
+              hydrated: true,
               retry,
             })
             return

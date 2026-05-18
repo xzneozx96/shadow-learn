@@ -56,6 +56,34 @@ vi.mock('@/contexts/VocabularyContext', () => ({
   useVocabulary: () => ({ entries: [], save: vi.fn(), remove: vi.fn(), isSaved: () => false }),
 }))
 
+// StudyQueueProvider isn't wrapped in this test harness — stub the consumer
+// hook with a fully-idle queue so the component renders without throwing.
+vi.mock('@/contexts/StudyQueueContext', () => ({
+  StudyQueueProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useStudyQueueContext: () => ({
+    loading: false,
+    hasWordDrills: false,
+    hasDailyReview: false,
+    wordDrillsEntries: [],
+    dailyEntries: [],
+    vocabularyDone: false,
+    listeningDone: false,
+    speakingDone: false,
+    readingDone: false,
+    writingDone: false,
+    dailyReviewDone: false,
+    shadowingDone: false,
+    customTasks: [],
+    addCustomTask: vi.fn(),
+    toggleCustomTask: vi.fn(),
+    updateCustomTask: vi.fn(),
+    removeCustomTask: vi.fn(),
+    refresh: vi.fn(),
+    allDoneToday: false,
+    incompleteCount: 0,
+  }),
+}))
+
 vi.mock('@/lib/language-caps', () => ({
   getLanguageCaps: () => ({ azurePronunciationLocale: null }),
 }))
