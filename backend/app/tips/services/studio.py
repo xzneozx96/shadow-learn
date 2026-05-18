@@ -58,11 +58,17 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
     if not settings.openrouter_api_key:
         raise RuntimeError("OPENROUTER_API_KEY not configured")
 
-    payload = {
+    payload: dict[str, Any] = {
         "model": settings.openrouter_structured_model,
         "messages": [{"role": "user", "content": prompt}],
         "response_format": {"type": "json_object"},
-        "max_tokens": 2000,
+        # 8000 covers Qwen3-style reasoning + a long Study Guide / Cards
+        # payload. Lower cap caused finish_reason=length with empty content.
+        "max_tokens": 8000,
+        # Disable thinking-mode reasoning for structured JSON output —
+        # the reasoning chain blows the token budget before any content
+        # appears. OpenRouter passes provider-specific params through.
+        "reasoning": {"exclude": True},
     }
 
     async with httpx.AsyncClient(timeout=60.0) as client:
