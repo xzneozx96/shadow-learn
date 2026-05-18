@@ -1,4 +1,4 @@
-import { BookOpen, FileText, GraduationCap, Sparkles } from 'lucide-react'
+import { BookOpen, GraduationCap, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
@@ -6,7 +6,6 @@ import { useTipStudio } from '@/hooks/useTipStudio'
 import { QuizArtifact } from '../studio/QuizArtifact'
 import { StudioTile } from '../studio/StudioTile'
 import { StudyGuideArtifact } from '../studio/StudyGuideArtifact'
-import { SummaryArtifact } from '../studio/SummaryArtifact'
 
 interface Props {
   courseId: string
@@ -16,7 +15,7 @@ interface Props {
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
 }
 
-type Surface = 'grid' | 'summary' | 'study_guide' | 'quiz'
+type Surface = 'grid' | 'study_guide' | 'quiz'
 
 export function StudioTab(props: Props) {
   const { courseId, videoId, lessonTitle, transcript, transcriptStatus } = props
@@ -27,7 +26,6 @@ export function StudioTab(props: Props) {
   const noTranscript = transcriptStatus === 'unavailable' || transcriptStatus === 'error'
   const studioLocale: 'en' | 'vi' = locale === 'vi' ? 'vi' : 'en'
 
-  const summary = useTipStudio({ db, kind: 'summary', videoId, transcript, locale: studioLocale })
   const guide = useTipStudio({ db, kind: 'study_guide', videoId, transcript, locale: studioLocale })
 
   if (noTranscript) {
@@ -38,18 +36,6 @@ export function StudioTab(props: Props) {
     )
   }
 
-  if (surface === 'summary' && summary.data) {
-    return (
-      <div className="p-4 space-y-3">
-        <button type="button" onClick={() => setSurface('grid')} className="text-xs text-primary font-bold cursor-pointer">
-          ←
-          {' '}
-          {t('tips.studio.title')}
-        </button>
-        <SummaryArtifact data={summary.data} />
-      </div>
-    )
-  }
   if (surface === 'study_guide' && guide.data) {
     return (
       <div className="p-4 space-y-3">
@@ -78,25 +64,6 @@ export function StudioTab(props: Props) {
   return (
     <div className="p-3 space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <StudioTile
-          Icon={FileText}
-          titleKey="tips.studio.tile.summary.title"
-          blurbKey="tips.studio.tile.summary.blurb"
-          state={summary.data ? 'filled' : 'empty'}
-          preview={summary.data?.abstract ?? null}
-          primaryLabel={summary.data ? t('tips.studio.open') : t('tips.studio.generate')}
-          onPrimary={async () => {
-            if (!summary.data)
-              await summary.generate()
-            setSurface('summary')
-          }}
-          onRegen={summary.regenerate}
-          busy={summary.inFlightByOther}
-          busyLabel={t('tips.studio.busy')}
-          loading={summary.status === 'loading'}
-          loadingLabel={t('tips.studio.loading')}
-          errorLabel={summary.status === 'error' ? t('tips.studio.error') : undefined}
-        />
         <StudioTile
           Icon={BookOpen}
           titleKey="tips.studio.tile.studyGuide.title"

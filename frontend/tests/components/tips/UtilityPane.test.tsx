@@ -63,7 +63,7 @@ describe('utilityPane', () => {
   it('clicking Studio tab shows the tile grid (not the coming-soon placeholder)', async () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="x" transcriptStatus="ready" />)
     await userEvent.click(screen.getByRole('tab', { name: /studio/i }))
-    expect(screen.getByRole('heading', { level: 3, name: /summary/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: /study guide/i })).toBeInTheDocument()
     expect(screen.queryByText(/coming in b2/i)).not.toBeInTheDocument()
   })
 

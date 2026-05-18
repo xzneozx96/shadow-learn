@@ -153,7 +153,11 @@ export function TipCoursePage() {
             onTimeUpdate={(cur, dur) => { void progress.recordPosition(cur, dur) }}
             onEnded={() => { void progress.markComplete() }}
           />
-          <OverviewBlock disabled={transcript.status !== 'ready'} />
+          <OverviewBlock
+            videoId={activeVideoId}
+            transcript={transcriptText}
+            transcriptStatus={transcript.status}
+          />
           <div className="xl:hidden mt-4 rounded-xl border border-border bg-card p-4 text-center">
             <div className="text-sm font-bold text-foreground mb-1">{t('tips.responsive.title')}</div>
             <div className="text-xs text-muted-foreground">{t('tips.responsive.body')}</div>

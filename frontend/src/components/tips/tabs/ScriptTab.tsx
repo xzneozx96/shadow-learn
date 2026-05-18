@@ -87,7 +87,7 @@ export function ScriptTab({ segments, transcriptStatus }: Props) {
             onClick={() => seekTo(seg.start)}
             data-active={isActive ? 'true' : 'false'}
             className={[
-              'w-full text-left flex gap-2 px-2 py-1.5 rounded-md text-sm cursor-pointer transition-colors',
+              'w-full text-left flex gap-2 px-2 py-1.5 text-sm cursor-pointer transition-colors',
               isActive
                 ? 'bg-primary/12 text-foreground border-l-2 border-primary'
                 : 'hover:bg-card text-muted-foreground border-l-2 border-transparent',

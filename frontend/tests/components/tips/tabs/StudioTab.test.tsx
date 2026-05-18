@@ -34,12 +34,12 @@ describe('studioTab', () => {
     transcriptStatus: 'ready' as const,
   }
 
-  it('renders a 2x2 tile grid with 4 tiles (Summary, Study Guide, Quiz, Mind Map)', () => {
+  it('renders Study Guide + Quiz + locked Mind Map (Summary lives in OverviewBlock)', () => {
     render(<StudioTab {...baseProps} />)
-    expect(screen.getByRole('heading', { level: 3, name: /summary/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: /study guide/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: /quiz/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: /mind map/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 3, name: /^summary$/i })).not.toBeInTheDocument()
   })
 
   it('mind Map tile is locked and shows B3 badge', () => {
@@ -54,18 +54,18 @@ describe('studioTab', () => {
     expect(screen.getByText(/no transcript/i)).toBeInTheDocument()
   })
 
-  it('clicking Generate on Summary tile fires POST /api/tips/studio/summary', async () => {
+  it('clicking Generate on Study Guide tile fires POST /api/tips/studio/study_guide', async () => {
     (globalThis.fetch as any).mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ abstract: 'abs', takeaways: ['a', 'b', 'c'] }),
+      json: async () => ({ items: [{ question: 'q', answer: 'a' }, { question: 'q2', answer: 'a2' }, { question: 'q3', answer: 'a3' }] }),
     })
     render(<StudioTab {...baseProps} />)
-    const summaryGen = screen.getAllByRole('button', { name: /^generate$/i })[0]
-    await userEvent.click(summaryGen)
+    const guideGen = screen.getAllByRole('button', { name: /^generate$/i })[0]
+    await userEvent.click(guideGen)
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.stringMatching(/\/api\/tips\/studio\/summary$/),
+        expect.stringMatching(/\/api\/tips\/studio\/study_guide$/),
         expect.objectContaining({ method: 'POST' }),
       )
     })
