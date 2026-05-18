@@ -73,25 +73,30 @@ export function StudioTile({
         <div className="text-xs text-foreground border-t border-dashed border-border pt-1.5 line-clamp-2">{preview}</div>
       )}
       <div className="mt-auto flex items-center justify-between gap-2">
-        {!isLocked && primaryLabel && onPrimary && (
-          <button
-            type="button"
-            disabled={isDisabled || busy || loading}
-            title={busy ? busyLabel : undefined}
-            onClick={onPrimary}
-            className={[
-              'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold',
-              state === 'filled'
-                ? 'bg-transparent border border-primary text-primary'
-                : 'bg-primary text-primary-foreground',
-              isDisabled || busy || loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
-            ].join(' ')}
-          >
-            {loading && <Loader2 className="size-3.5 animate-spin" />}
-            <span>{loading ? (loadingLabel ?? t('tips.studio.loading')) : primaryLabel}</span>
-          </button>
-        )}
-        {state === 'filled' && onRegen && !loading && (
+        {!isLocked && primaryLabel && onPrimary && (() => {
+          // Opening a filled tile reads cached IDB data — zero cost.
+          // Only block primary button when it would fire a network call (empty state).
+          const primaryBlocked = isDisabled || loading || (busy && state !== 'filled')
+          return (
+            <button
+              type="button"
+              disabled={primaryBlocked}
+              title={busy && state !== 'filled' ? busyLabel : undefined}
+              onClick={onPrimary}
+              className={[
+                'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold',
+                state === 'filled'
+                  ? 'bg-transparent border border-primary text-primary'
+                  : 'bg-primary text-primary-foreground',
+                primaryBlocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+              ].join(' ')}
+            >
+              {loading && <Loader2 className="size-3.5 animate-spin" />}
+              <span>{loading ? (loadingLabel ?? t('tips.studio.loading')) : primaryLabel}</span>
+            </button>
+          )
+        })()}
+        {state === 'filled' && onRegen && !loading && !busy && (
           <button type="button" onClick={onRegen} className="text-[11px] font-bold text-primary cursor-pointer">
             ↻
             {' '}
