@@ -1,6 +1,7 @@
 import type { WarmingStep } from '@/hooks/useTipTranscript'
 import type { TranslationKey } from '@/lib/i18n'
 import { Check, Loader2 } from 'lucide-react'
+import { TextShimmer } from '@/components/ui/text-shimmer'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
 
@@ -42,12 +43,18 @@ export function WarmingState({ step, complete = false }: { step: WarmingStep, co
     <div className="rounded-xl border border-border bg-muted p-4">
       <div className="text-center mb-4">
         <div className="text-2xl mb-2" aria-hidden>✦</div>
-        <div className="text-sm font-bold text-foreground">{t('tips.warming.headline')}</div>
-        <div className="text-xs text-muted-foreground">{t('tips.warming.eta')}</div>
+        <TextShimmer
+          className="text-sm font-bold"
+          duration={2}
+        >
+          {t('tips.warming.headline')}
+        </TextShimmer>
+        <div className="text-xs text-muted-foreground mt-1">{t('tips.warming.eta')}</div>
       </div>
       <ol className="space-y-2" role="list">
         {UI_STEPS.map((s) => {
           const state = stateFor(s.id, current, complete)
+          const label = t(s.labelKey)
           return (
             <li
               key={s.id}
@@ -65,14 +72,19 @@ export function WarmingState({ step, complete = false }: { step: WarmingStep, co
               >
                 {state === 'done' ? <Check className="size-3" /> : state === 'active' ? <Loader2 className="size-3 motion-safe:animate-spin" /> : ''}
               </span>
-              <span className={cn(
-                'flex-1',
-                state === 'pending' ? 'text-muted-foreground' : 'text-foreground',
-                state === 'active' && 'font-bold',
-              )}
-              >
-                {t(s.labelKey)}
-              </span>
+              {state === 'active'
+                ? (
+                    <TextShimmer className="flex-1 font-bold" duration={1.5}>{label}</TextShimmer>
+                  )
+                : (
+                    <span className={cn(
+                      'flex-1',
+                      state === 'pending' ? 'text-muted-foreground' : 'text-foreground',
+                    )}
+                    >
+                      {label}
+                    </span>
+                  )}
               <span className="text-[10px] text-muted-foreground tabular-nums">{s.eta}</span>
             </li>
           )
