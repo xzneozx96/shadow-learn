@@ -37,7 +37,10 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
           src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`}
           alt=""
           loading="lazy"
-          className="absolute inset-0 size-full object-cover"
+          className={cn(
+            'absolute inset-0 size-full object-cover',
+            isCompleted && 'opacity-50',
+          )}
           onError={(e) => {
             // Fallback chain: mqdefault → hqdefault → hidden (gradient shows through)
             const img = e.currentTarget
@@ -48,12 +51,17 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
           }}
         />
         {isCompleted && (
-          <span
-            aria-label={t('tips.lesson.completed')}
-            className="absolute bottom-0.5 right-0.5 flex items-center justify-center size-3.5 rounded-full bg-success text-white"
-          >
-            <Check className="size-2.5" aria-hidden />
-          </span>
+          <>
+            <span aria-hidden className="absolute inset-0 bg-black/40" />
+            <span
+              aria-label={t('tips.lesson.completed')}
+              className="absolute inset-0 flex items-center justify-center"
+            >
+              <span className="flex items-center justify-center size-7 rounded-full bg-success text-white shadow-lg ring-2 ring-background">
+                <Check className="size-4" aria-hidden strokeWidth={3} />
+              </span>
+            </span>
+          </>
         )}
       </div>
       <div className="flex-1 min-w-0">
