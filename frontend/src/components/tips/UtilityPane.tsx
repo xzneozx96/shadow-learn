@@ -41,11 +41,15 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
   // the warming state. Tabs would all be non-functional (no transcript →
   // chat disabled, studio disabled, notes is a B3 placeholder). Hiding
   // them removes the "why is this empty" confusion.
-  if (transcriptStatus === 'pending' && warmingStep) {
+  //
+  // Show this as soon as status flips to 'pending' — don't wait for the
+  // first job-poll response to populate `warmingStep`, otherwise the user
+  // sees stale tabs for a few seconds after switching to a new video.
+  if (transcriptStatus === 'pending') {
     return (
       <aside className="flex flex-col h-full border-l border-border overflow-hidden">
         <div className="flex-1 overflow-y-auto p-4">
-          <WarmingState step={warmingStep} />
+          <WarmingState step={warmingStep ?? 'video_download'} />
         </div>
       </aside>
     )
