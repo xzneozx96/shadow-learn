@@ -49,20 +49,18 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
   const progressPct = Math.round(((deck.index + 1) / total) * 100)
 
   return (
-    <div className="p-4 h-full flex flex-col gap-4">
+    <div className="p-4 flex flex-col gap-4">
       <ProgressHeader progressPct={progressPct} />
 
-      <div className="flex-1">
-        <FlipCard
-          card={current}
-          flipped={deck.flipped}
-          onFlip={deck.flip}
-          onNext={deck.next}
-          onPrev={deck.prev}
-          index={deck.index}
-          total={total}
-        />
-      </div>
+      <FlipCard
+        card={current}
+        flipped={deck.flipped}
+        onFlip={deck.flip}
+        onNext={deck.next}
+        onPrev={deck.prev}
+        index={deck.index}
+        total={total}
+      />
 
       <div className="grid grid-cols-2 gap-2.5">
         <ActionPill tone="learning" Icon={GraduationCap} label={t('tips.cards.markLearning')} onClick={deck.markLearning} />
@@ -97,14 +95,8 @@ function ProgressHeader({ progressPct }: { progressPct: number }) {
         {String(progressPct).padStart(2, '0')}
         %
       </span>
-      <div className="flex-1 h-[3px] rounded-full bg-secondary/60 overflow-hidden ring-1 ring-border/40">
-        <div
-          className="h-full origin-left bg-gradient-to-r from-primary/70 via-primary to-primary/90"
-          style={{
-            transform: `scaleX(${progressPct / 100})`,
-            transition: `transform 700ms ${EASE}`,
-          }}
-        />
+      <div className="flex-1 h-2 rounded bg-secondary overflow-hidden">
+        <div className="h-full bg-primary rounded transition-all" style={{ width: `${progressPct}%` }} />
       </div>
     </div>
   )

@@ -47,11 +47,11 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev, index, total }
       role="button"
       aria-label={t('tips.cards.flipHint')}
       onClick={onFlip}
-      className="group relative min-h-[340px] outline-none rounded-[1.75rem] focus-visible:ring-2 focus-visible:ring-primary/60 cursor-pointer"
+      className="group relative outline-none rounded-[1.75rem] focus-visible:ring-2 focus-visible:ring-primary/60 cursor-pointer"
       style={{ perspective: '1500px' }}
     >
       <div
-        className="relative h-full w-full"
+        className="grid w-full"
         style={{
           transformStyle: 'preserve-3d',
           transition: `transform 700ms ${FLIP_EASE}`,
@@ -59,7 +59,7 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev, index, total }
         }}
       >
         <CardFace>
-          <div className="flex flex-col h-full min-h-[332px]">
+          <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <Eyebrow>{t('tips.cards.subtitle')}</Eyebrow>
               <span className="text-[10px] font-medium tabular-nums text-muted-foreground tracking-[0.18em]">
@@ -70,19 +70,17 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev, index, total }
                 {String(total).padStart(2, '0')}
               </span>
             </div>
-            <div className="flex-1 flex items-center">
-              <div className="text-[1.35rem] font-bold text-foreground leading-[1.25] tracking-[-0.01em]">
-                {card.front}
-              </div>
+            <div className="text-[1.2rem] font-bold text-foreground leading-[1.3] tracking-[-0.01em]">
+              {card.front}
             </div>
             <FlipHint label={t('tips.cards.flipHint')} />
           </div>
         </CardFace>
 
         <CardFace back>
-          <div className="flex flex-col h-full min-h-[332px] gap-3">
+          <div className="flex flex-col gap-3">
             <Eyebrow>{t('tips.cards.subtitle')}</Eyebrow>
-            <div className="text-[0.95rem] font-medium text-foreground leading-[1.55]">
+            <div className="text-[0.9rem] font-medium text-foreground leading-[1.55]">
               {card.rule}
             </div>
             <DetailRow tone="success" label={t('tips.cards.exampleLabel')}>{card.example}</DetailRow>
@@ -99,14 +97,15 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev, index, total }
 function CardFace({ children, back = false }: { children: React.ReactNode, back?: boolean }) {
   return (
     <div
-      className="absolute inset-0 rounded-[1.75rem] p-1.5 ring-1 ring-border/60 bg-gradient-to-br from-secondary/40 via-background to-secondary/20"
+      className="rounded-[1.75rem] p-1.5 ring-1 ring-border/60 bg-linear-to-br from-secondary/40 via-background to-secondary/20"
       style={{
+        gridArea: '1 / 1',
         backfaceVisibility: 'hidden',
         transform: back ? 'rotateY(180deg)' : undefined,
       }}
     >
       <div
-        className="relative h-full w-full rounded-[calc(1.75rem-0.375rem)] bg-card px-5 py-5"
+        className="rounded-[calc(1.75rem-0.375rem)] bg-card px-5 py-5"
         style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 60px -32px rgba(0,0,0,0.6)' }}
       >
         {children}
