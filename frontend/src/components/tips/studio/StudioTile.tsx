@@ -80,7 +80,7 @@ export function StudioTile({
               title={busy && state !== 'filled' ? busyLabel : undefined}
               onClick={onPrimary}
               className={[
-                'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold',
+                'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold',
                 state === 'filled'
                   ? 'bg-transparent border border-primary text-primary'
                   : 'bg-primary text-primary-foreground',

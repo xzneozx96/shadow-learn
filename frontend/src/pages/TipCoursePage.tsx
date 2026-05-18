@@ -163,8 +163,8 @@ export function TipCoursePage() {
           />
         </div>
         <main className="flex flex-col overflow-y-auto p-6">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-xl font-bold text-foreground">{activeLesson.title}</h1>
+          <div className="flex items-center justify-between gap-4 mb-8">
+            <h3 className="xl:text-xl text-lg font-bold text-foreground text-balance">{activeLesson.title}</h3>
             <Button
               onClick={handleNextLesson}
               disabled={!hasNext}

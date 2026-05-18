@@ -29,10 +29,10 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
         <Link
           to="/collection?tab=tips"
           aria-label={backLabel}
-          className="group flex items-start gap-1.5 text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors"
+          className="group flex items-center gap-1.5 text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors"
         >
           <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden />
-          <h2 className="text-sm font-bold leading-snug">{courseName}</h2>
+          <h4 className="text-sm font-bold leading-snug">{courseName}</h4>
         </Link>
       </header>
       <ol role="list" className="flex-1 overflow-y-auto">

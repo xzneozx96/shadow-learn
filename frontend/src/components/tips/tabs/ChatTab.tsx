@@ -337,7 +337,7 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
   return (
     <div className="flex flex-col h-full">
       <Conversation className="flex-1">
-        <ConversationContent className="gap-3">
+        <ConversationContent className="h-full gap-3">
           {chat.messages.length === 0 && chat.status === 'ready' && (
             <ConversationEmptyState
               icon={<MessageSquareDashed className="size-8" />}
