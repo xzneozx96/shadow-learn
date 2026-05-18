@@ -102,6 +102,7 @@ export interface StudioCardsData {
 export interface MindMapNode {
   label: string
   summary: string
+  start_sec?: number | null
   children: MindMapNode[]
 }
 

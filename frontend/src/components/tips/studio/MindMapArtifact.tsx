@@ -2,9 +2,10 @@ import type { Edge, Node, NodeProps, NodeTypes } from '@xyflow/react'
 import type { MindMapNode, StudioMindMapData } from '@/types/tips'
 import { Background, Controls, Handle, Position, ReactFlow } from '@xyflow/react'
 import dagre from 'dagre'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Play } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
+import { usePlayer } from '@/contexts/PlayerContext'
 import { ChatTab } from '../tabs/ChatTab'
 import '@xyflow/react/dist/style.css'
 
@@ -19,21 +20,41 @@ interface Props {
 interface FlatNode {
   id: string
   label: string
+  startSec: number | null
   parentId: string | null
 }
 
-const NODE_WIDTH = 180
+const NODE_WIDTH = 200
 const NODE_HEIGHT = 44
 
+interface MindNodeData {
+  label: string
+  startSec: number | null
+  onSeek: (sec: number) => void
+}
+
 function MindNode({ data }: NodeProps) {
-  const { label } = data as { label: string }
+  const { label, startSec, onSeek } = data as unknown as MindNodeData
   return (
     <div
-      className="rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-foreground shadow-sm hover:border-primary transition-colors"
-      style={{ width: NODE_WIDTH, height: NODE_HEIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      className="group relative rounded-md border border-border bg-card text-xs font-medium text-foreground shadow-sm hover:border-primary transition-colors"
+      style={{ width: NODE_WIDTH, height: NODE_HEIGHT, display: 'flex', alignItems: 'center' }}
     >
       <Handle type="target" position={Position.Left} className="bg-border! border-0! w-1.5! h-1.5!" />
-      <span className="truncate px-1">{label}</span>
+      <span className="truncate px-3 flex-1">{label}</span>
+      {startSec !== null && (
+        <button
+          type="button"
+          aria-label={`Jump to ${Math.floor(startSec / 60)}:${String(Math.floor(startSec % 60)).padStart(2, '0')}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onSeek(startSec)
+          }}
+          className="mr-2 flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+        >
+          <Play className="size-3 fill-current" aria-hidden />
+        </button>
+      )}
       <Handle type="source" position={Position.Right} className="bg-border! border-0! w-1.5! h-1.5!" />
     </div>
   )
@@ -44,14 +65,14 @@ const nodeTypes: NodeTypes = { mind: MindNode }
 function flatten(root: MindMapNode): FlatNode[] {
   const out: FlatNode[] = []
   function walk(node: MindMapNode, parentId: string | null, path: string) {
-    out.push({ id: path, label: node.label, parentId })
+    out.push({ id: path, label: node.label, startSec: node.start_sec ?? null, parentId })
     node.children.forEach((child, i) => walk(child, path, `${path}.${i}`))
   }
   walk(root, null, '0')
   return out
 }
 
-function layout(flat: FlatNode[]): { nodes: Node[], edges: Edge[] } {
+function layout(flat: FlatNode[], onSeek: (sec: number) => void): { nodes: Node[], edges: Edge[] } {
   const g = new dagre.graphlib.Graph()
   g.setGraph({ rankdir: 'LR', nodesep: 24, ranksep: 80 })
   g.setDefaultEdgeLabel(() => ({}))
@@ -69,7 +90,7 @@ function layout(flat: FlatNode[]): { nodes: Node[], edges: Edge[] } {
     return {
       id: f.id,
       type: 'mind',
-      data: { label: f.label },
+      data: { label: f.label, startSec: f.startSec, onSeek },
       position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 },
     }
   })
@@ -81,10 +102,15 @@ function layout(flat: FlatNode[]): { nodes: Node[], edges: Edge[] } {
 
 export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcript }: Props) {
   const { t } = useI18n()
+  const { player } = usePlayer()
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
 
   const flat = useMemo(() => flatten(data.root), [data])
-  const { nodes, edges } = useMemo(() => layout(flat), [flat])
+  const onSeek = useMemo(() => (sec: number) => {
+    player?.seekTo(sec)
+    player?.play()
+  }, [player])
+  const { nodes, edges } = useMemo(() => layout(flat, onSeek), [flat, onSeek])
 
   if (flat.length <= 2) {
     return (

@@ -45,6 +45,9 @@ class MindMapNode(BaseModel):
     """One node in the Mind Map tree. `children` is recursive."""
     label: str = Field(min_length=1, max_length=120)
     summary: str = Field(min_length=1, max_length=400)
+    # Optional timestamp in seconds. LLM picks the nearest [HH:MM:SS] marker
+    # from the transcript prompt. None = no anchor (root nodes / abstract concepts).
+    start_sec: float | None = Field(default=None, ge=0)
     children: list["MindMapNode"] = Field(default_factory=list)
 
 

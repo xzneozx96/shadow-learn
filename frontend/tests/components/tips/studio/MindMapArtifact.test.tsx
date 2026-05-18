@@ -9,6 +9,10 @@ vi.mock('@/components/tips/tabs/ChatTab', () => ({
   ),
 }))
 
+vi.mock('@/contexts/PlayerContext', () => ({
+  usePlayer: () => ({ player: null }),
+}))
+
 vi.mock('@/contexts/I18nContext', () => ({
   useI18n: () => ({
     locale: 'en',

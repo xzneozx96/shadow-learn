@@ -25,6 +25,10 @@ vi.mock('@/hooks/useVoiceInput', () => ({
   useVoiceInput: () => ({ state: 'idle', error: null, start: vi.fn(), stop: vi.fn() }),
 }))
 
+vi.mock('@/contexts/PlayerContext', () => ({
+  usePlayer: () => ({ player: null }),
+}))
+
 describe('chatTab initialUserMessage', () => {
   it('auto-sends the initial message once on mount when prop set', () => {
     sendSpy.mockClear()

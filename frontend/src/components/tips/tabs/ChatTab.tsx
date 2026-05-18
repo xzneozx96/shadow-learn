@@ -27,6 +27,7 @@ import {
 } from '@/components/ai-elements/prompt-input'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/contexts/I18nContext'
+import { usePlayer } from '@/contexts/PlayerContext'
 import { useTipChat } from '@/hooks/useTipChat'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { VoiceInputBridge } from '../../chat/VoiceInputBridge'
@@ -142,9 +143,47 @@ function AttachmentPreviewBar({ altFallback, removeLabel }: { altFallback: strin
   )
 }
 
-const MemoMarkdown = memo(({ text }: { text: string }) => (
+// Match [HH:MM:SS] or [MM:SS] timestamp tokens inline (not already a markdown
+// link, not inside a code span). Captured group is the raw token "MM:SS"
+// or "HH:MM:SS". Re-emitted as markdown link with timestamp: scheme so
+// ReactMarkdown's <a> handler can intercept the click.
+const TIMESTAMP_TOKEN_RE = /\[(\d{1,2}(?::\d{2}){1,2})\](?!\()/g
+
+function tokenToSeconds(token: string): number {
+  const parts = token.split(':').map(p => Number.parseInt(p, 10))
+  if (parts.length === 3)
+    return parts[0] * 3600 + parts[1] * 60 + parts[2]
+  return parts[0] * 60 + parts[1]
+}
+
+function linkifyTimestamps(text: string): string {
+  return text.replace(TIMESTAMP_TOKEN_RE, (_, token) => `[${token}](timestamp:${tokenToSeconds(token)})`)
+}
+
+const MemoMarkdown = memo(({ text, onSeek }: { text: string, onSeek: (sec: number) => void }) => (
   <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed">
-    <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        a: ({ href, children }) => {
+          if (typeof href === 'string' && href.startsWith('timestamp:')) {
+            const sec = Number.parseInt(href.slice('timestamp:'.length), 10)
+            return (
+              <button
+                type="button"
+                onClick={() => onSeek(sec)}
+                className="inline-flex items-center rounded bg-primary/15 px-1.5 py-0.5 text-[0.7rem] font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer not-prose tabular-nums"
+              >
+                {children}
+              </button>
+            )
+          }
+          return <a href={href} target="_blank" rel="noreferrer">{children}</a>
+        },
+      }}
+    >
+      {linkifyTimestamps(text)}
+    </ReactMarkdown>
   </div>
 ))
 
@@ -158,7 +197,7 @@ function StreamingDots() {
   )
 }
 
-function ChatBubble({ message, imageAlt }: { message: UIMessage, imageAlt: string }) {
+function ChatBubble({ message, imageAlt, onSeek }: { message: UIMessage, imageAlt: string, onSeek: (sec: number) => void }) {
   const text = messageText(message)
   if (message.role === 'user') {
     return (
@@ -195,7 +234,7 @@ function ChatBubble({ message, imageAlt }: { message: UIMessage, imageAlt: strin
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
-        <MemoMarkdown text={text} />
+        <MemoMarkdown text={text} onSeek={onSeek} />
       </div>
     </motion.div>
   )
@@ -210,6 +249,11 @@ function messageText(message: UIMessage): string {
 
 export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt, initialUserMessage }: Props) {
   const { locale, t } = useI18n()
+  const { player } = usePlayer()
+  const onSeek = useCallback((sec: number) => {
+    player?.seekTo(sec)
+    player?.play()
+  }, [player])
   const chat = useTipChat({
     courseId,
     videoId,
@@ -291,7 +335,7 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
               description={t('tips.chat.empty.body')}
             />
           )}
-          {chat.messages.map(m => <ChatBubble key={m.id} message={m} imageAlt={t('tips.chat.imageAlt')} />)}
+          {chat.messages.map(m => <ChatBubble key={m.id} message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={onSeek} />)}
           {(chat.status === 'submitted' || chat.status === 'streaming')
             && (chat.messages.length === 0
               || chat.messages.at(-1)?.role === 'user'
