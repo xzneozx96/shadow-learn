@@ -1,4 +1,5 @@
 import type { ShadowLearnDB } from '../../src/db'
+import type { StudioMindMapData } from '../../src/types/tips'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initDB, putTipStudio, studioKey } from '../../src/db'
@@ -83,5 +84,53 @@ describe('useTipStudio', () => {
   it('disabled=true when transcript empty', () => {
     const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v5', transcript: '', locale: 'en' }))
     expect(result.current.disabled).toBe(true)
+  })
+})
+
+const sampleMM: StudioMindMapData = {
+  root: { label: 'r', summary: 's', children: [{ label: 'c', summary: 's', children: [] }] },
+}
+
+describe('useTipStudio mind_map', () => {
+  it('fetches and caches a mind map', async () => {
+    ;(globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleMM,
+    } as Response)
+
+    const { result } = renderHook(() => useTipStudio({
+      db,
+      kind: 'mind_map',
+      videoId: 'v1',
+      transcript: 'hello',
+      locale: 'en',
+    }))
+
+    await act(async () => { await result.current.generate() })
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.data?.root.label).toBe('r')
+  })
+
+  it('reads cached mind map on second mount without fetching', async () => {
+    await putTipStudio(db, {
+      key: studioKey('v1', 'mind_map', 'en'),
+      kind: 'mind_map',
+      videoId: 'v1',
+      locale: 'en',
+      data: sampleMM,
+      generatedAt: '2026-05-18T00:00:00Z',
+    });
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockClear()
+
+    const { result } = renderHook(() => useTipStudio({
+      db,
+      kind: 'mind_map',
+      videoId: 'v1',
+      transcript: 'hello',
+      locale: 'en',
+    }))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.data?.root.label).toBe('r')
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 })
