@@ -65,23 +65,38 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
   const { db } = useAuth()
   const [tick, setTick] = useState(0)
   const retry = () => setTick(t => t + 1)
-  const [lastKey, setLastKey] = useState(`${videoId}:${tick}`)
   const key = `${videoId}:${tick}`
 
-  const [result, setResult] = useState<UseTipTranscriptResult>(() => makeInitial(retry))
+  // Single piece of state holding both the active key AND the result. This
+  // collapses what used to be two separate useState calls so the reset on
+  // videoId change commits atomically — previously, setLastKey and
+  // setResult could land in different render passes, leaving a frame where
+  // lastKey was already updated but result still held the previous video's
+  // warming.step (e.g. 'indexing' = all done) before flipping to the real
+  // initial step 1 state.
+  const [entry, setEntry] = useState<{ key: string, result: UseTipTranscriptResult }>(
+    () => ({ key, result: makeInitial(retry) }),
+  )
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Reset state synchronously during render when videoId or tick changes.
-  // We must compute the *visible* result inline because setResult only
-  // affects the NEXT render — without this, the first render after a
-  // video switch flashes the previous video's warming.step (e.g. step
-  // 3 'indexing' active) before flipping to the initial step 1 state.
-  const isStale = lastKey !== key
-  if (isStale) {
-    setLastKey(key)
-    setResult(makeInitial(retry))
+  const isStale = entry.key !== key
+  if (isStale)
+    setEntry({ key, result: makeInitial(retry) })
+
+  const visible = isStale ? makeInitial(retry) : entry.result
+
+  type Updater = UseTipTranscriptResult | ((r: UseTipTranscriptResult) => UseTipTranscriptResult)
+  function setResult(updater: Updater): void {
+    setEntry((prev) => {
+      // Defend against late writes from the previous video's async tasks.
+      if (prev.key !== key)
+        return prev
+      const nextResult = typeof updater === 'function'
+        ? (updater as (r: UseTipTranscriptResult) => UseTipTranscriptResult)(prev.result)
+        : updater
+      return { key: prev.key, result: nextResult }
+    })
   }
-  const visible = isStale ? makeInitial(retry) : result
 
   useEffect(() => {
     if (!videoId)
