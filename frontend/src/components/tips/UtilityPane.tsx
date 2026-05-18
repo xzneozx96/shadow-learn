@@ -53,19 +53,19 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
 
   return (
     <aside className="flex flex-col h-full border-l border-border overflow-hidden">
-      <Tabs value={tab} onValueChange={v => setTab(v as TabValue)} className="flex flex-col h-full">
-        <TabsList className="grid grid-cols-3 gap-0.5 m-2 bg-background">
+      <Tabs value={tab} onValueChange={v => setTab(v as TabValue)} className="flex flex-col h-full gap-0">
+        <TabsList variant="line" className="w-full shrink-0 border-b border-border px-3 rounded-none h-[65px]!">
           <TabsTrigger value="notes" aria-label={t('tips.tab.notes')}>
             <NotebookPen className="size-4" aria-hidden />
-            <span className="hidden xl:inline text-xs">{t('tips.tab.notes')}</span>
+            <span className="text-sm">{t('tips.tab.notes')}</span>
           </TabsTrigger>
           <TabsTrigger value="chat" aria-label={t('tips.tab.chat')}>
             <MessageSquare className="size-4" aria-hidden />
-            <span className="hidden xl:inline text-xs">{t('tips.tab.chat')}</span>
+            <span className="text-sm">{t('tips.tab.chat')}</span>
           </TabsTrigger>
           <TabsTrigger value="studio" aria-label={t('tips.tab.studio')}>
             <Sparkles className="size-4" aria-hidden />
-            <span className="hidden xl:inline text-xs">{t('tips.tab.studio')}</span>
+            <span className="text-sm">{t('tips.tab.studio')}</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="chat" className="flex-1 overflow-hidden">
