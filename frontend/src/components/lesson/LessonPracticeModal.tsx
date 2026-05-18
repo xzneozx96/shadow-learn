@@ -178,11 +178,11 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
                       : 'bg-card text-muted-foreground'
 
               const TrailingIcon = isDone
-                ? <Check className="size-3.5 shrink-0 text-emerald-500" />
+                ? <Check className="size-4 shrink-0 text-emerald-500" />
                 : isAlert
-                  ? <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
+                  ? <AlertTriangle className="size-4 shrink-0 text-amber-500" />
                   : isPartial
-                    ? <span className="flex size-3.5 shrink-0 items-center justify-center rounded-full border border-primary/60 bg-primary/10"><span className="size-1.5 rounded-full bg-primary/80" /></span>
+                    ? <span className="flex size-4 shrink-0 items-center justify-center rounded-full border border-primary/60 bg-primary/10"><span className="size-1.5 rounded-full bg-primary/80" /></span>
                     : null
 
               return (
@@ -198,7 +198,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
                   )}
                 >
                   <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-full', iconBg)}>
-                    <Icon className="size-3.5" />
+                    <Icon className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className={cn(

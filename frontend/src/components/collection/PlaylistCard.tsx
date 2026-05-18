@@ -112,13 +112,13 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
             <div className="mt-auto flex items-center gap-4 text-xs text-muted-foreground overflow-hidden">
               {formatPublishedAt(playlist.published_at) && (
                 <span className="flex items-center gap-1 shrink-0" title={playlist.published_at ?? ''}>
-                  <Calendar className="size-3.5" />
+                  <Calendar className="size-4" />
                   {formatPublishedAt(playlist.published_at)}
                 </span>
               )}
               {playlist.channel && (
                 <span className="flex items-center gap-1 min-w-0 overflow-hidden" title={playlist.channel}>
-                  <Tv className="size-3.5 shrink-0" />
+                  <Tv className="size-4 shrink-0" />
                   <span className="line-clamp-1">{playlist.channel}</span>
                 </span>
               )}

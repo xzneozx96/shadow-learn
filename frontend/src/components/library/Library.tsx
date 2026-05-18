@@ -225,7 +225,7 @@ export function Library() {
                   </h3>
                   <div className="flex items-center gap-2">
                     <div className="group relative">
-                      <Search className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+                      <Search className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
                       <Input
                         placeholder={t('nav.search')}
                         value={search}

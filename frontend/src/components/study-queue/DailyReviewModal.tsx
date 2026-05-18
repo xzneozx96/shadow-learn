@@ -186,11 +186,11 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
                       : 'bg-card text-muted-foreground'
 
               const TrailingIcon = isDone
-                ? <Check className="size-3.5 text-emerald-500 shrink-0" />
+                ? <Check className="size-4 text-emerald-500 shrink-0" />
                 : isAlert
-                  ? <AlertTriangle className="size-3.5 text-amber-500 shrink-0" />
+                  ? <AlertTriangle className="size-4 text-amber-500 shrink-0" />
                   : isPartial
-                    ? <span className="size-3.5 rounded-full border border-primary/60 bg-primary/10 shrink-0 flex items-center justify-center"><span className="size-1.5 rounded-full bg-primary/80" /></span>
+                    ? <span className="size-4 rounded-full border border-primary/60 bg-primary/10 shrink-0 flex items-center justify-center"><span className="size-1.5 rounded-full bg-primary/80" /></span>
                     : null
 
               return (
@@ -207,7 +207,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
                   onClick={() => setActiveSkill(key)}
                 >
                   <div className={cn('size-8 rounded-full flex items-center justify-center shrink-0', iconBg)}>
-                    <Icon className="size-3.5" />
+                    <Icon className="size-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className={cn(
@@ -280,7 +280,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
               <div>
                 <div className="text-base font-semibold">{t('queue.review.selectSkill')}</div>
                 <div className="text-sm text-muted-foreground mt-1 flex items-center justify-center gap-1">
-                  <ArrowLeft className="size-3.5" />
+                  <ArrowLeft className="size-4" />
                   {t('queue.review.selectSkillHint')}
                 </div>
               </div>
@@ -315,7 +315,7 @@ function AllDoneView({ skills, skillDone, t }: AllDoneViewProps) {
         {skills.map(({ key, label, Icon }) => (
           <div key={key} className="flex items-center gap-3 rounded-lg border border-border px-4 py-2.5 bg-card">
             <div className="size-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-              <Icon className="size-3.5" />
+              <Icon className="size-4" />
             </div>
             <span className="flex-1 text-sm font-medium">{label}</span>
             {skillDone[key] && <Check className="size-4 text-emerald-500 shrink-0" />}

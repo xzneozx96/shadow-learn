@@ -115,7 +115,7 @@ export function ErrorScreen({ error }: Props) {
                 >
                   <ChevronDown
                     className={cn(
-                      'size-3.5 transition-transform duration-200',
+                      'size-4 transition-transform duration-200',
                       showStack && 'rotate-180',
                     )}
                   />

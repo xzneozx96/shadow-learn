@@ -44,6 +44,7 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
       return
     autoFiredRef.current = sig
     void summary.generate()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcriptReady, summary.status, summary.data, summary.generate, videoId, studioLocale])
 
   return (

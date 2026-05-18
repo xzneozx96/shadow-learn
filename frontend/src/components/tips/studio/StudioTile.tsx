@@ -52,7 +52,7 @@ export function StudioTile({
       className={[
         'flex flex-col gap-2 rounded-xl border bg-card p-3 min-h-[168px] transition-colors',
         isLocked ? 'opacity-50' : '',
-        state === 'filled' ? 'border-primary/30 bg-gradient-to-b from-primary/[0.06] to-card' : 'border-border',
+        state === 'filled' ? 'border-primary/30 bg-linear-to-b from-primary/6 to-card' : 'border-border',
         isDisabled ? 'opacity-60' : '',
       ].join(' ')}
     >
@@ -91,7 +91,7 @@ export function StudioTile({
                 primaryBlocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
               ].join(' ')}
             >
-              {loading && <Loader2 className="size-3.5 animate-spin" />}
+              {loading && <Loader2 className="size-4 animate-spin" />}
               <span>{loading ? (loadingLabel ?? t('tips.studio.loading')) : primaryLabel}</span>
             </button>
           )
