@@ -130,7 +130,6 @@ export function StudioTab(props: Props) {
           state="locked"
         />
       </div>
-      <p className="text-[10px] text-muted-foreground text-center opacity-70">{t('tips.studio.footnote')}</p>
     </div>
   )
 }
