@@ -27,9 +27,9 @@ import {
 } from '@/components/ai-elements/prompt-input'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/contexts/I18nContext'
-import { usePlayer } from '@/contexts/PlayerContext'
 import { useTipChat } from '@/hooks/useTipChat'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
+import { seekTip } from '@/lib/tipSeekBus'
 import { VoiceInputBridge } from '../../chat/VoiceInputBridge'
 
 interface Props {
@@ -259,11 +259,6 @@ function messageText(message: UIMessage): string {
 
 export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt, initialUserMessage }: Props) {
   const { locale, t } = useI18n()
-  const { player } = usePlayer()
-  const onSeek = useCallback((sec: number) => {
-    player?.seekTo(sec)
-    player?.play()
-  }, [player])
   const chat = useTipChat({
     courseId,
     videoId,
@@ -345,7 +340,7 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
               description={t('tips.chat.empty.body')}
             />
           )}
-          {chat.messages.map(m => <ChatBubble key={m.id} message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={onSeek} />)}
+          {chat.messages.map(m => <ChatBubble key={m.id} message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={seekTip} />)}
           {(chat.status === 'submitted' || chat.status === 'streaming')
             && (chat.messages.length === 0
               || chat.messages.at(-1)?.role === 'user'

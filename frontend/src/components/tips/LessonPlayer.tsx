@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { registerTipSeek } from '@/lib/tipSeekBus'
 
 interface YTPlayer {
   destroy: () => void
@@ -46,6 +47,7 @@ export function LessonPlayer({ videoId, resumeSec, onTimeUpdate, onEnded }: Prop
   const hostRef = useRef<HTMLDivElement | null>(null)
   const playerRef = useRef<YTPlayer | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const unregisterSeekRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     let destroyed = false
@@ -61,6 +63,16 @@ export function LessonPlayer({ videoId, resumeSec, onTimeUpdate, onEnded }: Prop
               onEnded?.()
           },
         },
+      })
+      unregisterSeekRef.current?.()
+      unregisterSeekRef.current = registerTipSeek((sec) => {
+        try {
+          playerRef.current?.seekTo(sec, true)
+          playerRef.current?.playVideo()
+        }
+        catch {
+          // noop — player not ready or destroyed
+        }
       })
       intervalRef.current = setInterval(() => {
         if (!playerRef.current || !onTimeUpdate)
@@ -80,6 +92,8 @@ export function LessonPlayer({ videoId, resumeSec, onTimeUpdate, onEnded }: Prop
       destroyed = true
       if (intervalRef.current)
         clearInterval(intervalRef.current)
+      unregisterSeekRef.current?.()
+      unregisterSeekRef.current = null
       try {
         playerRef.current?.destroy()
       }

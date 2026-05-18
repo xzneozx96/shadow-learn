@@ -5,7 +5,7 @@ import dagre from 'dagre'
 import { ChevronLeft, Play } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
-import { usePlayer } from '@/contexts/PlayerContext'
+import { seekTip } from '@/lib/tipSeekBus'
 import { ChatTab } from '../tabs/ChatTab'
 import '@xyflow/react/dist/style.css'
 
@@ -102,15 +102,10 @@ function layout(flat: FlatNode[], onSeek: (sec: number) => void): { nodes: Node[
 
 export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcript }: Props) {
   const { t } = useI18n()
-  const { player } = usePlayer()
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
 
   const flat = useMemo(() => flatten(data.root), [data])
-  const onSeek = useMemo(() => (sec: number) => {
-    player?.seekTo(sec)
-    player?.play()
-  }, [player])
-  const { nodes, edges } = useMemo(() => layout(flat, onSeek), [flat, onSeek])
+  const { nodes, edges } = useMemo(() => layout(flat, seekTip), [flat])
 
   if (flat.length <= 2) {
     return (

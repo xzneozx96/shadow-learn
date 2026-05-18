@@ -9,8 +9,9 @@ vi.mock('@/components/tips/tabs/ChatTab', () => ({
   ),
 }))
 
-vi.mock('@/contexts/PlayerContext', () => ({
-  usePlayer: () => ({ player: null }),
+vi.mock('@/lib/tipSeekBus', () => ({
+  seekTip: vi.fn(),
+  registerTipSeek: vi.fn(() => () => {}),
 }))
 
 vi.mock('@/contexts/I18nContext', () => ({

@@ -25,8 +25,8 @@ vi.mock('@/hooks/useVoiceInput', () => ({
   useVoiceInput: () => ({ state: 'idle', error: null, start: vi.fn(), stop: vi.fn() }),
 }))
 
-vi.mock('@/contexts/PlayerContext', () => ({
-  usePlayer: () => ({ player: null }),
+vi.mock('@/lib/tipSeekBus', () => ({
+  seekTip: vi.fn(),
 }))
 
 describe('chatTab initialUserMessage', () => {
