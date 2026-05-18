@@ -2,9 +2,8 @@ import type { ShadowLearnDB } from '@/db'
 import type { ConceptCard, StudioLocale } from '@/types/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cardsKey, getTipCards, putTipCards } from '@/db'
+import { API_BASE } from '@/lib/config'
 import { useStudioLock } from './useStudioLock'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 interface Args {
   db: ShadowLearnDB | null

@@ -8,9 +8,8 @@ import type {
 } from '@/types/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getTipStudio, putTipStudio, studioKey } from '@/db'
+import { API_BASE } from '@/lib/config'
 import { useStudioLock } from './useStudioLock'
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 type DataFor<K extends StudioKind>
   = K extends 'summary' ? StudioSummaryData
