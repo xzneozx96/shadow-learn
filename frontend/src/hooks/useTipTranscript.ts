@@ -79,6 +79,16 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
   )
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // db arrives asynchronously from AuthContext. We must not include it in
+  // useEffect deps — otherwise the moment db transitions null → non-null
+  // (very common during initial mount), the effect tears down the in-flight
+  // load and restarts. The frontend then sees warming.step regress (e.g.
+  // step 3 → step 1) because the second load() requests a NEW backend job
+  // that starts fresh from 'video_download'. Stash db on a ref and let
+  // load()/persistReady read the latest value at the moment of use.
+  const dbRef = useRef(db)
+  dbRef.current = db
+
   const isStale = entry.key !== key
   if (isStale)
     setEntry({ key, result: makeInitial(retry) })
@@ -106,9 +116,10 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
     const state = { cancelled: false }
 
     async function persistReady(body: ServerReady) {
-      if (!db)
+      const d = dbRef.current
+      if (!d)
         return
-      await putTipTranscript(db, {
+      await putTipTranscript(d, {
         videoId,
         status: 'ready',
         source: body.source,
@@ -119,8 +130,9 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
     }
 
     async function load() {
-      if (db) {
-        const cached = await getTipTranscript(db, videoId)
+      const d = dbRef.current
+      if (d) {
+        const cached = await getTipTranscript(d, videoId)
         if (state.cancelled)
           return
         if (cached && cached.status === 'ready') {
@@ -185,8 +197,9 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
           return
         }
         if (body.status === 'too_long') {
-          if (db) {
-            await putTipTranscript(db, {
+          const d2 = dbRef.current
+          if (d2) {
+            await putTipTranscript(d2, {
               videoId,
               status: 'too_long',
               source: null,
@@ -287,7 +300,8 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
         pollTimerRef.current = null
       }
     }
-  }, [videoId, db, tick])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- db read via ref intentionally
+  }, [videoId, tick])
 
   return visible
 }
