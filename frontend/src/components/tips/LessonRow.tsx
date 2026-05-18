@@ -79,7 +79,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
             >
               {badge === 'playing' && (
                 <span className="flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground shadow-lg">
-                  <Play className="size-3.5 ml-0.5" aria-hidden fill="currentColor" />
+                  <Play className="size-4 ml-0.5" aria-hidden fill="currentColor" />
                 </span>
               )}
               {badge === 'completed' && (
@@ -89,7 +89,10 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
               )}
               {badge === 'in_progress' && (
                 <span className="flex items-center justify-center size-7 rounded-full bg-amber-500 text-white shadow-lg">
-                  <Clock className="size-3.5" aria-hidden />
+                  {/* Lucide's Clock draws the minute hand up + hour hand to ~4 o'clock,
+                      so visual mass skews lower-right. Nudge -0.5px up and left to
+                      land on the optical center inside the circle. */}
+                  <Clock className="size-4 -translate-x-px -translate-y-px" aria-hidden />
                 </span>
               )}
             </span>
