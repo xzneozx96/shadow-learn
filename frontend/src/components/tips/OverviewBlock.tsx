@@ -1,5 +1,5 @@
 import { ChevronDown, Loader2, Sparkles } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipStudio } from '@/hooks/useTipStudio'
@@ -28,6 +28,24 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
     transcript,
     locale: studioLocale,
   })
+
+  // Auto-generate the Summary the first time transcript becomes ready and
+  // there is no cached row for this (videoId, locale). The ref guard prevents
+  // a retry loop on error and prevents double-fire if the effect re-runs.
+  const autoFiredRef = useRef<string | null>(null)
+  useEffect(() => {
+    const sig = `${videoId}:${studioLocale}`
+    if (!transcriptReady)
+      return
+    if (summary.status !== 'idle')
+      return
+    if (summary.data)
+      return
+    if (autoFiredRef.current === sig)
+      return
+    autoFiredRef.current = sig
+    void summary.generate()
+  }, [transcriptReady, summary.status, summary.data, summary.generate, videoId, studioLocale])
 
   // Caption text varies with state.
   let caption: string
