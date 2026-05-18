@@ -23,10 +23,11 @@ vi.mock('ai', () => ({
 }))
 
 describe('utilityPane', () => {
-  it('renders a tablist with four tabs', () => {
+  it('renders a tablist with three tabs (Notes/Chat/Studio)', () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
     expect(screen.getByRole('tablist')).toBeInTheDocument()
-    expect(screen.getAllByRole('tab')).toHaveLength(4)
+    expect(screen.getAllByRole('tab')).toHaveLength(3)
+    expect(screen.queryByRole('tab', { name: /cards/i })).not.toBeInTheDocument()
   })
 
   it('chat tab is selected by default in B1', () => {
@@ -56,12 +57,10 @@ describe('utilityPane', () => {
     expect(screen.queryByText(/coming in b2/i)).not.toBeInTheDocument()
   })
 
-  it('clicking Cards tab shows the deck UI (not the coming-soon placeholder)', async () => {
+  it('studio tile grid includes a Flashcards tile (Cards merged from its own tab)', async () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="x" transcriptStatus="ready" />)
-    await userEvent.click(screen.getByRole('tab', { name: /cards/i }))
-    const ctas = await screen.findAllByText(/generate cards|concept cards/i)
-    expect(ctas.length).toBeGreaterThan(0)
-    expect(screen.queryByText(/coming in b2/i)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: /studio/i }))
+    expect(screen.getByRole('heading', { level: 3, name: /flashcards/i })).toBeInTheDocument()
   })
 
   it('shows too-long takeover when transcriptStatus is too_long', () => {

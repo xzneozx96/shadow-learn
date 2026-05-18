@@ -1,11 +1,13 @@
-import { BookOpen, GraduationCap, Sparkles } from 'lucide-react'
+import { BookOpen, GraduationCap, Layers, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useTipCards } from '@/hooks/useTipCards'
 import { useTipStudio } from '@/hooks/useTipStudio'
 import { QuizArtifact } from '../studio/QuizArtifact'
 import { StudioTile } from '../studio/StudioTile'
 import { StudyGuideArtifact } from '../studio/StudyGuideArtifact'
+import { CardsTab } from './CardsTab'
 
 interface Props {
   courseId: string
@@ -15,7 +17,7 @@ interface Props {
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
 }
 
-type Surface = 'grid' | 'study_guide' | 'quiz'
+type Surface = 'grid' | 'study_guide' | 'quiz' | 'cards'
 
 export function StudioTab(props: Props) {
   const { courseId, videoId, lessonTitle, transcript, transcriptStatus } = props
@@ -27,6 +29,9 @@ export function StudioTab(props: Props) {
   const studioLocale: 'en' | 'vi' = locale === 'vi' ? 'vi' : 'en'
 
   const guide = useTipStudio({ db, kind: 'study_guide', videoId, transcript, locale: studioLocale })
+  // Read-only peek at the cards cache to drive the tile preview / state.
+  // The actual deck UI re-mounts useTipCards itself inside CardsTab.
+  const cardsPeek = useTipCards({ db, videoId, transcript, locale: studioLocale })
 
   if (noTranscript) {
     return (
@@ -60,6 +65,22 @@ export function StudioTab(props: Props) {
       </div>
     )
   }
+  if (surface === 'cards') {
+    return (
+      <div className="flex flex-col h-full">
+        <button type="button" onClick={() => setSurface('grid')} className="text-xs text-primary font-bold cursor-pointer px-4 pt-3">
+          ←
+          {' '}
+          {t('tips.studio.title')}
+        </button>
+        <div className="flex-1 overflow-y-auto">
+          <CardsTab videoId={videoId} transcript={transcript} transcriptStatus={transcriptStatus} />
+        </div>
+      </div>
+    )
+  }
+
+  const cardsHasDeck = cardsPeek.cards.length > 0
 
   return (
     <div className="p-3 space-y-3">
@@ -82,6 +103,17 @@ export function StudioTab(props: Props) {
           loading={guide.status === 'loading'}
           loadingLabel={t('tips.studio.loading')}
           errorLabel={guide.status === 'error' ? t('tips.studio.error') : undefined}
+        />
+        <StudioTile
+          Icon={Layers}
+          titleKey="tips.studio.tile.cards.title"
+          blurbKey="tips.studio.tile.cards.blurb"
+          state={cardsHasDeck ? 'filled' : 'empty'}
+          preview={cardsHasDeck ? cardsPeek.cards[0].front : null}
+          primaryLabel={cardsHasDeck ? t('tips.studio.open') : t('tips.studio.generate')}
+          onPrimary={() => setSurface('cards')}
+          busy={cardsPeek.inFlightByOther}
+          busyLabel={t('tips.studio.busy')}
         />
         <StudioTile
           Icon={GraduationCap}

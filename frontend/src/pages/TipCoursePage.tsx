@@ -1,4 +1,5 @@
 import type { TipSource } from '@/types'
+import { Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
@@ -121,7 +122,8 @@ export function TipCoursePage() {
   if (loading) {
     return (
       <Layout>
-        <div className="h-full flex items-center justify-center text-muted-foreground">
+        <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+          <Loader2 className="size-8 animate-spin" />
           {t('tips.loading')}
         </div>
       </Layout>

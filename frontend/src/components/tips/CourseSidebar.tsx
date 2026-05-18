@@ -31,7 +31,7 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
           aria-label={backLabel}
           className="group flex items-start gap-1.5 text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors"
         >
-          <ChevronLeft className="size-4 shrink-0 mt-0.5 text-muted-foreground group-hover:text-primary" aria-hidden />
+          <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden />
           <h2 className="text-sm font-bold leading-snug">{courseName}</h2>
         </Link>
       </header>

@@ -34,9 +34,10 @@ describe('studioTab', () => {
     transcriptStatus: 'ready' as const,
   }
 
-  it('renders Study Guide + Quiz + locked Mind Map (Summary lives in OverviewBlock)', () => {
+  it('renders Study Guide + Flashcards + Quiz + locked Mind Map (Summary lives in OverviewBlock)', () => {
     render(<StudioTab {...baseProps} />)
     expect(screen.getByRole('heading', { level: 3, name: /study guide/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: /flashcards/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: /quiz/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: /mind map/i })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 3, name: /^summary$/i })).not.toBeInTheDocument()

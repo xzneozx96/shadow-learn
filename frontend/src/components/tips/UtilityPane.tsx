@@ -1,9 +1,8 @@
 import type { WarmingStep } from '@/hooks/useTipTranscript'
-import { BookOpen, Clock, MessageSquare, NotebookPen, Sparkles } from 'lucide-react'
+import { Clock, MessageSquare, NotebookPen, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useI18n } from '@/contexts/I18nContext'
-import { CardsTab } from './tabs/CardsTab'
 import { ChatTab } from './tabs/ChatTab'
 import { DisabledTab } from './tabs/DisabledTab'
 import { StudioTab } from './tabs/StudioTab'
@@ -18,7 +17,7 @@ interface Props {
   warmingStep?: WarmingStep
 }
 
-type TabValue = 'notes' | 'chat' | 'cards' | 'studio'
+type TabValue = 'notes' | 'chat' | 'studio'
 
 export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transcriptStatus, warmingStep }: Props) {
   const { t } = useI18n()
@@ -40,7 +39,7 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
 
   // While the transcript pipeline is processing, the right pane shows ONLY
   // the warming state. Tabs would all be non-functional (no transcript →
-  // chat disabled, studio/cards disabled, notes is a B3 placeholder). Hiding
+  // chat disabled, studio disabled, notes is a B3 placeholder). Hiding
   // them removes the "why is this empty" confusion.
   if (transcriptStatus === 'pending' && warmingStep) {
     return (
@@ -55,7 +54,7 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
   return (
     <aside className="flex flex-col h-full border-l border-border overflow-hidden">
       <Tabs value={tab} onValueChange={v => setTab(v as TabValue)} className="flex flex-col h-full">
-        <TabsList className="grid grid-cols-4 gap-0.5 m-2 bg-background">
+        <TabsList className="grid grid-cols-3 gap-0.5 m-2 bg-background">
           <TabsTrigger value="notes" aria-label={t('tips.tab.notes')}>
             <NotebookPen className="size-4" aria-hidden />
             <span className="hidden xl:inline text-xs">{t('tips.tab.notes')}</span>
@@ -63,10 +62,6 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
           <TabsTrigger value="chat" aria-label={t('tips.tab.chat')}>
             <MessageSquare className="size-4" aria-hidden />
             <span className="hidden xl:inline text-xs">{t('tips.tab.chat')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="cards" aria-label={t('tips.tab.cards')}>
-            <BookOpen className="size-4" aria-hidden />
-            <span className="hidden xl:inline text-xs">{t('tips.tab.cards')}</span>
           </TabsTrigger>
           <TabsTrigger value="studio" aria-label={t('tips.tab.studio')}>
             <Sparkles className="size-4" aria-hidden />
@@ -78,9 +73,6 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
         </TabsContent>
         <TabsContent value="notes" className="flex-1">
           <DisabledTab Icon={NotebookPen} labelKey="tips.placeholder.label.notes" reasonKey="tips.placeholder.notes" />
-        </TabsContent>
-        <TabsContent value="cards" className="flex-1 overflow-y-auto">
-          <CardsTab videoId={videoId} transcript={transcript} transcriptStatus={transcriptStatus} />
         </TabsContent>
         <TabsContent value="studio" className="flex-1 overflow-y-auto">
           <StudioTab
