@@ -28,7 +28,6 @@ export function StudioTile({
   blurbKey,
   state,
   badge,
-  preview,
   primaryLabel,
   onPrimary,
   onRegen,
@@ -50,7 +49,7 @@ export function StudioTile({
       data-tile
       data-locked={isLocked ? 'true' : 'false'}
       className={[
-        'flex flex-col gap-2 rounded-xl border bg-card p-3 min-h-[168px] transition-colors',
+        'flex flex-col gap-2 rounded-xl border bg-card p-3 min-h-44 transition-colors',
         isLocked ? 'opacity-50' : '',
         state === 'filled' ? 'border-primary/30 bg-linear-to-b from-primary/6 to-card' : 'border-border',
         isDisabled ? 'opacity-60' : '',
@@ -69,9 +68,6 @@ export function StudioTile({
         </h3>
         <p className="text-xs text-muted-foreground leading-snug mt-1">{blurb}</p>
       </div>
-      {preview && (
-        <div className="text-xs text-foreground border-t border-dashed border-border pt-1.5 line-clamp-2">{preview}</div>
-      )}
       <div className="mt-auto flex items-center justify-between gap-2">
         {!isLocked && primaryLabel && onPrimary && (() => {
           // Opening a filled tile reads cached IDB data — zero cost.

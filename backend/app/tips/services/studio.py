@@ -1,7 +1,6 @@
 """Studio artifact generation: prompt building + OpenRouter call + retry."""
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from typing import Any, Literal
@@ -9,6 +8,7 @@ from typing import Any, Literal
 import httpx
 
 from app.settings import settings
+from app.shared._retry import RetryableError, http_retry
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,12 @@ def build_prompt(*, kind: StudioKind, transcript: str, locale: StudioLocale) -> 
 
 
 async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
-    """Single OpenRouter call expecting JSON response. Raises on non-2xx."""
+    """Single OpenRouter call expecting JSON response. Retries via @http_retry.
+
+    Raises RetryableError on truncation / empty content / malformed JSON so
+    the shared retry decorator picks it up. Network 429/502/503/504 + timeouts
+    are also retryable per the decorator's predicate.
+    """
     if not settings.openrouter_api_key:
         raise RuntimeError("OPENROUTER_API_KEY not configured")
 
@@ -62,27 +67,26 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
         "model": settings.openrouter_structured_model,
         "messages": [{"role": "user", "content": prompt}],
         "response_format": {"type": "json_object"},
-        # 8000 covers Qwen3-style reasoning + a long Study Guide / Cards
-        # payload. Lower cap caused finish_reason=length with empty content.
-        "max_tokens": 8000,
+        "max_tokens": 65000,
         # Project-standard reasoning toggle used by translation, vocab, quiz,
-        # daily_review, and agent routers. Without it, thinking-mode models
-        # (Qwen3, DeepSeek-R1, o1) burn the token budget on internal reasoning
-        # and return content="" with finish_reason=length.
-        "reasoning": {"effort": "none"},
+        # daily_review, and agent routers. Thinking-mode models (Qwen3,
+        # DeepSeek-R1, o1) otherwise burn the token budget on internal
+        # reasoning and return content="" with finish_reason=length.
+        # "reasoning": {"effort": "none"},
     }
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(
-            settings.openrouter_chat_url,
-            headers={
-                "Authorization": f"Bearer {settings.openrouter_api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-        )
-        if resp.status_code >= 500:
-            raise RuntimeError(f"openrouter transient {resp.status_code}")
+    @http_retry(logger)
+    async def _call() -> dict[str, Any]:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                settings.openrouter_chat_url,
+                headers={
+                    "Authorization": f"Bearer {settings.openrouter_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+        # Let @http_retry catch 429/5xx and retry; raise immediately on others.
         resp.raise_for_status()
         body = resp.json()
 
@@ -91,22 +95,28 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
         #    response_format=json_object and dropped the body)
         #  - content: "" empty string
         #  - content: a JSON-shaped string wrapped in markdown fences
-        # Any of these should be retryable rather than crashing.
+        # All retryable via RetryableError → @http_retry's predicate.
         choices = body.get("choices") or []
         if not choices:
-            raise RuntimeError(f"openrouter empty choices: {body}")
-        message = choices[0].get("message") or {}
+            raise RetryableError(f"openrouter empty choices: {body}")
+
+        choice = choices[0]
+        if choice.get("finish_reason") == "length":
+            raise RetryableError(
+                f"openrouter truncated by token limit (model={body.get('model')})",
+            )
+
+        message = choice.get("message") or {}
         content = message.get("content")
         if not content or not isinstance(content, str):
-            raise RuntimeError(
-                f"openrouter empty content (finish_reason={choices[0].get('finish_reason')}, "
+            raise RetryableError(
+                f"openrouter empty content (finish_reason={choice.get('finish_reason')}, "
                 f"model={body.get('model')})",
             )
 
         # Strip markdown fences if the model wrapped the JSON in them.
         stripped = content.strip()
         if stripped.startswith("```"):
-            # Remove fence and optional language tag (```json ... ```).
             stripped = stripped.removeprefix("```json").removeprefix("```").strip()
             if stripped.endswith("```"):
                 stripped = stripped.removesuffix("```").strip()
@@ -114,48 +124,24 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
         try:
             return json.loads(stripped)
         except json.JSONDecodeError as e:
-            # Log a preview so operators can see what the model actually returned.
             preview = stripped[:500] + ("…" if len(stripped) > 500 else "")
             logger.warning(
-                "openrouter returned non-JSON content (schema=%s, model=%s): %s — content preview: %r",
+                "openrouter returned non-JSON content (schema=%s, model=%s): %s — preview: %r",
                 schema_name, body.get("model"), e, preview,
             )
-            raise RuntimeError(f"openrouter returned non-JSON content: {e}") from e
+            raise RetryableError(f"openrouter returned non-JSON content: {e}") from e
 
-
-_MAX_ATTEMPTS = 3  # 1 try + 2 retries
+    return await _call()
 
 
 async def generate_studio_artifact(
     *, kind: StudioKind, transcript: str, locale: StudioLocale,
 ) -> dict[str, Any]:
-    """Generate one studio artifact. Retries on transient errors.
+    """Generate one studio artifact. Retries handled by @http_retry on _call.
 
-    Retryable: 5xx, empty/None content, malformed JSON, timeouts.
+    Retryable (via shared decorator): RetryableError (truncation, empty/malformed
+    content), httpx 429/502/503/504, ConnectError, TimeoutException.
     Non-retryable: 4xx (caller config issue), missing API key.
     """
     prompt = build_prompt(kind=kind, transcript=transcript, locale=locale)
-
-    last_err: Exception | None = None
-    for attempt in range(_MAX_ATTEMPTS):
-        try:
-            return await _call_openrouter(prompt=prompt, schema_name=kind)
-        except RuntimeError as e:
-            last_err = e
-            logger.warning(
-                "studio: attempt %d/%d failed for kind=%s locale=%s model=%s: %s",
-                attempt + 1, _MAX_ATTEMPTS, kind, locale,
-                settings.openrouter_structured_model, e,
-            )
-            # Last attempt: give up.
-            if attempt == _MAX_ATTEMPTS - 1:
-                break
-            # Tiny exponential backoff to give the upstream a breath.
-            await asyncio.sleep(0.5 * (2 ** attempt))
-
-    assert last_err is not None
-    logger.error(
-        "studio: all %d attempts failed for kind=%s, giving up. Last error: %s",
-        _MAX_ATTEMPTS, kind, last_err,
-    )
-    raise last_err
+    return await _call_openrouter(prompt=prompt, schema_name=kind)
