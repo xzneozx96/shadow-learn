@@ -164,10 +164,13 @@ const MemoMarkdown = memo(({ text, onSeek }: { text: string, onSeek: (sec: numbe
   <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed">
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
+      // Default urlTransform strips non-http schemes (including our
+      // `timestamp:` custom scheme), so href arrives empty. Pass URLs
+      // through unchanged — chat content comes from our own LLM, not
+      // untrusted user input.
+      urlTransform={url => url}
       components={{
         a: ({ href, children }) => {
-          // ReactMarkdown URL-encodes the colon in custom schemes, so
-          // `timestamp:83` arrives as `timestamp%3A83`. Decode before testing.
           const decoded = typeof href === 'string' ? decodeURIComponent(href) : ''
           if (decoded.startsWith('timestamp:')) {
             const sec = Number.parseInt(decoded.slice('timestamp:'.length), 10)
