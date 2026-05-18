@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react'
+import { Check, Hourglass, Play } from 'lucide-react'
 import { memo } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
 import { cn } from '@/lib/utils'
@@ -9,11 +9,31 @@ interface Props {
   duration: string
   isActive: boolean
   isCompleted: boolean
+  isInProgress?: boolean
   onSelect: (videoId: string) => void
 }
 
-function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSelect }: Props) {
+function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInProgress = false, onSelect }: Props) {
   const { t } = useI18n()
+  // Badge priority: Playing > Completed > InProgress. A playing lesson that
+  // is also marked complete still shows the Playing badge so the user can
+  // see where they are.
+  let badge: 'playing' | 'completed' | 'in_progress' | null = null
+  if (isActive)
+    badge = 'playing'
+  else if (isCompleted)
+    badge = 'completed'
+  else if (isInProgress)
+    badge = 'in_progress'
+
+  let badgeLabel = ''
+  if (badge === 'playing')
+    badgeLabel = t('tips.lesson.playing')
+  else if (badge === 'completed')
+    badgeLabel = t('tips.lesson.completed')
+  else if (badge === 'in_progress')
+    badgeLabel = t('tips.lesson.inProgress')
+
   return (
     <li
       role="listitem"
@@ -39,7 +59,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
           loading="lazy"
           className={cn(
             'absolute inset-0 size-full object-cover',
-            isCompleted && 'opacity-50',
+            badge && 'opacity-50',
           )}
           onError={(e) => {
             // Fallback chain: mqdefault → hqdefault → hidden (gradient shows through)
@@ -50,22 +70,40 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, onSel
               img.style.display = 'none'
           }}
         />
-        {isCompleted && (
+        {badge && (
           <>
             <span aria-hidden className="absolute inset-0 bg-black/40" />
             <span
-              aria-label={t('tips.lesson.completed')}
+              aria-label={badgeLabel}
               className="absolute inset-0 flex items-center justify-center"
             >
-              <span className="flex items-center justify-center size-7 rounded-full bg-success text-white shadow-lg">
-                <Check className="size-4" aria-hidden strokeWidth={3} />
-              </span>
+              {badge === 'playing' && (
+                <span className="flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground shadow-lg animate-pulse">
+                  <Play className="size-3.5 ml-0.5" aria-hidden fill="currentColor" />
+                </span>
+              )}
+              {badge === 'completed' && (
+                <span className="flex items-center justify-center size-7 rounded-full bg-success text-white shadow-lg">
+                  <Check className="size-4" aria-hidden strokeWidth={3} />
+                </span>
+              )}
+              {badge === 'in_progress' && (
+                <span className="flex items-center justify-center size-7 rounded-full bg-amber-500 text-white shadow-lg">
+                  <Hourglass className="size-3.5" aria-hidden strokeWidth={2.5} />
+                </span>
+              )}
             </span>
           </>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <div className={cn('text-xs font-semibold line-clamp-2 leading-snug', isCompleted ? 'text-muted-foreground' : 'text-foreground')}>{title}</div>
+        <div className={cn(
+          'text-xs font-semibold line-clamp-2 leading-snug',
+          isActive ? 'text-primary' : isCompleted ? 'text-muted-foreground' : 'text-foreground',
+        )}
+        >
+          {title}
+        </div>
         <div className="text-xs text-amber-500 mt-1 tabular-nums">{duration}</div>
       </div>
     </li>

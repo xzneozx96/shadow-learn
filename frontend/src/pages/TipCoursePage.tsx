@@ -32,18 +32,24 @@ export function TipCoursePage() {
   const { course, lessons, loading, error } = useTipCourse(safeSource, safeId)
 
   const [completedSet, setCompletedSet] = useState<Set<string>>(() => new Set())
+  const [inProgressSet, setInProgressSet] = useState<Set<string>>(() => new Set())
   useEffect(() => {
     let cancelled = false
     async function load() {
       if (!db || !course) {
-        if (!cancelled)
+        if (!cancelled) {
           setCompletedSet(new Set())
+          setInProgressSet(new Set())
+        }
         return
       }
       const rows = await listTipProgressForCourse(db, course.id)
       if (cancelled)
         return
       setCompletedSet(new Set(rows.filter(r => r.completed).map(r => r.videoId)))
+      setInProgressSet(new Set(
+        rows.filter(r => !r.completed && r.watchedSec > 0).map(r => r.videoId),
+      ))
     }
     void load()
     return () => { cancelled = true }
@@ -74,8 +80,26 @@ export function TipCoursePage() {
         next.add(activeVideoId)
         return next
       })
+      // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
+      setInProgressSet((prev) => {
+        if (!prev.has(activeVideoId))
+          return prev
+        const next = new Set(prev)
+        next.delete(activeVideoId)
+        return next
+      })
     }
-  }, [progress.completed, activeVideoId])
+    else if (progress.watchedSec > 0 && activeVideoId && !progress.completed) {
+      // eslint-disable-next-line react-hooks-extra/no-direct-set-state-in-use-effect
+      setInProgressSet((prev) => {
+        if (prev.has(activeVideoId))
+          return prev
+        const next = new Set(prev)
+        next.add(activeVideoId)
+        return next
+      })
+    }
+  }, [progress.completed, progress.watchedSec, activeVideoId])
 
   const transcriptText = transcript.segments.map(s => `[${formatTs(s.start)}] ${s.text}`).join('\n')
 
@@ -125,13 +149,14 @@ export function TipCoursePage() {
   return (
     <Layout>
       <div className="relative z-5 grid h-full grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[280px_1fr_360px] 2xl:grid-cols-[280px_1fr_440px]">
-        <div className="border-b border-border lg:border-b-0 max-h-[40vh] lg:max-h-none overflow-y-auto">
+        <div className="border-b border-border lg:border-b-0 max-h-[40vh] lg:max-h-none overflow-hidden">
           <CourseSidebar
             courseName={course.name}
             topic={course.topic}
             lessons={lessons}
             activeVideoId={activeVideoId}
             completedVideoIds={completedSet}
+            inProgressVideoIds={inProgressSet}
             onSelect={handleSelectLesson}
           />
         </div>
