@@ -9,24 +9,12 @@ from pydantic import BaseModel
 
 import app.tips.services.studio as _studio_svc
 import app.tips.services.transcript as _transcript_svc
-from app.tips.schemas import (
-    StudioCards,
-    StudioMindMap,
-    StudioRequest,
-    StudioStudyGuide,
-    StudioSummary,
-)
+from app.job_store import get_job_for_key, jobs
+from app.tips.schemas import StudioRequest
 
 router = APIRouter(prefix="/api/tips", tags=["tips"])
 
 _VALID_KINDS = {"summary", "study_guide", "cards", "mind_map"}
-
-_KIND_TO_MODEL = {
-    "summary": StudioSummary,
-    "study_guide": StudioStudyGuide,
-    "cards": StudioCards,
-    "mind_map": StudioMindMap,
-}
 
 _YOUTUBE_ID = re.compile(r"^[A-Za-z0-9_-]{6,32}$")
 
@@ -112,37 +100,72 @@ async def get_transcript(video_id: str):
     )
 
 
+def _studio_response_for_job(job_id: str) -> JSONResponse:
+    """Translate a backend Job into the wire shape the studio client expects.
+
+    Shape mirrors the transcript flow: 200 ``ready`` with data, 202
+    ``pending``, 502 ``error``. Job pruning + dedupe keep the source of truth
+    on the backend so the client never has to persist jobIds.
+    """
+    job = jobs[job_id]
+    if job.status == "complete":
+        return JSONResponse(
+            status_code=200,
+            content={"status": "ready", "jobId": job_id, "data": (job.result or {}).get("data")},
+        )
+    if job.status == "error":
+        return JSONResponse(
+            status_code=502,
+            content={"status": "error", "jobId": job_id, "error": job.error or "unknown error"},
+        )
+    return JSONResponse(
+        status_code=202,
+        content={"status": "pending", "jobId": job_id},
+    )
+
+
 @router.post("/studio/{kind}")
 async def post_studio(kind: str, req: StudioRequest):
+    """Trigger (or join) a studio-artifact generation job.
+
+    Behavior:
+      - If a live job already exists for ``(kind, video_id, locale)``, no new
+        OpenRouter call is made; the existing job's current state is
+        returned (ready / pending). This is what lets two tabs / a reload
+        avoid spawning duplicate work.
+      - Otherwise a background job is kicked off and ``202 {jobId}`` is
+        returned. The client polls ``GET /api/jobs/{job_id}``.
+    """
     if kind not in _VALID_KINDS:
         raise HTTPException(status_code=400, detail=f"invalid kind: {kind}")
 
-    try:
-        raw = await _studio_svc.generate_studio_artifact(
-            kind=kind,  # type: ignore[arg-type]
-            transcript=req.transcript,
-            locale=req.locale,
-        )
-    except RuntimeError as e:
-        raise HTTPException(status_code=502, detail=f"upstream error: {e}") from e
-    except Exception as e:
-        # Tenacity raises after retries exhaust — wraps the last RetryableError /
-        # httpx error. Service-side schema validation inside the retry boundary
-        # also surfaces here when the LLM repeatedly emits invalid trees.
-        raise HTTPException(
-            status_code=502,
-            detail=f"upstream failed after retries: {e}",
-        ) from e
+    job_id = _studio_svc.kick_off_studio_job(
+        kind=kind,  # type: ignore[arg-type]
+        video_id=req.video_id,
+        transcript=req.transcript,
+        locale=req.locale,
+    )
+    return _studio_response_for_job(job_id)
 
-    # Validate the LLM output against the per-kind Pydantic model. If the
-    # LLM returned malformed JSON, surface a 502 (we cannot trust the
-    # response and the client cannot recover by retrying with the same input).
-    model = _KIND_TO_MODEL[kind]
-    try:
-        validated = model.model_validate(raw)
-    except Exception as e:  # pydantic ValidationError
-        raise HTTPException(
-            status_code=502,
-            detail=f"upstream returned invalid schema: {e}",
-        ) from e
-    return validated.model_dump()
+
+@router.get("/studio/{kind}/{video_id}")
+async def get_studio_status(kind: str, video_id: str, locale: str = "en"):
+    """Status probe used by the client on mount / reload.
+
+    Looks up any live job for ``(kind, video_id, locale)`` without spending
+    an OpenRouter call. Returns ``ready`` / ``pending`` / ``404 none``. This
+    is the analog of ``GET /api/tips/transcript/{video_id}`` — content-keyed
+    lookup is the resume mechanism, no client-side jobId persistence needed.
+    """
+    if kind not in _VALID_KINDS:
+        raise HTTPException(status_code=400, detail=f"invalid kind: {kind}")
+    if locale not in {"en", "vi"}:
+        raise HTTPException(status_code=400, detail=f"invalid locale: {locale}")
+    if not _YOUTUBE_ID.match(video_id):
+        raise HTTPException(status_code=400, detail="invalid video_id")
+
+    key = _studio_svc.studio_job_key(kind, video_id, locale)  # type: ignore[arg-type]
+    job_id = get_job_for_key(key)
+    if job_id is None:
+        return JSONResponse(status_code=404, content={"status": "none"})
+    return _studio_response_for_job(job_id)

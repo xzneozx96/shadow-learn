@@ -33,7 +33,13 @@ beforeEach(async () => {
     ],
     generatedAt: '',
   })
-  globalThis.fetch = vi.fn() as any
+  // Default to a benign 404 probe response so the hook lands on idle when
+  // no cache row exists. Specific tests override this when they care.
+  globalThis.fetch = vi.fn().mockResolvedValue({
+    ok: false,
+    status: 404,
+    json: async () => ({ status: 'none' }),
+  }) as any
 })
 
 describe('cardsTab', () => {

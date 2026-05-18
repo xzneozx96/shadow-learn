@@ -34,7 +34,7 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
         </div>
         <Button
           size="lg"
-          disabled={deck.disabled || deck.status === 'loading' || deck.inFlightByOther}
+          disabled={deck.disabled || deck.status === 'loading'}
           onClick={deck.generate}
         >
           {deck.status === 'loading' && <Loader2 className="size-4 animate-spin" />}

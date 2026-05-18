@@ -8,6 +8,14 @@ import 'fake-indexeddb/auto'
 
 let db: ShadowLearnDB
 
+function makeResponse(status: number, body: unknown): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+  } as Response
+}
+
 beforeEach(async () => {
   const { deleteDB } = await import('idb')
   await deleteDB('shadowlearn')
@@ -21,13 +29,15 @@ afterEach(() => {
 })
 
 describe('useTipStudio', () => {
-  it('starts idle when nothing is cached', () => {
+  it('starts idle when nothing is cached and probe returns 404', async () => {
+    ;(globalThis.fetch as any).mockResolvedValue(makeResponse(404, { status: 'none' }))
     const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v1', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
     expect(result.current.status).toBe('idle')
     expect(result.current.data).toBeNull()
   })
 
-  it('reads cached artifact on mount when present', async () => {
+  it('reads cached artifact on mount without probing the server', async () => {
     await putTipStudio(db, {
       key: studioKey('v1', 'summary', 'en'),
       kind: 'summary',
@@ -40,17 +50,20 @@ describe('useTipStudio', () => {
     const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v1', transcript: 'x', locale: 'en' }))
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.data).toEqual({ abstract: 'cached', takeaways: ['a', 'b', 'c'] })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
-  it('generate() fetches and caches', async () => {
+  it('generate() returning ready synchronously persists data', async () => {
     const fake = { abstract: 'fresh', takeaways: ['1', '2', '3'] }
-    ;(globalThis.fetch as any).mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => fake,
+    ;(globalThis.fetch as any).mockImplementation((url: string) => {
+      // Probe on mount → none. POST → ready.
+      if (url.includes('/api/tips/studio/summary/v2'))
+        return Promise.resolve(makeResponse(404, { status: 'none' }))
+      return Promise.resolve(makeResponse(200, { status: 'ready', jobId: 'j1', data: fake }))
     })
 
     const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v2', transcript: 'hi', locale: 'en' }))
+    await waitFor(() => expect(result.current.status).toBe('idle'))
     await act(async () => { await result.current.generate() })
 
     await waitFor(() => expect(result.current.status).toBe('ready'))
@@ -59,31 +72,69 @@ describe('useTipStudio', () => {
     expect(cached?.data).toEqual(fake)
   })
 
-  it('locale switch reads different cache slot', async () => {
-    await putTipStudio(db, {
-      key: studioKey('v3', 'summary', 'en'),
-      kind: 'summary',
-      videoId: 'v3',
-      locale: 'en',
-      data: { abstract: 'EN', takeaways: ['a', 'b', 'c'] },
-      generatedAt: '2026-05-17T00:00:00Z',
+  it('generate() pending → polls /api/jobs and resolves when complete', async () => {
+    const fake = { abstract: 'polled', takeaways: ['1', '2', '3'] }
+    let pollCalls = 0
+    ;(globalThis.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/tips/studio/summary/v3'))
+        return Promise.resolve(makeResponse(404, { status: 'none' }))
+      if (url.endsWith('/api/tips/studio/summary'))
+        return Promise.resolve(makeResponse(202, { status: 'pending', jobId: 'job-xyz' }))
+      // /api/jobs/job-xyz
+      pollCalls += 1
+      if (pollCalls < 2)
+        return Promise.resolve(makeResponse(200, { status: 'processing', step: 'queued' }))
+      return Promise.resolve(makeResponse(200, { status: 'complete', result: { data: fake } }))
     })
 
-    const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v3', transcript: 'x', locale: 'vi' }))
+    const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v3', transcript: 'hi', locale: 'en' }))
     await waitFor(() => expect(result.current.status).toBe('idle'))
-    expect(result.current.data).toBeNull()
+    await act(async () => { await result.current.generate() })
+
+    await waitFor(() => expect(result.current.status).toBe('ready'), { timeout: 4000 })
+    expect(result.current.data).toEqual(fake)
+    expect(pollCalls).toBeGreaterThanOrEqual(2)
   })
 
-  it('5xx response sets status=error', async () => {
-    ;(globalThis.fetch as any).mockResolvedValue({ ok: false, status: 502 })
+  it('resumes polling on mount when probe returns pending', async () => {
+    const fake = { abstract: 'resumed', takeaways: ['1', '2', '3'] }
+    let pollCalls = 0
+    ;(globalThis.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/tips/studio/summary/v4'))
+        return Promise.resolve(makeResponse(202, { status: 'pending', jobId: 'job-r' }))
+      pollCalls += 1
+      return Promise.resolve(makeResponse(200, { status: 'complete', result: { data: fake } }))
+    })
+
     const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v4', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(result.current.status).toBe('ready'), { timeout: 4000 })
+    expect(result.current.data).toEqual(fake)
+    expect(pollCalls).toBeGreaterThanOrEqual(1)
+  })
+
+  it('5xx response on POST sets status=error', async () => {
+    ;(globalThis.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/tips/studio/summary/v5'))
+        return Promise.resolve(makeResponse(404, { status: 'none' }))
+      return Promise.resolve(makeResponse(502, { detail: 'boom' }))
+    })
+
+    const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v5', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(result.current.status).toBe('idle'))
     await act(async () => { await result.current.generate() })
     expect(result.current.status).toBe('error')
   })
 
   it('disabled=true when transcript empty', () => {
-    const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v5', transcript: '', locale: 'en' }))
+    const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v6', transcript: '', locale: 'en' }))
     expect(result.current.disabled).toBe(true)
+  })
+
+  it('inFlightByOther is always false (legacy concurrency flag retired)', async () => {
+    ;(globalThis.fetch as any).mockResolvedValue(makeResponse(404, { status: 'none' }))
+    const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v7', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    expect(result.current.inFlightByOther).toBe(false)
   })
 })
 
@@ -92,11 +143,12 @@ const sampleMM: StudioMindMapData = {
 }
 
 describe('useTipStudio mind_map', () => {
-  it('fetches and caches a mind map', async () => {
-    ;(globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => sampleMM,
-    } as Response)
+  it('fetches and caches a mind map via ready response', async () => {
+    ;(globalThis.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/tips/studio/mind_map/v1'))
+        return Promise.resolve(makeResponse(404, { status: 'none' }))
+      return Promise.resolve(makeResponse(200, { status: 'ready', jobId: 'jm', data: sampleMM }))
+    })
 
     const { result } = renderHook(() => useTipStudio({
       db,
@@ -106,6 +158,7 @@ describe('useTipStudio mind_map', () => {
       locale: 'en',
     }))
 
+    await waitFor(() => expect(result.current.status).toBe('idle'))
     await act(async () => { await result.current.generate() })
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.data?.root.label).toBe('r')
@@ -119,8 +172,7 @@ describe('useTipStudio mind_map', () => {
       locale: 'en',
       data: sampleMM,
       generatedAt: '2026-05-18T00:00:00Z',
-    });
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockClear()
+    })
 
     const { result } = renderHook(() => useTipStudio({
       db,

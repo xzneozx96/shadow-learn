@@ -116,8 +116,6 @@ export function StudioTab(props: Props) {
             setSurface('study_guide')
           }}
           onRegen={guide.regenerate}
-          busy={guide.inFlightByOther}
-          busyLabel={t('tips.studio.busy')}
           loading={guide.status === 'loading'}
           loadingLabel={t('tips.studio.loading')}
           errorLabel={guide.status === 'error' ? t('tips.studio.error') : undefined}
@@ -130,8 +128,6 @@ export function StudioTab(props: Props) {
           preview={cardsHasDeck ? cardsPeek.cards[0].front : null}
           primaryLabel={cardsHasDeck ? t('tips.studio.open') : t('tips.studio.generate')}
           onPrimary={() => setSurface('cards')}
-          busy={cardsPeek.inFlightByOther}
-          busyLabel={t('tips.studio.busy')}
         />
         <StudioTile
           Icon={GraduationCap}
@@ -154,8 +150,6 @@ export function StudioTab(props: Props) {
             setSurface('mind_map')
           }}
           onRegen={mindmap.regenerate}
-          busy={mindmap.inFlightByOther}
-          busyLabel={t('tips.studio.busy')}
           loading={mindmap.status === 'loading'}
           loadingLabel={t('tips.studio.loading')}
           errorLabel={mindmap.status === 'error' ? t('tips.studio.error') : undefined}

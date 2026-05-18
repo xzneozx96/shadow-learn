@@ -107,3 +107,21 @@ class StudioMindMap(BaseModel):
 
 
 MindMapNode.model_rebuild()
+
+
+# ---- Studio job response models ---------------------------------------------
+
+
+class StudioStatusReady(BaseModel):
+    status: Literal["ready"] = "ready"
+    jobId: str
+    data: dict
+
+
+class StudioStatusPending(BaseModel):
+    status: Literal["pending"] = "pending"
+    jobId: str
+
+
+class StudioStatusNone(BaseModel):
+    status: Literal["none"] = "none"

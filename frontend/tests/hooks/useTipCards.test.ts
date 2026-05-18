@@ -82,14 +82,20 @@ describe('useTipCards', () => {
       ],
       generatedAt: '',
     });
+    // POST returns the artifact synchronously as a ready envelope. The
+    // probe call on mount is short-circuited by the IDB cache hit above.
     (globalThis.fetch as any).mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({
-        cards: [
-          { id: 'new1', front: 'Q1', rule: 'r2', example: 'e2', trap: null }, // matches old1.front
-          { id: 'new3', front: 'Q3', rule: 'r3', example: 'e3', trap: null }, // brand new
-        ],
+        status: 'ready',
+        jobId: 'jc',
+        data: {
+          cards: [
+            { id: 'new1', front: 'Q1', rule: 'r2', example: 'e2', trap: null },
+            { id: 'new3', front: 'Q3', rule: 'r3', example: 'e3', trap: null },
+          ],
+        },
       }),
     })
 

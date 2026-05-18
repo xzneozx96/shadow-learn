@@ -8,6 +8,7 @@ from typing import Any, Literal
 import httpx
 from pydantic import BaseModel, ValidationError
 
+from app.job_store import jobs, kick_off_keyed_job
 from app.settings import settings
 from app.shared._retry import RetryableError, http_retry
 from app.tips.schemas import (
@@ -192,3 +193,47 @@ async def generate_studio_artifact(
     """
     prompt = build_prompt(kind=kind, transcript=transcript, locale=locale)
     return await _call_openrouter(prompt=prompt, schema_name=kind)
+
+
+def studio_job_key(kind: StudioKind, video_id: str, locale: StudioLocale) -> str:
+    """Namespaced key used by the shared keyed-job index."""
+    return f"tip-studio:{kind}:{video_id}:{locale}"
+
+
+def kick_off_studio_job(
+    *, kind: StudioKind, video_id: str, transcript: str, locale: StudioLocale,
+) -> str:
+    """Spawn (or resume) a background studio-generation job, return its id.
+
+    Dedupe key = (kind, videoId, locale). If a live job already exists for
+    that key, the existing id is returned and no new OpenRouter call is made.
+    The runner validates the LLM payload against the per-kind Pydantic model
+    inside the retry boundary (``_call_openrouter`` already does this), then
+    writes ``{"data": <validated dict>}`` onto ``Job.result``.
+    """
+    async def _run(job_id: str) -> None:
+        try:
+            data = await generate_studio_artifact(
+                kind=kind, transcript=transcript, locale=locale,
+            )
+            # Second validation pass at the runner boundary. ``_call_openrouter``
+            # already validates inside its retry loop, but a feature consumer
+            # (or a test stub) that swaps ``generate_studio_artifact`` for a
+            # raw payload would bypass that — re-validating here keeps the
+            # job's terminal state consistent with the schema contract.
+            model = _KIND_TO_MODEL[kind]
+            validated = model.model_validate(data).model_dump()
+            jobs[job_id].result = {"data": validated}
+            jobs[job_id].status = "complete"
+            jobs[job_id].step = "complete"
+        except Exception as exc:  # noqa: BLE001 — surface every failure on the Job
+            logger.exception(
+                "kick_off_studio_job._run: failed job_id=%s kind=%s video_id=%s",
+                job_id, kind, video_id,
+            )
+            jobs[job_id].status = "error"
+            jobs[job_id].error = str(exc)
+
+    return kick_off_keyed_job(
+        studio_job_key(kind, video_id, locale), _run, id_prefix="tip-studio",
+    )

@@ -58,7 +58,7 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
           <button
             type="button"
             onClick={summary.regenerate}
-            disabled={summary.status === 'loading' || summary.inFlightByOther}
+            disabled={summary.status === 'loading'}
             className="ml-auto inline-flex items-center gap-1 text-xs font-bold text-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {summary.status === 'loading' && <Loader2 className="size-3 animate-spin" />}
