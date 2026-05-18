@@ -89,10 +89,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
               )}
               {badge === 'in_progress' && (
                 <span className="flex items-center justify-center size-7 rounded-full bg-amber-500 text-white shadow-lg">
-                  {/* Lucide's Clock draws the minute hand up + hour hand to ~4 o'clock,
-                      so visual mass skews lower-right. Nudge -0.5px up and left to
-                      land on the optical center inside the circle. */}
-                  <Clock className="size-4 -translate-x-px -translate-y-px" aria-hidden />
+                  <Clock className="size-4 -translate-y-[0.5px]" aria-hidden />
                 </span>
               )}
             </span>
