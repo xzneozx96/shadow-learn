@@ -1,5 +1,5 @@
 import { BookOpen, ChevronLeft, GraduationCap, Layers, Sparkles } from 'lucide-react'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipCards } from '@/hooks/useTipCards'
@@ -9,6 +9,10 @@ import { StudioTile } from '../studio/StudioTile'
 import { StudyGuideArtifact } from '../studio/StudyGuideArtifact'
 import { CardsTab } from './CardsTab'
 
+const MindMapArtifact = lazy(() =>
+  import('../studio/MindMapArtifact').then(m => ({ default: m.MindMapArtifact })),
+)
+
 interface Props {
   courseId: string
   videoId: string
@@ -17,7 +21,7 @@ interface Props {
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
 }
 
-type Surface = 'grid' | 'study_guide' | 'quiz' | 'cards'
+type Surface = 'grid' | 'study_guide' | 'quiz' | 'cards' | 'mind_map'
 
 export function StudioTab(props: Props) {
   const { courseId, videoId, lessonTitle, transcript, transcriptStatus } = props
@@ -29,6 +33,7 @@ export function StudioTab(props: Props) {
   const studioLocale: 'en' | 'vi' = locale === 'vi' ? 'vi' : 'en'
 
   const guide = useTipStudio({ db, kind: 'study_guide', videoId, transcript, locale: studioLocale })
+  const mindmap = useTipStudio({ db, kind: 'mind_map', videoId, transcript, locale: studioLocale })
   // Read-only peek at the cards cache to drive the tile preview / state.
   // The actual deck UI re-mounts useTipCards itself inside CardsTab.
   const cardsPeek = useTipCards({ db, videoId, transcript, locale: studioLocale })
@@ -74,6 +79,24 @@ export function StudioTab(props: Props) {
         <div className="px-4 pt-3">{backButton}</div>
         <div className="flex-1 overflow-y-auto">
           <CardsTab videoId={videoId} transcript={transcript} transcriptStatus={transcriptStatus} />
+        </div>
+      </div>
+    )
+  }
+  if (surface === 'mind_map' && mindmap.data) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-4 pt-3">{backButton}</div>
+        <div className="flex-1">
+          <Suspense fallback={<div className="p-6 text-center text-sm text-muted-foreground">{t('tips.studio.loading')}</div>}>
+            <MindMapArtifact
+              data={mindmap.data}
+              courseId={courseId}
+              videoId={videoId}
+              lessonTitle={lessonTitle}
+              transcript={transcript}
+            />
+          </Suspense>
         </div>
       </div>
     )
@@ -126,8 +149,20 @@ export function StudioTab(props: Props) {
           Icon={Sparkles}
           titleKey="tips.studio.tile.mindMap.title"
           blurbKey="tips.studio.tile.mindMap.blurb"
-          badge={t('tips.studio.tile.mindMap.badge')}
-          state="locked"
+          state={mindmap.data ? 'filled' : 'empty'}
+          preview={mindmap.data ? mindmap.data.root.label : null}
+          primaryLabel={mindmap.data ? t('tips.studio.open') : t('tips.studio.generate')}
+          onPrimary={async () => {
+            if (!mindmap.data)
+              await mindmap.generate()
+            setSurface('mind_map')
+          }}
+          onRegen={mindmap.regenerate}
+          busy={mindmap.inFlightByOther}
+          busyLabel={t('tips.studio.busy')}
+          loading={mindmap.status === 'loading'}
+          loadingLabel={t('tips.studio.loading')}
+          errorLabel={mindmap.status === 'error' ? t('tips.studio.error') : undefined}
         />
       </div>
     </div>
