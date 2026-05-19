@@ -81,6 +81,10 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(note.title)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Set synchronously in commit/cancel so the same-tick click bubbling to
+  // the article suppresses onOpen even though setRenaming(false) hasn't
+  // committed yet. Cleared on next event loop turn.
+  const suppressOpenRef = useRef(false)
 
   useEffect(() => {
     if (renaming)
@@ -92,17 +96,14 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
     setRenaming(true)
   }
 
-  const commitRename = () => {
-    if (!renaming)
-      return
+  const finishRename = (commit: boolean) => {
+    suppressOpenRef.current = true
+    setTimeout(() => { suppressOpenRef.current = false }, 0)
     setRenaming(false)
-    if (draft.trim() !== note.title)
+    if (commit && draft.trim() !== note.title)
       onRename(note.id, draft)
-  }
-
-  const cancelRename = () => {
-    setRenaming(false)
-    setDraft(note.title)
+    if (!commit)
+      setDraft(note.title)
   }
 
   const { textCls, bgCls, tagLabel } = (() => {
@@ -149,7 +150,7 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
     <article
       className="p-6 rounded-[22px] border border-border/50 bg-gradient-to-b from-card to-card/95 shadow-xs hover:border-primary transition-colors duration-200 cursor-pointer relative overflow-hidden"
       onClick={() => {
-        if (renaming)
+        if (renaming || suppressOpenRef.current)
           return
         onOpen(note.id)
       }}
@@ -200,15 +201,15 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
                 placeholder={t('tips.notes.titlePlaceholder')}
                 onClick={e => e.stopPropagation()}
                 onChange={e => setDraft(e.target.value)}
-                onBlur={commitRename}
+                onBlur={() => finishRename(true)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
-                    commitRename()
+                    finishRename(true)
                   }
                   else if (e.key === 'Escape') {
                     e.preventDefault()
-                    cancelRename()
+                    finishRename(false)
                   }
                 }}
                 autoFocus
