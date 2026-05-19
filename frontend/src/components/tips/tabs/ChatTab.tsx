@@ -360,7 +360,7 @@ export function ChatTab(props: Props) {
     <div className="flex flex-col h-full">
       <div
         ref={scrollRef}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-6"
       >
         {chat.messages.length === 0 && chat.status === 'ready' && (
           <ConversationEmptyState
