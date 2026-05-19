@@ -113,33 +113,33 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
     const kind = note.sourceRef?.kind
     if (note.source === 'chat') {
       return {
-        bgCls: 'bg-sky-500 text-white shadow-md shadow-sky-500/10 dark:shadow-sky-500/5',
+        bgCls: 'bg-sky-500/20 text-sky-300',
         tagLabel: t('tips.notes.source.chat'),
       }
     }
     if (note.source === 'studio') {
       let label = t('tips.notes.source.studio')
-      let bg = 'bg-indigo-500 text-white shadow-md shadow-indigo-500/10 dark:shadow-indigo-500/5'
+      let bg = 'bg-violet-500/20 text-violet-300'
       if (kind === 'summary') {
         label = t('tips.notes.source.summary')
-        bg = 'bg-amber-500 text-white shadow-md shadow-amber-500/10 dark:shadow-amber-500/5'
+        bg = 'bg-amber-500/20 text-amber-300'
       }
       else if (kind === 'study_guide') {
         label = t('tips.notes.source.studyGuide')
-        bg = 'bg-blue-500 text-white shadow-md shadow-blue-500/10 dark:shadow-blue-500/5'
+        bg = 'bg-blue-500/20 text-blue-300'
       }
       else if (kind === 'mind_map') {
         label = t('tips.notes.source.mindMap')
-        bg = 'bg-violet-500 text-white shadow-md shadow-violet-500/10 dark:shadow-violet-500/5'
+        bg = 'bg-violet-500/20 text-violet-300'
       }
       else if (kind === 'cards') {
         label = t('tips.notes.source.card')
-        bg = 'bg-emerald-500 text-white shadow-md shadow-emerald-500/10 dark:shadow-emerald-500/5'
+        bg = 'bg-emerald-500/20 text-emerald-300'
       }
       return { bgCls: bg, tagLabel: label }
     }
     return {
-      bgCls: 'bg-zinc-500 text-white shadow-md shadow-zinc-500/10 dark:shadow-zinc-500/5',
+      bgCls: 'bg-zinc-500/20 text-zinc-300',
       tagLabel: t('tips.notes.source.freeform'),
     }
   })()
