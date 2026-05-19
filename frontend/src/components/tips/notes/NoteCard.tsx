@@ -18,14 +18,15 @@ interface Props {
   onDelete: (id: string) => void
 }
 
-function relativeTime(iso: string, locale: string): string {
+function relativeTime(iso: string, locale: string, justNowLabel: string): string {
   const then = new Date(iso).getTime()
   const now = Date.now()
   const diffSec = Math.round((then - now) / 1000)
-  const rtf = new Intl.RelativeTimeFormat(locale === 'vi' ? 'vi' : 'en', { numeric: 'auto' })
   const absSec = Math.abs(diffSec)
+  // Under 60s collapses to a static label — avoids per-second ticking on re-render.
   if (absSec < 60)
-    return rtf.format(diffSec, 'second')
+    return justNowLabel
+  const rtf = new Intl.RelativeTimeFormat(locale === 'vi' ? 'vi' : 'en', { numeric: 'auto' })
   if (absSec < 3600)
     return rtf.format(Math.round(diffSec / 60), 'minute')
   if (absSec < 86400)
@@ -117,7 +118,7 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
         </DropdownMenu>
       </div>
       <p className="text-[11px] text-muted-foreground text-right mt-2">
-        {relativeTime(note.updatedAt, locale)}
+        {relativeTime(note.updatedAt, locale, t('tips.notes.justNow'))}
         {' · '}
         {t('tips.notes.from')}
         {' '}
