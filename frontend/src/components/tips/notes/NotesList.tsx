@@ -38,8 +38,8 @@ export function NotesList({ notes, hydrated, onNew, onOpen, onDiscuss, onRename,
       {notes.map((note, i) => (
         <div
           key={note.id}
-          className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-          style={{ animationDelay: `${Math.min(i, 5) * 40}ms`, animationFillMode: 'both' }}
+          className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+          style={{ animationDelay: `${i * 70}ms`, animationFillMode: 'both' }}
         >
           <NoteCard note={note} onOpen={onOpen} onDiscuss={onDiscuss} onRename={onRename} onDelete={onDelete} />
         </div>
