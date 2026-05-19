@@ -1,7 +1,6 @@
 import type { TipNote } from '@/types/tips'
 import { BookOpen, FileText, Layers, MessageSquare, MoreHorizontal, PenLine, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,32 +36,33 @@ function relativeTime(iso: string, locale: string, justNowLabel: string): string
 
 interface SourceVisual {
   Icon: typeof MessageSquare
-  bg: string
-  fg: string
+  bgCls: string
 }
 
 function sourceVisual(note: TipNote): SourceVisual {
   const kind = note.sourceRef?.kind
   if (note.source === 'chat')
-    return { Icon: MessageSquare, bg: 'bg-primary/20', fg: 'text-primary' }
+    return { Icon: MessageSquare, bgCls: 'bg-sky-500/20 text-sky-300' }
   if (note.source === 'studio') {
     if (kind === 'cards')
-      return { Icon: Layers, bg: 'bg-success/20', fg: 'text-success' }
+      return { Icon: Layers, bgCls: 'bg-emerald-500/20 text-emerald-300' }
     if (kind === 'mind_map')
-      return { Icon: Sparkles, bg: 'bg-violet-500/20', fg: 'text-violet-300' }
+      return { Icon: Sparkles, bgCls: 'bg-violet-500/20 text-violet-300' }
     if (kind === 'study_guide')
-      return { Icon: BookOpen, bg: 'bg-blue-500/20', fg: 'text-blue-300' }
+      return { Icon: BookOpen, bgCls: 'bg-blue-500/20 text-blue-300' }
     if (kind === 'summary')
-      return { Icon: FileText, bg: 'bg-amber-500/20', fg: 'text-amber-300' }
-    return { Icon: Sparkles, bg: 'bg-violet-500/20', fg: 'text-violet-300' }
+      return { Icon: FileText, bgCls: 'bg-amber-500/20 text-amber-300' }
+    return { Icon: Sparkles, bgCls: 'bg-violet-500/20 text-violet-300' }
   }
-  return { Icon: PenLine, bg: 'bg-muted-foreground/15', fg: 'text-muted-foreground' }
+  return { Icon: PenLine, bgCls: 'bg-rose-500/20 text-rose-300' }
 }
+
 const ENTITY_QUOT = /&quot;/g
 const ENTITY_APOS = /&#39;/g
 const ENTITY_AMP = /&amp;/g
 const ENTITY_LT = /&lt;/g
 const ENTITY_GT = /&gt;/g
+const WHITESPACE_RUN = /\s+/g
 
 function decodeEntities(text: string) {
   return text
@@ -73,22 +73,21 @@ function decodeEntities(text: string) {
     .replace(ENTITY_GT, '>')
 }
 
-function previewOf(html: string, max = 220): string {
-  const text = decodeEntities(htmlToPlain(html))
+function previewOf(html: string, max = 120): string {
+  const text = decodeEntities(htmlToPlain(html)).replace(WHITESPACE_RUN, ' ').trim()
   return text.length > max ? `${text.slice(0, max)}…` : text
 }
 
 export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props) {
   const { t, locale } = useI18n()
-  const { Icon } = sourceVisual(note)
-  const preview = previewOf(note.html, 220) || t('tips.notes.empty.preview')
+  const { Icon, bgCls } = sourceVisual(note)
+  const preview = previewOf(note.html) || t('tips.notes.empty.preview')
+  const time = relativeTime(note.updatedAt, locale, t('tips.notes.justNow'))
+  const subtitle = `${time} · ${preview}`
 
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(note.title)
   const inputRef = useRef<HTMLInputElement>(null)
-  // Captures `renaming` at mousedown so the trailing click can read the
-  // pre-commit state synchronously — defends against React batching
-  // setRenaming(false) into the same event tick.
   const renamingAtMouseDownRef = useRef(false)
 
   useEffect(() => {
@@ -109,71 +108,30 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
       setDraft(note.title)
   }
 
-  const { bgCls, tagLabel } = (() => {
-    const kind = note.sourceRef?.kind
-    if (note.source === 'chat') {
-      return {
-        bgCls: 'bg-sky-500/20 text-sky-300',
-        tagLabel: t('tips.notes.source.chat'),
-      }
-    }
-    if (note.source === 'studio') {
-      let label = t('tips.notes.source.studio')
-      let bg = 'bg-violet-500/20 text-violet-300'
-      if (kind === 'summary') {
-        label = t('tips.notes.source.summary')
-        bg = 'bg-amber-500/20 text-amber-300'
-      }
-      else if (kind === 'study_guide') {
-        label = t('tips.notes.source.studyGuide')
-        bg = 'bg-blue-500/20 text-blue-300'
-      }
-      else if (kind === 'mind_map') {
-        label = t('tips.notes.source.mindMap')
-        bg = 'bg-violet-500/20 text-violet-300'
-      }
-      else if (kind === 'cards') {
-        label = t('tips.notes.source.card')
-        bg = 'bg-emerald-500/20 text-emerald-300'
-      }
-      return { bgCls: bg, tagLabel: label }
-    }
-    return {
-      bgCls: 'bg-zinc-500/20 text-zinc-300',
-      tagLabel: t('tips.notes.source.freeform'),
-    }
-  })()
-
   return (
-    <article
-      className="p-6 rounded-xl border bg-card hover:border-primary transition-colors duration-200 cursor-pointer relative overflow-hidden"
+    <div
+      className="relative flex items-stretch rounded-xl border border-border bg-card hover:border-primary/60 transition-colors duration-150"
       onMouseDown={(e) => {
-        // Capture the pre-commit state synchronously: setRenaming(false)
-        // queued by finishRename is batched into this event tick, so by the
-        // time the trailing click fires the `renaming` closure may already
-        // read false. The ref pins the gesture's intent.
         renamingAtMouseDownRef.current = renaming
-        // Article is not focusable — mousedown outside the input does NOT
-        // blur it. Commit the rename explicitly here.
         if (renaming && inputRef.current && !inputRef.current.contains(e.target as Node))
           finishRename(true)
       }}
-      onClick={() => {
-        if (renamingAtMouseDownRef.current) {
-          renamingAtMouseDownRef.current = false
-          return
-        }
-        onOpen(note.id)
-      }}
     >
-      {/* Header row: icon + (title above meta) + action menu */}
-      <div className="flex items-center gap-3">
-        <span
-          className={`inline-flex w-12 h-12 rounded-[16px] items-center justify-center shrink-0 ${bgCls}`}
-          aria-hidden
-        >
-          <Icon className="size-5.5 stroke-[2.25]" />
-        </span>
+      <button
+        type="button"
+        onClick={() => {
+          if (renamingAtMouseDownRef.current) {
+            renamingAtMouseDownRef.current = false
+            return
+          }
+          onOpen(note.id)
+        }}
+        className="flex flex-1 min-w-0 items-center gap-3 rounded-xl px-3.5 py-3 text-left min-h-[68px] cursor-pointer active:bg-muted/40"
+        aria-label={note.title || t('tips.notes.untitled')}
+      >
+        <div className={`shrink-0 size-10 rounded-lg flex items-center justify-center ${bgCls}`} aria-hidden>
+          <Icon className="size-5" strokeWidth={2} />
+        </div>
 
         <div className="flex-1 min-w-0">
           {renaming
@@ -197,28 +155,24 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
                     }
                   }}
                   autoFocus
-                  className="w-full bg-transparent border-b border-primary text-base font-bold leading-snug tracking-tight text-foreground focus:outline-none"
+                  className="w-full bg-transparent border-b border-primary text-[14px] font-semibold leading-tight text-foreground focus:outline-none"
                 />
               )
             : (
-                <h4 className="text-base font-bold leading-snug tracking-tight text-foreground truncate">
+                <h3 className="text-[14px] font-semibold leading-tight truncate text-foreground">
                   {note.title || t('tips.notes.untitled')}
-                </h4>
+                </h3>
               )}
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="accent" className="h-5 text-xs">
-              {tagLabel}
-            </Badge>
-            <span className="text-[10.5px] text-muted-foreground/30" aria-hidden>•</span>
-            <span className="text-[11px] text-muted-foreground/75 font-semibold">
-              {relativeTime(note.updatedAt, locale, t('tips.notes.justNow'))}
-            </span>
-          </div>
+          <p className="text-[12px] leading-snug mt-0.5 truncate text-muted-foreground">
+            {subtitle}
+          </p>
         </div>
+      </button>
 
+      <div className="flex items-center pr-2.5 shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="p-2 rounded-xl hover:bg-secondary text-muted-foreground/80 hover:text-foreground shrink-0 transition-colors"
+            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground/80 hover:text-foreground transition-colors"
             aria-label={t('tips.notes.actions.menu')}
             onClick={e => e.stopPropagation()}
           >
@@ -241,11 +195,6 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      {/* Bottom row with generous description */}
-      <p className="text-sm text-muted-foreground/80 leading-relaxed mt-3 line-clamp-3">
-        {preview}
-      </p>
-    </article>
+    </div>
   )
 }

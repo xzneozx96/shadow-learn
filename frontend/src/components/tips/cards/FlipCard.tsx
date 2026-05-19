@@ -107,7 +107,7 @@ export function FlipCard({ videoId, card, flipped, onFlip, onNext, onPrev }: Pro
 
 function FlipHint({ label }: { label: string }) {
   return (
-    <div className="mt-auto pt-4 flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/50">
+    <div className="mt-auto pt-4 flex items-center justify-center gap-4 text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground/50">
       <span className="h-px w-8 bg-linear-to-r from-transparent to-muted-foreground/30" />
       <span className="animate-pulse">{label}</span>
       <span className="h-px w-8 bg-linear-to-l from-transparent to-muted-foreground/30" />
@@ -126,7 +126,7 @@ function DetailRow({ tone, label, children }: { tone: 'success' | 'warning', lab
     <div className={`relative rounded-xl border ${borderClr} ${accentLight} p-3.5 sm:p-4 flex flex-col gap-2 transition-colors duration-300 hover:bg-opacity-80`}>
       <div className="flex items-center gap-2.5">
         <span className={`size-1.5 rounded-full ${dotClr} shadow-[0_0_8px_currentColor]`} />
-        <div className={`text-[10px] font-extrabold uppercase tracking-widest ${labelClr}`}>
+        <div className={`text-xs font-extrabold uppercase tracking-widest ${labelClr}`}>
           {label}
         </div>
       </div>

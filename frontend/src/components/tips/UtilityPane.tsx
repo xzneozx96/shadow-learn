@@ -1,6 +1,6 @@
 import type { ContextChip } from '@/components/chat/ContextChipBar'
 import type { WarmingStep } from '@/hooks/useTipTranscript'
-import { Clock } from 'lucide-react'
+import { Clock, FileText, MessageSquare, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
@@ -8,7 +8,6 @@ import { useI18n } from '@/contexts/I18nContext'
 import { useTipNotes } from '@/hooks/useTipNotes'
 import { OverviewBlock } from './OverviewBlock'
 import { ChatTab } from './tabs/ChatTab'
-import { NotesTab } from './tabs/NotesTab'
 import { StudioTab } from './tabs/StudioTab'
 import { WarmingState } from './WarmingState'
 
@@ -29,7 +28,7 @@ interface Props {
   transcriptHydrated?: boolean
 }
 
-type TabValue = 'summary' | 'notes' | 'chat' | 'studio'
+type TabValue = 'summary' | 'chat' | 'studio'
 
 export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transcriptStatus, warmingStep, transcriptHydrated = true }: Props) {
   const { t } = useI18n()
@@ -85,17 +84,17 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
   return (
     <aside className="flex flex-col h-full border-l border-border overflow-hidden">
       <Tabs value={tab} onValueChange={v => setTab(v as TabValue)} className="flex flex-col h-full gap-0">
-        <TabsList variant="line" className="w-full shrink-0 border-b border-border rounded-none h-12!">
+        <TabsList variant="line" className="w-full shrink-0 border-b border-border rounded-none h-13!">
           <TabsTrigger value="summary" aria-label={t('tips.tab.summary')}>
+            <FileText className="size-4" aria-hidden />
             <span className="text-sm">{t('tips.tab.summary')}</span>
           </TabsTrigger>
-          <TabsTrigger value="notes" aria-label={t('tips.tab.notes')}>
-            <span className="text-sm">{t('tips.tab.notes')}</span>
-          </TabsTrigger>
           <TabsTrigger value="chat" aria-label={t('tips.tab.chat')}>
+            <MessageSquare className="size-4" aria-hidden />
             <span className="text-sm">{t('tips.tab.chat')}</span>
           </TabsTrigger>
           <TabsTrigger value="studio" aria-label={t('tips.tab.studio')}>
+            <Sparkles className="size-4" aria-hidden />
             <span className="text-sm">{t('tips.tab.studio')}</span>
           </TabsTrigger>
         </TabsList>
@@ -114,21 +113,6 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
             onClearChips={clearChips}
           />
         </TabsContent>
-        <TabsContent value="notes" className="flex-1 overflow-hidden">
-          <NotesTab
-            key={videoId}
-            notes={notesDeck.notes}
-            hydrated={notesDeck.hydrated}
-            videoId={videoId}
-            onCreate={notesDeck.create}
-            onUpdate={notesDeck.update}
-            onRemove={notesDeck.remove}
-            onDiscussNote={(text) => {
-              addChip(text, 'note')
-              setTab('chat')
-            }}
-          />
-        </TabsContent>
         <TabsContent value="studio" className="flex-1 overflow-y-auto">
           <StudioTab
             courseId={courseId}
@@ -136,6 +120,15 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
             lessonTitle={lessonTitle}
             transcript={transcript}
             transcriptStatus={transcriptStatus}
+            notes={notesDeck.notes}
+            notesHydrated={notesDeck.hydrated}
+            onCreateNote={notesDeck.create}
+            onUpdateNote={notesDeck.update}
+            onRemoveNote={notesDeck.remove}
+            onDiscussNote={(text) => {
+              addChip(text, 'note')
+              setTab('chat')
+            }}
           />
         </TabsContent>
       </Tabs>

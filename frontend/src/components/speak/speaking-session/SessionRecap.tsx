@@ -30,7 +30,7 @@ function SectionDivider({ label }: { label: string }) {
       <span className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground shrink-0">
         {label}
       </span>
-      <div className="flex-1 h-px bg-border/40" />
+      <div className="flex-1 h-px bg-border/80" />
     </div>
   )
 }

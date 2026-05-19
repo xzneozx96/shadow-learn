@@ -19,7 +19,7 @@ export function NotesList({ notes, hydrated, onNew, onOpen, onDiscuss, onRename,
 
   if (hydrated && notes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 p-8 text-center h-full">
+      <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
         <NotebookPen className="size-10 text-muted-foreground/50" aria-hidden />
         <div>
           <h4 className="text-sm font-semibold text-foreground">{t('tips.notes.empty.title')}</h4>
@@ -34,7 +34,7 @@ export function NotesList({ notes, hydrated, onNew, onOpen, onDiscuss, onRename,
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-4">
+    <div className="flex flex-col gap-3">
       {notes.map((note, i) => (
         <div
           key={note.id}
