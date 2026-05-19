@@ -52,6 +52,7 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
       <ProgressHeader count={progressCount} pctLabel={progressPctLabel} pct={progressPct} />
 
       <FlipCard
+        videoId={videoId}
         card={current}
         flipped={deck.flipped}
         onFlip={deck.flip}

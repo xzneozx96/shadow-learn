@@ -76,7 +76,7 @@ export function StudioTab(props: Props) {
     return (
       <div className="p-4 space-y-3">
         {backButton}
-        <StudyGuideArtifact data={guide.data} />
+        <StudyGuideArtifact videoId={videoId} data={guide.data} />
       </div>
     )
   }

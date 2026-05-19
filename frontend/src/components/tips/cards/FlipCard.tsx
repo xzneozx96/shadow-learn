@@ -2,8 +2,11 @@ import type { ConceptCard } from '@/types/tips'
 import { useEffect, useRef } from 'react'
 import { FlipCard as FlipCardPrimitive } from '@/components/library/FlipCard'
 import { useI18n } from '@/contexts/I18nContext'
+import { escapeHtml } from '@/lib/htmlText'
+import { SaveToNotesButton } from '../notes/SaveToNotesButton'
 
 interface Props {
+  videoId: string
   card: ConceptCard
   flipped: boolean
   onFlip: () => void
@@ -15,7 +18,7 @@ interface Props {
 
 const FLIP_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 
-export function FlipCard({ card, flipped, onFlip, onNext, onPrev }: Props) {
+export function FlipCard({ videoId, card, flipped, onFlip, onNext, onPrev }: Props) {
   const { t } = useI18n()
   const ref = useRef<HTMLDivElement>(null)
 
@@ -44,8 +47,25 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev }: Props) {
       ref={ref}
       tabIndex={0}
       aria-label={t('tips.cards.flipHint')}
-      className="outline-none rounded-2xl focus-visible:ring-2 focus-visible:ring-primary/60"
+      className="relative outline-none rounded-2xl focus-visible:ring-2 focus-visible:ring-primary/60"
     >
+      <div className="absolute top-2 right-2 z-50">
+        <SaveToNotesButton
+          build={() => ({
+            videoId,
+            title: card.front.slice(0, 80),
+            html: [
+              `<p><strong>${escapeHtml(card.front)}</strong></p>`,
+              `<p>${escapeHtml(card.rule)}</p>`,
+              card.example ? `<p><em>${escapeHtml(card.example)}</em></p>` : '',
+              card.trap ? `<p>⚠️ ${escapeHtml(card.trap)}</p>` : '',
+            ].join(''),
+            source: 'studio',
+            sourceRef: { kind: 'cards', ref: card.id },
+          })}
+          alwaysVisible
+        />
+      </div>
       <FlipCardPrimitive
         flipped={flipped}
         onFlippedChange={() => onFlip()}
