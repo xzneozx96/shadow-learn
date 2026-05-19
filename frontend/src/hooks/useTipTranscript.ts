@@ -179,6 +179,12 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
         }
       }
 
+      // IDB read settled with no usable cache. Flip hydrated so the warming
+      // UI can render immediately instead of waiting for the backend's first
+      // response (which can take 5-6s for never-processed videos while the
+      // job is enqueued).
+      setResult(r => ({ ...r, hydrated: true }))
+
       try {
         const res = await fetch(`${API_BASE}/api/tips/transcript/${encodeURIComponent(videoId)}`, { signal: controller.signal })
         if (state.cancelled) {
