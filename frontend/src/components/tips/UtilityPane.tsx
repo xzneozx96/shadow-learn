@@ -116,6 +116,7 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
         </TabsContent>
         <TabsContent value="notes" className="flex-1 overflow-hidden">
           <NotesTab
+            key={videoId}
             notes={notesDeck.notes}
             hydrated={notesDeck.hydrated}
             videoId={videoId}
