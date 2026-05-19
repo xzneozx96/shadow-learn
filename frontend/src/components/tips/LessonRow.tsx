@@ -11,9 +11,10 @@ interface Props {
   isCompleted: boolean
   isInProgress?: boolean
   onSelect: (videoId: string) => void
+  titleLoading?: boolean
 }
 
-function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInProgress = false, onSelect }: Props) {
+function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInProgress = false, onSelect, titleLoading = false }: Props) {
   const { t } = useI18n()
   let badge: 'playing' | 'completed' | 'in_progress' | null = null
   if (isActive)
@@ -66,13 +67,17 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
       </span>
 
       <div className="flex-1 min-w-0">
-        <div className={cn(
-          'text-xs font-semibold line-clamp-2 leading-snug',
-          isActive ? 'text-primary' : isCompleted ? 'text-muted-foreground' : 'text-foreground',
-        )}
-        >
-          {title}
-        </div>
+        {titleLoading
+          ? <span className="inline-block h-3.5 w-40 rounded bg-muted animate-pulse" aria-hidden />
+          : (
+              <div className={cn(
+                'text-xs font-semibold line-clamp-2 leading-snug',
+                isActive ? 'text-primary' : isCompleted ? 'text-muted-foreground' : 'text-foreground',
+              )}
+              >
+                {title}
+              </div>
+            )}
       </div>
       <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{duration}</span>
     </li>

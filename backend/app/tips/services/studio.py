@@ -100,10 +100,6 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
         "messages": [{"role": "user", "content": prompt}],
         "response_format": {"type": "json_object"},
         "max_tokens": 65000,
-        # Project-standard reasoning toggle used by translation, vocab, quiz,
-        # daily_review, and agent routers. Thinking-mode models (Qwen3,
-        # DeepSeek-R1, o1) otherwise burn the token budget on internal
-        # reasoning and return content="" with finish_reason=length.
         "reasoning": {"effort": "none"},
     }
 

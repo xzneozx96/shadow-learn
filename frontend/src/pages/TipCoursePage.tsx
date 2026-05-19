@@ -29,7 +29,7 @@ export function TipCoursePage() {
   const { db } = useAuth()
   const { t } = useI18n()
 
-  const { course, lessons, loading, error } = useTipCourse(safeSource, safeId)
+  const { course, lessons, loading, metaLoading, error } = useTipCourse(safeSource, safeId)
 
   const [completedSet, setCompletedSet] = useState<Set<string>>(() => new Set())
   const [inProgressSet, setInProgressSet] = useState<Set<string>>(() => new Set())
@@ -167,11 +167,14 @@ export function TipCoursePage() {
             completedVideoIds={completedSet}
             inProgressVideoIds={inProgressSet}
             onSelect={handleSelectLesson}
+            metaLoading={metaLoading}
           />
         </div>
         <main className="flex flex-col p-6 min-h-0 overflow-y-auto lg:overflow-hidden xl:overflow-y-auto lg:col-start-2 lg:row-start-1 xl:row-span-1">
           <div className="flex items-center justify-between gap-4 mb-4 shrink-0 lg:hidden xl:flex">
-            <h3 className="xl:text-xl text-lg font-bold text-foreground text-balance">{activeLesson.title}</h3>
+            {metaLoading
+              ? <span className="inline-block h-6 w-64 rounded bg-muted animate-pulse" aria-hidden />
+              : <h3 className="xl:text-xl text-lg font-bold text-foreground text-balance">{activeLesson.title}</h3>}
             <Button
               onClick={handleNextLesson}
               disabled={!hasNext}

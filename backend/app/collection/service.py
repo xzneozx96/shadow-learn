@@ -332,7 +332,7 @@ DIFFICULTY_BUCKET: dict[str, str] = {
 }
 
 MATERIAL_GROUP_ORDER = ["HSK 1-2", "HSK 3-4", "HSK 5+"]
-TIP_GROUP_ORDER = ["Pronunciation", "Vocabulary", "Speaking", "Learning Tips"]
+TIP_GROUP_ORDER = ["Grammar", "Pronunciation", "Vocabulary", "Speaking", "Learning Tips"]
 
 
 def bucket_difficulty(raw: str | None) -> str | None:
