@@ -148,7 +148,15 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
 
   return (
     <article
-      className="p-6 rounded-[22px] border border-border/50 bg-gradient-to-b from-card to-card/95 shadow-xs hover:border-primary transition-colors duration-200 cursor-pointer relative overflow-hidden"
+      className="p-6 rounded-xl border bg-card hover:border-primary transition-colors duration-200 cursor-pointer relative overflow-hidden"
+      onMouseDown={(e) => {
+        // Article is not focusable, so mousedown outside the input does NOT
+        // blur it — onBlur never fires and the rename never commits. Detect
+        // that case here and commit explicitly. suppressOpenRef then blocks
+        // the trailing click from triggering onOpen.
+        if (renaming && inputRef.current && !inputRef.current.contains(e.target as Node))
+          finishRename(true)
+      }}
       onClick={() => {
         if (renaming || suppressOpenRef.current)
           return
