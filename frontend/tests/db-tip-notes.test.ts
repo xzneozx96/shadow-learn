@@ -1,6 +1,6 @@
 import type { TipNote } from '@/types/tips'
 
-import { deleteDB } from 'idb'
+import { deleteDB, openDB } from 'idb'
 import { afterEach, describe, expect, it } from 'vitest'
 import { deleteTipNote, getTipNotesForVideo, initDB, putTipNote } from '@/db'
 import 'fake-indexeddb/auto'
@@ -61,6 +61,33 @@ describe('tip-notes IDB store', () => {
     await deleteTipNote(db, 'vid-1', 'gone')
     const out = await getTipNotesForVideo(db, 'vid-1')
     expect(out).toEqual([])
+    db.close()
+  })
+})
+
+describe('tip-notes migration from v16', () => {
+  it('upgrades a B3-shaped v16 db cleanly; B3 stores preserved, tip-notes added', async () => {
+    // Simulate a real B3 deployment: stores present after the v16 migration.
+    const earlier = await openDB(DB_NAME, 16, {
+      upgrade(db) {
+        db.createObjectStore('settings')
+        db.createObjectStore('tip-courses', { keyPath: 'id' })
+        db.createObjectStore('tip-studio', { keyPath: 'key' })
+        db.createObjectStore('tip-cards', { keyPath: 'key' })
+      },
+    })
+    await earlier.put('tip-courses', { id: 'c1', name: 'demo' } as any)
+    await earlier.put('tip-cards', { key: 'k1', cards: [] } as any)
+    earlier.close()
+
+    // Now open at the latest version — initDB runs the v17 branch.
+    const db = await initDB()
+    expect(db.objectStoreNames.contains('tip-notes')).toBe(true)
+    expect(await db.get('tip-courses', 'c1')).toMatchObject({ id: 'c1' })
+    expect(await db.get('tip-cards', 'k1')).toMatchObject({ key: 'k1' })
+    await putTipNote(db, makeNote({ id: 'migrated' }))
+    const out = await getTipNotesForVideo(db, 'vid-1')
+    expect(out.map(n => n.id)).toEqual(['migrated'])
     db.close()
   })
 })
