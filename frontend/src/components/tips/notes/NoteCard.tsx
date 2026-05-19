@@ -81,10 +81,10 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(note.title)
   const inputRef = useRef<HTMLInputElement>(null)
-  // Set synchronously in commit/cancel so the same-tick click bubbling to
-  // the article suppresses onOpen even though setRenaming(false) hasn't
-  // committed yet. Cleared on next event loop turn.
-  const suppressOpenRef = useRef(false)
+  // Captures `renaming` at mousedown so the trailing click can read the
+  // pre-commit state synchronously — defends against React batching
+  // setRenaming(false) into the same event tick.
+  const renamingAtMouseDownRef = useRef(false)
 
   useEffect(() => {
     if (renaming)
@@ -97,8 +97,6 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
   }
 
   const finishRename = (commit: boolean) => {
-    suppressOpenRef.current = true
-    setTimeout(() => { suppressOpenRef.current = false }, 0)
     setRenaming(false)
     if (commit && draft.trim() !== note.title)
       onRename(note.id, draft)
@@ -150,16 +148,21 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
     <article
       className="p-6 rounded-xl border bg-card hover:border-primary transition-colors duration-200 cursor-pointer relative overflow-hidden"
       onMouseDown={(e) => {
-        // Article is not focusable, so mousedown outside the input does NOT
-        // blur it — onBlur never fires and the rename never commits. Detect
-        // that case here and commit explicitly. suppressOpenRef then blocks
-        // the trailing click from triggering onOpen.
+        // Capture the pre-commit state synchronously: setRenaming(false)
+        // queued by finishRename is batched into this event tick, so by the
+        // time the trailing click fires the `renaming` closure may already
+        // read false. The ref pins the gesture's intent.
+        renamingAtMouseDownRef.current = renaming
+        // Article is not focusable — mousedown outside the input does NOT
+        // blur it. Commit the rename explicitly here.
         if (renaming && inputRef.current && !inputRef.current.contains(e.target as Node))
           finishRename(true)
       }}
       onClick={() => {
-        if (renaming || suppressOpenRef.current)
+        if (renamingAtMouseDownRef.current) {
+          renamingAtMouseDownRef.current = false
           return
+        }
         onOpen(note.id)
       }}
     >
