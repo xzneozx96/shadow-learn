@@ -67,7 +67,11 @@ def build_prompt(*, kind: StudioKind, transcript: str, locale: StudioLocale) -> 
     else:  # mind_map
         instructions = (
             f"Build a Mind Map of this Chinese-learning lesson in {locale_name}. "
-            "Return JSON with one field `root`, a single tree node of shape "
+            "Return JSON with EXACTLY one top-level field named `root`. The "
+            "value of `root` is a single tree node. Do NOT return the node "
+            "itself at the top level — it MUST be wrapped: "
+            '`{\"root\": {\"label\": ..., \"summary\": ..., \"start_sec\": ..., \"children\": [...]}}`. '
+            "Each node has shape "
             "{label, summary, start_sec, children}. `label` is a short 1-6 word "
             "concept name. `summary` is one short sentence elaborating the node. "
             "`start_sec` is the integer seconds offset of the transcript timestamp "
