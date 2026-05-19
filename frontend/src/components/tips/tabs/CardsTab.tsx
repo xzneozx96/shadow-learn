@@ -76,7 +76,7 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
           onClick={deck.regenerate}
           className="group flex items-center gap-2.5 rounded-full bg-secondary/30 px-6 py-2.5 text-[11px] font-bold text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-foreground hover:shadow-md active:scale-95 border border-white/5"
         >
-          <RotateCcw className="size-3.5 transition-transform duration-500 group-hover:-rotate-180" strokeWidth={2.5} />
+          <RotateCcw className="size-4 transition-transform duration-500 group-hover:-rotate-180" strokeWidth={2.5} />
           <span className="uppercase tracking-[0.2em] pt-px">{t('tips.cards.regenerate')}</span>
         </button>
         <NavButton onClick={deck.next} aria-label={t('tips.cards.next')}>

@@ -29,7 +29,7 @@ export function SaveToNotesButton({ build, alwaysVisible = false }: Props) {
       aria-label={t('tips.notes.actions.save')}
       title={t('tips.notes.actions.save')}
     >
-      <NotebookPen className="size-3.5" />
+      <NotebookPen className="size-4" />
     </button>
   )
 }

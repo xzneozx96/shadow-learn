@@ -167,7 +167,7 @@ export function StudioTile({
         >
           <Icon className="size-5" strokeWidth={2} />
           {isLocked && (
-            <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full bg-card flex items-center justify-center">
+            <span className="absolute -bottom-1 -right-1 size-4 rounded-full bg-card flex items-center justify-center">
               <Lock className="size-2.5 text-muted-foreground" />
             </span>
           )}

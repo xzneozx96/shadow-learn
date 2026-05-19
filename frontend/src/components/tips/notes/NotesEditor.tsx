@@ -31,7 +31,7 @@ export default function NotesEditor({ html, placeholder, onChange, debounceMs = 
     content: html,
     editorProps: {
       attributes: {
-        'class': 'prose prose-invert prose-sm max-w-none focus:outline-none min-h-[200px]',
+        'class': 'prose prose-invert prose-sm max-w-none focus:outline-none min-h-full flex-1 flex flex-col',
         'data-testid': 'notes-editor-content',
       },
     },
@@ -68,29 +68,31 @@ export default function NotesEditor({ html, placeholder, onChange, debounceMs = 
     return <div className="p-4 text-xs text-muted-foreground">{t('tips.notes.editor.loading')}</div>
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex-1 flex flex-col rounded-xl border border-border bg-card overflow-hidden focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/5 transition-all min-h-0">
       <Toolbar editor={editor} />
-      <EditorContent editor={editor} />
+      <div className="flex-1 overflow-y-auto p-3.5 flex flex-col">
+        <EditorContent editor={editor} className="flex-1 flex flex-col min-h-0" />
+      </div>
     </div>
   )
 }
 
 function Toolbar({ editor }: { editor: Editor }) {
   const cls = (active: boolean) =>
-    `p-1.5 rounded text-xs hover:bg-secondary ${active ? 'bg-secondary text-primary' : 'text-muted-foreground'}`
+    `p-1.5 rounded-lg text-xs hover:bg-secondary/80 transition-colors ${active ? 'bg-secondary text-primary font-semibold' : 'text-muted-foreground'}`
   return (
-    <div className="flex items-center gap-1 border-b border-border pb-2" role="toolbar">
-      <button type="button" className={cls(editor.isActive('bold'))} onClick={() => editor.chain().focus().toggleBold().run()} aria-label="Bold"><Bold className="size-3.5" /></button>
-      <button type="button" className={cls(editor.isActive('italic'))} onClick={() => editor.chain().focus().toggleItalic().run()} aria-label="Italic"><Italic className="size-3.5" /></button>
-      <button type="button" className={cls(editor.isActive('strike'))} onClick={() => editor.chain().focus().toggleStrike().run()} aria-label="Strike"><Strikethrough className="size-3.5" /></button>
-      <button type="button" className={cls(editor.isActive('code'))} onClick={() => editor.chain().focus().toggleCode().run()} aria-label="Code"><Code className="size-3.5" /></button>
-      <span className="w-px h-4 bg-border mx-1" />
-      <button type="button" className={cls(editor.isActive('heading', { level: 1 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} aria-label="H1"><Heading1 className="size-3.5" /></button>
-      <button type="button" className={cls(editor.isActive('heading', { level: 2 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} aria-label="H2"><Heading2 className="size-3.5" /></button>
-      <button type="button" className={cls(editor.isActive('heading', { level: 3 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} aria-label="H3"><Heading3 className="size-3.5" /></button>
-      <span className="w-px h-4 bg-border mx-1" />
-      <button type="button" className={cls(editor.isActive('bulletList'))} onClick={() => editor.chain().focus().toggleBulletList().run()} aria-label="Bullet list"><List className="size-3.5" /></button>
-      <button type="button" className={cls(editor.isActive('orderedList'))} onClick={() => editor.chain().focus().toggleOrderedList().run()} aria-label="Ordered list"><ListOrdered className="size-3.5" /></button>
+    <div className="flex flex-wrap items-center gap-1 border-b border-border/60 bg-muted/40 px-3 py-2" role="toolbar">
+      <button type="button" className={cls(editor.isActive('bold'))} onClick={() => editor.chain().focus().toggleBold().run()} aria-label="Bold"><Bold className="size-4" /></button>
+      <button type="button" className={cls(editor.isActive('italic'))} onClick={() => editor.chain().focus().toggleItalic().run()} aria-label="Italic"><Italic className="size-4" /></button>
+      <button type="button" className={cls(editor.isActive('strike'))} onClick={() => editor.chain().focus().toggleStrike().run()} aria-label="Strike"><Strikethrough className="size-4" /></button>
+      <button type="button" className={cls(editor.isActive('code'))} onClick={() => editor.chain().focus().toggleCode().run()} aria-label="Code"><Code className="size-4" /></button>
+      <span className="w-px h-4 bg-border/60 mx-1" />
+      <button type="button" className={cls(editor.isActive('heading', { level: 1 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} aria-label="H1"><Heading1 className="size-4" /></button>
+      <button type="button" className={cls(editor.isActive('heading', { level: 2 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} aria-label="H2"><Heading2 className="size-4" /></button>
+      <button type="button" className={cls(editor.isActive('heading', { level: 3 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} aria-label="H3"><Heading3 className="size-4" /></button>
+      <span className="w-px h-4 bg-border/60 mx-1" />
+      <button type="button" className={cls(editor.isActive('bulletList'))} onClick={() => editor.chain().focus().toggleBulletList().run()} aria-label="Bullet list"><List className="size-4" /></button>
+      <button type="button" className={cls(editor.isActive('orderedList'))} onClick={() => editor.chain().focus().toggleOrderedList().run()} aria-label="Ordered list"><ListOrdered className="size-4" /></button>
     </div>
   )
 }

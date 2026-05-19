@@ -1,5 +1,6 @@
 import { BookOpen, ChevronLeft, GraduationCap, Layers, Sparkles } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipCards } from '@/hooks/useTipCards'
@@ -62,14 +63,15 @@ export function StudioTab(props: Props) {
   }
 
   const backButton = (
-    <button
-      type="button"
+    <Button
       onClick={() => setSurface('grid')}
-      className="inline-flex items-center gap-1 text-sm text-muted-foreground font-bold cursor-pointer hover:underline"
+      variant="ghost"
+      size="sm"
+      className="text-muted-foreground px-0"
     >
-      <ChevronLeft className="size-3.5" aria-hidden />
+      <ChevronLeft className="size-4" aria-hidden />
       {t('tips.studio.title')}
-    </button>
+    </Button>
   )
 
   if (surface === 'study_guide' && guide.data) {
@@ -182,7 +184,7 @@ export function StudioTab(props: Props) {
   ]
 
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-6 space-y-4">
       <div className="flex flex-col gap-3">
         {tiles.map((tile, i) => (
           <div

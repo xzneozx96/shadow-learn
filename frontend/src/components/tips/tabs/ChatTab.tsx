@@ -317,6 +317,7 @@ export function ChatTab(props: Props) {
       return
     lastSeededRef.current = initialUserMessage
     chat.sendMessage({ text: initialUserMessage })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialUserMessage, chat.ready, chat.disabled, chat.sendMessage])
 
   const handleSubmit = useCallback((message: { text: string, files: FileUIPart[] }) => {
@@ -391,7 +392,7 @@ export function ChatTab(props: Props) {
                   aria-label={t('tips.notes.actions.save')}
                   title={t('tips.notes.actions.save')}
                 >
-                  <NotebookPen className="size-3.5" />
+                  <NotebookPen className="size-4" />
                 </button>
               )}
             </div>

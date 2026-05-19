@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useI18n } from '@/contexts/I18nContext'
 import { htmlToPlain } from '@/lib/htmlText'
-import { cn } from '@/lib/utils'
 
 interface Props {
   note: TipNote
@@ -104,11 +103,10 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
       setDraft(note.title)
   }
 
-  const { textCls, bgCls, tagLabel } = (() => {
+  const { bgCls, tagLabel } = (() => {
     const kind = note.sourceRef?.kind
     if (note.source === 'chat') {
       return {
-        textCls: 'text-sky-500 dark:text-sky-400',
         bgCls: 'bg-sky-500 text-white shadow-md shadow-sky-500/10 dark:shadow-sky-500/5',
         tagLabel: t('tips.notes.source.chat'),
       }
@@ -126,19 +124,16 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
 
       if (kind === 'cards') {
         return {
-          textCls: 'text-emerald-500 dark:text-emerald-400',
           bgCls: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/10 dark:shadow-emerald-500/5',
           tagLabel: label,
         }
       }
       return {
-        textCls: 'text-indigo-500 dark:text-indigo-400',
         bgCls: 'bg-indigo-500 text-white shadow-md shadow-indigo-500/10 dark:shadow-indigo-500/5',
         tagLabel: label,
       }
     }
     return {
-      textCls: 'text-zinc-500 dark:text-zinc-400',
       bgCls: 'bg-zinc-500 text-white shadow-md shadow-zinc-500/10 dark:shadow-zinc-500/5',
       tagLabel: t('tips.notes.source.freeform'),
     }
@@ -197,22 +192,16 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
                     }
                   }}
                   autoFocus
-                  className="w-full bg-transparent border-b border-primary text-[17px] font-bold leading-snug tracking-tight text-foreground focus:outline-none"
+                  className="w-full bg-transparent border-b border-primary text-base font-bold leading-snug tracking-tight text-foreground focus:outline-none"
                 />
               )
             : (
-                <h4 className="text-[17px] font-bold leading-snug tracking-tight text-foreground truncate">
+                <h4 className="text-base font-bold leading-snug tracking-tight text-foreground truncate">
                   {note.title || t('tips.notes.untitled')}
                 </h4>
               )}
           <div className="flex items-center gap-2 mt-1">
-            <Badge
-              variant="outline"
-              className={cn(
-                'h-5 text-[9px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded-full border',
-                textCls,
-              )}
-            >
+            <Badge variant="accent" className="h-5 text-xs">
               {tagLabel}
             </Badge>
             <span className="text-[10.5px] text-muted-foreground/30" aria-hidden>•</span>
@@ -249,7 +238,7 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
       </div>
 
       {/* Bottom row with generous description */}
-      <p className="text-[13.5px] text-muted-foreground/80 leading-relaxed mt-3 line-clamp-3">
+      <p className="text-sm text-muted-foreground/80 leading-relaxed mt-3 line-clamp-3">
         {preview}
       </p>
     </article>

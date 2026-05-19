@@ -132,7 +132,7 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
       onClick={onBackToGrid}
       className="inline-flex items-center gap-1 text-xs text-muted-foreground font-bold cursor-pointer hover:underline"
     >
-      <ChevronLeft className="size-3.5" aria-hidden />
+      <ChevronLeft className="size-4" aria-hidden />
       {t('tips.studio.title')}
     </button>
   )
@@ -158,7 +158,7 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
             onClick={() => setPendingPrompt(null)}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground font-bold cursor-pointer hover:underline"
           >
-            <ChevronLeft className="size-3.5" aria-hidden />
+            <ChevronLeft className="size-4" aria-hidden />
             {t('tips.studio.mindmap.backToTree')}
           </button>
         </div>
