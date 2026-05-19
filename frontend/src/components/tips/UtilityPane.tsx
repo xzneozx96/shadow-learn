@@ -1,11 +1,14 @@
+import type { ContextChip } from '@/components/chat/ContextChipBar'
 import type { WarmingStep } from '@/hooks/useTipTranscript'
-import { Clock, NotebookPen } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useTipNotes } from '@/hooks/useTipNotes'
 import { OverviewBlock } from './OverviewBlock'
 import { ChatTab } from './tabs/ChatTab'
-import { DisabledTab } from './tabs/DisabledTab'
+import { NotesTab } from './tabs/NotesTab'
 import { StudioTab } from './tabs/StudioTab'
 import { WarmingState } from './WarmingState'
 
@@ -30,7 +33,15 @@ type TabValue = 'summary' | 'notes' | 'chat' | 'studio'
 
 export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transcriptStatus, warmingStep, transcriptHydrated = true }: Props) {
   const { t } = useI18n()
+  const { db } = useAuth()
+  const notesDeck = useTipNotes({ db, videoId })
   const [tab, setTab] = useState<TabValue>('summary')
+  const [chips, setChips] = useState<ContextChip[]>([])
+  const addChip = (text: string, source?: string) =>
+    setChips(prev => [...prev, { id: crypto.randomUUID(), text, source }])
+  const removeChip = (id: string) =>
+    setChips(prev => prev.filter(c => c.id !== id))
+  const clearChips = () => setChips([])
 
   // Video too long: no transcript will ever exist. Take over the pane with
   // a clear explanation rather than showing tabs that all silently disable.
@@ -92,10 +103,30 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
           <OverviewBlock videoId={videoId} transcript={transcript} transcriptStatus={transcriptStatus} />
         </TabsContent>
         <TabsContent value="chat" className="flex-1 overflow-hidden">
-          <ChatTab courseId={courseId} videoId={videoId} lessonTitle={lessonTitle} transcript={transcript} transcriptStatus={transcriptStatus} />
+          <ChatTab
+            courseId={courseId}
+            videoId={videoId}
+            lessonTitle={lessonTitle}
+            transcript={transcript}
+            transcriptStatus={transcriptStatus}
+            chips={chips}
+            onRemoveChip={removeChip}
+            onClearChips={clearChips}
+          />
         </TabsContent>
-        <TabsContent value="notes" className="flex-1">
-          <DisabledTab Icon={NotebookPen} labelKey="tips.placeholder.label.notes" reasonKey="tips.placeholder.notes" />
+        <TabsContent value="notes" className="flex-1 overflow-hidden">
+          <NotesTab
+            notes={notesDeck.notes}
+            hydrated={notesDeck.hydrated}
+            videoId={videoId}
+            onCreate={notesDeck.create}
+            onUpdate={notesDeck.update}
+            onRemove={notesDeck.remove}
+            onDiscussNote={(text) => {
+              addChip(text, 'note')
+              setTab('chat')
+            }}
+          />
         </TabsContent>
         <TabsContent value="studio" className="flex-1 overflow-y-auto">
           <StudioTab
