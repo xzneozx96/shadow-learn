@@ -3,6 +3,7 @@ import { BookOpen, Loader2, Volume2, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { EmptyState } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WordBreakdownModal } from '@/components/workbook/WordBreakdownModal'
@@ -85,11 +86,11 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
       {/* Word grid or empty state */}
       {count === 0
         ? (
-            <div className="flex flex-1 items-center justify-center px-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                {t('lesson.workbook.emptyHint')}
-              </p>
-            </div>
+            <EmptyState
+              className="flex-1"
+              icon={<BookOpen className="size-7 text-primary/65" strokeWidth={1.25} />}
+              description={t('lesson.workbook.emptyHint')}
+            />
           )
         : (
             <ScrollArea className="min-h-0 flex-1 p-3">

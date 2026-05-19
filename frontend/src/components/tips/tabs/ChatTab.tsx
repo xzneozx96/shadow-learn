@@ -1,7 +1,8 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { FileUIPart } from 'ai'
+import type { ContextChip } from '@/components/chat/ContextChipBar'
 import type { TipChatKind } from '@/types/tips'
-import { ImageIcon, MessageSquareDashed, Mic, X } from 'lucide-react'
+import { Bot, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -25,10 +26,13 @@ import {
   PromptInputTools,
   usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
+import { ContextChipBar } from '@/components/chat/ContextChipBar'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipChat } from '@/hooks/useTipChat'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
+import { escapeHtml } from '@/lib/htmlText'
+import { saveTipNote } from '@/lib/tipNoteBus'
 import { seekTip } from '@/lib/tipSeekBus'
 import { VoiceInputBridge } from '../../chat/VoiceInputBridge'
 
@@ -41,10 +45,16 @@ interface Props {
   kind?: TipChatKind
   systemPrompt?: string
   initialUserMessage?: string
+  chips?: ContextChip[]
+  onRemoveChip?: (id: string) => void
+  onClearChips?: () => void
 }
 
 const BURST_DURATION_S = 30
 const WAVE_BAR_COUNT = 4
+const NEWLINES_RE = /\n+/g
+const SINGLE_NEWLINE_RE = /\n/g
+const BLANK_LINE_RE = /\n{2,}/g
 
 function generateBarHeights(): number[][] {
   // eslint-disable-next-line e18e/prefer-array-fill -- callback uses Math.random() per call
@@ -262,7 +272,8 @@ function messageText(message: UIMessage): string {
     .join('')
 }
 
-export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt, initialUserMessage }: Props) {
+export function ChatTab(props: Props) {
+  const { courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt, initialUserMessage, chips = [], onRemoveChip, onClearChips } = props
   const { locale, t } = useI18n()
   const chat = useTipChat({
     courseId,
@@ -306,6 +317,7 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
       return
     lastSeededRef.current = initialUserMessage
     chat.sendMessage({ text: initialUserMessage })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialUserMessage, chat.ready, chat.disabled, chat.sendMessage])
 
   const handleSubmit = useCallback((message: { text: string, files: FileUIPart[] }) => {
@@ -315,8 +327,13 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
     const hasFiles = message.files.length > 0
     if ((!trimmed && !hasFiles) || chat.disabled)
       return
-    chat.sendMessage({ text: trimmed, ...(hasFiles ? { files: message.files } : {}) } as Parameters<typeof chat.sendMessage>[0])
-  }, [voice.state, chat])
+    const composed = chips.length > 0
+      ? `${chips.map(c => `> ${c.text.replace(NEWLINES_RE, ' ')}`).join('\n')}\n\n${trimmed}`
+      : trimmed
+    chat.sendMessage({ text: composed, ...(hasFiles ? { files: message.files } : {}) } as Parameters<typeof chat.sendMessage>[0])
+    if (chips.length > 0)
+      onClearChips?.()
+  }, [voice.state, chat, chips, onClearChips])
 
   const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept', message: string }) => {
     toast.error(err.message)
@@ -340,12 +357,46 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
         <ConversationContent className="h-full gap-3">
           {chat.messages.length === 0 && chat.status === 'ready' && (
             <ConversationEmptyState
-              icon={<MessageSquareDashed className="size-8" />}
+              icon={<Bot className="size-8" />}
               title={t('tips.chat.empty.title')}
               description={t('tips.chat.empty.body')}
             />
           )}
-          {chat.messages.map(m => <ChatBubble key={m.id} message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={seekTip} />)}
+          {chat.messages.map(m => (
+            <div key={m.id} className="group relative">
+              <ChatBubble message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={seekTip} />
+              {m.role === 'assistant' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const raw = messageText(m).trim()
+                    if (!raw)
+                      return
+                    const firstLine = raw.split(SINGLE_NEWLINE_RE)[0]?.slice(0, 80) ?? ''
+                    const html = raw
+                      .split(BLANK_LINE_RE)
+                      .map(block => `<p>${escapeHtml(block).replace(SINGLE_NEWLINE_RE, '<br>')}</p>`)
+                      .join('')
+                    void saveTipNote({
+                      videoId,
+                      title: firstLine,
+                      html,
+                      source: 'chat',
+                      sourceRef: { kind: 'chat', ref: m.id },
+                    }).then(
+                      () => toast.success(t('tips.notes.saved.toast')),
+                      () => toast.error(t('tips.notes.saved.toastError')),
+                    )
+                  }}
+                  className="absolute -right-1 top-1 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:bg-secondary hover:text-primary"
+                  aria-label={t('tips.notes.actions.save')}
+                  title={t('tips.notes.actions.save')}
+                >
+                  <NotebookPen className="size-4" />
+                </button>
+              )}
+            </div>
+          ))}
           {(chat.status === 'submitted' || chat.status === 'streaming')
             && (chat.messages.length === 0
               || chat.messages.at(-1)?.role === 'user'
@@ -362,6 +413,11 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
       </Conversation>
 
       <div className="shrink-0 border-t border-border p-3">
+        {chips.length > 0 && onRemoveChip && (
+          <div className="mb-2">
+            <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />
+          </div>
+        )}
         <PromptInputProvider>
           <PromptInput
             accept="image/jpeg,image/png,image/webp"

@@ -151,7 +151,7 @@ export function StudioTile({
         disabled={isInert || loading}
         aria-label={`${title} — ${primaryLabel ?? ''}`.trim()}
         className={[
-          'flex flex-1 items-center gap-3 rounded-xl px-3.5 py-3 text-left min-h-[68px]',
+          'flex flex-1 min-w-0 items-center gap-3 rounded-xl px-3.5 py-3 text-left min-h-[68px]',
           isInert ? 'cursor-not-allowed' : 'cursor-pointer active:bg-muted/40',
           loading ? 'cursor-progress' : '',
         ].join(' ')}
@@ -167,7 +167,7 @@ export function StudioTile({
         >
           <Icon className="size-5" strokeWidth={2} />
           {isLocked && (
-            <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full bg-card flex items-center justify-center">
+            <span className="absolute -bottom-1 -right-1 size-4 rounded-full bg-card flex items-center justify-center">
               <Lock className="size-2.5 text-muted-foreground" />
             </span>
           )}

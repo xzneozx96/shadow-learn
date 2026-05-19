@@ -32,6 +32,12 @@ If a case fails check 3, 5, 6, 7, or 8 → file a B3.1 polish ticket; not a bloc
 
 (Fill in after running locally.)
 
-- Case 1 (3-min EN): TBD
-- Case 2 (12-15-min EN): TBD
-- Case 3 (5-min VI): TBD
+Run via `evals/run_studio_evals.py`. Latest: `evals/results/studio-prompts-20260519-105505.md`.
+
+- Case 1 (3-min EN): ✅ depth 4, 16 nodes, no sibling dupes
+- Case 2 (12-min EN): ✅ depth 4, 24 nodes, no sibling dupes
+- Case 3 (5-min VI): ✅ depth 3, 15 nodes, no sibling dupes, VI diacritics in labels
+
+Initial run hit a recurring ship-blocker: LLM emitted the root tree node at top level instead of `{"root": {...}}`. Fixed in `build_prompt` (`backend/app/tips/services/studio.py`) — prompt now states wrapper explicitly with literal JSON shape. Re-run: 28/28 checks pass across all kinds × locales.
+
+Manual checks (2, 5, 6, 7, 8) still require human dogfood per matrix above.

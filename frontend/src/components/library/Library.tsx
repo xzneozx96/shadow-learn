@@ -6,6 +6,7 @@ import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { EmptyState } from '@/components/EmptyState'
 import { Layout } from '@/components/Layout'
 import { Input } from '@/components/ui/input'
 import { WhatsNewDialog } from '@/components/whats-new/WhatsNewDialog'
@@ -23,7 +24,6 @@ import { ActivityHeatmap } from './ActivityHeatmap'
 import { BentoCard } from './BentoCard'
 import { CurrentLessonHero } from './CurrentLessonHero'
 import { FirstLessonCTA } from './FirstLessonCTA'
-import { GlowIconPlaceholder } from './GlowIconPlaceholder'
 import { LessonCard } from './LessonCard'
 import { StreakCard } from './StreakCard'
 import { WordsCard } from './WordsCard'
@@ -357,12 +357,7 @@ export function Library() {
                   : activeFilter === 'done'
                     ? t('library.emptyDone')
                     : t('library.emptyInProgress')
-                return (
-                  <div className="py-12 flex flex-col items-center gap-3 text-center">
-                    <GlowIconPlaceholder icon={icon} className="size-20 rounded-3xl" />
-                    <p className="text-sm text-muted-foreground">{label}</p>
-                  </div>
-                )
+                return <EmptyState icon={icon} title={label} />
               })()}
             </section>
           )}

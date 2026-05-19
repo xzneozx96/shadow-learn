@@ -1,9 +1,24 @@
+import type { NewTipNote, TipNote } from '@/types/tips'
 import { BookOpen, ChevronLeft, GraduationCap, Layers, Sparkles } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipCards } from '@/hooks/useTipCards'
 import { useTipStudio } from '@/hooks/useTipStudio'
+import { htmlToPlain } from '@/lib/htmlText'
+import { NotesEditorSurface } from '../notes/NotesEditorSurface'
+import { NotesList } from '../notes/NotesList'
 import { QuizArtifact } from '../studio/QuizArtifact'
 import { StudioTile } from '../studio/StudioTile'
 import { StudyGuideArtifact } from '../studio/StudyGuideArtifact'
@@ -19,29 +34,31 @@ interface Props {
   lessonTitle: string
   transcript: string
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
+  notes: TipNote[]
+  notesHydrated: boolean
+  onCreateNote: (input: NewTipNote) => Promise<string>
+  onUpdateNote: (id: string, patch: Partial<Omit<TipNote, 'id' | 'createdAt' | 'videoId'>>) => Promise<void>
+  onRemoveNote: (id: string) => Promise<void>
+  onDiscussNote: (text: string) => void
 }
 
-type Surface = 'grid' | 'study_guide' | 'quiz' | 'cards' | 'mind_map'
+type Surface = 'grid' | 'study_guide' | 'quiz' | 'cards' | 'mind_map' | 'note_editor'
 
 export function StudioTab(props: Props) {
-  const { courseId, videoId, lessonTitle, transcript, transcriptStatus } = props
+  const { courseId, videoId, lessonTitle, transcript, transcriptStatus, notes, notesHydrated, onCreateNote, onUpdateNote, onRemoveNote, onDiscussNote } = props
   const { db } = useAuth()
   const { t, locale } = useI18n()
   const [surface, setSurface] = useState<Surface>('grid')
+  const [openNoteId, setOpenNoteId] = useState<string | null>(null)
+  const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null)
 
   const noTranscript = transcriptStatus === 'unavailable' || transcriptStatus === 'error'
   const studioLocale: 'en' | 'vi' = locale === 'vi' ? 'vi' : 'en'
 
   const guide = useTipStudio({ db, kind: 'study_guide', videoId, transcript, locale: studioLocale })
   const mindmap = useTipStudio({ db, kind: 'mind_map', videoId, transcript, locale: studioLocale })
-  // Read-only peek at the cards cache to drive the tile preview / state.
-  // The actual deck UI re-mounts useTipCards itself inside CardsTab.
   const cardsPeek = useTipCards({ db, videoId, transcript, locale: studioLocale })
 
-  // When the user returns from an inner surface (cards / study_guide / etc.)
-  // to the grid, the in-tab view may have just kicked off a generation that
-  // the always-mounted peek hooks never saw. Re-probe the backend on
-  // re-entry so tiles reflect the live job state.
   const prevSurfaceRef = useRef<Surface>(surface)
   useEffect(() => {
     const prev = prevSurfaceRef.current
@@ -53,30 +70,58 @@ export function StudioTab(props: Props) {
     prevSurfaceRef.current = surface
   }, [surface, guide, mindmap, cardsPeek])
 
-  if (noTranscript) {
-    return (
-      <div className="p-6 text-center text-muted-foreground text-sm">
-        {t('tips.studio.disabled.transcript')}
-      </div>
-    )
+  const openNote = (id: string) => {
+    setOpenNoteId(id)
+    setSurface('note_editor')
+  }
+  const backToGrid = () => {
+    setOpenNoteId(null)
+    setSurface('grid')
+  }
+  const newNote = async () => {
+    const id = await onCreateNote({ videoId, title: '', html: '', source: 'freeform' })
+    openNote(id)
+  }
+  const discussNote = (id: string) => {
+    const note = notes.find(n => n.id === id)
+    if (!note)
+      return
+    const text = htmlToPlain(note.html)
+    const titled = note.title ? `${note.title}\n\n${text}` : text
+    onDiscussNote(titled.trim() || t('tips.notes.untitled'))
+  }
+  const renameNote = (id: string, nextTitle: string) => {
+    void onUpdateNote(id, { title: nextTitle.trim() })
+  }
+  const confirmDeleteNote = async () => {
+    if (!deleteNoteId)
+      return
+    const id = deleteNoteId
+    setDeleteNoteId(null)
+    if (id === openNoteId) {
+      setOpenNoteId(null)
+      setSurface('grid')
+    }
+    await onRemoveNote(id)
   }
 
   const backButton = (
-    <button
-      type="button"
+    <Button
       onClick={() => setSurface('grid')}
-      className="inline-flex items-center gap-1 text-sm text-muted-foreground font-bold cursor-pointer hover:underline"
+      variant="ghost"
+      size="sm"
+      className="text-muted-foreground px-0"
     >
-      <ChevronLeft className="size-3.5" aria-hidden />
+      <ChevronLeft className="size-4" aria-hidden />
       {t('tips.studio.title')}
-    </button>
+    </Button>
   )
 
   if (surface === 'study_guide' && guide.data) {
     return (
       <div className="p-4 space-y-3">
         {backButton}
-        <StudyGuideArtifact data={guide.data} />
+        <StudyGuideArtifact videoId={videoId} data={guide.data} />
       </div>
     )
   }
@@ -112,10 +157,24 @@ export function StudioTab(props: Props) {
       </Suspense>
     )
   }
+  if (surface === 'note_editor' && openNoteId) {
+    const note = notes.find(n => n.id === openNoteId)
+    if (note) {
+      return (
+        <NotesEditorSurface
+          note={note}
+          backLabel={t('tips.studio.title')}
+          onBack={backToGrid}
+          onUpdate={onUpdateNote}
+          onDiscuss={discussNote}
+        />
+      )
+    }
+  }
 
   const cardsHasDeck = cardsPeek.cards.length > 0
 
-  const tiles = [
+  const generatedTiles = [
     <StudioTile
       key="study_guide"
       Icon={BookOpen}
@@ -181,19 +240,64 @@ export function StudioTab(props: Props) {
     />,
   ]
 
-  return (
-    <div className="p-3 space-y-3">
-      <div className="flex flex-col gap-3">
-        {tiles.map((tile, i) => (
-          <div
-            key={tile.key}
-            className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
-            style={{ animationDelay: `${i * 70}ms`, animationFillMode: 'both' }}
-          >
-            {tile}
-          </div>
-        ))}
-      </div>
+  const sectionLabel = (label: string) => (
+    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground/70 px-1">
+      {label}
     </div>
+  )
+
+  return (
+    <>
+      <div className="p-6 space-y-8">
+        {!noTranscript && (
+          <div className="space-y-2">
+            {sectionLabel(t('tips.studio.section.generated'))}
+            <div className="flex flex-col gap-3">
+              {generatedTiles.map((tile, i) => (
+                <div
+                  key={tile.key}
+                  className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                  style={{ animationDelay: `${i * 70}ms`, animationFillMode: 'both' }}
+                >
+                  {tile}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {noTranscript && (
+          <div className="text-center text-muted-foreground text-sm py-2">
+            {t('tips.studio.disabled.transcript')}
+          </div>
+        )}
+        <div className="h-px bg-border/80" aria-hidden />
+        <div className="space-y-2">
+          {sectionLabel(t('tips.studio.section.yours'))}
+          <NotesList
+            notes={notes}
+            hydrated={notesHydrated}
+            onNew={newNote}
+            onOpen={openNote}
+            onDiscuss={discussNote}
+            onRename={renameNote}
+            onDelete={setDeleteNoteId}
+          />
+        </div>
+      </div>
+      <AlertDialog open={deleteNoteId !== null} onOpenChange={open => !open && setDeleteNoteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('tips.notes.delete.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('tips.notes.delete.body')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteNote} className="bg-destructive text-destructive-foreground">
+              {t('tips.notes.actions.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

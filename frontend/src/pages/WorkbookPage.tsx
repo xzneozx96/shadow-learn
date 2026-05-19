@@ -2,7 +2,7 @@ import type { ErrorPattern, ProgressStats } from '@/db'
 import { ArrowUpRight, Bookmark } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { EmptyState } from '@/components/EmptyState'
 import { Layout } from '@/components/Layout'
 import { AccuracyTrendChart } from '@/components/progress/AccuracyTrendChart'
 import { MistakesPanel } from '@/components/progress/MistakesPanel'
@@ -154,22 +154,16 @@ export function WorkbookPage() {
 
               {/* Empty state */}
               {sortedLessonIds.length === 0 && (
-                <div className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border border-dashed border-primary/30 bg-primary/3 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] flex flex-col items-center justify-center text-center">
-                  <div className="pointer-events-none absolute -top-16 left-1/2 size-56 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl" />
-                  <div className="mb-4 flex size-12 items-center justify-center rounded-xl border border-primary/40 bg-primary/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                    <Bookmark className="size-5 text-primary" />
-                  </div>
-                  <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
-                    {t('workbook.noWords')}
-                  </p>
-                  <Link
-                    to="/"
-                    className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-transform duration-200 hover:scale-[1.02]"
-                  >
-                    {t('nav.library')}
-                    <ArrowUpRight className="size-4" />
-                  </Link>
-                </div>
+                <EmptyState
+                  className="min-h-[340px] rounded-2xl border border-dashed border-primary/30 bg-primary/3 backdrop-blur-sm"
+                  icon={<Bookmark className="size-7 text-primary" strokeWidth={1.5} />}
+                  description={t('workbook.noWords')}
+                  action={{
+                    label: t('nav.library'),
+                    href: '/',
+                    icon: <ArrowUpRight className="size-4" />,
+                  }}
+                />
               )}
 
               {/* No search results state */}

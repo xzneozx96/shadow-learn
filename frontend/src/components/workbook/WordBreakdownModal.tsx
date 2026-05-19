@@ -143,7 +143,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
           </header>
 
           {/* Single-Column Flow with Grid for Anatomy */}
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-4">
             {/* Mnemonic / Explanation */}
             <section className="w-full">
               <h3 className="text-xs font-bold text-foreground/40 uppercase tracking-[0.2em] mb-4">{t('breakdown.story')}</h3>

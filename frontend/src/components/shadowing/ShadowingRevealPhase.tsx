@@ -140,7 +140,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
       </div>
 
       {/* Progress bar */}
-      <div className="h-px bg-border">
+      <div className="h-px bg-border/80">
         <div
           className="h-full bg-foreground/40 transition-all duration-300"
           style={{ width: `${Math.round(progress * 100)}%` }}

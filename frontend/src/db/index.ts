@@ -1,11 +1,11 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
 import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, ShadowingAudio, ShadowingBest, VocabEntry } from '../types'
-import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse, TipProgress, TipStudioRecord, TipTranscriptRecord } from '../types/tips'
+import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse, TipNote, TipProgress, TipStudioRecord, TipTranscriptRecord } from '../types/tips'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 16
+const DB_VERSION = 17
 
 export interface LearnerProfile {
   name: string
@@ -236,6 +236,11 @@ interface ShadowLearnSchema extends DBSchema {
     key: string
     value: TipCardsRecord
   }
+  'tip-notes': {
+    key: [string, string] // [videoId, id]
+    value: TipNote
+    indexes: { 'by-video': string }
+  }
 }
 
 export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
@@ -384,6 +389,10 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
           const newKey = `${row.courseId}:${row.videoId}:tutor`
           await chatStore.put({ ...row, key: newKey, kind: 'tutor' })
         }
+      }
+      if (oldVersion < 17) {
+        const notesStore = db.createObjectStore('tip-notes', { keyPath: ['videoId', 'id'] })
+        notesStore.createIndex('by-video', 'videoId', { unique: false })
       }
     },
   })
@@ -797,4 +806,17 @@ export async function getTipCards(db: ShadowLearnDB, key: string): Promise<TipCa
 
 export async function putTipCards(db: ShadowLearnDB, record: TipCardsRecord): Promise<void> {
   await db.put('tip-cards', record)
+}
+
+export async function putTipNote(db: ShadowLearnDB, note: TipNote): Promise<void> {
+  await db.put('tip-notes', note)
+}
+
+export async function getTipNotesForVideo(db: ShadowLearnDB, videoId: string): Promise<TipNote[]> {
+  const rows = await db.getAllFromIndex('tip-notes', 'by-video', videoId)
+  return rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+}
+
+export async function deleteTipNote(db: ShadowLearnDB, videoId: string, id: string): Promise<void> {
+  await db.delete('tip-notes', [videoId, id])
 }

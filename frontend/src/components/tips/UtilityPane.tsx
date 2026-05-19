@@ -1,11 +1,13 @@
+import type { ContextChip } from '@/components/chat/ContextChipBar'
 import type { WarmingStep } from '@/hooks/useTipTranscript'
-import { Clock, FileText, MessageSquare, NotebookPen, Sparkles } from 'lucide-react'
+import { Clock, FileText, MessageSquare, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
+import { useTipNotes } from '@/hooks/useTipNotes'
 import { OverviewBlock } from './OverviewBlock'
 import { ChatTab } from './tabs/ChatTab'
-import { DisabledTab } from './tabs/DisabledTab'
 import { StudioTab } from './tabs/StudioTab'
 import { WarmingState } from './WarmingState'
 
@@ -26,11 +28,19 @@ interface Props {
   transcriptHydrated?: boolean
 }
 
-type TabValue = 'summary' | 'notes' | 'chat' | 'studio'
+type TabValue = 'summary' | 'chat' | 'studio'
 
 export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transcriptStatus, warmingStep, transcriptHydrated = true }: Props) {
   const { t } = useI18n()
+  const { db } = useAuth()
+  const notesDeck = useTipNotes({ db, videoId })
   const [tab, setTab] = useState<TabValue>('summary')
+  const [chips, setChips] = useState<ContextChip[]>([])
+  const addChip = (text: string, source?: string) =>
+    setChips(prev => [...prev, { id: crypto.randomUUID(), text, source }])
+  const removeChip = (id: string) =>
+    setChips(prev => prev.filter(c => c.id !== id))
+  const clearChips = () => setChips([])
 
   // Video too long: no transcript will ever exist. Take over the pane with
   // a clear explanation rather than showing tabs that all silently disable.
@@ -74,14 +84,10 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
   return (
     <aside className="flex flex-col h-full border-l border-border overflow-hidden">
       <Tabs value={tab} onValueChange={v => setTab(v as TabValue)} className="flex flex-col h-full gap-0">
-        <TabsList variant="line" className="w-full shrink-0 border-b border-border rounded-none h-12!">
+        <TabsList variant="line" className="w-full shrink-0 border-b border-border rounded-none h-13!">
           <TabsTrigger value="summary" aria-label={t('tips.tab.summary')}>
             <FileText className="size-4" aria-hidden />
             <span className="text-sm">{t('tips.tab.summary')}</span>
-          </TabsTrigger>
-          <TabsTrigger value="notes" aria-label={t('tips.tab.notes')}>
-            <NotebookPen className="size-4" aria-hidden />
-            <span className="text-sm">{t('tips.tab.notes')}</span>
           </TabsTrigger>
           <TabsTrigger value="chat" aria-label={t('tips.tab.chat')}>
             <MessageSquare className="size-4" aria-hidden />
@@ -96,10 +102,16 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
           <OverviewBlock videoId={videoId} transcript={transcript} transcriptStatus={transcriptStatus} />
         </TabsContent>
         <TabsContent value="chat" className="flex-1 overflow-hidden">
-          <ChatTab courseId={courseId} videoId={videoId} lessonTitle={lessonTitle} transcript={transcript} transcriptStatus={transcriptStatus} />
-        </TabsContent>
-        <TabsContent value="notes" className="flex-1">
-          <DisabledTab Icon={NotebookPen} labelKey="tips.placeholder.label.notes" reasonKey="tips.placeholder.notes" />
+          <ChatTab
+            courseId={courseId}
+            videoId={videoId}
+            lessonTitle={lessonTitle}
+            transcript={transcript}
+            transcriptStatus={transcriptStatus}
+            chips={chips}
+            onRemoveChip={removeChip}
+            onClearChips={clearChips}
+          />
         </TabsContent>
         <TabsContent value="studio" className="flex-1 overflow-y-auto">
           <StudioTab
@@ -108,6 +120,15 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
             lessonTitle={lessonTitle}
             transcript={transcript}
             transcriptStatus={transcriptStatus}
+            notes={notesDeck.notes}
+            notesHydrated={notesDeck.hydrated}
+            onCreateNote={notesDeck.create}
+            onUpdateNote={notesDeck.update}
+            onRemoveNote={notesDeck.remove}
+            onDiscussNote={(text) => {
+              addChip(text, 'note')
+              setTab('chat')
+            }}
           />
         </TabsContent>
       </Tabs>

@@ -138,7 +138,7 @@ export function OverviewBlock({ videoId, transcript, transcriptStatus }: Props) 
 
       {transcriptReady && summary.status === 'loading'
         ? <SummarySkeleton />
-        : summary.data && <SummaryArtifact data={summary.data} />}
+        : summary.data && <SummaryArtifact videoId={videoId} data={summary.data} />}
     </section>
   )
 }

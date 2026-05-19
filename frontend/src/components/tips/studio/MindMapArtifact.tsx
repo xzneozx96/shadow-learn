@@ -5,7 +5,9 @@ import dagre from 'dagre'
 import { ChevronLeft, Play } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useI18n } from '@/contexts/I18nContext'
+import { escapeHtml } from '@/lib/htmlText'
 import { seekTip } from '@/lib/tipSeekBus'
+import { SaveToNotesButton } from '../notes/SaveToNotesButton'
 import { ChatTab } from '../tabs/ChatTab'
 import '@xyflow/react/dist/style.css'
 
@@ -21,6 +23,7 @@ interface Props {
 interface FlatNode {
   id: string
   label: string
+  summary: string
   startSec: number | null
   parentId: string | null
 }
@@ -30,12 +33,15 @@ const NODE_HEIGHT = 44
 
 interface MindNodeData {
   label: string
+  summary: string
+  videoId: string
+  pathRef: string
   startSec: number | null
   onSeek: (sec: number) => void
 }
 
 function MindNode({ data }: NodeProps) {
-  const { label, startSec, onSeek } = data as unknown as MindNodeData
+  const { label, summary, videoId, pathRef, startSec, onSeek } = data as unknown as MindNodeData
   return (
     <div
       className="group relative rounded-md border border-border bg-card text-xs font-medium text-foreground shadow-sm hover:border-primary transition-colors"
@@ -56,6 +62,18 @@ function MindNode({ data }: NodeProps) {
           <Play className="size-3 fill-current" aria-hidden />
         </button>
       )}
+      <div className="mr-1 flex-shrink-0">
+        <SaveToNotesButton
+          build={() => ({
+            videoId,
+            title: label.slice(0, 80),
+            html: `<p><strong>${escapeHtml(label)}</strong></p>${summary ? `<p>${escapeHtml(summary)}</p>` : ''}`,
+            source: 'studio',
+            sourceRef: { kind: 'mind_map', ref: pathRef },
+          })}
+          alwaysVisible
+        />
+      </div>
       <Handle type="source" position={Position.Right} className="bg-border! border-0! w-1.5! h-1.5!" />
     </div>
   )
@@ -66,14 +84,14 @@ const nodeTypes: NodeTypes = { mind: MindNode }
 function flatten(root: MindMapNode): FlatNode[] {
   const out: FlatNode[] = []
   function walk(node: MindMapNode, parentId: string | null, path: string) {
-    out.push({ id: path, label: node.label, startSec: node.start_sec ?? null, parentId })
+    out.push({ id: path, label: node.label, summary: node.summary ?? '', startSec: node.start_sec ?? null, parentId })
     node.children.forEach((child, i) => walk(child, path, `${path}.${i}`))
   }
   walk(root, null, '0')
   return out
 }
 
-function layout(flat: FlatNode[], onSeek: (sec: number) => void): { nodes: Node[], edges: Edge[] } {
+function layout(flat: FlatNode[], onSeek: (sec: number) => void, videoId: string): { nodes: Node[], edges: Edge[] } {
   const g = new dagre.graphlib.Graph()
   g.setGraph({ rankdir: 'LR', nodesep: 24, ranksep: 80 })
   g.setDefaultEdgeLabel(() => ({}))
@@ -91,7 +109,7 @@ function layout(flat: FlatNode[], onSeek: (sec: number) => void): { nodes: Node[
     return {
       id: f.id,
       type: 'mind',
-      data: { label: f.label, startSec: f.startSec, onSeek },
+      data: { label: f.label, summary: f.summary, videoId, pathRef: f.id, startSec: f.startSec, onSeek },
       position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 },
     }
   })
@@ -106,7 +124,7 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
 
   const flat = useMemo(() => flatten(data.root), [data])
-  const { nodes, edges } = useMemo(() => layout(flat, seekTip), [flat])
+  const { nodes, edges } = useMemo(() => layout(flat, seekTip, videoId), [flat, videoId])
 
   const studioBack = (
     <button
@@ -114,7 +132,7 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
       onClick={onBackToGrid}
       className="inline-flex items-center gap-1 text-xs text-muted-foreground font-bold cursor-pointer hover:underline"
     >
-      <ChevronLeft className="size-3.5" aria-hidden />
+      <ChevronLeft className="size-4" aria-hidden />
       {t('tips.studio.title')}
     </button>
   )
@@ -140,7 +158,7 @@ export function MindMapArtifact({ data, courseId, videoId, lessonTitle, transcri
             onClick={() => setPendingPrompt(null)}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground font-bold cursor-pointer hover:underline"
           >
-            <ChevronLeft className="size-3.5" aria-hidden />
+            <ChevronLeft className="size-4" aria-hidden />
             {t('tips.studio.mindmap.backToTree')}
           </button>
         </div>
