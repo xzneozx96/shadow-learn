@@ -1,5 +1,6 @@
 import type { TipNote } from '@/types/tips'
 import { NotebookPen, Plus } from 'lucide-react'
+import { EmptyState } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { NoteCard } from './NoteCard'
@@ -19,17 +20,16 @@ export function NotesList({ notes, hydrated, onNew, onOpen, onDiscuss, onRename,
 
   if (hydrated && notes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <NotebookPen className="size-10 text-muted-foreground/50" aria-hidden />
-        <div>
-          <h4 className="text-sm font-semibold text-foreground">{t('tips.notes.empty.title')}</h4>
-          <p className="text-xs text-muted-foreground mt-1 max-w-64 mx-auto">{t('tips.notes.empty.body')}</p>
-        </div>
-        <Button onClick={onNew} size="sm">
-          <Plus className="size-4" />
-          {t('tips.notes.new')}
-        </Button>
-      </div>
+      <EmptyState
+        icon={<NotebookPen className="size-8" />}
+        title={t('tips.notes.empty.title')}
+        description={t('tips.notes.empty.body')}
+        action={{
+          label: t('tips.notes.new'),
+          icon: <Plus className="size-4" />,
+          onClick: onNew,
+        }}
+      />
     )
   }
 

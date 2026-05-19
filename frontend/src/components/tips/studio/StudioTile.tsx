@@ -239,8 +239,9 @@ export function StudioTile({
           <Button
             size="icon-lg"
             variant={loading ? 'ghost' : 'default'}
-            tabIndex={-1}
-            aria-hidden="true"
+            onClick={isInert || loading ? undefined : (e) => { e.stopPropagation(); onPrimary?.() }}
+            disabled={isInert || loading}
+            aria-label={primaryLabel ?? title}
           >
             {loading
               ? <Loader2 className={['size-4 animate-spin', a.filledChipFg].join(' ')} />
