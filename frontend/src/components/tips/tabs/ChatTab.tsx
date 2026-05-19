@@ -2,17 +2,15 @@ import type { UIMessage } from '@ai-sdk/react'
 import type { FileUIPart } from 'ai'
 import type { ContextChip } from '@/components/chat/ContextChipBar'
 import type { TipChatKind } from '@/types/tips'
-import { Bot, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
+import { ArrowDownIcon, Bot, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { toast } from 'sonner'
+import { useStickToBottom } from 'use-stick-to-bottom'
 import {
-  Conversation,
-  ConversationContent,
   ConversationEmptyState,
-  ConversationScrollButton,
 } from '@/components/ai-elements/conversation'
 import {
   PromptInput,
@@ -27,6 +25,7 @@ import {
   usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
 import { ContextChipBar } from '@/components/chat/ContextChipBar'
+import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipChat } from '@/hooks/useTipChat'
@@ -320,6 +319,11 @@ export function ChatTab(props: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialUserMessage, chat.ready, chat.disabled, chat.sendMessage])
 
+  const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
+    initial: 'smooth',
+    resize: 'smooth',
+  })
+
   const handleSubmit = useCallback((message: { text: string, files: FileUIPart[] }) => {
     if (voice.state !== 'idle')
       throw new Error('voice-active')
@@ -330,10 +334,11 @@ export function ChatTab(props: Props) {
     const composed = chips.length > 0
       ? `${chips.map(c => `> ${c.text.replace(NEWLINES_RE, ' ')}`).join('\n')}\n\n${trimmed}`
       : trimmed
+    scrollToBottom()
     chat.sendMessage({ text: composed, ...(hasFiles ? { files: message.files } : {}) } as Parameters<typeof chat.sendMessage>[0])
     if (chips.length > 0)
       onClearChips?.()
-  }, [voice.state, chat, chips, onClearChips])
+  }, [voice.state, chat, chips, onClearChips, scrollToBottom])
 
   const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept', message: string }) => {
     toast.error(err.message)
@@ -353,15 +358,19 @@ export function ChatTab(props: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      <Conversation className="flex-1">
-        <ConversationContent className="h-full gap-3">
-          {chat.messages.length === 0 && chat.status === 'ready' && (
-            <ConversationEmptyState
-              icon={<Bot className="size-8" />}
-              title={t('tips.chat.empty.title')}
-              description={t('tips.chat.empty.body')}
-            />
-          )}
+      <div
+        ref={scrollRef}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2"
+      >
+        {chat.messages.length === 0 && chat.status === 'ready' && (
+          <ConversationEmptyState
+            className="size-auto flex-1"
+            icon={<Bot className="size-8" />}
+            title={t('tips.chat.empty.title')}
+            description={t('tips.chat.empty.body')}
+          />
+        )}
+        <div ref={contentRef} className="flex flex-col gap-3">
           {chat.messages.map(m => (
             <div key={m.id} className="group relative">
               <ChatBubble message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={seekTip} />
@@ -408,9 +417,22 @@ export function ChatTab(props: Props) {
                 </div>
               </div>
             )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
+        </div>
+
+        {chat.messages.length > 0 && <div className="h-4 shrink-0" />}
+
+        {!isAtBottom && (
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={() => scrollToBottom()}
+            className="sticky bottom-4 left-1/2 -translate-x-1/2 rounded-full"
+          >
+            <ArrowDownIcon className="size-4" />
+          </Button>
+        )}
+      </div>
 
       <div className="shrink-0 border-t border-border p-3">
         {chips.length > 0 && onRemoveChip && (
