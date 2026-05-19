@@ -227,6 +227,128 @@
   }
 }
 
+@property --radiant-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes radiant-rotate {
+  to {
+    --radiant-angle: 360deg;
+  }
+}
+
+@keyframes radiant-shimmer-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes radiant-glow-breathe {
+
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateX(-50%) scaleX(0.9);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: translateX(-50%) scaleX(1.1);
+  }
+}
+
+.radiant-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--radiant-bg, #0b0b0d);
+  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.radiant-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.radiant-btn[data-disabled='true'] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.radiant-border {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--radiant-border-width, 1.5px);
+  background: conic-gradient(from var(--radiant-angle),
+      transparent 0deg,
+      transparent 270deg,
+      var(--radiant-color) 335deg,
+      #ffffff 350deg,
+      var(--radiant-color) 360deg);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: radiant-rotate var(--radiant-duration, 3s) linear infinite;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px var(--radiant-color));
+}
+
+.radiant-shimmer {
+  position: absolute;
+  inset: var(--radiant-border-width, 1.5px);
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, transparent 0%, transparent 35%, #000 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 35%, #000 100%);
+}
+
+.radiant-shimmer::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 250%;
+  aspect-ratio: 1;
+  background: linear-gradient(115deg,
+      transparent 38%,
+      var(--radiant-color) 50%,
+      transparent 62%);
+  transform: translate(-50%, -50%) rotate(0deg);
+  animation: radiant-shimmer-spin calc(var(--radiant-duration, 3s) * 2.5) linear infinite;
+  opacity: 0.35;
+}
+
+.radiant-glow {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 45%;
+  height: 6px;
+  background: var(--radiant-color);
+  border-radius: 9999px;
+  filter: blur(10px);
+  opacity: 0.35;
+  animation: radiant-glow-breathe calc(var(--radiant-duration, 3s) * 1.5) ease-in-out infinite;
+  pointer-events: none;
+}
+
+.radiant-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
 /* YouTube iframe must fill its container */
 #yt-player {
   width: 100% !important;

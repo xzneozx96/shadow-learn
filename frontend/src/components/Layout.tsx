@@ -10,6 +10,7 @@ import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { cn } from '@/lib/utils'
 import { useHasUnseenAnnouncement } from '@/lib/whats-new'
 import { AmbientBackdrop } from './AmbientBackdrop'
+import { RadiantButton } from './RadiantButton'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -144,36 +145,40 @@ export function Layout({ children }: LayoutProps) {
         {/* Bottom actions */}
         <div className="border-t border-white/6 p-3 flex flex-col gap-2">
           {/* AI Companion CTA */}
-          <button
-            type="button"
+          <RadiantButton
             onClick={openPanel}
             title={collapsed ? t('companion.askButton') : undefined}
-            className={cn(
-              'group relative w-full h-11 rounded-lg bg-linear-to-br from-amber-400/10 to-amber-500/5 border border-amber-400/20 animate-breathe-amber hover:from-amber-400/15 hover:to-amber-500/10 hover:border-amber-400/35 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] flex items-center cursor-pointer',
-              collapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5',
+            color="#fbbf24"
+            background="rgba(251, 191, 36, 0.06)"
+            className="group w-full h-11"
+            innerClassName={cn(
+              'h-full',
+              collapsed ? 'justify-center px-0' : 'justify-start gap-2.5 px-2.5',
             )}
           >
             <span className="flex size-7 items-center justify-center rounded-md bg-amber-400/20 ring-1 ring-amber-400/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] shrink-0">
               <Sparkles className="size-4 text-amber-300 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-12 group-hover:scale-110" />
             </span>
             {!collapsed && <span className="text-sm font-semibold text-amber-100/95">{t('companion.askButton')}</span>}
-          </button>
+          </RadiantButton>
 
           {/* Speak Practice CTA */}
-          <button
-            type="button"
+          <RadiantButton
             onClick={openSpeakModal}
             title={collapsed ? t('speak.title') : undefined}
-            className={cn(
-              'group relative w-full h-11 rounded-lg bg-linear-to-br from-primary/12 to-primary/5 border border-primary/25 animate-breathe-primary hover:from-primary/18 hover:to-primary/8 hover:border-primary/40 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] flex items-center cursor-pointer',
-              collapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5',
+            color="hsl(var(--primary))"
+            background="hsl(var(--primary) / 0.08)"
+            className="group w-full h-11"
+            innerClassName={cn(
+              'h-full',
+              collapsed ? 'justify-center px-0' : 'justify-start gap-2.5 px-2.5',
             )}
           >
             <span className="flex size-7 items-center justify-center rounded-md bg-primary/20 ring-1 ring-primary/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] shrink-0">
-              <AudioLines className="size-4 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:-translate-y-0.5" />
+              <AudioLines className="size-4 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110" />
             </span>
             {!collapsed && <span className="text-sm font-semibold text-foreground">{t('speak.title')}</span>}
-          </button>
+          </RadiantButton>
 
           {/* Settings */}
           <Button
