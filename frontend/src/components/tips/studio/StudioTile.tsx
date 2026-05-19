@@ -151,7 +151,7 @@ export function StudioTile({
         disabled={isInert || loading}
         aria-label={`${title} — ${primaryLabel ?? ''}`.trim()}
         className={[
-          'flex flex-1 items-center gap-3 rounded-xl px-3.5 py-3 text-left min-h-[68px]',
+          'flex flex-1 min-w-0 items-center gap-3 rounded-xl px-3.5 py-3 text-left min-h-[68px]',
           isInert ? 'cursor-not-allowed' : 'cursor-pointer active:bg-muted/40',
           loading ? 'cursor-progress' : '',
         ].join(' ')}

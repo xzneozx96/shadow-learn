@@ -1,8 +1,9 @@
 import type { UIMessage } from 'ai'
 import type { ComponentProps } from 'react'
-import { ArrowDownIcon, DownloadIcon } from 'lucide-react'
+import { ArrowDownIcon, Bot, DownloadIcon } from 'lucide-react'
 import { useCallback } from 'react'
 import { StickToBottom, useStickToBottomContext } from 'use-stick-to-bottom'
+import { EmptyState } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -36,7 +37,8 @@ export function ConversationContent({
   )
 }
 
-export type ConversationEmptyStateProps = ComponentProps<'div'> & {
+export interface ConversationEmptyStateProps {
+  className?: string
   title?: string
   description?: string
   icon?: React.ReactNode
@@ -47,29 +49,14 @@ export function ConversationEmptyState({
   title = 'No messages yet',
   description = 'Start a conversation to see messages here',
   icon,
-  children,
-  ...props
 }: ConversationEmptyStateProps) {
   return (
-    <div
-      className={cn(
-        'flex size-full flex-col items-center justify-center gap-3 p-8 text-center',
-        className,
-      )}
-      {...props}
-    >
-      {children ?? (
-        <>
-          {icon && <div className="text-muted-foreground">{icon}</div>}
-          <div className="space-y-2">
-            <h3 className="font-bold text-base">{title}</h3>
-            {description && (
-              <p className="text-muted-foreground text-sm">{description}</p>
-            )}
-          </div>
-        </>
-      )}
-    </div>
+    <EmptyState
+      className={cn('size-full', className)}
+      icon={icon ?? <Bot className="size-7 text-primary/65" strokeWidth={1.25} />}
+      title={title}
+      description={description}
+    />
   )
 }
 

@@ -1,6 +1,8 @@
+import { Lightbulb } from 'lucide-react'
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { HubRow } from '@/components/collection/HubRow'
+import { EmptyState } from '@/components/EmptyState'
 import { Layout } from '@/components/Layout'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
@@ -180,11 +182,11 @@ export function CollectionPage() {
               {activeTab === 'tips' && (
                 data.tips.groups.length === 0
                   ? (
-                      <div className="mt-16 rounded-2xl border border-dashed border-border/80 bg-muted/20 px-8 py-16 text-center">
-                        <p className="text-sm text-muted-foreground">
-                          {t('collection.tipsEmpty')}
-                        </p>
-                      </div>
+                      <EmptyState
+                        className="mt-16 rounded-2xl border border-dashed border-border/80 bg-muted/20 py-16"
+                        icon={<Lightbulb className="size-7 text-primary/65" strokeWidth={1.25} />}
+                        description={t('collection.tipsEmpty')}
+                      />
                     )
                   : data.tips.groups.map(g => (
                       <HubRow

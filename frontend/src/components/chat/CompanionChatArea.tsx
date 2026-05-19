@@ -8,6 +8,7 @@ import { motion } from 'motion/react'
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useStickToBottom } from 'use-stick-to-bottom'
+import { ConversationEmptyState } from '@/components/ai-elements/conversation'
 import {
   PromptInput,
   PromptInputBody,
@@ -434,20 +435,20 @@ export function CompanionChatArea({
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2"
       >
         {showInitialLoading && (
-          <div className="flex h-full items-center justify-center py-12">
+          <div className="flex flex-1 items-center justify-center">
             <Spinner className="size-8 text-muted-foreground" />
           </div>
         )}
 
         {!showInitialLoading && messages.length === 0 && !isLoading && (
-          <div className="flex h-full items-center justify-center py-12">
-            <p className="text-center text-sm text-muted-foreground">
-              {t('lesson.companionPlaceholder')}
-            </p>
-          </div>
+          <ConversationEmptyState
+            className="size-auto flex-1"
+            title={t('lesson.companion')}
+            description={t('lesson.companionPlaceholder')}
+          />
         )}
 
         <div ref={contentRef} className="space-y-3">
@@ -474,7 +475,7 @@ export function CompanionChatArea({
           )}
         </div>
 
-        <div className="h-px" />
+        {messages.length > 0 && <div className="h-px" />}
 
         {!isAtBottom && (
           <Button

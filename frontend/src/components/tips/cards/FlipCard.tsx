@@ -1,5 +1,6 @@
 import type { ConceptCard } from '@/types/tips'
 import { useEffect, useRef } from 'react'
+import { FlipCard as FlipCardPrimitive } from '@/components/library/FlipCard'
 import { useI18n } from '@/contexts/I18nContext'
 
 interface Props {
@@ -41,85 +42,77 @@ export function FlipCard({ card, flipped, onFlip, onNext, onPrev }: Props) {
   return (
     <div
       ref={ref}
-      data-card
-      data-flipped={flipped ? 'true' : 'false'}
       tabIndex={0}
-      role="button"
       aria-label={t('tips.cards.flipHint')}
-      onClick={onFlip}
-      className="group relative outline-none rounded-lg focus-visible:ring-2 focus-visible:ring-primary/60 cursor-pointer"
-      style={{ perspective: '1500px' }}
+      className="outline-none rounded-2xl focus-visible:ring-2 focus-visible:ring-primary/60"
     >
-      <div
-        className="grid w-full"
-        style={{
-          transformStyle: 'preserve-3d',
-          transition: `transform 700ms ${FLIP_EASE}`,
-          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-        }}
+      <FlipCardPrimitive
+        flipped={flipped}
+        onFlippedChange={() => onFlip()}
+        animationDuration={800}
+        easing={FLIP_EASE}
+        borderRadius="1rem"
+        scaleOnPress
+        className="w-full"
       >
-        <CardFace>
-          <div className="h-full flex flex-col gap-4">
-            <div className="text-[1.2rem] font-bold text-foreground leading-[1.3] tracking-[-0.01em]">
+        <FlipCardPrimitive.Trigger style={{ zIndex: 50 }} />
+        <FlipCardPrimitive.Front className="rounded-2xl bg-linear-to-br from-card to-secondary/80 border border-white/8 shadow-2xl shadow-black/40 p-7 sm:p-9 flex flex-col justify-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-linear-to-t from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+          <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-white/15 to-transparent" />
+          <div className="h-full flex flex-col gap-6 relative z-10">
+            <div className="text-xl sm:text-[1.5rem] font-bold text-foreground leading-[1.4] tracking-tight text-center text-balance my-auto drop-shadow-sm">
               {card.front}
             </div>
             <FlipHint label={t('tips.cards.flipHint')} />
           </div>
-        </CardFace>
-
-        <CardFace back>
-          <div className="flex flex-col gap-3">
-            <div className="text-[0.9rem] font-medium text-foreground leading-[1.55]">
+        </FlipCardPrimitive.Front>
+        <FlipCardPrimitive.Back className="rounded-2xl bg-linear-to-bl from-secondary/80 to-card border border-white/8 shadow-2xl shadow-black/40 p-6 sm:p-8 flex flex-col relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-white/15 to-transparent" />
+          <div className="flex flex-col gap-6 h-full relative z-10 overflow-y-auto custom-scrollbar">
+            <div className="text-[1.05rem] font-medium text-foreground/90 leading-relaxed text-center pb-2">
               {card.rule}
             </div>
-            <DetailRow tone="success" label={t('tips.cards.exampleLabel')}>{card.example}</DetailRow>
-            {card.trap && (
-              <DetailRow tone="warning" label={t('tips.cards.trapLabel')}>{card.trap}</DetailRow>
-            )}
+            <div className="flex flex-col gap-3.5 mt-auto">
+              <DetailRow tone="success" label={t('tips.cards.exampleLabel')}>{card.example}</DetailRow>
+              {card.trap && (
+                <DetailRow tone="warning" label={t('tips.cards.trapLabel')}>{card.trap}</DetailRow>
+              )}
+            </div>
           </div>
-        </CardFace>
-      </div>
-    </div>
-  )
-}
-
-function CardFace({ children, back = false }: { children: React.ReactNode, back?: boolean }) {
-  return (
-    <div
-      className="rounded-lg bg-secondary border"
-      style={{
-        gridArea: '1 / 1',
-        backfaceVisibility: 'hidden',
-        transform: back ? 'rotateY(180deg)' : undefined,
-      }}
-    >
-      <div
-        className="h-full rounded-lg px-5 py-5"
-      >
-        {children}
-      </div>
+        </FlipCardPrimitive.Back>
+      </FlipCardPrimitive>
     </div>
   )
 }
 
 function FlipHint({ label }: { label: string }) {
   return (
-    <div className="mt-auto italic pt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-      <span className="h-px w-6 bg-white/10" />
-      <span>{label}</span>
-      <span className="h-px w-6 bg-white/10" />
+    <div className="mt-auto pt-4 flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/50">
+      <span className="h-px w-8 bg-linear-to-r from-transparent to-muted-foreground/30" />
+      <span className="animate-pulse">{label}</span>
+      <span className="h-px w-8 bg-linear-to-l from-transparent to-muted-foreground/30" />
     </div>
   )
 }
 
 function DetailRow({ tone, label, children }: { tone: 'success' | 'warning', label: string, children: React.ReactNode }) {
-  const accent = tone === 'success' ? 'bg-success/60' : 'bg-destructive/60'
-  const labelClr = tone === 'success' ? 'text-success' : 'text-destructive'
+  const isSuccess = tone === 'success'
+  const accentLight = isSuccess ? 'bg-success/10' : 'bg-destructive/10'
+  const borderClr = isSuccess ? 'border-success/20' : 'border-destructive/20'
+  const labelClr = isSuccess ? 'text-success' : 'text-destructive'
+  const dotClr = isSuccess ? 'bg-success' : 'bg-destructive'
+
   return (
-    <div className="relative bg-card ring-1 ring-border/50 pl-3.5 pr-3 py-2.5 overflow-hidden">
-      <span className={`absolute left-0 top-2 bottom-2 w-[2px] rounded-full ${accent}`} />
-      <div className={`text-xs font-bold uppercase ${labelClr} mb-1`}>{label}</div>
-      <div className="text-xs text-foreground/85 leading-[1.55]">{children}</div>
+    <div className={`relative rounded-xl border ${borderClr} ${accentLight} p-3.5 sm:p-4 flex flex-col gap-2 transition-colors duration-300 hover:bg-opacity-80`}>
+      <div className="flex items-center gap-2.5">
+        <span className={`size-1.5 rounded-full ${dotClr} shadow-[0_0_8px_currentColor]`} />
+        <div className={`text-[10px] font-extrabold uppercase tracking-widest ${labelClr}`}>
+          {label}
+        </div>
+      </div>
+      <div className="text-[13px] sm:text-sm text-foreground/90 leading-relaxed pl-4">
+        {children}
+      </div>
     </div>
   )
 }

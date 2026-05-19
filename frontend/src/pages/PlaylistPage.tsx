@@ -2,6 +2,7 @@ import { ChevronLeft, ListVideo } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { VideoCard } from '@/components/collection/VideoCard'
+import { EmptyState } from '@/components/EmptyState'
 import { Layout } from '@/components/Layout'
 import { Badge } from '@/components/ui/badge'
 import { useI18n } from '@/contexts/I18nContext'
@@ -93,12 +94,11 @@ export function PlaylistPage() {
             <div className="px-6 md:px-10 pb-16">
               {data.videos.length === 0
                 ? (
-                    <div className="rounded-2xl border border-dashed border-border/80 bg-muted/20 px-8 py-20 text-center">
-                      <ListVideo className="size-10 mx-auto mb-3 text-muted-foreground/50" />
-                      <p className="text-sm text-muted-foreground">
-                        {t('collection.playlistEmpty')}
-                      </p>
-                    </div>
+                    <EmptyState
+                      className="rounded-2xl border border-dashed border-border/80 bg-muted/20 py-20"
+                      icon={<ListVideo className="size-7 text-primary/65" strokeWidth={1.25} />}
+                      description={t('collection.playlistEmpty')}
+                    />
                   )
                 : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-5">

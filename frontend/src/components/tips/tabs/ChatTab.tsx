@@ -1,7 +1,7 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { FileUIPart } from 'ai'
 import type { TipChatKind } from '@/types/tips'
-import { ImageIcon, MessageSquareDashed, Mic, X } from 'lucide-react'
+import { Bot, ImageIcon, Mic, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -340,7 +340,7 @@ export function ChatTab({ courseId, videoId, lessonTitle, transcript, transcript
         <ConversationContent className="h-full gap-3">
           {chat.messages.length === 0 && chat.status === 'ready' && (
             <ConversationEmptyState
-              icon={<MessageSquareDashed className="size-8" />}
+              icon={<Bot className="size-8" />}
               title={t('tips.chat.empty.title')}
               description={t('tips.chat.empty.body')}
             />

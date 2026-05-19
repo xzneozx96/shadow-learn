@@ -1,6 +1,7 @@
 import type { VocabEntry } from '@/types'
 import { motion } from 'motion/react'
 import { useState } from 'react'
+import { FlipCard } from '@/components/library/FlipCard'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 
@@ -20,55 +21,44 @@ export function FlashcardExercise({ entry, progress = '', onNext }: Props) {
         <div className="text-sm text-muted-foreground self-end tabular-nums">{progress}</div>
       )}
 
-      {/* 3D flip card */}
-      <div
-        className="w-full cursor-pointer"
-        style={{ perspective: '1200px' }}
-        onClick={() => !flipped && setFlipped(true)}
+      <FlipCard
+        className="w-full"
+        animationDuration={500}
+        easing="cubic-bezier(0.16, 1, 0.3, 1)"
+        scaleOnPress
+        onFlippedChange={(v) => {
+          if (v)
+            setFlipped(true)
+        }}
       >
-        <motion.div
-          animate={{ rotateY: flipped ? 180 : 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          style={{ transformStyle: 'preserve-3d', position: 'relative' }}
-          className="w-full"
-        >
-          {/* Front */}
-          <div
-            className="w-full min-h-64 rounded-2xl border border-border bg-card flex flex-col items-center justify-center gap-4 p-8"
-            style={{ backfaceVisibility: 'hidden' }}
-          >
-            <div className="text-6xl font-bold tracking-wider leading-tight text-center">
-              {entry.word}
-            </div>
-            <div className="text-sm text-muted-foreground mt-2 tracking-wide uppercase">
-              {t('flashcard.reveal')}
-              {' '}
-              →
-            </div>
+        {!flipped && <FlipCard.Trigger />}
+        <FlipCard.Front className="w-full min-h-64 rounded-2xl border border-border bg-card flex flex-col items-center justify-center gap-4 p-8">
+          <div className="text-6xl font-bold tracking-wider leading-tight text-center">
+            {entry.word}
           </div>
-
-          {/* Back */}
-          <div
-            className="absolute inset-0 rounded-2xl border border-primary/20 bg-card flex flex-col items-center justify-center gap-3 p-8 text-center"
-            style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-          >
-            <div className="text-base text-primary/70 font-medium tracking-widest">
-              {entry.romanization}
-            </div>
-            <div className="text-5xl font-bold tracking-wider leading-tight">
-              {entry.word}
-            </div>
-            <div className="text-xl text-foreground font-medium">
-              {entry.meaning}
-            </div>
-            {entry.usage && (
-              <div className="text-lg text-muted-foreground max-w-xs leading-relaxed">
-                {entry.usage}
-              </div>
-            )}
+          <div className="text-sm text-muted-foreground mt-2 tracking-wide uppercase">
+            {t('flashcard.reveal')}
+            {' '}
+            →
           </div>
-        </motion.div>
-      </div>
+        </FlipCard.Front>
+        <FlipCard.Back className="w-full min-h-64 rounded-2xl border border-primary/20 bg-card flex flex-col items-center justify-center gap-3 p-8 text-center">
+          <div className="text-base text-primary/70 font-medium tracking-widest">
+            {entry.romanization}
+          </div>
+          <div className="text-5xl font-bold tracking-wider leading-tight">
+            {entry.word}
+          </div>
+          <div className="text-xl text-foreground font-medium">
+            {entry.meaning}
+          </div>
+          {entry.usage && (
+            <div className="text-lg text-muted-foreground max-w-xs leading-relaxed">
+              {entry.usage}
+            </div>
+          )}
+        </FlipCard.Back>
+      </FlipCard>
 
       {/* Self-assessment buttons */}
       <motion.div

@@ -1,5 +1,5 @@
 import type { WarmingStep } from '@/hooks/useTipTranscript'
-import { Clock, FileText, MessageSquare, NotebookPen, Sparkles } from 'lucide-react'
+import { Clock, NotebookPen } from 'lucide-react'
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useI18n } from '@/contexts/I18nContext'
@@ -76,19 +76,15 @@ export function UtilityPane({ courseId, videoId, lessonTitle, transcript, transc
       <Tabs value={tab} onValueChange={v => setTab(v as TabValue)} className="flex flex-col h-full gap-0">
         <TabsList variant="line" className="w-full shrink-0 border-b border-border rounded-none h-12!">
           <TabsTrigger value="summary" aria-label={t('tips.tab.summary')}>
-            <FileText className="size-4" aria-hidden />
             <span className="text-sm">{t('tips.tab.summary')}</span>
           </TabsTrigger>
           <TabsTrigger value="notes" aria-label={t('tips.tab.notes')}>
-            <NotebookPen className="size-4" aria-hidden />
             <span className="text-sm">{t('tips.tab.notes')}</span>
           </TabsTrigger>
           <TabsTrigger value="chat" aria-label={t('tips.tab.chat')}>
-            <MessageSquare className="size-4" aria-hidden />
             <span className="text-sm">{t('tips.tab.chat')}</span>
           </TabsTrigger>
           <TabsTrigger value="studio" aria-label={t('tips.tab.studio')}>
-            <Sparkles className="size-4" aria-hidden />
             <span className="text-sm">{t('tips.tab.studio')}</span>
           </TabsTrigger>
         </TabsList>

@@ -1,5 +1,5 @@
-import { ArrowLeft, ArrowRight, Check, GraduationCap, Loader2, RotateCcw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { ArrowLeft, ArrowRight, Check, GraduationCap, Layers, Loader2, RotateCcw } from 'lucide-react'
+import { EmptyState } from '@/components/EmptyState'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useTipCards } from '@/hooks/useTipCards'
@@ -10,8 +10,6 @@ interface Props {
   transcript: string
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
 }
-
-const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 
 export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
   const { db } = useAuth()
@@ -26,21 +24,20 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
   }
 
   if (deck.cards.length === 0) {
+    const loading = deck.status === 'loading'
     return (
-      <div className="flex flex-col items-center justify-center gap-6 p-8 text-center h-full">
-        <div>
-          <h4 className="text-base font-bold text-foreground">{t('tips.cards.empty.title')}</h4>
-          <div className="text-sm text-muted-foreground max-w-[260px] mt-1">{t('tips.cards.empty.body')}</div>
-        </div>
-        <Button
-          size="lg"
-          disabled={deck.disabled || deck.status === 'loading'}
-          onClick={deck.generate}
-        >
-          {deck.status === 'loading' && <Loader2 className="size-4 animate-spin" />}
-          <span>{deck.status === 'loading' ? t('tips.studio.loading') : t('tips.cards.generate')}</span>
-        </Button>
-      </div>
+      <EmptyState
+        className="h-full"
+        icon={<Layers className="size-7 text-primary/65" strokeWidth={1.25} />}
+        title={t('tips.cards.empty.title')}
+        description={t('tips.cards.empty.body')}
+        action={{
+          label: loading ? t('tips.studio.loading') : t('tips.cards.generate'),
+          onClick: deck.generate,
+          disabled: deck.disabled || loading,
+          icon: loading ? <Loader2 className="size-4 animate-spin" /> : undefined,
+        }}
+      />
     )
   }
 
@@ -69,21 +66,20 @@ export function CardsTab({ videoId, transcript, transcriptStatus }: Props) {
         <ActionPill tone="known" Icon={Check} label={t('tips.cards.markKnown')} onClick={deck.markKnown} />
       </div>
 
-      <div className="flex items-center justify-between gap-2 pt-1">
+      <div className="flex items-center justify-between gap-4 pt-3">
         <NavButton onClick={deck.prev} aria-label={t('tips.cards.prev')}>
-          <ArrowLeft className="size-3.5" aria-hidden strokeWidth={1.5} />
+          <ArrowLeft className="size-4" strokeWidth={2.5} />
         </NavButton>
         <button
           type="button"
           onClick={deck.regenerate}
-          className="group inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-primary"
-          style={{ transition: `color 400ms ${EASE}` }}
+          className="group flex items-center gap-2.5 rounded-full bg-secondary/30 px-6 py-2.5 text-[11px] font-bold text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-foreground hover:shadow-md active:scale-95 border border-white/5"
         >
-          <RotateCcw className="size-3 group-hover:-rotate-180" style={{ transition: `transform 600ms ${EASE}` }} strokeWidth={1.75} aria-hidden />
-          <span className="uppercase tracking-[0.18em]">{t('tips.cards.regenerate')}</span>
+          <RotateCcw className="size-3.5 transition-transform duration-500 group-hover:-rotate-180" strokeWidth={2.5} />
+          <span className="uppercase tracking-[0.2em] pt-px">{t('tips.cards.regenerate')}</span>
         </button>
         <NavButton onClick={deck.next} aria-label={t('tips.cards.next')}>
-          <ArrowRight className="size-3.5" aria-hidden strokeWidth={1.5} />
+          <ArrowRight className="size-4" strokeWidth={2.5} />
         </NavButton>
       </div>
     </div>
@@ -116,24 +112,24 @@ function ActionPill({
   onClick: () => void
 }) {
   const isKnown = tone === 'known'
-  const ring = isKnown ? 'ring-success/30 hover:ring-success/60' : 'ring-destructive/25 hover:ring-destructive/50'
-  const accent = isKnown ? 'text-success' : 'text-destructive'
-  const iconBg = isKnown ? 'bg-success/15 group-hover:bg-success group-hover:text-white' : 'bg-destructive/15 group-hover:bg-destructive group-hover:text-white'
+
+  const wrapperClass = isKnown
+    ? 'text-success bg-success/5 hover:bg-success/10 border-success/20 hover:border-success/30 ring-1 ring-success/0 hover:ring-success/20'
+    : 'text-destructive bg-destructive/5 hover:bg-destructive/10 border-destructive/20 hover:border-destructive/30 ring-1 ring-destructive/0 hover:ring-destructive/20'
+
+  const iconClass = isKnown
+    ? 'bg-success text-white'
+    : 'bg-destructive text-white'
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`group relative flex items-center gap-2 rounded-full p-1.5 pl-4 pr-1.5 bg-card ring-1 ${ring} active:scale-[0.98]`}
-      style={{ transition: `all 350ms ${EASE}` }}
+      className={`group flex items-center justify-between rounded-[20px] border p-2 pl-5 transition-all duration-300 active:scale-[0.97] ${wrapperClass}`}
     >
-      <span className={`text-[11px] font-bold uppercase tracking-[0.16em] ${accent}`}>
-        {label}
-      </span>
-      <span
-        className={`ml-auto inline-flex size-8 items-center justify-center rounded-full ${iconBg} ${accent}`}
-        style={{ transition: `all 350ms ${EASE}` }}
-      >
-        <Icon className="size-3.5 group-hover:scale-110" style={{ transition: `transform 350ms ${EASE}` }} strokeWidth={1.75} aria-hidden />
+      <span className="text-[12px] font-bold uppercase tracking-[0.15em] pt-0.5">{label}</span>
+      <span className={`flex size-10 items-center justify-center rounded-[14px] transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg ${iconClass}`}>
+        <Icon className="size-4" strokeWidth={2.5} />
       </span>
     </button>
   )
@@ -144,8 +140,7 @@ function NavButton({ children, onClick, ...rest }: { children: React.ReactNode, 
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex size-8 items-center justify-center rounded-full bg-secondary/40 text-muted-foreground ring-1 ring-border/40 hover:text-foreground hover:bg-secondary hover:ring-border active:scale-[0.94]"
-      style={{ transition: `all 300ms ${EASE}` }}
+      className="flex size-11 items-center justify-center rounded-full bg-secondary/30 text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-foreground hover:shadow-md active:scale-90 border border-white/5"
       {...rest}
     >
       {children}
