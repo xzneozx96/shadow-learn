@@ -148,7 +148,11 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
   return (
     <article
       className="p-6 rounded-[22px] border border-border/50 bg-gradient-to-b from-card to-card/95 shadow-xs hover:border-primary transition-colors duration-200 cursor-pointer relative overflow-hidden"
-      onClick={() => onOpen(note.id)}
+      onClick={() => {
+        if (renaming)
+          return
+        onOpen(note.id)
+      }}
     >
       {/* Top row with squircle icon and action button */}
       <div className="flex items-center justify-between">
