@@ -60,12 +60,10 @@ export interface TipTranscriptRecord {
 }
 
 export interface TipChatRecord {
-  // Composite key `${courseId}:${videoId}:${kind}` so quiz chats do not
-  // overwrite tutor chats for the same course/video pair.
+  // Composite key `${courseId}:${videoId}` — one chat per course/video pair.
   key: string
   courseId: string
   videoId: string
-  kind: TipChatKind
   messages: UIMessage[]
   updatedAt: string
 }
@@ -124,9 +122,6 @@ export interface TipCardsRecord {
   cards: ConceptCard[]
   generatedAt: string
 }
-
-// Quiz chat kind discriminator (D1)
-export type TipChatKind = 'tutor' | 'quiz'
 
 export type TipNoteSource = 'chat' | 'studio' | 'freeform'
 

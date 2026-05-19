@@ -1,5 +1,5 @@
 import type { NewTipNote, TipNote } from '@/types/tips'
-import { BookOpen, ChevronLeft, GraduationCap, Layers, Sparkles } from 'lucide-react'
+import { BookOpen, ChevronLeft, Layers, Sparkles } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
   AlertDialog,
@@ -19,7 +19,6 @@ import { useTipStudio } from '@/hooks/useTipStudio'
 import { htmlToPlain } from '@/lib/htmlText'
 import { NotesEditorSurface } from '../notes/NotesEditorSurface'
 import { NotesList } from '../notes/NotesList'
-import { QuizArtifact } from '../studio/QuizArtifact'
 import { StudioTile } from '../studio/StudioTile'
 import { StudyGuideArtifact } from '../studio/StudyGuideArtifact'
 import { CardsTab } from './CardsTab'
@@ -42,7 +41,7 @@ interface Props {
   onDiscussNote: (text: string) => void
 }
 
-type Surface = 'grid' | 'study_guide' | 'quiz' | 'cards' | 'mind_map' | 'note_editor'
+type Surface = 'grid' | 'study_guide' | 'cards' | 'mind_map' | 'note_editor'
 
 export function StudioTab(props: Props) {
   const { courseId, videoId, lessonTitle, transcript, transcriptStatus, notes, notesHydrated, onCreateNote, onUpdateNote, onRemoveNote, onDiscussNote } = props
@@ -122,14 +121,6 @@ export function StudioTab(props: Props) {
       <div className="p-4 space-y-3">
         {backButton}
         <StudyGuideArtifact videoId={videoId} data={guide.data} />
-      </div>
-    )
-  }
-  if (surface === 'quiz') {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="px-4 pt-3">{backButton}</div>
-        <QuizArtifact courseId={courseId} videoId={videoId} lessonTitle={lessonTitle} transcript={transcript} transcriptStatus={transcriptStatus} />
       </div>
     )
   }
@@ -227,16 +218,6 @@ export function StudioTab(props: Props) {
       loadingLabel={t('tips.studio.loading')}
       errorLabel={cardsPeek.status === 'error' ? t('tips.studio.error') : undefined}
       hydrated={cardsPeek.hydrated}
-    />,
-    <StudioTile
-      key="quiz"
-      Icon={GraduationCap}
-      accent="amber"
-      titleKey="tips.studio.tile.quiz.title"
-      blurbKey="tips.studio.tile.quiz.blurb"
-      state="empty"
-      primaryLabel={t('tips.studio.start')}
-      onPrimary={() => setSurface('quiz')}
     />,
   ]
 

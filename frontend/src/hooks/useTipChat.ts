@@ -1,9 +1,8 @@
 import type { UIMessage } from '@ai-sdk/react'
-import type { ChatUiLanguage } from '@/lib/tipChatPrompt'
-import type { TipChatKind } from '@/types/tips'
+import type { ChatUiLanguage, TipChatMode } from '@/lib/tipChatPrompt'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { chatKey, getTipChat, putTipChat } from '@/db'
 import { API_BASE } from '@/lib/config'
@@ -11,8 +10,8 @@ import { buildTipSystemPrompt } from '@/lib/tipChatPrompt'
 
 export interface UseTipChatResult {
   ready: boolean
+  isHistoryLoading: boolean
   systemPrompt: string
-  initialMessages: UIMessage[]
   messages: UIMessage[]
   sendMessage: (message: { text: string }) => void
   status: 'ready' | 'submitted' | 'streaming' | 'error'
@@ -26,8 +25,7 @@ export interface UseTipChatArgs {
   lessonTitle: string
   transcript: string
   uiLanguage: ChatUiLanguage
-  kind?: TipChatKind
-  systemPrompt?: string
+  mode: TipChatMode
 }
 
 export function useTipChat(args: UseTipChatArgs): UseTipChatResult {
@@ -37,82 +35,103 @@ export function useTipChat(args: UseTipChatArgs): UseTipChatResult {
     lessonTitle,
     transcript,
     uiLanguage,
-    kind = 'tutor',
-    systemPrompt: systemPromptOverride,
+    mode,
   } = args
   const { db, keys } = useAuth()
-  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([])
-  const [hydrated, setHydrated] = useState(false)
+
+  const key = chatKey(courseId, videoId)
+
+  // setState-during-render pattern (matches useAgentChat): reset loading state
+  // synchronously when the conversation key changes so subscribers re-render
+  // with a fresh loading flag before the effect-driven IDB fetch lands.
+  const [prevKey, setPrevKey] = useState(key)
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true)
+  if (prevKey !== key) {
+    setPrevKey(key)
+    setIsHistoryLoading(true)
+  }
 
   const systemPrompt = useMemo(
-    () => systemPromptOverride ?? buildTipSystemPrompt({ lessonTitle, transcript, uiLanguage }),
-    [systemPromptOverride, lessonTitle, transcript, uiLanguage],
+    () => buildTipSystemPrompt({ lessonTitle, transcript, uiLanguage, mode }),
+    [lessonTitle, transcript, uiLanguage, mode],
   )
 
-  useEffect(() => {
-    let cancelled = false
-    async function hydrate() {
-      if (!db) {
-        if (!cancelled)
-          setHydrated(true)
-        return
-      }
-      const record = await getTipChat(db, chatKey(courseId, videoId, kind))
-      if (!cancelled) {
-        setInitialMessages(record?.messages ?? [])
-        setHydrated(true)
-      }
-    }
-    void hydrate()
-    return () => { cancelled = true }
-  }, [db, courseId, videoId, kind])
+  // useChat captures `transport` at mount and ignores reactive replacement,
+  // so we keep one stable transport and read live values (systemPrompt swaps
+  // when guided mode toggles, api key swaps on unlock) via refs inside `body`.
+  const systemPromptRef = useRef(systemPrompt)
+  systemPromptRef.current = systemPrompt
+  const apiKeyRef = useRef(keys?.openrouterApiKey ?? '')
+  apiKeyRef.current = keys?.openrouterApiKey ?? ''
 
   const transport = useMemo(
     () => new DefaultChatTransport({
       api: `${API_BASE}/api/agent`,
       body: () => ({
-        system_prompt: systemPrompt,
-        // Match useAgentChat: always send a string. Backend falls back to
-        // SHADOWLEARN_OPENROUTER_API_KEY when the field is empty.
-        openrouter_api_key: keys?.openrouterApiKey ?? '',
+        system_prompt: systemPromptRef.current,
+        // Backend falls back to SHADOWLEARN_OPENROUTER_API_KEY when empty.
+        openrouter_api_key: apiKeyRef.current,
         tools: [],
       }),
     }),
-    [systemPrompt, keys?.openrouterApiKey],
+    [],
   )
 
-  const chat = useChat({
+  const { messages, setMessages, sendMessage, status } = useChat({
+    id: `tip-${key}`,
     transport,
-    messages: initialMessages,
-    onFinish: async ({ messages }) => {
-      if (!db)
-        return
-      await putTipChat(db, {
-        key: chatKey(courseId, videoId, kind),
-        courseId,
-        videoId,
-        kind,
-        messages,
-        updatedAt: new Date().toISOString(),
-      })
-    },
   })
 
-  // Only gate on transcript. The OpenRouter key is not required from the user —
-  // backend falls back to its own server key (matches useAgentChat / Companion
-  // pattern). Frontend lets the user chat; if the backend has no fallback key
-  // either, the request errors and surfaces via chat.status === 'error'.
-  // Reason is exposed as a stable code; consumer translates via i18n.
+  // Load saved history on mount and whenever the conversation key changes.
+  // Mirrors useAgentChat: useChat ignores reactive `messages` prop after mount,
+  // so we push restored history via setMessages.
+  useEffect(() => {
+    if (!db) {
+      setIsHistoryLoading(false)
+      return
+    }
+    let cancelled = false
+    setIsHistoryLoading(true)
+    getTipChat(db, key)
+      .then((record) => {
+        if (cancelled)
+          return
+        setMessages(record?.messages ?? [])
+      })
+      .finally(() => {
+        if (!cancelled)
+          setIsHistoryLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [db, key, setMessages])
+
+  // Persist on stream completion. Status returns to 'ready' after each turn.
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
+  useEffect(() => {
+    if (status !== 'ready')
+      return
+    if (!db || messagesRef.current.length === 0)
+      return
+    void putTipChat(db, {
+      key,
+      courseId,
+      videoId,
+      messages: messagesRef.current,
+      updatedAt: new Date().toISOString(),
+    })
+  }, [status, db, key, courseId, videoId])
+
   const disabledReason: 'no-transcript' | null = !transcript ? 'no-transcript' : null
 
   return {
-    ready: hydrated,
+    ready: !isHistoryLoading,
+    isHistoryLoading,
     systemPrompt,
-    initialMessages,
-    messages: chat.messages,
-    sendMessage: chat.sendMessage,
-    status: chat.status,
-    disabled: disabledReason !== null,
+    messages,
+    sendMessage,
+    status,
+    disabled: disabledReason !== null || isHistoryLoading,
     disabledReason,
   }
 }

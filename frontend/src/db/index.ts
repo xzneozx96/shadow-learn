@@ -5,7 +5,7 @@ import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 17
+const DB_VERSION = 18
 
 export interface LearnerProfile {
   name: string
@@ -393,6 +393,32 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
       if (oldVersion < 17) {
         const notesStore = db.createObjectStore('tip-notes', { keyPath: ['videoId', 'id'] })
         notesStore.createIndex('by-video', 'videoId', { unique: false })
+      }
+      if (oldVersion < 18) {
+        // Collapse `${courseId}:${videoId}:tutor` keys back to `${courseId}:${videoId}`
+        // and drop any `:quiz` records (Quiz feature removed; tutor + guided
+        // share one history per video now).
+        const chatStore = transaction.objectStore('tip-chats')
+        let cursor = await chatStore.openCursor()
+        const ops: Array<{ oldKey: string, newRow: any | null }> = []
+        while (cursor) {
+          const oldKey = cursor.key as string
+          const row = cursor.value as any
+          if (oldKey.endsWith(':quiz')) {
+            ops.push({ oldKey, newRow: null })
+          }
+          else if (oldKey.endsWith(':tutor')) {
+            const newKey = oldKey.slice(0, -':tutor'.length)
+            const { kind: _kind, ...rest } = row
+            ops.push({ oldKey, newRow: { ...rest, key: newKey } })
+          }
+          cursor = await cursor.continue()
+        }
+        for (const { oldKey, newRow } of ops) {
+          await chatStore.delete(oldKey)
+          if (newRow)
+            await chatStore.put(newRow)
+        }
       }
     },
   })
@@ -788,8 +814,8 @@ export function cardsKey(videoId: string, locale: StudioLocale): string {
   return `${videoId}:${locale}`
 }
 
-export function chatKey(courseId: string, videoId: string, kind: 'tutor' | 'quiz'): string {
-  return `${courseId}:${videoId}:${kind}`
+export function chatKey(courseId: string, videoId: string): string {
+  return `${courseId}:${videoId}`
 }
 
 export async function getTipStudio(db: ShadowLearnDB, key: string): Promise<TipStudioRecord | undefined> {

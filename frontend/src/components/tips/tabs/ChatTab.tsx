@@ -1,8 +1,7 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { FileUIPart } from 'ai'
 import type { ContextChip } from '@/components/chat/ContextChipBar'
-import type { TipChatKind } from '@/types/tips'
-import { ArrowDownIcon, Bot, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
+import { ArrowDownIcon, Bot, GraduationCap, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -41,8 +40,6 @@ interface Props {
   lessonTitle: string
   transcript: string
   transcriptStatus: 'pending' | 'ready' | 'unavailable' | 'error'
-  kind?: TipChatKind
-  systemPrompt?: string
   initialUserMessage?: string
   chips?: ContextChip[]
   onRemoveChip?: (id: string) => void
@@ -272,16 +269,16 @@ function messageText(message: UIMessage): string {
 }
 
 export function ChatTab(props: Props) {
-  const { courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt, initialUserMessage, chips = [], onRemoveChip, onClearChips } = props
+  const { courseId, videoId, lessonTitle, transcript, transcriptStatus, initialUserMessage, chips = [], onRemoveChip, onClearChips } = props
   const { locale, t } = useI18n()
+  const [guided, setGuided] = useState(false)
   const chat = useTipChat({
     courseId,
     videoId,
     lessonTitle,
     transcript,
     uiLanguage: locale === 'vi' ? 'vi' : 'en',
-    kind,
-    systemPrompt,
+    mode: guided ? 'guided' : 'free',
   })
 
   const [draftText, setDraftText] = useState('')
@@ -362,7 +359,12 @@ export function ChatTab(props: Props) {
         ref={scrollRef}
         className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-6"
       >
-        {chat.messages.length === 0 && chat.status === 'ready' && (
+        {chat.isHistoryLoading && (
+          <div className="flex flex-1 items-center justify-center">
+            <Spinner className="size-5 text-muted-foreground" />
+          </div>
+        )}
+        {!chat.isHistoryLoading && chat.messages.length === 0 && chat.status === 'ready' && (
           <ConversationEmptyState
             className="size-auto flex-1"
             icon={<Bot className="size-8" />}
@@ -467,6 +469,37 @@ export function ChatTab(props: Props) {
             </PromptInputBody>
             <PromptInputFooter>
               <PromptInputTools className="gap-2">
+                {guided
+                  ? (
+                      <PromptInputButton
+                        title={t('tips.chat.guidedLearning.tooltip')}
+                        aria-label={t('tips.chat.guidedLearning.offToast')}
+                        onClick={() => {
+                          setGuided(false)
+                          toast.success(t('tips.chat.guidedLearning.offToast'))
+                        }}
+                        data-state="on"
+                        className="bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary rounded-full px-2.5"
+                      >
+                        <GraduationCap className="size-4" />
+                        <span className="text-xs font-medium">{t('tips.chat.guidedLearning.tooltip')}</span>
+                        <X className="size-3.5 opacity-70" />
+                      </PromptInputButton>
+                    )
+                  : (
+                      <PromptInputButton
+                        size="icon-sm"
+                        title={t('tips.chat.guidedLearning.tooltip')}
+                        aria-label={t('tips.chat.guidedLearning.tooltip')}
+                        onClick={() => {
+                          setGuided(true)
+                          toast.success(t('tips.chat.guidedLearning.onToast'))
+                        }}
+                        data-state="off"
+                      >
+                        <GraduationCap className="size-4" />
+                      </PromptInputButton>
+                    )}
                 <AttachImageButton tooltip={t('companion.attachImage')} muted={voice.state !== 'idle'} />
                 {voice.state === 'recording'
                   ? <RecordingPill onStop={() => voice.stop()} label={t('tips.chat.stopRecording')} />
