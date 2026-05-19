@@ -127,3 +127,25 @@ export interface TipCardsRecord {
 
 // Quiz chat kind discriminator (D1)
 export type TipChatKind = 'tutor' | 'quiz'
+
+export type TipNoteSource = 'chat' | 'studio' | 'freeform'
+
+export type TipNoteSourceRefKind = 'chat' | 'summary' | 'study_guide' | 'mind_map' | 'cards'
+
+export interface TipNoteSourceRef {
+  kind: TipNoteSourceRefKind
+  ref: string
+}
+
+export interface TipNote {
+  id: string
+  videoId: string
+  title: string
+  html: string
+  createdAt: string
+  updatedAt: string
+  source: TipNoteSource
+  sourceRef?: TipNoteSourceRef
+}
+
+export type NewTipNote = Omit<TipNote, 'id' | 'createdAt' | 'updatedAt'>
