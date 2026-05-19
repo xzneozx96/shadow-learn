@@ -11,6 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useI18n } from '@/contexts/I18nContext'
 import { htmlToPlain } from '@/lib/htmlText'
 import { NotesList } from '../notes/NotesList'
@@ -59,15 +61,8 @@ export function NotesTab({ notes, hydrated, videoId, onCreate, onUpdate, onRemov
     onDiscussNote(titled.trim() || t('tips.notes.untitled'))
   }
 
-  const onRename = (id: string) => {
-    const note = notes.find(n => n.id === id)
-    if (!note)
-      return
-    // eslint-disable-next-line no-alert
-    const next = window.prompt(t('tips.notes.actions.rename'), note.title || '')
-    if (next === null)
-      return
-    void onUpdate(id, { title: next.trim() })
+  const onRename = (id: string, nextTitle: string) => {
+    void onUpdate(id, { title: nextTitle.trim() })
   }
 
   const onDelete = (id: string) => setDeleteId(id)
@@ -109,10 +104,9 @@ export function NotesTab({ notes, hydrated, videoId, onCreate, onUpdate, onRemov
     if (!note)
       return null
     return (
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <button
-            type="button"
+      <div className="flex flex-col h-full relative">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+          <Button
             onClick={() => {
               if (titleTimerRef.current) {
                 clearTimeout(titleTimerRef.current)
@@ -121,22 +115,23 @@ export function NotesTab({ notes, hydrated, videoId, onCreate, onUpdate, onRemov
               }
               setSurface('list')
             }}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground font-bold cursor-pointer hover:underline"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground px-0"
           >
-            <ChevronLeft className="size-3.5" aria-hidden />
+            <ChevronLeft className="size-4" />
             {t('tips.notes.title')}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             onClick={() => onDiscuss(note.id)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/15"
+            variant="accent"
           >
-            <MessageSquare className="size-3.5" />
+            <MessageSquare className="size-4" />
             {t('tips.notes.actions.discuss')}
-          </button>
+          </Button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <input
+        <div className="flex-1 flex flex-col p-4 gap-3 overflow-hidden">
+          <Input
             type="text"
             value={titleDraft}
             placeholder={t('tips.notes.titlePlaceholder')}
@@ -151,13 +146,14 @@ export function NotesTab({ notes, hydrated, videoId, onCreate, onUpdate, onRemov
               }
               void onUpdate(note.id, { title: titleDraft.trim() })
             }}
-            className="w-full bg-card border border-border rounded-md px-3 py-2 text-base font-bold focus:outline-none focus:border-primary"
           />
-          <EditorBoundary onReset={() => setSurface('list')}>
-            <Suspense fallback={<div className="p-4 text-xs text-muted-foreground">{t('tips.notes.editor.loading')}</div>}>
-              <NotesEditor html={note.html} onChange={html => void onUpdate(note.id, { html })} />
-            </Suspense>
-          </EditorBoundary>
+          <div className="flex-1 flex flex-col min-h-0">
+            <EditorBoundary onReset={() => setSurface('list')}>
+              <Suspense fallback={<div className="p-4 text-xs text-muted-foreground">{t('tips.notes.editor.loading')}</div>}>
+                <NotesEditor html={note.html} onChange={html => void onUpdate(note.id, { html })} />
+              </Suspense>
+            </EditorBoundary>
+          </div>
         </div>
       </div>
     )

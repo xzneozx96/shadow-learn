@@ -1,5 +1,6 @@
 import type { TipNote } from '@/types/tips'
 import { NotebookPen, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { NoteCard } from './NoteCard'
 
@@ -9,7 +10,7 @@ interface Props {
   onNew: () => void
   onOpen: (id: string) => void
   onDiscuss: (id: string) => void
-  onRename: (id: string) => void
+  onRename: (id: string, nextTitle: string) => void
   onDelete: (id: string) => void
 }
 
@@ -19,46 +20,39 @@ export function NotesList({ notes, hydrated, onNew, onOpen, onDiscuss, onRename,
   if (hydrated && notes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center h-full">
-        <NotebookPen className="size-10 text-muted-foreground" aria-hidden />
+        <NotebookPen className="size-10 text-muted-foreground/50" aria-hidden />
         <div>
-          <h4 className="text-base font-bold text-foreground">{t('tips.notes.empty.title')}</h4>
-          <p className="text-sm text-muted-foreground mt-1 max-w-[260px]">{t('tips.notes.empty.body')}</p>
+          <h4 className="text-sm font-semibold text-foreground">{t('tips.notes.empty.title')}</h4>
+          <p className="text-xs text-muted-foreground mt-1 max-w-64 mx-auto">{t('tips.notes.empty.body')}</p>
         </div>
-        <button
-          type="button"
-          onClick={onNew}
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-sm font-bold"
-        >
+        <Button onClick={onNew} size="sm">
           <Plus className="size-4" />
           {t('tips.notes.new')}
-        </button>
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <h3 className="text-base font-bold">{t('tips.notes.title')}</h3>
-        <button
-          type="button"
-          onClick={onNew}
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-2.5 py-1 text-xs font-bold"
+    <div className="h-full overflow-y-auto p-6 space-y-4">
+      {notes.map((note, i) => (
+        <div
+          key={note.id}
+          className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+          style={{ animationDelay: `${Math.min(i, 5) * 40}ms`, animationFillMode: 'both' }}
         >
-          <Plus className="size-3.5" />
+          <NoteCard note={note} onOpen={onOpen} onDiscuss={onDiscuss} onRename={onRename} onDelete={onDelete} />
+        </div>
+      ))}
+      <div className="flex justify-center pt-2">
+        <Button
+          onClick={onNew}
+          variant="accent"
+          size="lg"
+        >
+          <Plus className="size-4" />
           {t('tips.notes.new')}
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {notes.map((note, i) => (
-          <div
-            key={note.id}
-            className="animate-in fade-in slide-in-from-bottom-3 duration-500"
-            style={{ animationDelay: `${Math.min(i, 5) * 50}ms`, animationFillMode: 'both' }}
-          >
-            <NoteCard note={note} onOpen={onOpen} onDiscuss={onDiscuss} onRename={onRename} onDelete={onDelete} />
-          </div>
-        ))}
+        </Button>
       </div>
     </div>
   )

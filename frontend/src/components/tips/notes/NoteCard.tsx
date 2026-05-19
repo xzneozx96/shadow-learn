@@ -1,5 +1,7 @@
 import type { TipNote } from '@/types/tips'
-import { Layers, MessageSquare, MoreVertical, PenLine, Sparkles, Trash2 } from 'lucide-react'
+import { Layers, MessageSquare, MoreHorizontal, PenLine, Sparkles, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,12 +11,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useI18n } from '@/contexts/I18nContext'
 import { htmlToPlain } from '@/lib/htmlText'
+import { cn } from '@/lib/utils'
 
 interface Props {
   note: TipNote
   onOpen: (id: string) => void
   onDiscuss: (id: string) => void
-  onRename: (id: string) => void
+  onRename: (id: string, nextTitle: string) => void
   onDelete: (id: string) => void
 }
 
@@ -23,7 +26,6 @@ function relativeTime(iso: string, locale: string, justNowLabel: string): string
   const now = Date.now()
   const diffSec = Math.round((then - now) / 1000)
   const absSec = Math.abs(diffSec)
-  // Under 60s collapses to a static label — avoids per-second ticking on re-render.
   if (absSec < 60)
     return justNowLabel
   const rtf = new Intl.RelativeTimeFormat(locale === 'vi' ? 'vi' : 'en', { numeric: 'auto' })
@@ -51,78 +53,189 @@ function sourceVisual(note: TipNote): SourceVisual {
   }
   return { Icon: PenLine, bg: 'bg-muted-foreground/15', fg: 'text-muted-foreground' }
 }
+const ENTITY_QUOT = /&quot;/g
+const ENTITY_APOS = /&#39;/g
+const ENTITY_AMP = /&amp;/g
+const ENTITY_LT = /&lt;/g
+const ENTITY_GT = /&gt;/g
 
-function previewOf(html: string, max = 160): string {
-  const text = htmlToPlain(html)
+function decodeEntities(text: string) {
+  return text
+    .replace(ENTITY_QUOT, '"')
+    .replace(ENTITY_APOS, '\'')
+    .replace(ENTITY_AMP, '&')
+    .replace(ENTITY_LT, '<')
+    .replace(ENTITY_GT, '>')
+}
+
+function previewOf(html: string, max = 220): string {
+  const text = decodeEntities(htmlToPlain(html))
   return text.length > max ? `${text.slice(0, max)}…` : text
 }
 
 export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props) {
   const { t, locale } = useI18n()
-  const { Icon, bg, fg } = sourceVisual(note)
-  const preview = previewOf(note.html) || t('tips.notes.empty.preview')
-  const label = (() => {
+  const { Icon } = sourceVisual(note)
+  const preview = previewOf(note.html, 220) || t('tips.notes.empty.preview')
+
+  const [renaming, setRenaming] = useState(false)
+  const [draft, setDraft] = useState(note.title)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (renaming)
+      inputRef.current?.select()
+  }, [renaming])
+
+  const startRename = () => {
+    setDraft(note.title)
+    setRenaming(true)
+  }
+
+  const commitRename = () => {
+    if (!renaming)
+      return
+    setRenaming(false)
+    if (draft.trim() !== note.title)
+      onRename(note.id, draft)
+  }
+
+  const cancelRename = () => {
+    setRenaming(false)
+    setDraft(note.title)
+  }
+
+  const { textCls, bgCls, tagLabel } = (() => {
     const kind = note.sourceRef?.kind
-    if (note.source === 'chat')
-      return t('tips.notes.source.chat')
-    if (note.source === 'studio') {
-      if (kind === 'summary')
-        return t('tips.notes.source.summary')
-      if (kind === 'study_guide')
-        return t('tips.notes.source.studyGuide')
-      if (kind === 'mind_map')
-        return t('tips.notes.source.mindMap')
-      if (kind === 'cards')
-        return t('tips.notes.source.card')
-      return t('tips.notes.source.studio')
+    if (note.source === 'chat') {
+      return {
+        textCls: 'text-sky-500 dark:text-sky-400',
+        bgCls: 'bg-sky-500 text-white shadow-md shadow-sky-500/10 dark:shadow-sky-500/5',
+        tagLabel: t('tips.notes.source.chat'),
+      }
     }
-    return t('tips.notes.source.freeform')
+    if (note.source === 'studio') {
+      let label = t('tips.notes.source.studio')
+      if (kind === 'summary')
+        label = t('tips.notes.source.summary')
+      else if (kind === 'study_guide')
+        label = t('tips.notes.source.studyGuide')
+      else if (kind === 'mind_map')
+        label = t('tips.notes.source.mindMap')
+      else if (kind === 'cards')
+        label = t('tips.notes.source.card')
+
+      if (kind === 'cards') {
+        return {
+          textCls: 'text-emerald-500 dark:text-emerald-400',
+          bgCls: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/10 dark:shadow-emerald-500/5',
+          tagLabel: label,
+        }
+      }
+      return {
+        textCls: 'text-indigo-500 dark:text-indigo-400',
+        bgCls: 'bg-indigo-500 text-white shadow-md shadow-indigo-500/10 dark:shadow-indigo-500/5',
+        tagLabel: label,
+      }
+    }
+    return {
+      textCls: 'text-zinc-500 dark:text-zinc-400',
+      bgCls: 'bg-zinc-500 text-white shadow-md shadow-zinc-500/10 dark:shadow-zinc-500/5',
+      tagLabel: t('tips.notes.source.freeform'),
+    }
   })()
 
   return (
     <article
-      className="p-3 rounded-2xl border border-border bg-card shadow-lg cursor-pointer hover:border-primary/50 transition-colors"
+      className="p-6 rounded-[22px] border border-border/50 bg-gradient-to-b from-card to-card/95 shadow-xs hover:border-primary transition-colors duration-200 cursor-pointer relative overflow-hidden"
       onClick={() => onOpen(note.id)}
     >
-      <div className="flex items-start gap-3">
-        <span className={`inline-flex w-9 h-9 rounded-full items-center justify-center shrink-0 ${bg} ${fg}`} aria-hidden>
-          <Icon className="size-4" />
+      {/* Top row with squircle icon and action button */}
+      <div className="flex items-center justify-between">
+        <span
+          className={`inline-flex w-12 h-12 rounded-[16px] items-center justify-center shrink-0 ${bgCls}`}
+          aria-hidden
+        >
+          <Icon className="size-5.5 stroke-[2.25]" />
         </span>
-        <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-bold leading-tight truncate">{note.title || t('tips.notes.untitled')}</h4>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview}</p>
-        </div>
+
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="p-1 rounded hover:bg-secondary text-muted-foreground shrink-0"
+            className="p-2 rounded-xl hover:bg-secondary text-muted-foreground/80 hover:text-foreground shrink-0 transition-colors"
             aria-label={t('tips.notes.actions.menu')}
             onClick={e => e.stopPropagation()}
           >
-            <MoreVertical className="size-4" />
+            <MoreHorizontal className="size-4.5" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+          <DropdownMenuContent align="end" onClick={e => e.stopPropagation()} className="w-auto min-w-40">
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDiscuss(note.id) }}>
-              <MessageSquare className="size-4" />
+              <MessageSquare className="size-4 mr-2" />
               <span>{t('tips.notes.actions.discuss')}</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRename(note.id) }}>
-              <PenLine className="size-4" />
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); startRename() }}>
+              <PenLine className="size-4 mr-2" />
               <span>{t('tips.notes.actions.rename')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(note.id) }} className="text-destructive focus:text-destructive">
-              <Trash2 className="size-4" />
+              <Trash2 className="size-4 mr-2" />
               <span>{t('tips.notes.actions.delete')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <p className="text-[11px] text-muted-foreground text-right mt-2">
-        {relativeTime(note.updatedAt, locale, t('tips.notes.justNow'))}
-        {' · '}
-        {t('tips.notes.from')}
-        {' '}
-        {label}
+
+      {/* Middle row with Title and Uppercase Tag Metadata */}
+      <div className="mt-4">
+        {renaming
+          ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={draft}
+                placeholder={t('tips.notes.titlePlaceholder')}
+                onClick={e => e.stopPropagation()}
+                onChange={e => setDraft(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    commitRename()
+                  }
+                  else if (e.key === 'Escape') {
+                    e.preventDefault()
+                    cancelRename()
+                  }
+                }}
+                autoFocus
+                className="w-full bg-transparent border-b border-primary text-[17px] font-bold leading-snug tracking-tight text-foreground focus:outline-none"
+              />
+            )
+          : (
+              <h4 className="text-[17px] font-bold leading-snug tracking-tight text-foreground truncate">
+                {note.title || t('tips.notes.untitled')}
+              </h4>
+            )}
+        <div className="flex items-center gap-2 mt-1.5">
+          <Badge
+            variant="outline"
+            className={cn(
+              'h-5 text-[9px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded-full border',
+              textCls,
+            )}
+          >
+            {tagLabel}
+          </Badge>
+          <span className="text-[10.5px] text-muted-foreground/30" aria-hidden>•</span>
+          <span className="text-[11px] text-muted-foreground/75 font-semibold">
+            {relativeTime(note.updatedAt, locale, t('tips.notes.justNow'))}
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom row with generous description */}
+      <p className="text-[13.5px] text-muted-foreground/80 leading-relaxed mt-4 line-clamp-3">
+        {preview}
       </p>
     </article>
   )
