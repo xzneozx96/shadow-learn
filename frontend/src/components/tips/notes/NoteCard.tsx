@@ -166,14 +166,61 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
         onOpen(note.id)
       }}
     >
-      {/* Top row with squircle icon and action button */}
-      <div className="flex items-center justify-between">
+      {/* Header row: icon + (title above meta) + action menu */}
+      <div className="flex items-center gap-3">
         <span
           className={`inline-flex w-12 h-12 rounded-[16px] items-center justify-center shrink-0 ${bgCls}`}
           aria-hidden
         >
           <Icon className="size-5.5 stroke-[2.25]" />
         </span>
+
+        <div className="flex-1 min-w-0">
+          {renaming
+            ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={draft}
+                  placeholder={t('tips.notes.titlePlaceholder')}
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => setDraft(e.target.value)}
+                  onBlur={() => finishRename(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      finishRename(true)
+                    }
+                    else if (e.key === 'Escape') {
+                      e.preventDefault()
+                      finishRename(false)
+                    }
+                  }}
+                  autoFocus
+                  className="w-full bg-transparent border-b border-primary text-[17px] font-bold leading-snug tracking-tight text-foreground focus:outline-none"
+                />
+              )
+            : (
+                <h4 className="text-[17px] font-bold leading-snug tracking-tight text-foreground truncate">
+                  {note.title || t('tips.notes.untitled')}
+                </h4>
+              )}
+          <div className="flex items-center gap-2 mt-1">
+            <Badge
+              variant="outline"
+              className={cn(
+                'h-5 text-[9px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded-full border',
+                textCls,
+              )}
+            >
+              {tagLabel}
+            </Badge>
+            <span className="text-[10.5px] text-muted-foreground/30" aria-hidden>•</span>
+            <span className="text-[11px] text-muted-foreground/75 font-semibold">
+              {relativeTime(note.updatedAt, locale, t('tips.notes.justNow'))}
+            </span>
+          </div>
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -201,56 +248,8 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
         </DropdownMenu>
       </div>
 
-      {/* Middle row with Title and Uppercase Tag Metadata */}
-      <div className="mt-4">
-        {renaming
-          ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={draft}
-                placeholder={t('tips.notes.titlePlaceholder')}
-                onClick={e => e.stopPropagation()}
-                onChange={e => setDraft(e.target.value)}
-                onBlur={() => finishRename(true)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    finishRename(true)
-                  }
-                  else if (e.key === 'Escape') {
-                    e.preventDefault()
-                    finishRename(false)
-                  }
-                }}
-                autoFocus
-                className="w-full bg-transparent border-b border-primary text-[17px] font-bold leading-snug tracking-tight text-foreground focus:outline-none"
-              />
-            )
-          : (
-              <h4 className="text-[17px] font-bold leading-snug tracking-tight text-foreground truncate">
-                {note.title || t('tips.notes.untitled')}
-              </h4>
-            )}
-        <div className="flex items-center gap-2 mt-1.5">
-          <Badge
-            variant="outline"
-            className={cn(
-              'h-5 text-[9px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded-full border',
-              textCls,
-            )}
-          >
-            {tagLabel}
-          </Badge>
-          <span className="text-[10.5px] text-muted-foreground/30" aria-hidden>•</span>
-          <span className="text-[11px] text-muted-foreground/75 font-semibold">
-            {relativeTime(note.updatedAt, locale, t('tips.notes.justNow'))}
-          </span>
-        </div>
-      </div>
-
       {/* Bottom row with generous description */}
-      <p className="text-[13.5px] text-muted-foreground/80 leading-relaxed mt-4 line-clamp-3">
+      <p className="text-[13.5px] text-muted-foreground/80 leading-relaxed mt-3 line-clamp-3">
         {preview}
       </p>
     </article>
