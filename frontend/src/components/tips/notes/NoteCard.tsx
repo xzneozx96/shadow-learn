@@ -1,5 +1,5 @@
 import type { TipNote } from '@/types/tips'
-import { Layers, MessageSquare, MoreHorizontal, PenLine, Sparkles, Trash2 } from 'lucide-react'
+import { Layers, ListChecks, MessageSquare, MoreHorizontal, Network, PenLine, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -48,6 +48,10 @@ function sourceVisual(note: TipNote): SourceVisual {
   if (note.source === 'studio') {
     if (kind === 'cards')
       return { Icon: Layers, bg: 'bg-success/20', fg: 'text-success' }
+    if (kind === 'mind_map')
+      return { Icon: Network, bg: 'bg-[hsl(270_60%_65%/0.2)]', fg: 'text-[hsl(270_80%_80%)]' }
+    if (kind === 'study_guide')
+      return { Icon: ListChecks, bg: 'bg-[hsl(270_60%_65%/0.2)]', fg: 'text-[hsl(270_80%_80%)]' }
     return { Icon: Sparkles, bg: 'bg-[hsl(270_60%_65%/0.2)]', fg: 'text-[hsl(270_80%_80%)]' }
   }
   return { Icon: PenLine, bg: 'bg-muted-foreground/15', fg: 'text-muted-foreground' }
