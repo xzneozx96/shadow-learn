@@ -1,5 +1,5 @@
 import type { TipNote } from '@/types/tips'
-import { Layers, ListChecks, MessageSquare, MoreHorizontal, Network, PenLine, Sparkles, Trash2 } from 'lucide-react'
+import { BookOpen, FileText, Layers, MessageSquare, MoreHorizontal, PenLine, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -49,10 +49,12 @@ function sourceVisual(note: TipNote): SourceVisual {
     if (kind === 'cards')
       return { Icon: Layers, bg: 'bg-success/20', fg: 'text-success' }
     if (kind === 'mind_map')
-      return { Icon: Network, bg: 'bg-[hsl(270_60%_65%/0.2)]', fg: 'text-[hsl(270_80%_80%)]' }
+      return { Icon: Sparkles, bg: 'bg-violet-500/20', fg: 'text-violet-300' }
     if (kind === 'study_guide')
-      return { Icon: ListChecks, bg: 'bg-[hsl(270_60%_65%/0.2)]', fg: 'text-[hsl(270_80%_80%)]' }
-    return { Icon: Sparkles, bg: 'bg-[hsl(270_60%_65%/0.2)]', fg: 'text-[hsl(270_80%_80%)]' }
+      return { Icon: BookOpen, bg: 'bg-blue-500/20', fg: 'text-blue-300' }
+    if (kind === 'summary')
+      return { Icon: FileText, bg: 'bg-amber-500/20', fg: 'text-amber-300' }
+    return { Icon: Sparkles, bg: 'bg-violet-500/20', fg: 'text-violet-300' }
   }
   return { Icon: PenLine, bg: 'bg-muted-foreground/15', fg: 'text-muted-foreground' }
 }
@@ -117,25 +119,24 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
     }
     if (note.source === 'studio') {
       let label = t('tips.notes.source.studio')
-      if (kind === 'summary')
+      let bg = 'bg-indigo-500 text-white shadow-md shadow-indigo-500/10 dark:shadow-indigo-500/5'
+      if (kind === 'summary') {
         label = t('tips.notes.source.summary')
-      else if (kind === 'study_guide')
+        bg = 'bg-amber-500 text-white shadow-md shadow-amber-500/10 dark:shadow-amber-500/5'
+      }
+      else if (kind === 'study_guide') {
         label = t('tips.notes.source.studyGuide')
-      else if (kind === 'mind_map')
+        bg = 'bg-blue-500 text-white shadow-md shadow-blue-500/10 dark:shadow-blue-500/5'
+      }
+      else if (kind === 'mind_map') {
         label = t('tips.notes.source.mindMap')
-      else if (kind === 'cards')
+        bg = 'bg-violet-500 text-white shadow-md shadow-violet-500/10 dark:shadow-violet-500/5'
+      }
+      else if (kind === 'cards') {
         label = t('tips.notes.source.card')
-
-      if (kind === 'cards') {
-        return {
-          bgCls: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/10 dark:shadow-emerald-500/5',
-          tagLabel: label,
-        }
+        bg = 'bg-emerald-500 text-white shadow-md shadow-emerald-500/10 dark:shadow-emerald-500/5'
       }
-      return {
-        bgCls: 'bg-indigo-500 text-white shadow-md shadow-indigo-500/10 dark:shadow-indigo-500/5',
-        tagLabel: label,
-      }
+      return { bgCls: bg, tagLabel: label }
     }
     return {
       bgCls: 'bg-zinc-500 text-white shadow-md shadow-zinc-500/10 dark:shadow-zinc-500/5',
