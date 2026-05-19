@@ -51,24 +51,6 @@ function sourceVisual(note: TipNote): SourceVisual {
   return { Icon: PenLine, bg: 'bg-muted-foreground/15', fg: 'text-muted-foreground' }
 }
 
-function sourceLabel(note: TipNote, t: (k: string) => string): string {
-  const kind = note.sourceRef?.kind
-  if (note.source === 'chat')
-    return t('tips.notes.source.chat')
-  if (note.source === 'studio') {
-    if (kind === 'summary')
-      return t('tips.notes.source.summary')
-    if (kind === 'study_guide')
-      return t('tips.notes.source.studyGuide')
-    if (kind === 'mind_map')
-      return t('tips.notes.source.mindMap')
-    if (kind === 'cards')
-      return t('tips.notes.source.card')
-    return t('tips.notes.source.studio')
-  }
-  return t('tips.notes.source.freeform')
-}
-
 function previewOf(html: string, max = 160): string {
   const text = htmlToPlain(html)
   return text.length > max ? `${text.slice(0, max)}…` : text
@@ -78,6 +60,23 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
   const { t, locale } = useI18n()
   const { Icon, bg, fg } = sourceVisual(note)
   const preview = previewOf(note.html) || t('tips.notes.empty.preview')
+  const label = (() => {
+    const kind = note.sourceRef?.kind
+    if (note.source === 'chat')
+      return t('tips.notes.source.chat')
+    if (note.source === 'studio') {
+      if (kind === 'summary')
+        return t('tips.notes.source.summary')
+      if (kind === 'study_guide')
+        return t('tips.notes.source.studyGuide')
+      if (kind === 'mind_map')
+        return t('tips.notes.source.mindMap')
+      if (kind === 'cards')
+        return t('tips.notes.source.card')
+      return t('tips.notes.source.studio')
+    }
+    return t('tips.notes.source.freeform')
+  })()
 
   return (
     <article
@@ -93,15 +92,12 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview}</p>
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="p-1 rounded hover:bg-secondary text-muted-foreground shrink-0"
-              aria-label={t('tips.notes.actions.menu')}
-              onClick={e => e.stopPropagation()}
-            >
-              <MoreVertical className="size-4" />
-            </button>
+          <DropdownMenuTrigger
+            className="p-1 rounded hover:bg-secondary text-muted-foreground shrink-0"
+            aria-label={t('tips.notes.actions.menu')}
+            onClick={e => e.stopPropagation()}
+          >
+            <MoreVertical className="size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDiscuss(note.id) }}>
@@ -125,7 +121,7 @@ export function NoteCard({ note, onOpen, onDiscuss, onRename, onDelete }: Props)
         {' · '}
         {t('tips.notes.from')}
         {' '}
-        {sourceLabel(note, t)}
+        {label}
       </p>
     </article>
   )

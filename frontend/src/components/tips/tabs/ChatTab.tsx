@@ -45,9 +45,9 @@ interface Props {
   kind?: TipChatKind
   systemPrompt?: string
   initialUserMessage?: string
-  chips: ContextChip[]
-  onRemoveChip: (id: string) => void
-  onClearChips: () => void
+  chips?: ContextChip[]
+  onRemoveChip?: (id: string) => void
+  onClearChips?: () => void
 }
 
 const BURST_DURATION_S = 30
@@ -273,7 +273,7 @@ function messageText(message: UIMessage): string {
 }
 
 export function ChatTab(props: Props) {
-  const { courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt, initialUserMessage, chips, onRemoveChip, onClearChips } = props
+  const { courseId, videoId, lessonTitle, transcript, transcriptStatus, kind, systemPrompt, initialUserMessage, chips = [], onRemoveChip, onClearChips } = props
   const { locale, t } = useI18n()
   const chat = useTipChat({
     courseId,
@@ -331,7 +331,7 @@ export function ChatTab(props: Props) {
       : trimmed
     chat.sendMessage({ text: composed, ...(hasFiles ? { files: message.files } : {}) } as Parameters<typeof chat.sendMessage>[0])
     if (chips.length > 0)
-      onClearChips()
+      onClearChips?.()
   }, [voice.state, chat, chips, onClearChips])
 
   const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept', message: string }) => {
@@ -412,7 +412,7 @@ export function ChatTab(props: Props) {
       </Conversation>
 
       <div className="shrink-0 border-t border-border p-3">
-        {chips.length > 0 && (
+        {chips.length > 0 && onRemoveChip && (
           <div className="mb-2">
             <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />
           </div>
