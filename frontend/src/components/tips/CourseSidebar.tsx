@@ -12,9 +12,12 @@ interface Props {
   completedVideoIds: Set<string>
   inProgressVideoIds?: Set<string>
   onSelect: (videoId: string) => void
+  // True while the standalone-video branch is fetching YouTube metadata.
+  // Renders a title-bar skeleton + lesson-row skeletons during the gap.
+  metaLoading?: boolean
 }
 
-export function CourseSidebar({ courseName, lessons, activeVideoId, completedVideoIds, inProgressVideoIds, onSelect }: Props) {
+export function CourseSidebar({ courseName, lessons, activeVideoId, completedVideoIds, inProgressVideoIds, onSelect, metaLoading = false }: Props) {
   const { t } = useI18n()
   const completed = lessons.reduce((n, l) => n + (completedVideoIds.has(l.videoId) ? 1 : 0), 0)
   const pct = lessons.length === 0 ? 0 : Math.round((completed / lessons.length) * 100)
@@ -32,7 +35,9 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
           className="group flex items-center gap-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors"
         >
           <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-foreground" aria-hidden />
-          <h4 className="text-sm font-bold leading-snug">{courseName}</h4>
+          {metaLoading
+            ? <span className="inline-block h-4 w-32 rounded bg-muted animate-pulse" aria-hidden />
+            : <h4 className="text-sm font-bold leading-snug">{courseName}</h4>}
         </Link>
       </header>
       <ol role="list" className="flex-1 overflow-y-auto">
@@ -46,6 +51,7 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
             isCompleted={completedVideoIds.has(l.videoId)}
             isInProgress={inProgressVideoIds?.has(l.videoId) ?? false}
             onSelect={onSelect}
+            titleLoading={metaLoading}
           />
         ))}
       </ol>

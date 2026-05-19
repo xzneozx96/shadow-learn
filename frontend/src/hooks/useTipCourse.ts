@@ -7,7 +7,17 @@ interface State {
   course: TipCourse | null
   lessons: TipLesson[]
   loading: boolean
+  // True while the standalone-video branch is fetching YouTube metadata
+  // (title/channel/thumbnail) via oEmbed. Playlists ship full metadata
+  // from the backend so this stays false there.
+  metaLoading: boolean
   error: Error | null
+}
+
+interface YouTubeOEmbed {
+  title?: string
+  author_name?: string
+  thumbnail_url?: string
 }
 
 function durationToSec(duration: string): number | null {
@@ -24,12 +34,12 @@ function durationToSec(duration: string): number | null {
 }
 
 export function useTipCourse(source: TipSource, id: string): State {
-  const [state, setState] = useState<State>({ course: null, lessons: [], loading: true, error: null })
+  const [state, setState] = useState<State>({ course: null, lessons: [], loading: true, metaLoading: false, error: null })
   const [lastKey, setLastKey] = useState(`${source}:${id}`)
   const key = `${source}:${id}`
   if (lastKey !== key) {
     setLastKey(key)
-    setState({ course: null, lessons: [], loading: true, error: null })
+    setState({ course: null, lessons: [], loading: true, metaLoading: false, error: null })
   }
 
   useEffect(() => {
@@ -65,12 +75,16 @@ export function useTipCourse(source: TipSource, id: string): State {
             },
             lessons,
             loading: false,
+            metaLoading: false,
             error: null,
           })
         }
         else {
           if (cancelled)
             return
+          // Mount immediately with a 'Tip' placeholder so the player and
+          // pipeline can start before the oEmbed call returns. metaLoading
+          // gates the title display so consumers can swap in a skeleton.
           setState({
             course: {
               id,
@@ -84,14 +98,47 @@ export function useTipCourse(source: TipSource, id: string): State {
             },
             lessons: [{ videoId: id, title: 'Tip', duration: '', thumbnailUrl: null, durationSec: null }],
             loading: false,
+            metaLoading: true,
             error: null,
           })
+
+          try {
+            const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`
+            const res = await fetch(oembedUrl, { signal: controller.signal })
+            if (cancelled)
+              return
+            if (res.ok) {
+              const meta = (await res.json()) as YouTubeOEmbed
+              const title = meta.title?.trim() || 'Tip'
+              const channel = meta.author_name?.trim() || null
+              const thumb = meta.thumbnail_url?.trim() || null
+              setState(prev => prev.course && prev.course.id === id
+                ? {
+                    ...prev,
+                    course: { ...prev.course, name: title, channel, thumbnailUrl: thumb },
+                    lessons: prev.lessons.map(l => l.videoId === id ? { ...l, title, thumbnailUrl: thumb } : l),
+                    metaLoading: false,
+                  }
+                : prev)
+            }
+            else {
+              // oEmbed failed (private/removed video). Keep 'Tip' fallback.
+              setState(prev => ({ ...prev, metaLoading: false }))
+            }
+          }
+          catch (err) {
+            if (controller.signal.aborted || cancelled)
+              return
+            // Network error — keep the 'Tip' fallback rather than nuking the page.
+            void err
+            setState(prev => ({ ...prev, metaLoading: false }))
+          }
         }
       }
       catch (err) {
         if (controller.signal.aborted || cancelled)
           return
-        setState({ course: null, lessons: [], loading: false, error: err as Error })
+        setState({ course: null, lessons: [], loading: false, metaLoading: false, error: err as Error })
       }
     }
 
