@@ -92,6 +92,29 @@ export interface AgentMemory {
   lessonId?: string
 }
 
+export type ThreadSurface = 'lesson' | 'global' | 'tip'
+
+export interface ThreadRecord {
+  id: string // canonical id: lessonId | '__global' | `${courseId}:${videoId}`
+  surface: ThreadSurface
+  ownerId: string | null // lessonId | null | `${courseId}:${videoId}`
+  courseId?: string // tip only
+  videoId?: string // tip only
+  messages: UIMessage[]
+  updatedAt: number // ms epoch
+  createdAt: number
+  latestSummaryGen?: number
+}
+
+export interface ThreadSummaryRecord {
+  threadId: string
+  generation: number
+  summary: string
+  coversThroughMessageId: string
+  tokenBudget: number
+  createdAt: number
+}
+
 export interface ExerciseStat {
   correct: number
   total: number
@@ -246,6 +269,16 @@ interface ShadowLearnSchema extends DBSchema {
     key: string
     value: UserMaterial
     indexes: { 'by-external': string, 'by-skill': string }
+  }
+  'threads': {
+    key: string
+    value: ThreadRecord
+    indexes: { 'by-surface': string, 'by-owner': string, 'by-updated': number }
+  }
+  'thread-summaries': {
+    key: [string, number]
+    value: ThreadSummaryRecord
+    indexes: { 'by-thread': string }
   }
 }
 
