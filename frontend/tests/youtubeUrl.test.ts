@@ -3,13 +3,13 @@ import { parseYouTubeUrl } from '@/lib/youtubeUrl'
 
 describe('parseYouTubeUrl', () => {
   it('parses playlist URL', () => {
-    expect(parseYouTubeUrl('https://www.youtube.com/playlist?list=PLabc123'))
-      .toEqual({ kind: 'playlist', id: 'PLabc123' })
+    expect(parseYouTubeUrl('https://www.youtube.com/playlist?list=PLabc1234567'))
+      .toEqual({ kind: 'playlist', id: 'PLabc1234567' })
   })
 
   it('parses watch URL with list= as playlist (preferred over video)', () => {
-    expect(parseYouTubeUrl('https://www.youtube.com/watch?v=VID1&list=PLxyz'))
-      .toEqual({ kind: 'playlist', id: 'PLxyz' })
+    expect(parseYouTubeUrl('https://www.youtube.com/watch?v=VID1&list=PLxyz12345678'))
+      .toEqual({ kind: 'playlist', id: 'PLxyz12345678' })
   })
 
   it('parses watch URL without list= as video', () => {
@@ -43,5 +43,9 @@ describe('parseYouTubeUrl', () => {
   it('trims whitespace', () => {
     expect(parseYouTubeUrl('  https://youtu.be/abcdefghijk  '))
       .toEqual({ kind: 'video', id: 'abcdefghijk' })
+  })
+
+  it('returns null for watch URL with too-short v= param', () => {
+    expect(parseYouTubeUrl('https://www.youtube.com/watch?v=short')).toBeNull()
   })
 })

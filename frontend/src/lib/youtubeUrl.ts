@@ -2,8 +2,8 @@ export type ParsedYouTubeUrl
   = { kind: 'playlist', id: string }
     | { kind: 'video', id: string }
 
-const VIDEO_ID_RE = /^[\w-]{6,}$/
-const PLAYLIST_ID_RE = /^[\w-]{2,}$/
+const VIDEO_ID_RE = /^[\w-]{11}$/
+const PLAYLIST_ID_RE = /^[\w-]{10,}$/
 const YOUTUBE_HOSTS = new Set(['youtube.com', 'm.youtube.com', 'youtu.be'])
 const WWW_PREFIX_RE = /^www\./
 
