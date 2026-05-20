@@ -574,14 +574,20 @@ export async function deleteVideo(db: ShadowLearnDB, lessonId: string): Promise<
 // Chat history
 export async function saveChatMessages(db: ShadowLearnDB, lessonId: string, messages: UIMessage[]): Promise<void> {
   await db.put('chats', messages, lessonId)
+  const surface: ThreadSurface = lessonId === '__global' ? 'global' : 'lesson'
+  await saveThreadMessages(db, lessonId, messages, surface, surface === 'lesson' ? lessonId : null)
 }
 
 export async function getChatMessages(db: ShadowLearnDB, lessonId: string): Promise<UIMessage[] | undefined> {
+  const thread = await db.get('threads', lessonId)
+  if (thread)
+    return thread.messages
   return db.get('chats', lessonId)
 }
 
 export async function deleteChatMessages(db: ShadowLearnDB, lessonId: string): Promise<void> {
   await db.delete('chats', lessonId)
+  await deleteThread(db, lessonId)
 }
 
 // Threads (unified chat store) — DB v20
@@ -957,9 +963,20 @@ export async function getTipTranscript(db: ShadowLearnDB, videoId: string): Prom
 
 export async function putTipChat(db: ShadowLearnDB, chat: TipChatRecord): Promise<void> {
   await db.put('tip-chats', chat)
+  await saveThreadMessages(db, chat.key, chat.messages, 'tip', chat.key, chat.courseId, chat.videoId)
 }
 
 export async function getTipChat(db: ShadowLearnDB, key: string): Promise<TipChatRecord | undefined> {
+  const thread = await db.get('threads', key)
+  if (thread && thread.surface === 'tip') {
+    return {
+      key: thread.id,
+      courseId: thread.courseId ?? '',
+      videoId: thread.videoId ?? '',
+      messages: thread.messages,
+      updatedAt: new Date(thread.updatedAt).toISOString(),
+    }
+  }
   return db.get('tip-chats', key)
 }
 

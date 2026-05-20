@@ -1,12 +1,17 @@
 import { openDB } from 'idb'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  deleteChatMessages,
   deleteThread,
+  getChatMessages,
   getLatestSummary,
   getThread,
+  getTipChat,
   initDB,
   listThreadsBySurface,
   putThreadSummary,
+  putTipChat,
+  saveChatMessages,
   saveThreadMessages,
 } from '../src/db'
 import 'fake-indexeddb/auto'
@@ -123,6 +128,65 @@ describe('thread helpers', () => {
     const latest = await getLatestSummary(db, 't')
     expect(latest?.generation).toBe(2)
     expect(latest?.summary).toBe('two')
+    db.close()
+  })
+})
+
+describe('legacy chat helpers (shim layer)', () => {
+  beforeEach(() => { (globalThis as any).indexedDB = new (globalThis as any).IDBFactory() })
+
+  it('saveChatMessages writes to both chats and threads', async () => {
+    const db = await initDB()
+    const msgs = [{ id: 'm', role: 'user', parts: [{ type: 'text', text: 'x' }] }] as any
+    await saveChatMessages(db, 'lesson-id', msgs)
+    expect(await db.get('chats', 'lesson-id')).toEqual(msgs)
+    const thread = await getThread(db, 'lesson-id')
+    expect(thread?.messages).toEqual(msgs)
+    expect(thread?.surface).toBe('lesson')
+    db.close()
+  })
+
+  it('saveChatMessages with __global tags as global surface', async () => {
+    const db = await initDB()
+    await saveChatMessages(db, '__global', [] as any)
+    expect((await getThread(db, '__global'))?.surface).toBe('global')
+    db.close()
+  })
+
+  it('getChatMessages prefers threads, falls back to legacy', async () => {
+    const db = await initDB()
+    await db.put('chats', [{ id: 'legacy' }] as any, 'lid')
+    const got = await getChatMessages(db, 'lid')
+    expect((got?.[0] as any)?.id).toBe('legacy')
+    db.close()
+  })
+
+  it('deleteChatMessages removes from both stores', async () => {
+    const db = await initDB()
+    await saveChatMessages(db, 'lid', [{ id: 'm' }] as any)
+    await deleteChatMessages(db, 'lid')
+    expect(await db.get('chats', 'lid')).toBeUndefined()
+    expect(await getThread(db, 'lid')).toBeUndefined()
+    db.close()
+  })
+
+  it('putTipChat dual-writes', async () => {
+    const db = await initDB()
+    const rec = { key: 'c:v', courseId: 'c', videoId: 'v', messages: [{ id: 'tm' }] as any, updatedAt: '2026-05-20T00:00:00Z' }
+    await putTipChat(db, rec as any)
+    expect((await db.get('tip-chats', 'c:v'))?.messages?.[0]?.id).toBe('tm')
+    const thread = await getThread(db, 'c:v')
+    expect(thread?.surface).toBe('tip')
+    expect(thread?.courseId).toBe('c')
+    expect(thread?.videoId).toBe('v')
+    db.close()
+  })
+
+  it('getTipChat prefers threads, falls back', async () => {
+    const db = await initDB()
+    await db.put('tip-chats', { key: 'c:v', courseId: 'c', videoId: 'v', messages: [{ id: 'fb' }], updatedAt: '' } as any)
+    const got = await getTipChat(db, 'c:v')
+    expect((got?.messages?.[0] as any)?.id).toBe('fb')
     db.close()
   })
 })
