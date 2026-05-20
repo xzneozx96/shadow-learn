@@ -6,7 +6,7 @@ import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { useVocabulary } from '@/contexts/VocabularyContext'
-import { useAgentChat } from '@/hooks/useAgentChat'
+import { useZoberChat } from '@/hooks/useZoberChat'
 import { captureCompanionMessageSent } from '@/lib/posthog-events'
 import { CompanionChatArea } from '../chat/CompanionChatArea'
 import { LessonWorkbookPanel } from './LessonWorkbookPanel'
@@ -34,7 +34,13 @@ export function CompanionPanel({
   const { entriesByLesson } = useVocabulary()
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
-  const { messages, isLoading, isHistoryLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useAgentChat(lessonId, activeSegment, lessonTitle, roleplaySystemPrompt)
+  const { messages, isLoading, isHistoryLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useZoberChat({
+    surface: 'lesson',
+    lessonId,
+    lessonTitle,
+    activeSegment,
+    roleplaySystemPrompt,
+  })
   const { openSpeakModal } = useSpeakModal()
 
   useEffect(() => {
