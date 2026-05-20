@@ -213,7 +213,11 @@ function StreamingDots() {
   )
 }
 
-function ChatBubble({ message, imageAlt, onSeek }: { message: UIMessage, imageAlt: string, onSeek: (sec: number) => void }) {
+function StreamingText({ text }: { text: string }) {
+  return <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{text}</span>
+}
+
+function ChatBubble({ message, imageAlt, onSeek, isStreaming }: { message: UIMessage, imageAlt: string, onSeek: (sec: number) => void, isStreaming: boolean }) {
   const text = messageText(message)
   if (message.role === 'user') {
     return (
@@ -255,7 +259,9 @@ function ChatBubble({ message, imageAlt, onSeek }: { message: UIMessage, imageAl
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
-        <MemoMarkdown text={text} onSeek={onSeek} />
+        {isStreaming
+          ? <StreamingText text={text} />
+          : <MemoMarkdown text={text} onSeek={onSeek} />}
       </div>
     </motion.div>
   )
@@ -384,41 +390,47 @@ export function ChatTab(props: Props) {
           />
         )}
         <div ref={contentRef} className="flex flex-col gap-3">
-          {chat.messages.map(m => (
-            <div key={m.id} className="group relative">
-              <ChatBubble message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={seekTip} />
-              {m.role === 'assistant' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const raw = messageText(m).trim()
-                    if (!raw)
-                      return
-                    const firstLine = raw.split(SINGLE_NEWLINE_RE)[0]?.slice(0, 80) ?? ''
-                    const html = raw
-                      .split(BLANK_LINE_RE)
-                      .map(block => `<p>${escapeHtml(block).replace(SINGLE_NEWLINE_RE, '<br>')}</p>`)
-                      .join('')
-                    void saveTipNote({
-                      videoId,
-                      title: firstLine,
-                      html,
-                      source: 'chat',
-                      sourceRef: { kind: 'chat', ref: m.id },
-                    }).then(
-                      () => toast.success(t('tips.notes.saved.toast')),
-                      () => toast.error(t('tips.notes.saved.toastError')),
-                    )
-                  }}
-                  className="absolute -right-1 top-1 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:bg-secondary hover:text-primary"
-                  aria-label={t('tips.notes.actions.save')}
-                  title={t('tips.notes.actions.save')}
-                >
-                  <NotebookPen className="size-4" />
-                </button>
-              )}
-            </div>
-          ))}
+          {chat.messages.map((m, idx) => {
+            const isLast = idx === chat.messages.length - 1
+            const isStreaming = isLast
+              && m.role === 'assistant'
+              && (chat.status === 'streaming' || chat.status === 'submitted')
+            return (
+              <div key={m.id} className="group relative">
+                <ChatBubble message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={seekTip} isStreaming={isStreaming} />
+                {m.role === 'assistant' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const raw = messageText(m).trim()
+                      if (!raw)
+                        return
+                      const firstLine = raw.split(SINGLE_NEWLINE_RE)[0]?.slice(0, 80) ?? ''
+                      const html = raw
+                        .split(BLANK_LINE_RE)
+                        .map(block => `<p>${escapeHtml(block).replace(SINGLE_NEWLINE_RE, '<br>')}</p>`)
+                        .join('')
+                      void saveTipNote({
+                        videoId,
+                        title: firstLine,
+                        html,
+                        source: 'chat',
+                        sourceRef: { kind: 'chat', ref: m.id },
+                      }).then(
+                        () => toast.success(t('tips.notes.saved.toast')),
+                        () => toast.error(t('tips.notes.saved.toastError')),
+                      )
+                    }}
+                    className="absolute -right-1 top-1 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:bg-secondary hover:text-primary"
+                    aria-label={t('tips.notes.actions.save')}
+                    title={t('tips.notes.actions.save')}
+                  >
+                    <NotebookPen className="size-4" />
+                  </button>
+                )}
+              </div>
+            )
+          })}
           {(chat.status === 'submitted' || chat.status === 'streaming')
             && (chat.messages.length === 0
               || chat.messages.at(-1)?.role === 'user'

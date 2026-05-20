@@ -5,7 +5,7 @@ import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
 import { ArrowDownIcon, AudioLines, ImageIcon, Mic, X } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import { ConversationEmptyState } from '@/components/ai-elements/conversation'
@@ -217,33 +217,21 @@ export function CompanionChatArea({
     onSend({ text: opts.text })
   }
 
-  // Defer message list rendering so that typing (urgent) is never blocked by
-  // streaming token updates (non-urgent). React will interrupt deferred renders
-  // when the user types and resume them afterward.
-  const deferredMessages = useDeferredValue(messages)
+  const showInitialLoading = isHistoryLoading && messages.length === 0
 
-  // Track whether the initial deferred render has caught up at least once.
-  // Used only to keep the loading spinner visible during the first paint of
-  // restored history, where useDeferredValue lags behind setMessages by 1-2s
-  // when the history is large. Once the first deferred render lands, we never
-  // re-show the spinner — later deferred lag during streaming/typing is
-  // expected and shouldn't flicker the loader. Resets when the hook starts a
-  // new IDB fetch (isHistoryLoading flipping true) so lesson switches re-show
-  // the loader.
-  const initialRenderCompleteRef = useRef(false)
-  const prevHistoryLoadingRef = useRef(isHistoryLoading)
-  if (isHistoryLoading && !prevHistoryLoadingRef.current) {
-    initialRenderCompleteRef.current = false
-  }
-  prevHistoryLoadingRef.current = isHistoryLoading
-  if (!initialRenderCompleteRef.current && !isHistoryLoading && deferredMessages === messages) {
-    initialRenderCompleteRef.current = true
-  }
-  const showInitialLoading = !initialRenderCompleteRef.current && (isHistoryLoading || messages.length > 0)
+  // While streaming, the last assistant message is the one being filled in.
+  // Pass its id down so ChatMessageItem can render plain text (cheap) instead
+  // of re-parsing markdown on every token tick.
+  const streamingMessageId = useMemo(() => {
+    if (!isLoading)
+      return null
+    const last = messages.at(-1)
+    return last?.role === 'assistant' ? last.id : null
+  }, [isLoading, messages])
 
   const uniqueMessages = useMemo(() => {
     const seen = new Set<string>()
-    return deferredMessages.filter((m) => {
+    return messages.filter((m) => {
       if (!hasVisibleContent(m))
         return false
       if (seen.has(m.id))
@@ -251,7 +239,7 @@ export function CompanionChatArea({
       seen.add(m.id)
       return true
     })
-  }, [deferredMessages])
+  }, [messages])
 
   // For each "wide" tool type (exercises, charts, vocab cards), only the LAST
   // occurrence across all messages renders as a full widget. Earlier occurrences
@@ -456,11 +444,19 @@ export function CompanionChatArea({
             <div ref={topSentinelRef} className="h-px w-full" aria-hidden="true" />
           )}
 
-          {uniqueMessages.map((msg: UIMessage) => (
-            <div key={msg.id}>
-              <MessageItem msg={msg} sendMessage={sendMessage} activeWideIds={activeWideIds} />
-            </div>
-          ))}
+          {uniqueMessages.map((msg: UIMessage) => {
+            const isStreaming = isLoading && msg.id === streamingMessageId
+            return (
+              <div key={msg.id}>
+                <MessageItem
+                  msg={msg}
+                  sendMessage={sendMessage}
+                  activeWideIds={activeWideIds}
+                  isStreaming={isStreaming}
+                />
+              </div>
+            )
+          })}
 
           {isLoading && messages.length > 0 && (
             !hasVisibleContent(messages.at(-1)!)
