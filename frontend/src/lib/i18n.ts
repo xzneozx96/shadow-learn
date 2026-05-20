@@ -866,6 +866,7 @@ export const TRANSLATIONS = {
     'tips.chat.copy': 'Copy',
     'tips.chat.copied': 'Copied',
     'tips.chat.copyError': 'Copy failed',
+    'tips.chat.regenerate': 'Regenerate',
     // --- Tips LMS B2 (Studio + Cards) ---
     'tips.studio.title': 'Studio',
     'tips.studio.subtitle': 'Generate on demand · cached after first run',
@@ -1779,6 +1780,7 @@ export const TRANSLATIONS = {
     'tips.chat.copy': 'Sao chép',
     'tips.chat.copied': 'Đã sao chép',
     'tips.chat.copyError': 'Sao chép thất bại',
+    'tips.chat.regenerate': 'Tạo lại',
     // --- Tips LMS B2 ---
     'tips.studio.title': 'Studio',
     'tips.studio.subtitle': 'Tạo theo yêu cầu · lưu cache sau lần đầu',

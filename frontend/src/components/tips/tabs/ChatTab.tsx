@@ -2,7 +2,7 @@ import type { UIMessage } from '@ai-sdk/react'
 import type { FileUIPart } from 'ai'
 import type { ContextChip } from '@/components/chat/ContextChipBar'
 import type { TranslationKey } from '@/lib/i18n'
-import { ArrowDownIcon, Bot, Copy, GraduationCap, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
+import { ArrowDownIcon, Bot, Copy, GraduationCap, ImageIcon, Mic, NotebookPen, RefreshCw, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -174,6 +174,21 @@ const MemoMarkdown = memo(({ text, onSeek }: { text: string, onSeek: (sec: numbe
       // through unchanged — chat content comes from our own LLM, not
       // untrusted user input.
       urlTransform={url => url}
+      // Default linkSafety blocks non-http(s) URLs (including our custom
+      // `timestamp:` scheme), rendering them as text + `[blocked]`. Allow
+      // our scheme through alongside standard web schemes.
+      linkSafety={{
+        enabled: true,
+        onLinkCheck: (url: string) => {
+          if (url.startsWith('timestamp:'))
+            return true
+          if (url.startsWith('http://') || url.startsWith('https://'))
+            return true
+          if (url.startsWith('mailto:'))
+            return true
+          return false
+        },
+      }}
       components={{
         a: ({ href, children }) => {
           const decoded = typeof href === 'string' ? decodeURIComponent(href) : ''
@@ -271,11 +286,15 @@ function MessageActions({
   text,
   messageId,
   videoId,
+  canRegenerate,
+  onRegenerate,
   t,
 }: {
   text: string
   messageId: string
   videoId: string
+  canRegenerate: boolean
+  onRegenerate: () => void
   t: (key: TranslationKey) => string
 }) {
   if (!text)
@@ -329,6 +348,17 @@ function MessageActions({
       >
         <NotebookPen className="size-4" />
       </Button>
+      {canRegenerate && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onRegenerate}
+          aria-label={t('tips.chat.regenerate')}
+          title={t('tips.chat.regenerate')}
+        >
+          <RefreshCw className="size-4" />
+        </Button>
+      )}
     </div>
   )
 }
@@ -462,6 +492,8 @@ export function ChatTab(props: Props) {
                     text={messageText(m).trim()}
                     messageId={m.id}
                     videoId={videoId}
+                    canRegenerate={isLast}
+                    onRegenerate={chat.regenerate}
                     t={t}
                   />
                 )}
