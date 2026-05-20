@@ -249,6 +249,7 @@ async def _stream_agent(stream, stitch_message_id: str | None = None):
                 for choice in chunk.choices:
                     if choice.finish_reason is not None:
                         finish_reason = choice.finish_reason
+                        logger.info(f"[_stream_agent] finish_reason={choice.finish_reason}")
 
                     delta = choice.delta
                     if delta is None:
@@ -491,6 +492,7 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
         "stream": True,
         "extra_body": {"reasoning": {"effort": "none"}},
         "messages": openai_messages,
+        "max_tokens": settings.openrouter_agent_max_tokens,
     }
     if request.tools:
         create_kwargs["tools"] = request.tools

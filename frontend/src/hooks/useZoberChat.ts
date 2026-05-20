@@ -59,14 +59,6 @@ type AgentActionsDispatch = (action: AgentAction) => void
 
 const noopDispatch: AgentActionsDispatch = () => {}
 
-const DEBUG_ZOBER = true // TODO: remove or flip after debugging
-function zlog(event: string, data?: unknown): void {
-  if (!DEBUG_ZOBER)
-    return
-  // eslint-disable-next-line no-console
-  console.log(`[zober] ${event}`, data ?? '')
-}
-
 export type ZoberChatArgs
   = | {
     surface: 'lesson'
@@ -261,20 +253,6 @@ export function useZoberChat(args: ZoberChatArgs) {
             ctx.lesson.exhausted = exhausted
           }
 
-          zlog('prepareSendMessagesRequest', {
-            surface: narrowed.surface,
-            msgsIn: messages.length,
-            trigger,
-            stitch_message_id: messageId ?? null,
-            exhausted: ctx?.lesson?.exhausted ?? null,
-            roundsSinceUser: narrowed.lesson
-              ? computeLessonExhaustion(messages, { maxRounds: MAX_TOOL_ROUNDS_LESSON }).roundsSinceUser
-              : null,
-            sameToolLoop: narrowed.lesson
-              ? computeLessonExhaustion(messages, { maxRounds: MAX_TOOL_ROUNDS_LESSON }).sameToolLoop
-              : null,
-          })
-
           // Reconstruct full history (IDB-unloaded prefix + React state), de-duplicate by id
           const unloaded = allStoredRef.current.slice(0, loadedOffsetRef.current)
           const seen = new Set<string>()
@@ -291,14 +269,6 @@ export function useZoberChat(args: ZoberChatArgs) {
           const includeTools = !ctx?.lesson?.exhausted
 
           const projectedTokens = estimateTokens(compacted) + estimateTextTokens(builtPrompt)
-
-          zlog('prepareSendMessagesRequest:compacted', {
-            fullHistoryLen: fullHistory.length,
-            compactedLen: compacted.length,
-            projectedTokens,
-            includeTools: !ctx?.lesson?.exhausted,
-            toolPoolSize: toolPool.length,
-          })
 
           if (projectedTokens > TOKEN_BUDGET_HARD * TOKEN_BUDGET) {
             throw new Error('Conversation too long. Please start a new chat.')
@@ -322,7 +292,7 @@ export function useZoberChat(args: ZoberChatArgs) {
           }
         },
       }),
-    [apiKey, refreshContext, toolPool, args, narrowed.lesson, narrowed.surface],
+    [apiKey, refreshContext, toolPool, args],
   )
 
   const {
@@ -341,48 +311,24 @@ export function useZoberChat(args: ZoberChatArgs) {
     // Gated by per-surface round budget + same-tool loop detection.
     sendAutomaticallyWhen: ({ messages: msgs }) => {
       const completeWithTools = lastAssistantMessageIsCompleteWithToolCalls({ messages: msgs })
-      const lastMsg = msgs.at(-1)
-      const lastMsgSummary = lastMsg
-        ? {
-            id: lastMsg.id,
-            role: lastMsg.role,
-            partTypes: (lastMsg.parts ?? []).map((p: any) => p.type),
-            toolStates: (lastMsg.parts ?? [])
-              .filter((p: any) => typeof p.type === 'string' && p.type.startsWith('tool-'))
-              .map((p: any) => ({ name: p.toolName, callId: p.toolCallId, state: p.state })),
-          }
-        : null
-
       if (!completeWithTools) {
-        zlog('sendAutomaticallyWhen:false', { reason: 'last-not-complete-with-tools', lastMsg: lastMsgSummary })
         return false
       }
       if (narrowed.surface === 'tip') {
-        zlog('sendAutomaticallyWhen:false', { reason: 'tip-surface', lastMsg: lastMsgSummary })
         return false
       }
       if (narrowed.lesson) {
-        const ex = computeLessonExhaustion(msgs, { maxRounds: MAX_TOOL_ROUNDS_LESSON })
-        zlog('sendAutomaticallyWhen:true', { reason: 'lesson', exhaustion: ex, lastMsg: lastMsgSummary })
         return true
       }
       const { roundsSinceUser, sameToolLoop } = computeLessonExhaustion(msgs, {
         maxRounds: maxRoundsForSurface,
       })
       if (sameToolLoop) {
-        zlog('sendAutomaticallyWhen:false', { reason: 'global-same-tool-loop', roundsSinceUser })
         return false
       }
-      const result = roundsSinceUser < maxRoundsForSurface
-      zlog('sendAutomaticallyWhen', { result, reason: 'global', roundsSinceUser, maxRoundsForSurface })
-      return result
+      return roundsSinceUser < maxRoundsForSurface
     },
     async onToolCall({ toolCall }) {
-      zlog('onToolCall:start', {
-        toolCallId: toolCall.toolCallId,
-        toolName: toolCall.toolName,
-        inputKeys: Object.keys((toolCall.input ?? {}) as Record<string, unknown>),
-      })
       toolCallCountRef.current += 1
       if (!db || !toolContext)
         return
@@ -394,12 +340,6 @@ export function useZoberChat(args: ZoberChatArgs) {
         const errMsg = String((output as Record<string, unknown>).error ?? 'Unknown error')
         toast.error(`Tool [${toolCall.toolName}] failed: ${errMsg}`)
         errorCountRef.current += 1
-        zlog('onToolCall:addToolResult', {
-          toolCallId: toolCall.toolCallId,
-          toolName: toolCall.toolName,
-          state: 'output-error',
-          outputSize: typeof output === 'string' ? output.length : JSON.stringify(output ?? null).length,
-        })
         addToolResult({
           tool: toolCall.toolName,
           toolCallId: toolCall.toolCallId,
@@ -408,12 +348,6 @@ export function useZoberChat(args: ZoberChatArgs) {
         })
       }
       else {
-        zlog('onToolCall:addToolResult', {
-          toolCallId: toolCall.toolCallId,
-          toolName: toolCall.toolName,
-          state: 'output-available',
-          outputSize: typeof output === 'string' ? output.length : JSON.stringify(output ?? null).length,
-        })
         addToolResult({
           tool: toolCall.toolName,
           toolCallId: toolCall.toolCallId,
@@ -422,7 +356,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       }
     },
     onError(err) {
-      zlog('chat:error', { message: err.message, name: err.name })
       errorCountRef.current += 1
       console.error('Agent chat error:', err)
       toast.error(err.message || 'Unknown error')
@@ -449,7 +382,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       setMessages(visible)
       setHasMore(startOffset > 0)
       setIsHistoryLoading(false)
-      zlog('history:loaded', { threadId, total: stored.length, visible: visible.length })
     })()
     return () => {
       cancelled = true
@@ -495,11 +427,6 @@ export function useZoberChat(args: ZoberChatArgs) {
         ?? (surface === 'tip' ? threadId : null)
     const courseId = narrowed.tip?.courseId
     const videoId = narrowed.tip?.videoId
-    zlog('persist', {
-      threadId,
-      fullHistoryLen: fullHistory.length,
-      surface,
-    })
     void saveThreadMessages(db, threadId, fullHistory, surface, ownerId, courseId, videoId).then(
       () => {
         if (narrowed.lesson) {
@@ -517,15 +444,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       },
     )
   }, [status, messages, db, narrowed, threadId, apiKey])
-
-  useEffect(() => {
-    zlog('chat:status', {
-      status,
-      messageCount: messages.length,
-      lastMessageId: messages.at(-1)?.id,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, messages.length])
 
   const loadMore = useCallback(() => {
     const next = Math.max(0, loadedOffsetRef.current - PAGE_SIZE)
