@@ -292,6 +292,18 @@ export function useZoberChat(args: ZoberChatArgs) {
         return false
       if (args.surface === 'tip')
         return false // tip has no tools
+
+      if (args.surface === 'lesson') {
+        // Lesson surface: always allow another iteration when LLM emitted tool calls.
+        // On exhaustion (max rounds OR same-tool loop), prepareSendMessagesRequest
+        // strips tools + appends recovery prompt. The tools-stripped response will
+        // have no tool calls, so lastAssistantMessageIsCompleteWithToolCalls returns
+        // false on the next predicate call, terminating the loop. Matches legacy
+        // useAgentChat wrap-up turn behavior.
+        return true
+      }
+
+      // Global surface: hard stop on budget/loop (matches legacy useGlobalCompanionChat).
       const { roundsSinceUser, sameToolLoop } = computeLessonExhaustion(msgs, {
         maxRounds: maxRoundsForSurface,
       })
