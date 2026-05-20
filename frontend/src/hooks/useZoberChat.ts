@@ -29,6 +29,7 @@ import {
 import { getMemorySummary } from '@/lib/agent-memory'
 import {
   compactForTokenBudget,
+  estimateTextTokens,
   estimateTokens,
   normalizeMessagesForBackend,
   PAGE_SIZE,
@@ -73,6 +74,22 @@ export type ZoberChatArgs
     mode: TipChatMode
   }
 
+interface NarrowedArgs {
+  surface: ZoberChatArgs['surface']
+  lesson: Extract<ZoberChatArgs, { surface: 'lesson' }> | null
+  global: Extract<ZoberChatArgs, { surface: 'global' }> | null
+  tip: Extract<ZoberChatArgs, { surface: 'tip' }> | null
+}
+
+function narrowArgs(args: ZoberChatArgs): NarrowedArgs {
+  return {
+    surface: args.surface,
+    lesson: args.surface === 'lesson' ? args : null,
+    global: args.surface === 'global' ? args : null,
+    tip: args.surface === 'tip' ? args : null,
+  }
+}
+
 export function useZoberChat(args: ZoberChatArgs) {
   const { keys, db } = useAuth()
   const { dispatchAction } = useAgentActions()
@@ -80,15 +97,16 @@ export function useZoberChat(args: ZoberChatArgs) {
   const apiKey = keys?.openrouterApiKey ?? ''
   const abortControllerRef = useRef(new AbortController())
 
+  const narrowed = useMemo(() => narrowArgs(args), [args])
+
   const threadId = useMemo(
     () =>
-      resolveThreadId(args.surface, {
-        lessonId: args.surface === 'lesson' ? args.lessonId : undefined,
-        courseId: args.surface === 'tip' ? args.courseId : undefined,
-        videoId: args.surface === 'tip' ? args.videoId : undefined,
+      resolveThreadId(narrowed.surface, {
+        lessonId: narrowed.lesson?.lessonId,
+        courseId: narrowed.tip?.courseId,
+        videoId: narrowed.tip?.videoId,
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [args.surface, (args as any).lessonId, (args as any).courseId, (args as any).videoId],
+    [narrowed.surface, narrowed.lesson?.lessonId, narrowed.tip?.courseId, narrowed.tip?.videoId],
   )
 
   const [allMessages, setAllMessages] = useState<UIMessage[]>([])
@@ -266,7 +284,7 @@ export function useZoberChat(args: ZoberChatArgs) {
           const builtPrompt = ctx ? buildPrompt(ctx) : ''
           const includeTools = !ctx?.lesson?.exhausted
 
-          const projectedTokens = estimateTokens(compacted) + estimateTokens([{ role: 'system', parts: [{ type: 'text', text: builtPrompt }] }] as any)
+          const projectedTokens = estimateTokens(compacted) + estimateTextTokens(builtPrompt)
 
           if (projectedTokens > TOKEN_BUDGET_HARD * TOKEN_BUDGET) {
             throw new Error('Conversation too long. Please start a new chat.')
@@ -362,15 +380,16 @@ export function useZoberChat(args: ZoberChatArgs) {
   // Wrapped sendMessage — exercise-stats trigger only (SDK handles loop reset)
   const sendMessage = useCallback(
     (opts: Parameters<typeof rawSendMessage>[0]) => {
+      let nextOpts = opts
       // Input clamp — cap user input at MAX_INPUT_CHARS, silently clip overflow
       if (opts != null && 'text' in opts && typeof opts.text === 'string' && opts.text.length > MAX_INPUT_CHARS) {
         console.warn(`[useZoberChat] Input clamped from ${opts.text.length} to ${MAX_INPUT_CHARS} chars`)
-        ;(opts as any).text = opts.text.slice(0, MAX_INPUT_CHARS)
+        nextOpts = { ...opts, text: opts.text.slice(0, MAX_INPUT_CHARS) }
       }
 
-      if (args.surface === 'lesson' && opts != null && 'text' in opts && opts.text) {
+      if (narrowed.lesson && nextOpts != null && 'text' in nextOpts && nextOpts.text) {
         try {
-          const parsed = JSON.parse(opts.text)
+          const parsed = JSON.parse(nextOpts.text)
           if (parsed?.type === 'exercise_result')
             exercisesThisSessionRef.current += 1
         }
@@ -378,9 +397,9 @@ export function useZoberChat(args: ZoberChatArgs) {
           /* not JSON */
         }
       }
-      return rawSendMessage(opts)
+      return rawSendMessage(nextOpts)
     },
-    [rawSendMessage, args.surface],
+    [rawSendMessage, narrowed.lesson],
   )
 
   // Persist on ready
@@ -391,20 +410,17 @@ export function useZoberChat(args: ZoberChatArgs) {
       ...allStoredRef.current.slice(0, loadedOffsetRef.current),
       ...messages,
     ]
-    const surface = args.surface
+    const surface = narrowed.surface
     const ownerId
-      = surface === 'lesson'
-        ? (args as any).lessonId
-        : surface === 'tip'
-          ? threadId
-          : null
-    const courseId = surface === 'tip' ? (args as any).courseId : undefined
-    const videoId = surface === 'tip' ? (args as any).videoId : undefined
+      = narrowed.lesson?.lessonId
+        ?? (surface === 'tip' ? threadId : null)
+    const courseId = narrowed.tip?.courseId
+    const videoId = narrowed.tip?.videoId
     void saveThreadMessages(db, threadId, fullHistory, surface, ownerId, courseId, videoId).then(
       () => {
-        if (surface === 'lesson') {
+        if (narrowed.lesson) {
           void appendAgentLog(db, {
-            lessonId: (args as any).lessonId,
+            lessonId: narrowed.lesson.lessonId,
             timestamp: new Date().toISOString(),
             durationMs: Date.now() - sessionStartRef.current,
             messageCount: messages.length,
@@ -416,7 +432,7 @@ export function useZoberChat(args: ZoberChatArgs) {
         void maybeRunBackgroundSummary(db, threadId, fullHistory, apiKey, API_BASE)
       },
     )
-  }, [status, messages, db, args, threadId, apiKey])
+  }, [status, messages, db, narrowed, threadId, apiKey])
 
   const loadMore = useCallback(() => {
     const next = Math.max(0, loadedOffsetRef.current - PAGE_SIZE)
@@ -427,7 +443,7 @@ export function useZoberChat(args: ZoberChatArgs) {
     setHasMore(next > 0)
   }, [])
 
-  const isTipDisabled = args.surface === 'tip' && !(args as any).transcript
+  const isTipDisabled = !!narrowed.tip && !narrowed.tip.transcript
 
   return {
     messages,

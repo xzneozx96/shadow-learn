@@ -65,6 +65,11 @@ export function estimateTokens(messages: UIMessage[]): number {
   return Math.ceil(chars / 4)
 }
 
+/** Cheap char-based token estimate for a single string (no UIMessage wrapping). */
+export function estimateTextTokens(text: string): number {
+  return Math.ceil(text.length / 4)
+}
+
 /**
  * [STAGE 1]
  * Drops user messages that contain no text and no files.
