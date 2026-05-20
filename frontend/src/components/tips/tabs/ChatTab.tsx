@@ -3,7 +3,7 @@ import type { FileUIPart } from 'ai'
 import type { ContextChip } from '@/components/chat/ContextChipBar'
 import { ArrowDownIcon, Bot, GraduationCap, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
 import { motion } from 'motion/react'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { toast } from 'sonner'
@@ -27,8 +27,8 @@ import { ContextChipBar } from '@/components/chat/ContextChipBar'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from '@/contexts/I18nContext'
-import { useTipChat } from '@/hooks/useTipChat'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
+import { useZoberChat } from '@/hooks/useZoberChat'
 import { escapeHtml } from '@/lib/htmlText'
 import { saveTipNote } from '@/lib/tipNoteBus'
 import { seekTip } from '@/lib/tipSeekBus'
@@ -272,7 +272,8 @@ export function ChatTab(props: Props) {
   const { courseId, videoId, lessonTitle, transcript, transcriptStatus, initialUserMessage, chips = [], onRemoveChip, onClearChips } = props
   const { locale, t } = useI18n()
   const [guided, setGuided] = useState(false)
-  const chat = useTipChat({
+  const zober = useZoberChat({
+    surface: 'tip',
     courseId,
     videoId,
     lessonTitle,
@@ -280,6 +281,16 @@ export function ChatTab(props: Props) {
     uiLanguage: locale === 'vi' ? 'vi' : 'en',
     mode: guided ? 'guided' : 'free',
   })
+
+  // Adapter — preserve legacy `chat.*` field-access ergonomics
+  const chat = useMemo(
+    () => ({
+      ...zober,
+      ready: !zober.isHistoryLoading,
+      systemPrompt: zober.systemPrompt ?? '',
+    }),
+    [zober],
+  )
 
   const [draftText, setDraftText] = useState('')
   const [pendingConfirmed, setPendingConfirmed] = useState<string | null>(null)

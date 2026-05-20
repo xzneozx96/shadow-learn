@@ -4,11 +4,10 @@ import { ChatTab } from '@/components/tips/tabs/ChatTab'
 
 const sendSpy = vi.fn()
 
-vi.mock('@/hooks/useTipChat', () => ({
-  useTipChat: () => ({
-    ready: true,
+vi.mock('@/hooks/useZoberChat', () => ({
+  useZoberChat: () => ({
+    isHistoryLoading: false,
     systemPrompt: '',
-    initialMessages: [],
     messages: [],
     sendMessage: sendSpy,
     status: 'ready',
