@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useSpeakModal } from '@/contexts/SpeakModalContext'
-import { useGlobalCompanionChat } from '@/hooks/useGlobalCompanionChat'
+import { useZoberChat } from '@/hooks/useZoberChat'
 import { CompanionChatArea } from './CompanionChatArea'
 
 const NEWLINES_RE = /\n+/g
@@ -11,7 +11,7 @@ const NEWLINES_RE = /\n+/g
 export function GlobalCompanionPanel() {
   const { t } = useI18n()
   const { chips, removeChip, clearChips, closePanel } = useGlobalCompanionContext()
-  const { messages, isLoading, isHistoryLoading, sendMessage, stop, loadMore, hasMore } = useGlobalCompanionChat()
+  const { messages, isLoading, isHistoryLoading, sendMessage, stop, loadMore, hasMore } = useZoberChat({ surface: 'global' })
   const { openSpeakModal } = useSpeakModal()
 
   function handleSend({ text, files }: { text: string, files?: import('ai').FileUIPart[] }) {
