@@ -584,6 +584,61 @@ export async function deleteChatMessages(db: ShadowLearnDB, lessonId: string): P
   await db.delete('chats', lessonId)
 }
 
+// Threads (unified chat store) — DB v20
+
+export async function getThread(db: ShadowLearnDB, id: string): Promise<ThreadRecord | undefined> {
+  return db.get('threads', id)
+}
+
+export async function saveThreadMessages(
+  db: ShadowLearnDB,
+  id: string,
+  messages: UIMessage[],
+  surface: ThreadSurface,
+  ownerId: string | null,
+  courseId?: string,
+  videoId?: string,
+): Promise<void> {
+  const existing = await db.get('threads', id)
+  const now = Date.now()
+  await db.put('threads', {
+    id,
+    surface,
+    ownerId,
+    courseId: courseId ?? existing?.courseId,
+    videoId: videoId ?? existing?.videoId,
+    messages,
+    updatedAt: now,
+    createdAt: existing?.createdAt ?? now,
+    latestSummaryGen: existing?.latestSummaryGen,
+  })
+}
+
+export async function deleteThread(db: ShadowLearnDB, id: string): Promise<void> {
+  await db.delete('threads', id)
+  const summaries = await db.getAllFromIndex('thread-summaries', 'by-thread', id)
+  await Promise.all(summaries.map(s => db.delete('thread-summaries', [s.threadId, s.generation])))
+}
+
+export async function listThreadsBySurface(db: ShadowLearnDB, surface: ThreadSurface): Promise<ThreadRecord[]> {
+  return db.getAllFromIndex('threads', 'by-surface', surface)
+}
+
+export async function putThreadSummary(db: ShadowLearnDB, summary: ThreadSummaryRecord): Promise<void> {
+  await db.put('thread-summaries', summary)
+  const t = await db.get('threads', summary.threadId)
+  if (t) {
+    await db.put('threads', { ...t, latestSummaryGen: summary.generation })
+  }
+}
+
+export async function getLatestSummary(db: ShadowLearnDB, threadId: string): Promise<ThreadSummaryRecord | undefined> {
+  const all = await db.getAllFromIndex('thread-summaries', 'by-thread', threadId)
+  if (all.length === 0)
+    return undefined
+  return all.sort((a, b) => b.generation - a.generation)[0]
+}
+
 // Settings
 export async function saveSettings(db: ShadowLearnDB, settings: AppSettings): Promise<void> {
   await db.put('settings', settings, 'settings')

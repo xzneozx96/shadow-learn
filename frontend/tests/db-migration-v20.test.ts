@@ -1,6 +1,14 @@
 import { openDB } from 'idb'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { initDB } from '../src/db'
+import {
+  deleteThread,
+  getLatestSummary,
+  getThread,
+  initDB,
+  listThreadsBySurface,
+  putThreadSummary,
+  saveThreadMessages,
+} from '../src/db'
 import 'fake-indexeddb/auto'
 
 const DB_NAME = 'shadowlearn'
@@ -69,6 +77,52 @@ describe('iDB v20 migration', () => {
     const db = await initDB()
     expect(await db.get('chats', 'lesson-abc')).toBeDefined()
     expect(await db.get('tip-chats', 'course-x:video-y')).toBeDefined()
+    db.close()
+  })
+})
+
+describe('thread helpers', () => {
+  beforeEach(() => { globalThis.indexedDB = new IDBFactory() })
+  afterEach(() => { globalThis.indexedDB = new IDBFactory() })
+
+  it('saveThreadMessages + getThread round-trip', async () => {
+    const db = await initDB()
+    const msgs = [{ id: 'a', role: 'user', parts: [{ type: 'text', text: 'hello' }] }] as any
+    await saveThreadMessages(db, 'tid', msgs, 'lesson', 'tid')
+    const got = await getThread(db, 'tid')
+    expect(got?.messages).toEqual(msgs)
+    expect(got?.surface).toBe('lesson')
+    db.close()
+  })
+
+  it('listThreadsBySurface filters by surface', async () => {
+    const db = await initDB()
+    await saveThreadMessages(db, 'l1', [] as any, 'lesson', 'l1')
+    await saveThreadMessages(db, 'l2', [] as any, 'lesson', 'l2')
+    await saveThreadMessages(db, '__global', [] as any, 'global', null)
+    expect(await listThreadsBySurface(db, 'lesson')).toHaveLength(2)
+    expect(await listThreadsBySurface(db, 'global')).toHaveLength(1)
+    db.close()
+  })
+
+  it('deleteThread removes row + cascades summaries', async () => {
+    const db = await initDB()
+    await saveThreadMessages(db, 'tid', [] as any, 'lesson', 'tid')
+    await putThreadSummary(db, { threadId: 'tid', generation: 1, summary: 's', coversThroughMessageId: 'm', tokenBudget: 0, createdAt: 0 })
+    await deleteThread(db, 'tid')
+    expect(await getThread(db, 'tid')).toBeUndefined()
+    expect(await getLatestSummary(db, 'tid')).toBeUndefined()
+    db.close()
+  })
+
+  it('getLatestSummary returns highest generation', async () => {
+    const db = await initDB()
+    await saveThreadMessages(db, 't', [] as any, 'lesson', 't')
+    await putThreadSummary(db, { threadId: 't', generation: 1, summary: 'one', coversThroughMessageId: 'm1', tokenBudget: 100, createdAt: 1 })
+    await putThreadSummary(db, { threadId: 't', generation: 2, summary: 'two', coversThroughMessageId: 'm2', tokenBudget: 200, createdAt: 2 })
+    const latest = await getLatestSummary(db, 't')
+    expect(latest?.generation).toBe(2)
+    expect(latest?.summary).toBe('two')
     db.close()
   })
 })
