@@ -6,7 +6,7 @@ import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 19
+const DB_VERSION = 20
 
 export interface LearnerProfile {
   name: string
@@ -463,6 +463,66 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
         const store = db.createObjectStore('user-materials', { keyPath: 'id' })
         store.createIndex('by-external', 'externalId', { unique: true })
         store.createIndex('by-skill', 'skill', { unique: false })
+      }
+      if (oldVersion < 20) {
+        const threadsStore = db.createObjectStore('threads', { keyPath: 'id' })
+        threadsStore.createIndex('by-surface', 'surface', { unique: false })
+        threadsStore.createIndex('by-owner', 'ownerId', { unique: false })
+        threadsStore.createIndex('by-updated', 'updatedAt', { unique: false })
+        const summariesStore = db.createObjectStore('thread-summaries', { keyPath: ['threadId', 'generation'] })
+        summariesStore.createIndex('by-thread', 'threadId', { unique: false })
+
+        const now = Date.now()
+        const newThreads: ThreadRecord[] = []
+
+        if (db.objectStoreNames.contains('chats')) {
+          const chatsStore = transaction.objectStore('chats')
+          let c1 = await chatsStore.openCursor()
+          while (c1) {
+            const id = c1.key as string
+            const messages = (c1.value as UIMessage[]) ?? []
+            const surface: ThreadSurface = id === '__global' ? 'global' : 'lesson'
+            newThreads.push({
+              id,
+              surface,
+              ownerId: surface === 'lesson' ? id : null,
+              messages,
+              updatedAt: now,
+              createdAt: now,
+            })
+            c1 = await c1.continue()
+          }
+        }
+
+        if (db.objectStoreNames.contains('tip-chats')) {
+          const tipStore = transaction.objectStore('tip-chats')
+          let c2 = await tipStore.openCursor()
+          while (c2) {
+            const row = c2.value as { key: string, courseId: string, videoId: string, messages: UIMessage[], updatedAt: string }
+            const updatedAtMs = Date.parse(row.updatedAt) || now
+            newThreads.push({
+              id: row.key,
+              surface: 'tip',
+              ownerId: row.key,
+              courseId: row.courseId,
+              videoId: row.videoId,
+              messages: row.messages ?? [],
+              updatedAt: updatedAtMs,
+              createdAt: updatedAtMs,
+            })
+            c2 = await c2.continue()
+          }
+        }
+
+        const out = transaction.objectStore('threads')
+        for (const t of newThreads) {
+          try {
+            await out.add(t)
+          }
+          catch {
+            // Already migrated; partial-crash re-run is a no-op
+          }
+        }
       }
     },
   })
