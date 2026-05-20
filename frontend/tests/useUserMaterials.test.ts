@@ -27,12 +27,16 @@ beforeEach(() => {
         }),
       } as any
     }
-    if (String(url).includes('oembed')) {
+    if (String(url).includes('/api/video/')) {
       return {
         ok: true,
         json: async () => ({
+          video_id: 'VID1',
           title: 'Video Title',
-          author_name: 'Author',
+          channel: 'Author',
+          duration: '5:37',
+          view_count: 1000,
+          published_at: '2024-01-01T00:00:00Z',
           thumbnail_url: 'http://vthumb',
         }),
       } as any

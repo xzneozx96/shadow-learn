@@ -453,6 +453,47 @@ def build_hub_response(
     }
 
 
+# {video_id: (fetched_at_epoch, entry)}
+_video_cache: dict[str, tuple[float, dict | None]] = {}
+
+
+def get_video_metadata(video_id: str) -> dict | None:
+    """Fetch standalone video metadata: title, channel, duration, view_count, published_at.
+
+    Returns None when YouTube has no data for this id (private/deleted/invalid).
+    Cached for CACHE_TTL_SECONDS.
+    """
+    now = time.time()
+    cached = _video_cache.get(video_id)
+    if cached is not None:
+        fetched_at, entry = cached
+        ttl = CACHE_TTL_SECONDS if entry else EMPTY_CACHE_TTL_SECONDS
+        if now - fetched_at < ttl:
+            return entry
+
+    api_key = settings.youtube_api_key
+    if not api_key:
+        return None
+
+    entries = fetch_standalone_video_entries([video_id], api_key)
+    raw = entries.get(video_id)
+    if not raw:
+        _video_cache[video_id] = (now, None)
+        return None
+
+    result = {
+        "video_id": video_id,
+        "title": raw.get("title") or "Video",
+        "channel": raw.get("channel"),
+        "duration": format_duration(raw.get("duration_seconds")),
+        "view_count": raw.get("view_count"),
+        "published_at": raw.get("published_at"),
+        "thumbnail_url": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+    }
+    _video_cache[video_id] = (now, result)
+    return result
+
+
 def get_playlist_videos(playlist_id: str) -> dict | None:
     """Fetch all videos for one playlist with full HubVideo fields.
 

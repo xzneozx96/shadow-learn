@@ -68,12 +68,7 @@ function MineSection({
   return (
     <>
       <div className="mt-6 flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {groups.reduce((s, g) => s + g.items.length, 0)}
-          {' '}
-          {t('collection.mineItemCount')}
-        </div>
-        <Button size="sm" onClick={onRegister}>{t('collection.register')}</Button>
+        <Button size="lg" onClick={onRegister}>{t('collection.register')}</Button>
       </div>
 
       {groups.length === 0

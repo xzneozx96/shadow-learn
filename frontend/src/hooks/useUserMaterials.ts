@@ -23,10 +23,14 @@ export type AddResult
   = { ok: true }
     | { ok: false, reason: 'duplicate' | 'fetch-failed' | 'no-db' }
 
-interface YouTubeOEmbed {
-  title?: string
-  author_name?: string
-  thumbnail_url?: string
+interface VideoResponse {
+  video_id: string
+  title: string
+  channel: string | null
+  duration: string
+  view_count: number | null
+  published_at: string | null
+  thumbnail_url: string | null
 }
 
 interface RelaxedPlaylistResponse {
@@ -50,6 +54,8 @@ interface VideoMeta {
   thumbnailUrl: string | null
   channel: string | null
   publishedAt: string | null
+  duration: string
+  viewCount: number | null
 }
 
 async function fetchPlaylistMeta(playlistId: string): Promise<PlaylistMeta | null> {
@@ -73,16 +79,17 @@ async function fetchPlaylistMeta(playlistId: string): Promise<PlaylistMeta | nul
 
 async function fetchVideoMeta(videoId: string): Promise<VideoMeta | null> {
   try {
-    const url = `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`
-    const res = await fetch(url)
+    const res = await fetch(`${API_BASE}/api/video/${encodeURIComponent(videoId)}`)
     if (!res.ok)
       return null
-    const meta = (await res.json()) as YouTubeOEmbed
+    const data = (await res.json()) as VideoResponse
     return {
-      name: meta.title?.trim() || 'Video',
-      thumbnailUrl: meta.thumbnail_url?.trim() || null,
-      channel: meta.author_name?.trim() || null,
-      publishedAt: null,
+      name: data.title || 'Video',
+      thumbnailUrl: data.thumbnail_url,
+      channel: data.channel,
+      publishedAt: data.published_at,
+      duration: data.duration,
+      viewCount: data.view_count,
     }
   }
   catch {
@@ -118,8 +125,8 @@ function toHubItem(m: UserMaterial): UserHubItem {
     type: 'video',
     video_id: m.externalId,
     title: m.name,
-    duration: '',
-    view_count: null,
+    duration: m.cachedMeta.duration ?? '',
+    view_count: m.cachedMeta.viewCount,
     description: null,
   } as UserHubItem
 }
@@ -182,6 +189,8 @@ export function useUserMaterials() {
         channel: meta.channel,
         videoCount: 'videoCount' in meta ? meta.videoCount : null,
         publishedAt: meta.publishedAt,
+        duration: 'duration' in meta ? meta.duration : null,
+        viewCount: 'viewCount' in meta ? meta.viewCount : null,
       },
       createdAt: new Date().toISOString(),
     }
@@ -219,6 +228,8 @@ export function useUserMaterials() {
             channel: meta.channel,
             videoCount: 'videoCount' in meta ? meta.videoCount : r.cachedMeta.videoCount,
             publishedAt: meta.publishedAt ?? r.cachedMeta.publishedAt,
+            duration: 'duration' in meta ? meta.duration : r.cachedMeta.duration,
+            viewCount: 'viewCount' in meta ? meta.viewCount : r.cachedMeta.viewCount,
           },
         }
         await putUserMaterial(db, next)

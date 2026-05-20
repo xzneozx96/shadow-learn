@@ -1,5 +1,6 @@
 import type { HubItem, HubVideo, PlaylistItem } from '@/types/collection'
 import { Trash2 } from 'lucide-react'
+import { Button } from '../ui/button'
 import { PlaylistCard } from './PlaylistCard'
 import { VideoCard } from './VideoCard'
 
@@ -24,14 +25,15 @@ export function UserMaterialCard({ item, onDelete }: Props) {
           )}
 
       {id && (
-        <button
-          type="button"
+        <Button
+          variant="destructive"
+          size="icon"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(id) }}
-          className="absolute bottom-3 right-3 z-10 inline-flex items-center justify-center size-8 rounded-full bg-destructive text-destructive-foreground shadow-md ring-1 ring-destructive/40 hover:bg-destructive/90 hover:scale-105 active:scale-95 transition-all duration-150"
+          className="absolute bottom-3 right-3 z-10 rounded-full"
           aria-label="Delete"
         >
           <Trash2 className="size-4" />
-        </button>
+        </Button>
       )}
     </div>
   )

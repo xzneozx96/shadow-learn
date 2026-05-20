@@ -75,6 +75,8 @@ export interface UserMaterialCachedMeta {
   channel: string | null
   videoCount: number | null
   publishedAt: string | null
+  duration: string | null
+  viewCount: number | null
 }
 
 export interface UserMaterial {
