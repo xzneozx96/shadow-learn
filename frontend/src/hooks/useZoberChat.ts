@@ -265,7 +265,7 @@ export function useZoberChat(args: ZoberChatArgs) {
     () =>
       new DefaultChatTransport({
         api: `${API_BASE}/api/agent`,
-        prepareSendMessagesRequest: async ({ messages }) => {
+        prepareSendMessagesRequest: async ({ messages, trigger, messageId }) => {
           await refreshContext()
           const ctx = ctxRef.current
 
@@ -280,6 +280,8 @@ export function useZoberChat(args: ZoberChatArgs) {
           zlog('prepareSendMessagesRequest', {
             surface: narrowed.surface,
             msgsIn: messages.length,
+            trigger,
+            stitch_message_id: messageId ?? null,
             exhausted: ctx?.lesson?.exhausted ?? null,
             roundsSinceUser: narrowed.lesson
               ? computeLessonExhaustion(messages, { maxRounds: MAX_TOOL_ROUNDS_LESSON }).roundsSinceUser
@@ -327,6 +329,11 @@ export function useZoberChat(args: ZoberChatArgs) {
               system_prompt: builtPrompt,
               openrouter_api_key: apiKey || null,
               tools: includeTools ? getToolDefinitions(toolPool) : [],
+              // Pass trigger + lastMessage id so backend can echo the id on
+              // auto-resubmits, enabling AI SDK v6 to stitch tool-loop rounds
+              // into a single growing assistant message instead of N copies.
+              trigger,
+              stitch_message_id: messageId ?? null,
             },
           }
         },

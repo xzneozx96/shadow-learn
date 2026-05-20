@@ -50,6 +50,8 @@ class AgentRequest(BaseModel):
     openrouter_api_key: str | None = None
     tools: list[dict] | None = None
     model: str | None = None
+    trigger: str | None = None
+    stitch_message_id: str | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -216,13 +218,22 @@ def _sanitize_tool_arguments(raw: str) -> str:
     return cleaned
 
 
-async def _stream_agent(stream):
-    """Yield SSE events in AI SDK v5 UIMessage stream format. Caller creates the stream."""
+async def _stream_agent(stream, stitch_message_id: str | None = None):
+    """Yield SSE events in AI SDK v5 UIMessage stream format. Caller creates the stream.
+
+    When ``stitch_message_id`` is supplied (set by caller only on
+    ``trigger == 'submit-message'`` auto-resubmits), echo that id in the
+    ``start`` event so AI SDK v6's ``createStreamingUIMessageState`` takes the
+    ``replaceMessage`` path and stitches all tool-loop rounds into one
+    assistant message instead of pushing a new (inherited-parts) message per
+    round.
+    """
     try:
         def fmt(payload: dict) -> str:
             return f"data: {json.dumps(payload, separators=(',', ':'))}\n\n"
 
         message_id = f"msg-{uuid.uuid4().hex}"
+        emit_message_id = stitch_message_id or message_id
         text_stream_id = "text-1"
         text_started = False
         text_finished = False
@@ -230,7 +241,7 @@ async def _stream_agent(stream):
         usage_data = None
         tool_calls_state: dict[int, dict[str, Any]] = {}
 
-        yield fmt({"type": "start", "messageId": message_id})
+        yield fmt({"type": "start", "messageId": emit_message_id})
         yield fmt({"type": "start-step"})
 
         try:
@@ -484,13 +495,23 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
     if request.tools:
         create_kwargs["tools"] = request.tools
 
+    # Only echo the client-provided id on auto-resubmits (the SDK's
+    # sendAutomaticallyWhen path uses trigger == 'submit-message'). For a fresh
+    # user turn we mint a new id so each user→assistant exchange remains a
+    # distinct message.
+    should_stitch = (
+        request.trigger == "submit-message"
+        and request.stitch_message_id is not None
+    )
+    stitch_id = request.stitch_message_id if should_stitch else None
+
     last_error: Exception | None = None
     for model in unique_cascade:
         try:
             stream = await client.chat.completions.create(model=model, **create_kwargs)
             logger.info(f"[agent_chat] Streaming with model={model}")
             response = StreamingResponse(
-                _stream_agent(stream),
+                _stream_agent(stream, stitch_message_id=stitch_id),
                 media_type="text/event-stream",
             )
             return _patch_headers(response)
