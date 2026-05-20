@@ -1,11 +1,12 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
 import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, ShadowingAudio, ShadowingBest, VocabEntry } from '../types'
+import type { UserMaterial } from '../types/collection'
 import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse, TipNote, TipProgress, TipStudioRecord, TipTranscriptRecord } from '../types/tips'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 18
+const DB_VERSION = 19
 
 export interface LearnerProfile {
   name: string
@@ -241,6 +242,11 @@ interface ShadowLearnSchema extends DBSchema {
     value: TipNote
     indexes: { 'by-video': string }
   }
+  'user-materials': {
+    key: string
+    value: UserMaterial
+    indexes: { 'by-external': string, 'by-skill': string }
+  }
 }
 
 export type ShadowLearnDB = IDBPDatabase<ShadowLearnSchema>
@@ -419,6 +425,11 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
           if (newRow)
             await chatStore.put(newRow)
         }
+      }
+      if (oldVersion < 19) {
+        const store = db.createObjectStore('user-materials', { keyPath: 'id' })
+        store.createIndex('by-external', 'externalId', { unique: true })
+        store.createIndex('by-skill', 'skill', { unique: false })
       }
     },
   })
@@ -845,4 +856,24 @@ export async function getTipNotesForVideo(db: ShadowLearnDB, videoId: string): P
 
 export async function deleteTipNote(db: ShadowLearnDB, videoId: string, id: string): Promise<void> {
   await db.delete('tip-notes', [videoId, id])
+}
+
+// User-registered materials
+export async function listUserMaterials(db: ShadowLearnDB): Promise<UserMaterial[]> {
+  return db.getAll('user-materials')
+}
+
+export async function getUserMaterialByExternalId(
+  db: ShadowLearnDB,
+  externalId: string,
+): Promise<UserMaterial | undefined> {
+  return db.getFromIndex('user-materials', 'by-external', externalId)
+}
+
+export async function putUserMaterial(db: ShadowLearnDB, m: UserMaterial): Promise<void> {
+  await db.put('user-materials', m)
+}
+
+export async function deleteUserMaterial(db: ShadowLearnDB, id: string): Promise<void> {
+  await db.delete('user-materials', id)
 }
