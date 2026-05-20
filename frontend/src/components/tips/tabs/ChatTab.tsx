@@ -1,7 +1,8 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { FileUIPart } from 'ai'
 import type { ContextChip } from '@/components/chat/ContextChipBar'
-import { ArrowDownIcon, Bot, GraduationCap, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
+import type { TranslationKey } from '@/lib/i18n'
+import { ArrowDownIcon, Bot, Copy, GraduationCap, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -274,6 +275,72 @@ function messageText(message: UIMessage): string {
     .join('')
 }
 
+function MessageActions({
+  text,
+  messageId,
+  videoId,
+  t,
+}: {
+  text: string
+  messageId: string
+  videoId: string
+  t: (key: TranslationKey) => string
+}) {
+  if (!text)
+    return null
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(t('tips.chat.copied'))
+    }
+    catch {
+      toast.error(t('tips.chat.copyError'))
+    }
+  }
+
+  const handleSave = () => {
+    const firstLine = text.split(SINGLE_NEWLINE_RE)[0]?.slice(0, 80) ?? ''
+    const html = text
+      .split(BLANK_LINE_RE)
+      .map(block => `<p>${escapeHtml(block).replace(SINGLE_NEWLINE_RE, '<br>')}</p>`)
+      .join('')
+    void saveTipNote({
+      videoId,
+      title: firstLine,
+      html,
+      source: 'chat',
+      sourceRef: { kind: 'chat', ref: messageId },
+    }).then(
+      () => toast.success(t('tips.notes.saved.toast')),
+      () => toast.error(t('tips.notes.saved.toastError')),
+    )
+  }
+
+  return (
+    <div className="mt-1 flex gap-1 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="p-1 rounded text-muted-foreground hover:bg-secondary hover:text-primary"
+        aria-label={t('tips.chat.copy')}
+        title={t('tips.chat.copy')}
+      >
+        <Copy className="size-4" />
+      </button>
+      <button
+        type="button"
+        onClick={handleSave}
+        className="p-1 rounded text-muted-foreground hover:bg-secondary hover:text-primary"
+        aria-label={t('tips.notes.actions.save')}
+        title={t('tips.notes.actions.save')}
+      >
+        <NotebookPen className="size-4" />
+      </button>
+    </div>
+  )
+}
+
 export function ChatTab(props: Props) {
   const { courseId, videoId, lessonTitle, transcript, transcriptStatus, initialUserMessage, chips = [], onRemoveChip, onClearChips } = props
   const { locale, t } = useI18n()
@@ -398,35 +465,13 @@ export function ChatTab(props: Props) {
             return (
               <div key={m.id} className="group relative">
                 <ChatBubble message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={seekTip} isStreaming={isStreaming} />
-                {m.role === 'assistant' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const raw = messageText(m).trim()
-                      if (!raw)
-                        return
-                      const firstLine = raw.split(SINGLE_NEWLINE_RE)[0]?.slice(0, 80) ?? ''
-                      const html = raw
-                        .split(BLANK_LINE_RE)
-                        .map(block => `<p>${escapeHtml(block).replace(SINGLE_NEWLINE_RE, '<br>')}</p>`)
-                        .join('')
-                      void saveTipNote({
-                        videoId,
-                        title: firstLine,
-                        html,
-                        source: 'chat',
-                        sourceRef: { kind: 'chat', ref: m.id },
-                      }).then(
-                        () => toast.success(t('tips.notes.saved.toast')),
-                        () => toast.error(t('tips.notes.saved.toastError')),
-                      )
-                    }}
-                    className="absolute -right-1 top-1 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:bg-secondary hover:text-primary"
-                    aria-label={t('tips.notes.actions.save')}
-                    title={t('tips.notes.actions.save')}
-                  >
-                    <NotebookPen className="size-4" />
-                  </button>
+                {m.role === 'assistant' && !isStreaming && (
+                  <MessageActions
+                    text={messageText(m).trim()}
+                    messageId={m.id}
+                    videoId={videoId}
+                    t={t}
+                  />
                 )}
               </div>
             )

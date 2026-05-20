@@ -863,6 +863,9 @@ export const TRANSLATIONS = {
     'tips.chat.guidedLearning.tooltip': 'Guided learning',
     'tips.chat.guidedLearning.onToast': 'Guided learning on — I\'ll ask questions instead of giving answers',
     'tips.chat.guidedLearning.offToast': 'Guided learning off',
+    'tips.chat.copy': 'Copy',
+    'tips.chat.copied': 'Copied',
+    'tips.chat.copyError': 'Copy failed',
     // --- Tips LMS B2 (Studio + Cards) ---
     'tips.studio.title': 'Studio',
     'tips.studio.subtitle': 'Generate on demand · cached after first run',
@@ -1773,6 +1776,9 @@ export const TRANSLATIONS = {
     'tips.chat.guidedLearning.tooltip': 'Học có hướng dẫn',
     'tips.chat.guidedLearning.onToast': 'Đã bật học có hướng dẫn — mình sẽ đặt câu hỏi thay vì đưa đáp án',
     'tips.chat.guidedLearning.offToast': 'Đã tắt học có hướng dẫn',
+    'tips.chat.copy': 'Sao chép',
+    'tips.chat.copied': 'Đã sao chép',
+    'tips.chat.copyError': 'Sao chép thất bại',
     // --- Tips LMS B2 ---
     'tips.studio.title': 'Studio',
     'tips.studio.subtitle': 'Tạo theo yêu cầu · lưu cache sau lần đầu',
