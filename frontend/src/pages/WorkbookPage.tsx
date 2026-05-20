@@ -155,7 +155,7 @@ export function WorkbookPage() {
               {/* Empty state */}
               {sortedLessonIds.length === 0 && (
                 <EmptyState
-                  className="min-h-[340px] rounded-2xl border border-dashed border-primary/30 bg-primary/3 backdrop-blur-sm"
+                  className="min-h-[340px]"
                   icon={<Bookmark className="size-7 text-primary" strokeWidth={1.5} />}
                   description={t('workbook.noWords')}
                   action={{

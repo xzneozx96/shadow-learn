@@ -76,11 +76,11 @@ export function RegisterMaterialPage() {
                 {t('collection.toast.registered')}
               </p>
               <div className="flex gap-2">
-                <Button size="lg" onClick={() => navigate('/collection?tab=mine')}>
-                  {t('collection.registerPage.goToMine')}
-                </Button>
-                <Button variant="outline" size="lg" onClick={() => { reset(); setRegistered(false) }}>
+                <Button size="lg" onClick={() => { reset(); setRegistered(false) }}>
                   {t('collection.registerPage.registerAnother')}
+                </Button>
+                <Button variant="outline" size="lg" onClick={() => navigate('/collection?tab=mine')}>
+                  {t('collection.registerPage.goToMine')}
                 </Button>
               </div>
             </CardContent>
@@ -99,7 +99,7 @@ export function RegisterMaterialPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="url">{t('collection.registerModal.urlLabel')}</Label>
+              <Label htmlFor="url" className="text-foreground/60 pl-2">{t('collection.registerModal.urlLabel')}</Label>
               <Input
                 id="url"
                 value={url}
@@ -107,10 +107,10 @@ export function RegisterMaterialPage() {
                 placeholder="https://www.youtube.com/playlist?list=… or https://youtu.be/…"
               />
               {url && !parsed && (
-                <p className="text-xs text-destructive">{t('collection.registerModal.urlInvalid')}</p>
+                <p className="pl-2 text-xs text-destructive italic">{t('collection.registerModal.urlInvalid')}</p>
               )}
               {parsed && (
-                <p className="text-xs text-muted-foreground">
+                <p className="pl-2 text-xs text-amber-500 italic">
                   {parsed.kind === 'playlist'
                     ? t('collection.registerModal.detectedPlaylist')
                     : t('collection.registerModal.detectedVideo')}
@@ -119,7 +119,7 @@ export function RegisterMaterialPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">{t('collection.registerModal.nameLabel')}</Label>
+              <Label htmlFor="name" className="text-foreground/60 pl-2">{t('collection.registerModal.nameLabel')}</Label>
               <Input
                 id="name"
                 value={name}
@@ -130,7 +130,7 @@ export function RegisterMaterialPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>{t('collection.registerModal.skillLabel')}</Label>
+              <Label className="text-foreground/60 pl-2">{t('collection.registerModal.skillLabel')}</Label>
               <Select value={skill} onValueChange={v => v !== null && setSkill(v as Skill)}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -140,7 +140,7 @@ export function RegisterMaterialPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>{t('collection.registerModal.langLabel')}</Label>
+              <Label className="text-foreground/60 pl-2">{t('collection.registerModal.langLabel')}</Label>
               <Select value={lang} onValueChange={v => v !== null && setLang(v as InstructionLanguage)}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
