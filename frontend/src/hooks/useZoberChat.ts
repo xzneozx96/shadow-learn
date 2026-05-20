@@ -29,8 +29,10 @@ import {
 import { getMemorySummary } from '@/lib/agent-memory'
 import {
   compactForTokenBudget,
+  estimateTokens,
   normalizeMessagesForBackend,
   PAGE_SIZE,
+  TOKEN_BUDGET,
 } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
 import { buildPrompt, resolveThreadId } from '@/lib/context-assembler'
@@ -49,6 +51,8 @@ import {
 const MAX_TOOL_ROUNDS_LESSON = 5
 const MAX_TOOL_ROUNDS_GLOBAL = 5
 const MAX_INPUT_CHARS = 8000
+const TOKEN_BUDGET_SOFT = 0.8
+const TOKEN_BUDGET_HARD = 1.0
 
 export type ZoberChatArgs
   = | {
@@ -261,6 +265,15 @@ export function useZoberChat(args: ZoberChatArgs) {
           const compacted = compactForTokenBudget(fullHistory)
           const builtPrompt = ctx ? buildPrompt(ctx) : ''
           const includeTools = !ctx?.lesson?.exhausted
+
+          const projectedTokens = estimateTokens(compacted) + estimateTokens([{ role: 'system', parts: [{ type: 'text', text: builtPrompt }] }] as any)
+
+          if (projectedTokens > TOKEN_BUDGET_HARD * TOKEN_BUDGET) {
+            throw new Error('Conversation too long. Please start a new chat.')
+          }
+          if (projectedTokens > TOKEN_BUDGET_SOFT * TOKEN_BUDGET) {
+            console.warn(`[useZoberChat] Approaching context limit: ${projectedTokens} / ${TOKEN_BUDGET}`)
+          }
 
           return {
             body: {
