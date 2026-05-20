@@ -132,27 +132,6 @@ export function useZoberChat(args: ZoberChatArgs) {
   // Live context built into a ref to avoid stale closures in transport
   const ctxRef = useRef<any>(null)
 
-  useEffect(() => {
-    if (!db)
-      return
-    let cancelled = false
-    void (async () => {
-      const thread = await getThread(db, threadId)
-      const stored = thread?.messages ?? []
-      if (cancelled)
-        return
-      allStoredRef.current = stored
-      const startOffset = Math.max(0, stored.length - PAGE_SIZE)
-      loadedOffsetRef.current = startOffset
-      setAllMessages(stored.slice(startOffset))
-      setHasMore(startOffset > 0)
-      setIsHistoryLoading(false)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [db, threadId])
-
   const refreshContext = useCallback(async () => {
     if (!db)
       return
@@ -343,6 +322,7 @@ export function useZoberChat(args: ZoberChatArgs) {
 
   const {
     messages,
+    setMessages,
     sendMessage: rawSendMessage,
     addToolResult,
     stop,
@@ -444,6 +424,33 @@ export function useZoberChat(args: ZoberChatArgs) {
     },
   })
 
+  // Load persisted thread from IDB and hydrate useChat state via setMessages.
+  // useChat treats the `messages` init prop as initial value only — subsequent
+  // prop changes are ignored. Call setMessages here so reloads show history.
+  useEffect(() => {
+    if (!db)
+      return
+    let cancelled = false
+    void (async () => {
+      const thread = await getThread(db, threadId)
+      const stored = thread?.messages ?? []
+      if (cancelled)
+        return
+      allStoredRef.current = stored
+      const startOffset = Math.max(0, stored.length - PAGE_SIZE)
+      loadedOffsetRef.current = startOffset
+      const visible = stored.slice(startOffset)
+      setAllMessages(visible)
+      setMessages(visible)
+      setHasMore(startOffset > 0)
+      setIsHistoryLoading(false)
+      zlog('history:loaded', { threadId, total: stored.length, visible: visible.length })
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [db, threadId, setMessages])
+
   // Wrapped sendMessage — exercise-stats trigger only (SDK handles loop reset)
   const sendMessage = useCallback(
     (opts: Parameters<typeof rawSendMessage>[0]) => {
@@ -520,9 +527,11 @@ export function useZoberChat(args: ZoberChatArgs) {
     if (next === loadedOffsetRef.current)
       return
     loadedOffsetRef.current = next
-    setAllMessages(allStoredRef.current.slice(next))
+    const visible = allStoredRef.current.slice(next)
+    setAllMessages(visible)
+    setMessages(visible)
     setHasMore(next > 0)
-  }, [])
+  }, [setMessages])
 
   const isTipDisabled = !!narrowed.tip && !narrowed.tip.transcript
 
