@@ -32,7 +32,8 @@ interface AuthState {
   startTrial: () => void
 }
 
-const AuthContext = createContext<AuthState | null>(null)
+// eslint-disable-next-line react-refresh/only-export-components
+export const AuthContext = createContext<AuthState | null>(null)
 
 const TRIAL_SESSION_KEY = 'shadowlearn_trial'
 
