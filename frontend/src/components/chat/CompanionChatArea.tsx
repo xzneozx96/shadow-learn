@@ -219,16 +219,6 @@ export function CompanionChatArea({
 
   const showInitialLoading = isHistoryLoading && messages.length === 0
 
-  // While streaming, the last assistant message is the one being filled in.
-  // Pass its id down so ChatMessageItem can render plain text (cheap) instead
-  // of re-parsing markdown on every token tick.
-  const streamingMessageId = useMemo(() => {
-    if (!isLoading)
-      return null
-    const last = messages.at(-1)
-    return last?.role === 'assistant' ? last.id : null
-  }, [isLoading, messages])
-
   const uniqueMessages = useMemo(() => {
     const seen = new Set<string>()
     return messages.filter((m) => {
@@ -444,19 +434,15 @@ export function CompanionChatArea({
             <div ref={topSentinelRef} className="h-px w-full" aria-hidden="true" />
           )}
 
-          {uniqueMessages.map((msg: UIMessage) => {
-            const isStreaming = isLoading && msg.id === streamingMessageId
-            return (
-              <div key={msg.id}>
-                <MessageItem
-                  msg={msg}
-                  sendMessage={sendMessage}
-                  activeWideIds={activeWideIds}
-                  isStreaming={isStreaming}
-                />
-              </div>
-            )
-          })}
+          {uniqueMessages.map((msg: UIMessage) => (
+            <div key={msg.id}>
+              <MessageItem
+                msg={msg}
+                sendMessage={sendMessage}
+                activeWideIds={activeWideIds}
+              />
+            </div>
+          ))}
 
           {isLoading && messages.length > 0 && (
             !hasVisibleContent(messages.at(-1)!)

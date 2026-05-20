@@ -5,9 +5,8 @@ import type { TranslationKey } from '@/lib/i18n'
 import { ArrowDownIcon, Bot, Copy, GraduationCap, ImageIcon, Mic, NotebookPen, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { toast } from 'sonner'
+import { Streamdown } from 'streamdown'
 import { useStickToBottom } from 'use-stick-to-bottom'
 import {
   ConversationEmptyState,
@@ -153,7 +152,7 @@ function AttachmentPreviewBar({ altFallback, removeLabel }: { altFallback: strin
 // Match [HH:MM:SS] or [MM:SS] timestamp tokens inline (not already a markdown
 // link, not inside a code span). Captured group is the raw token "MM:SS"
 // or "HH:MM:SS". Re-emitted as markdown link with timestamp: scheme so
-// ReactMarkdown's <a> handler can intercept the click.
+// Streamdown's <a> handler can intercept the click.
 const TIMESTAMP_TOKEN_RE = /\[(\d{1,2}(?::\d{2}){1,2})\](?!\()/g
 
 function tokenToSeconds(token: string): number {
@@ -169,8 +168,7 @@ function linkifyTimestamps(text: string): string {
 
 const MemoMarkdown = memo(({ text, onSeek }: { text: string, onSeek: (sec: number) => void }) => (
   <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed">
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+    <Streamdown
       // Default urlTransform strips non-http schemes (including our
       // `timestamp:` custom scheme), so href arrives empty. Pass URLs
       // through unchanged — chat content comes from our own LLM, not
@@ -200,7 +198,7 @@ const MemoMarkdown = memo(({ text, onSeek }: { text: string, onSeek: (sec: numbe
       }}
     >
       {linkifyTimestamps(text)}
-    </ReactMarkdown>
+    </Streamdown>
   </div>
 ))
 
@@ -214,11 +212,7 @@ function StreamingDots() {
   )
 }
 
-function StreamingText({ text }: { text: string }) {
-  return <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{text}</span>
-}
-
-function ChatBubble({ message, imageAlt, onSeek, isStreaming }: { message: UIMessage, imageAlt: string, onSeek: (sec: number) => void, isStreaming: boolean }) {
+function ChatBubble({ message, imageAlt, onSeek }: { message: UIMessage, imageAlt: string, onSeek: (sec: number) => void }) {
   const text = messageText(message)
   if (message.role === 'user') {
     return (
@@ -260,9 +254,7 @@ function ChatBubble({ message, imageAlt, onSeek, isStreaming }: { message: UIMes
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
-        {isStreaming
-          ? <StreamingText text={text} />
-          : <MemoMarkdown text={text} onSeek={onSeek} />}
+        <MemoMarkdown text={text} onSeek={onSeek} />
       </div>
     </motion.div>
   )
@@ -318,25 +310,25 @@ function MessageActions({
   }
 
   return (
-    <div className="mt-1 flex gap-1 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-      <button
-        type="button"
+    <div className="mt-1 flex gap-1">
+      <Button
+        variant="ghost"
+        size="icon-sm"
         onClick={handleCopy}
-        className="p-1 rounded text-muted-foreground hover:bg-secondary hover:text-primary"
         aria-label={t('tips.chat.copy')}
         title={t('tips.chat.copy')}
       >
         <Copy className="size-4" />
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
         onClick={handleSave}
-        className="p-1 rounded text-muted-foreground hover:bg-secondary hover:text-primary"
         aria-label={t('tips.notes.actions.save')}
         title={t('tips.notes.actions.save')}
       >
         <NotebookPen className="size-4" />
-      </button>
+      </Button>
     </div>
   )
 }
@@ -464,7 +456,7 @@ export function ChatTab(props: Props) {
               && (chat.status === 'streaming' || chat.status === 'submitted')
             return (
               <div key={m.id} className="group relative">
-                <ChatBubble message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={seekTip} isStreaming={isStreaming} />
+                <ChatBubble message={m} imageAlt={t('tips.chat.imageAlt')} onSeek={seekTip} />
                 {m.role === 'assistant' && !isStreaming && (
                   <MessageActions
                     text={messageText(m).trim()}

@@ -4,8 +4,7 @@ import type { ExerciseRenderResult } from '../lesson/ExerciseRenderer'
 import { FileText } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { Streamdown } from 'streamdown'
 import {
   getToolName,
   isToolPart,
@@ -24,20 +23,14 @@ import {
 import { ExerciseRenderer } from '../lesson/ExerciseRenderer'
 import { SessionResultsCard } from './SessionResultsCard'
 
-// Memoized so that already-streamed text parts are not re-parsed by ReactMarkdown
-// on every new token. Only the part whose text actually changed re-renders.
+// Streamdown is a streaming-aware markdown renderer: it parses incrementally
+// so partial syntax (mid-bold, half-finished lists, in-progress code fences)
+// renders progressively instead of snapping in once the stream finishes.
 const MemoMarkdown = memo(({ text }: { text: string }) => (
   <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-[#080a0d]/50 [&_table]:block [&_table]:overflow-x-auto [&_table]:whitespace-nowrap">
-    <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+    <Streamdown>{text}</Streamdown>
   </div>
 ))
-
-// Plain-text rendering used while a message is actively streaming. Avoids the
-// per-token ReactMarkdown re-parse that stalls token paint. Once the stream
-// finishes, the message re-renders via MemoMarkdown to get final formatting.
-function StreamingText({ text }: { text: string }) {
-  return <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{text}</span>
-}
 
 const CONTEXT_CHIPS_REGEX = /^Context:\n((?:> [^\n]*\n)+)\n([\s\S]*)$/
 const BLOCKQUOTE_PREFIX_REGEX = /^> /
@@ -68,7 +61,7 @@ export function StreamingDots() {
  * activeWideIds: set of toolCallIds that should render as full widgets.
  * Parts not in this set collapse to compact ToolCallCards to prevent history clutter.
  */
-export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, activeWideIds: ReadonlySet<string>, isStreaming = false) {
+export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, activeWideIds: ReadonlySet<string>) {
   if (!msg.parts || msg.parts.length === 0)
     return null
 
@@ -162,9 +155,7 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
     if (part.type === 'text') {
       const partKey = `text-${i}`
       if (msg.role === 'assistant') {
-        return isStreaming
-          ? <StreamingText key={partKey} text={part.text} />
-          : <MemoMarkdown key={partKey} text={part.text} />
+        return <MemoMarkdown key={partKey} text={part.text} />
       }
       if (part.text.trimStart().startsWith('{')) {
         try {
@@ -200,7 +191,7 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
 }
 
 export const MessageItem = memo(
-  ({ msg, sendMessage, activeWideIds, isStreaming = false }: { msg: UIMessage, sendMessage: SendMessage, activeWideIds: ReadonlySet<string>, isStreaming?: boolean }) => {
+  ({ msg, sendMessage, activeWideIds }: { msg: UIMessage, sendMessage: SendMessage, activeWideIds: ReadonlySet<string> }) => {
     if (msg.role !== 'assistant') {
       // Parse context chips from user messages for visual rendering
       const textPart = msg.parts.find((p): p is { type: 'text', text: string } => p.type === 'text' && 'text' in p)
@@ -232,10 +223,10 @@ export const MessageItem = memo(
               ? (
                   <>
                     {body && <p className="whitespace-pre-wrap">{body}</p>}
-                    {renderMessageParts({ ...msg, parts: msg.parts.filter(p => p.type !== 'text') } as UIMessage, sendMessage, activeWideIds, isStreaming)}
+                    {renderMessageParts({ ...msg, parts: msg.parts.filter(p => p.type !== 'text') } as UIMessage, sendMessage, activeWideIds)}
                   </>
                 )
-              : renderMessageParts(msg, sendMessage, activeWideIds, isStreaming)}
+              : renderMessageParts(msg, sendMessage, activeWideIds)}
           </div>
         </motion.div>
       )
@@ -252,8 +243,8 @@ export const MessageItem = memo(
     })
     const fullWidthParts = parts.filter(isWidePart)
 
-    const bubbleContent = renderMessageParts({ ...msg, parts: bubbleParts } as UIMessage, sendMessage, activeWideIds, isStreaming)
-    const fullWidthContent = renderMessageParts({ ...msg, parts: fullWidthParts } as UIMessage, sendMessage, activeWideIds, isStreaming)
+    const bubbleContent = renderMessageParts({ ...msg, parts: bubbleParts } as UIMessage, sendMessage, activeWideIds)
+    const fullWidthContent = renderMessageParts({ ...msg, parts: fullWidthParts } as UIMessage, sendMessage, activeWideIds)
     const hasBubble = bubbleParts.some((p) => {
       if (p.type === 'text' && 'text' in p)
         return (p.text as string)?.trim()
@@ -286,8 +277,6 @@ export const MessageItem = memo(
   },
   (prev, next) => {
     if (prev.activeWideIds !== next.activeWideIds)
-      return false
-    if (prev.isStreaming !== next.isStreaming)
       return false
     if (prev.msg.id !== next.msg.id)
       return false
