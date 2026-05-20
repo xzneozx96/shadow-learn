@@ -8,13 +8,13 @@
  */
 
 import type { UIMessage } from '@ai-sdk/react'
+import type { AgentAction } from '@/contexts/AgentActionsContext'
 import type { ChatUiLanguage, TipChatMode } from '@/lib/tipChatPrompt'
 import type { Segment } from '@/types'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { useAgentActions } from '@/contexts/AgentActionsContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
 import {
@@ -55,6 +55,10 @@ const MAX_INPUT_CHARS = 8000
 const TOKEN_BUDGET_SOFT = 0.8
 const TOKEN_BUDGET_HARD = 1.0
 
+type AgentActionsDispatch = (action: AgentAction) => void
+
+const noopDispatch: AgentActionsDispatch = () => {}
+
 const DEBUG_ZOBER = true // TODO: remove or flip after debugging
 function zlog(event: string, data?: unknown): void {
   if (!DEBUG_ZOBER)
@@ -70,6 +74,7 @@ export type ZoberChatArgs
     lessonTitle?: string
     activeSegment?: Segment | null
     roleplaySystemPrompt?: string
+    dispatchAction: AgentActionsDispatch
   }
   | { surface: 'global' }
   | {
@@ -100,12 +105,12 @@ function narrowArgs(args: ZoberChatArgs): NarrowedArgs {
 
 export function useZoberChat(args: ZoberChatArgs) {
   const { keys, db } = useAuth()
-  const { dispatchAction } = useAgentActions()
   const { locale } = useI18n()
   const apiKey = keys?.openrouterApiKey ?? ''
   const abortControllerRef = useRef(new AbortController())
 
   const narrowed = useMemo(() => narrowArgs(args), [args])
+  const dispatchAction = narrowed.lesson?.dispatchAction ?? noopDispatch
 
   const threadId = useMemo(
     () =>

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { AgentActionsProvider } from '@/contexts/AgentActionsContext'
 import { AuthContext } from '@/contexts/AuthContext'
 import { I18nProvider } from '@/contexts/I18nContext'
 import { initDB } from '@/db'
@@ -27,9 +26,7 @@ function makeWrapper(db: any) {
           } as any
         }
       >
-        <I18nProvider>
-          <AgentActionsProvider>{children}</AgentActionsProvider>
-        </I18nProvider>
+        <I18nProvider>{children}</I18nProvider>
       </AuthContext>
     )
   }
@@ -45,6 +42,7 @@ describe('useZoberChat smoke', () => {
           lessonId: 'lid',
           lessonTitle: 'T',
           activeSegment: null,
+          dispatchAction: () => {},
         }),
       { wrapper: makeWrapper(db) },
     )

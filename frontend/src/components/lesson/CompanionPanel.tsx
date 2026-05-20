@@ -2,6 +2,7 @@ import type { Segment } from '@/types'
 import { useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAgentActions } from '@/contexts/AgentActionsContext'
 import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useSpeakModal } from '@/contexts/SpeakModalContext'
@@ -34,12 +35,14 @@ export function CompanionPanel({
   const { entriesByLesson } = useVocabulary()
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
+  const { dispatchAction } = useAgentActions()
   const { messages, isLoading, isHistoryLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useZoberChat({
     surface: 'lesson',
     lessonId,
     lessonTitle,
     activeSegment,
     roleplaySystemPrompt,
+    dispatchAction,
   })
   const { openSpeakModal } = useSpeakModal()
 
