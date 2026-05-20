@@ -1,3 +1,4 @@
+import type { AddResult, RegisterInput } from '@/hooks/useUserMaterials'
 import type { InstructionLanguage, Skill } from '@/types/collection'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -7,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useI18n } from '@/contexts/I18nContext'
-import { useUserMaterials } from '@/hooks/useUserMaterials'
 import { parseYouTubeUrl } from '@/lib/youtubeUrl'
 
 const SKILLS: Skill[] = ['Grammar', 'Pronunciation', 'Vocabulary', 'Speaking', 'Learning Tips']
@@ -16,11 +16,11 @@ const LANGS: InstructionLanguage[] = ['English', 'Vietnamese', 'Chinese']
 interface Props {
   open: boolean
   onClose: () => void
+  onSubmit: (input: RegisterInput) => Promise<AddResult>
 }
 
-export function RegisterMaterialModal({ open, onClose }: Props) {
+export function RegisterMaterialModal({ open, onClose, onSubmit }: Props) {
   const { t } = useI18n()
-  const { add } = useUserMaterials()
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
   const [skill, setSkill] = useState<Skill>('Grammar')
@@ -49,7 +49,7 @@ export function RegisterMaterialModal({ open, onClose }: Props) {
     if (!parsed)
       return
     setSubmitting(true)
-    const result = await add({
+    const result = await onSubmit({
       source: parsed.kind,
       externalId: parsed.id,
       name,

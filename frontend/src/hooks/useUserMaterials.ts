@@ -72,9 +72,12 @@ async function fetchVideoMeta(videoId: string): Promise<{ name: string, thumbnai
   }
 }
 
-function toHubItem(m: UserMaterial): HubItem & { userMaterialId: string } {
+export type UserHubItem = HubItem & { userMaterialId: string, instructionLanguage: InstructionLanguage }
+
+function toHubItem(m: UserMaterial): UserHubItem {
   const base = {
     userMaterialId: m.id,
+    instructionLanguage: m.instructionLanguage,
     difficulty: null,
     topic: null,
     skill: m.skill,
@@ -90,7 +93,7 @@ function toHubItem(m: UserMaterial): HubItem & { userMaterialId: string } {
       name: m.name,
       thumbnail_url: m.cachedMeta.thumbnailUrl,
       video_count: m.cachedMeta.videoCount,
-    } as HubItem & { userMaterialId: string }
+    } as UserHubItem
   }
   return {
     ...base,
@@ -100,11 +103,11 @@ function toHubItem(m: UserMaterial): HubItem & { userMaterialId: string } {
     duration: '—',
     view_count: null,
     description: null,
-  } as HubItem & { userMaterialId: string }
+  } as UserHubItem
 }
 
 function buildGroups(items: UserMaterial[]): TipGroup[] {
-  const buckets = new Map<Skill, HubItem[]>()
+  const buckets = new Map<Skill, UserHubItem[]>()
   for (const m of items) {
     const arr = buckets.get(m.skill) ?? []
     arr.push(toHubItem(m))

@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { useCollection } from '@/hooks/useCollection'
@@ -79,7 +79,7 @@ function MineSection({
       {groups.length === 0
         ? (
             <EmptyState
-              className="mt-10 rounded-2xl border border-dashed border-border/80 bg-muted/20 py-16"
+              className="mt-16 rounded-2xl border border-dashed border-border/80 bg-muted/20 py-16"
               icon={<Lightbulb className="size-7 text-primary/65" strokeWidth={1.25} />}
               description={t('collection.mineEmpty')}
               action={{ label: t('collection.registerFirst'), onClick: onRegister }}
@@ -119,11 +119,11 @@ export function CollectionPage() {
   const activeTopic = searchParams.get('topic')
 
   const userMats = useUserMaterials()
+  const { revalidateAll } = userMats
   useEffect(() => {
     if (activeTab === 'mine')
-      void userMats.revalidateAll()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]) // intentionally omit userMats to avoid revalidate loop
+      void revalidateAll()
+  }, [activeTab, revalidateAll])
 
   const [registerOpen, setRegisterOpen] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
@@ -309,7 +309,11 @@ export function CollectionPage() {
         </div>
       </div>
 
-      <RegisterMaterialModal open={registerOpen} onClose={() => setRegisterOpen(false)} />
+      <RegisterMaterialModal
+        open={registerOpen}
+        onClose={() => setRegisterOpen(false)}
+        onSubmit={userMats.add}
+      />
 
       <AlertDialog open={pendingDeleteId !== null} onOpenChange={v => !v && setPendingDeleteId(null)}>
         <AlertDialogContent>
@@ -320,6 +324,7 @@ export function CollectionPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
+              className={buttonVariants({ variant: 'destructive' })}
               onClick={async () => {
                 const id = pendingDeleteId
                 if (!id)

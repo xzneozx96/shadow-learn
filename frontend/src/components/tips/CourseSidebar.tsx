@@ -1,6 +1,6 @@
 import type { TipLesson } from '@/types'
 import { ChevronLeft } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useI18n } from '@/contexts/I18nContext'
 import { LessonRow } from './LessonRow'
 
@@ -19,6 +19,7 @@ interface Props {
 
 export function CourseSidebar({ courseName, lessons, activeVideoId, completedVideoIds, inProgressVideoIds, onSelect, metaLoading = false }: Props) {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const completed = lessons.reduce((n, l) => n + (completedVideoIds.has(l.videoId) ? 1 : 0), 0)
   const pct = lessons.length === 0 ? 0 : Math.round((completed / lessons.length) * 100)
   const progressCount = `${completed} / ${lessons.length}`
@@ -26,19 +27,27 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
   const navLabel = t('tips.sidebar.aria')
   const backLabel = t('tips.sidebar.back', { course: courseName })
 
+  const handleBack = () => {
+    if (window.history.length > 1)
+      navigate(-1)
+    else
+      navigate('/collection')
+  }
+
   return (
     <nav aria-label={navLabel} className="flex flex-col h-full border-r border-border">
       <header className="px-3 py-3.5 border-b border-border shrink-0">
-        <Link
-          to="/collection?tab=tips"
+        <button
+          type="button"
+          onClick={handleBack}
           aria-label={backLabel}
-          className="group flex items-center gap-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors"
+          className="group flex items-center gap-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors text-left"
         >
           <ChevronLeft className="size-5 shrink-0 text-muted-foreground group-hover:text-foreground" aria-hidden />
           {metaLoading
             ? <span className="inline-block h-4 w-32 rounded bg-muted animate-pulse" aria-hidden />
             : <h4 className="text-sm font-bold leading-snug">{courseName}</h4>}
-        </Link>
+        </button>
       </header>
       <ol role="list" className="flex-1 overflow-y-auto">
         {lessons.map(l => (
