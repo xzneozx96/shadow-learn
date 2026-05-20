@@ -64,16 +64,20 @@ function MineSection({
   if (loading)
     return <HubRowSkeleton />
 
+  const isEmpty = groups.length === 0
+
   return (
     <>
-      <div className="mt-6 flex items-center justify-between">
-        <Button size="lg" onClick={onRegister}>{t('collection.register')}</Button>
-      </div>
+      {!isEmpty && (
+        <div className="mt-6 flex items-center justify-between">
+          <Button size="lg" onClick={onRegister}>{t('collection.register')}</Button>
+        </div>
+      )}
 
-      {groups.length === 0
+      {isEmpty
         ? (
             <EmptyState
-              className="mt-16 rounded-2xl border border-dashed border-border/80 bg-muted/20 py-16"
+              className="mt-16 min-h-[340px]"
               icon={<Lightbulb className="size-7 text-primary/65" strokeWidth={1.25} />}
               description={t('collection.mineEmpty')}
               action={{ label: t('collection.registerFirst'), onClick: onRegister }}
@@ -273,7 +277,7 @@ export function CollectionPage() {
                 data.tips.groups.length === 0
                   ? (
                       <EmptyState
-                        className="mt-16 rounded-2xl border border-dashed border-border/80 bg-muted/20 py-16"
+                        className="mt-16 min-h-[340px]"
                         icon={<Lightbulb className="size-7 text-primary/65" strokeWidth={1.25} />}
                         description={t('collection.tipsEmpty')}
                       />
