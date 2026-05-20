@@ -12,7 +12,11 @@ function extractToolNamesKey(msg: UIMessage): string {
     return ''
   return parts
     .filter(p => typeof p.type === 'string' && p.type.startsWith('tool-'))
-    .map(p => p.toolName ?? '')
+    .map((p) => {
+      // v6 SDK encodes toolName in `type` ("tool-foo"), not in a separate field.
+      // Fall back to slicing the type prefix when `toolName` field is absent.
+      return p.toolName ?? p.type.slice('tool-'.length)
+    })
     .sort()
     .join(',')
 }

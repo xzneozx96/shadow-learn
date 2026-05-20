@@ -21,6 +21,20 @@ function asst(id: string, toolNames: string[]): UIMessage {
         })),
   } as any
 }
+function asstV6(id: string, toolTypes: string[]): UIMessage {
+  // Mimics AI SDK v6 part shape: toolName encoded only in `type`, no separate field
+  return {
+    id,
+    role: 'assistant',
+    parts: toolTypes.map((name, i) => ({
+      type: `tool-${name}`,
+      toolCallId: `${id}-${i}`,
+      state: 'output-available',
+      input: {},
+      output: 'ok',
+    })),
+  } as any
+}
 
 describe('computeLessonExhaustion', () => {
   it('returns zeros when no user message present', () => {
@@ -82,5 +96,28 @@ describe('computeLessonExhaustion', () => {
       asst('a2', ['lookup']),
     ]
     expect(computeLessonExhaustion(msgs, { maxRounds: 5 }).roundsSinceUser).toBe(1)
+  })
+
+  it('counts tool rounds when toolName is encoded in type (v6 SDK shape)', () => {
+    const msgs = [
+      user('u', 'go'),
+      asstV6('a1', ['lookup', 'translate']),
+      asstV6('a2', ['lookup', 'translate']),
+    ]
+    const res = computeLessonExhaustion(msgs, { maxRounds: 5 })
+    expect(res.roundsSinceUser).toBe(2)
+    expect(res.sameToolLoop).toBe(true)
+    expect(res.exhausted).toBe(true)
+  })
+
+  it('handles mixed shapes (v5 field + v6 type-only)', () => {
+    const msgs = [
+      user('u', 'go'),
+      asst('a1', ['lookup']),
+      asstV6('a2', ['lookup']),
+    ]
+    const res = computeLessonExhaustion(msgs, { maxRounds: 5 })
+    expect(res.roundsSinceUser).toBe(2)
+    expect(res.sameToolLoop).toBe(true)
   })
 })
