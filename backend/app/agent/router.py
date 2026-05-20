@@ -231,6 +231,7 @@ async def _stream_agent(stream):
         tool_calls_state: dict[int, dict[str, Any]] = {}
 
         yield fmt({"type": "start", "messageId": message_id})
+        yield fmt({"type": "start-step"})
 
         try:
             async for chunk in stream:
@@ -399,6 +400,7 @@ async def _stream_agent(stream):
                 )
 
         # Finish event — finishReason at top level per AI SDK v5 schema
+        yield fmt({"type": "finish-step"})
         finish_event: dict[str, Any] = {"type": "finish"}
         if finish_reason is not None:
             finish_event["finishReason"] = finish_reason.replace("_", "-")

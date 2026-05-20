@@ -231,7 +231,9 @@ async def test_agent_streams_with_correct_headers():
                 types.append(event["type"])
 
             assert "start" in types
+            assert "start-step" in types
             assert "text-delta" in types
+            assert "finish-step" in types
             assert "finish" in types
 
 
