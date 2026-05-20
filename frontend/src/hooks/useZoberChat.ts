@@ -48,6 +48,7 @@ import {
 // Lesson + global use the same round budget today (legacy parity verified during plan audit)
 const MAX_TOOL_ROUNDS_LESSON = 5
 const MAX_TOOL_ROUNDS_GLOBAL = 5
+const MAX_INPUT_CHARS = 8000
 
 export type ZoberChatArgs
   = | {
@@ -348,6 +349,12 @@ export function useZoberChat(args: ZoberChatArgs) {
   // Wrapped sendMessage — exercise-stats trigger only (SDK handles loop reset)
   const sendMessage = useCallback(
     (opts: Parameters<typeof rawSendMessage>[0]) => {
+      // Input clamp — cap user input at MAX_INPUT_CHARS, silently clip overflow
+      if (opts != null && 'text' in opts && typeof opts.text === 'string' && opts.text.length > MAX_INPUT_CHARS) {
+        console.warn(`[useZoberChat] Input clamped from ${opts.text.length} to ${MAX_INPUT_CHARS} chars`)
+        ;(opts as any).text = opts.text.slice(0, MAX_INPUT_CHARS)
+      }
+
       if (args.surface === 'lesson' && opts != null && 'text' in opts && opts.text) {
         try {
           const parsed = JSON.parse(opts.text)
