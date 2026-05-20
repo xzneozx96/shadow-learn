@@ -284,8 +284,8 @@ export function CreateLesson() {
               </TabsContent>
             </Tabs>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-white/65">{t('create.videoLanguage')}</label>
+            <div>
+              <label className="text-sm font-medium text-foreground/60 pl-2">{t('create.videoLanguage')}</label>
               <Select value={sourceLanguage} onValueChange={v => v !== null && setSourceLanguage(v)} items={LANGUAGES}>
                 <SelectTrigger className="w-full" data-testid="create-lesson-source-language-select">
                   <SelectValue />
@@ -298,8 +298,8 @@ export function CreateLesson() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-white/65">{t('create.translationLanguage')}</label>
+            <div>
+              <label className="text-sm font-medium text-foreground/60 pl-2">{t('create.translationLanguage')}</label>
               <Select value={language} onValueChange={v => v !== null && setLanguage(v)} items={LANGUAGES}>
                 <SelectTrigger className="w-full" data-testid="create-lesson-translation-language-select">
                   <SelectValue />

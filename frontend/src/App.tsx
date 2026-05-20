@@ -29,6 +29,7 @@ import { ChangelogPage } from '@/pages/ChangelogPage'
 import { CollectionPage } from '@/pages/CollectionPage'
 import { DocumentationPage } from '@/pages/DocumentationPage'
 import { PlaylistPage } from '@/pages/PlaylistPage'
+import { RegisterMaterialPage } from '@/pages/RegisterMaterialPage'
 import { TipCoursePage } from '@/pages/TipCoursePage'
 import { WorkbookPage } from '@/pages/WorkbookPage'
 
@@ -147,6 +148,7 @@ const router = createBrowserRouter([
       { path: '/create', element: <CreateLesson /> },
       { path: '/changelog', element: <ChangelogPage /> },
       { path: '/collection', element: <CollectionPage /> },
+      { path: '/collection/register', element: <RegisterMaterialPage /> },
       { path: '/collection/:playlistId', element: <PlaylistPage /> },
       { path: '/tips/:source/:id', element: <TipCoursePage /> },
       { path: '/docs', element: <DocumentationPage /> },

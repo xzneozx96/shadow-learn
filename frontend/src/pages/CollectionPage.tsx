@@ -1,12 +1,26 @@
+import type { TipGroup } from '@/types/collection'
 import { Lightbulb } from 'lucide-react'
-import { useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { HubRow } from '@/components/collection/HubRow'
+import { UserMaterialCard } from '@/components/collection/UserMaterialCard'
 import { EmptyState } from '@/components/EmptyState'
 import { Layout } from '@/components/Layout'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { useLessons } from '@/contexts/LessonsContext'
 import { useCollection } from '@/hooks/useCollection'
+import { useUserMaterials } from '@/hooks/useUserMaterials'
 import { cn } from '@/lib/utils'
 
 const YOUTUBE_ID_REGEX = /[?&]v=([^&]+)|youtu\.be\/([^?&]+)/
@@ -31,15 +45,86 @@ function HubRowSkeleton() {
   )
 }
 
-type ActiveTab = 'materials' | 'tips'
+type ActiveTab = 'materials' | 'tips' | 'mine'
+
+function MineSection({
+  groups,
+  loading,
+  onRegister,
+  onDelete,
+  createdSet,
+}: {
+  groups: TipGroup[]
+  loading: boolean
+  onRegister: () => void
+  onDelete: (id: string) => void
+  createdSet: Set<string>
+}) {
+  const { t } = useI18n()
+  if (loading)
+    return <HubRowSkeleton />
+
+  const isEmpty = groups.length === 0
+
+  return (
+    <>
+      {!isEmpty && (
+        <div className="mt-6 flex items-center justify-between">
+          <Button size="lg" onClick={onRegister}>{t('collection.register')}</Button>
+        </div>
+      )}
+
+      {isEmpty
+        ? (
+            <EmptyState
+              className="mt-16 min-h-[340px]"
+              icon={<Lightbulb className="size-7 text-primary/65" strokeWidth={1.25} />}
+              description={t('collection.mineEmpty')}
+              action={{ label: t('collection.registerFirst'), onClick: onRegister }}
+            />
+          )
+        : groups.map(g => (
+            <HubRow
+              key={g.skill}
+              label={g.skill}
+              items={g.items}
+              activeTopic={null}
+              createdSet={createdSet}
+              renderItem={item => (
+                <UserMaterialCard
+                  item={item as any}
+                  onDelete={onDelete}
+                />
+              )}
+            />
+          ))}
+    </>
+  )
+}
 
 export function CollectionPage() {
   const { t } = useI18n()
   const { data, loading, error } = useCollection()
   const { lessons } = useLessons()
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab: ActiveTab = (searchParams.get('tab') as ActiveTab) === 'tips' ? 'tips' : 'materials'
+  const rawTab = searchParams.get('tab')
+  const activeTab: ActiveTab
+    = rawTab === 'tips'
+      ? 'tips'
+      : rawTab === 'mine'
+        ? 'mine'
+        : 'materials'
   const activeTopic = searchParams.get('topic')
+
+  const navigate = useNavigate()
+  const userMats = useUserMaterials()
+  const { revalidateAll } = userMats
+  useEffect(() => {
+    if (activeTab === 'mine')
+      void revalidateAll()
+  }, [activeTab, revalidateAll])
+
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   const createdSet = useMemo(() => {
     const set = new Set<string>()
@@ -62,7 +147,10 @@ export function CollectionPage() {
     : null
 
   const handleTabSwitch = (tab: ActiveTab) => {
-    setSearchParams(tab === 'materials' ? {} : { tab })
+    if (tab === 'materials')
+      setSearchParams({})
+    else
+      setSearchParams({ tab })
   }
 
   const handleTopicClick = (topic: string) => {
@@ -86,11 +174,17 @@ export function CollectionPage() {
 
           {/* Tab bar */}
           <div className="mt-8 flex items-center gap-1 border-b">
-            {(['materials', 'tips'] as const).map((tab) => {
-              const count = tab === 'materials' ? materialsCount : tipsCount
+            {(['materials', 'tips', 'mine'] as const).map((tab) => {
+              const count = tab === 'materials'
+                ? materialsCount
+                : tab === 'tips'
+                  ? tipsCount
+                  : userMats.groups.reduce((s, g) => s + g.items.length, 0)
               const label = tab === 'materials'
                 ? t('collection.tabMaterials')
-                : t('collection.tabTips')
+                : tab === 'tips'
+                  ? t('collection.tabTips')
+                  : t('collection.tabMine')
               return (
                 <button
                   key={tab}
@@ -183,7 +277,7 @@ export function CollectionPage() {
                 data.tips.groups.length === 0
                   ? (
                       <EmptyState
-                        className="mt-16 rounded-2xl border border-dashed border-border/80 bg-muted/20 py-16"
+                        className="mt-16 min-h-[340px]"
                         icon={<Lightbulb className="size-7 text-primary/65" strokeWidth={1.25} />}
                         description={t('collection.tipsEmpty')}
                       />
@@ -200,8 +294,42 @@ export function CollectionPage() {
               )}
             </>
           )}
+
+          {activeTab === 'mine' && (
+            <MineSection
+              groups={userMats.groups}
+              loading={userMats.loading}
+              onRegister={() => navigate('/collection/register')}
+              onDelete={id => setPendingDeleteId(id)}
+              createdSet={createdSet}
+            />
+          )}
         </div>
       </div>
+
+      <AlertDialog open={pendingDeleteId !== null} onOpenChange={v => !v && setPendingDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('collection.deleteConfirm.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('collection.deleteConfirm.body')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: 'destructive' })}
+              onClick={async () => {
+                const id = pendingDeleteId
+                if (!id)
+                  return
+                setPendingDeleteId(null)
+                await userMats.remove(id)
+              }}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   )
 }

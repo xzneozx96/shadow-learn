@@ -453,20 +453,87 @@ def build_hub_response(
     }
 
 
+# {video_id: (fetched_at_epoch, entry)}
+_video_cache: dict[str, tuple[float, dict | None]] = {}
+
+
+def get_video_metadata(video_id: str) -> dict | None:
+    """Fetch standalone video metadata: title, channel, duration, view_count, published_at.
+
+    Returns None when YouTube has no data for this id (private/deleted/invalid).
+    Cached for CACHE_TTL_SECONDS.
+    """
+    now = time.time()
+    cached = _video_cache.get(video_id)
+    if cached is not None:
+        fetched_at, entry = cached
+        ttl = CACHE_TTL_SECONDS if entry else EMPTY_CACHE_TTL_SECONDS
+        if now - fetched_at < ttl:
+            return entry
+
+    api_key = settings.youtube_api_key
+    if not api_key:
+        return None
+
+    entries = fetch_standalone_video_entries([video_id], api_key)
+    raw = entries.get(video_id)
+    if not raw:
+        _video_cache[video_id] = (now, None)
+        return None
+
+    result = {
+        "video_id": video_id,
+        "title": raw.get("title") or "Video",
+        "channel": raw.get("channel"),
+        "duration": format_duration(raw.get("duration_seconds")),
+        "view_count": raw.get("view_count"),
+        "published_at": raw.get("published_at"),
+        "thumbnail_url": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+    }
+    _video_cache[video_id] = (now, result)
+    return result
+
+
 def get_playlist_videos(playlist_id: str) -> dict | None:
     """Fetch all videos for one playlist with full HubVideo fields.
 
-    Returns None if playlist_id is not in the curated PLAYLISTS config.
-    Returns {name, thumbnail_url, topic, videos: list[HubVideo]}.
+    Accepts any YouTube playlist_id. If `playlist_id` is in the curated
+    PLAYLISTS config, curated metadata (default skill, topic, content_type)
+    is merged in. Otherwise the response is built from YouTube API data
+    alone and curated fields default to None.
+
+    Returns None only when YouTube returns no playable entries
+    (private/deleted/invalid id).
     """
     playlist = next((p for p in PLAYLISTS if p.playlist_id == playlist_id), None)
-    if playlist is None:
-        return None
 
     entries = get_cached_playlist(playlist_id)
+    # Return None for both curated and non-curated playlists when YouTube has no
+    # playable entries (private, deleted, or invalid id). Callers treat None as
+    # "not accessible"; an empty-videos response is not a useful state to surface.
+    if not entries:
+        return None
+
     meta = get_cached_playlist_metadata([playlist_id]).get(playlist_id, {})
-    base_videos = build_video_list(playlist, entries)
-    video_cfg_map = {v.video_id: v for v in playlist.videos}
+    video_cfg_map = {v.video_id: v for v in playlist.videos} if playlist else {}
+
+    if playlist is not None:
+        base_videos = build_video_list(playlist, entries)
+    else:
+        # Synthetic build for non-curated playlists: no per-playlist defaults.
+        base_videos = [
+            {
+                "video_id": e["id"],
+                "title": e.get("title", "Untitled"),
+                "duration": format_duration(e.get("duration")),
+                "difficulty": None,
+                "view_count": e.get("view_count"),
+                "channel": e.get("channel"),
+                "description": e.get("description"),
+                "published_at": e.get("published_at"),
+            }
+            for e in entries
+        ]
 
     hub_videos = []
     for bv in base_videos:
@@ -474,15 +541,15 @@ def get_playlist_videos(playlist_id: str) -> dict | None:
         vcfg = video_cfg_map.get(vid)
         content_type = (
             (vcfg.content_type if vcfg and vcfg.content_type is not None else None)
-            or playlist.default_content_type
+            or (playlist.default_content_type if playlist else None)
         )
         topic = (
             (vcfg.topic if vcfg and vcfg.topic is not None else None)
-            or playlist.default_topic
+            or (playlist.default_topic if playlist else None)
         )
         skill = (
             (vcfg.skill if vcfg and vcfg.skill is not None else None)
-            or playlist.default_skill
+            or (playlist.default_skill if playlist else None)
         )
         hub_videos.append({
             **bv,
@@ -495,11 +562,11 @@ def get_playlist_videos(playlist_id: str) -> dict | None:
     hub_videos.sort(key=lambda v: v.get("published_at") or "", reverse=True)
 
     return {
-        "name": playlist.name,
+        "name": playlist.name if playlist else (meta.get("channel") or "Playlist"),
         "thumbnail_url": meta.get("thumbnail_url"),
         "channel": meta.get("channel"),
         "published_at": meta.get("published_at"),
-        "topic": playlist.default_topic,
+        "topic": playlist.default_topic if playlist else None,
         "videos": hub_videos,
     }
 

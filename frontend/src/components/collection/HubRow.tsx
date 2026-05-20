@@ -1,6 +1,7 @@
+import type { ReactNode } from 'react'
 import type { HubItem, HubVideo } from '@/types/collection'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/contexts/I18nContext'
 import { computeScrollState } from '@/lib/carousel'
@@ -12,9 +13,10 @@ interface HubRowProps {
   items: HubItem[]
   activeTopic: string | null
   createdSet: Set<string>
+  renderItem?: (item: HubItem) => ReactNode
 }
 
-export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
+export function HubRow({ label, items, activeTopic, createdSet, renderItem }: HubRowProps) {
   const { t } = useI18n()
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -114,20 +116,23 @@ export function HubRow({ label, items, activeTopic, createdSet }: HubRowProps) {
           ref={setScrollRef}
           className="flex items-stretch gap-5 overflow-x-auto px-2 py-3 -my-3 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {filteredItems.map((item, i) =>
-            item.type === 'playlist'
+          {filteredItems.map((item, i) => {
+            const key = item.type === 'playlist' ? item.playlist_id : `${item.video_id}-${i}`
+            if (renderItem)
+              return <Fragment key={key}>{renderItem(item)}</Fragment>
+            return item.type === 'playlist'
               ? (
-                  <PlaylistCard key={item.playlist_id} playlist={item} />
+                  <PlaylistCard key={key} playlist={item} />
                 )
               : (
                   <VideoCard
-                    key={`${item.video_id}-${i}`}
+                    key={key}
                     video={item as HubVideo}
                     alreadyCreated={createdSet.has(item.video_id)}
                     showCreateLesson={item.content_type !== 'tip'}
                   />
-                ),
-          )}
+                )
+          })}
         </div>
       </div>
     </section>

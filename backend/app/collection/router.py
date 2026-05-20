@@ -3,7 +3,7 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException
 
-from app.collection.service import get_collection, get_playlist_videos
+from app.collection.service import get_collection, get_playlist_videos, get_video_metadata
 
 router = APIRouter(prefix="/api")
 
@@ -20,4 +20,13 @@ async def get_playlist_endpoint(playlist_id: str) -> dict:
     result = await asyncio.to_thread(get_playlist_videos, playlist_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Playlist not found")
+    return result
+
+
+@router.get("/video/{video_id}")
+async def get_video_endpoint(video_id: str) -> dict:
+    """Return standalone video metadata: title, channel, duration, view_count, published_at."""
+    result = await asyncio.to_thread(get_video_metadata, video_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Video not found")
     return result

@@ -45,7 +45,7 @@ export function BlogTab({ url, onUrlChange, text, onTextChange, title, onTitleCh
       {mode === 'url'
         ? (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-white/65">{t('create.blogUrl')}</label>
+              <label className="text-sm font-medium text-foreground/60 pl-2">{t('create.blogUrl')}</label>
               <Input
                 placeholder={t('create.blogUrlPlaceholder')}
                 value={url}
@@ -57,7 +57,7 @@ export function BlogTab({ url, onUrlChange, text, onTextChange, title, onTitleCh
         : (
             <div className="space-y-3">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white/65">{t('create.blogTextTitle')}</label>
+                <label className="text-sm font-medium text-foreground/60 pl-2">{t('create.blogTextTitle')}</label>
                 <Input
                   placeholder={t('create.blogTextTitlePlaceholder')}
                   value={title}
@@ -66,7 +66,7 @@ export function BlogTab({ url, onUrlChange, text, onTextChange, title, onTitleCh
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-white/65">{t('create.blogPasteText')}</label>
+                <label className="text-sm font-medium text-foreground/60 pl-2">{t('create.blogPasteText')}</label>
                 <textarea
                   placeholder={t('create.blogTextPlaceholder')}
                   value={text}
@@ -89,7 +89,7 @@ export function BlogTab({ url, onUrlChange, text, onTextChange, title, onTitleCh
           )}
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-white/65">Narrator Voice</label>
+        <label className="text-sm font-medium text-foreground/60 pl-2">Narrator Voice</label>
         <VoiceSelector voices={MINIMAX_VOICES} selectedId={voiceId} onSelect={onVoiceChange} />
       </div>
     </div>

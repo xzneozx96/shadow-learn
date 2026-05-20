@@ -219,7 +219,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
             </CutoutCardInsetLabel>
           )}
 
-          {!playing && (
+          {!playing && video.duration && (
             <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
               {video.duration}
               <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
@@ -253,20 +253,24 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
               variants={stagger.item}
             >
               <div className="flex items-center gap-4 min-w-0 text-xs text-muted-foreground overflow-hidden">
-                <span className="flex items-center gap-1 tabular-nums shrink-0" title={`${video.view_count?.toLocaleString() ?? 'N/A'} views`}>
-                  <Eye className="size-4" />
-                  {formatCount(video.view_count)}
-                </span>
+                {video.view_count !== null && video.view_count !== undefined && (
+                  <span className="flex items-center gap-1 tabular-nums shrink-0" title={`${video.view_count.toLocaleString()} views`}>
+                    <Eye className="size-4" />
+                    {formatCount(video.view_count)}
+                  </span>
+                )}
                 {formatPublishedAt(video.published_at) && (
                   <span className="flex items-center gap-1 tabular-nums shrink-0" title={video.published_at ?? ''}>
                     <Calendar className="size-4" />
                     {formatPublishedAt(video.published_at)}
                   </span>
                 )}
-                <span className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden" title={video.channel ?? 'N/A'}>
-                  <Tv className="size-4 shrink-0" />
-                  <span className="min-w-0 flex-1 line-clamp-1">{video.channel ?? 'N/A'}</span>
-                </span>
+                {video.channel && (
+                  <span className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden" title={video.channel}>
+                    <Tv className="size-4 shrink-0" />
+                    <span className="min-w-0 flex-1 line-clamp-1">{video.channel}</span>
+                  </span>
+                )}
               </div>
               {showCreateLesson && (
                 alreadyCreated

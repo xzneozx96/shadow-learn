@@ -66,3 +66,27 @@ export interface PlaylistDetail {
   topic: string | null
   videos: HubVideo[]
 }
+
+export type Skill = 'Pronunciation' | 'Vocabulary' | 'Speaking' | 'Grammar' | 'Learning Tips'
+export type InstructionLanguage = 'English' | 'Vietnamese' | 'Chinese'
+
+export interface UserMaterialCachedMeta {
+  thumbnailUrl: string | null
+  channel: string | null
+  videoCount: number | null
+  publishedAt: string | null
+  duration: string | null
+  viewCount: number | null
+}
+
+export interface UserMaterial {
+  id: string
+  source: 'playlist' | 'video'
+  externalId: string
+  name: string
+  skill: Skill
+  instructionLanguage: InstructionLanguage
+  contentType: 'tip'
+  cachedMeta: UserMaterialCachedMeta
+  createdAt: string
+}

@@ -45,9 +45,10 @@ function difficultyTone(difficulty: string | null): string {
 
 interface PlaylistCardProps {
   playlist: PlaylistItem
+  wrapperClassName?: string
 }
 
-export function PlaylistCard({ playlist }: PlaylistCardProps) {
+export function PlaylistCard({ playlist, wrapperClassName }: PlaylistCardProps) {
   const target = playlist.content_type === 'tip'
     ? `/tips/playlist/${playlist.playlist_id}`
     : `/collection/${playlist.playlist_id}`
@@ -55,7 +56,10 @@ export function PlaylistCard({ playlist }: PlaylistCardProps) {
   return (
     <Link
       to={target}
-      className="shrink-0 w-[calc(25%-15px)] min-w-[260px] flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
+      className={cn(
+        'flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl',
+        wrapperClassName ?? 'shrink-0 w-[calc(25%-15px)] min-w-[260px]',
+      )}
     >
       <div className="relative pt-3 flex-1 flex flex-col">
         {/* Stacked cards: peek from behind main card at top */}
