@@ -33,10 +33,26 @@ interface RelaxedPlaylistResponse {
   name: string
   thumbnail_url: string | null
   channel: string | null
+  published_at: string | null
   videos: Array<{ video_id: string }>
 }
 
-async function fetchPlaylistMeta(playlistId: string): Promise<{ name: string, thumbnailUrl: string | null, channel: string | null, videoCount: number } | null> {
+interface PlaylistMeta {
+  name: string
+  thumbnailUrl: string | null
+  channel: string | null
+  publishedAt: string | null
+  videoCount: number
+}
+
+interface VideoMeta {
+  name: string
+  thumbnailUrl: string | null
+  channel: string | null
+  publishedAt: string | null
+}
+
+async function fetchPlaylistMeta(playlistId: string): Promise<PlaylistMeta | null> {
   try {
     const res = await fetch(`${API_BASE}/api/playlist/${encodeURIComponent(playlistId)}`)
     if (!res.ok)
@@ -46,6 +62,7 @@ async function fetchPlaylistMeta(playlistId: string): Promise<{ name: string, th
       name: data.name,
       thumbnailUrl: data.thumbnail_url,
       channel: data.channel,
+      publishedAt: data.published_at,
       videoCount: data.videos.length,
     }
   }
@@ -54,7 +71,7 @@ async function fetchPlaylistMeta(playlistId: string): Promise<{ name: string, th
   }
 }
 
-async function fetchVideoMeta(videoId: string): Promise<{ name: string, thumbnailUrl: string | null, channel: string | null } | null> {
+async function fetchVideoMeta(videoId: string): Promise<VideoMeta | null> {
   try {
     const url = `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`
     const res = await fetch(url)
@@ -65,6 +82,7 @@ async function fetchVideoMeta(videoId: string): Promise<{ name: string, thumbnai
       name: meta.title?.trim() || 'Video',
       thumbnailUrl: meta.thumbnail_url?.trim() || null,
       channel: meta.author_name?.trim() || null,
+      publishedAt: null,
     }
   }
   catch {
@@ -83,7 +101,7 @@ function toHubItem(m: UserMaterial): UserHubItem {
     skill: m.skill,
     content_type: m.contentType,
     channel: m.cachedMeta.channel,
-    published_at: null,
+    published_at: m.cachedMeta.publishedAt,
   }
   if (m.source === 'playlist') {
     return {
@@ -100,7 +118,7 @@ function toHubItem(m: UserMaterial): UserHubItem {
     type: 'video',
     video_id: m.externalId,
     title: m.name,
-    duration: '—',
+    duration: '',
     view_count: null,
     description: null,
   } as UserHubItem
@@ -163,6 +181,7 @@ export function useUserMaterials() {
         thumbnailUrl: meta.thumbnailUrl,
         channel: meta.channel,
         videoCount: 'videoCount' in meta ? meta.videoCount : null,
+        publishedAt: meta.publishedAt,
       },
       createdAt: new Date().toISOString(),
     }
@@ -199,6 +218,7 @@ export function useUserMaterials() {
             thumbnailUrl: meta.thumbnailUrl,
             channel: meta.channel,
             videoCount: 'videoCount' in meta ? meta.videoCount : r.cachedMeta.videoCount,
+            publishedAt: meta.publishedAt ?? r.cachedMeta.publishedAt,
           },
         }
         await putUserMaterial(db, next)
