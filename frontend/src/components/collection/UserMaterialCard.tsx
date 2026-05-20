@@ -11,15 +11,15 @@ interface Props {
 export function UserMaterialCard({ item, onDelete }: Props) {
   const id = item.userMaterialId
   return (
-    <div className="relative shrink-0 w-[calc(25%-15px)] min-w-[260px]">
+    <div className="relative shrink-0 w-[calc(25%-15px)] min-w-[260px] flex flex-col">
       {item.type === 'playlist'
-        ? <PlaylistCard playlist={item as PlaylistItem} wrapperClassName="w-full min-w-0" />
+        ? <PlaylistCard playlist={item as PlaylistItem} wrapperClassName="w-full min-w-0 flex-1" />
         : (
             <VideoCard
               video={item as unknown as HubVideo}
               alreadyCreated={false}
               showCreateLesson={false}
-              wrapperClassName="w-full min-w-0"
+              wrapperClassName="w-full min-w-0 flex-1"
             />
           )}
 
