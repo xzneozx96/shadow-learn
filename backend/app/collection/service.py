@@ -467,6 +467,9 @@ def get_playlist_videos(playlist_id: str) -> dict | None:
     playlist = next((p for p in PLAYLISTS if p.playlist_id == playlist_id), None)
 
     entries = get_cached_playlist(playlist_id)
+    # Return None for both curated and non-curated playlists when YouTube has no
+    # playable entries (private, deleted, or invalid id). Callers treat None as
+    # "not accessible"; an empty-videos response is not a useful state to surface.
     if not entries:
         return None
 
