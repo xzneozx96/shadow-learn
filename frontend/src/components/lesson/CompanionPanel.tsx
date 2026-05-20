@@ -1,6 +1,6 @@
 import type { Segment } from '@/types'
 import { BookOpenText, MessageSquare } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAgentActions } from '@/contexts/AgentActionsContext'
@@ -11,6 +11,7 @@ import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useZoberChat } from '@/hooks/useZoberChat'
 import { captureCompanionMessageSent } from '@/lib/posthog-events'
 import { CompanionChatArea } from '../chat/CompanionChatArea'
+import { GuidedModeToggle } from '../chat/GuidedModeToggle'
 import { SpeakWithAIButton } from '../chat/PromptInputExtras'
 import { LessonWorkbookPanel } from './LessonWorkbookPanel'
 
@@ -38,6 +39,7 @@ export function CompanionPanel({
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
   const { dispatchAction } = useAgentActions()
+  const [guided, setGuided] = useState(false)
   const { messages, isLoading, isHistoryLoading, sendMessage: sendMessageRaw, stop, regenerate, loadMore, hasMore } = useZoberChat({
     surface: 'lesson',
     lessonId,
@@ -45,11 +47,24 @@ export function CompanionPanel({
     activeSegment,
     roleplaySystemPrompt,
     dispatchAction,
+    mode: guided ? 'guided' : 'free',
   })
   const { openSpeakModal } = useSpeakModal()
   const speakExtras = useMemo(
     () => <SpeakWithAIButton onClick={openSpeakModal} title={t('speak.title')} />,
     [openSpeakModal, t],
+  )
+  const guidedToggle = useMemo(
+    () => (
+      <GuidedModeToggle
+        guided={guided}
+        setGuided={setGuided}
+        tooltip={t('tips.chat.guidedLearning.tooltip')}
+        onToast={t('tips.chat.guidedLearning.onToast')}
+        offToast={t('tips.chat.guidedLearning.offToast')}
+      />
+    ),
+    [guided, t],
   )
 
   useEffect(() => {
@@ -102,6 +117,7 @@ export function CompanionPanel({
           onStop={stop}
           headerSlot={headerSlot}
           toolbarLeading={speakExtras}
+          toolbarTrailing={guidedToggle}
           onRegenerate={regenerate}
         />
       </TabsContent>

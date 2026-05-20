@@ -23,6 +23,7 @@ export interface LessonContext {
   accuracy: Record<string, { accuracy: number, attempts: number }>
   deferredToolNames?: string[]
   exhausted?: boolean
+  mode?: TipChatMode
 }
 
 export interface GlobalContext {

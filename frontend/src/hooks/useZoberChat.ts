@@ -67,6 +67,7 @@ export type ZoberChatArgs
     activeSegment?: Segment | null
     roleplaySystemPrompt?: string
     dispatchAction: AgentActionsDispatch
+    mode?: TipChatMode
   }
   | { surface: 'global' }
   | {
@@ -172,6 +173,7 @@ export function useZoberChat(args: ZoberChatArgs) {
           accuracy,
           deferredToolNames: getDeferredToolNames(apiKey, locale),
           exhausted: false,
+          mode: args.mode,
         },
         compactedSummary: summary?.summary,
       }

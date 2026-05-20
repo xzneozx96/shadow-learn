@@ -2,11 +2,10 @@ import type { FileUIPart } from 'ai'
 import type { ContextChip } from '@/components/chat/ContextChipBar'
 import type { MessageAction } from '@/components/chat/MessageActions'
 import type { TranslationKey } from '@/lib/i18n'
-import { Bot, GraduationCap, X } from 'lucide-react'
+import { Bot } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
-import { PromptInputButton } from '@/components/ai-elements/prompt-input'
 import { CompanionChatArea } from '@/components/chat/CompanionChatArea'
+import { GuidedModeToggle } from '@/components/chat/GuidedModeToggle'
 import { useI18n } from '@/contexts/I18nContext'
 import { useZoberChat } from '@/hooks/useZoberChat'
 import { escapeHtml } from '@/lib/htmlText'
@@ -28,49 +27,6 @@ interface Props {
 const NEWLINES_RE = /\n+/g
 const SINGLE_NEWLINE_RE = /\n/g
 const BLANK_LINE_RE = /\n{2,}/g
-
-function GuidedModeToggle({
-  guided,
-  setGuided,
-  t,
-}: {
-  guided: boolean
-  setGuided: (v: boolean) => void
-  t: (key: TranslationKey) => string
-}) {
-  if (guided) {
-    return (
-      <PromptInputButton
-        title={t('tips.chat.guidedLearning.tooltip')}
-        aria-label={t('tips.chat.guidedLearning.offToast')}
-        onClick={() => {
-          setGuided(false)
-          toast.success(t('tips.chat.guidedLearning.offToast'))
-        }}
-        data-state="on"
-        className="bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary rounded-full px-2.5"
-      >
-        <GraduationCap className="size-4" />
-        <span className="text-xs font-medium">{t('tips.chat.guidedLearning.tooltip')}</span>
-        <X className="size-3.5 opacity-70" />
-      </PromptInputButton>
-    )
-  }
-  return (
-    <PromptInputButton
-      size="icon-sm"
-      title={t('tips.chat.guidedLearning.tooltip')}
-      aria-label={t('tips.chat.guidedLearning.tooltip')}
-      onClick={() => {
-        setGuided(true)
-        toast.success(t('tips.chat.guidedLearning.onToast'))
-      }}
-      data-state="off"
-    >
-      <GraduationCap className="size-4" />
-    </PromptInputButton>
-  )
-}
 
 function UnavailableNotice({ t }: { t: (key: TranslationKey) => string }) {
   return (
@@ -123,7 +79,15 @@ export function ChatTab(props: Props) {
   )
 
   const toolbarTrailing = useMemo(
-    () => <GuidedModeToggle guided={guided} setGuided={setGuided} t={t} />,
+    () => (
+      <GuidedModeToggle
+        guided={guided}
+        setGuided={setGuided}
+        tooltip={t('tips.chat.guidedLearning.tooltip')}
+        onToast={t('tips.chat.guidedLearning.onToast')}
+        offToast={t('tips.chat.guidedLearning.offToast')}
+      />
+    ),
     [guided, t],
   )
 
