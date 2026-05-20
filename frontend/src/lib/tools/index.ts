@@ -87,6 +87,34 @@ export function getGlobalToolPool(): AgentTool[] {
   )
 }
 
+const TIP_TOOL_NAMES = new Set<string>([
+  // Intentionally empty in Phase 1 to preserve current tip behavior (tools: []).
+  // Future product decision can populate.
+])
+
+export function getTipToolPool(openrouterApiKey: string, uiLanguage: string = 'en'): AgentTool[] {
+  if (TIP_TOOL_NAMES.size === 0)
+    return []
+  return getAllBaseTools(openrouterApiKey, uiLanguage).filter(
+    t => TIP_TOOL_NAMES.has(t.name) && t.isEnabled(),
+  )
+}
+
+export function getToolPoolForSurface(
+  surface: 'lesson' | 'global' | 'tip',
+  openrouterApiKey: string,
+  opts?: { uiLanguage?: string, includeDeferred?: boolean },
+): AgentTool[] {
+  switch (surface) {
+    case 'lesson':
+      return getActiveToolPool(openrouterApiKey, opts)
+    case 'global':
+      return getGlobalToolPool()
+    case 'tip':
+      return getTipToolPool(openrouterApiKey, opts?.uiLanguage)
+  }
+}
+
 export function getToolDefinitions(pool: AgentTool[]) {
   return pool.map(tool => ({
     type: 'function' as const,
