@@ -1,9 +1,8 @@
 import type { TipGroup } from '@/types/collection'
 import { Lightbulb } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { HubRow } from '@/components/collection/HubRow'
-import { RegisterMaterialModal } from '@/components/collection/RegisterMaterialModal'
 import { UserMaterialCard } from '@/components/collection/UserMaterialCard'
 import { EmptyState } from '@/components/EmptyState'
 import { Layout } from '@/components/Layout'
@@ -113,6 +112,7 @@ export function CollectionPage() {
         : 'materials'
   const activeTopic = searchParams.get('topic')
 
+  const navigate = useNavigate()
   const userMats = useUserMaterials()
   const { revalidateAll } = userMats
   useEffect(() => {
@@ -120,7 +120,6 @@ export function CollectionPage() {
       void revalidateAll()
   }, [activeTab, revalidateAll])
 
-  const [registerOpen, setRegisterOpen] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   const createdSet = useMemo(() => {
@@ -296,19 +295,13 @@ export function CollectionPage() {
             <MineSection
               groups={userMats.groups}
               loading={userMats.loading}
-              onRegister={() => setRegisterOpen(true)}
+              onRegister={() => navigate('/collection/register')}
               onDelete={id => setPendingDeleteId(id)}
               createdSet={createdSet}
             />
           )}
         </div>
       </div>
-
-      <RegisterMaterialModal
-        open={registerOpen}
-        onClose={() => setRegisterOpen(false)}
-        onSubmit={userMats.add}
-      />
 
       <AlertDialog open={pendingDeleteId !== null} onOpenChange={v => !v && setPendingDeleteId(null)}>
         <AlertDialogContent>

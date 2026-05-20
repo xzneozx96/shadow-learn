@@ -233,6 +233,8 @@ export const TRANSLATIONS = {
     'collection.toast.duplicate': 'Already in My Materials',
     'collection.toast.fetchFailed': 'Could not load this playlist/video from YouTube',
     'collection.toast.unknownError': 'Something went wrong. Please try again.',
+    'collection.registerPage.goToMine': 'Back to My Materials',
+    'collection.registerPage.registerAnother': 'Register another',
 
     // Lesson View
     'lesson.transcript': 'Transcript',
@@ -1121,6 +1123,8 @@ export const TRANSLATIONS = {
     'collection.toast.duplicate': 'Đã có trong Tài liệu của tôi',
     'collection.toast.fetchFailed': 'Không thể tải danh sách phát/video từ YouTube',
     'collection.toast.unknownError': 'Đã xảy ra lỗi. Vui lòng thử lại.',
+    'collection.registerPage.goToMine': 'Quay lại Tài liệu của tôi',
+    'collection.registerPage.registerAnother': 'Đăng ký thêm',
 
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',

@@ -29,7 +29,7 @@ export function UserMaterialCard({ item, onDelete }: Props) {
           variant="destructive"
           size="icon"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(id) }}
-          className="absolute bottom-3 right-3 z-10 rounded-full"
+          className="absolute bottom-6 right-3 z-10 rounded-full"
           aria-label="Delete"
         >
           <Trash2 className="size-4" />
