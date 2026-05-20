@@ -121,3 +121,103 @@ describe('computeLessonExhaustion', () => {
     expect(res.sameToolLoop).toBe(true)
   })
 })
+
+function stitchedAsst(id: string, steps: Array<Array<{ name: string, input?: unknown }>>): UIMessage {
+  const parts: any[] = []
+  for (const step of steps) {
+    parts.push({ type: 'step-start' })
+    for (const tool of step) {
+      parts.push({
+        type: `tool-${tool.name}`,
+        toolCallId: `${id}-${tool.name}-${Math.random()}`,
+        state: 'output-available',
+        input: tool.input ?? {},
+        output: 'ok',
+      })
+    }
+    parts.push({ type: 'text', text: '' })
+  }
+  return { id, role: 'assistant', parts } as any
+}
+
+describe('computeLessonExhaustion (v6 stitched shape)', () => {
+  it('counts step-start parts as rounds within a stitched message', () => {
+    const msgs = [
+      user('u', 'go'),
+      stitchedAsst('a', [
+        [{ name: 'tool_search' }],
+        [{ name: 'tool_search' }],
+        [{ name: 'get_core_guidelines' }],
+      ]),
+    ]
+    const res = computeLessonExhaustion(msgs, { maxRounds: 5 })
+    expect(res.roundsSinceUser).toBe(3)
+  })
+
+  it('flags exhausted when stitched rounds >= maxRounds', () => {
+    const msgs = [
+      user('u', 'go'),
+      stitchedAsst('a', [
+        [{ name: 'tool_search' }],
+        [{ name: 'tool_search' }],
+        [{ name: 'tool_search' }],
+        [{ name: 'tool_search' }],
+        [{ name: 'tool_search' }],
+      ]),
+    ]
+    const res = computeLessonExhaustion(msgs, { maxRounds: 5 })
+    expect(res.roundsSinceUser).toBe(5)
+    expect(res.exhausted).toBe(true)
+  })
+
+  it('distinguishes same tool with different args as different fingerprints', () => {
+    const msgs = [
+      user('u', 'go'),
+      stitchedAsst('a', [
+        [{ name: 'tool_search', input: { query: 'a' } }],
+        [{ name: 'tool_search', input: { query: 'b' } }],
+      ]),
+    ]
+    const res = computeLessonExhaustion(msgs, { maxRounds: 5 })
+    expect(res.sameToolLoop).toBe(false)
+    expect(res.exhausted).toBe(false)
+  })
+
+  it('flags sameToolLoop when same tool called with SAME args twice in a row', () => {
+    const msgs = [
+      user('u', 'go'),
+      stitchedAsst('a', [
+        [{ name: 'tool_search', input: { query: 'a', max: 1 } }],
+        [{ name: 'tool_search', input: { max: 1, query: 'a' } }],
+      ]),
+    ]
+    const res = computeLessonExhaustion(msgs, { maxRounds: 5 })
+    expect(res.sameToolLoop).toBe(true)
+    expect(res.exhausted).toBe(true)
+  })
+
+  it('ignores text-only steps (no tool parts) toward round count', () => {
+    const msgs = [
+      user('u', 'go'),
+      stitchedAsst('a', [
+        [{ name: 'tool_search' }],
+        [],
+        [{ name: 'get_vocabulary' }],
+      ]),
+    ]
+    const res = computeLessonExhaustion(msgs, { maxRounds: 5 })
+    expect(res.roundsSinceUser).toBe(2)
+  })
+
+  it('handles multiple tools within one step as a single fingerprint set', () => {
+    const msgs = [
+      user('u', 'go'),
+      stitchedAsst('a', [
+        [{ name: 'get_study_context' }, { name: 'get_vocabulary', input: { id: 'x' } }],
+        [{ name: 'get_study_context' }, { name: 'get_vocabulary', input: { id: 'x' } }],
+      ]),
+    ]
+    const res = computeLessonExhaustion(msgs, { maxRounds: 5 })
+    expect(res.sameToolLoop).toBe(true)
+  })
+})
