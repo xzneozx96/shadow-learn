@@ -4,6 +4,12 @@ import { createContext, use, useCallback, useEffect, useRef, useState } from 're
 import { SelectionMenu } from '@/components/chat/SelectionMenu'
 
 const CJK_REGEX = /[\u4E00-\u9FFF]/
+const SCRUB_RE = /<(system|tool|prompt|instructions?)\b[^>]*>[\s\S]*?<\/\1\s*>/gi
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function scrub(text: string): string {
+  return text.replace(SCRUB_RE, '')
+}
 
 interface GlobalCompanionContextValue {
   chips: ContextChip[]
@@ -29,7 +35,8 @@ export function GlobalCompanionProvider({ children }: { children: ReactNode }) {
 
   // rerender-functional-setstate: stable callbacks with no stale closures
   const addChip = useCallback((text: string, source?: string) => {
-    setChips(prev => [...prev, { id: crypto.randomUUID(), text, source }])
+    const cleanText = scrub(text)
+    setChips(prev => [...prev, { id: crypto.randomUUID(), text: cleanText, source }])
     setIsGlobalPanelOpen(true)
   }, [])
 

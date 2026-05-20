@@ -23,32 +23,19 @@ vi.mock('ai', () => ({
 }))
 
 describe('utilityPane', () => {
-  it('renders a tablist with four tabs (Summary/Notes/Chat/Studio)', () => {
+  it('renders a tablist with three tabs (Summary/Chat/Studio)', () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
     expect(screen.getByRole('tablist')).toBeInTheDocument()
-    expect(screen.getAllByRole('tab')).toHaveLength(4)
-    expect(screen.queryByRole('tab', { name: /cards/i })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('tab')).toHaveLength(3)
+    expect(screen.queryByRole('tab', { name: /notes/i })).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /summary/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /chat/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /studio/i })).toBeInTheDocument()
   })
 
   it('summary tab is selected by default', () => {
     render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
     expect(screen.getByRole('tab', { name: /summary/i })).toHaveAttribute('aria-selected', 'true')
-  })
-
-  it('b2/B3 placeholder tabs are clickable and reveal coming-soon copy', async () => {
-    render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
-    await userEvent.click(screen.getByRole('tab', { name: /notes/i }))
-    expect(screen.getByRole('tab', { name: /notes/i })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText(/notes coming in b2/i)).toBeInTheDocument()
-  })
-
-  it('user can navigate back to Chat from a placeholder tab', async () => {
-    render(<UtilityPane courseId="PL1" videoId="v1" lessonTitle="t" transcript="" transcriptStatus="ready" />)
-    await userEvent.click(screen.getByRole('tab', { name: /notes/i }))
-    expect(screen.getByRole('tab', { name: /notes/i })).toHaveAttribute('aria-selected', 'true')
-    await userEvent.click(screen.getByRole('tab', { name: /chat/i }))
-    expect(screen.getByRole('tab', { name: /chat/i })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('clicking Studio tab shows the tile grid (not the coming-soon placeholder)', async () => {

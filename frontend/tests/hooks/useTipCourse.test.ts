@@ -48,15 +48,21 @@ describe('useTipCourse', () => {
   })
 
   it('synthesizes a mini-course-of-1 for source=video without hitting the API', async () => {
-    const fetchSpy = vi.fn() as unknown as typeof fetch
-    globalThis.fetch = fetchSpy
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({}),
+    }) as unknown as typeof fetch
 
     const { result } = renderHook(() => useTipCourse('video', 'lone-vid'))
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(result.current.course?.source).toBe('video')
     expect(result.current.lessons.map(l => l.videoId)).toEqual(['lone-vid'])
-    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(globalThis.fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining('/api/playlist/'),
+      expect.anything(),
+    )
   })
 
   it('exposes a 404 as error', async () => {

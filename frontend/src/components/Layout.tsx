@@ -1,4 +1,4 @@
-import { AudioLines, BookOpenText, FileText, Library, Newspaper, PanelLeft, PanelRight, Settings, Sparkles, Sprout, TvMinimalPlay } from 'lucide-react'
+import { AudioLines, BookOpenText, FileText, Library, Newspaper, PanelLeft, PanelRight, Settings, Sprout, TvMinimalPlay } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
@@ -20,7 +20,7 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const { t } = useI18n()
   const { trialMode } = useAuth()
-  const { isGlobalPanelOpen, openPanel } = useGlobalCompanionContext()
+  const { isGlobalPanelOpen } = useGlobalCompanionContext()
   const { openSpeakModal } = useSpeakModal()
   const hasUnseen = useHasUnseenAnnouncement()
 
@@ -144,8 +144,8 @@ export function Layout({ children }: LayoutProps) {
 
         {/* Bottom actions */}
         <div className="border-t border-white/6 p-3 flex flex-col gap-2">
-          {/* AI Companion CTA */}
-          <RadiantButton
+          {/* AI Companion CTA — temporarily disabled. GlobalCompanion needs a clearer purpose; revisit. */}
+          {/* <RadiantButton
             onClick={openPanel}
             title={collapsed ? t('companion.askButton') : undefined}
             color="#fbbf24"
@@ -160,7 +160,7 @@ export function Layout({ children }: LayoutProps) {
               <Sparkles className="size-4 text-amber-300 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-12 group-hover:scale-110" />
             </span>
             {!collapsed && <span className="text-sm font-semibold text-amber-100/95">{t('companion.askButton')}</span>}
-          </RadiantButton>
+          </RadiantButton> */}
 
           {/* Speak Practice CTA */}
           <RadiantButton

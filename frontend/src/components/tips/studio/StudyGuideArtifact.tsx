@@ -45,7 +45,7 @@ export function StudyGuideArtifact({ videoId, data }: Props) {
               aria-label={t('tips.studyGuide.copy')}
               title={t('tips.studyGuide.copy')}
             >
-              <Copy className="size-3.5" />
+              <Copy className="size-4" />
             </button>
             <SaveToNotesButton
               build={() => ({

@@ -231,8 +231,151 @@ async def test_agent_streams_with_correct_headers():
                 types.append(event["type"])
 
             assert "start" in types
+            assert "start-step" in types
             assert "text-delta" in types
+            assert "finish-step" in types
             assert "finish" in types
+
+
+@pytest.mark.asyncio
+async def test_agent_echoes_stitch_message_id_on_auto_resubmit():
+    """On trigger == 'submit-message' with stitch_message_id, start event
+    must echo that id so AI SDK v6 stitches tool-loop rounds into one message.
+    """
+    mock_chunk = MagicMock()
+    mock_choice = MagicMock()
+    mock_choice.finish_reason = "stop"
+    mock_delta = MagicMock()
+    mock_delta.content = "hi"
+    mock_delta.tool_calls = None
+    mock_choice.delta = mock_delta
+    mock_chunk.choices = [mock_choice]
+    mock_chunk.usage = None
+
+    with patch("app.agent.router.AsyncOpenAI") as MockAsyncOpenAI:
+        mock_client = MagicMock()
+        mock_client.chat.completions.create = AsyncMock(
+            return_value=AsyncIteratorMock([mock_chunk])
+        )
+        MockAsyncOpenAI.return_value = mock_client
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/agent",
+                json={
+                    "messages": [
+                        {"role": "user", "parts": [{"type": "text", "text": "hi"}]}
+                    ],
+                    "system_prompt": "sys",
+                    "openrouter_api_key": "key",
+                    "tools": [],
+                    "trigger": "submit-message",
+                    "stitch_message_id": "msg-stitch-abc",
+                },
+            )
+            assert response.status_code == 200
+            start_events = [
+                json.loads(line.replace("data: ", ""))
+                for line in response.text.strip().split("\n")
+                if line.startswith("data: ") and '"type":"start"' in line
+            ]
+            assert start_events
+            assert start_events[0]["messageId"] == "msg-stitch-abc"
+
+
+@pytest.mark.asyncio
+async def test_agent_mints_fresh_message_id_on_user_turn():
+    """Without trigger/stitch_message_id (fresh user turn), backend should
+    mint its own id and NOT echo any client-provided value.
+    """
+    mock_chunk = MagicMock()
+    mock_choice = MagicMock()
+    mock_choice.finish_reason = "stop"
+    mock_delta = MagicMock()
+    mock_delta.content = "hi"
+    mock_delta.tool_calls = None
+    mock_choice.delta = mock_delta
+    mock_chunk.choices = [mock_choice]
+    mock_chunk.usage = None
+
+    with patch("app.agent.router.AsyncOpenAI") as MockAsyncOpenAI:
+        mock_client = MagicMock()
+        mock_client.chat.completions.create = AsyncMock(
+            return_value=AsyncIteratorMock([mock_chunk])
+        )
+        MockAsyncOpenAI.return_value = mock_client
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/agent",
+                json={
+                    "messages": [
+                        {"role": "user", "parts": [{"type": "text", "text": "hi"}]}
+                    ],
+                    "system_prompt": "sys",
+                    "openrouter_api_key": "key",
+                    "tools": [],
+                },
+            )
+            assert response.status_code == 200
+            start_events = [
+                json.loads(line.replace("data: ", ""))
+                for line in response.text.strip().split("\n")
+                if line.startswith("data: ") and '"type":"start"' in line
+            ]
+            assert start_events
+            assert start_events[0]["messageId"].startswith("msg-")
+            # Sanity check: must not be a stitched id we never sent
+            assert start_events[0]["messageId"] != "msg-stitch-abc"
+
+
+@pytest.mark.asyncio
+async def test_agent_ignores_stitch_id_when_trigger_is_not_submit_message():
+    """If stitch_message_id is provided but trigger != 'submit-message',
+    backend mints a fresh id (only auto-resubmits trigger stitching).
+    """
+    mock_chunk = MagicMock()
+    mock_choice = MagicMock()
+    mock_choice.finish_reason = "stop"
+    mock_delta = MagicMock()
+    mock_delta.content = "hi"
+    mock_delta.tool_calls = None
+    mock_choice.delta = mock_delta
+    mock_chunk.choices = [mock_choice]
+    mock_chunk.usage = None
+
+    with patch("app.agent.router.AsyncOpenAI") as MockAsyncOpenAI:
+        mock_client = MagicMock()
+        mock_client.chat.completions.create = AsyncMock(
+            return_value=AsyncIteratorMock([mock_chunk])
+        )
+        MockAsyncOpenAI.return_value = mock_client
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/agent",
+                json={
+                    "messages": [
+                        {"role": "user", "parts": [{"type": "text", "text": "hi"}]}
+                    ],
+                    "system_prompt": "sys",
+                    "openrouter_api_key": "key",
+                    "tools": [],
+                    "trigger": "regenerate-message",
+                    "stitch_message_id": "msg-stitch-xyz",
+                },
+            )
+            assert response.status_code == 200
+            start_events = [
+                json.loads(line.replace("data: ", ""))
+                for line in response.text.strip().split("\n")
+                if line.startswith("data: ") and '"type":"start"' in line
+            ]
+            assert start_events
+            assert start_events[0]["messageId"] != "msg-stitch-xyz"
 
 
 @pytest.mark.asyncio

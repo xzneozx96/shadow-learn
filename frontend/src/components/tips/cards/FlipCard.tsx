@@ -46,6 +46,7 @@ export function FlipCard({ videoId, card, flipped, onFlip, onNext, onPrev }: Pro
     <div
       ref={ref}
       tabIndex={0}
+      data-card
       aria-label={t('tips.cards.flipHint')}
       className="relative outline-none rounded-2xl focus-visible:ring-2 focus-visible:ring-primary/60"
     >

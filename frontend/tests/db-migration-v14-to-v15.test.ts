@@ -125,7 +125,7 @@ describe('v14 → v15 migration', () => {
     const db1 = await initDB()
     db1.close()
     const db2 = await initDB()
-    expect(db2.version).toBe(16)
+    expect(db2.version).toBe(20)
     expect(db2.objectStoreNames.contains('tip-courses')).toBe(true)
     db2.close()
   })

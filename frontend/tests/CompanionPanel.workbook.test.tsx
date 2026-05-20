@@ -50,9 +50,18 @@ vi.mock('@/contexts/AuthContext', () => ({
   })),
 }))
 
-// Mock useAgentChat so CompanionPanel renders without hitting real IDB/API
-vi.mock('@/hooks/useAgentChat', () => ({
-  useAgentChat: vi.fn(() => ({
+// Mock AgentActionsContext — CompanionPanel reads dispatchAction from it
+vi.mock('@/contexts/AgentActionsContext', () => ({
+  useAgentActions: vi.fn(() => ({
+    pendingAction: null,
+    dispatchAction: vi.fn(),
+    clearAction: vi.fn(),
+  })),
+}))
+
+// Mock useZoberChat so CompanionPanel renders without hitting real IDB/API
+vi.mock('@/hooks/useZoberChat', () => ({
+  useZoberChat: vi.fn(() => ({
     messages: [],
     isLoading: false,
     status: 'ready',

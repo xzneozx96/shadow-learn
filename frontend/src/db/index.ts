@@ -6,7 +6,7 @@ import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 19
+const DB_VERSION = 20
 
 export interface LearnerProfile {
   name: string
@@ -90,6 +90,29 @@ export interface AgentMemory {
   createdAt: number
   lastAccessedAt: number
   lessonId?: string
+}
+
+export type ThreadSurface = 'lesson' | 'global' | 'tip'
+
+export interface ThreadRecord {
+  id: string // canonical id: lessonId | '__global' | `${courseId}:${videoId}`
+  surface: ThreadSurface
+  ownerId: string | null // lessonId | null | `${courseId}:${videoId}`
+  courseId?: string // tip only
+  videoId?: string // tip only
+  messages: UIMessage[]
+  updatedAt: number // ms epoch
+  createdAt: number
+  latestSummaryGen?: number
+}
+
+export interface ThreadSummaryRecord {
+  threadId: string
+  generation: number
+  summary: string
+  coversThroughMessageId: string
+  tokenBudget: number
+  createdAt: number
 }
 
 export interface ExerciseStat {
@@ -246,6 +269,16 @@ interface ShadowLearnSchema extends DBSchema {
     key: string
     value: UserMaterial
     indexes: { 'by-external': string, 'by-skill': string }
+  }
+  'threads': {
+    key: string
+    value: ThreadRecord
+    indexes: { 'by-surface': string, 'by-owner': string, 'by-updated': number }
+  }
+  'thread-summaries': {
+    key: [string, number]
+    value: ThreadSummaryRecord
+    indexes: { 'by-thread': string }
   }
 }
 
@@ -431,6 +464,66 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
         store.createIndex('by-external', 'externalId', { unique: true })
         store.createIndex('by-skill', 'skill', { unique: false })
       }
+      if (oldVersion < 20) {
+        const threadsStore = db.createObjectStore('threads', { keyPath: 'id' })
+        threadsStore.createIndex('by-surface', 'surface', { unique: false })
+        threadsStore.createIndex('by-owner', 'ownerId', { unique: false })
+        threadsStore.createIndex('by-updated', 'updatedAt', { unique: false })
+        const summariesStore = db.createObjectStore('thread-summaries', { keyPath: ['threadId', 'generation'] })
+        summariesStore.createIndex('by-thread', 'threadId', { unique: false })
+
+        const now = Date.now()
+        const newThreads: ThreadRecord[] = []
+
+        if (db.objectStoreNames.contains('chats')) {
+          const chatsStore = transaction.objectStore('chats')
+          let c1 = await chatsStore.openCursor()
+          while (c1) {
+            const id = c1.key as string
+            const messages = (c1.value as UIMessage[]) ?? []
+            const surface: ThreadSurface = id === '__global' ? 'global' : 'lesson'
+            newThreads.push({
+              id,
+              surface,
+              ownerId: surface === 'lesson' ? id : null,
+              messages,
+              updatedAt: now,
+              createdAt: now,
+            })
+            c1 = await c1.continue()
+          }
+        }
+
+        if (db.objectStoreNames.contains('tip-chats')) {
+          const tipStore = transaction.objectStore('tip-chats')
+          let c2 = await tipStore.openCursor()
+          while (c2) {
+            const row = c2.value as { key: string, courseId: string, videoId: string, messages: UIMessage[], updatedAt: string }
+            const updatedAtMs = Date.parse(row.updatedAt) || now
+            newThreads.push({
+              id: row.key,
+              surface: 'tip',
+              ownerId: row.key,
+              courseId: row.courseId,
+              videoId: row.videoId,
+              messages: row.messages ?? [],
+              updatedAt: updatedAtMs,
+              createdAt: updatedAtMs,
+            })
+            c2 = await c2.continue()
+          }
+        }
+
+        const out = transaction.objectStore('threads')
+        for (const t of newThreads) {
+          try {
+            await out.add(t)
+          }
+          catch {
+            // Already migrated; partial-crash re-run is a no-op
+          }
+        }
+      }
     },
   })
 }
@@ -481,14 +574,75 @@ export async function deleteVideo(db: ShadowLearnDB, lessonId: string): Promise<
 // Chat history
 export async function saveChatMessages(db: ShadowLearnDB, lessonId: string, messages: UIMessage[]): Promise<void> {
   await db.put('chats', messages, lessonId)
+  const surface: ThreadSurface = lessonId === '__global' ? 'global' : 'lesson'
+  await saveThreadMessages(db, lessonId, messages, surface, surface === 'lesson' ? lessonId : null)
 }
 
 export async function getChatMessages(db: ShadowLearnDB, lessonId: string): Promise<UIMessage[] | undefined> {
+  const thread = await db.get('threads', lessonId)
+  if (thread)
+    return thread.messages
   return db.get('chats', lessonId)
 }
 
 export async function deleteChatMessages(db: ShadowLearnDB, lessonId: string): Promise<void> {
   await db.delete('chats', lessonId)
+  await deleteThread(db, lessonId)
+}
+
+// Threads (unified chat store) — DB v20
+
+export async function getThread(db: ShadowLearnDB, id: string): Promise<ThreadRecord | undefined> {
+  return db.get('threads', id)
+}
+
+export async function saveThreadMessages(
+  db: ShadowLearnDB,
+  id: string,
+  messages: UIMessage[],
+  surface: ThreadSurface,
+  ownerId: string | null,
+  courseId?: string,
+  videoId?: string,
+): Promise<void> {
+  const existing = await db.get('threads', id)
+  const now = Date.now()
+  await db.put('threads', {
+    id,
+    surface,
+    ownerId,
+    courseId: courseId ?? existing?.courseId,
+    videoId: videoId ?? existing?.videoId,
+    messages,
+    updatedAt: now,
+    createdAt: existing?.createdAt ?? now,
+    latestSummaryGen: existing?.latestSummaryGen,
+  })
+}
+
+export async function deleteThread(db: ShadowLearnDB, id: string): Promise<void> {
+  await db.delete('threads', id)
+  const summaries = await db.getAllFromIndex('thread-summaries', 'by-thread', id)
+  await Promise.all(summaries.map(s => db.delete('thread-summaries', [s.threadId, s.generation])))
+}
+
+export async function listThreadsBySurface(db: ShadowLearnDB, surface: ThreadSurface): Promise<ThreadRecord[]> {
+  return db.getAllFromIndex('threads', 'by-surface', surface)
+}
+
+export async function putThreadSummary(db: ShadowLearnDB, summary: ThreadSummaryRecord): Promise<void> {
+  await db.put('thread-summaries', summary)
+  const t = await db.get('threads', summary.threadId)
+  if (t) {
+    await db.put('threads', { ...t, latestSummaryGen: summary.generation })
+  }
+}
+
+export async function getLatestSummary(db: ShadowLearnDB, threadId: string): Promise<ThreadSummaryRecord | undefined> {
+  const all = await db.getAllFromIndex('thread-summaries', 'by-thread', threadId)
+  if (all.length === 0)
+    return undefined
+  return all.sort((a, b) => b.generation - a.generation)[0]
 }
 
 // Settings
@@ -809,9 +963,20 @@ export async function getTipTranscript(db: ShadowLearnDB, videoId: string): Prom
 
 export async function putTipChat(db: ShadowLearnDB, chat: TipChatRecord): Promise<void> {
   await db.put('tip-chats', chat)
+  await saveThreadMessages(db, chat.key, chat.messages, 'tip', chat.key, chat.courseId, chat.videoId)
 }
 
 export async function getTipChat(db: ShadowLearnDB, key: string): Promise<TipChatRecord | undefined> {
+  const thread = await db.get('threads', key)
+  if (thread && thread.surface === 'tip') {
+    return {
+      key: thread.id,
+      courseId: thread.courseId ?? '',
+      videoId: thread.videoId ?? '',
+      messages: thread.messages,
+      updatedAt: new Date(thread.updatedAt).toISOString(),
+    }
+  }
   return db.get('tip-chats', key)
 }
 
