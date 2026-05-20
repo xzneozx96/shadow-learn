@@ -1,10 +1,10 @@
 /* eslint-disable react-refresh/only-export-components -- renderMessageParts is tightly coupled with MessageItem */
 import type { UIMessage } from '@ai-sdk/react'
 import type { ExerciseRenderResult } from '../lesson/ExerciseRenderer'
+import type { MessageAction } from './MessageActions'
 import { FileText } from 'lucide-react'
 import { motion } from 'motion/react'
-import { memo } from 'react'
-import { Streamdown } from 'streamdown'
+import { memo, useMemo } from 'react'
 import {
   getToolName,
   isToolPart,
@@ -21,16 +21,9 @@ import {
   VocabCardRenderer,
 } from '../lesson/AgentRenderers'
 import { ExerciseRenderer } from '../lesson/ExerciseRenderer'
+import { MessageActions } from './MessageActions'
+import { MessageMarkdown } from './MessageMarkdown'
 import { SessionResultsCard } from './SessionResultsCard'
-
-// Streamdown is a streaming-aware markdown renderer: it parses incrementally
-// so partial syntax (mid-bold, half-finished lists, in-progress code fences)
-// renders progressively instead of snapping in once the stream finishes.
-const MemoMarkdown = memo(({ text }: { text: string }) => (
-  <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-[#080a0d]/50 [&_table]:block [&_table]:overflow-x-auto [&_table]:whitespace-nowrap">
-    <Streamdown>{text}</Streamdown>
-  </div>
-))
 
 const CONTEXT_CHIPS_REGEX = /^Context:\n((?:> [^\n]*\n)+)\n([\s\S]*)$/
 const BLOCKQUOTE_PREFIX_REGEX = /^> /
@@ -61,7 +54,12 @@ export function StreamingDots() {
  * activeWideIds: set of toolCallIds that should render as full widgets.
  * Parts not in this set collapse to compact ToolCallCards to prevent history clutter.
  */
-export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, activeWideIds: ReadonlySet<string>) {
+export function renderMessageParts(
+  msg: UIMessage,
+  sendMessage: SendMessage,
+  activeWideIds: ReadonlySet<string>,
+  onTimestampClick?: (sec: number) => void,
+) {
   if (!msg.parts || msg.parts.length === 0)
     return null
 
@@ -155,7 +153,7 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
     if (part.type === 'text') {
       const partKey = `text-${i}`
       if (msg.role === 'assistant') {
-        return <MemoMarkdown key={partKey} text={part.text} />
+        return <MessageMarkdown key={partKey} text={part.text} onTimestampClick={onTimestampClick} />
       }
       if (part.text.trimStart().startsWith('{')) {
         try {
@@ -190,8 +188,27 @@ export function renderMessageParts(msg: UIMessage, sendMessage: SendMessage, act
   })
 }
 
+interface MessageItemProps {
+  msg: UIMessage
+  sendMessage: SendMessage
+  activeWideIds: ReadonlySet<string>
+  isLast: boolean
+  isStreaming: boolean
+  onTimestampClick?: (sec: number) => void
+  actions?: MessageAction[]
+  onRegenerate?: () => void
+}
+
 export const MessageItem = memo(
-  ({ msg, sendMessage, activeWideIds }: { msg: UIMessage, sendMessage: SendMessage, activeWideIds: ReadonlySet<string> }) => {
+  ({ msg, sendMessage, activeWideIds, isLast, isStreaming, onTimestampClick, actions, onRegenerate }: MessageItemProps) => {
+    const assistantText = useMemo(
+      () =>
+        msg.role === 'assistant'
+          ? msg.parts.filter(p => p.type === 'text').map(p => (p as { text: string }).text).join('')
+          : '',
+      [msg.role, msg.parts],
+    )
+
     if (msg.role !== 'assistant') {
       // Parse context chips from user messages for visual rendering
       const textPart = msg.parts.find((p): p is { type: 'text', text: string } => p.type === 'text' && 'text' in p)
@@ -223,10 +240,10 @@ export const MessageItem = memo(
               ? (
                   <>
                     {body && <p className="whitespace-pre-wrap">{body}</p>}
-                    {renderMessageParts({ ...msg, parts: msg.parts.filter(p => p.type !== 'text') } as UIMessage, sendMessage, activeWideIds)}
+                    {renderMessageParts({ ...msg, parts: msg.parts.filter(p => p.type !== 'text') } as UIMessage, sendMessage, activeWideIds, onTimestampClick)}
                   </>
                 )
-              : renderMessageParts(msg, sendMessage, activeWideIds)}
+              : renderMessageParts(msg, sendMessage, activeWideIds, onTimestampClick)}
           </div>
         </motion.div>
       )
@@ -243,8 +260,8 @@ export const MessageItem = memo(
     })
     const fullWidthParts = parts.filter(isWidePart)
 
-    const bubbleContent = renderMessageParts({ ...msg, parts: bubbleParts } as UIMessage, sendMessage, activeWideIds)
-    const fullWidthContent = renderMessageParts({ ...msg, parts: fullWidthParts } as UIMessage, sendMessage, activeWideIds)
+    const bubbleContent = renderMessageParts({ ...msg, parts: bubbleParts } as UIMessage, sendMessage, activeWideIds, onTimestampClick)
+    const fullWidthContent = renderMessageParts({ ...msg, parts: fullWidthParts } as UIMessage, sendMessage, activeWideIds, onTimestampClick)
     const hasBubble = bubbleParts.some((p) => {
       if (p.type === 'text' && 'text' in p)
         return (p.text as string)?.trim()
@@ -252,6 +269,8 @@ export const MessageItem = memo(
         return true
       return false
     })
+
+    const showActions = !isStreaming && actions && actions.length > 0 && assistantText.trim().length > 0
 
     return (
       <motion.div
@@ -261,10 +280,21 @@ export const MessageItem = memo(
         transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       >
         {hasBubble && (
-          <div className="flex justify-start w-full">
-            <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
-              {bubbleContent}
+          <div className="flex flex-col w-full">
+            <div className="flex justify-start w-full">
+              <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
+                {bubbleContent}
+              </div>
             </div>
+            {showActions && (
+              <MessageActions
+                text={assistantText.trim()}
+                messageId={msg.id}
+                isLast={isLast}
+                actions={actions}
+                onRegenerate={onRegenerate}
+              />
+            )}
           </div>
         )}
         {fullWidthParts.length > 0 && (
@@ -279,6 +309,16 @@ export const MessageItem = memo(
     if (prev.activeWideIds !== next.activeWideIds)
       return false
     if (prev.msg.id !== next.msg.id)
+      return false
+    if (prev.isLast !== next.isLast)
+      return false
+    if (prev.isStreaming !== next.isStreaming)
+      return false
+    if (prev.onTimestampClick !== next.onTimestampClick)
+      return false
+    if (prev.onRegenerate !== next.onRegenerate)
+      return false
+    if (prev.actions !== next.actions)
       return false
     const p1 = prev.msg.parts
     const p2 = next.msg.parts

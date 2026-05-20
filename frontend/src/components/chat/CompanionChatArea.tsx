@@ -3,12 +3,11 @@ import type { ChatStatus, FileUIPart } from 'ai'
 import type { ReactNode } from 'react'
 import type { SendMessage } from './ChatMessageItem'
 import type { ContextChip } from './ContextChipBar'
-import { ArrowDownIcon, AudioLines, ImageIcon, Mic, X } from 'lucide-react'
-import { motion } from 'motion/react'
+import type { MessageAction } from './MessageActions'
+import { ArrowDownIcon, Mic } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useStickToBottom } from 'use-stick-to-bottom'
-import { ConversationEmptyState } from '@/components/ai-elements/conversation'
 import {
   PromptInput,
   PromptInputBody,
@@ -19,7 +18,6 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
-  usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -34,120 +32,16 @@ import {
 } from '@/lib/companion-utils'
 import { MessageItem, StreamingDots } from './ChatMessageItem'
 import { ContextChipBar } from './ContextChipBar'
+import { ChatEmptyState } from './EmptyState'
+import { AttachImageButton, AttachmentPreviewBar, RecordingPill } from './PromptInputExtras'
 import { VoiceInputBridge } from './VoiceInputBridge'
-
-// Max recording burst in seconds — must match MAX_BURST_MS in useVoiceInput.
-const BURST_DURATION_S = 30
-const WAVE_BAR_COUNT = 4
-
-/** Each bar gets a 5-step keyframe sequence; motion cycles through these as height values. */
-function generateBarHeights(): number[][] {
-  // eslint-disable-next-line e18e/prefer-array-fill -- callback uses Math.random() per call
-  return Array.from({ length: WAVE_BAR_COUNT }, () => [
-    4 + Math.random() * 3,
-    10 + Math.random() * 4,
-    6 + Math.random() * 3,
-    14 + Math.random() * 4,
-    5 + Math.random() * 3,
-  ])
-}
-
-/**
- * Circular recording button — destructive-colored countdown border + bouncing
- * waveform bars inside. Click to stop.
- */
-function RecordingPill({ onStop }: { onStop: () => void }) {
-  const [barHeights] = useState(generateBarHeights)
-  return (
-    <motion.button
-      type="button"
-      onClick={onStop}
-      aria-label="Stop recording"
-      initial={{ scale: 0.7, opacity: 0.6 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-destructive/15 text-destructive focus-visible:outline-none"
-    >
-      <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden="true">
-        <motion.circle
-          cx="50%"
-          cy="50%"
-          r="16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          pathLength={1}
-          strokeDasharray="1"
-          strokeLinecap="round"
-          initial={{ strokeDashoffset: 1 }}
-          animate={{ strokeDashoffset: 0 }}
-          transition={{ duration: BURST_DURATION_S, ease: 'linear' }}
-        />
-      </svg>
-      <div className="relative z-10 flex items-center gap-[2px]">
-        {barHeights.map((heights, i) => (
-          <motion.div
-
-            key={i}
-            animate={{ height: heights }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear', delay: i * 0.08 }}
-            style={{ originY: 1 }}
-            className="w-[2.5px] rounded-full bg-destructive"
-          />
-        ))}
-      </div>
-    </motion.button>
-  )
-}
-
-/** Attach-image button — must be rendered inside a <PromptInput> so the context is available. */
-function AttachImageButton({ tooltip, muted }: { tooltip: string, muted?: boolean }) {
-  const attachments = usePromptInputAttachments()
-  return (
-    <PromptInputButton
-      size="icon-sm"
-      title={tooltip}
-      aria-label={tooltip}
-      onClick={muted ? undefined : attachments.openFileDialog}
-      className={muted ? 'pointer-events-none opacity-50' : undefined}
-    >
-      <ImageIcon className="size-4" />
-    </PromptInputButton>
-  )
-}
-
-/** Thumbnail strip for attached images — must be inside a <PromptInput>. */
-function AttachmentPreviewBar() {
-  const { files, remove } = usePromptInputAttachments()
-  if (files.length === 0)
-    return null
-  return (
-    <div className="flex flex-wrap gap-2 px-1 pb-1">
-      {files.map(f => (
-        <div key={f.id} className="relative size-14 shrink-0">
-          <img
-            src={f.url}
-            alt={f.filename ?? 'Attached image'}
-            className="size-full rounded-md object-cover border border-border"
-          />
-          <button
-            type="button"
-            aria-label="Remove image"
-            onClick={() => remove(f.id)}
-            className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow"
-          >
-            <X className="size-2.5" />
-          </button>
-        </div>
-      ))}
-    </div>
-  )
-}
 
 export interface SendPayload {
   text: string
   files?: FileUIPart[]
 }
+
+const DEFAULT_MESSAGE_ACTIONS: MessageAction[] = [{ kind: 'copy' }, { kind: 'regenerate' }]
 
 interface CompanionChatAreaProps {
   messages: UIMessage[]
@@ -161,7 +55,22 @@ interface CompanionChatAreaProps {
   onStop?: () => void
   headerSlot?: ReactNode
   placeholder?: string
-  onSpeakClick?: () => void
+
+  /** Extra toolbar buttons rendered at the outer left (before Attach). Stable identity recommended. */
+  toolbarLeading?: ReactNode
+  /** Extra toolbar buttons rendered at the outer right (after Mic). Stable identity recommended. */
+  toolbarTrailing?: ReactNode
+  /** Override default empty-state copy + icon. */
+  emptyState?: { icon?: ReactNode, title: string, description: string }
+  /** Disable textarea + submit + Mic start. */
+  disabled?: boolean
+  disabledPlaceholder?: string
+  /** When set, [MM:SS] tokens in assistant text linkify and click invokes this. Memoize at caller. */
+  onTimestampClick?: (sec: number) => void
+  /** Per-message action toolbar config. Default: Copy + Regenerate. Memoize array at caller. */
+  messageActions?: MessageAction[]
+  /** Called when the 'regenerate' action triggers. Memoize at caller. */
+  onRegenerate?: () => void
 }
 
 export function CompanionChatArea({
@@ -176,7 +85,14 @@ export function CompanionChatArea({
   onStop,
   headerSlot,
   placeholder,
-  onSpeakClick,
+  toolbarLeading,
+  toolbarTrailing,
+  emptyState,
+  disabled = false,
+  disabledPlaceholder,
+  onTimestampClick,
+  messageActions,
+  onRegenerate,
 }: CompanionChatAreaProps) {
   const { t } = useI18n()
   const [draftText, setDraftText] = useState('')
@@ -389,11 +305,11 @@ export function CompanionChatArea({
       throw new Error('voice-active')
     const trimmed = message.text.trim()
     const hasFiles = message.files.length > 0
-    if ((!trimmed && !hasFiles) || isLoading)
+    if ((!trimmed && !hasFiles) || isLoading || disabled)
       return
     scrollToBottom()
     onSend({ text: trimmed, files: hasFiles ? message.files : undefined })
-  }, [isLoading, onSend, scrollToBottom, voice.state])
+  }, [isLoading, disabled, onSend, scrollToBottom, voice.state])
 
   const handleAttachError = (err: { code: 'max_files' | 'max_file_size' | 'accept' }) => {
     if (err.code === 'accept') {
@@ -407,13 +323,18 @@ export function CompanionChatArea({
     }
   }
 
+  const resolvedActions = messageActions ?? DEFAULT_MESSAGE_ACTIONS
+  const resolvedPlaceholder = disabled
+    ? (disabledPlaceholder ?? placeholder ?? t('lesson.askAboutSegment'))
+    : (placeholder ?? t('lesson.askAboutSegment'))
+
   return (
     <>
       {headerSlot}
 
       <div
         ref={scrollRef}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-6"
       >
         {showInitialLoading && (
           <div className="flex flex-1 items-center justify-center">
@@ -422,11 +343,9 @@ export function CompanionChatArea({
         )}
 
         {!showInitialLoading && messages.length === 0 && !isLoading && (
-          <ConversationEmptyState
-            className="size-auto flex-1"
-            title={t('lesson.companion')}
-            description={t('lesson.companionPlaceholder')}
-          />
+          emptyState
+            ? <ChatEmptyState icon={emptyState.icon} title={emptyState.title} description={emptyState.description} />
+            : <ChatEmptyState title={t('lesson.companion')} description={t('lesson.companionPlaceholder')} />
         )}
 
         <div ref={contentRef} className="space-y-3">
@@ -434,15 +353,24 @@ export function CompanionChatArea({
             <div ref={topSentinelRef} className="h-px w-full" aria-hidden="true" />
           )}
 
-          {uniqueMessages.map((msg: UIMessage) => (
-            <div key={msg.id}>
-              <MessageItem
-                msg={msg}
-                sendMessage={sendMessage}
-                activeWideIds={activeWideIds}
-              />
-            </div>
-          ))}
+          {uniqueMessages.map((msg: UIMessage, idx) => {
+            const isLast = idx === uniqueMessages.length - 1
+            const isStreaming = isLast && msg.role === 'assistant' && isLoading
+            return (
+              <div key={msg.id}>
+                <MessageItem
+                  msg={msg}
+                  sendMessage={sendMessage}
+                  activeWideIds={activeWideIds}
+                  isLast={isLast}
+                  isStreaming={isStreaming}
+                  onTimestampClick={onTimestampClick}
+                  actions={resolvedActions}
+                  onRegenerate={onRegenerate}
+                />
+              </div>
+            )
+          })}
 
           {isLoading && messages.length > 0 && (
             !hasVisibleContent(messages.at(-1)!)
@@ -491,44 +419,35 @@ export function CompanionChatArea({
             />
             <PromptInputHeader>
               {chips.length > 0 && <ContextChipBar chips={chips} onRemoveChip={onRemoveChip} />}
-              <AttachmentPreviewBar />
+              <AttachmentPreviewBar altFallback="Attached image" removeLabel="Remove image" />
             </PromptInputHeader>
             <PromptInputBody>
-              <PromptInputTextarea placeholder={placeholder ?? t('lesson.askAboutSegment')} />
+              <PromptInputTextarea placeholder={resolvedPlaceholder} disabled={disabled} />
             </PromptInputBody>
             <PromptInputFooter>
               <PromptInputTools className="gap-2">
-                {onSpeakClick && (
-                  <PromptInputButton
-                    variant="default"
-                    size="icon-sm"
-                    onClick={voice.state !== 'idle' ? undefined : onSpeakClick}
-                    title={t('speak.title')}
-                    aria-label={t('speak.title')}
-                    className={`bg-linear-to-br from-[#7e14ff] via-[#5b6cff] to-[#47bfff] text-white shadow-sm shadow-[#5b6cff]/40 hover:from-[#9341ff] hover:via-[#7787ff] hover:to-[#5fc8ff] hover:text-white${voice.state !== 'idle' ? ' pointer-events-none opacity-50' : ''}`}
-                  >
-                    <AudioLines className="size-4" />
-                  </PromptInputButton>
-                )}
-                <AttachImageButton tooltip={t('companion.attachImage')} muted={voice.state !== 'idle'} />
+                {toolbarLeading}
+                <AttachImageButton tooltip={t('companion.attachImage')} muted={voice.state !== 'idle' || disabled} />
                 {voice.state === 'recording'
-                  ? <RecordingPill onStop={() => voice.stop()} />
+                  ? <RecordingPill onStop={() => voice.stop()} label="Stop recording" />
                   : (
                       <PromptInputButton
                         size="icon-sm"
                         title={t('voice.dictate')}
                         aria-label={t('voice.dictate')}
                         onClick={() => voice.state === 'idle' && voice.start()}
-                        disabled={voice.state === 'connecting' || voice.state === 'processing'}
+                        disabled={disabled || voice.state === 'connecting' || voice.state === 'processing'}
                       >
                         {voice.state === 'connecting' || voice.state === 'processing'
                           ? <Spinner className="size-4" />
                           : <Mic className="size-4" />}
                       </PromptInputButton>
                     )}
+                {toolbarTrailing}
               </PromptInputTools>
               <PromptInputSubmit
                 status={chatStatus}
+                disabled={disabled}
                 onStop={onStop}
                 className={voice.state !== 'idle' ? 'pointer-events-none opacity-50' : undefined}
               />

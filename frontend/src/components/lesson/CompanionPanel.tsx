@@ -1,5 +1,6 @@
 import type { Segment } from '@/types'
-import { useEffect } from 'react'
+import { BookOpenText, MessageSquare } from 'lucide-react'
+import { useEffect, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAgentActions } from '@/contexts/AgentActionsContext'
@@ -10,6 +11,7 @@ import { useVocabulary } from '@/contexts/VocabularyContext'
 import { useZoberChat } from '@/hooks/useZoberChat'
 import { captureCompanionMessageSent } from '@/lib/posthog-events'
 import { CompanionChatArea } from '../chat/CompanionChatArea'
+import { SpeakWithAIButton } from '../chat/PromptInputExtras'
 import { LessonWorkbookPanel } from './LessonWorkbookPanel'
 
 const NEWLINES_RE = /\n+/g
@@ -36,7 +38,7 @@ export function CompanionPanel({
   const count = (entriesByLesson[lessonId] ?? []).length
   const { chips, removeChip, clearChips } = useGlobalCompanionContext()
   const { dispatchAction } = useAgentActions()
-  const { messages, isLoading, isHistoryLoading, sendMessage: sendMessageRaw, stop, loadMore, hasMore } = useZoberChat({
+  const { messages, isLoading, isHistoryLoading, sendMessage: sendMessageRaw, stop, regenerate, loadMore, hasMore } = useZoberChat({
     surface: 'lesson',
     lessonId,
     lessonTitle,
@@ -45,6 +47,10 @@ export function CompanionPanel({
     dispatchAction,
   })
   const { openSpeakModal } = useSpeakModal()
+  const speakExtras = useMemo(
+    () => <SpeakWithAIButton onClick={openSpeakModal} title={t('speak.title')} />,
+    [openSpeakModal, t],
+  )
 
   useEffect(() => {
     if (chips.length > 0)
@@ -71,9 +77,13 @@ export function CompanionPanel({
 
   return (
     <Tabs defaultValue="ai" value={activeTab} onValueChange={onTabChange} className="flex h-full flex-col gap-0">
-      <TabsList variant="line" className="w-full shrink-0 border-b border-border rounded-none h-12!">
-        <TabsTrigger value="ai">{t('lesson.aiCompanion')}</TabsTrigger>
+      <TabsList variant="line" className="w-full shrink-0 border-b border-border rounded-none h-13!">
+        <TabsTrigger value="ai">
+          <MessageSquare className="size-4" aria-hidden />
+          {t('lesson.aiCompanion')}
+        </TabsTrigger>
         <TabsTrigger value="workbook" className="gap-1.5">
+          <BookOpenText className="size-4" aria-hidden />
           {t('lesson.workbook')}
           {count > 0 && <Badge className="size-5 text-xs">{count}</Badge>}
         </TabsTrigger>
@@ -91,7 +101,8 @@ export function CompanionPanel({
           onSend={handleSend}
           onStop={stop}
           headerSlot={headerSlot}
-          onSpeakClick={openSpeakModal}
+          toolbarLeading={speakExtras}
+          onRegenerate={regenerate}
         />
       </TabsContent>
 

@@ -32,13 +32,18 @@ describe('studioTab', () => {
     lessonTitle: 'Lesson 1',
     transcript: 'hello world',
     transcriptStatus: 'ready' as const,
+    notes: [],
+    notesHydrated: true,
+    onCreateNote: vi.fn().mockResolvedValue('note-id'),
+    onUpdateNote: vi.fn().mockResolvedValue(undefined),
+    onRemoveNote: vi.fn().mockResolvedValue(undefined),
+    onDiscussNote: vi.fn(),
   }
 
-  it('renders Study Guide + Flashcards + Quiz + locked Mind Map (Summary lives in OverviewBlock)', () => {
+  it('renders Study Guide + Flashcards + Mind Map (Summary lives in OverviewBlock)', () => {
     render(<StudioTab {...baseProps} />)
     expect(screen.getByRole('heading', { level: 3, name: /study guide/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: /flashcards/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 3, name: /quiz/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: /mind map/i })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 3, name: /^summary$/i })).not.toBeInTheDocument()
   })

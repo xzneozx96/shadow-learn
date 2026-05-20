@@ -129,9 +129,17 @@ export function useZoberChat(args: ZoberChatArgs) {
   // Live context built into a ref to avoid stale closures in transport
   const ctxRef = useRef<any>(null)
 
+  // AI SDK `useChat` caches the Chat instance and its transport at first render
+  // (recreates only on `id` change). Closing over `args` directly would freeze
+  // mode/segment/etc at first render. Mirror args into a ref so refreshContext
+  // always reads the latest props from the caller.
+  const argsRef = useRef(args)
+  argsRef.current = args
+
   const refreshContext = useCallback(async () => {
     if (!db)
       return
+    const args = argsRef.current
     if (args.surface === 'lesson') {
       const [profile, memories, mistakes, due, accuracy, summary] = await Promise.all([
         getLearnerProfile(db),
@@ -203,7 +211,7 @@ export function useZoberChat(args: ZoberChatArgs) {
         compactedSummary: summary?.summary,
       }
     }
-  }, [db, args, threadId, apiKey, locale])
+  }, [db, threadId, apiKey, locale])
 
   useEffect(() => {
     void refreshContext()
@@ -244,9 +252,10 @@ export function useZoberChat(args: ZoberChatArgs) {
         prepareSendMessagesRequest: async ({ messages, trigger, messageId }) => {
           await refreshContext()
           const ctx = ctxRef.current
+          const liveArgs = argsRef.current
 
           // Stateless exhaustion detection — replaces hand-rolled refs in legacy useAgentChat
-          if (args.surface === 'lesson' && ctx?.lesson) {
+          if (liveArgs.surface === 'lesson' && ctx?.lesson) {
             const { exhausted } = computeLessonExhaustion(messages, {
               maxRounds: MAX_TOOL_ROUNDS_LESSON,
             })
@@ -266,6 +275,8 @@ export function useZoberChat(args: ZoberChatArgs) {
           // Reuse EXISTING compaction helper (no new compactor written)
           const compacted = compactForTokenBudget(fullHistory)
           const builtPrompt = ctx ? buildPrompt(ctx) : ''
+          // eslint-disable-next-line no-console
+          console.log('[zober]', { surface: ctx?.surface, mode: ctx?.tip?.mode, promptFirstLine: builtPrompt.split('\n')[0] })
           const includeTools = !ctx?.lesson?.exhausted
 
           const projectedTokens = estimateTokens(compacted) + estimateTextTokens(builtPrompt)
@@ -292,7 +303,7 @@ export function useZoberChat(args: ZoberChatArgs) {
           }
         },
       }),
-    [apiKey, refreshContext, toolPool, args],
+    [apiKey, refreshContext, toolPool],
   )
 
   const {

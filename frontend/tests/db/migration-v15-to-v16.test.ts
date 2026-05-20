@@ -41,15 +41,15 @@ describe('idb migration v15 → v16', () => {
     v15.close()
 
     const v16 = await initDB()
-    expect(v16.version).toBe(16)
+    expect(v16.version).toBe(20)
 
-    const row = await v16.get('tip-chats', 'PL123:vid456:tutor')
+    // v18 reversed the :tutor suffix migration, so key is plain again
+    const row = await v16.get('tip-chats', 'PL123:vid456')
     expect(row).toBeDefined()
-    expect(row!.kind).toBe('tutor')
     expect(row!.messages).toHaveLength(1)
 
-    // Old key should be gone
-    const oldRow = await v16.get('tip-chats', 'PL123:vid456')
+    // :tutor key does not exist after v18 reversal
+    const oldRow = await v16.get('tip-chats', 'PL123:vid456:tutor')
     expect(oldRow).toBeUndefined()
 
     v16.close()
