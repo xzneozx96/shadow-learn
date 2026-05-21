@@ -116,7 +116,7 @@ export async function flushSM2Pending(db: ShadowLearnDB, date: string): Promise<
     const score = pending[vocabId]
     const existing = await getSpacedRepetitionItem(db, vocabId)
     const item = existing ?? createSpacedRepetitionItem(vocabId)
-    const updated = updateSpacedRepetition(item, score)
+    const updated = updateSpacedRepetition(item, score, date)
     await saveSpacedRepetitionItem(db, updated)
   }
 

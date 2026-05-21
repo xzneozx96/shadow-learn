@@ -42,21 +42,21 @@ describe('updateSpacedRepetition', () => {
     expect(updated.consecutiveIncorrect).toBe(0)
   })
 
-  it('sets interval=6 on second correct answer', () => {
+  it('sets interval=3 on second correct answer (Anki-style: round(1×EF))', () => {
     let item = createSpacedRepetitionItem('vocab-1')
     item = updateSpacedRepetition(item, 80)
     item = updateSpacedRepetition(item, 80)
     expect(item.repetitions).toBe(2)
-    expect(item.intervalDays).toBe(6)
+    expect(item.intervalDays).toBe(3)
   })
 
   it('multiplies interval by easiness factor on third+ correct answer', () => {
     let item = createSpacedRepetitionItem('vocab-1')
     item = updateSpacedRepetition(item, 80) // rep=1, interval=1
-    item = updateSpacedRepetition(item, 80) // rep=2, interval=6
+    item = updateSpacedRepetition(item, 80) // rep=2, interval=3
     const ef = item.easinessFactor
-    item = updateSpacedRepetition(item, 80) // rep=3, interval=round(6*ef)
-    expect(item.intervalDays).toBe(Math.round(6 * ef))
+    item = updateSpacedRepetition(item, 80) // rep=3, interval=round(3*ef)
+    expect(item.intervalDays).toBe(Math.round(3 * ef))
   })
 
   it('resets interval to 1 and repetitions to 0 on incorrect answer (score < 60)', () => {

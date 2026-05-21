@@ -182,7 +182,7 @@ describe('flushSM2Pending', () => {
     const item2 = await getSpacedRepetitionItem(db, 'v2')
     expect(item1).not.toBeUndefined()
     expect(item2).not.toBeUndefined()
-    // v1 has 2 successful reviews → intervalDays 6 (SM-2 progression)
+    // v1 has 2 successful reviews → intervalDays 3 (Anki-style: round(1×EF))
     // v2 failed on second review → intervalDays 1
     expect((item1?.intervalDays ?? 0) > (item2?.intervalDays ?? 0)).toBe(true)
   })
