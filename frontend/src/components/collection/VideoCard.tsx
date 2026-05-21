@@ -202,7 +202,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
                 )}
 
           {video.difficulty && !playing && (
-            <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-3 py-1.5">
+            <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-3 py-2">
               <span className={cn('font-bold text-xs uppercase tracking-widest', difficultyTone(video.difficulty))}>
                 {video.difficulty}
               </span>
@@ -212,7 +212,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
           )}
 
           {video.topic && !playing && showTopic && (
-            <CutoutCardInsetLabel className="bottom-0 right-0 rounded-tl-[20px] bg-card px-3 py-1.5">
+            <CutoutCardInsetLabel className="bottom-0 right-0 rounded-tl-[20px] bg-card px-3 py-2">
               <span className="text-xs text-muted-foreground">{video.topic}</span>
               <CutoutCorner className="absolute -left-[31px] -bottom-px -rotate-90 text-card" />
               <CutoutCorner className="absolute -top-[31px] -right-px -rotate-90 text-card" />
@@ -220,7 +220,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
           )}
 
           {!playing && video.duration && (
-            <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
+            <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-3 py-1 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
               {video.duration}
               <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
               <CutoutCorner className="absolute right-0 -bottom-[23px] -rotate-90 text-card" size={24} />

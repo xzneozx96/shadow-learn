@@ -82,7 +82,7 @@ export function PlaylistCard({ playlist, wrapperClassName }: PlaylistCardProps) 
                 )}
 
             {playlist.video_count !== null && (
-              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-2.5 py-1 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40 flex items-center gap-1">
+              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-3 py-1 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40 flex items-center gap-1">
                 <ListVideo className="size-3 shrink-0" />
                 <span>{playlist.video_count}</span>
                 <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-card" size={24} />
@@ -91,7 +91,7 @@ export function PlaylistCard({ playlist, wrapperClassName }: PlaylistCardProps) 
             )}
 
             {playlist.difficulty && (
-              <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-3 py-1.5">
+              <CutoutCardInsetLabel className="bottom-0 left-0 rounded-tr-[20px] bg-card px-3 py-2">
                 <span className={cn('font-bold text-xs uppercase tracking-widest', difficultyTone(playlist.difficulty))}>
                   {playlist.difficulty}
                 </span>

@@ -75,7 +75,7 @@ function EvaluationSection({ evaluation, t }: { evaluation: SessionEvaluation, t
                 {evaluation.vocabulary_mastered.map(w => (
                   <span
                     key={w}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-success/10 text-success text-xs font-bold tracking-wide"
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-success/10 text-success text-xs font-bold tracking-wide"
                   >
                     {w}
                   </span>
@@ -90,7 +90,7 @@ function EvaluationSection({ evaluation, t }: { evaluation: SessionEvaluation, t
                 {evaluation.vocabulary_to_practice.map(w => (
                   <span
                     key={w}
-                    className="px-2.5 py-1 rounded-md bg-primary/10 text-primary/80 text-xs font-bold tracking-wide"
+                    className="px-3 py-1 rounded-md bg-primary/10 text-primary/80 text-xs font-bold tracking-wide"
                   >
                     {w}
                   </span>

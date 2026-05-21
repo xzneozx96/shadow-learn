@@ -151,6 +151,13 @@ PLAYLISTS: list[PlaylistConfig] = [
     
     # Pronunciation tips
     PlaylistConfig(
+        name="Phát âm Tiếng Trung | Đậu Gia Trang",
+        playlist_id="PLzROKCNBas-2-hKwv-yJMD7EtxFFqCtzq",
+        default_content_type="tip",
+        default_skill="Pronunciation",
+        instruction_language="Vietnamese",
+    ),
+    PlaylistConfig(
         name="PHÁT ÂM TIẾNG TRUNG TỪ ĐẦU | Yangdexin",
         playlist_id="PLbGRE6dBnYmJu18TL-omkDZxwqUejyYS7",
         default_content_type="tip",
@@ -174,8 +181,36 @@ PLAYLISTS: list[PlaylistConfig] = [
 
     # Grammar tips
     PlaylistConfig(
-        name="Lượng từ trong tiếng Trung | Ms Trinh Chinese",
-        playlist_id="PLCuFrbSZn_8gkHnJmgzbwqE_NAnudj-MB",
+        name="Ngữ pháp sơ cấp HSK 1-2-3 | Đậu Gia Trang",
+        playlist_id="PLzROKCNBas-2jCvb3UBo8uF5wSEOmnyc3",
+        default_content_type="tip",
+        default_skill="Grammar",
+        instruction_language="Vietnamese",
+    ),
+    PlaylistConfig(
+        name="Ngữ pháp HSK 4 | Đậu Gia Trang",
+        playlist_id="PLzROKCNBas-2XGw7PTPluVGNGZYvfSrat",
+        default_content_type="tip",
+        default_skill="Grammar",
+        instruction_language="Vietnamese",
+    ),
+    PlaylistConfig(
+        name="NGỮ PHÁP HSK1/HSK2 | Weiwei Chinese 炜炜中文",
+        playlist_id="PLKW-2I7gpssVOor8mFNveIpsirOQuf3fN",
+        default_content_type="tip",
+        default_skill="Grammar",
+        instruction_language="Vietnamese",
+    ),
+    PlaylistConfig(
+        name="NGỮ PHÁP HSK3 | Weiwei Chinese 炜炜中文",
+        playlist_id="PLKW-2I7gpssUVz-7_6i9m_OfY51uGUnv-",
+        default_content_type="tip",
+        default_skill="Grammar",
+        instruction_language="Vietnamese",
+    ),
+    PlaylistConfig(
+        name="NGỮ PHÁP HSK4 | Weiwei Chinese 炜炜中文",
+        playlist_id="PLKW-2I7gpssWXbO1jnFDtwEtjfLtVYhDC",
         default_content_type="tip",
         default_skill="Grammar",
         instruction_language="Vietnamese",
@@ -183,6 +218,13 @@ PLAYLISTS: list[PlaylistConfig] = [
     PlaylistConfig(
         name="TỔNG HỢP NGỮ PHÁP TIẾNG TRUNG",
         playlist_id="PLbGRE6dBnYmIaN5NRZ78JnWQ-57WfcTsj",
+        default_content_type="tip",
+        default_skill="Grammar",
+        instruction_language="Vietnamese",
+    ),
+    PlaylistConfig(
+        name="Lượng từ trong tiếng Trung | Ms Trinh Chinese",
+        playlist_id="PLCuFrbSZn_8gkHnJmgzbwqE_NAnudj-MB",
         default_content_type="tip",
         default_skill="Grammar",
         instruction_language="Vietnamese",

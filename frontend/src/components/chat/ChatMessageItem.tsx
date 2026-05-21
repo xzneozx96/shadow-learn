@@ -2,10 +2,11 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { ExerciseRenderResult } from '../lesson/ExerciseRenderer'
 import type { MessageAction } from './MessageActions'
-import { BrainCircuit, ChevronDown, FileText } from 'lucide-react'
+import { Brain, ChevronDown, FileText } from 'lucide-react'
 import { motion } from 'motion/react'
-import { memo, useMemo, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { TextShimmer } from '@/components/ui/text-shimmer'
+import { useI18n } from '@/contexts/I18nContext'
 import {
   getToolName,
   isToolPart,
@@ -51,33 +52,47 @@ export function StreamingDots() {
   )
 }
 
+// Extracted so memo can skip re-renders when only the parent streaming/open state changes.
+const ThinkingExpandedContent = memo(({ text }: { text: string }) => (
+  <div className="px-3 pb-2 pt-0.5 whitespace-pre-wrap leading-relaxed border-t border-border/40 text-muted-foreground">
+    {text}
+  </div>
+))
+
+// Extracted so memo skips header re-renders on every reasoning delta (streaming=true doesn't change per chunk).
+const ThinkingHeader = memo(({ streaming, open, onToggle }: { streaming: boolean, open: boolean, onToggle: () => void }) => {
+  const { t } = useI18n()
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center gap-2 px-3 py-2 hover:bg-muted/40 transition-colors"
+    >
+      <Brain
+        className={cn(
+          'size-4 shrink-0 text-muted-foreground',
+          streaming && 'motion-safe:animate-pulse text-foreground/70',
+        )}
+      />
+      <span className="flex-1 text-left font-medium">
+        {streaming
+          ? <TextShimmer as="span" className="font-medium" duration={1.5}>{t('chat.thinking.streaming')}</TextShimmer>
+          : t('chat.thinking')}
+      </span>
+      <ChevronDown className={cn('size-4 text-muted-foreground shrink-0 transition-transform duration-200', open && 'rotate-180')} />
+    </button>
+  )
+})
+
 function ThinkingBlock({ text, streaming }: { text: string, streaming: boolean }) {
   const [open, setOpen] = useState(false)
+  // Defer layout-heavy text renders so rapid reasoning deltas don't block the UI.
+  const deferredText = useDeferredValue(text)
+  const handleToggle = useCallback(() => setOpen(o => !o), [])
   return (
-    <div className="mb-1.5 rounded-md border border-border/50 bg-muted/30 text-xs text-muted-foreground overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 hover:bg-muted/40 transition-colors"
-      >
-        <BrainCircuit
-          className={cn(
-            'size-3.5 shrink-0',
-            streaming && 'motion-safe:animate-pulse text-foreground/70',
-          )}
-        />
-        <span className="flex-1 text-left font-medium">
-          {streaming
-            ? <TextShimmer as="span" className="font-medium" duration={1.5}>Thinking…</TextShimmer>
-            : 'Thinking'}
-        </span>
-        <ChevronDown className={cn('size-3.5 shrink-0 transition-transform duration-200', open && 'rotate-180')} />
-      </button>
-      {open && (
-        <div className="px-2.5 pb-2 pt-0.5 whitespace-pre-wrap leading-relaxed border-t border-border/40">
-          {text}
-        </div>
-      )}
+    <div className="mb-2 rounded-sm border border-border bg-input text-xs text-foreground overflow-hidden">
+      <ThinkingHeader streaming={streaming} open={open} onToggle={handleToggle} />
+      {open && <ThinkingExpandedContent text={deferredText} />}
     </div>
   )
 }

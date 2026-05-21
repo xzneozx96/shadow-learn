@@ -62,7 +62,7 @@ function BreakdownNode({ data }: NodeProps) {
   const clickable = !!(d.meaning || d.meaningVi)
   return (
     <div
-      className={`bg-card/60 border border-border rounded-xl px-3 py-1.5 text-center min-w-[60px] shadow-sm transition-colors ${clickable ? 'cursor-pointer hover:border-primary/50 hover:bg-card' : ''}`}
+      className={`bg-card/60 border border-border rounded-xl px-3 py-2 text-center min-w-[60px] shadow-sm transition-colors ${clickable ? 'cursor-pointer hover:border-primary/50 hover:bg-card' : ''}`}
     >
       <Handle type="target" position={Position.Top} className={handleClass} />
       {charRenderable

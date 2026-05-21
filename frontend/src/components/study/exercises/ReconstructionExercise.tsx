@@ -77,7 +77,7 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
       {/* Source context link */}
       <Link
         to={`/lesson/${entry.sourceLessonId}?segmentId=${entry.sourceSegmentId}`}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border/50 rounded-full px-2.5 py-1 mb-3 hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border/50 rounded-full px-3 py-1 mb-3 hover:text-foreground transition-colors"
       >
         📍
         {' '}
@@ -97,7 +97,7 @@ export function ReconstructionExercise({ entry, words, caps, progress = '', onNe
           <span
             key={i}
             className={cn(
-              'px-3 py-1.5 rounded-md text-base font-semibold border border-border bg-secondary transition-opacity',
+              'px-3 py-2 rounded-md text-base font-semibold border border-border bg-secondary transition-opacity',
               !active[i] && 'opacity-25',
             )}
           >

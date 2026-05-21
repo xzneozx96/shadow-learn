@@ -117,7 +117,7 @@ export function SessionResultsCard({ payload }: { payload: SessionCompletePayloa
           return (
             <li
               key={`${r.vocabId}-${idx}`}
-              className="flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-muted/40 transition-colors"
+              className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-muted/40 transition-colors"
             >
               <div
                 className={cn(

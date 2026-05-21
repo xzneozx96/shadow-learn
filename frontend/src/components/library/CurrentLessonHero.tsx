@@ -55,7 +55,7 @@ function languageLabel(code: string | undefined, t: TFn): string | null {
 
 function HeroChip({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string, strokeWidth?: number }>, children: React.ReactNode }) {
   return (
-    <span className="group inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/6 backdrop-blur-md px-2.5 py-1 text-sm font-medium text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-card/90 hover:border-white/20">
+    <span className="group inline-flex items-center gap-1.5 rounded-md border border-white/12 bg-white/6 backdrop-blur-md px-3 py-1 text-sm font-medium text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-card/90 hover:border-white/20">
       <Icon className="size-4 text-foreground transition-transform duration-200 group-hover:scale-110" strokeWidth={1.75} />
       {children}
     </span>

@@ -82,7 +82,7 @@ export function CompanionPanel({
 
   const headerSlot = activeSegment
     ? (
-        <div className="h-10 flex items-center border-b border-border px-3 py-1.5">
+        <div className="h-10 flex items-center border-b border-border px-3 py-2">
           <Badge variant="secondary" className="max-w-full truncate text-sm">
             {activeSegment.text}
           </Badge>

@@ -83,7 +83,7 @@ export function VoiceSelector({ voices, selectedId, onSelect }: VoiceSelectorPro
                 aria-selected={isSelected}
                 onClick={() => handleSelect(voice.id)}
                 className={cn(
-                  'flex items-center gap-3 rounded-md px-2 py-1.5 cursor-pointer select-none transition-colors duration-100',
+                  'flex items-center gap-3 rounded-md px-2 py-2 cursor-pointer select-none transition-colors duration-100',
                   isSelected ? 'bg-primary/10' : 'hover:bg-input',
                 )}
               >

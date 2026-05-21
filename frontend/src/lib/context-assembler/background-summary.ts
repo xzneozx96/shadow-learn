@@ -1,14 +1,45 @@
 import type { UIMessage } from '@ai-sdk/react'
-import type { ShadowLearnDB } from '@/db'
-import { getLatestSummary, putThreadSummary } from '@/db'
+import type { ShadowLearnDB, ThreadSummaryRecord } from '@/db'
+import { getLatestSummary, getThread, putThreadSummary, saveThreadMessages } from '@/db'
 import { estimateTokens, TOKEN_BUDGET } from '@/lib/agent-utils'
 
-const COMPACTION_TRIGGER_RATIO = 0.7
-const MIN_MESSAGES_BEFORE_SUMMARY = 30
+const COMPACTION_TRIGGER_RATIO = 0.01
+const MIN_MESSAGES_BEFORE_SUMMARY = 4
 
-const SUMMARIZER_SYSTEM_PROMPT = `You are a conversation summarizer. Output JSON only matching this shape:
-{ "summary": string, "keyDecisions": string[], "openTopics": string[] }
-Keep summary under 600 words. Preserve learner-specific facts (vocabulary mistakes, weak skills, preferences). Do not include any prose outside the JSON.`
+const inFlight = new Set<string>()
+
+/**
+ * Given the full message history and an existing summary, return what to persist to IDB.
+ * Collapses everything up to and including `coversThroughMessageId` into a single synthetic
+ * assistant message containing the summary, keeping the messages after the cut visible.
+ * The cut point is set at the second-to-last assistant message, so the most recent
+ * user→assistant exchange is always preserved as real messages.
+ * When no summary exists, returns `fullHistory` unchanged.
+ */
+export function buildHistoryToStore(
+  fullHistory: UIMessage[],
+  summary: ThreadSummaryRecord | null | undefined,
+): UIMessage[] {
+  if (!summary)
+    return fullHistory
+
+  const cutIdx = fullHistory.findIndex(m => m.id === summary.coversThroughMessageId)
+  if (cutIdx < 0) {
+    console.warn('[buildHistoryToStore] coversThroughMessageId not found in history — returning full history. Summary may be stale.', summary.coversThroughMessageId)
+    return fullHistory
+  }
+
+  const postSummaryMessages = fullHistory.slice(cutIdx + 1)
+  return [
+    {
+      id: 'compaction-assistant',
+      role: 'assistant',
+      content: summary.summary,
+      parts: [{ type: 'text', text: summary.summary }],
+    } as UIMessage,
+    ...postSummaryMessages,
+  ]
+}
 
 export async function maybeRunBackgroundSummary(
   db: ShadowLearnDB,
@@ -16,70 +47,90 @@ export async function maybeRunBackgroundSummary(
   messages: UIMessage[],
   apiKey: string,
   apiBase: string,
+  locale: string,
 ): Promise<void> {
   if (messages.length < MIN_MESSAGES_BEFORE_SUMMARY)
     return
-  if (estimateTokens(messages) < COMPACTION_TRIGGER_RATIO * TOKEN_BUDGET)
-    return
 
   const last = messages.at(-1)!
-  const previous = await getLatestSummary(db, threadId)
+  const flightKey = `${threadId}:${last.id}`
+  if (inFlight.has(flightKey))
+    return
+  inFlight.add(flightKey)
+
+  let previous: Awaited<ReturnType<typeof getLatestSummary>>
   try {
-    const resp = await fetch(`${apiBase}/api/agent`, {
+    previous = await getLatestSummary(db, threadId)
+  }
+  catch {
+    inFlight.delete(flightKey)
+    return
+  }
+
+  const coveredIdx = previous
+    ? messages.findIndex(m => m.id === previous!.coversThroughMessageId)
+    : -1
+  const uncovered = messages.slice(coveredIdx + 1)
+
+  if (uncovered.length < MIN_MESSAGES_BEFORE_SUMMARY) {
+    inFlight.delete(flightKey)
+    return
+  }
+  if (estimateTokens(uncovered) < COMPACTION_TRIGGER_RATIO * TOKEN_BUDGET) {
+    inFlight.delete(flightKey)
+    return
+  }
+
+  // Cut after the second-to-last assistant message so the most recent
+  // user→assistant exchange stays visible after compaction.
+  const assistantIdxs: number[] = []
+  for (let i = messages.length - 1; i >= 0 && assistantIdxs.length < 2; i--) {
+    if (messages[i].role === 'assistant')
+      assistantIdxs.push(i)
+  }
+  const cutIdx = assistantIdxs.length >= 2 ? assistantIdxs[1] : (assistantIdxs[0] ?? messages.length - 1)
+  const cutMsg = messages[cutIdx]
+
+  try {
+    const resp = await fetch(`${apiBase}/api/summarize`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        messages: messages.map((m: any) => ({ role: m.role, parts: m.parts })),
-        system_prompt: SUMMARIZER_SYSTEM_PROMPT,
+        messages: messages.slice(0, cutIdx + 1).map((m: any) => ({ role: m.role, parts: m.parts })),
         openrouter_api_key: apiKey || null,
-        tools: [],
+        locale,
       }),
     })
-    if (!resp.ok || !resp.body)
+    if (!resp.ok)
       return
 
-    const reader = resp.body.getReader()
-    const decoder = new TextDecoder()
-    let buf = ''
-    let text = ''
-    while (true) {
-      const { value, done } = await reader.read()
-      if (done)
-        break
-      buf += decoder.decode(value, { stream: true })
-      let nl: number
-      // eslint-disable-next-line no-cond-assign
-      while ((nl = buf.indexOf('\n\n')) >= 0) {
-        const evt = buf.slice(0, nl)
-        buf = buf.slice(nl + 2)
-        const dataLine = evt.split('\n').find(l => l.startsWith('data: '))
-        if (!dataLine)
-          continue
-        try {
-          const parsed = JSON.parse(dataLine.slice(6))
-          if (parsed.type === 'text-delta' && typeof parsed.delta === 'string')
-            text += parsed.delta
-        }
-        catch { /* ignore parse errors */ }
-      }
-    }
-
-    let parsedJson: { summary?: string } = {}
-    try { parsedJson = JSON.parse(text) }
+    let parsedJson: { summary?: string }
+    try { parsedJson = await resp.json() }
     catch { return }
     if (!parsedJson.summary)
       return
 
-    await putThreadSummary(db, {
+    const newSummary: ThreadSummaryRecord = {
       threadId,
-      generation: (previous?.generation ?? 0) + 1,
       summary: parsedJson.summary,
-      coversThroughMessageId: last.id,
+      coversThroughMessageId: cutMsg.id,
       tokenBudget: estimateTokens(messages),
       createdAt: Date.now(),
-    })
+    }
+    await putThreadSummary(db, newSummary)
+
+    // Write compacted form so future loads start clean.
+    // Fetch current thread in case new messages arrived after our snapshot.
+    const thread = await getThread(db, threadId)
+    if (thread) {
+      const toStore = buildHistoryToStore(thread.messages, newSummary)
+      await saveThreadMessages(db, threadId, toStore, thread.surface, thread.ownerId)
+    }
   }
   catch {
     // Background failure silent by design.
+  }
+  finally {
+    inFlight.delete(flightKey)
   }
 }

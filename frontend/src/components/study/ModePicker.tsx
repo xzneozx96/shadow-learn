@@ -53,7 +53,7 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
             key={m.id}
             onClick={() => onSelect(m.id)}
             className={cn(
-              'py-10 px-2.5 rounded-md text-center border transition-all bg-card/50',
+              'py-10 px-3 rounded-md text-center border transition-all bg-card/50',
               selected === m.id
                 ? 'bg-secondary border-border/60 shadow-sm'
                 : 'border-border hover:bg-accent/60',

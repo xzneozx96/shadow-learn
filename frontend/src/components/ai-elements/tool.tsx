@@ -24,7 +24,7 @@ export type ToolProps = ComponentProps<typeof Collapsible>
 export function Tool({ className, ...props }: ToolProps) {
   return (
     <Collapsible
-      className={cn('group not-prose mb-4 w-full rounded-md border', className)}
+      className={cn('group not-prose mb-2 w-full rounded-md border', className)}
       {...props}
     />
   )
@@ -49,6 +49,9 @@ const statusLabels: Record<ToolPart['state'], string> = {
   'input-streaming': 'Pending',
   'output-available': 'Completed',
   'output-error': 'Error',
+  'approval-requested': 'Awaiting Approval',
+  'approval-responded': 'Approved',
+  'output-denied': 'Denied',
 }
 
 const statusIcons: Record<ToolPart['state'], ReactNode> = {
@@ -56,12 +59,15 @@ const statusIcons: Record<ToolPart['state'], ReactNode> = {
   'input-streaming': <CircleIcon className="size-4" />,
   'output-available': <CheckCircleIcon className="size-4 text-green-600" />,
   'output-error': <XCircleIcon className="size-4 text-red-600" />,
+  'approval-requested': <ClockIcon className="size-4 text-yellow-600" />,
+  'approval-responded': <CheckCircleIcon className="size-4 text-blue-600" />,
+  'output-denied': <XCircleIcon className="size-4 text-orange-600" />,
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function getStatusBadge(status: ToolPart['state']) {
   return (
-    <Badge className="gap-1.5 rounded-full text-xs" variant="secondary">
+    <Badge className="ml-auto gap-1.5 rounded-full text-xs" variant="secondary">
       {statusIcons[status]}
       {statusLabels[status]}
     </Badge>
@@ -82,14 +88,14 @@ export function ToolHeader({
   return (
     <CollapsibleTrigger
       className={cn(
-        'flex w-full items-center justify-between gap-4 p-3',
+        'flex w-full items-center justify-between gap-2 px-3 py-2 bg-input rounded-sm',
         className,
       )}
       {...props}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex flex-1 items-center gap-2">
         <WrenchIcon className="size-4 text-muted-foreground" />
-        <span className="font-medium text-sm">{title ?? derivedName}</span>
+        <span className="font-medium text-xs">{title ?? derivedName}</span>
         {getStatusBadge(state)}
       </div>
       <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
