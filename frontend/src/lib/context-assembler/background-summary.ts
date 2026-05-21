@@ -3,8 +3,8 @@ import type { ShadowLearnDB, ThreadSummaryRecord } from '@/db'
 import { getLatestSummary, getThread, putThreadSummary, saveThreadMessages } from '@/db'
 import { estimateTokens, TOKEN_BUDGET } from '@/lib/agent-utils'
 
-const COMPACTION_TRIGGER_RATIO = 0.01
-const MIN_MESSAGES_BEFORE_SUMMARY = 4
+const COMPACTION_TRIGGER_RATIO = 0.7
+const MIN_MESSAGES_BEFORE_SUMMARY = 40
 
 const inFlight = new Set<string>()
 
