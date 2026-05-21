@@ -2,9 +2,10 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { ExerciseRenderResult } from '../lesson/ExerciseRenderer'
 import type { MessageAction } from './MessageActions'
-import { FileText } from 'lucide-react'
+import { BrainCircuit, ChevronDown, FileText } from 'lucide-react'
 import { motion } from 'motion/react'
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
+import { TextShimmer } from '@/components/ui/text-shimmer'
 import {
   getToolName,
   isToolPart,
@@ -15,6 +16,7 @@ import {
   EXERCISE_TOOLS,
   SILENT_TOOLS,
 } from '@/lib/tools/index'
+import { cn } from '@/lib/utils'
 import {
   ProgressChartRenderer,
   ToolCallCard,
@@ -46,6 +48,37 @@ export function StreamingDots() {
       <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:150ms]" />
       <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:300ms]" />
     </span>
+  )
+}
+
+function ThinkingBlock({ text, streaming }: { text: string, streaming: boolean }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mb-1.5 rounded-md border border-border/50 bg-muted/30 text-xs text-muted-foreground overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 hover:bg-muted/40 transition-colors"
+      >
+        <BrainCircuit
+          className={cn(
+            'size-3.5 shrink-0',
+            streaming && 'motion-safe:animate-pulse text-foreground/70',
+          )}
+        />
+        <span className="flex-1 text-left font-medium">
+          {streaming
+            ? <TextShimmer as="span" className="font-medium" duration={1.5}>Thinking…</TextShimmer>
+            : 'Thinking'}
+        </span>
+        <ChevronDown className={cn('size-3.5 shrink-0 transition-transform duration-200', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div className="px-2.5 pb-2 pt-0.5 whitespace-pre-wrap leading-relaxed border-t border-border/40">
+          {text}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -148,6 +181,19 @@ export function renderMessageParts(
 
       // Unknown tool at unknown state — show generic card
       return <ToolCallCard key={partKey} toolName={toolName} state={state as 'input-available'} input={part.input} />
+    }
+
+    if (part.type === 'reasoning') {
+      const rp = part as { type: 'reasoning', text: string, state?: 'streaming' | 'done' }
+      if (!rp.text)
+        return null
+      return (
+        <ThinkingBlock
+          key={`reasoning-${i}`}
+          text={rp.text}
+          streaming={rp.state === 'streaming'}
+        />
+      )
     }
 
     if (part.type === 'text') {
@@ -265,6 +311,8 @@ export const MessageItem = memo(
     const hasBubble = bubbleParts.some((p) => {
       if (p.type === 'text' && 'text' in p)
         return (p.text as string)?.trim()
+      if (p.type === 'reasoning' && 'text' in p)
+        return (p.text as string)?.trim()
       if (isToolPart(p))
         return true
       return false
@@ -332,6 +380,11 @@ export const MessageItem = memo(
         return false
       if (p.type === 'text' && 'text' in p && 'text' in nextPart)
         return p.text === nextPart.text
+      if (p.type === 'reasoning' && nextPart.type === 'reasoning') {
+        const pr = p as { text: string, state?: string }
+        const nr = nextPart as { text: string, state?: string }
+        return pr.text === nr.text && pr.state === nr.state
+      }
       if (isToolPart(p) && isToolPart(nextPart))
         return p.state === nextPart.state && (p.output != null) === (nextPart.output != null)
       return true

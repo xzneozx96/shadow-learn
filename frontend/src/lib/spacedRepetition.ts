@@ -29,9 +29,10 @@ export function createSpacedRepetitionItem(itemId: string): SpacedRepetitionItem
 export function updateSpacedRepetition(
   item: SpacedRepetitionItem,
   performanceScore: number,
+  reviewDate?: string,
 ): SpacedRepetitionItem {
   const quality = scoreToQuality(performanceScore)
-  const today = todayISO()
+  const studyDate = reviewDate ?? todayISO()
 
   let { repetitions, intervalDays, easinessFactor, consecutiveCorrect, consecutiveIncorrect, masteryLevel } = item
 
@@ -41,8 +42,6 @@ export function updateSpacedRepetition(
     consecutiveIncorrect = 0
     if (repetitions === 1)
       intervalDays = 1
-    else if (repetitions === 2)
-      intervalDays = 6
     else intervalDays = Math.round(intervalDays * easinessFactor)
   }
   else {
@@ -66,8 +65,8 @@ export function updateSpacedRepetition(
     consecutiveIncorrect = 0
   }
 
-  const dueDate = new Date()
-  dueDate.setDate(dueDate.getDate() + intervalDays)
+  const [sy, sm, sd] = studyDate.split('-').map(Number)
+  const dueDate = new Date(sy, sm - 1, sd + intervalDays)
 
   return {
     ...item,
@@ -78,10 +77,10 @@ export function updateSpacedRepetition(
     consecutiveIncorrect,
     masteryLevel,
     dueDate: localDateString(dueDate),
-    lastReviewed: today,
+    lastReviewed: studyDate,
     reviewHistory: [
       ...item.reviewHistory,
-      { date: today, quality, intervalDays },
+      { date: studyDate, quality, intervalDays },
     ],
   }
 }

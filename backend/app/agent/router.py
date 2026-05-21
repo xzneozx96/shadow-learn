@@ -235,8 +235,11 @@ async def _stream_agent(stream, stitch_message_id: str | None = None):
         message_id = f"msg-{uuid.uuid4().hex}"
         emit_message_id = stitch_message_id or message_id
         text_stream_id = "text-1"
+        reasoning_stream_id = "reasoning-1"
         text_started = False
         text_finished = False
+        reasoning_started = False
+        reasoning_finished = False
         finish_reason = None
         usage_data = None
         tool_calls_state: dict[int, dict[str, Any]] = {}
@@ -255,8 +258,28 @@ async def _stream_agent(stream, stitch_message_id: str | None = None):
                     if delta is None:
                         continue
 
-                    # Text content
-                    if delta.content is not None:
+                    # Reasoning content (thinking tokens) — only before block is closed
+                    reasoning_delta = getattr(delta, "reasoning", None)
+                    if reasoning_delta is not None and not reasoning_finished:
+                        if not reasoning_started:
+                            yield fmt({"type": "reasoning-start", "id": reasoning_stream_id})
+                            reasoning_started = True
+                        yield fmt(
+                            {
+                                "type": "reasoning-delta",
+                                "id": reasoning_stream_id,
+                                "delta": reasoning_delta,
+                            }
+                        )
+
+                    # Close reasoning block once actual text begins
+                    # Use truthiness — OpenRouter sends content='' (not None) during reasoning chunks
+                    if delta.content and reasoning_started and not reasoning_finished:
+                        yield fmt({"type": "reasoning-end", "id": reasoning_stream_id})
+                        reasoning_finished = True
+
+                    # Text content — skip empty strings sent during reasoning phase
+                    if delta.content:
                         if not text_started:
                             yield fmt({"type": "text-start", "id": text_stream_id})
                             text_started = True
@@ -343,6 +366,11 @@ async def _stream_agent(stream, stitch_message_id: str | None = None):
                 }
             )
             finish_reason = "stop"
+
+        # Close reasoning block if it never got closed (e.g. model produced only reasoning, no text)
+        if reasoning_started and not reasoning_finished:
+            yield fmt({"type": "reasoning-end", "id": reasoning_stream_id})
+            reasoning_finished = True
 
         # Finalize text stream — close BEFORE tool finalization so SDK state
         # machine sees text-end before tool-input-available events.
@@ -490,7 +518,7 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
 
     create_kwargs: dict[str, Any] = {
         "stream": True,
-        "extra_body": {"reasoning": {"effort": "none"}},
+        "extra_body": {"reasoning": {"max_tokens": 512}},
         "messages": openai_messages,
         "max_tokens": settings.openrouter_agent_max_tokens,
     }

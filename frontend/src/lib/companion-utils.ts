@@ -76,6 +76,8 @@ export function hasVisibleContent(msg: UIMessage): boolean {
         return part.text.trim().length > 0
       if (isToolPart(part))
         return true
+      if (part.type === 'reasoning' && 'text' in part)
+        return (part.text as string).trim().length > 0
       return false
     })
   }
