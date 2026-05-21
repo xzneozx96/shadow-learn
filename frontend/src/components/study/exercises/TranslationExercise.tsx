@@ -256,7 +256,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
             {wordBankItems.map(item => (
               <div
                 key={item.word}
-                className="flex flex-col items-center px-2.5 py-1.5 rounded-lg border bg-input/50 text-center"
+                className="flex flex-col items-center px-3 py-2 rounded-lg border bg-input/50 text-center"
               >
                 <span className="text-base">{item.word}</span>
                 <span className="text-xs text-muted-foreground">{item.pinyin}</span>

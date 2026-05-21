@@ -189,7 +189,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry, onToggleDone }
 
             {/* Duration pin — top-right cutout (when available, not error) */}
             {!isProcessing && !isError && lesson.duration != null && (
-              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-3 py-1.5 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
+              <CutoutCardPin className="top-0 right-0 rounded-bl-[16px] bg-card px-3 py-2 text-xs font-semibold text-amber-500 tabular-nums shadow-md ring-1 ring-border/40">
                 {formatDuration(lesson.duration)}
                 <CutoutCorner className="absolute top-0 -left-4 -rotate-90 text-card" size={16} />
                 <CutoutCorner className="absolute right-0 -bottom-4 -rotate-90 text-card" size={16} />
@@ -200,7 +200,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry, onToggleDone }
             {isError && (
               <CutoutCardPin
                 data-testid="lesson-card-error-badge"
-                className="top-0 right-0 rounded-bl-[16px] bg-destructive px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-destructive-foreground shadow-md"
+                className="top-0 right-0 rounded-bl-[16px] bg-destructive px-3 py-2 text-xs font-bold uppercase tracking-wide text-destructive-foreground shadow-md"
               >
                 {t('library.failed')}
                 <CutoutCorner className="absolute top-0 -left-[23px] -rotate-90 text-destructive" size={24} />

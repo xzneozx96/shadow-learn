@@ -162,7 +162,7 @@ export function ChangelogPage() {
                       <Badge
                         key={tag}
                         variant="outline"
-                        className={`h-auto flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold border uppercase tracking-wider ${ui.badge}`}
+                        className={`h-auto flex items-center gap-1.5 px-3 py-1 text-xs font-bold border uppercase tracking-wider ${ui.badge}`}
                       >
                         <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
                         {t(`whatsNew.tag.${tag}` as Parameters<typeof t>[0])}

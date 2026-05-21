@@ -101,10 +101,14 @@ async def _call_openrouter(*, prompt: str, schema_name: str) -> dict[str, Any]:
 
     payload: dict[str, Any] = {
         "model": settings.openrouter_structured_model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user", "content": [{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}}]}],
         "response_format": {"type": "json_object"},
         "max_tokens": 65000,
-        "reasoning": {"max_tokens": 512},
+        "reasoning": {"budget_tokens": 256},
+        "provider": {
+            "require_parameters": True,  # only route to providers supporting the params in your call
+            "allow_fallbacks": True,     # but allow fallback among those that qualify
+        },
     }
 
     @http_retry(logger)

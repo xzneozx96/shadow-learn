@@ -8,7 +8,7 @@ export const TRANSLATIONS = {
     'nav.settings': 'Settings',
     'nav.workbook': 'Workbook',
     'nav.documentation': 'Documentation',
-    'nav.collection': 'Collection',
+    'nav.collection': 'Explore',
     'nav.search': 'Search lessons...',
 
     // Auth — Setup & Unlock
@@ -874,6 +874,8 @@ export const TRANSLATIONS = {
     'chat.actions.save': 'Save',
     'chat.actions.saved': 'Saved',
     'chat.actions.saveError': 'Save failed',
+    'chat.thinking': 'Thinking',
+    'chat.thinking.streaming': 'Thinking…',
     // --- Tips LMS B2 (Studio + Cards) ---
     'tips.studio.title': 'Studio',
     'tips.studio.subtitle': 'Generate on demand · cached after first run',
@@ -1112,9 +1114,9 @@ export const TRANSLATIONS = {
     'collection.playlistEmpty': 'Chưa có video trong playlist này.',
     'collection.tabMine': 'Tài liệu của tôi',
     'collection.mineSubtitle': 'Danh sách phát và video của bạn, sẵn sàng học với đầy đủ tính năng.',
-    'collection.mineEmpty': 'Các bài giảng yêu thích của bạn từ YouTube sẽ xuất hiện tại đây.',
+    'collection.mineEmpty': 'Các bài giảng yêu thích của bạn từ YouTube sẽ xuất hiện tại đây. Bấm nút bên dưới để thêm video đầu tiên của bạn.',
     'collection.mineItemCount': 'mục',
-    'collection.register': 'Đăng ký',
+    'collection.register': 'Thêm video',
     'collection.registerFirst': 'Thêm bài giảng',
     'collection.registerModal.title': 'Thêm danh sách phát hoặc video YouTube',
     'collection.registerModal.urlLabel': 'URL YouTube',
@@ -1795,6 +1797,8 @@ export const TRANSLATIONS = {
     'chat.actions.save': 'Lưu',
     'chat.actions.saved': 'Đã lưu',
     'chat.actions.saveError': 'Lưu thất bại',
+    'chat.thinking': 'Đang suy nghĩ',
+    'chat.thinking.streaming': 'Đang suy nghĩ…',
     // --- Tips LMS B2 ---
     'tips.studio.title': 'Studio',
     'tips.studio.subtitle': 'Tạo theo yêu cầu · lưu cache sau lần đầu',

@@ -37,7 +37,7 @@ function LessonRowInner({ videoId, title, duration, isActive, isCompleted, isInP
       role="listitem"
       aria-current={isActive ? 'true' : undefined}
       className={cn(
-        'flex items-center gap-2.5 px-2.5 py-2 cursor-pointer border-r-[3px] border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
+        'flex items-center gap-2.5 px-3 py-2 cursor-pointer border-r-[3px] border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
         isActive && 'bg-primary/10 border-r-primary',
         !isActive && 'hover:bg-card',
       )}

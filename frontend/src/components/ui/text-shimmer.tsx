@@ -18,7 +18,9 @@ function TextShimmerComponent({
   duration = 2,
   spread = 2,
 }: TextShimmerProps) {
-  const MotionComponent = motion.create(Component as keyof JSX.IntrinsicElements)
+  // motion.create() must not be called inside render — it creates a new component
+  // type each time, causing React to unmount+remount and resetting the animation.
+  const MotionComponent = useMemo(() => motion.create(Component as keyof JSX.IntrinsicElements), [Component])
 
   const dynamicSpread = useMemo(() => children.length * spread, [children, spread])
 

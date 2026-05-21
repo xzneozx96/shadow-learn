@@ -28,7 +28,6 @@ import {
 } from '@/db'
 import { getMemorySummary } from '@/lib/agent-memory'
 import {
-  compactForTokenBudget,
   estimateTextTokens,
   estimateTokens,
   normalizeMessagesForBackend,
@@ -37,7 +36,7 @@ import {
 } from '@/lib/agent-utils'
 import { API_BASE } from '@/lib/config'
 import { buildPrompt, resolveThreadId } from '@/lib/context-assembler'
-import { maybeRunBackgroundSummary } from '@/lib/context-assembler/background-summary'
+import { buildHistoryToStore, maybeRunBackgroundSummary } from '@/lib/context-assembler/background-summary'
 import { computeLessonExhaustion } from '@/lib/context-assembler/exhaustion'
 import { getEffectiveDueItems } from '@/lib/skillSessionProgress'
 import { ToolExecutor } from '@/lib/tools/executor'
@@ -176,6 +175,7 @@ export function useZoberChat(args: ZoberChatArgs) {
           mode: args.mode,
         },
         compactedSummary: summary?.summary,
+        summaryCoversThroughId: summary?.coversThroughMessageId,
       }
     }
     else if (args.surface === 'global') {
@@ -192,6 +192,7 @@ export function useZoberChat(args: ZoberChatArgs) {
         currentTime: new Date().toISOString(),
         global: { chips: [] },
         compactedSummary: summary?.summary,
+        summaryCoversThroughId: summary?.coversThroughMessageId,
       }
     }
     else {
@@ -211,6 +212,7 @@ export function useZoberChat(args: ZoberChatArgs) {
           mode: args.mode,
         },
         compactedSummary: summary?.summary,
+        summaryCoversThroughId: summary?.coversThroughMessageId,
       }
     }
   }, [db, threadId, apiKey, locale])
@@ -274,14 +276,42 @@ export function useZoberChat(args: ZoberChatArgs) {
             return true
           })
 
-          // Reuse EXISTING compaction helper (no new compactor written)
-          const compacted = compactForTokenBudget(fullHistory)
+          // Strip messages already covered by the summary compaction point
+          const coveredId = ctx?.summaryCoversThroughId
+          const trimmedHistory = coveredId
+            ? fullHistory.slice(fullHistory.findIndex(m => m.id === coveredId) + 1)
+            : fullHistory
+          if (coveredId && trimmedHistory.length === 0)
+            console.warn('[useZoberChat] summaryCoversThroughId not found in fullHistory — sending untrimmed')
+          const safeHistory = trimmedHistory.length > 0 ? trimmedHistory : fullHistory
+
+          // Normalize post-summary messages (tool stubbing, dedup, compaction)
+          const normalizedHistory = normalizeMessagesForBackend(safeHistory)
+
+          // Prepend summary as a conversational [user, assistant] pair so the model
+          // sees prior context as a natural conversation turn, not hidden system metadata
+          const finalMessages: UIMessage[] = ctx?.compactedSummary
+            ? [
+                {
+                  id: 'compaction-user',
+                  role: 'user',
+                  content: 'What did we do so far?',
+                  parts: [{ type: 'text', text: 'What did we do so far?' }],
+                } as UIMessage,
+                {
+                  id: 'compaction-assistant',
+                  role: 'assistant',
+                  content: ctx.compactedSummary,
+                  parts: [{ type: 'text', text: ctx.compactedSummary }],
+                } as UIMessage,
+                ...normalizedHistory,
+              ]
+            : normalizedHistory
+
           const builtPrompt = ctx ? buildPrompt(ctx) : ''
-          // eslint-disable-next-line no-console
-          console.log('[zober]', { surface: ctx?.surface, mode: ctx?.tip?.mode, promptFirstLine: builtPrompt.split('\n')[0] })
           const includeTools = !ctx?.lesson?.exhausted
 
-          const projectedTokens = estimateTokens(compacted) + estimateTextTokens(builtPrompt)
+          const projectedTokens = estimateTokens(finalMessages) + estimateTextTokens(builtPrompt)
 
           if (projectedTokens > TOKEN_BUDGET_HARD * TOKEN_BUDGET) {
             throw new Error('Conversation too long. Please start a new chat.')
@@ -292,7 +322,7 @@ export function useZoberChat(args: ZoberChatArgs) {
 
           return {
             body: {
-              messages: normalizeMessagesForBackend(compacted),
+              messages: finalMessages,
               system_prompt: builtPrompt,
               openrouter_api_key: apiKey || null,
               tools: includeTools ? getToolDefinitions(toolPool) : [],
@@ -441,23 +471,24 @@ export function useZoberChat(args: ZoberChatArgs) {
         ?? (surface === 'tip' ? threadId : null)
     const courseId = narrowed.tip?.courseId
     const videoId = narrowed.tip?.videoId
-    void saveThreadMessages(db, threadId, fullHistory, surface, ownerId, courseId, videoId).then(
-      () => {
-        if (narrowed.lesson) {
-          void appendAgentLog(db, {
-            lessonId: narrowed.lesson.lessonId,
-            timestamp: new Date().toISOString(),
-            durationMs: Date.now() - sessionStartRef.current,
-            messageCount: messages.length,
-            toolCallCount: toolCallCountRef.current,
-            errorCount: errorCountRef.current,
-            exercisesCompleted: exercisesThisSessionRef.current,
-          })
-        }
-        void maybeRunBackgroundSummary(db, threadId, fullHistory, apiKey, API_BASE)
-      },
-    )
-  }, [status, messages, db, narrowed, threadId, apiKey])
+    void (async () => {
+      const summary = await getLatestSummary(db, threadId)
+      const toStore = buildHistoryToStore(fullHistory, summary)
+      await saveThreadMessages(db, threadId, toStore, surface, ownerId, courseId, videoId)
+      if (narrowed.lesson) {
+        void appendAgentLog(db, {
+          lessonId: narrowed.lesson.lessonId,
+          timestamp: new Date().toISOString(),
+          durationMs: Date.now() - sessionStartRef.current,
+          messageCount: messages.length,
+          toolCallCount: toolCallCountRef.current,
+          errorCount: errorCountRef.current,
+          exercisesCompleted: exercisesThisSessionRef.current,
+        })
+      }
+      void maybeRunBackgroundSummary(db, threadId, fullHistory, apiKey, API_BASE, locale)
+    })()
+  }, [status, messages, db, narrowed, threadId, apiKey, locale])
 
   const loadMore = useCallback(() => {
     const next = Math.max(0, loadedOffsetRef.current - PAGE_SIZE)

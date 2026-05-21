@@ -239,7 +239,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
         <Button
           variant="outline"
           size="xl"
-          className="flex-1 py-1.5 text-sm"
+          className="flex-1 py-2 text-sm"
           onClick={onRetry}
           disabled={loadingScore}
         >
@@ -248,7 +248,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
         <Button
           ref={nextBtnRef}
           size="xl"
-          className="flex-1 py-1.5 text-sm flex items-center justify-center gap-1.5"
+          className="flex-1 py-2 text-sm flex items-center justify-center gap-1.5"
           onClick={() => void handleNext()}
           disabled={loadingScore}
         >

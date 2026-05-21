@@ -50,4 +50,6 @@ export interface SurfaceContext {
   global?: GlobalContext
   tip?: TipContext
   compactedSummary?: string
+  /** ID of the last message covered by compactedSummary — messages up to this ID can be stripped before sending */
+  summaryCoversThroughId?: string
 }

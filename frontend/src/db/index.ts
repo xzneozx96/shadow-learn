@@ -6,7 +6,7 @@ import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
-const DB_VERSION = 20
+const DB_VERSION = 21
 
 export interface LearnerProfile {
   name: string
@@ -103,12 +103,10 @@ export interface ThreadRecord {
   messages: UIMessage[]
   updatedAt: number // ms epoch
   createdAt: number
-  latestSummaryGen?: number
 }
 
 export interface ThreadSummaryRecord {
   threadId: string
-  generation: number
   summary: string
   coversThroughMessageId: string
   tokenBudget: number
@@ -276,9 +274,8 @@ interface ShadowLearnSchema extends DBSchema {
     indexes: { 'by-surface': string, 'by-owner': string, 'by-updated': number }
   }
   'thread-summaries': {
-    key: [string, number]
+    key: string
     value: ThreadSummaryRecord
-    indexes: { 'by-thread': string }
   }
 }
 
@@ -524,6 +521,14 @@ export async function initDB(onTerminated?: () => void): Promise<ShadowLearnDB> 
           }
         }
       }
+      if (oldVersion < 21) {
+        // Simplify thread-summaries: drop append-only log (keyed by [threadId, generation])
+        // in favour of a single record per thread keyed by threadId.
+        // Old generations are never read; getLatestSummary always took the highest one.
+        if (db.objectStoreNames.contains('thread-summaries'))
+          db.deleteObjectStore('thread-summaries')
+        db.createObjectStore('thread-summaries', { keyPath: 'threadId' })
+      }
     },
   })
 }
@@ -616,14 +621,12 @@ export async function saveThreadMessages(
     messages,
     updatedAt: now,
     createdAt: existing?.createdAt ?? now,
-    latestSummaryGen: existing?.latestSummaryGen,
   })
 }
 
 export async function deleteThread(db: ShadowLearnDB, id: string): Promise<void> {
   await db.delete('threads', id)
-  const summaries = await db.getAllFromIndex('thread-summaries', 'by-thread', id)
-  await Promise.all(summaries.map(s => db.delete('thread-summaries', [s.threadId, s.generation])))
+  await db.delete('thread-summaries', id)
 }
 
 export async function listThreadsBySurface(db: ShadowLearnDB, surface: ThreadSurface): Promise<ThreadRecord[]> {
@@ -632,17 +635,10 @@ export async function listThreadsBySurface(db: ShadowLearnDB, surface: ThreadSur
 
 export async function putThreadSummary(db: ShadowLearnDB, summary: ThreadSummaryRecord): Promise<void> {
   await db.put('thread-summaries', summary)
-  const t = await db.get('threads', summary.threadId)
-  if (t) {
-    await db.put('threads', { ...t, latestSummaryGen: summary.generation })
-  }
 }
 
 export async function getLatestSummary(db: ShadowLearnDB, threadId: string): Promise<ThreadSummaryRecord | undefined> {
-  const all = await db.getAllFromIndex('thread-summaries', 'by-thread', threadId)
-  if (all.length === 0)
-    return undefined
-  return all.sort((a, b) => b.generation - a.generation)[0]
+  return db.get('thread-summaries', threadId)
 }
 
 // Settings

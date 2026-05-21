@@ -262,7 +262,7 @@ export function Library() {
                       type="button"
                       onClick={() => setActiveFilter(f)}
                       className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-150',
+                        'px-3 py-2 rounded-full text-xs font-medium transition-colors duration-150',
                         activeFilter === f
                           ? 'bg-foreground text-background'
                           : 'bg-secondary text-muted-foreground hover:text-foreground',

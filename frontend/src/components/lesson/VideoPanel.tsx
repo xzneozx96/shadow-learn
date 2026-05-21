@@ -313,7 +313,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
                     href={lesson.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="absolute bottom-4 left-3 flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-sm text-muted-foreground backdrop-blur-sm transition-colors duration-300 hover:text-foreground"
+                    className="absolute bottom-4 left-3 flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm text-muted-foreground backdrop-blur-sm transition-colors duration-300 hover:text-foreground"
                   >
                     <ExternalLink className="size-3" strokeWidth={1.25} />
                     {(() => {

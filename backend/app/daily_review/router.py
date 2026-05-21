@@ -145,7 +145,7 @@ async def generate_passage(req: PassageRequest):
     api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     word_list = ", ".join(f"{w.hanzi} ({w.meaning})" for w in req.words)
     messages = [
-        {"role": "system", "content": "You are a Chinese teacher creating reading passages for Vietnamese learners."},
+        {"role": "system", "content": [{"type": "text", "text": "You are a Chinese teacher creating reading passages for Vietnamese learners.", "cache_control": {"type": "ephemeral"}}]},
         {"role": "user", "content": (
             f"Write a short Chinese story or dialogue (2–3 sentences) naturally incorporating these words: {word_list}. "
             "Level: HSK 2–3. The story should feel natural, not a vocabulary list. "
@@ -160,7 +160,7 @@ async def generate_passage(req: PassageRequest):
 async def grade_passage(req: GradePassageRequest):
     api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     messages = [
-        {"role": "system", "content": "You are a Chinese teacher grading a Vietnamese learner's translation."},
+        {"role": "system", "content": [{"type": "text", "text": "You are a Chinese teacher grading a Vietnamese learner's translation.", "cache_control": {"type": "ephemeral"}}]},
         {"role": "user", "content": (
             f"Original Chinese passage:\n{req.passage}\n\n"
             f"Learner's Vietnamese translation:\n{req.user_translation}\n\n"
@@ -176,7 +176,7 @@ async def grade_passage(req: GradePassageRequest):
 async def grade_sentence(req: GradeSentenceRequest):
     api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
     messages = [
-        {"role": "system", "content": "You are a Chinese teacher grading a Vietnamese learner's sentence."},
+        {"role": "system", "content": [{"type": "text", "text": "You are a Chinese teacher grading a Vietnamese learner's sentence.", "cache_control": {"type": "ephemeral"}}]},
         {"role": "user", "content": (
             f"Word: {req.hanzi} — meaning: {req.meaning}\n"
             f"Learner's sentence: {req.user_sentence}\n\n"

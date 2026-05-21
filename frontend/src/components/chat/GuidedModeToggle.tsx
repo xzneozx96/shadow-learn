@@ -21,7 +21,7 @@ export function GuidedModeToggle({ guided, setGuided, tooltip, onToast, offToast
           toast.success(offToast)
         }}
         data-state="on"
-        className="bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary rounded-full px-2.5"
+        className="bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary rounded-full px-3"
       >
         <GraduationCap className="size-4" />
         <span className="text-xs font-medium">{tooltip}</span>

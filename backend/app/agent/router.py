@@ -11,10 +11,13 @@ import traceback
 import uuid
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from openai import AsyncOpenAI, RateLimitError, APIStatusError
 from app.settings import settings
+from app.shared.utils import _resolve_key
+from app.shared._retry import RetryableError, http_retry
 from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
@@ -63,7 +66,13 @@ def _convert_to_openai_messages(
     messages: list[ClientMessage],
     system_prompt: str,
 ) -> list[dict]:
-    openai_messages: list[dict] = [{"role": "system", "content": system_prompt}]
+    # Cache the system prompt — Alibaba Qwen requires explicit cache_control markers
+    openai_messages: list[dict] = [
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
+        }
+    ]
 
     for message in messages:
         message_parts: list[dict] = []
@@ -492,7 +501,6 @@ def _messages_contain_image(messages: list[ClientMessage]) -> bool:
 @router.post("/agent")
 async def agent_chat(request: AgentRequest) -> StreamingResponse:
     """Stream agent response in AI SDK v5 UIMessage format."""
-    logger.info(f"[agent_chat] Request received, messages={len(request.messages)} model={request.model or 'default'}")
     if not request.messages:
         raise HTTPException(status_code=400, detail="messages must not be empty")
 
@@ -518,7 +526,13 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
 
     create_kwargs: dict[str, Any] = {
         "stream": True,
-        "extra_body": {"reasoning": {"max_tokens": 512}},
+        "extra_body": {
+            "reasoning": {"budget_tokens": 256},
+            "provider": {
+                "require_parameters": True,  # only route to providers supporting the params in your call
+                "allow_fallbacks": True,     # but allow fallback among those that qualify
+            },
+        },
         "messages": openai_messages,
         "max_tokens": settings.openrouter_agent_max_tokens,
     }
@@ -539,7 +553,9 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
     for model in unique_cascade:
         try:
             stream = await client.chat.completions.create(model=model, **create_kwargs)
-            logger.info(f"[agent_chat] Streaming with model={model}")
+            
+            logger.info(f"[agent_chat] Request received, messages={len(request.messages)} model={model}")
+
             response = StreamingResponse(
                 _stream_agent(stream, stitch_message_id=stitch_id),
                 media_type="text/event-stream",
@@ -553,3 +569,142 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
             last_error = e
 
     raise last_error or HTTPException(status_code=503, detail="All models in cascade unavailable")
+
+
+# --------------------------------------------------------------------------- #
+# Summarize — non-streaming structured output via fast structured model
+# --------------------------------------------------------------------------- #
+
+_SUMMARY_JSON_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "summary_response",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string"},
+                "keyDecisions": {"type": "array", "items": {"type": "string"}},
+                "openTopics": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["summary", "keyDecisions", "openTopics"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+_SUMMARIZER_SYSTEM_TEMPLATE = """\
+Summarize the language-learning conversation into a compact record that lets a tutor resume teaching without re-reading the chat. Output your response as JSON matching the required schema.
+
+**IMPORTANT: Write ALL output fields (summary, keyDecisions, openTopics) in {output_language}. Do not use any other language.**
+
+<process_steps>
+Work through these steps before writing the summary:
+1. Identify every language topic covered: vocabulary items, grammar patterns, pronunciation points, comprehension work.
+2. Note each error (vocabulary, grammar, pronunciation) and how it was corrected. Capture the exact words or characters where possible.
+3. Identify weak areas (recurring errors, repeated questions, hesitations) and strong areas (first-attempt success, confident responses).
+4. Capture learner-stated preferences or behavioral patterns (e.g. prefers mnemonics, struggles with tones, requests more examples).
+5. List any threads the learner raised that were not fully resolved.
+6. Draft the summary in {output_language}: lead with the session arc, then add specific learner observations. Avoid generic statements ("learner is improving") — prefer specific ones ("confused 喝 hē / 和 hé homophones, corrected twice").
+</process_steps>
+
+<output_guidelines>
+1. summary — 100–300 words of prose in {output_language}. Topic arc first, then specific errors corrected, weak spots, and preferences noted.
+2. keyDecisions — 2–5 short strings in {output_language}. Specific facts, corrections, or rules the learner must carry forward. Each under 20 words. No duplication of summary prose.
+3. openTopics — 0–3 short strings in {output_language}. Unresolved threads or questions the learner raised. Empty array if none.
+</output_guidelines>
+
+<ideal_output>
+{{
+  "summary": "Session focused on food and restaurant vocabulary (HSK 2). Learner correctly used 好吃 hǎo chī and 好喝 hǎo hē in context. Main correction: confused 多少 duōshao (how much/many) with 怎么 zěnme (how) when forming price questions — drilled the pattern 多少钱 three times before producing it correctly. Weak area: measure words (个 gè vs. 杯 bēi) — used 个 for beverages throughout; tutor introduced 杯 but learner has not yet internalized the distinction. Strong area: tone production on 4th-tone words. Learner prefers short dialogues over grammar drills and asked for a sample restaurant dialogue to study.",
+  "keyDecisions": [
+    "Price questions use 多少钱 duōshao qián, not 怎么钱",
+    "Beverages use measure word 杯 bēi, not 个 gè",
+    "好吃 = tasty (food), 好喝 = tasty (drink) — not interchangeable"
+  ],
+  "openTopics": [
+    "Learner asked for a sample restaurant dialogue — not yet provided"
+  ]
+}}
+</ideal_output>"""
+
+_LOCALE_NAMES = {"vi": "Vietnamese (Tiếng Việt)", "en": "English"}
+
+
+def _build_summarizer_system(locale: str | None) -> str:
+    lang = _LOCALE_NAMES.get(locale or "en", locale or "English")
+    return _SUMMARIZER_SYSTEM_TEMPLATE.format(output_language=lang)
+
+
+class SummarizeRequest(BaseModel):
+    messages: list[ClientMessage]
+    openrouter_api_key: str | None = None
+    locale: str | None = None
+
+
+class SummarizeResponse(BaseModel):
+    summary: str
+    keyDecisions: list[str]
+    openTopics: list[str]
+
+
+def _build_summary_messages(messages: list[ClientMessage], system_prompt: str) -> list[dict]:
+    """Simplified message builder for the structured summarize model.
+
+    Strips tool calls, tool results, file parts, and content arrays — the
+    structured model only needs plain text turns from user and assistant.
+    """
+    result: list[dict] = [{"role": "system", "content": system_prompt}]
+    for msg in messages:
+        if msg.role not in ("user", "assistant"):
+            continue
+        text = ""
+        if msg.parts:
+            text = " ".join(p.text for p in msg.parts if p.type == "text" and p.text)
+        elif msg.content:
+            text = msg.content
+        if text.strip():
+            result.append({"role": msg.role, "content": text})
+    return result
+
+
+@router.post("/summarize", response_model=SummarizeResponse)
+async def summarize_thread(req: SummarizeRequest) -> SummarizeResponse:
+    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
+    openai_messages = _build_summary_messages(req.messages, _build_summarizer_system(req.locale))
+    payload = {
+        "model": settings.openrouter_structured_model,
+        "messages": openai_messages,
+        "temperature": 0.5,
+        "response_format": _SUMMARY_JSON_SCHEMA,
+        "reasoning": {"effort": "none"},
+    }
+
+    @http_retry(logger)
+    async def _call() -> SummarizeResponse:
+        async with httpx.AsyncClient(timeout=90) as client:
+            resp = await client.post(
+                settings.openrouter_chat_url,
+                headers={"Authorization": f"Bearer {api_key}"},
+                json=payload,
+            )
+        resp.raise_for_status()
+        body = resp.json()
+        if "error" in body or "choices" not in body:
+            logger.error("[summarize] OpenRouter unexpected response: %s", body)
+            raise HTTPException(500, f"OpenRouter error: {body.get('error', body)}")
+        choice = body["choices"][0]
+        if choice.get("finish_reason") == "length":
+            raise RetryableError("response truncated by token limit")
+        try:
+            content = choice["message"]["content"]
+            if not isinstance(content, str):
+                raise RetryableError(f"unexpected content type: {type(content).__name__}: {content!r}")
+            data = json.loads(content)
+            if not isinstance(data, dict):
+                raise RetryableError(f"expected JSON object, got {type(data).__name__}: {data!r}")
+            return SummarizeResponse(**data)
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+            raise RetryableError(f"malformed response: {exc}") from exc
+
+    return await _call()

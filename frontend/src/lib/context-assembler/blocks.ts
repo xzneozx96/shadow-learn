@@ -2,12 +2,6 @@ import type { SurfaceContext } from './types'
 import { buildGlobalSystemPrompt, buildSystemPrompt } from '@/lib/agent-system-prompt'
 import { buildTipSystemPrompt } from '@/lib/tipChatPrompt'
 
-function appendSummary(prompt: string, summary?: string): string {
-  if (!summary)
-    return prompt
-  return `${prompt}\n\n## Conversation Summary\n<conversation_summary>\n${summary}\n</conversation_summary>`
-}
-
 function appendRecovery(prompt: string, exhausted?: boolean): string {
   if (!exhausted)
     return prompt
@@ -76,7 +70,6 @@ export function buildLessonPrompt(ctx: SurfaceContext): string {
     deferredToolNames: ctx.lesson.deferredToolNames,
   })
   let out = base
-  out = appendSummary(out, ctx.compactedSummary)
   out = appendRecovery(out, ctx.lesson.exhausted)
   out = prefixGuided(out, ctx.lesson.mode)
   out = prefixRoleplay(out, ctx.roleplaySystemPrompt)
@@ -84,18 +77,16 @@ export function buildLessonPrompt(ctx: SurfaceContext): string {
 }
 
 export function buildGlobalPrompt(ctx: SurfaceContext): string {
-  const base = buildGlobalSystemPrompt(ctx.profile ?? undefined, ctx.memories, ctx.currentTime)
-  return appendSummary(base, ctx.compactedSummary)
+  return buildGlobalSystemPrompt(ctx.profile ?? undefined, ctx.memories, ctx.currentTime)
 }
 
 export function buildTipPrompt(ctx: SurfaceContext): string {
   if (!ctx.tip)
     throw new Error('tip context required')
-  const base = buildTipSystemPrompt({
+  return buildTipSystemPrompt({
     lessonTitle: ctx.tip.lessonTitle,
     transcript: ctx.tip.transcript,
     uiLanguage: ctx.tip.uiLanguage,
     mode: ctx.tip.mode,
   })
-  return appendSummary(base, ctx.compactedSummary)
 }

@@ -114,7 +114,7 @@ class EditorBoundary extends Component<BoundaryProps, BoundaryState> {
           <button
             type="button"
             onClick={() => { this.setState({ hasError: false }); this.props.onReset() }}
-            className="self-start rounded-md bg-secondary px-3 py-1.5 text-xs font-bold"
+            className="self-start rounded-md bg-secondary px-3 py-2 text-xs font-bold"
           >
             Retry
           </button>

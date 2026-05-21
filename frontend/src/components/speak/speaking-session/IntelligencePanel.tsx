@@ -35,7 +35,7 @@ export function IntelligencePanel({
                 <div
                   key={word}
                   className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-300 bg-cyan-500/10 border border-cyan-500/30 text-cyan-200',
+                    'px-3 py-1 rounded-lg text-xs font-medium transition-all duration-300 bg-cyan-500/10 border border-cyan-500/30 text-cyan-200',
                     isMastered && 'line-through opacity-30',
                   )}
                 >

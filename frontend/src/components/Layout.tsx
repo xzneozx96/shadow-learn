@@ -153,7 +153,7 @@ export function Layout({ children }: LayoutProps) {
             className="group w-full h-11"
             innerClassName={cn(
               'h-full',
-              collapsed ? 'justify-center px-0' : 'justify-start gap-2.5 px-2.5',
+              collapsed ? 'justify-center px-0' : 'justify-start gap-2.5 px-3',
             )}
           >
             <span className="flex size-7 items-center justify-center rounded-md bg-amber-400/20 ring-1 ring-amber-400/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] shrink-0">
@@ -171,7 +171,7 @@ export function Layout({ children }: LayoutProps) {
             className="group w-full h-11"
             innerClassName={cn(
               'h-full',
-              collapsed ? 'justify-center px-0' : 'justify-start gap-2.5 px-2.5',
+              collapsed ? 'justify-center px-0' : 'justify-start gap-2.5 px-3',
             )}
           >
             <span className="flex size-7 items-center justify-center rounded-md bg-primary/20 ring-1 ring-primary/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] shrink-0">

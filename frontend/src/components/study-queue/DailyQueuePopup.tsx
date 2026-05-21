@@ -350,7 +350,7 @@ function SkillRow({ label, done, onStart }: SkillRowProps) {
     <div
       role="button"
       tabIndex={done ? -1 : 0}
-      className="relative flex items-center gap-3 pl-6 pr-3 py-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
+      className="relative flex items-center gap-3 pl-6 pr-3 py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
       onClick={done ? undefined : onStart}
       onKeyDown={done ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStart() } }}
     >
