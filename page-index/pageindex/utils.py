@@ -40,6 +40,8 @@ def llm_completion(model, prompt, chat_history=None, return_finish_reason=False)
                 model=model,
                 messages=messages,
                 temperature=0,
+                # Indexing does not need reasoning — disable it (OpenRouter).
+                extra_body={"reasoning": {"effort": "none"}},
             )
             content = response.choices[0].message.content
             if return_finish_reason:
@@ -70,6 +72,8 @@ async def llm_acompletion(model, prompt):
                 model=model,
                 messages=messages,
                 temperature=0,
+                # Indexing does not need reasoning — disable it (OpenRouter).
+                extra_body={"reasoning": {"effort": "none"}},
             )
             return response.choices[0].message.content
         except Exception as e:
