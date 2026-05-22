@@ -11,9 +11,9 @@ import {
 } from '@/lib/tools/index'
 
 describe('getAllBaseTools', () => {
-  it('returns exactly 18 tools (17 + tool_search)', () => {
+  it('returns exactly 19 tools (18 + tool_search)', () => {
     const tools = getAllBaseTools('test-key')
-    expect(tools).toHaveLength(18)
+    expect(tools).toHaveLength(19)
   })
 
   it('includes tool_search as first tool', () => {
@@ -53,10 +53,10 @@ describe('getActiveToolPool', () => {
     expect(names).toContain('recall_memory')
   })
 
-  it('returns 10 tools by default (18 total - 8 deferred)', () => {
+  it('returns 11 tools by default (19 total - 1 disabled - 7 deferred)', () => {
     const pool = getActiveToolPool('test-key')
-    // 18 - 8 deferred = 10
-    expect(pool).toHaveLength(10)
+    // 19 - 1 disabled (get_user_manual) - 7 deferred = 11
+    expect(pool).toHaveLength(11)
   })
 
   it('returns all 18 tools when includeDeferred=true', () => {

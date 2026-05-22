@@ -81,3 +81,7 @@ backend/scripts/*
 evals/results/
 graphify-out/
 
+# PageIndex runtime data — processed docs (uploads + tree/TOC results) + log dumps
+page-index/storage/
+page-index/logs/
+

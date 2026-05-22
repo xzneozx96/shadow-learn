@@ -27,11 +27,9 @@ class Settings(BaseSettings):
     # LLM (OpenAI default; OpenRouter via OPENROUTER_API_KEY + "openrouter/<model>")
     OPENAI_API_KEY: str = ""
     # Model used for the indexing/tree-building pipeline.
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_MODEL: str = "openrouter/qwen/qwen3.5-flash-02-23"
     # Model used for retrieval reasoning. Falls back to OPENAI_MODEL if empty.
-    RETRIEVAL_MODEL: str = ""
-    # Reasoning effort for the retrieval model (OpenRouter): none | low | medium | high.
-    RETRIEVAL_REASONING_EFFORT: str = "minimal"
+    RETRIEVAL_MODEL: str = "openrouter/deepseek/deepseek-v4-flash"
     OPENROUTER_API_KEY: str = ""
     LLM_TIMEOUT_SECONDS: int = 60
 

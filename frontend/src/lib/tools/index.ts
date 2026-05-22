@@ -50,7 +50,7 @@ export function getAllBaseTools(openrouterApiKey: string, uiLanguage: string = '
 // NEW: Get deferred tool names for system prompt
 export function getDeferredToolNames(openrouterApiKey: string, uiLanguage: string = 'en'): string[] {
   return getAllBaseTools(openrouterApiKey, uiLanguage)
-    .filter(tool => tool.isDeferred())
+    .filter(tool => tool.isEnabled() && tool.isDeferred())
     .map(tool => tool.name)
 }
 

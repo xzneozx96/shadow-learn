@@ -83,7 +83,7 @@ Reply in the following JSON format:
         temperature=0,
         timeout=timeout,
         # Configurable reasoning effort for the retrieval model (OpenRouter).
-        extra_body={"reasoning": {"effort": settings.RETRIEVAL_REASONING_EFFORT}},
+        extra_body={"reasoning": {"effort": "minimal"}},
     )
     response_text = response.choices[0].message.content or ""
     try:

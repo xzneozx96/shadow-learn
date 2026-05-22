@@ -196,7 +196,7 @@ describe('deferred tools integration', () => {
     expect(deferredNames).toContain('get_progress_summary')
     expect(deferredNames).toContain('get_core_guidelines')
     expect(deferredNames).toContain('get_skill_guide')
-    expect(deferredNames).toContain('get_user_manual')
+    expect(deferredNames).not.toContain('get_user_manual') // disabled — excluded from deferred list
     expect(deferredNames).toContain('update_learner_profile')
   })
 
@@ -214,8 +214,8 @@ describe('deferred tools integration', () => {
     const fullPool = getActiveToolPool('test-key', { includeDeferred: true })
     const deferredTools = getDeferredToolNames('test-key')
 
-    // Full pool should contain all tools
-    expect(fullPool.length).toBe(getAllBaseTools('test-key').length)
+    // Full pool should contain all enabled tools
+    expect(fullPool.length).toBe(getAllBaseTools('test-key').filter(t => t.isEnabled()).length)
 
     // Should include deferred tools
     for (const name of deferredTools) {
@@ -252,8 +252,8 @@ describe('getAllBaseTools includes tool_search', () => {
     expect(tools[0]?.name).toBe('tool_search')
   })
 
-  it('returns 18 tools (17 existing + tool_search)', () => {
+  it('returns 19 tools (18 existing + tool_search)', () => {
     const tools = getAllBaseTools('test-key')
-    expect(tools).toHaveLength(18)
+    expect(tools).toHaveLength(19)
   })
 })
