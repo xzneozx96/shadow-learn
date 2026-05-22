@@ -79,3 +79,5 @@ intro-video/
 # Generated data from backend/scripts/ pipeline — reproducible, not source of truth
 backend/scripts/*
 evals/results/
+graphify-out/
+

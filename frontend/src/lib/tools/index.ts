@@ -11,6 +11,7 @@ import { getVocabularyTool } from '@/lib/tools/data/getVocabulary'
 import { logMistakeTool } from '@/lib/tools/data/logMistake'
 import { recallMemoryTool } from '@/lib/tools/data/recallMemory'
 import { saveMemoryTool } from '@/lib/tools/data/saveMemory'
+import { searchDocumentTool } from '@/lib/tools/data/searchDocument'
 import { updateLearnerProfileTool } from '@/lib/tools/data/updateLearnerProfile'
 import { updateSrItemTool } from '@/lib/tools/data/updateSrItem'
 import { getCoreGuidelinesTool } from '@/lib/tools/guidance/getCoreGuidelines'
@@ -27,6 +28,7 @@ export function getAllBaseTools(openrouterApiKey: string, uiLanguage: string = '
     toolSearchTool, // ALWAYS first - never deferred
     getStudyContextTool,
     getVocabularyTool,
+    searchDocumentTool,
     getProgressSummaryTool,
     recallMemoryTool,
     saveMemoryTool,
@@ -70,6 +72,7 @@ const GLOBAL_TOOL_NAMES = new Set([
   'recall_memory',
   'save_memory',
   'get_vocabulary',
+  'search_document',
   'get_study_context',
   'get_progress_summary',
   'update_learner_profile',
@@ -134,6 +137,7 @@ export function findTool(pool: AgentTool[], name: string): AgentTool | undefined
 export const SILENT_TOOLS = new Set([
   'get_study_context',
   'get_vocabulary',
+  'search_document',
   'get_progress_summary',
   'recall_memory',
   'get_core_guidelines',
