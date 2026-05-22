@@ -32,7 +32,7 @@ export const searchDocumentTool = buildTool({
   inputSchema: SearchDocumentSchema,
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
-  maxResultSizeChars: 30_000,
+  maxResultSizeChars: 100_000,
   searchHint: 'document search reference manual article pdf knowledge base',
   execute: async (input, _context) => executeSearchDocument(input as SearchDocumentArgs),
 })
