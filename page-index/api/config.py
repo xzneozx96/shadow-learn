@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     # Model used for retrieval reasoning. Falls back to OPENAI_MODEL if empty.
     RETRIEVAL_MODEL: str = ""
+    # Reasoning effort for the retrieval model (OpenRouter): none | low | medium | high.
+    RETRIEVAL_REASONING_EFFORT: str = "minimal"
     OPENROUTER_API_KEY: str = ""
     LLM_TIMEOUT_SECONDS: int = 60
 

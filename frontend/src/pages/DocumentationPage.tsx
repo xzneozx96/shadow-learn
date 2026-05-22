@@ -19,6 +19,7 @@ const HEADING_REGEX = /^(#{2,3})\s+(.*)/
 const ID_CLEAN_REGEX = /[^\w\u00C0-\u1EF9\s-]/g
 const ID_SPACE_REGEX = /\s+/g
 const IMG_SRC_REGEX = /^docs\/images/
+const SECTION_NUM_REGEX = /^\D*(\d+)\./
 
 function generateId(text: string) {
   return text
@@ -104,22 +105,28 @@ export function DocumentationPage() {
     }
   })
 
-  // Group into categories
+  // Group into categories by leading section number (locale-agnostic; the
+  // English manual has an unnumbered "Overview" heading that the Vietnamese
+  // one lacks, so positional slicing would drift by one).
+  const sectionNum = (node: TreeNode) => {
+    const m = node.text.match(SECTION_NUM_REGEX)
+    return m ? Number(m[1]) : 0
+  }
   const categories = [
     {
       title: t('docs.category.getStarted'),
       icon: <Rocket className="w-4 h-4" />,
-      items: tree.slice(0, 2),
+      items: tree.filter(n => sectionNum(n) <= 2),
     },
     {
       title: t('docs.category.features'),
       icon: <Hammer className="w-4 h-4" />,
-      items: tree.slice(2, 7),
+      items: tree.filter(n => sectionNum(n) >= 3 && sectionNum(n) <= 10),
     },
     {
       title: t('docs.category.management'),
       icon: <Settings className="w-4 h-4" />,
-      items: tree.slice(7),
+      items: tree.filter(n => sectionNum(n) >= 11),
     },
   ]
 
@@ -197,7 +204,7 @@ export function DocumentationPage() {
                                 }`}
                               >
                                 {activeId === child.id && (
-                                  <span className="absolute left-[-1px] top-1 bottom-1 w-[2px] rounded-full bg-primary" />
+                                  <span className="absolute -left-px top-1 bottom-1 w-[2px] rounded-full bg-primary" />
                                 )}
                                 {child.text}
                               </a>

@@ -9,6 +9,7 @@ import logging
 
 import litellm
 from pageindex.utils import get_text_of_pages
+from api.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,8 @@ Reply in the following JSON format:
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
         timeout=timeout,
+        # Configurable reasoning effort for the retrieval model (OpenRouter).
+        extra_body={"reasoning": {"effort": settings.RETRIEVAL_REASONING_EFFORT}},
     )
     response_text = response.choices[0].message.content or ""
     try:
