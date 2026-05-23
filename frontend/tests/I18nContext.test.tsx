@@ -3,11 +3,11 @@ import { IDBFactory } from 'fake-indexeddb'
 import * as React from 'react'
 import { use } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { I18nContext, I18nProvider } from '@/contexts/I18nContext'
+import { I18nContext, I18nProvider } from '@/app/providers/I18nContext'
 import { initDB, saveSettings } from '@/db'
 import 'fake-indexeddb/auto'
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: (globalThis as any).__testDb }),
 }))
 

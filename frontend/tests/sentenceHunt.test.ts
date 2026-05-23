@@ -1,9 +1,9 @@
 import type { ShadowLearnDB } from '@/db'
-import type { LessonMeta, Segment } from '@/types'
+import type { LessonMeta, Segment } from '@/shared/types'
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { initDB, saveLessonMeta, saveSegments } from '@/db'
-import { findSegmentsForWords } from '@/lib/sentenceHunt'
+import { findSegmentsForWords } from '@/shared/lib/sentenceHunt'
 import 'fake-indexeddb/auto'
 
 function makeLesson(id: string, createdAt: string): LessonMeta {

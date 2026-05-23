@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
-import { Setup } from '@/components/onboarding/Setup'
+import { Setup } from '@/app/onboarding/Setup'
 
-vi.mock('@/lib/config', () => ({
+vi.mock('@/shared/lib/config', () => ({
   getAppConfig: vi.fn().mockResolvedValue({
     ttsProvider: 'other',
     sttProvider: 'other',
@@ -13,12 +13,12 @@ vi.mock('@/lib/config', () => ({
 }))
 
 const mockSetup = vi.fn()
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ setup: mockSetup, startTrial: vi.fn() }),
 }))
 
-vi.mock('@/contexts/I18nContext', async () => {
-  const { getTranslation } = await import('@/lib/i18n')
+vi.mock('@/app/providers/I18nContext', async () => {
+  const { getTranslation } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),
   }

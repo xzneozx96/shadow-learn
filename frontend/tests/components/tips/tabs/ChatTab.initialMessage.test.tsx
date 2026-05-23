@@ -1,10 +1,10 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { ChatTab } from '@/components/tips/tabs/ChatTab'
+import { ChatTab } from '@/features/learning-materials/ui/tips/tabs/ChatTab'
 
 const sendSpy = vi.fn()
 
-vi.mock('@/hooks/useZoberChat', () => ({
+vi.mock('@/features/agent/application/useZoberChat', () => ({
   useZoberChat: () => ({
     isHistoryLoading: false,
     systemPrompt: '',
@@ -16,15 +16,15 @@ vi.mock('@/hooks/useZoberChat', () => ({
   }),
 }))
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ locale: 'en', t: (k: string) => k }),
 }))
 
-vi.mock('@/hooks/useVoiceInput', () => ({
+vi.mock('@/features/agent/application/useVoiceInput', () => ({
   useVoiceInput: () => ({ state: 'idle', error: null, start: vi.fn(), stop: vi.fn() }),
 }))
 
-vi.mock('@/lib/tipSeekBus', () => ({
+vi.mock('@/features/learning-materials/lib/tipSeekBus', () => ({
   seekTip: vi.fn(),
 }))
 

@@ -1,0 +1,242 @@
+import type { MistakeExample } from '@/db'
+import type { ExerciseType } from '@/shared/hooks/useTracking'
+import type { LanguageCapabilities } from '@/shared/lib/language-caps'
+import type { ExerciseMode, PronunciationAssessResult, VocabEntry } from '@/shared/types'
+import { isWritingSupported } from '@/shared/lib/hanzi-writer-chars'
+
+export interface SessionQuestion {
+  type: Exclude<ExerciseMode, 'mixed'>
+  entry: VocabEntry
+  clozeData?: { story: string, blanks: string[] }
+  pronunciationData?: { sentence: string, translation: string, romanization?: string }
+  reconstructionTokens?: string[]
+  translationData?: {
+    sentence: { text: string, romanization: string, translation: string }
+    direction: 'native-to-source' | 'source-to-native'
+  }
+}
+
+export function isClozeExercise(x: unknown): x is { story: string, blanks: string[] } {
+  return (
+    typeof x === 'object' && x !== null
+    && typeof (x as any).story === 'string' && (x as any).story.trim() !== ''
+    && Array.isArray((x as any).blanks) && (x as any).blanks.length > 0
+    && (x as any).blanks.every((b: unknown) => typeof b === 'string' && b.trim() !== '')
+  )
+}
+
+export function isPronExercise(x: unknown): x is { sentence: string, translation: string, romanization?: string } {
+  return (
+    typeof x === 'object' && x !== null
+    && typeof (x as any).sentence === 'string' && (x as any).sentence.trim() !== ''
+    && typeof (x as any).translation === 'string' && (x as any).translation.trim() !== ''
+  )
+}
+
+export function isTranslationSentence(x: unknown): x is { text: string, romanization: string, translation: string } {
+  return (
+    typeof x === 'object' && x !== null
+    && typeof (x as any).text === 'string' && (x as any).text.trim() !== ''
+    && typeof (x as any).romanization === 'string'
+    && typeof (x as any).translation === 'string' && (x as any).translation.trim() !== ''
+  )
+}
+
+export function toFallbackType(
+  t: Exclude<ExerciseMode, 'mixed'>,
+  hasRomanization: boolean = true,
+): Exclude<ExerciseMode, 'mixed'> {
+  if (t === 'cloze' || t === 'translation' || t === 'pronunciation')
+    return hasRomanization ? 'romanization-recall' : 'dictation'
+  return t
+}
+
+export function buildExerciseResultPayload(
+  exerciseType: ExerciseType,
+  score: number,
+  opts?: { skipped?: boolean, mistakes?: MistakeExample[], assessment?: PronunciationAssessResult },
+  vocabEntry?: { id: string, word: string },
+): object {
+  return {
+    type: 'exercise_result',
+    exercise: exerciseType,
+    score,
+    ...(vocabEntry && { vocabId: vocabEntry.id, word: vocabEntry.word }),
+    mistakes: opts?.mistakes?.map(m => m.userAnswer) ?? [],
+    skipped: opts?.skipped ?? false,
+    ...(opts?.assessment && {
+      breakdown: {
+        fluency: opts.assessment.overall.fluency,
+        completeness: opts.assessment.overall.completeness,
+        prosody: opts.assessment.overall.prosody,
+      },
+      mispronounced_words: opts.assessment.words
+        .filter(w => w.error_type !== null)
+        .map(w => ({ word: w.word, error: w.error_type })),
+    }),
+  }
+}
+
+export function buildSessionQuestions(
+  types: Exclude<ExerciseMode, 'mixed'>[],
+  pool: VocabEntry[],
+  clozeExercises: { story: string, blanks: string[] }[],
+  pronExercises: { sentence: string, translation: string, romanization?: string }[],
+  translationSentences: { text: string, romanization: string, translation: string }[],
+  getDirection: () => 'native-to-source' | 'source-to-native' = () => Math.random() < 0.5 ? 'native-to-source' : 'source-to-native',
+): SessionQuestion[] {
+  let clozeIdx = 0
+  let pronIdx = 0
+  let translationIdx = 0
+  const qs: SessionQuestion[] = []
+
+  for (let i = 0; i < types.length; i++) {
+    const type = types[i]
+    const entry = pool[i % pool.length]
+
+    if (type === 'writing') {
+      if (isWritingSupported(entry.word))
+        qs.push({ type, entry })
+      continue
+    }
+
+    if (type === 'translation') {
+      const sentence = translationSentences[translationIdx++]
+      if (!sentence)
+        continue
+      qs.push({ type, entry, translationData: { sentence, direction: getDirection() } })
+      continue
+    }
+
+    const q: SessionQuestion = { type, entry }
+
+    if (type === 'cloze') {
+      const clozeData = clozeExercises[clozeIdx++]
+      if (!clozeData)
+        continue
+      q.clozeData = clozeData
+    }
+
+    if (type === 'pronunciation') {
+      const pronunciationData = pronExercises[pronIdx++]
+      if (!pronunciationData)
+        continue
+      q.pronunciationData = pronunciationData
+    }
+
+    if (type === 'reconstruction')
+      q.reconstructionTokens = getSegmentTokens(entry.sourceSegmentText, entry.sourceLanguage ?? 'zh-CN')
+
+    qs.push(q)
+  }
+
+  return qs
+}
+
+const CHAR_BASED_LANG = /^(?:zh|ja|ko)/
+const WHITESPACE = /\s+/
+
+export function getActiveChips(chips: string[], typed: string): boolean[] {
+  return chips.map(chip => !typed.includes(chip))
+}
+
+export function getSegmentTokens(text: string, language: string): string[] {
+  const isCharBased = CHAR_BASED_LANG.test(language)
+  if (isCharBased) {
+    return text.split('').filter(c => c.trim() !== '')
+  }
+  return text.split(WHITESPACE).filter(Boolean)
+}
+
+export function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+export function buildStudyPool(entries: VocabEntry[], forReview: boolean): VocabEntry[] {
+  if (forReview)
+    return shuffleArray(entries)
+  return entries.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+export function charDiff(typed: string, expected: string): { char: string, ok: boolean }[] {
+  return expected.split('').map((ch, i) => ({ char: ch, ok: typed[i] === ch }))
+}
+
+const SENTENCE_END = /[。！？!?.]+$/u
+
+function normalizeAnswer(s: string): string {
+  return s.trim().replace(SENTENCE_END, '')
+}
+
+export function scoreReconstruction(typed: string, expected: string): number {
+  const t = normalizeAnswer(typed)
+  const e = normalizeAnswer(expected)
+  if (e.length === 0)
+    return t.length === 0 ? 100 : 0
+  const correct = e.split('').filter((ch, i) => t[i] === ch).length
+  return Math.round((correct / e.length) * 100)
+}
+
+export function distributeExercises(
+  mode: ExerciseMode,
+  count: number,
+  hasAzure: boolean,
+  hasWriting: boolean,
+  caps: LanguageCapabilities,
+): Exclude<ExerciseMode, 'mixed'>[] {
+  const available: Exclude<ExerciseMode, 'mixed'>[] = ['dictation', 'reconstruction', 'cloze']
+  if (caps.romanizationSystem !== 'none')
+    available.push('romanization-recall')
+  if (caps.hasTranslation)
+    available.push('translation')
+  if (hasAzure)
+    available.push('pronunciation')
+  if (hasWriting)
+    available.push('writing')
+
+  if (mode !== 'mixed') {
+    return Array.from<Exclude<ExerciseMode, 'mixed'>>({ length: count }).fill(mode as Exclude<ExerciseMode, 'mixed'>)
+  }
+
+  const result: Exclude<ExerciseMode, 'mixed'>[] = []
+  if (count >= available.length) {
+    result.push(...available)
+  }
+  while (result.length < count) {
+    result.push(available[Math.floor(Math.random() * available.length)])
+  }
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[result[i], result[j]] = [result[j], result[i]]
+  }
+  return result.slice(0, count)
+}
+
+export interface ExerciseResult {
+  type: 'exercise_result'
+  exercise: string
+  vocabId: string
+  word: string
+  score: number
+  correct: boolean
+  mistakes?: { userAnswer: string, correctAnswer: string, context?: string }[]
+}
+
+export interface SessionCompletePayload {
+  type: 'study_session_complete'
+  results: ExerciseResult[]
+}
+
+export function isSessionCompletePayload(value: unknown): value is SessionCompletePayload {
+  return (
+    typeof value === 'object'
+    && value !== null
+    && (value as { type?: unknown }).type === 'study_session_complete'
+    && Array.isArray((value as { results?: unknown }).results)
+  )
+}

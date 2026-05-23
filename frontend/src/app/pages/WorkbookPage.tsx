@@ -1,0 +1,281 @@
+import type { ErrorPattern, ProgressStats } from '@/db'
+import { ArrowUpRight, Bookmark } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useMemo, useState } from 'react'
+import { Layout } from '@/app/Layout'
+import { useAuth } from '@/app/providers/AuthContext'
+import { useI18n } from '@/app/providers/I18nContext'
+import { getProgressStats, getRecentMistakes } from '@/db'
+import { useDailyReview } from '@/features/study/application/DailyReviewContext'
+import { AccuracyTrendChart } from '@/features/study/ui/progress/AccuracyTrendChart'
+import { MistakesPanel } from '@/features/study/ui/progress/MistakesPanel'
+import { AccuracyPieCard, ExercisesCard, SessionsCard } from '@/features/study/ui/progress/OverallStatsPanel'
+import { ReviewQueueBanner } from '@/features/study/ui/progress/ReviewQueueBanner'
+import { SkillMasteryGrid } from '@/features/study/ui/progress/SkillMasteryGrid'
+import { StudySession } from '@/features/study/ui/StudySession'
+import { useVocabulary } from '@/features/vocabulary/application/VocabularyContext'
+import { LessonGroup } from '@/features/vocabulary/ui/workbook/LessonGroup'
+import { useTracking } from '@/shared/hooks/useTracking'
+import { Dialog, DialogContent } from '@/shared/ui/dialog'
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { Input } from '@/shared/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+
+export function WorkbookPage() {
+  const { t } = useI18n()
+  const { entries, entriesByLesson, removeGroup } = useVocabulary()
+  const { db } = useAuth()
+  const { isOpen: dailyReviewOpen } = useDailyReview()
+  const { getDueItemsList } = useTracking()
+
+  // Workbook State
+  const [search, setSearch] = useState('')
+  const [dueItems, setDueItems] = useState<typeof entries>([])
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [sessionActive, setSessionActive] = useState(false)
+  const [activeTab, setActiveTab] = useState('workbook')
+
+  // Progress State
+  const [stats, setStats] = useState<ProgressStats | undefined>()
+  const [mistakes, setMistakes] = useState<ErrorPattern[]>([])
+  const [loadingProgress, setLoadingProgress] = useState(true)
+
+  // Fetch Due Items
+  useEffect(() => {
+    async function fetchDue() {
+      const list = await getDueItemsList()
+      const ids = new Set(list.map(i => i.itemId))
+      setDueItems(entries.filter(e => ids.has(e.id)))
+    }
+    if (db)
+      void fetchDue()
+    // getDueItemsList is an inline fn in useTracking, not stable — intentionally excluded.
+    // dailyReviewOpen + reviewOpen included so closing either modal refetches the
+    // due list (pending SM2 scores from those sessions filter out completed words).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, entries, dailyReviewOpen, reviewOpen])
+
+  // Fetch Progress Stats
+  useEffect(() => {
+    async function fetchData() {
+      if (!db)
+        return
+      try {
+        const [s, m] = await Promise.all([
+          getProgressStats(db),
+          getRecentMistakes(db, 30),
+        ])
+        setStats(s)
+        setMistakes(m)
+      }
+      finally {
+        setLoadingProgress(false)
+      }
+    }
+    void fetchData()
+  }, [db, reviewOpen])
+
+  const lastSaved = entries.length
+    ? entries.reduce((a, b) => (a.createdAt > b.createdAt ? a : b)).createdAt
+    : null
+
+  // Sort lesson groups by most recently saved entry
+  const sortedLessonIds = useMemo(() => {
+    return Object.keys(entriesByLesson).sort((a, b) => {
+      const latestA = entriesByLesson[a].reduce((x, e) => (e.createdAt > x ? e.createdAt : x), '')
+      const latestB = entriesByLesson[b].reduce((x, e) => (e.createdAt > x ? e.createdAt : x), '')
+      return latestB.localeCompare(latestA)
+    })
+  }, [entriesByLesson])
+
+  // Filter entries by search
+  const filteredByLesson = useMemo(() => {
+    if (!search.trim())
+      return entriesByLesson
+    const q = search.toLowerCase()
+    const result: Record<string, typeof entries> = {}
+    for (const [lid, group] of Object.entries(entriesByLesson)) {
+      const filtered = group.filter(e =>
+        e.word.includes(q) || e.meaning.toLowerCase().includes(q) || e.romanization.includes(q),
+      )
+      if (filtered.length > 0)
+        result[lid] = filtered
+    }
+    return result
+  }, [entriesByLesson, search])
+
+  return (
+    <Layout>
+      <div className="relative z-5 h-full overflow-y-auto">
+        <div className="container mx-auto px-6 md:px-10 py-12">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative z-10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-7 gap-4">
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-foreground to-foreground/70">
+                  {t('workbook.title')}
+                </h1>
+                <p className="text-sm font-medium text-muted-foreground mt-2">
+                  {t('workbook.subtitle')}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <TabsList className="grid w-full sm:w-64 grid-cols-2">
+                  <TabsTrigger value="workbook">{t('workbook.tab')}</TabsTrigger>
+                  <TabsTrigger value="progress">{t('workbook.progressTab')}</TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
+
+            <TabsContent value="workbook" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+              <div className="flex items-center justify-between mb-6">
+                <div className="text-sm text-muted-foreground font-medium">
+                  {entries.length}
+                  {' '}
+                  {t('workbook.wordCount')}
+                  {' · '}
+                  {sortedLessonIds.length}
+                  {' '}
+                  {t('workbook.lessonCount')}
+                  {lastSaved && ` · ${t('workbook.lastSaved')} ${new Date(lastSaved).toLocaleDateString()}`}
+                </div>
+                <Input
+                  className="w-48 bg-background backdrop-blur-sm"
+                  placeholder={t('workbook.searchPlaceholder')}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+
+              {/* Review Banner */}
+              <div className="mb-6">
+                <ReviewQueueBanner count={dueItems.length} onStartReview={() => setReviewOpen(true)} />
+              </div>
+
+              {/* Empty state */}
+              {sortedLessonIds.length === 0 && (
+                <EmptyState
+                  className="min-h-[340px]"
+                  icon={<Bookmark className="size-7 text-primary" strokeWidth={1.5} />}
+                  description={t('workbook.noWords')}
+                  action={{
+                    label: t('nav.library'),
+                    href: '/',
+                    icon: <ArrowUpRight className="size-4" />,
+                  }}
+                />
+              )}
+
+              {/* No search results state */}
+              {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
+                <div className="text-center py-20 text-muted-foreground text-sm">
+                  {t('workbook.noSearchResults')}
+                  {' "'}
+                  {search}
+                  ".
+                  {' '}
+                </div>
+              )}
+
+              {/* Groups */}
+              <div className="flex flex-col gap-7">
+                {sortedLessonIds
+                  .filter(id => filteredByLesson[id])
+                  .map((id, index) => (
+                    <motion.div
+                      key={id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, delay: Math.min(index, 8) * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                      <LessonGroup
+                        lessonId={id}
+                        lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
+                        entries={filteredByLesson[id]}
+                        onDeleteGroup={removeGroup}
+                      />
+                    </motion.div>
+                  ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="progress" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+              <AnimatePresence mode="wait">
+                {activeTab === 'progress' && (
+                  <motion.div
+                    key="progress"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    {loadingProgress
+                      ? (
+                          <div className="h-64 flex flex-col items-center justify-center text-muted-foreground animate-pulse space-y-4">
+                            <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                            <span className="text-sm font-medium tracking-widest uppercase">{t('workbook.loadingMetrics')}</span>
+                          </div>
+                        )
+                      : (
+                          <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-min gap-4 md:gap-6 pt-4">
+                            {/* Row 1: Accuracy Trend (left) + Pie Chart (right) */}
+                            <div className="md:col-span-8 flex flex-col">
+                              <AccuracyTrendChart trend={stats?.accuracyTrend} />
+                            </div>
+                            <div className="md:col-span-4 flex flex-col">
+                              <AccuracyPieCard stats={stats} />
+                            </div>
+
+                            {/* Row 2: Exercises + Sessions + Mistakes */}
+                            <div className="md:col-span-4 flex flex-col">
+                              <ExercisesCard stats={stats} />
+                            </div>
+                            <div className="md:col-span-4 flex flex-col">
+                              <SessionsCard stats={stats} />
+                            </div>
+                            <div className="md:col-span-4 flex flex-col">
+                              <MistakesPanel mistakes={mistakes} entries={entries} />
+                            </div>
+
+                            {/* Row 3: Skill Mastery Grid */}
+                            <div className="md:col-span-12 mt-2">
+                              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1">
+                                {t('workbook.skillBreakdown')}
+                              </h3>
+                              <SkillMasteryGrid stats={stats} />
+                            </div>
+                          </div>
+                        )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+
+      <Dialog
+        open={reviewOpen}
+        disablePointerDismissal={sessionActive}
+        onOpenChange={(open, _eventDetails) => {
+          if (!open && sessionActive)
+            return
+          setReviewOpen(open)
+        }}
+      >
+        <DialogContent
+          className="max-h-[95vh] overflow-y-auto p-0 sm:max-w-2xl border-white/10 shadow-2xl backdrop-blur-2xl bg-background/80"
+          showCloseButton={false}
+        >
+          <StudySession
+            lessonId=""
+            preloadedEntries={dueItems}
+            onClose={() => setReviewOpen(false)}
+            onActiveChange={setSessionActive}
+            disableLeaveGuard
+          />
+        </DialogContent>
+      </Dialog>
+    </Layout>
+  )
+}

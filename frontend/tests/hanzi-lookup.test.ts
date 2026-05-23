@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCharData, getDecomposition, getSinoVietnamese } from '@/lib/hanzi/lookup'
+import { buildCharData, getDecomposition, getSinoVietnamese } from '@/shared/lib/hanzi/lookup'
 
 describe('getSinoVietnamese', () => {
   it('returns the Hán Việt reading for a known character', async () => {

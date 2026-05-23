@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { WarmingState } from '@/components/tips/WarmingState'
+import { WarmingState } from '@/features/learning-materials/ui/tips/WarmingState'
 
-vi.mock('@/contexts/I18nContext', async () => {
-  const { getTranslation } = await import('@/lib/i18n')
+vi.mock('@/app/providers/I18nContext', async () => {
+  const { getTranslation } = await import('@/shared/lib/i18n')
   return { useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }) }
 })
 

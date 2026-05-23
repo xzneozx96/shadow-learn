@@ -4,7 +4,7 @@ import {
   isItemDueToday,
   scoreToQuality,
   updateSpacedRepetition,
-} from '@/lib/spacedRepetition'
+} from '@/shared/lib/spacedRepetition'
 
 describe('scoreToQuality', () => {
   it('maps 100 → 5', () => expect(scoreToQuality(100)).toBe(5))
@@ -115,9 +115,11 @@ describe('updateSpacedRepetition', () => {
   it('sets dueDate to today+intervalDays', () => {
     const item = createSpacedRepetitionItem('vocab-1')
     const updated = updateSpacedRepetition(item, 80)
-    const expectedDate = new Date()
-    expectedDate.setDate(expectedDate.getDate() + updated.intervalDays)
-    expect(updated.dueDate).toBe(expectedDate.toISOString().split('T')[0])
+    const d = new Date()
+    d.setDate(d.getDate() + updated.intervalDays)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const expectedStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    expect(updated.dueDate).toBe(expectedStr)
   })
 })
 

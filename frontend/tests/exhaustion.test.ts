@@ -1,6 +1,6 @@
 import type { UIMessage } from '@ai-sdk/react'
 import { describe, expect, it } from 'vitest'
-import { computeLessonExhaustion } from '@/lib/context-assembler/exhaustion'
+import { computeLessonExhaustion } from '@/features/agent/lib/context-assembler/exhaustion'
 
 function user(id: string, text: string): UIMessage {
   return { id, role: 'user', parts: [{ type: 'text', text }] } as any

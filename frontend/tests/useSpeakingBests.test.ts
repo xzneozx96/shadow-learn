@@ -1,15 +1,15 @@
-import type { ShadowingBest } from '../src/types'
+import type { ShadowingBest } from '@/shared/types'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { initDB, saveSpeakingAudio, saveSpeakingBest } from '../src/db'
-import { useSpeakingBests } from '../src/hooks/useSpeakingBests'
+import { initDB, saveSpeakingAudio, saveSpeakingBest } from '@/db'
+import { useSpeakingBests } from '@/shared/hooks/useSpeakingBests'
 import 'fake-indexeddb/auto'
 
 let mockDb: Awaited<ReturnType<typeof initDB>>
 
 // Mock AuthContext — hook reads db from useAuth()
-vi.mock('../src/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: mockDb }),
 }))
 

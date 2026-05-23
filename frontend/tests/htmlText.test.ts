@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { escapeHtml, htmlToPlain } from '@/lib/htmlText'
+import { escapeHtml, htmlToPlain } from '@/features/learning-materials/lib/htmlText'
 
 describe('escapeHtml', () => {
   it('escapes the 5 standard characters', () => {

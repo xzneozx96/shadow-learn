@@ -1,6 +1,6 @@
-import type { LanguageCapabilities } from '@/lib/language-caps'
+import type { LanguageCapabilities } from '@/shared/lib/language-caps'
 import { describe, expect, it } from 'vitest'
-import { buildExerciseResultPayload, buildSessionQuestions, buildStudyPool, distributeExercises, isClozeExercise, isPronExercise, isTranslationSentence, toFallbackType } from '@/lib/study-utils'
+import { buildExerciseResultPayload, buildSessionQuestions, buildStudyPool, distributeExercises, isClozeExercise, isPronExercise, isTranslationSentence, toFallbackType } from '@/shared/lib/study-utils'
 
 function entry(id: string) {
   return {

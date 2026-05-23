@@ -41,7 +41,7 @@ describe('idb migration v15 → v16', () => {
     v15.close()
 
     const v16 = await initDB()
-    expect(v16.version).toBe(20)
+    expect(v16.version).toBe(21)
 
     // v18 reversed the :tutor suffix migration, so key is plain again
     const row = await v16.get('tip-chats', 'PL123:vid456')

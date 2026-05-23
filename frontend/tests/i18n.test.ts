@@ -1,6 +1,6 @@
-import type { TranslationKey } from '@/lib/i18n'
+import type { TranslationKey } from '@/shared/lib/i18n'
 import { describe, expect, it } from 'vitest'
-import { getTranslation, TRANSLATIONS } from '@/lib/i18n'
+import { getTranslation, TRANSLATIONS } from '@/shared/lib/i18n'
 
 describe('getTranslation', () => {
   it('returns English string for en locale', () => {

@@ -23,6 +23,86 @@ services:
       - SHADOWLEARN_YTDLP_BGUTIL_URL=http://bgutil-provider:4416
       # SHADOWLEARN_OFFSHORE_BASE_URL and SHADOWLEARN_OFFSHORE_INTERNAL_TOKEN
       # must be set in backend/.env pointing at the offshore server.
+      # Document search → self-hosted PageIndex (same compose network).
+      - SHADOWLEARN_PAGEINDEX_BASE_URL=http://pageindex-api:8000
+      - SHADOWLEARN_PAGEINDEX_API_KEY=${PAGEINDEX_API_KEY}
     depends_on:
       bgutil-provider:
         condition: service_started
+      pageindex-api:
+        condition: service_started
+
+  # --- PageIndex self-hosted document retrieval ---------------------------- #
+  # Build context ./page-index — copy or symlink the PageIndex repo there.
+  # API_SECRET_KEY (PageIndex) and SHADOWLEARN_PAGEINDEX_API_KEY (backend) are
+  # both fed from the single compose var PAGEINDEX_API_KEY so they always match.
+  pageindex-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PAGEINDEX_DB_USER:-pageindex}
+      POSTGRES_PASSWORD: ${PAGEINDEX_DB_PASSWORD:-pageindex}
+      POSTGRES_DB: ${PAGEINDEX_DB_NAME:-pageindex}
+    volumes:
+      - pageindex_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PAGEINDEX_DB_USER:-pageindex} -d ${PAGEINDEX_DB_NAME:-pageindex}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pageindex-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pageindex-api:
+    build: ./page-index
+    restart: unless-stopped
+    env_file:
+      - ./page-index/.env
+    environment:
+      - API_SECRET_KEY=${PAGEINDEX_API_KEY}
+      - DATABASE_URL=postgresql+asyncpg://${PAGEINDEX_DB_USER:-pageindex}:${PAGEINDEX_DB_PASSWORD:-pageindex}@pageindex-postgres/${PAGEINDEX_DB_NAME:-pageindex}
+      - CELERY_BROKER_URL=redis://pageindex-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://pageindex-redis:6379/0
+    volumes:
+      - pageindex_uploads:/app/storage/uploads
+      - pageindex_results:/app/storage/results
+    depends_on:
+      pageindex-postgres:
+        condition: service_healthy
+      pageindex-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pageindex-worker:
+    build: ./page-index
+    restart: unless-stopped
+    command: celery -A api.tasks.celery_app worker --loglevel=info
+    env_file:
+      - ./page-index/.env
+    environment:
+      - API_SECRET_KEY=${PAGEINDEX_API_KEY}
+      - DATABASE_URL=postgresql+asyncpg://${PAGEINDEX_DB_USER:-pageindex}:${PAGEINDEX_DB_PASSWORD:-pageindex}@pageindex-postgres/${PAGEINDEX_DB_NAME:-pageindex}
+      - CELERY_BROKER_URL=redis://pageindex-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://pageindex-redis:6379/0
+    volumes:
+      - pageindex_uploads:/app/storage/uploads
+      - pageindex_results:/app/storage/results
+    depends_on:
+      pageindex-api:
+        condition: service_healthy
+
+volumes:
+  pageindex_pgdata:
+  pageindex_uploads:
+  pageindex_results:

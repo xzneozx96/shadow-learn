@@ -4,9 +4,9 @@ import {
   hasUnseenAnnouncement,
   markAnnouncementSeen,
   useHasUnseenAnnouncement,
-} from '@/lib/whats-new'
+} from '@/shared/lib/whats-new'
 
-vi.mock('@/lib/changelog', () => ({
+vi.mock('@/shared/lib/changelog', () => ({
   getLatestAnnouncementId: vi.fn().mockReturnValue('2026-04-workbook-srs'),
 }))
 

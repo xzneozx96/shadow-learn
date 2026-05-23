@@ -34,7 +34,7 @@ Tests live in `frontend/tests/`. Run one file: `npx vitest tests/my.test.ts`.
 |------|-------|
 | New page | `src/pages/` |
 | Feature component | `src/components/<feature>/` |
-| UI primitive | `src/components/ui/` via shadcn CLI only |
+| UI primitive | `src/shared/ui/` via shadcn CLI only |
 | Pure utility | `src/lib/` |
 | Data/feature hook | `src/hooks/` |
 | Context provider | `src/contexts/` |
@@ -45,7 +45,7 @@ Don't create a new file when editing an existing one would do. Don't create abst
 
 Do not modify without careful review:
 
-- `src/components/ui/` — shadcn-managed, use CLI to update
+- `src/shared/ui/` — shadcn-managed, use CLI to update
 - `src/db/index.ts` — schema changes require a `DB_VERSION` bump and new `upgrade()` migration branch
 - `src/contexts/AuthContext.tsx` — gates the entire app; mistakes break all data access
 - `src/lib/crypto.ts` — encryption bugs silently corrupt user data

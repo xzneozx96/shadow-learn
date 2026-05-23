@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     encryption_key: str | None = None          # env: SHADOWLEARN_ENCRYPTION_KEY
     youtube_api_key: str | None = None          # env: SHADOWLEARN_YOUTUBE_API_KEY
 
+    # PageIndex self-hosted retrieval API (document search for the AI Companion).
+    # PageIndex owns all routing/retrieval logic; this backend only proxies + injects the key.
+    pageindex_base_url: str = "http://pageindex-api:8000"  # env: SHADOWLEARN_PAGEINDEX_BASE_URL
+    pageindex_api_key: str | None = None                   # env: SHADOWLEARN_PAGEINDEX_API_KEY
+
     # Offshore Gemini proxy — see backend/livekit_agent/http_server.py.
     # The China-side backend forwards Gemini-bound traffic here so it never
     # crosses the GFW directly. Empty base_url disables the proxy and

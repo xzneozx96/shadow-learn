@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useAudioRecorder } from '@/hooks/useAudioRecorder'
+import { useAudioRecorder } from '@/shared/hooks/useAudioRecorder'
 
 // Minimal MediaRecorder mock.
 // Must be a regular function (not arrow) so it can be called with `new`.

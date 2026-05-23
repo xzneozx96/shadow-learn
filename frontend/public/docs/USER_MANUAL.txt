@@ -1,4 +1,6 @@
-# Welcome to ShadowLearn! 
+# Welcome to ShadowLearn!
+
+## Overview
 
 **ShadowLearn** is your ultimate companion to conquer any foreign language using the **Shadowing** technique (Listen & Repeat) combined with smart interactive exercises and AI Assistance.
 
@@ -15,10 +17,12 @@ They are "keys" that allow the app to connect with Artificial Intelligence (AI) 
 
 | Key Name | Main Role | Importance |
 | :--- | :--- | :--- |
-| **OpenRouter API Key** | Translates, explains grammar, and chats with you. | **Required**  |
+| **OpenRouter API Key** | Translates, explains grammar, and chats with you. | **Optional (recommended)**  |
 | **Google Gemini API Key** | Powers live voice conversations in Speak with AI. | **Required for Speak with AI**  |
 
 > ️ **Absolute Security**: All keys are encrypted and **only saved on your computer**. The app never sends them to our servers.
+
+>  **No OpenRouter key? You can still start right away.** Leave the field blank and ShadowLearn falls back to a **shared key pooled with other learners**, so you can try every feature for free. Heads-up: this shared key is a goodwill free trial and **may slow down, get paused, or be discontinued** as the community grows beyond what the author can afford to fund. For reliable, uninterrupted learning, we strongly recommend adding **your own** OpenRouter key in Setup or Settings — it stays encrypted on your device just like every other key.
 
 ### How to Get API Keys
 
@@ -38,8 +42,6 @@ They are "keys" that allow the app to connect with Artificial Intelligence (AI) 
 ![Google AI Studio — API key and billing setup](docs/images/speak_google_api_key.png)
 
 >  **Cost:** ~300 VNĐ (~$0.012 USD) per minute of conversation. You only pay when you use it.
-
----
 
 ### Create a PIN
 - Create a PIN (minimum 4 characters) and confirm it.
@@ -66,21 +68,24 @@ The main dashboard is the **Library**, containing all your created lessons.
 ![Library](docs/images/library.png)
 
 ### Creating a New Lesson
-Click the **+** card or **Create Lesson** button. You have 2 options:
+Click the **+** card or **Create Lesson** button. You have 3 options:
 
 1. **Via YouTube Link** :
    - Paste the video URL into the box.
    - The app will download the audio and generate subtitles automatically.
 2. **Upload from Computer** :
    - Upload an audio (.mp3) or video (.mp4) file from your device.
+3. **From a Blog or News Article** :
+   - Paste the link to any article you find interesting. ShadowLearn extracts the text and turns it into a natural-sounding **audio podcast** — complete with narration, an aligned transcript, and vocabulary breakdowns for shadowing practice.
+   - **No link, or behind a login wall?** Switch to **Paste Text** mode and drop in up to 2,000 characters directly. We synthesize the voice, build the transcript, and translate it for you.
 
-### Choose Translation Language
-- Select your target language (e.g., **English**).
-- Click **Generate**. The lesson enters a processing queue — you can return to the Library to wait (status shown as *Processing*).
+Select your target language (e.g., **English**), then click **Generate**. The lesson enters a processing queue — you can return to the Library to wait (status shown as *Processing*).
+
+> 🎬 **Study with a vibe:** Blog and article lessons play over a looping ambient background video. Pick a scene from the strip at the bottom, and click anywhere on the video to play or pause.
 
 ![Create New Lesson](docs/images/create_lesson.png)
 
-### ️ Managing Existing Lessons
+### Managing Existing Lessons ️
 
 Each lesson card in the Library supports:
 
@@ -91,7 +96,7 @@ Each lesson card in the Library supports:
 
 ---
 
-## ️ 4. Learning Interface (Classroom)
+## 4. Learning Interface (Classroom) ️
 
 Opening a lesson divides the screen into **3 main columns**:
 
@@ -121,7 +126,7 @@ Plays the lesson content. Controls include:
 
 ### Right Column — AI Companion (2 Tabs)
 
-The right column is home to your personal AI tutor. See [Section 5](#5-ai-companion--your-personal-language-tutor) for the full guide — it's the most powerful feature in ShadowLearn.
+The right column is home to your personal AI tutor — an intelligent agent that knows your vocabulary, tracks your progress, and runs interactive exercises directly inside the chat. See [AI Companion ↓](#5-ai-companion--your-personal-language-tutor) for the full guide.
 
 **Tab 1 — Chat ** — Talk to your AI tutor, ask questions, request exercises.
 **Tab 2 — Workbook ** — Browse words saved from this lesson; click any word to jump to it in the transcript. **Study This Lesson** button launches a quiz session.
@@ -134,8 +139,6 @@ The right column is home to your personal AI tutor. See [Section 5](#5-ai-compan
 
 The **AI Companion** lives in the right panel of every lesson. It is not a simple chatbot — it is an intelligent, agentic tutor that **knows who you are**, **remembers you across sessions**, and **takes action** on your behalf. It can read your vocabulary list, check which words you're due to review, see exactly which sentence you're studying, and then launch a real interactive exercise — all directly inside the chat.
 
----
-
 ### What Makes It Different
 
 | Ordinary chatbot | ShadowLearn AI Companion |
@@ -144,8 +147,6 @@ The **AI Companion** lives in the right panel of every lesson. It is not a simpl
 | Forgets you next session | **Remembers** your preferences, struggles, and goals |
 | Gives generic advice | Adapts to **your level and progress** in real time |
 | Talks about exercises | **Runs exercises directly in the chat** |
-
----
 
 ### How to Start a Conversation
 
@@ -174,8 +175,6 @@ Just type naturally. Here are ideas to get you going:
 
 The AI will remember everything you tell it, even in future sessions.
 
----
-
 ### Interactive Exercises Right in the Chat
 
 This is the standout feature. When you ask for practice, the AI doesn't just describe an exercise — it **renders a live, interactive exercise directly inside the conversation**. You complete it, submit your answer, and the AI responds with feedback and updates your progress automatically.
@@ -194,8 +193,6 @@ Exercises the AI can launch in chat:
 
 The AI chooses which words to include based on what you've saved, what's due for review, and what you've been struggling with recently — not randomly.
 
----
-
 ### It Knows You — The Learner Profile
 
 The first time you start chatting, the AI will ask you a few quick questions:
@@ -205,9 +202,7 @@ The first time you start chatting, the AI will ask you a few quick questions:
 
 These answers build your **Learner Profile**, which the AI reads at the start of every session to calibrate the difficulty of its explanations and exercise selections. You can update it at any time simply by telling the AI — *"I think I'm at intermediate level now"* — and it will adjust.
 
----
-
-### ️ Long-Term Memory
+### Long-Term Memory ️
 
 The AI keeps a **persistent memory** of important things you share with it:
 - Your learning goals and motivations
@@ -217,8 +212,6 @@ The AI keeps a **persistent memory** of important things you share with it:
 
 This memory carries over to every future session. The AI can also search its own memory when you ask — *"What have I told you about my goals?"* — and retrieve what it knows about you.
 
----
-
 ### Ask for Your Progress
 
 At any time, type:
@@ -226,8 +219,6 @@ At any time, type:
 - *"How is my skill breakdown looking?"*
 
 The AI will render a **visual chart** right in the chat — an accuracy trend graph or a mastery breakdown across all five skills (Listening, Speaking, Reading, Writing, Vocabulary).
-
----
 
 ### Tips for Getting the Best Out of It
 
@@ -238,13 +229,11 @@ The AI will render a **visual chart** right in the chat — an accuracy trend gr
 
 ---
 
-## ️ 6. Speak with AI — Live Voice Practice
+## 6. Speak with AI — Live Voice Practice ️
 
 > *No scheduling. No judgment. Just you and an AI that corrects your grammar while you speak.*
 
-**Speak with AI** is a real-time voice conversation feature. You speak — the AI responds in your target language — and the app gives you instant support so you never get stuck. Before using this feature, make sure you've added your **Google Gemini API key** in Settings (see [Section 1](#1-initial-setup-for-beginners)).
-
----
+**Speak with AI** is a real-time voice conversation feature. You speak — the AI responds in your target language — and the app gives you instant support so you never get stuck. Before using this feature, make sure you've added your **Google Gemini API key** in Settings (see [Initial Setup ↑](#1-initial-setup-for-beginners)).
 
 ### What You Get in Every Session
 
@@ -260,8 +249,6 @@ The AI will render a **visual chart** right in the chat — an accuracy trend gr
 **Supported languages:** Chinese (Simplified), English, Japanese.
 **Session limit:** 10 minutes per session (countdown timer shown during conversation).
 
----
-
 ### How to Use It
 
 #### Step 1 — Open Speak with AI
@@ -271,10 +258,6 @@ There are two ways to access the feature:
 - **From the Companion Panel:** Inside a lesson, click the **Voice** icon in the AI Companion panel on the right.
 
 If your Google Gemini key isn't set yet, the app will prompt you to go to Settings first.
-
-![Two entry points — sidebar and Companion Panel](docs/images/speak_entry_points.png)
-
----
 
 #### Step 2 — Choose language and level
 Select your **target language**, then pick a **proficiency level**:
@@ -287,14 +270,10 @@ The AI adjusts vocabulary, sentence complexity, and feedback depth to match your
 
 ![Language and level picker](docs/images/speak_language_level.png)
 
----
-
 #### Step 3 — Pick a persona
 Choose the AI character you want to talk to. Each persona has a distinct personality and speaking style — friendly study buddy, encouraging friend, strict parent, taxi driver, and more. Available personas vary by language.
 
 ![Persona picker — grid of characters](docs/images/speak_persona_picker.png)
-
----
 
 #### Step 4 — Pick a situation
 Choose a scenario from the grid: casual chat, ordering food, asking directions, shopping/bargaining, job interview, meeting the family, hospital visit, karaoke, and more.
@@ -303,14 +282,10 @@ Choose a scenario from the grid: casual chat, ordering food, asking directions, 
 
 ![Situation picker](docs/images/speak_situation_picker.png)
 
----
-
 #### Step 5 — Preview and confirm
 Before starting, review the scenario card: description, your role and goal, and the target vocabulary for this session. Click **Regenerate** for a fresh version, or **Start** when ready.
 
 ![Situation preview card](docs/images/speak_situation_preview.png)
-
----
 
 #### Step 6 — Have the conversation
 
@@ -338,8 +313,6 @@ The session screen has three panels:
 
 When finished, click **End Session**.
 
----
-
 #### Step 7 — Review your recap
 After the session, a full recap shows:
 - Duration and turn count
@@ -350,8 +323,6 @@ After the session, a full recap shows:
 Click **Practice Again** to repeat the same scenario, or **Back** to choose a new one.
 
 ![Session recap](docs/images/speak_session_recap.png)
-
----
 
 ### Troubleshooting
 
@@ -380,8 +351,6 @@ Click the **Shadowing** button in the middle column (or the  icon on a specific 
 
 You can also set **how many segments** to practice, or choose "All remaining" to go through the whole lesson.
 
----
-
 ### Dictation Mode Flow
 
 **Step 1 — Listen Phase**
@@ -400,8 +369,6 @@ You can also set **how many segments** to practice, or choose "All remaining" to
 
 ![Dictation Result](docs/images/shadowing_result.png)
 
----
-
 ### Speaking Mode Flow
 
 **Step 1 — Listen Phase**
@@ -418,9 +385,7 @@ You can also set **how many segments** to practice, or choose "All remaining" to
 - Azure grades your pronunciation:  Green = good,  Red = needs work.
 - Click **Retry** to try again or **Next** to continue.
 
----
-
-### Session Summary
+### Shadowing Session Summary
 
 After all segments are done, you see a full summary:
 - Accuracy score per segment
@@ -434,6 +399,17 @@ After all segments are done, you see a full summary:
 ### Saving Words
 While reading subtitles, **hover over any word** and click the **Bookmark ** icon. The word is instantly added to your Workbook.
 
+### Word Breakdown — Decode Characters, Anchor Memories 📖
+
+Ever stared at a Chinese character and drawn a complete blank? **Word Breakdown** gives you X-ray vision into any character. Click the **book icon (📖)** on any vocabulary card to open it:
+
+- **Radicals** — the semantic roots that hint at a word's meaning.
+- **Components** — every sub-part of the character, named and explained.
+- **Hán Việt (Sino-Vietnamese)** — the bridge linking characters to Vietnamese vocabulary you may already know.
+- **AI memory story** — the moment you open the panel, the AI weaves the components into a vivid, memorable scene so the word sticks. Hit **🔄** for a fresh story, or **✏️** to write your own. Your story saves to the card, ready for every future review.
+
+![Word Breakdown — radical breakdown and AI memory story](docs/images/word_breakdown_demo.png)
+
 ### Accessing the Full Workbook
 
 Click **Workbook** in the top navigation to open the full Vocabulary page. Here you can:
@@ -445,8 +421,6 @@ Click **Workbook** in the top navigation to open the full Vocabulary page. Here 
 - Click **Study** on any lesson group to practice only those words
 
 ![Workbook Dashboard](docs/images/workbook_dashboard.png)
-
----
 
 ### Quiz Formats
 
@@ -467,8 +441,6 @@ When you start a study session (from the Workbook or the lesson's Workbook tab),
 ![Study Session](docs/images/study_workbook.png)
 
 After finishing, a **Session Summary** shows your score breakdown by exercise type.
-
----
 
 ### Progress Dashboard
 
@@ -515,7 +487,59 @@ When words are due for review, a banner appears at the top of the Workbook page:
 
 ---
 
-## ️ 9. Settings
+## 9. Smart Study — Your Daily Practice, Reimagined 📋
+
+> *Consistency is the hardest part of language learning. Smart Study handles the logistics so you can focus on practicing.*
+
+### Your Daily Goals, Always in Sight
+A floating study badge follows you on every page. Tap it to open your **daily dashboard** — a single, streamlined view of your reviews, shadowing sessions, and custom tasks. Stay on track without ever leaving what you're doing.
+
+### Five Skills, One Seamless Flow
+The Daily Review session covers everything: **Vocabulary, Listening, Reading, Writing, and Speaking**. An interactive progress ring tracks how far you've come — jump between skills freely, or pick up exactly where you left off later.
+
+### Spaced Repetition, Automated
+Every word you study is scheduled with **Spaced Repetition (SRS)**, so it resurfaces right before you'd forget it — no manual setup. This is the same review queue described in [Section 8 ↑](#8-vocabulary-workbook-quizzes-progress); Smart Study simply brings it to you each day.
+
+### Tailored to You
+Not every task fits a template. Add your own goals — conversation practice, grammar notes, anything — and check them off as you go. Your daily queue, built around the way you learn.
+
+---
+
+## 10. Explore — Your Grammar-Focused Study Hub 🧭
+
+> *Stop learning from static playlists. Turn any YouTube video into a personal AI study space — think NotebookLM, built for language learning.*
+
+Open **Explore** from the sidebar to launch your personalized study hub.
+
+![Explore — AI study workspace](docs/images/notebooklm-workspace.png)
+
+### One-Click Video Import
+Paste any YouTube URL — a single video or an entire playlist. ShadowLearn auto-detects the type and pulls in the title, thumbnail, and metadata, then files it neatly in your collection. Tag each item by **skill** (Grammar, Vocabulary, Pronunciation, Speaking, or Learning Tips) and instruction language so you can always find it again.
+
+![Your imported playlists](docs/images/notebooklm-my-playlists.png)
+
+### AI Study Companion
+Every video — yours or ours — opens the same toolkit:
+
+| Tool | What it does |
+| :--- | :--- |
+| **AI Summary** | Key grammar points and vocabulary distilled before you press play |
+| **Mind Map** | Visualize how grammar structures and vocabulary connect across the lesson |
+| **Study Guide** | Grammar rules, usage patterns, and concept explanations built from the video |
+| **Flashcard Deck** | Drill vocabulary and grammar patterns straight from the transcript |
+| **Chat** | Ask questions — every answer anchored in what the video actually said |
+| **Notes** | Save rules, example sentences, and key vocabulary. Searchable anytime |
+
+![Study tools — summary, mind map, flashcards and more](docs/images/notebooklm-studio.png)
+
+### Curated Playlists to Get You Started
+Not sure where to begin? We've hand-picked playlists for Grammar, Vocabulary, Pronunciation, Speaking, and Learning Tips — ready to go, no setup required.
+
+![Curated starter playlists](docs/images/notebooklm-curated-playlists.png)
+
+---
+
+## 11. Settings ️
 
 Click the **Settings icon** (️) in the top navigation at any time to:
 
@@ -528,28 +552,75 @@ Click the **Settings icon** (️) in the top navigation at any time to:
 
 ---
 
-## 10. Frequently Asked Questions (FAQ)
+## 12. Frequently Asked Questions (FAQ)
+
+### API Keys & Cost
+
+**Q: Do I really need an OpenRouter key to start?**
+- **A:** No. Leave it blank and ShadowLearn falls back to a **shared key pooled with other learners**, so you can try everything for free. It's a goodwill trial, though — it may slow down or be paused as the community grows. For reliable, uninterrupted use, add your own key in Settings.
+
+**Q: What does my own OpenRouter key cost?**
+- **A:** You pay OpenRouter directly, only for what you use. Translation, grammar explanations, quizzes, and chat are inexpensive — typically a few cents of usage goes a long way. You stay in full control of your spending limits on OpenRouter.
+
+**Q: Which features need the Google Gemini key?**
+- **A:** Only **Speak with AI** (live voice). Everything else runs on OpenRouter (or the shared key). Gemini Live costs ~300 VNĐ (~$0.012) per minute and requires paid billing — the free trial tier is unstable and drops sessions.
+
+**Q: Are my API keys safe?**
+- **A:** Yes. Every key is encrypted with your PIN and **stored only on your device**. They are never sent to our servers.
+
+### Lessons & Library
+
+**Q: What kinds of content can I turn into a lesson?**
+- **A:** Three sources: a **YouTube link**, an **audio/video file** from your computer, or a **blog/news article** (paste the URL — or paste up to 2,000 characters of text directly). Articles become a narrated audio podcast with transcript and vocabulary.
+
+**Q: How long does lesson creation take?**
+- **A:** Usually 1–3 minutes, depending on length (download/extraction + transcription + translation). You can leave the Library and come back — the status shows *Processing*.
+
+**Q: A lesson shows an error. What do I do?**
+- **A:** For YouTube/article lessons, click **Retry** on the lesson card. For uploaded files, delete the lesson and upload again.
+
+**Q: What's the difference between a lesson and Explore?**
+- **A:** A **lesson** is for shadowing and exercises (transcript, pinyin, practice). **Explore** is a study hub that turns a YouTube video into an AI study guide — summary, mind map, study guide, flashcards, chat, and notes — focused on grammar and vocabulary rather than shadowing.
+
+### Vocabulary & Word Breakdown
+
+**Q: How do I save a word, and where does it go?**
+- **A:** Hover any word in the transcript and click the **bookmark** icon. It lands in your **Workbook**, grouped by lesson, ready for quizzes and review.
+
+**Q: What is the book icon (📖) on a vocabulary card?**
+- **A:** It opens **Word Breakdown** — radicals, components, the Hán Việt reading, and an AI-generated memory story. Tap 🔄 for a new story or ✏️ to write your own; it saves to the card.
+
+### Smart Study & Review
+
+**Q: What is the floating badge that follows me around?**
+- **A:** That's **Smart Study**. Tap it to open your daily dashboard — reviews, shadowing, and custom tasks in one place.
+
+**Q: How does ShadowLearn decide what I review each day?**
+- **A:** **Spaced Repetition (SRS).** Each word is scheduled to resurface right before you'd forget it — answer well and it returns later; miss it and it comes back soon. When words are due, a banner offers **Start Review**.
+
+### AI Companion & Memory
+
+**Q: The AI Companion doesn't seem to know my lesson / vocabulary.**
+- **A:** It looks up your data on demand. Just ask directly — *"quiz me on my saved words"* — and it fetches them.
+
+**Q: Does the AI Companion remember me between sessions?**
+- **A:** Yes — it has long-term memory. Tell it your goals, level, or weak spots and it remembers for future sessions.
+
+### Speak with AI & Shadowing
+
+**Q: Speak with AI won't start.**
+- **A:** Check that your Google Gemini key is set in Settings, and that your internet connection is stable — the voice session needs a live connection to the server.
+
+**Q: Why are some segments skipped in Shadowing?**
+- **A:** Very short segments (fewer than 3 words) are skipped automatically — too brief to practice meaningfully.
+
+### Account & Security
 
 **Q: Can I change my PIN?**
-- **A:** Yes — open Settings and use the **Change PIN** section. Write your PIN down somewhere safe; there is no recovery if forgotten.
-
-**Q: How long does YouTube lesson creation take?**
-- **A:** Usually 1–3 minutes depending on video length (download + transcription + translation).
-
-**Q: The lesson shows an error. What do I do?**
-- **A:** For YouTube lessons, click **Retry** on the lesson card in the Library. For uploaded files, delete the lesson and upload again.
-
-**Q: Why are some segments skipped in Shadowing mode?**
-- **A:** Very short segments (fewer than 3 words) are automatically skipped — they are too brief to practice meaningfully.
-
-**Q: The AI Companion doesn't seem to know about my lesson / vocabulary.**
-- **A:** The AI looks up your data when it needs it (when you ask for a quiz or progress check). Just ask directly — *"quiz me on my saved words"* — and it will fetch them.
-
-**Q: Can the AI Companion remember things between sessions?**
-- **A:** Yes. It has a long-term memory system. Tell it your goals, level, or problem areas and it will remember for future sessions.
+- **A:** Yes — Settings → **Change PIN**. Write it down somewhere safe; there is no recovery if forgotten.
 
 **Q: Where is my data stored?**
-- **A:** Everything — lessons, vocabulary, chat history, AI memory, audio cache — is stored locally in your browser's storage. Nothing is sent to our servers.
+- **A:** Everything — lessons, vocabulary, chat history, AI memory, audio cache — lives locally in your browser. Nothing is sent to our servers.
 
 ---
-*Wishing you productive and enjoyable learning sessions on ShadowLearn!* 
+*Wishing you productive and enjoyable learning sessions on ShadowLearn!*

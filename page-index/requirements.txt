@@ -1,0 +1,21 @@
+litellm==1.83.7
+# openai-agents  # optional: required for examples/agentic_vectorless_rag_demo.py
+pymupdf==1.26.4
+PyPDF2==3.0.1
+python-dotenv==1.0.1
+pyyaml==6.0.2
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+sqlalchemy==2.0.36
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+celery[redis]==5.4.0
+redis==5.2.1
+alembic==1.14.0
+pydantic-settings==2.7.0
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
+greenlet==3.1.1
+aiofiles==24.1.0
