@@ -28,6 +28,16 @@ export function clearSystemPromptCache(): void {
 }
 
 /**
+ * ISO → 'YYYY-MM-DD'. Coarsens the timestamp to date granularity so the system
+ * prompt stays byte-identical across a session — required for OpenRouter prefix
+ * caching (the system prompt is message[0]; any per-send change misses the cache
+ * for the entire request).
+ */
+function toDateOnly(iso?: string): string {
+  return (iso ?? new Date().toISOString()).slice(0, 10)
+}
+
+/**
  * Static sections — parts that do not depend on any SessionContext field.
  * Role description only — the rest of the prompt is dynamic.
  */
@@ -68,7 +78,7 @@ function buildDynamicSections(context: SessionContext): string {
 
   const sections: string[] = []
 
-  sections.push(`Current Time: ${context.currentTime ?? new Date().toLocaleString()}`)
+  sections.push(`Current Date: ${toDateOnly(context.currentTime)}`)
   sections.push('')
 
   // Derive languages from lesson metadata when profile is missing
@@ -164,7 +174,6 @@ function buildDynamicSections(context: SessionContext): string {
     const snapshotLines: string[] = ['## Session Snapshot']
     const parts: string[] = [
       `Tab: ${appState.currentTab}.`,
-      `Duration: ${appState.sessionDurationMinutes}min.`,
       `Exercises done: ${appState.exercisesThisSession}.`,
     ]
     if (appState.vocabularyDueCount > 0)
@@ -264,7 +273,7 @@ export function buildGlobalSystemPrompt(
     '',
   )
 
-  sections.push(`Current Time: ${currentTime ?? new Date().toLocaleString()}`)
+  sections.push(`Current Date: ${toDateOnly(currentTime)}`)
   sections.push('')
 
   if (!profile) {

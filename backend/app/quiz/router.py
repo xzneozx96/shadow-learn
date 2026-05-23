@@ -150,7 +150,7 @@ async def generate_quiz(req: QuizRequest):
     payload = {
         "model": settings.openrouter_structured_model,
         "messages": [
-            {"role": "system", "content": [{"type": "text", "text": f"You are a {lang_cfg['language_name']} teacher creating learning exercises.", "cache_control": {"type": "ephemeral"}}]},
+            {"role": "system", "content": f"You are a {lang_cfg['language_name']} teacher creating learning exercises."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.5,

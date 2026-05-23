@@ -66,12 +66,11 @@ def _convert_to_openai_messages(
     messages: list[ClientMessage],
     system_prompt: str,
 ) -> list[dict]:
-    # Cache the system prompt — Alibaba Qwen requires explicit cache_control markers
+    # DeepSeek/OpenAI/Grok cache the prompt prefix automatically — no cache_control
+    # markers needed (and they're ignored by these providers). See OpenRouter prompt
+    # caching docs. Re-add markers only if routing to Anthropic/Gemini.
     openai_messages: list[dict] = [
-        {
-            "role": "system",
-            "content": [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
-        }
+        {"role": "system", "content": system_prompt}
     ]
 
     for message in messages:
@@ -349,9 +348,21 @@ async def _stream_agent(stream, stitch_message_id: str | None = None):
                                     }
                                 )
 
-                # Usage chunk (no choices)
-                if not chunk.choices and chunk.usage is not None:
+                # Usage may ride the final chunk (which also carries choices /
+                # finish_reason), not a separate no-choices chunk — so capture
+                # whenever it appears, not only when choices is empty.
+                if getattr(chunk, "usage", None) is not None:
                     usage_data = chunk.usage
+                    # Observe prompt-cache effectiveness. OpenRouter field naming
+                    # varies by provider, so dump the raw usage object.
+                    details = getattr(usage_data, "prompt_tokens_details", None)
+                    cached = getattr(details, "cached_tokens", None) if details else None
+                    logger.info(
+                        "[_stream_agent] usage: prompt=%s cached=%s raw=%s",
+                        getattr(usage_data, "prompt_tokens", None),
+                        cached,
+                        usage_data.model_dump() if hasattr(usage_data, "model_dump") else usage_data,
+                    )
         except Exception as e:
             logger.error(f"[_stream_agent] OpenAI Stream Error: {e}", exc_info=True)
             # Inspect standard openai.APIError attributes for more details
@@ -526,11 +537,20 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
 
     create_kwargs: dict[str, Any] = {
         "stream": True,
+        # Ask OpenRouter for a trailing usage chunk so we can observe prompt-cache
+        # hit rate (cached_tokens) — see _stream_agent logging.
+        "stream_options": {"include_usage": True},
         "extra_body": {
+            # OpenRouter-native usage accounting — includes cached_tokens / cost.
+            "usage": {"include": True},
             "reasoning": {"budget_tokens": 256},
             "provider": {
                 "require_parameters": True,  # only route to providers supporting the params in your call
                 "allow_fallbacks": True,     # but allow fallback among those that qualify
+                # Prefer DeepSeek's own endpoint — it's the only provider that
+                # supports prompt caching (input_cache_read) for deepseek models.
+                # Fallbacks still kick in if it's unavailable (they just won't cache).
+                "order": ["DeepSeek"],
             },
         },
         "messages": openai_messages,

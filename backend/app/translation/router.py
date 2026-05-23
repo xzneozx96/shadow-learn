@@ -148,7 +148,7 @@ async def generate_sentences(req: GenerateRequest):
     payload = {
         "model": settings.openrouter_structured_model,
         "messages": [
-            {"role": "system", "content": [{"type": "text", "text": f"You are a {lang_cfg['language_name']} teacher creating translation exercises.", "cache_control": {"type": "ephemeral"}}]},
+            {"role": "system", "content": f"You are a {lang_cfg['language_name']} teacher creating translation exercises."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.7,
@@ -230,7 +230,7 @@ async def evaluate_translation(req: EvaluateRequest):
     payload = {
         "model": settings.openrouter_structured_model,
         "messages": [
-            {"role": "system", "content": [{"type": "text", "text": "You are a language teacher evaluating student translations.", "cache_control": {"type": "ephemeral"}}]},
+            {"role": "system", "content": "You are a language teacher evaluating student translations."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.5,
