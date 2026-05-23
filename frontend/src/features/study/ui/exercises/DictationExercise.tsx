@@ -1,0 +1,124 @@
+import type { MistakeExample } from '@/db'
+import type { LanguageCapabilities } from '@/shared/lib/language-caps'
+import type { VocabEntry } from '@/shared/types'
+import { Loader2, Volume2 } from 'lucide-react'
+import { useState } from 'react'
+import { useI18n } from '@/contexts/I18nContext'
+import { ExerciseCard } from '@/features/study/ui/exercises/ExerciseCard'
+import { computeAccuracyScore, computeCharDiff } from '@/shared/lib/diff-utils'
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/button'
+import { LanguageInput } from '@/shared/ui/LanguageInput'
+
+interface Props {
+  entry: VocabEntry
+  progress?: string
+  onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
+  playTTS: (text: string) => Promise<void>
+  loadingText: string | null
+  caps: LanguageCapabilities
+}
+
+export function DictationExercise({ entry, progress = '', onNext, playTTS, loadingText, caps }: Props) {
+  const { t } = useI18n()
+  const [value, setValue] = useState('')
+  const [checked, setChecked] = useState(false)
+  const expected = entry.sourceSegmentText
+  const diff = checked ? computeCharDiff(value.trim(), expected.trim()) : []
+  const accuracyScore = checked ? computeAccuracyScore(diff) : 0
+
+  const footer = (
+    <div className="flex items-center justify-center gap-3 p-3">
+      <Button variant="ghost" size="lg" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
+      {!checked
+        ? <Button size="lg" onClick={() => setChecked(true)}>{t('study.checkButton')}</Button>
+        : (
+            <Button
+              size="lg"
+              onClick={() => {
+                const today = new Date().toISOString().split('T')[0]
+                const mistakes: MistakeExample[] = accuracyScore < 100
+                  ? [{ userAnswer: value.trim(), correctAnswer: expected.trim(), date: today }]
+                  : []
+                onNext(accuracyScore, { mistakes: mistakes.length > 0 ? mistakes : undefined })
+              }}
+            >
+              {t('study.nextButton')}
+            </Button>
+          )}
+    </div>
+  )
+
+  return (
+    <ExerciseCard
+      type={t('study.mode.dictation')}
+      progress={progress}
+      footer={footer}
+      info={t('study.exercise.dictation.info')}
+    >
+      <p className="text-sm text-muted-foreground mb-4">
+        {t('study.listenAndType')}
+      </p>
+
+      {(() => {
+        const isLoading = loadingText === entry.sourceSegmentText
+        return (
+          <button
+            type="button"
+            aria-label="Play audio"
+            disabled={isLoading}
+            className="flex items-center justify-center mx-auto mb-5 size-14 rounded-full border border-border bg-secondary hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={() => void playTTS(entry.sourceSegmentText)}
+          >
+            {isLoading
+              ? <Loader2 className="size-5 text-muted-foreground animate-spin" />
+              : <Volume2 className="size-5 text-muted-foreground" />}
+          </button>
+        )
+      })()}
+
+      <LanguageInput
+        langInputMode={caps.inputMode}
+        placeholder={caps.dictationPlaceholder}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && !checked && setChecked(true)}
+        disabled={checked}
+      />
+
+      {checked && (
+        <div className="mt-4 space-y-3">
+          <div className="rounded-lg border border-border/50 bg-muted px-4 py-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-3">{t('study.yourAnswer')}</p>
+            <div className="flex flex-wrap gap-1">
+              {diff.map((tok, i) => (
+                <span
+
+                  key={`${i}-${tok.text}`}
+                  className={cn(
+                    'text-xl font-semibold px-1.5 py-0.5 rounded-md',
+                    tok.correct
+                      ? 'text-emerald-500 bg-emerald-500/10'
+                      : 'text-destructive bg-destructive/10',
+                  )}
+                >
+                  {tok.text || '□'}
+                </span>
+              ))}
+            </div>
+          </div>
+          <p className={cn('text-sm font-bold', accuracyScore === 100 ? 'text-emerald-400' : 'text-amber-400')}>
+            {accuracyScore}
+            {t('study.accurate')}
+          </p>
+          {accuracyScore < 100 && (
+            <div className="rounded-lg border border-border/50 bg-muted px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 mb-1">{t('study.correctAnswer')}</p>
+              <p className="text-xl font-medium">{expected}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </ExerciseCard>
+  )
+}

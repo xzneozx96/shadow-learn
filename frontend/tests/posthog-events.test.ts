@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { posthog } from '@/lib/posthog'
+import { posthog } from '@/shared/lib/posthog'
 import {
   captureAuthEvent,
   captureCompanionMessageSent,
@@ -20,9 +20,9 @@ import {
   captureWhatsNewChangelogOpened,
   captureWhatsNewModalDismissed,
   captureWhatsNewModalShown,
-} from '@/lib/posthog-events'
+} from '@/shared/lib/posthog-events'
 
-vi.mock('@/lib/posthog', () => ({
+vi.mock('@/shared/lib/posthog', () => ({
   posthog: {
     capture: vi.fn(),
     captureException: vi.fn(),

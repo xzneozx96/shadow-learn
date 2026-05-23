@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeScrollState } from '@/lib/carousel'
+import { computeScrollState } from '@/shared/lib/carousel'
 
 describe('computeScrollState', () => {
   describe('no overflow (content fits)', () => {

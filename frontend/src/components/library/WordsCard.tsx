@@ -1,11 +1,11 @@
-import type { LessonMeta } from '@/types'
+import type { LessonMeta } from '@/shared/types'
 import { ArrowUpRight, BookOpen } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useI18n } from '@/contexts/I18nContext'
-import { useCountUp } from '@/hooks/useCountUp'
-import { cn } from '@/lib/utils'
-import { Button } from '../ui/button'
+import { useCountUp } from '@/shared/hooks/useCountUp'
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/button'
 import { CardLabel } from './BentoCard'
 
 /* ── Words: total + segmented distribution bar ── */

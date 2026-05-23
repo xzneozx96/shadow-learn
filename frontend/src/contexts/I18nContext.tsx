@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
-import type { Locale, TranslationKey } from '@/lib/i18n'
+import type { Locale, TranslationKey } from '@/shared/lib/i18n'
 import { createContext, use, useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getSettings, saveSettings } from '@/db'
-import { getTranslation } from '@/lib/i18n'
+import { getTranslation } from '@/shared/lib/i18n'
 
 export interface I18nContextValue {
   locale: Locale

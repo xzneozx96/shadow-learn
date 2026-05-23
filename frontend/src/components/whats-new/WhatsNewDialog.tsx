@@ -2,18 +2,18 @@ import { Gift, Sparkles, Wrench, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { Button } from '@/components/ui/button'
+import { useI18n } from '@/contexts/I18nContext'
+import { getChangelog, getLatestAnnouncementId } from '@/shared/lib/changelog'
+import { captureWhatsNewChangelogOpened, captureWhatsNewModalDismissed, captureWhatsNewModalShown } from '@/shared/lib/posthog-events'
+import { hasUnseenAnnouncement, markAnnouncementSeen } from '@/shared/lib/whats-new'
+import { Button } from '@/shared/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { useI18n } from '@/contexts/I18nContext'
-import { getChangelog, getLatestAnnouncementId } from '@/lib/changelog'
-import { captureWhatsNewChangelogOpened, captureWhatsNewModalDismissed, captureWhatsNewModalShown } from '@/lib/posthog-events'
-import { hasUnseenAnnouncement, markAnnouncementSeen } from '@/lib/whats-new'
+} from '@/shared/ui/dialog'
 
 const TAG_UI = {
   new: {

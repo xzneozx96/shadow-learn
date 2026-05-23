@@ -1,15 +1,15 @@
-import type { StudioMindMapData } from '@/types/tips'
+import type { StudioMindMapData } from '@/features/learning-materials/domain/tips'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { MindMapArtifact } from '@/components/tips/studio/MindMapArtifact'
+import { MindMapArtifact } from '@/features/learning-materials/ui/tips/studio/MindMapArtifact'
 
-vi.mock('@/components/tips/tabs/ChatTab', () => ({
+vi.mock('@/features/learning-materials/ui/tips/tabs/ChatTab', () => ({
   ChatTab: ({ initialUserMessage }: { initialUserMessage?: string }) => (
     <div data-testid="chat-panel">{initialUserMessage ?? ''}</div>
   ),
 }))
 
-vi.mock('@/lib/tipSeekBus', () => ({
+vi.mock('@/features/learning-materials/lib/tipSeekBus', () => ({
   seekTip: vi.fn(),
   registerTipSeek: vi.fn(() => () => {}),
 }))

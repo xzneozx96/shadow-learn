@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { ChineseInput } from '@/components/ui/ChineseInput'
+import { ChineseInput } from '@/shared/ui/ChineseInput'
 
 function setup(value = '', onChange = vi.fn()) {
   const { rerender } = render(

@@ -1,0 +1,131 @@
+import type { MistakeExample } from '@/db'
+import type { LanguageCapabilities } from '@/shared/lib/language-caps'
+import type { VocabEntry } from '@/shared/types'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useI18n } from '@/contexts/I18nContext'
+import { useHint } from '@/features/study/application/useHint'
+import { ExerciseCard } from '@/features/study/ui/exercises/ExerciseCard'
+import { HintButton } from '@/features/study/ui/exercises/HintButton'
+import { charDiff, getActiveChips, scoreReconstruction, shuffleArray } from '@/shared/lib/study-utils'
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/button'
+import { LanguageInput } from '@/shared/ui/LanguageInput'
+
+interface Props {
+  entry: VocabEntry
+  words: string[]
+  caps: LanguageCapabilities
+  progress?: string
+  onNext: (score: number, opts?: { skipped?: boolean, mistakes?: MistakeExample[] }) => void
+  playTTS?: (text: string) => Promise<void>
+}
+
+export function ReconstructionExercise({ entry, words, caps, progress = '', onNext, playTTS }: Props) {
+  const { t } = useI18n()
+  const chips = useMemo(() => shuffleArray(words), [words])
+  const [value, setValue] = useState('')
+  const [checked, setChecked] = useState(false)
+  const hint = useHint(playTTS ? 1 : 0)
+  const active = getActiveChips(chips, value)
+  const score = checked ? scoreReconstruction(value, entry.sourceSegmentText) : null
+  const correct = score === 100
+  const diff = checked ? charDiff(value, entry.sourceSegmentText) : null
+
+  function handleHint() {
+    hint.revealNext()
+    playTTS?.(entry.sourceSegmentText)
+  }
+
+  const footer = (
+    <div className="flex items-center justify-center gap-3 p-3">
+      <Button variant="ghost" size="lg" onClick={() => onNext(0, { skipped: true })}>{t('study.skip')}</Button>
+      {playTTS && (
+        <HintButton
+          level={hint.level}
+          totalLevels={1}
+          exhausted={hint.exhausted}
+          onHint={handleHint}
+        />
+      )}
+      {!checked
+        ? <Button size="lg" onClick={() => setChecked(true)}>{t('study.checkButton')}</Button>
+        : (
+            <Button
+              size="lg"
+              onClick={() => {
+                const today = new Date().toISOString().split('T')[0]
+                const mistakes: MistakeExample[] = !correct
+                  ? [{ userAnswer: value.trim(), correctAnswer: entry.sourceSegmentText.trim(), date: today }]
+                  : []
+                onNext(Math.round((score ?? 0) * hint.hintScore), { mistakes: mistakes.length > 0 ? mistakes : undefined })
+              }}
+            >
+              {t('study.nextButton')}
+            </Button>
+          )}
+    </div>
+  )
+
+  return (
+    <ExerciseCard
+      type={t('study.mode.reconstruction')}
+      progress={progress}
+      footer={footer}
+      info={t('study.exercise.reconstruction.info')}
+    >
+      {/* Source context link */}
+      <Link
+        to={`/lesson/${entry.sourceLessonId}?segmentId=${entry.sourceSegmentId}`}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border/50 rounded-full px-3 py-1 mb-3 hover:text-foreground transition-colors"
+      >
+        📍
+        {' '}
+        {entry.sourceLessonTitle}
+        {' '}
+        {t('study.whereYouSaved')}
+        {' '}
+        {entry.word}
+      </Link>
+
+      <p className="text-sm text-muted-foreground mb-3">{t('study.typeInOrder')}</p>
+
+      {/* Word chips */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {chips.map((chip, i) => (
+
+          <span
+            key={i}
+            className={cn(
+              'px-3 py-2 rounded-md text-base font-semibold border border-border bg-secondary transition-opacity',
+              !active[i] && 'opacity-25',
+            )}
+          >
+            {chip}
+          </span>
+        ))}
+      </div>
+
+      {/* Input */}
+      <LanguageInput
+        langInputMode={caps.inputMode}
+        className="text-lg tracking-wide"
+        placeholder={t('study.typeTheSentence')}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && !checked && setChecked(true)}
+        disabled={checked}
+      />
+
+      {/* Char diff (post-check) */}
+      {diff && (
+        <div className="mt-3 px-3 py-2 rounded-lg bg-muted/30 text-lg font-bold tracking-wider">
+          {diff.map((d, i) => (
+
+            <span key={i} className={d.ok ? 'text-emerald-400' : 'text-destructive'}>{d.char}</span>
+          ))}
+        </div>
+      )}
+    </ExerciseCard>
+  )
+}

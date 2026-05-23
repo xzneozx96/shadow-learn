@@ -1,9 +1,9 @@
 import { ThumbsUp } from 'lucide-react'
 import { useMatch } from 'react-router-dom'
-import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
-import { posthog } from '@/lib/posthog'
-import { Button } from './ui/button'
+import { useGlobalCompanionContext } from '@/features/agent/application/GlobalCompanionContext'
+import { posthog } from '@/shared/lib/posthog'
+import { Button } from '@/shared/ui/button'
 
 export function FeedbackButton() {
   const { t } = useI18n()

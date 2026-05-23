@@ -1,8 +1,8 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DBSchema, IDBPDatabase } from 'idb'
-import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, ShadowingAudio, ShadowingBest, VocabEntry } from '../types'
-import type { UserMaterial } from '../types/collection'
-import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse, TipNote, TipProgress, TipStudioRecord, TipTranscriptRecord } from '../types/tips'
+import type { UserMaterial } from '@/features/learning-materials/domain/collection'
+import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse, TipNote, TipProgress, TipStudioRecord, TipTranscriptRecord } from '@/features/learning-materials/domain/tips'
+import type { AppSettings, GrammarFeedback, LessonMeta, Segment, SessionEvaluation, ShadowingAudio, ShadowingBest, VocabEntry } from '@/shared/types'
 import { openDB } from 'idb'
 
 const DB_NAME = 'shadowlearn'
@@ -220,7 +220,7 @@ interface ShadowLearnSchema extends DBSchema {
   }
   'word-breakdowns': {
     key: string
-    value: import('../types').WordBreakdown
+    value: import('@/shared/types').WordBreakdown
   }
   'shadowing-bests': {
     key: [string, string]
@@ -864,7 +864,7 @@ export async function appendAgentLog(
 
 export async function saveBreakdown(
   db: ShadowLearnDB,
-  entry: import('../types').WordBreakdown,
+  entry: import('@/shared/types').WordBreakdown,
 ): Promise<void> {
   await db.put('word-breakdowns', entry)
 }
@@ -872,7 +872,7 @@ export async function saveBreakdown(
 export async function getBreakdown(
   db: ShadowLearnDB,
   word: string,
-): Promise<import('../types').WordBreakdown | undefined> {
+): Promise<import('@/shared/types').WordBreakdown | undefined> {
   return db.get('word-breakdowns', word)
 }
 

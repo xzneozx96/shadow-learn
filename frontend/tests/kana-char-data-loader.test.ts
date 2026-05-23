@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { kanaCharDataLoader } from '@/lib/kana-char-data-loader'
+import { kanaCharDataLoader } from '@/features/study/lib/kana-char-data-loader'
 
 describe('kanaCharDataLoader', () => {
   it('calls onLoad with stroke data for a known hiragana character', () => {

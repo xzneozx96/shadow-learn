@@ -1,14 +1,14 @@
-import type { ChangelogEntry } from '@/lib/changelog'
+import type { ChangelogEntry } from '@/shared/lib/changelog'
 import { Sparkles, Wrench, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Layout } from '@/components/Layout'
-import { Badge } from '@/components/ui/badge'
 import { useI18n } from '@/contexts/I18nContext'
-import { getChangelog, getLatestAnnouncementId } from '@/lib/changelog'
-import { captureWhatsNewChangelogOpened } from '@/lib/posthog-events'
-import { hasUnseenAnnouncement, markAnnouncementSeen } from '@/lib/whats-new'
+import { getChangelog, getLatestAnnouncementId } from '@/shared/lib/changelog'
+import { captureWhatsNewChangelogOpened } from '@/shared/lib/posthog-events'
+import { hasUnseenAnnouncement, markAnnouncementSeen } from '@/shared/lib/whats-new'
+import { Badge } from '@/shared/ui/badge'
 
 const TAG_UI = {
   new: {

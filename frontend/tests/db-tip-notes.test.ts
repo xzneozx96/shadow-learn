@@ -1,4 +1,4 @@
-import type { TipNote } from '@/types/tips'
+import type { TipNote } from '@/features/learning-materials/domain/tips'
 
 import { deleteDB, openDB } from 'idb'
 import { afterEach, describe, expect, it } from 'vitest'

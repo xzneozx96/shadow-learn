@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveThreadId } from '@/lib/context-assembler/thread-key'
+import { resolveThreadId } from '@/features/agent/lib/context-assembler/thread-key'
 
 describe('resolveThreadId', () => {
   it('lesson surface returns lessonId', () => {

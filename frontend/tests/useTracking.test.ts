@@ -1,10 +1,10 @@
-import type { ExerciseMode } from '@/components/study/ModePicker'
+import type { ExerciseMode } from '@/shared/types'
 import { renderHook } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth } from '@/contexts/AuthContext'
 import { initDB } from '@/db'
-import { EXERCISE_TO_SKILL, useTracking } from '@/hooks/useTracking'
+import { EXERCISE_TO_SKILL, useTracking } from '@/shared/hooks/useTracking'
 import 'fake-indexeddb/auto'
 
 // Mock useAuth to return our test db

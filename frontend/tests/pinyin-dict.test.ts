@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getCandidates } from '@/lib/pinyin-dict'
+import { getCandidates } from '@/shared/lib/pinyin-dict'
 
 describe('getCandidates', () => {
   it('returns candidates for a known syllable', () => {

@@ -2,13 +2,13 @@ import type { FormEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useI18n } from '@/contexts/I18nContext'
-import { getAppConfig } from '@/lib/config'
-import { INTERFACE_LANGUAGES } from '@/lib/constants'
+import { getAppConfig } from '@/shared/lib/config'
+import { INTERFACE_LANGUAGES } from '@/shared/lib/constants'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
 
 const SPRING = [0.16, 1, 0.3, 1] as const
 

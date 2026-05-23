@@ -3,7 +3,7 @@ import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth } from '@/contexts/AuthContext'
 import { initDB } from '@/db'
-import { useTipProgress } from '@/hooks/useTipProgress'
+import { useTipProgress } from '@/features/learning-materials/application/useTipProgress'
 import 'fake-indexeddb/auto'
 
 vi.mock('@/contexts/AuthContext', () => ({

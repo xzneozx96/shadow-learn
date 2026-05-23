@@ -1,7 +1,7 @@
-import type { Word, WordTiming } from '@/types'
+import type { Word, WordTiming } from '@/shared/types'
 
 import { describe, expect, it } from 'vitest'
-import { buildPositionMap, buildWordSpans } from '@/lib/segment-text'
+import { buildPositionMap, buildWordSpans } from '@/features/lesson/domain/segment-text'
 
 function makeWord(word: string): Word {
   return {

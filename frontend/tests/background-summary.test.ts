@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getLatestSummary, initDB } from '@/db'
-import { maybeRunBackgroundSummary } from '@/lib/context-assembler/background-summary'
+import { maybeRunBackgroundSummary } from '@/features/agent/lib/context-assembler/background-summary'
 import 'fake-indexeddb/auto'
 
 describe('maybeRunBackgroundSummary', () => {

@@ -13,7 +13,7 @@ import {
   isSkillDone,
   markReadingSubmitted,
   markWordComplete,
-} from '@/lib/skillSessionProgress'
+} from '@/shared/lib/skillSessionProgress'
 import 'fake-indexeddb/auto'
 
 beforeEach(() => {

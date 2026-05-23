@@ -4,7 +4,7 @@ import {
   isItemDueToday,
   scoreToQuality,
   updateSpacedRepetition,
-} from '@/lib/spacedRepetition'
+} from '@/shared/lib/spacedRepetition'
 
 describe('scoreToQuality', () => {
   it('maps 100 → 5', () => expect(scoreToQuality(100)).toBe(5))

@@ -1,7 +1,7 @@
 import { ChevronDown, Home, RotateCcw, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/button'
 
 interface Props {
   error: unknown

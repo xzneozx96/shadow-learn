@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getChangelog, getLatestAnnouncementId, parseRawEntries } from '@/lib/changelog'
+import { getChangelog, getLatestAnnouncementId, parseRawEntries } from '@/shared/lib/changelog'
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 

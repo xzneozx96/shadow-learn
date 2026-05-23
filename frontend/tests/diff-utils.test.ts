@@ -4,7 +4,7 @@ import {
   computeCharDiff,
   computePinyinDiff,
   stripPinyinTones,
-} from '@/lib/diff-utils'
+} from '@/shared/lib/diff-utils'
 
 describe('computeCharDiff', () => {
   it('marks matching grapheme clusters as correct', () => {

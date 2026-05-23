@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isKana, isWritingSupported } from '@/lib/hanzi-writer-chars'
+import { isKana, isWritingSupported } from '@/shared/lib/hanzi-writer-chars'
 
 describe('isWritingSupported', () => {
   it('returns true for common characters', () => {

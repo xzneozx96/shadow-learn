@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import { Setup } from '@/components/onboarding/Setup'
 
-vi.mock('@/lib/config', () => ({
+vi.mock('@/shared/lib/config', () => ({
   getAppConfig: vi.fn().mockResolvedValue({
     ttsProvider: 'other',
     sttProvider: 'other',
@@ -18,7 +18,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 }))
 
 vi.mock('@/contexts/I18nContext', async () => {
-  const { getTranslation } = await import('@/lib/i18n')
+  const { getTranslation } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),
   }

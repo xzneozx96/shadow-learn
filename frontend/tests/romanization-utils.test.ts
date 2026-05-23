@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareRomanization } from '@/lib/romanization-utils'
+import { compareRomanization } from '@/features/study/domain/romanization-utils'
 
 describe('compareRomanization', () => {
   it('delegates to comparePinyin for pinyin system', () => {

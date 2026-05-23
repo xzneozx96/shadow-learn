@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { ShadowLearnDB } from '../db'
-import type { DecryptedKeys } from '../types'
+import type { DecryptedKeys } from '@/shared/types'
 import {
   createContext,
   use,
@@ -9,6 +9,8 @@ import {
   useState,
 
 } from 'react'
+import { decryptKeys, encryptKeys } from '@/shared/lib/crypto'
+import { captureAuthEvent } from '@/shared/lib/posthog-events'
 import {
   deleteCryptoData,
   getCryptoData,
@@ -16,8 +18,6 @@ import {
   saveCryptoData,
 
 } from '../db'
-import { decryptKeys, encryptKeys } from '../lib/crypto'
-import { captureAuthEvent } from '../lib/posthog-events'
 
 interface AuthState {
   isFirstSetup: boolean | null // null = loading

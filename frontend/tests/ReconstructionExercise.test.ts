@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getActiveChips, getSegmentTokens, scoreReconstruction } from '@/lib/study-utils'
+import { getActiveChips, getSegmentTokens, scoreReconstruction } from '@/shared/lib/study-utils'
 
 describe('scoreReconstruction', () => {
   it('returns 100 for exact match', () => {

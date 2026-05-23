@@ -1,6 +1,6 @@
 import type { ExerciseStat } from '@/db'
 import { describe, expect, it } from 'vitest'
-import { getStepMode } from '@/lib/skillDecision'
+import { getStepMode } from '@/shared/lib/skillDecision'
 
 function stat(correct: number, total: number): ExerciseStat {
   return { correct, total, lastAttempt: '2026-05-13' }
