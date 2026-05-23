@@ -146,7 +146,10 @@ function FloatingDock() {
             </motion.div>
           )}
         </AnimatePresence>
-        <CompanionFloatingButton open={isGlobalPanelOpen} onClick={toggleCompanion} />
+        {/* Hidden while the queue popup is open — its translucent glass would otherwise reveal this glowing button behind it */}
+        <div className={open ? 'opacity-0 pointer-events-none transition-opacity' : 'transition-opacity'}>
+          <CompanionFloatingButton open={isGlobalPanelOpen} onClick={toggleCompanion} />
+        </div>
       </div>
 
       {/* Daily Review */}

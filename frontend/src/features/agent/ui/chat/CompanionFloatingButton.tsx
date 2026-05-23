@@ -21,14 +21,6 @@ export function CompanionFloatingButton({ open, onClick }: Props) {
 
   return (
     <div className="relative">
-      {/* Ping ring */}
-      {!open && (
-        <div
-          className="absolute inset-0 rounded-full animate-ping opacity-20"
-          style={{ background: 'rgba(251,191,36,1)' }}
-        />
-      )}
-
       <motion.button
         type="button"
         onClick={onClick}

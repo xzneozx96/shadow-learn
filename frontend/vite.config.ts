@@ -10,6 +10,14 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Guarantee a single React instance — a 2nd copy makes hooks crash with a
+    // null dispatcher ("Cannot read properties of null (reading 'use')").
+    dedupe: ['react', 'react-dom'],
+  },
+  // Pre-bundle the heavy deps used only by the lazy-loaded MindMap artifact, so
+  // opening it doesn't trigger a runtime re-optimization that spawns a 2nd React.
+  optimizeDeps: {
+    include: ['@xyflow/react', 'dagre'],
   },
   server: {
     port: 5173,

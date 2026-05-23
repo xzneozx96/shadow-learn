@@ -5,9 +5,7 @@ import dagre from 'dagre'
 import { ChevronLeft, Play } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useI18n } from '@/app/providers/I18nContext'
-import { escapeHtml } from '@/features/learning-materials/lib/htmlText'
 import { seekTip } from '@/features/learning-materials/lib/tipSeekBus'
-import { SaveToNotesButton } from '../notes/SaveToNotesButton'
 import { ChatTab } from '../tabs/ChatTab'
 import '@xyflow/react/dist/style.css'
 
@@ -41,7 +39,7 @@ interface MindNodeData {
 }
 
 function MindNode({ data }: NodeProps) {
-  const { label, summary, videoId, pathRef, startSec, onSeek } = data as unknown as MindNodeData
+  const { label, startSec, onSeek } = data as unknown as MindNodeData
   return (
     <div
       className="group relative rounded-md border border-border bg-card text-xs font-medium text-foreground shadow-sm hover:border-primary transition-colors"
@@ -62,18 +60,6 @@ function MindNode({ data }: NodeProps) {
           <Play className="size-3 fill-current" aria-hidden />
         </button>
       )}
-      <div className="mr-1 flex-shrink-0">
-        <SaveToNotesButton
-          build={() => ({
-            videoId,
-            title: label.slice(0, 80),
-            html: `<p><strong>${escapeHtml(label)}</strong></p>${summary ? `<p>${escapeHtml(summary)}</p>` : ''}`,
-            source: 'studio',
-            sourceRef: { kind: 'mind_map', ref: pathRef },
-          })}
-          alwaysVisible
-        />
-      </div>
       <Handle type="source" position={Position.Right} className="bg-border! border-0! w-1.5! h-1.5!" />
     </div>
   )
