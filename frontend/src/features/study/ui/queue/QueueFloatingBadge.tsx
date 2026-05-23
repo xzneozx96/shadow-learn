@@ -51,7 +51,7 @@ export function QueueFloatingBadge({ queue, open, onClick }: Props) {
               ? t('queue.badge.allDone')
               : t(count !== 1 ? 'queue.badge.remaining_plural' : 'queue.badge.remaining', { count })
         }
-        className="relative w-16 h-16 rounded-full flex items-center justify-center cursor-pointer border-2 border-white/20 overflow-hidden"
+        className="relative size-14 xl:size-16 rounded-full flex items-center justify-center cursor-pointer border-2 border-white/20 overflow-hidden"
         style={{ background: gradient, boxShadow: shadowBase }}
         animate={{ rotate: open ? 90 : 0, boxShadow: shadowBase }}
         whileHover={{ scale: 1.1, rotate: open ? 90 : 5, boxShadow: shadowHover }}
