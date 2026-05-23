@@ -29,11 +29,14 @@ def count_tokens(text, model=None):
     return litellm.token_counter(model=model, text=text)
 
 
-def llm_completion(model, prompt, chat_history=None, return_finish_reason=False):
+def llm_completion(model, prompt, chat_history=None, return_finish_reason=False, json_mode=True):
     if model:
         model = model.removeprefix("litellm/")
     max_retries = 10
     messages = list(chat_history) + [{"role": "user", "content": prompt}] if chat_history else [{"role": "user", "content": prompt}]
+    # Most indexing prompts expect JSON; force valid (escaped) JSON so PDF text
+    # containing quotes doesn't break parsing. Prose callers pass json_mode=False.
+    kwargs = {"response_format": {"type": "json_object"}} if json_mode else {}
     for i in range(max_retries):
         try:
             response = litellm.completion(
@@ -42,6 +45,7 @@ def llm_completion(model, prompt, chat_history=None, return_finish_reason=False)
                 temperature=0,
                 # Indexing does not need reasoning — disable it (OpenRouter).
                 extra_body={"reasoning": {"effort": "none"}},
+                **kwargs,
             )
             content = response.choices[0].message.content
             if return_finish_reason:
@@ -61,11 +65,12 @@ def llm_completion(model, prompt, chat_history=None, return_finish_reason=False)
 
 
 
-async def llm_acompletion(model, prompt):
+async def llm_acompletion(model, prompt, json_mode=True):
     if model:
         model = model.removeprefix("litellm/")
     max_retries = 10
     messages = [{"role": "user", "content": prompt}]
+    kwargs = {"response_format": {"type": "json_object"}} if json_mode else {}
     for i in range(max_retries):
         try:
             response = await litellm.acompletion(
@@ -74,6 +79,7 @@ async def llm_acompletion(model, prompt):
                 temperature=0,
                 # Indexing does not need reasoning — disable it (OpenRouter).
                 extra_body={"reasoning": {"effort": "none"}},
+                **kwargs,
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -127,7 +133,7 @@ def extract_json(content):
             json_content = json_content.replace(',]', ']').replace(',}', '}')
             return json.loads(json_content)
         except:
-            logging.error("Failed to parse JSON even after cleanup")
+            logging.error("Failed to parse JSON even after cleanup. Raw response: %r", content[:2000])
             return {}
     except Exception as e:
         logging.error(f"Unexpected error while extracting JSON: {e}")
@@ -598,7 +604,7 @@ async def generate_node_summary(node, model=None):
     
     Directly return the description, do not include any other text.
     """
-    response = await llm_acompletion(model, prompt)
+    response = await llm_acompletion(model, prompt, json_mode=False)
     return response
 
 
@@ -643,7 +649,7 @@ def generate_doc_description(structure, model=None):
     
     Directly return the description, do not include any other text.
     """
-    response = llm_completion(model, prompt)
+    response = llm_completion(model, prompt, json_mode=False)
     return response
 
 

@@ -29,13 +29,18 @@ def process_retrieval_task(self, retrieval_id: str, doc_id: str, query: str, thi
             session.commit()
 
         with open(doc.result_path, "r", encoding="utf-8") as f:
-            tree_structure = json.load(f).get("structure", [])
+            doc_info = json.load(f)
+        # Normalize into a core doc_info: ensure id/type, and force a valid local
+        # PDF path so the cached-pages-or-PDF fallback works for pre-refactor docs too.
+        doc_info["id"] = doc_id
+        doc_info.setdefault("type", "pdf")
+        doc_info["path"] = os.path.join(settings.UPLOAD_DIR, f"{doc_id}.pdf")
+        tree_structure = doc_info.get("structure", [])
 
         # Retrieval uses RETRIEVAL_MODEL when set, else falls back to OPENAI_MODEL.
         model = settings.RETRIEVAL_MODEL or settings.OPENAI_MODEL
-        pdf_path = os.path.join(settings.UPLOAD_DIR, f"{doc_id}.pdf")
         result = retrieve_from_document(
-            tree_structure, query, model, pdf_path, settings.LLM_TIMEOUT_SECONDS
+            tree_structure, query, model, doc_info, settings.LLM_TIMEOUT_SECONDS
         )
 
         if retrieval:

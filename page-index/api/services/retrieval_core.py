@@ -8,7 +8,7 @@ import json
 import logging
 
 import litellm
-from pageindex.utils import get_text_of_pages
+from pageindex.retrieve import get_page_content
 from api.config import settings
 
 logger = logging.getLogger(__name__)
@@ -25,28 +25,38 @@ def clean_structure_for_prompt(nodes: list) -> list:
     return cleaned
 
 
-def extract_node_content(nodes: list, target_ids: list, pdf_path: str = None) -> list:
-    """Recursively collect content for the nodes whose ids the LLM chose."""
+def extract_node_content(nodes: list, target_ids: list, doc_info: dict = None) -> list:
+    """Recursively collect content for the nodes whose ids the LLM chose.
+
+    Content comes from the node's own ``text`` if present; otherwise from the
+    document's pages via the core retriever (cached ``pages`` first, PDF fallback).
+    """
     results = []
+    documents = {doc_info["id"]: doc_info} if doc_info and doc_info.get("id") else None
+
+    def page_text(node) -> str:
+        if not documents or "start_index" not in node or "end_index" not in node:
+            return ""
+        doc_id = next(iter(documents))
+        raw = get_page_content(documents, doc_id, f"{node['start_index']}-{node['end_index']}")
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return ""
+        if isinstance(parsed, dict):  # {"error": "..."} from the core retriever
+            logger.error(f"get_page_content error for node {node.get('node_id')}: {parsed.get('error')}")
+            return ""
+        return "\n".join(p.get("content", "") for p in parsed).strip()
 
     def traverse(node_list):
         for node in node_list:
             if str(node.get("node_id")) in target_ids:
+                content_text = node.get("text") or page_text(node)
                 result_item = {
                     "title": node.get("title", ""),
                     "node_id": node.get("node_id"),
                     "relevant_contents": [],
                 }
-                content_text = ""
-                if "text" in node:
-                    content_text = node["text"]
-                elif pdf_path and "start_index" in node and "end_index" in node:
-                    try:
-                        content_text = get_text_of_pages(
-                            pdf_path, node["start_index"], node["end_index"], tag=False
-                        )
-                    except Exception as ex:
-                        logger.error(f"Failed to extract PDF text for node {node.get('node_id')}: {ex}")
                 if content_text:
                     result_item["relevant_contents"].append({
                         "page_index": node.get("start_index", 0),
@@ -95,8 +105,8 @@ Reply in the following JSON format:
         return [], None
 
 
-def retrieve_from_document(tree_structure: list, query: str, model: str, pdf_path: str, timeout: int) -> dict:
+def retrieve_from_document(tree_structure: list, query: str, model: str, doc_info: dict, timeout: int) -> dict:
     """Full single-doc retrieval: select relevant nodes, then extract their content."""
     node_ids, thinking = select_nodes(tree_structure, query, model, timeout)
-    retrieved_nodes = extract_node_content(tree_structure, node_ids, pdf_path)
+    retrieved_nodes = extract_node_content(tree_structure, node_ids, doc_info)
     return {"retrieved_nodes": retrieved_nodes, "thinking": thinking}

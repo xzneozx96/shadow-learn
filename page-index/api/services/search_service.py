@@ -64,9 +64,14 @@ def _retrieve_doc_sync(doc, query: str, model: str, timeout: int) -> list[dict]:
     if not doc.result_path or not os.path.exists(doc.result_path):
         return []
     with open(doc.result_path, "r", encoding="utf-8") as f:
-        tree_structure = json.load(f).get("structure", [])
-    pdf_path = os.path.join(settings.UPLOAD_DIR, f"{doc.doc_id}.pdf")
-    result = retrieve_from_document(tree_structure, query, model, pdf_path, timeout)
+        doc_info = json.load(f)
+    # Normalize into a core doc_info: ensure id/type, and force a valid local PDF
+    # path so the cached-pages-or-PDF fallback works for pre-refactor docs too.
+    doc_info["id"] = doc.doc_id
+    doc_info.setdefault("type", "pdf")
+    doc_info["path"] = os.path.join(settings.UPLOAD_DIR, f"{doc.doc_id}.pdf")
+    tree_structure = doc_info.get("structure", [])
+    result = retrieve_from_document(tree_structure, query, model, doc_info, timeout)
     passages = []
     for node in result["retrieved_nodes"]:
         text = " ".join(

@@ -4,6 +4,7 @@ import copy
 import math
 import random
 import re
+import logging
 from .utils import *
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -118,7 +119,10 @@ def toc_detector_single_page(content, model=None):
 
     response = llm_completion(model=model, prompt=prompt)
     # print('response', response)
-    json_content = extract_json(response)    
+    json_content = extract_json(response)
+    if 'toc_detected' not in json_content:
+        logging.error("toc_detector: no 'toc_detected' in parsed response, treating as 'no'. Raw: %r", str(response)[:2000])
+        return 'no'
     return json_content['toc_detected']
 
 
