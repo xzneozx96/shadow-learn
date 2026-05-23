@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { usePlayer } from '@/contexts/PlayerContext'
+import { usePlayer } from '@/app/providers/PlayerContext'
 
 /**
  * Subscribe to the player's time stream without going through React state.

@@ -1,6 +1,6 @@
 import type { PronunciationAssessResult } from '@/shared/types'
 import { useCallback, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import { API_BASE } from '@/shared/lib/config'
 
 interface UsePronunciationAssessmentReturn {

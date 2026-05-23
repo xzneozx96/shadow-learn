@@ -9,7 +9,7 @@ vi.mock('@/features/vocabulary/lib/api/breakdownStory', () => ({
 }))
 
 // useAuth is needed for the TTS button. Modal only reads `keys`, no setup needed.
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ keys: null, db: null }),
 }))
 

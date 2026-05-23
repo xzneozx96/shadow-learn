@@ -15,8 +15,8 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { useAuth } from '@/contexts/AuthContext'
-import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/app/providers/AuthContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import {
   appendAgentLog,
   getExerciseAccuracy,

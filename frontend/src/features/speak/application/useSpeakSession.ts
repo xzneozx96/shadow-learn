@@ -1,7 +1,7 @@
 import type { SpeakSession } from '@/db'
 import type { GrammarFeedback } from '@/shared/types'
 import { useCallback, useRef, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import { saveSpeakSession } from '@/features/speak/adapters/speakSessions'
 
 export interface SpeakSessionParams {

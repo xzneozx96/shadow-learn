@@ -1,6 +1,6 @@
 import type { SessionSummary } from '@/features/shadowing/domain/shadowing-utils'
 import type { Segment } from '@/shared/types'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
 
 interface ShadowingSessionSummaryProps {

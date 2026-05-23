@@ -1,7 +1,7 @@
 import type { TipNote } from '@/features/learning-materials/domain/tips'
 import { ChevronLeft, MessageSquare } from 'lucide-react'
 import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 

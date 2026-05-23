@@ -4,7 +4,7 @@ import { Background, Controls, Handle, Position, ReactFlow } from '@xyflow/react
 import dagre from 'dagre'
 import { ChevronLeft, Play } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { escapeHtml } from '@/features/learning-materials/lib/htmlText'
 import { seekTip } from '@/features/learning-materials/lib/tipSeekBus'
 import { SaveToNotesButton } from '../notes/SaveToNotesButton'

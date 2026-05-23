@@ -18,7 +18,7 @@ const mockPlayer = {
   onPause: vi.fn(() => () => {}),
 }
 
-vi.mock('@/contexts/PlayerContext', () => ({
+vi.mock('@/app/providers/PlayerContext', () => ({
   usePlayer: () => ({
     player: mockPlayer,
     subscribeTime: vi.fn(() => () => {}),

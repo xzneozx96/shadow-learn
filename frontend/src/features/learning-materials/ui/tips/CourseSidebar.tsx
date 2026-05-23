@@ -1,7 +1,7 @@
 import type { TipLesson } from '@/features/learning-materials/domain/tips'
 import { ChevronLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { LessonRow } from './LessonRow'
 
 interface Props {

@@ -11,7 +11,7 @@ vi.mock('react-router-dom', () => ({
   ),
 }))
 
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { TRANSLATIONS } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({

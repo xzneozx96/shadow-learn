@@ -5,14 +5,14 @@ import { cardsKey } from '@/db'
 import { CardsTab } from '@/features/learning-materials/ui/tips/tabs/CardsTab'
 import 'fake-indexeddb/auto'
 
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
   return { useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }) }
 })
 
 // Use real DB so we can verify persistence
 const mockDb = { value: null as any }
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: mockDb.value, keys: null }),
 }))
 

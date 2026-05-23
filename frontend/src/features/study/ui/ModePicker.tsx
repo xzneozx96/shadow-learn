@@ -1,7 +1,7 @@
 import type { LanguageCapabilities } from '@/shared/lib/language-caps'
 import type { ExerciseMode } from '@/shared/types'
 import { Sparkles } from 'lucide-react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 

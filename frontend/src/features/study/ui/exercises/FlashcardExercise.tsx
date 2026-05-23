@@ -1,9 +1,9 @@
 import type { VocabEntry } from '@/shared/types'
 import { motion } from 'motion/react'
 import { useState } from 'react'
-import { FlipCard } from '@/components/library/FlipCard'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
+import { FlipCard } from '@/shared/ui/FlipCard'
 
 interface Props {
   entry: VocabEntry

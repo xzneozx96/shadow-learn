@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TranscriptPanel } from '@/features/lesson/ui/TranscriptPanel'
 
 // Stub heavy dependencies not relevant to this test
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: null, keys: null }),
 }))
 
@@ -19,7 +19,7 @@ vi.mock('@/features/vocabulary/application/VocabularyContext', () => ({
 vi.mock('@/features/lesson/ui/SegmentText', () => ({
   SegmentText: ({ text }: { text: string }) => <span>{text}</span>,
 }))
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),

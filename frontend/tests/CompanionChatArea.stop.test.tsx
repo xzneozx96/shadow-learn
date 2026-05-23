@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { CompanionChatArea } from '@/features/agent/ui/chat/CompanionChatArea'
 
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),

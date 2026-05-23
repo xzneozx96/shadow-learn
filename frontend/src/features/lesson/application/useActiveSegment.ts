@@ -1,6 +1,6 @@
 import type { Segment } from '@/shared/types'
 import { useEffect, useRef, useState } from 'react'
-import { usePlayer } from '@/contexts/PlayerContext'
+import { usePlayer } from '@/app/providers/PlayerContext'
 
 /**
  * Find the active segment for a given time using binary search.

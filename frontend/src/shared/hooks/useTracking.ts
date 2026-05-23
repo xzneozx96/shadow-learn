@@ -1,6 +1,6 @@
 import type { MistakeExample, SessionLog, ShadowLearnDB, SpacedRepetitionItem } from '@/db'
 import type { ExerciseMode, VocabEntry } from '@/shared/types'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import {
   getErrorPattern,
   getMasteryData,

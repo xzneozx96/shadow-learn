@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
 import { useDailyReview } from '@/features/study/application/DailyReviewContext'
 import { todayISO } from '@/shared/lib/date'

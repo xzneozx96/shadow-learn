@@ -1,7 +1,7 @@
 import type { StudioStudyGuideData } from '@/features/learning-materials/domain/tips'
 import { Copy } from 'lucide-react'
 import { toast } from 'sonner'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { escapeHtml } from '@/features/learning-materials/lib/htmlText'
 import { SaveToNotesButton } from '../notes/SaveToNotesButton'
 

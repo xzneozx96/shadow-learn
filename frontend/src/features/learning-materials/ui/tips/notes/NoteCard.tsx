@@ -1,7 +1,7 @@
 import type { TipNote } from '@/features/learning-materials/domain/tips'
 import { BookOpen, FileText, Layers, MessageSquare, MoreHorizontal, PenLine, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { htmlToPlain } from '@/features/learning-materials/lib/htmlText'
 import {
   DropdownMenu,

@@ -1,6 +1,6 @@
 import type { TipProgress } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import { getTipProgress, putTipProgress } from '@/db'
 
 const WATCHED_THRESHOLD = 0.8

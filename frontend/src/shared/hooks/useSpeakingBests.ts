@@ -1,6 +1,6 @@
 import type { ShadowingBest } from '@/shared/types'
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import {
   getAllSpeakingBestsByLesson,
   getSpeakingAudio,

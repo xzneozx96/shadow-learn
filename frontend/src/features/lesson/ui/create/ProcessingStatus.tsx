@@ -1,5 +1,5 @@
 import { Check, Loader2, X } from 'lucide-react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
 
 export type StepStatus = 'pending' | 'active' | 'done' | 'error'

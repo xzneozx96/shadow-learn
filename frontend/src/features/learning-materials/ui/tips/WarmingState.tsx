@@ -1,7 +1,7 @@
 import type { WarmingStep } from '@/features/learning-materials/application/useTipTranscript'
 import type { TranslationKey } from '@/shared/lib/i18n'
 import { Check, Loader2 } from 'lucide-react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { cn } from '@/shared/lib/utils'
 import { TextShimmer } from '@/shared/ui/text-shimmer'
 

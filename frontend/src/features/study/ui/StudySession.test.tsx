@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { StudySession } from '@/features/study/ui/StudySession'
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ t: (key: string) => key, locale: 'en', setLocale: async () => {} }),
 }))
 
@@ -43,7 +43,7 @@ vi.mock('@/features/study/application/useQuizGeneration', () => ({
   useQuizGeneration: () => ({ generateQuiz: mockGenerateQuiz, loading: false }),
 }))
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: null, keys: null }),
 }))
 

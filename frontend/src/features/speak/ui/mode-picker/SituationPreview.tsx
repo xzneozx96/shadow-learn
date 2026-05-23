@@ -1,6 +1,6 @@
 import type { SituationPreviewData } from '../types'
 import { BookOpen, MapPin, MessageSquareQuote, RefreshCw, Target } from 'lucide-react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
 import { DialogFooter } from '@/shared/ui/dialog'
 

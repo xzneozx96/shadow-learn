@@ -1,6 +1,6 @@
 import type { HubItem, InstructionLanguage, Skill, TipGroup, UserMaterial } from '@/features/learning-materials/domain/collection'
 import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AuthContext } from '@/contexts/AuthContext'
+import { AuthContext } from '@/app/providers/AuthContext'
 import {
   deleteUserMaterial,
   getUserMaterialByExternalId,

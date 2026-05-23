@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePronunciationAssessment } from '@/features/study/application/usePronunciationAssessment'
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ keys: { azureSpeechKey: 'az-key', azureSpeechRegion: 'eastus' } }),
 }))
 

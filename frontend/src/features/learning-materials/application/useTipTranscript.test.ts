@@ -7,7 +7,7 @@ import 'fake-indexeddb/auto'
 // vi.hoisted so the factory closure captures a mutable reference that tests can update
 const mocks = vi.hoisted(() => ({ db: null as Awaited<ReturnType<typeof initDB>> | null }))
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: mocks.db }),
 }))
 

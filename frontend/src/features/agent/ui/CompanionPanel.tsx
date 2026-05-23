@@ -1,7 +1,7 @@
 import type { Segment } from '@/shared/types'
 import { BookOpenText, MessageSquare } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useAgentActions } from '@/features/agent/application/AgentActionsContext'
 import { useGlobalCompanionContext } from '@/features/agent/application/GlobalCompanionContext'
 import { useZoberChat } from '@/features/agent/application/useZoberChat'

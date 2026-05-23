@@ -1,9 +1,9 @@
 import type { ProgressStats } from '@/db'
 import type { TranslationKey } from '@/shared/lib/i18n'
 import { BookOpen, Ear, Edit3, MessageSquare, Type } from 'lucide-react'
-import { AmbientBackdrop } from '@/components/AmbientBackdrop'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { cn } from '@/shared/lib/utils'
+import { AmbientBackdrop } from '@/shared/ui/AmbientBackdrop'
 
 interface Props {
   stats?: ProgressStats

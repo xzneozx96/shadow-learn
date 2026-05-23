@@ -1,7 +1,7 @@
 import type { VideoPlayer } from '../src/player/types'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { PlayerProvider, usePlayer } from '../src/contexts/PlayerContext'
+import { PlayerProvider, usePlayer } from '@/app/providers/PlayerContext'
 
 function makePlayer(overrides: Partial<VideoPlayer> = {}): VideoPlayer {
   return {

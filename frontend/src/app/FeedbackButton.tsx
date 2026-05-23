@@ -1,6 +1,6 @@
 import { ThumbsUp } from 'lucide-react'
 import { useMatch } from 'react-router-dom'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useGlobalCompanionContext } from '@/features/agent/application/GlobalCompanionContext'
 import { posthog } from '@/shared/lib/posthog'
 import { Button } from '@/shared/ui/button'

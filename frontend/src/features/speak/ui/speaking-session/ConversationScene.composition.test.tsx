@@ -23,7 +23,7 @@ vi.mock('@livekit/components-react', async (importOriginal) => {
   }
 })
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ t: (k: string) => k, locale: 'en' }),
 }))
 

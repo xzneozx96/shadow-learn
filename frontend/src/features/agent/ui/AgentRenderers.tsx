@@ -6,7 +6,7 @@
 
 import type { DailyAccuracy } from '@/db'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { cn } from '@/shared/lib/utils'
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from '@/shared/ui/ai-elements/tool'
 

@@ -2,7 +2,7 @@ import { Languages, Sparkles } from 'lucide-react'
 import { pinyin } from 'pinyin-pro'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 
 interface SelectionMenuProps {
   rect: DOMRect

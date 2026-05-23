@@ -23,7 +23,7 @@ function makeMeta(overrides: Partial<LessonMeta> = {}): LessonMeta {
   }
 }
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: (globalThis as any).__testDb }),
 }))
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import { getVideo } from '@/db/index'
 
 // Module-level cache — survives re-renders and card remounts for the session

@@ -23,7 +23,7 @@ vi.mock('@/shared/ui/popover', () => ({
 }))
 
 // Mock I18nContext so SegmentText can be rendered without an I18nProvider in tests.
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),
@@ -31,7 +31,7 @@ vi.mock('@/contexts/I18nContext', async () => {
 })
 
 // Mock PlayerContext so SegmentText can be rendered without a PlayerProvider in tests.
-vi.mock('@/contexts/PlayerContext', () => ({
+vi.mock('@/app/providers/PlayerContext', () => ({
   usePlayer: () => ({
     subscribeTime: () => () => {},
     getTime: () => 0,

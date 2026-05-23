@@ -17,11 +17,11 @@ vi.mock('react-router-dom', () => ({
   ),
 }))
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: null, keys: null }),
 }))
 
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { TRANSLATIONS } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({

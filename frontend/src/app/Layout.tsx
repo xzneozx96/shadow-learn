@@ -1,14 +1,14 @@
 import { AudioLines, BookOpenText, FileText, Library, Newspaper, PanelLeft, PanelRight, Settings, Sprout, TvMinimalPlay } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
-import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/app/providers/AuthContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useSpeakModal } from '@/features/speak/application/SpeakModalContext'
 import { cn } from '@/shared/lib/utils'
 import { useHasUnseenAnnouncement } from '@/shared/lib/whats-new'
+import { AmbientBackdrop } from '@/shared/ui/AmbientBackdrop'
 import { Button } from '@/shared/ui/button'
-import { AmbientBackdrop } from './AmbientBackdrop'
-import { RadiantButton } from './RadiantButton'
+import { RadiantButton } from '@/shared/ui/RadiantButton'
 
 interface LayoutProps {
   children: React.ReactNode

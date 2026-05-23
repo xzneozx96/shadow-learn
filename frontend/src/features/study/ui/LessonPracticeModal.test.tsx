@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { LessonPracticeModal } from '@/features/study/ui/LessonPracticeModal'
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({
     t: (key: string, vars?: Record<string, string | number>) => {
       if (!vars)

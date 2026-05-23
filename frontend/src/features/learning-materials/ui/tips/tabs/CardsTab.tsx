@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight, Check, GraduationCap, Layers, Loader2, RotateCcw } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/app/providers/AuthContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useTipCards } from '@/features/learning-materials/application/useTipCards'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FlipCard } from '../cards/FlipCard'

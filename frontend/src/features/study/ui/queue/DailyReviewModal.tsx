@@ -2,7 +2,7 @@ import type { StudyQueueState } from '@/features/study/application/useStudyQueue
 import { AlertTriangle, ArrowLeft, BookOpen, Check, Ear, FileText, Mic, PenLine, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { todayISO } from '@/shared/lib/date'
 import { getSkillProgress, isReadingDone } from '@/shared/lib/skillSessionProgress'
 import { cn } from '@/shared/lib/utils'

@@ -1,8 +1,8 @@
 import type { VocabEntry } from '@/shared/types'
 import { BookOpen, Loader2, Volume2 } from 'lucide-react'
 import { useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/app/providers/AuthContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { cn } from '@/shared/lib/utils'
 import { WordBreakdownModal } from './WordBreakdownModal'
 

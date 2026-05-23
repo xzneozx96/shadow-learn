@@ -8,14 +8,14 @@ vi.mock('@/db', () => ({
   getSegments: (...args: any[]) => mockGetSegments(...args),
 }))
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ locale: 'en' }),
 }))
 
 const mockDb = {} as any
 let mockAuth: any = { keys: { openrouterApiKey: 'sk-test' }, db: mockDb }
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => mockAuth,
 }))
 

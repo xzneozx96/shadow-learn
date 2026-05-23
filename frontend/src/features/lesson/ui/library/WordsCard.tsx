@@ -2,11 +2,11 @@ import type { LessonMeta } from '@/shared/types'
 import { ArrowUpRight, BookOpen } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useCountUp } from '@/shared/hooks/useCountUp'
 import { cn } from '@/shared/lib/utils'
+import { CardLabel } from '@/shared/ui/BentoCard'
 import { Button } from '@/shared/ui/button'
-import { CardLabel } from './BentoCard'
 
 /* ── Words: total + segmented distribution bar ── */
 export function WordsCard({ lessons, entriesByLesson, total }: {

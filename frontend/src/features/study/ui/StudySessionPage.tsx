@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { Layout } from '@/components/Layout'
+import { Layout } from '@/app/Layout'
 import { StudySession } from '@/features/study/ui/StudySession'
 
 export function StudySessionPage() {

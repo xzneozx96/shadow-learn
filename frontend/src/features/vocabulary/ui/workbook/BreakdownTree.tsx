@@ -4,7 +4,7 @@ import type { CharData } from '@/shared/lib/hanzi/types'
 import { Controls, Handle, Position, ReactFlow } from '@xyflow/react'
 import { Loader2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { buildGraph } from './breakdownTreeLayout'
 import '@xyflow/react/dist/style.css'
 

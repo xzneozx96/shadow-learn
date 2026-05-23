@@ -1,6 +1,6 @@
 import type { ErrorInfo, ReactNode } from 'react'
 import { Component } from 'react'
-import { ErrorScreen } from '@/components/ErrorScreen'
+import { ErrorScreen } from '@/app/ErrorScreen'
 import { posthog } from '@/shared/lib/posthog'
 
 interface Props {

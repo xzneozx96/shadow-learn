@@ -9,7 +9,7 @@ import 'fake-indexeddb/auto'
 let mockDb: Awaited<ReturnType<typeof initDB>>
 
 // Mock AuthContext — hook reads db from useAuth()
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: mockDb }),
 }))
 

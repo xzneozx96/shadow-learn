@@ -1,8 +1,8 @@
 import type { Segment } from '@/shared/types'
 import { X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
-import { usePlayer } from '@/contexts/PlayerContext'
+import { useI18n } from '@/app/providers/I18nContext'
+import { usePlayer } from '@/app/providers/PlayerContext'
 import { useTimeEffect } from '@/shared/hooks/useTimeEffect'
 import { Button } from '@/shared/ui/button'
 

@@ -1,4 +1,4 @@
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Input } from '@/shared/ui/input'
 
 interface YouTubeTabProps {

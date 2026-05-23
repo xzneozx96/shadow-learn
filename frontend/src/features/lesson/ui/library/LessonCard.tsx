@@ -4,7 +4,7 @@ import { BookOpen, CheckCircle2, Clock, FileVideo, Loader2, MoreHorizontal, Penc
 import { motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useUploadThumbnail } from '@/features/lesson/application/useUploadThumbnail'
 import { getYoutubeThumbnail } from '@/features/lesson/domain/youtube'
 import { useVocabulary } from '@/features/vocabulary/application/VocabularyContext'

@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { UtilityPane } from '@/features/learning-materials/ui/tips/UtilityPane'
 
 // Stub useAuth so the chat hook can mount without an AuthProvider wrapper.
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: null, keys: null }),
 }))
 
 // Stub I18nContext with real EN translations so assertions match user-facing text.
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
   return { useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }) }
 })

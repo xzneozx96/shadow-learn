@@ -2,7 +2,7 @@ import { Gift, Sparkles, Wrench, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { getChangelog, getLatestAnnouncementId } from '@/shared/lib/changelog'
 import { captureWhatsNewChangelogOpened, captureWhatsNewModalDismissed, captureWhatsNewModalShown } from '@/shared/lib/posthog-events'
 import { hasUnseenAnnouncement, markAnnouncementSeen } from '@/shared/lib/whats-new'

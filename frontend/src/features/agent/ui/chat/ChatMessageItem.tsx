@@ -5,7 +5,7 @@ import type { ExerciseRenderResult } from '@/features/study/ui/ExerciseRenderer'
 import { Brain, ChevronDown, FileText } from 'lucide-react'
 import { motion } from 'motion/react'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import {
   getToolName,
   isToolPart,

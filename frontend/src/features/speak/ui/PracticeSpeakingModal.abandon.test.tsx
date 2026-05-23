@@ -11,10 +11,10 @@ vi.mock('@livekit/components-react', () => ({
   useSession: () => ({ start: vi.fn(), end: vi.fn(), isConnected: false }),
   useSessionMessages: () => ({ messages: [] }),
 }))
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ keys: { googleRealtimeKey: 'test' }, db: null }),
 }))
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ t: (k: string) => k, locale: 'en' }),
 }))
 vi.mock('@/features/speak/application/useSpeakSession', () => ({

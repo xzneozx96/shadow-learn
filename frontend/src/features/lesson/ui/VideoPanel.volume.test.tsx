@@ -5,7 +5,7 @@ import { VideoPanel } from '@/features/lesson/ui/VideoPanel'
 
 // Mock PlayerContext so we control volume/setVolume
 const mockSetVolume = vi.fn()
-vi.mock('@/contexts/PlayerContext', () => ({
+vi.mock('@/app/providers/PlayerContext', () => ({
   usePlayer: () => ({
     player: null,
     subscribeTime: vi.fn(() => () => {}),

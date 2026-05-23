@@ -16,7 +16,7 @@ const mockDb = {
   transaction: vi.fn().mockReturnValue(mockTx),
 }
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: mockDb, keys: null }),
 }))
 

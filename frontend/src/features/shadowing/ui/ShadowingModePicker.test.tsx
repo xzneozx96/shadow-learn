@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ShadowingModePicker } from '@/features/shadowing/ui/ShadowingModePicker'
 import { Dialog } from '@/shared/ui/dialog'
 
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { TRANSLATIONS } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({

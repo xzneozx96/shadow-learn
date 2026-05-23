@@ -1,7 +1,7 @@
 import type { NextLineSuggestion } from '@/shared/types'
 import { Info, Sparkles } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { cn } from '@/shared/lib/utils'
 
 export function IntelligencePanel({

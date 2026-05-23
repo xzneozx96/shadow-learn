@@ -1,6 +1,6 @@
 import { ArrowUpRight, Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 
 export function FirstLessonCTA() {
   const { t } = useI18n()

@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { PronunciationReferee } from '@/features/study/ui/exercises/PronunciationReferee'
 import { useTracking } from '@/shared/hooks/useTracking'
 import { getLanguageCaps } from '@/shared/lib/language-caps'

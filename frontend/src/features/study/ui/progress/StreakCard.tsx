@@ -1,7 +1,7 @@
 import { Flame } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useMemo } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { buildActiveDays } from '@/features/lesson/domain/libraryUtils'
 import { useCountUp } from '@/shared/hooks/useCountUp'
 import { cn } from '@/shared/lib/utils'

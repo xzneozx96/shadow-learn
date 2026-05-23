@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { posthog } from '@/shared/lib/posthog'
 
 vi.mock('@/shared/lib/posthog', () => ({

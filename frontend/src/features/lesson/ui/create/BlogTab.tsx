@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { VoiceSelector } from '@/features/settings/ui/VoiceSelector'
 import { cn } from '@/shared/lib/utils'
 import { MINIMAX_VOICES } from '@/shared/lib/voices'

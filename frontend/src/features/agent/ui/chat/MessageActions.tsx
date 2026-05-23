@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Copy, NotebookPen, RefreshCw } from 'lucide-react'
 import { memo } from 'react'
 import { toast } from 'sonner'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
 
 export type MessageAction

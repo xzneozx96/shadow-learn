@@ -6,7 +6,7 @@ import { useActiveSegment } from '@/features/lesson/application/useActiveSegment
 // ── Mock PlayerContext ────────────────────────────────────────────────────────
 let timeSubscribers: Set<(t: number) => void>
 
-vi.mock('@/contexts/PlayerContext', () => ({
+vi.mock('@/app/providers/PlayerContext', () => ({
   usePlayer: () => ({
     subscribeTime: (cb: (t: number) => void) => {
       timeSubscribers.add(cb)

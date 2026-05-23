@@ -1,7 +1,7 @@
 import type { LessonMeta, Segment, VocabEntry, Word } from '@/shared/types'
 import { createContext, use, useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import { deleteErrorPattern, deleteSpacedRepetitionItem } from '@/db'
 import { captureVocabularyWordSaved } from '@/shared/lib/posthog-events'
 

@@ -1,7 +1,7 @@
 import type { NewTipNote } from '@/features/learning-materials/domain/tips'
 import { NotebookPen } from 'lucide-react'
 import { toast } from 'sonner'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { saveTipNote } from '@/features/learning-materials/lib/tipNoteBus'
 
 interface Props {

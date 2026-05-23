@@ -1,6 +1,6 @@
 import type { ProgressStats } from '@/db'
 import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useCountUp } from '@/shared/hooks/useCountUp'
 
 interface Props {

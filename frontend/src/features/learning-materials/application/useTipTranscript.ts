@@ -1,6 +1,6 @@
 import type { TipSegment, TipTranscriptStatus } from '@/features/learning-materials/domain/tips'
 import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import { getTipTranscript, putTipTranscript } from '@/db'
 import { API_BASE } from '@/shared/lib/config'
 

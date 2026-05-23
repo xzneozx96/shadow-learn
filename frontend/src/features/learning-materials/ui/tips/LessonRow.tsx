@@ -1,6 +1,6 @@
 import { Check, ClockFading, Play } from 'lucide-react'
 import { memo } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { cn } from '@/shared/lib/utils'
 
 interface Props {

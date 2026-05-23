@@ -1,8 +1,8 @@
 import type { ErrorPattern, SpacedRepetitionItem } from '@/db'
 import type { VocabEntry } from '@/shared/types'
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/app/providers/AuthContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { getErrorPattern, getSpacedRepetitionItem } from '@/db'
 import { Button } from '@/shared/ui/button'
 import {

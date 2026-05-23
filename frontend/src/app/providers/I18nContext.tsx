@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { Locale, TranslationKey } from '@/shared/lib/i18n'
 import { createContext, use, useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import { getSettings, saveSettings } from '@/db'
 import { getTranslation } from '@/shared/lib/i18n'
 

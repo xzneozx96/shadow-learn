@@ -1,7 +1,7 @@
 import type { StudyQueueState } from '@/features/study/application/useStudyQueue'
 import { Check, ClipboardList, X } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 
 interface Props {
   queue: StudyQueueState

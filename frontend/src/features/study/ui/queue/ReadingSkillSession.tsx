@@ -2,8 +2,8 @@
 import type { VocabEntry } from '@/shared/types'
 import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useI18n } from '@/contexts/I18nContext'
+import { useAuth } from '@/app/providers/AuthContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { API_BASE } from '@/shared/lib/config'
 import {
   getReadingDraft,

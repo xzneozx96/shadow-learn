@@ -49,15 +49,19 @@ export default antfu(
         // `application` so provider files classify as `data`, not `application` (first match wins).
         // Real port-inversion behind interfaces is deferred to a later PR.
         { type: 'data', pattern: 'src/features/*/application/*Context.{ts,tsx}', mode: 'file' },
-        { type: 'data', pattern: 'src/{db,contexts}/**' },
+        { type: 'data', pattern: 'src/app/providers/**' },
+        { type: 'data', pattern: 'src/db/**' },
         { type: 'shared', pattern: 'src/shared/**' },
         { type: 'domain', pattern: 'src/features/*/domain/**' },
         { type: 'application', pattern: 'src/features/*/application/**' },
         { type: 'adapters', pattern: 'src/features/*/adapters/**' },
         { type: 'ui', pattern: 'src/features/*/ui/**' },
         { type: 'feature-lib', pattern: 'src/features/*/lib/**' },
-        // remaining un-relocated app code (composition root + leftovers)
-        { type: 'legacy', pattern: 'src/{pages,components,hooks,lib,app}/**' },
+        // composition root: App, routing, Layout, onboarding, error chrome, pages.
+        // Listed AFTER data so app/providers/** classifies as data, not app.
+        { type: 'app', pattern: 'src/app/**' },
+        // residual un-relocated code (should be empty after the app/ pass)
+        { type: 'legacy', pattern: 'src/{components,hooks,lib}/**' },
       ],
     },
     rules: {
@@ -66,7 +70,7 @@ export default antfu(
         rules: [
           {
             from: 'domain',
-            disallow: ['application', 'adapters', 'ui', 'feature-lib', 'legacy', 'data'],
+            disallow: ['application', 'adapters', 'ui', 'feature-lib', 'legacy', 'data', 'app'],
             // eslint-disable-next-line no-template-curly-in-string -- boundaries placeholder, not a JS template
             message: 'domain (inner ring) may import only shared — got ${dependency.type}',
           },
@@ -82,7 +86,7 @@ export default antfu(
           },
           {
             from: 'shared',
-            disallow: ['domain', 'application', 'adapters', 'ui', 'feature-lib', 'legacy'],
+            disallow: ['domain', 'application', 'adapters', 'ui', 'feature-lib', 'legacy', 'app'],
             message: 'shared must not import feature/app code (it is the innermost utility ring)',
           },
         ],

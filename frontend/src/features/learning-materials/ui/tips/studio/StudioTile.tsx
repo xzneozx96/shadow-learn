@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { TranslationKey } from '@/shared/lib/i18n'
 import { Check, Loader2, Lock, RotateCw, WandSparkles } from 'lucide-react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
 
 export type StudioTileAccent = 'blue' | 'emerald' | 'amber' | 'violet' | 'rose'

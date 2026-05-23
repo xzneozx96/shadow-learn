@@ -4,7 +4,7 @@ import type { PronunciationAssessResult, Segment, ShadowingBest } from '@/shared
 import { X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { API_BASE } from '@/shared/lib/config'
 import {
   computeAccuracyScore,

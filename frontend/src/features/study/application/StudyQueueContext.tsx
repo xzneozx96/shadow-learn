@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { StudyQueueState } from '@/features/study/application/useStudyQueue'
 import { createContext, use } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
 import { useStudyQueue } from '@/features/study/application/useStudyQueue'
 

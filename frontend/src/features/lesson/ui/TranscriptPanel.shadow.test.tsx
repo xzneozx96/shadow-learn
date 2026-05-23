@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { TranscriptPanel } from '@/features/lesson/ui/TranscriptPanel'
 
 // Stub heavy dependencies not relevant to this test
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: null, keys: null }),
 }))
 vi.mock('@/shared/hooks/useTTS', () => ({

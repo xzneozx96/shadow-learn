@@ -3,7 +3,7 @@ import type { Persona } from '@/shared/lib/constants'
 import { AlertCircle, BookOpen, Coffee, Heart, MapPin, Sparkles, User } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { API_BASE } from '@/shared/lib/config'
 
 interface ApiPersona {

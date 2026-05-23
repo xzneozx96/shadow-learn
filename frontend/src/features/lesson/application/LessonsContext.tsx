@@ -2,7 +2,7 @@ import type { ShadowLearnDB } from '@/db'
 import type { LessonMeta } from '@/shared/types'
 import * as React from 'react'
 import { createContext, use, useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/app/providers/AuthContext'
 import { deleteFullLesson, getAllLessonMetas, saveLessonMeta } from '@/db'
 import { useJobPoller } from '@/features/lesson/application/useJobPoller'
 

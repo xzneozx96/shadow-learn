@@ -1,6 +1,6 @@
 import type { TipNote } from '@/features/learning-materials/domain/tips'
 import { NotebookPen, Plus } from 'lucide-react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { NoteCard } from './NoteCard'

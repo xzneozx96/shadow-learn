@@ -1,6 +1,6 @@
 import { Sparkles, X } from 'lucide-react'
 import { useMemo } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useGlobalCompanionContext } from '@/features/agent/application/GlobalCompanionContext'
 import { useZoberChat } from '@/features/agent/application/useZoberChat'
 import { useSpeakModal } from '@/features/speak/application/SpeakModalContext'

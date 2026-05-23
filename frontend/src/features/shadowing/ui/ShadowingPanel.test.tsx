@@ -27,15 +27,15 @@ const mockPlayer = {
   destroy: vi.fn(),
 }
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: null, keys: null, trialMode: false }),
 }))
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ t: (key: string) => key, locale: 'en', setLocale: async () => {} }),
 }))
 
-vi.mock('@/contexts/PlayerContext', () => ({
+vi.mock('@/app/providers/PlayerContext', () => ({
   usePlayer: () => ({
     player: mockPlayer,
     subscribeTime: vi.fn(() => () => {}),

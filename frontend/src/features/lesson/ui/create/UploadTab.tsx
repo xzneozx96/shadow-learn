@@ -1,6 +1,6 @@
 import { FileVideo, Upload } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { cn } from '@/shared/lib/utils'
 
 const MAX_SIZE = 2 * 1024 * 1024 * 1024 // 2 GB

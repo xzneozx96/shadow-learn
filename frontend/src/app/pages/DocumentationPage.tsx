@@ -2,8 +2,8 @@ import { ChevronDown, Hammer, Rocket, Search, Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Layout } from '@/components/Layout'
-import { useI18n } from '@/contexts/I18nContext'
+import { Layout } from '@/app/Layout'
+import { useI18n } from '@/app/providers/I18nContext'
 
 interface HeadingItem {
   depth: number

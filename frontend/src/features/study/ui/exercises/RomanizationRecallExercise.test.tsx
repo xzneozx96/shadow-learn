@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { RomanizationRecallExercise } from '@/features/study/ui/exercises/RomanizationRecallExercise'
 import { getLanguageCaps } from '@/shared/lib/language-caps'
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ t: (key: string) => key, locale: 'en', setLocale: async () => {} }),
 }))
 

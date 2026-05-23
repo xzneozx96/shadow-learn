@@ -16,7 +16,7 @@ const mockPause = vi.fn()
 const timeSubscribers: ((t: number) => void)[] = []
 function fireTime(t: number) { timeSubscribers.forEach(cb => cb(t)) }
 
-vi.mock('@/contexts/PlayerContext', () => ({
+vi.mock('@/app/providers/PlayerContext', () => ({
   usePlayer: () => ({
     player: { seekTo: mockSeekTo, play: mockPlay, pause: mockPause },
     subscribeTime: (cb: (t: number) => void) => {
@@ -31,7 +31,7 @@ vi.mock('@/contexts/PlayerContext', () => ({
   PlayerProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: {}, keys: {} }),
 }))
 
@@ -39,7 +39,7 @@ vi.mock('@/features/lesson/application/LessonsContext', () => ({
   useLessons: () => ({ updateLesson: vi.fn() }),
 }))
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ t: (k: string) => k }),
 }))
 

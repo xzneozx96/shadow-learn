@@ -1,7 +1,7 @@
 import type { VocabEntry } from '@/shared/types'
 import { Check, ChevronDown, Minus } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { groupVocabByDay } from '@/features/vocabulary/domain/vocabGrouping'
 import {
   getGroupTriState,

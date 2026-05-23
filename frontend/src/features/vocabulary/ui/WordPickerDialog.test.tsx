@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { WordPickerDialog } from '@/features/vocabulary/ui/WordPickerDialog'
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({
     t: (key: string, vars?: Record<string, string | number>) => {
       if (!vars)

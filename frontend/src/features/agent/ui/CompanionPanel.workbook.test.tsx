@@ -7,7 +7,7 @@ import { CompanionPanel } from '@/features/agent/ui/CompanionPanel'
 import { useVocabulary } from '@/features/vocabulary/application/VocabularyContext'
 
 // Mock I18nContext so CompanionPanel can be rendered without an I18nProvider in tests.
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),
@@ -41,7 +41,7 @@ vi.mock('@/features/speak/application/SpeakModalContext', () => ({
 }))
 
 // Mock AuthContext
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: vi.fn(() => ({
     isUnlocked: true,
     db: {},

@@ -8,7 +8,7 @@ import { ArrowDownIcon, Mic } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useStickToBottom } from 'use-stick-to-bottom'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { useVoiceInput } from '@/features/agent/application/useVoiceInput'
 import {
   EXERCISE_TOOLS,

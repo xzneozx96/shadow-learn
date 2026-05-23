@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreateLesson } from '@/features/lesson/ui/create/CreateLesson'
 import { getAppConfig } from '@/shared/lib/config'
 
-vi.mock('@/contexts/I18nContext', async () => {
+vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
   return {
     useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }),
@@ -30,7 +30,7 @@ vi.mock('@/features/agent/application/GlobalCompanionContext', () => ({
 }))
 
 // Minimal auth context mock
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({
     db: {},
     keys: {

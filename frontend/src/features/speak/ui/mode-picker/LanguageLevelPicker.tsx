@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { useI18n } from '@/contexts/I18nContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { SPEAK_LANGUAGES } from '../speak-languages'

@@ -16,7 +16,7 @@ vi.mock('@/features/agent/application/useZoberChat', () => ({
   }),
 }))
 
-vi.mock('@/contexts/I18nContext', () => ({
+vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ locale: 'en', t: (k: string) => k }),
 }))
 
