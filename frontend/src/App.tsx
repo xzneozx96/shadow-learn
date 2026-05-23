@@ -2,6 +2,8 @@ import { Loader2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createBrowserRouter, Outlet, RouterProvider, useLocation, useRouteError } from 'react-router-dom'
+import { CompanionFloatingButton } from '@/components/chat/CompanionFloatingButton'
+import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { CreateLesson } from '@/components/create/CreateLesson'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorScreen } from '@/components/ErrorScreen'
@@ -17,7 +19,7 @@ import { QueueFloatingBadge } from '@/components/study-queue/QueueFloatingBadge'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { DailyReviewProvider, useDailyReview } from '@/contexts/DailyReviewContext'
-import { GlobalCompanionProvider } from '@/contexts/GlobalCompanionContext'
+import { GlobalCompanionProvider, useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { I18nProvider } from '@/contexts/I18nContext'
 import { LessonsProvider } from '@/contexts/LessonsContext'
 import { PlayerProvider } from '@/contexts/PlayerContext'
@@ -69,8 +71,11 @@ function RouteErrorElement() {
   return <ErrorScreen error={error} />
 }
 
-function StudyQueueUI() {
+const POPUP_TRANSITION = { duration: 0.2, ease: [0.175, 0.885, 0.32, 1.275] } as const
+
+function FloatingDock() {
   const queue = useStudyQueueContext()
+  const { isGlobalPanelOpen, openPanel, closePanel } = useGlobalCompanionContext()
   const [open, setOpen] = useState(false)
   const location = useLocation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -88,6 +93,7 @@ function StudyQueueUI() {
     return () => clearTimeout(timer)
   }, [queue.loading, location.pathname])
 
+  // Click-outside closes the queue popup only (companion popup keeps draft text safe).
   useEffect(() => {
     if (!open)
       return
@@ -99,26 +105,68 @@ function StudyQueueUI() {
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [open])
 
+  // Only one popup open at a time.
+  function toggleCompanion() {
+    if (isGlobalPanelOpen) {
+      closePanel()
+    }
+    else {
+      setOpen(false)
+      openPanel()
+    }
+  }
+
+  function toggleQueue() {
+    setOpen((o) => {
+      const next = !o
+      if (next)
+        closePanel()
+      return next
+    })
+  }
+
   if (location.pathname.startsWith('/lesson/') || location.pathname.startsWith('/tips/'))
     return null
 
   return (
-    <div ref={containerRef} className="fixed bottom-6 right-6 z-50">
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="absolute bottom-full right-0 mb-3"
-            style={{ transformOrigin: 'bottom right' }}
-            initial={{ opacity: 0, scale: 0.88, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.88, y: 10 }}
-            transition={{ duration: 0.2, ease: [0.175, 0.885, 0.32, 1.275] }}
-          >
-            <DailyQueuePopup queue={queue} onClose={() => setOpen(false)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <QueueFloatingBadge queue={queue} open={open} onClick={() => setOpen(o => !o)} />
+    <div ref={containerRef} className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-4">
+      {/* Companion */}
+      <div className="relative">
+        <AnimatePresence>
+          {isGlobalPanelOpen && (
+            <motion.div
+              className="absolute bottom-full right-0 mb-3"
+              style={{ transformOrigin: 'bottom right' }}
+              initial={{ opacity: 0, scale: 0.88, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.88, y: 10 }}
+              transition={POPUP_TRANSITION}
+            >
+              <GlobalCompanionPanel />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <CompanionFloatingButton open={isGlobalPanelOpen} onClick={toggleCompanion} />
+      </div>
+
+      {/* Daily Review */}
+      <div className="relative">
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              className="absolute bottom-full right-0 mb-3"
+              style={{ transformOrigin: 'bottom right' }}
+              initial={{ opacity: 0, scale: 0.88, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.88, y: 10 }}
+              transition={POPUP_TRANSITION}
+            >
+              <DailyQueuePopup queue={queue} onClose={() => setOpen(false)} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <QueueFloatingBadge queue={queue} open={open} onClick={toggleQueue} />
+      </div>
     </div>
   )
 }
@@ -132,7 +180,7 @@ function AppLayout() {
           {/* <FeedbackButton /> */}
           <GlobalSpeakModal />
           <GlobalDailyReview />
-          <StudyQueueUI />
+          <FloatingDock />
         </SpeakModalProvider>
       </GlobalCompanionProvider>
     </PlayerProvider>

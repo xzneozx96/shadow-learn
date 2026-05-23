@@ -1,10 +1,8 @@
 import { AudioLines, BookOpenText, FileText, Library, Newspaper, PanelLeft, PanelRight, Settings, Sprout, TvMinimalPlay } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { GlobalCompanionPanel } from '@/components/chat/GlobalCompanionPanel'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
-import { useGlobalCompanionContext } from '@/contexts/GlobalCompanionContext'
 import { useI18n } from '@/contexts/I18nContext'
 import { useSpeakModal } from '@/contexts/SpeakModalContext'
 import { cn } from '@/lib/utils'
@@ -20,7 +18,6 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const { t } = useI18n()
   const { trialMode } = useAuth()
-  const { isGlobalPanelOpen } = useGlobalCompanionContext()
   const { openSpeakModal } = useSpeakModal()
   const hasUnseen = useHasUnseenAnnouncement()
 
@@ -202,7 +199,6 @@ export function Layout({ children }: LayoutProps) {
           <AmbientBackdrop tone="violet" />
           {children}
         </main>
-        {isGlobalPanelOpen ? <GlobalCompanionPanel /> : null}
       </div>
     </div>
   )

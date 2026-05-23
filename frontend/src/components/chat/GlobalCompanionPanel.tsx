@@ -28,8 +28,8 @@ export function GlobalCompanionPanel() {
   }
 
   return (
-    <div className="relative z-5 w-[300px] xl:w-[400px] shrink-0 flex flex-col border-l border-border">
-      <div className="h-[61px] flex items-center gap-2 border-b border-border px-3">
+    <div className="relative w-[380px] h-[550px] max-h-[calc(100vh-10rem)] rounded-2xl overflow-hidden bg-black/20 backdrop-blur-2xl border border-white/10 bg-linear-to-br from-zinc-800/30 to-zinc-800/50 shadow-xl flex flex-col">
+      <div className="h-12 flex items-center gap-2 border-b border-white/10 px-3">
         <Sparkles className="size-4 text-primary" />
         <span className="flex-1 text-sm font-semibold">{t('companion.title')}</span>
         <Button variant="ghost" size="icon" className="size-7" onClick={closePanel}>
