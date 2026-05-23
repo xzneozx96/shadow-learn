@@ -63,6 +63,9 @@ services:
   pageindex-api:
     build: ./page-index
     restart: unless-stopped
+    # TEMP public access for browser upload — REMOVE after uploading.
+    ports:
+      - "8010:8000"
     env_file:
       - ./page-index/.env
     environment:
