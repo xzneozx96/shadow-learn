@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
@@ -18,11 +19,33 @@ async def lifespan(app: FastAPI):
     if not settings.API_SECRET_KEY:
         raise RuntimeError("API_SECRET_KEY must be set")
 
+    # Uvicorn only configures its own loggers, so api.* logs (e.g. [timing])
+    # have no handler and are dropped. Route them through uvicorn's handler.
+    _app_logger = logging.getLogger("api")
+    _app_logger.handlers = logging.getLogger("uvicorn").handlers
+    _app_logger.setLevel(logging.INFO)
+    _app_logger.propagate = False
+
     # Schema is managed by Alembic (alembic upgrade head runs in the entrypoint),
     # so we do not create_all here. Just resume any interrupted work.
-    async with AsyncSessionLocal() as db:
-        service = DocumentService(db)
-        await service.resume_pending_tasks()
+    # Under multiple uvicorn workers, every worker runs this lifespan — guard the
+    # resume with a Redis NX lock so only ONE worker re-queues, else each pending
+    # doc would be dispatched once per worker. TTL lets it auto-release on crash.
+    redis = aioredis.from_url(settings.CELERY_BROKER_URL)
+    try:
+        # NX dedupes among sibling workers (all attempt during the winner's
+        # resume, while the key is held). ex= is only crash-safety; we release on
+        # completion so a later container restart can resume again.
+        acquired = await redis.set("pageindex:resume_lock", "1", nx=True, ex=300)
+        if acquired:
+            try:
+                async with AsyncSessionLocal() as db:
+                    service = DocumentService(db)
+                    await service.resume_pending_tasks()
+            finally:
+                await redis.delete("pageindex:resume_lock")
+    finally:
+        await redis.aclose()
 
     yield
 

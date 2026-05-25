@@ -52,13 +52,13 @@ const mockMemories: AgentMemory[] = [
 describe('buildSystemPrompt', () => {
   it('includes role section', () => {
     const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: [] })
-    expect(prompt).toContain('## Role')
+    expect(prompt).toContain('<role>')
     expect(prompt).toContain('You are **Zober**')
   })
 
   it('includes learner profile when provided', () => {
     const prompt = buildSystemPrompt({ profile: mockProfile, activeSegment: null, memories: [] })
-    expect(prompt).toContain('## Learner Profile')
+    expect(prompt).toContain('<learner_profile>')
     expect(prompt).toContain('intermediate')
     expect(prompt).toContain('Streak: 5d')
     expect(prompt).toContain('Sessions: 42')
@@ -66,12 +66,12 @@ describe('buildSystemPrompt', () => {
 
   it('omits learner profile when undefined', () => {
     const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: [] })
-    expect(prompt).not.toContain('## Learner Profile')
+    expect(prompt).not.toContain('<learner_profile>')
   })
 
   it('includes lesson context with id and title when provided', () => {
     const prompt = buildSystemPrompt({ profile: undefined, lessonTitle: 'My Lesson', lessonId: 'lesson-abc', activeSegment: mockSegment, memories: [] })
-    expect(prompt).toContain('## Current Lesson')
+    expect(prompt).toContain('<current_lesson>')
     expect(prompt).toContain('ID: lesson-abc')
     expect(prompt).toContain('My Lesson')
     expect(prompt).toContain('今天天气很好')
@@ -80,12 +80,12 @@ describe('buildSystemPrompt', () => {
 
   it('omits lesson context when neither title, id, nor segment', () => {
     const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: [] })
-    expect(prompt).not.toContain('## Current Lesson')
+    expect(prompt).not.toContain('<current_lesson>')
   })
 
   it('includes memory summary when memories provided', () => {
     const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: mockMemories })
-    expect(prompt).toContain('## Memory Summary')
+    expect(prompt).toContain('<memory_summary>')
     expect(prompt).toContain('tone 3 sandhi')
     expect(prompt).toContain('dictation exercises')
   })
@@ -102,18 +102,18 @@ describe('buildSystemPrompt', () => {
 
   it('always includes instructions', () => {
     const prompt = buildSystemPrompt({ profile: undefined, activeSegment: null, memories: [] })
-    expect(prompt).toContain('## Instructions')
+    expect(prompt).toContain('<instructions>')
     expect(prompt).toContain('save_memory')
   })
 
   it('produces all sections for full input', () => {
     const prompt = buildSystemPrompt({ profile: mockProfile, lessonTitle: 'Lesson Title', lessonId: 'lesson-xyz', activeSegment: mockSegment, memories: mockMemories })
-    expect(prompt).toContain('## Role')
-    expect(prompt).toContain('## Learner Profile')
-    expect(prompt).toContain('## Current Lesson')
+    expect(prompt).toContain('<role>')
+    expect(prompt).toContain('<learner_profile>')
+    expect(prompt).toContain('<current_lesson>')
     expect(prompt).toContain('ID: lesson-xyz')
-    expect(prompt).toContain('## Memory Summary')
-    expect(prompt).toContain('## Instructions')
+    expect(prompt).toContain('<memory_summary>')
+    expect(prompt).toContain('<instructions>')
   })
 
   it('includes today date when provided', () => {
@@ -165,6 +165,14 @@ describe('buildSystemPrompt', () => {
     const prompt = buildSystemPrompt({ profile: mockProfile, activeSegment: null, memories: [] })
     expect(prompt).toContain('Chain tools when needed')
   })
+
+  it('wraps sections in balanced XML tags', () => {
+    const prompt = buildSystemPrompt({ profile: mockProfile, lessonTitle: 'L', lessonId: 'id', activeSegment: mockSegment, memories: mockMemories })
+    for (const name of ['role', 'instructions', 'exercise_rendering_rules', 'learner_profile', 'current_lesson', 'memory_summary']) {
+      expect(prompt).toContain(`<${name}>`)
+      expect(prompt).toContain(`</${name}>`)
+    }
+  })
 })
 
 describe('buildSystemPrompt — Session Snapshot', () => {
@@ -181,7 +189,7 @@ describe('buildSystemPrompt — Session Snapshot', () => {
     translation: { accuracy: 0.8, attempts: 5 },
   }
 
-  it('includes ## Session Snapshot when appState provided', () => {
+  it('includes session snapshot when appState provided', () => {
     const prompt = buildSystemPrompt({
       profile: mockProfile,
       activeSegment: null,
@@ -189,7 +197,7 @@ describe('buildSystemPrompt — Session Snapshot', () => {
       appState,
       accuracy: exerciseAccuracy,
     })
-    expect(prompt).toContain('## Session Snapshot')
+    expect(prompt).toContain('<session_snapshot>')
     expect(prompt).toContain('Exercises done: 3')
     expect(prompt).toContain('Vocabulary due: 8')
     expect(prompt).toContain('你好')
@@ -197,9 +205,9 @@ describe('buildSystemPrompt — Session Snapshot', () => {
     expect(prompt).toContain('translation 80%')
   })
 
-  it('omits ## Session Snapshot when appState not provided', () => {
+  it('omits session snapshot when appState not provided', () => {
     const prompt = buildSystemPrompt({ profile: mockProfile, activeSegment: null, memories: [] })
-    expect(prompt).not.toContain('## Session Snapshot')
+    expect(prompt).not.toContain('<session_snapshot>')
   })
 
   it('omits Recent mistakes line when recentMistakeWords is empty', () => {
@@ -213,16 +221,17 @@ describe('buildSystemPrompt — Session Snapshot', () => {
     expect(prompt).not.toContain('Recent mistakes:')
   })
 
-  it('## Session Snapshot appears before ## Instructions', () => {
+  it('static instructions appear before dynamic session snapshot', () => {
     const prompt = buildSystemPrompt({
       profile: mockProfile,
       activeSegment: null,
       memories: [],
       appState,
     })
-    const snapshotIdx = prompt.indexOf('## Session Snapshot')
-    const instructionsIdx = prompt.indexOf('## Instructions')
-    expect(snapshotIdx).toBeLessThan(instructionsIdx)
+    const snapshotIdx = prompt.indexOf('<session_snapshot>')
+    const instructionsIdx = prompt.indexOf('<instructions>')
+    // Static prefix (role + instructions) precedes the dynamic learner data.
+    expect(instructionsIdx).toBeLessThan(snapshotIdx)
   })
 })
 

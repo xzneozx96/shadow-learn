@@ -73,6 +73,10 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${PAGEINDEX_DB_USER:-pageindex}:${PAGEINDEX_DB_PASSWORD:-pageindex}@pageindex-postgres/${PAGEINDEX_DB_NAME:-pageindex}
       - CELERY_BROKER_URL=redis://pageindex-redis:6379/0
       - CELERY_RESULT_BACKEND=redis://pageindex-redis:6379/0
+      # uvicorn process count — scales the /search retrieval (CPU-bound PyPDF2).
+      # Set ~host vCPUs; each worker is a full app copy (watch RAM). Startup
+      # resume is Redis-locked so multiple workers don't duplicate-dispatch.
+      - UVICORN_WORKERS=${UVICORN_WORKERS:-4}
     volumes:
       - pageindex_uploads:/app/storage/uploads
       - pageindex_results:/app/storage/results

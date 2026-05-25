@@ -8,5 +8,8 @@ if [ "$1" = "celery" ]; then
 fi
 
 # api container: run DB migrations, then serve.
+# UVICORN_WORKERS controls process-level parallelism (CPU-bound PyPDF2 retrieval
+# is GIL-locked, so scale with vCPUs). The resume-on-startup is Redis-locked so
+# multiple workers don't duplicate-dispatch pending tasks.
 alembic upgrade head
-exec uvicorn api.main:app --host 0.0.0.0 --port 8000
+exec uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers "${UVICORN_WORKERS:-1}"

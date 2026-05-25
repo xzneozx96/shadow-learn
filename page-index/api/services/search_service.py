@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 
 # /search runs the routing LLM call inside the API process (not just the worker),
 # so the API container must carry an LLM key. Warn loudly if it doesn't.
@@ -105,8 +106,11 @@ async def search_documents(db: AsyncSession, query: str, max_docs: int = 3) -> d
         }
         for d in ready
     ]
+    _t0 = time.perf_counter()
     doc_ids = await run_in_threadpool(_route, query, catalogue, model, max_docs, timeout)
+    _t1 = time.perf_counter()
     if not doc_ids:
+        logger.info("[timing] route=%.3fs catalogue=%d routed=0", _t1 - _t0, len(catalogue))
         return {"passages": [], "routed_doc_ids": []}
 
     by_id = {d.doc_id: d for d in ready}
@@ -114,5 +118,10 @@ async def search_documents(db: AsyncSession, query: str, max_docs: int = 3) -> d
         run_in_threadpool(_retrieve_doc_sync, by_id[doc_id], query, model, timeout)
         for doc_id in doc_ids
     ])
+    _t2 = time.perf_counter()
+    logger.info(
+        "[timing] route=%.3fs retrieve_all=%.3fs total=%.3fs catalogue=%d routed=%d",
+        _t1 - _t0, _t2 - _t1, _t2 - _t0, len(catalogue), len(doc_ids),
+    )
     passages = [p for group in groups for p in group]
     return {"passages": passages, "routed_doc_ids": doc_ids}

@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
+    # On startup, a PROCESSING doc younger than this is assumed to be actively
+    # running in a worker and is NOT re-queued. Raise it above your p99 indexing
+    # time so live indexing jobs aren't duplicate-dispatched.
+    STALE_PROCESSING_MINUTES: int = 15
+
     # LLM (OpenAI default; OpenRouter via OPENROUTER_API_KEY + "openrouter/<model>")
     OPENAI_API_KEY: str = ""
     # Model used for the indexing/tree-building pipeline.

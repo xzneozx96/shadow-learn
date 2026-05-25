@@ -29,7 +29,7 @@ def process_pdf_task(self, doc_id: str, file_path: str, options: dict):
             session.commit()
         
         # Run PageIndex processing via the shared client so the API result
-        # matches the up-to-date core output (structure + per-page `pages`).
+        # matches the up-to-date core output.
         # NOTE: PageIndexClient.index hardcodes if_add_* flags to 'yes', so the
         # per-flag entries in `options` are inert; only `model` is honored.
         logger.info(f"Starting PageIndex processing for {doc_id}")
@@ -37,11 +37,14 @@ def process_pdf_task(self, doc_id: str, file_path: str, options: dict):
         client_doc_id = client.index(file_path, mode="pdf")
         result = client.documents[client_doc_id]
 
-        # Use the API's doc_id and drop node `text` (redundant with `pages`),
-        # mirroring PageIndexClient._save_doc.
+        # Use the API's doc_id and drop node `text` to keep the result lean.
         result["id"] = doc_id
         if result.get("structure"):
             result["structure"] = remove_fields(result["structure"], fields=["text"])
+        # Drop the full per-page cache: retrieval reads only the pages it needs
+        # from the PDF on demand (get_page_content -> PyPDF2), so caching all
+        # pages here bloats the JSON (e.g. 300+ pages) for no benefit.
+        result.pop("pages", None)
 
         # Save result
         result_filename = f"{doc_id}.json"

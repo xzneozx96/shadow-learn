@@ -33,6 +33,6 @@ export const searchDocumentTool = buildTool({
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
   maxResultSizeChars: 100_000,
-  searchHint: 'document search reference manual article pdf knowledge base',
+  searchHint: 'search app manual, how to use feature, grammar point explanation, construction pattern language reference',
   execute: async (input, _context) => executeSearchDocument(input as SearchDocumentArgs),
 })

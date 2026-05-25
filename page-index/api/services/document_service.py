@@ -5,6 +5,7 @@ from api.models.database import Document, ProcessingStatus
 from api.utils.storage import save_upload_file, get_result_path
 from api.tasks.pdf_tasks import process_pdf_task
 from api.config import settings
+from datetime import datetime, timedelta
 import json
 import os
 import logging
@@ -77,7 +78,17 @@ class DocumentService:
         docs = result.scalars().all()
         
         queued_count = 0
+        now = datetime.utcnow()
+        stale_threshold = timedelta(minutes=settings.STALE_PROCESSING_MINUTES)
         for doc in docs:
+            # Skip docs that are actively processing (recent PROCESSING) — only
+            # re-queue stale/interrupted ones, else we duplicate live work.
+            if (
+                doc.status == ProcessingStatus.PROCESSING
+                and doc.updated_at is not None
+                and (now - doc.updated_at) < stale_threshold
+            ):
+                continue
             file_path = os.path.join(settings.UPLOAD_DIR, f"{doc.doc_id}.pdf")
             if os.path.exists(file_path):
                 doc.status = ProcessingStatus.PENDING
