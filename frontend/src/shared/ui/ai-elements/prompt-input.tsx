@@ -1253,6 +1253,7 @@ export function PromptInputSubmit({
 
   const handleClick = useCallback(
     (e: any) => {
+      console.warn('[PromptInputSubmit] click', { status, isGenerating, hasOnStop: !!onStop })
       if (isGenerating && onStop) {
         e.preventDefault()
         onStop()
@@ -1260,7 +1261,7 @@ export function PromptInputSubmit({
       }
       onClick?.(e)
     },
-    [isGenerating, onStop, onClick],
+    [isGenerating, onStop, onClick, status],
   )
 
   return (

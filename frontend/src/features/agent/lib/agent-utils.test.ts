@@ -1,6 +1,6 @@
 import type { UIMessage } from 'ai'
 import { describe, expect, it } from 'vitest'
-import { compactForTokenBudget, estimateTokens, normalizeMessagesForBackend } from '@/features/agent/lib/agent-utils'
+import { estimateTokens, isOverflow, normalizeMessagesForBackend, pruneToFit, readUsageTokens, USABLE } from '@/features/agent/lib/agent-utils'
 
 /**
  * Build a UIMessage for tests. Parts often carry extra fields (toolName, args)
@@ -436,17 +436,56 @@ describe('estimateTokens', () => {
   })
 })
 
-describe('compactForTokenBudget', () => {
+describe('readUsageTokens', () => {
+  it('reads canonical camelCase metadata.usage.totalTokens', () => {
+    expect(readUsageTokens({ metadata: { usage: { totalTokens: 22889 } } })).toBe(22889)
+  })
+
+  it('accepts snake_case total_tokens (raw OpenRouter shape)', () => {
+    expect(readUsageTokens({ metadata: { usage: { total_tokens: 22889 } } })).toBe(22889)
+  })
+
+  it('falls back to promptTokens when total is absent', () => {
+    expect(readUsageTokens({ metadata: { usage: { promptTokens: 22213 } } })).toBe(22213)
+    expect(readUsageTokens({ metadata: { usage: { prompt_tokens: 22213 } } })).toBe(22213)
+  })
+
+  it('reads usage placed directly on metadata', () => {
+    expect(readUsageTokens({ metadata: { totalTokens: 100 } })).toBe(100)
+  })
+
+  it('returns undefined when absent or non-numeric (→ estimate fallback)', () => {
+    expect(readUsageTokens({})).toBeUndefined()
+    expect(readUsageTokens(null)).toBeUndefined()
+    expect(readUsageTokens({ metadata: {} })).toBeUndefined()
+    expect(readUsageTokens({ metadata: { usage: { totalTokens: 0 } } })).toBeUndefined()
+    expect(readUsageTokens({ metadata: { usage: { totalTokens: 'x' } } })).toBeUndefined()
+  })
+})
+
+describe('isOverflow', () => {
+  it('true iff tokens reach the usable budget', () => {
+    expect(isOverflow(USABLE - 1)).toBe(false)
+    expect(isOverflow(USABLE)).toBe(true)
+    expect(isOverflow(USABLE + 1)).toBe(true)
+  })
+
+  it('honours an explicit budget', () => {
+    expect(isOverflow(100, 200)).toBe(false)
+    expect(isOverflow(200, 200)).toBe(true)
+  })
+})
+
+describe('pruneToFit', () => {
   it('returns messages unchanged when under budget', () => {
     const messages = [
       msg({ id: '1', role: 'user', parts: [{ type: 'text', text: 'Hello' }] }),
       msg({ id: '2', role: 'assistant', parts: [{ type: 'text', text: 'Hi' }] }),
     ]
-    const result = compactForTokenBudget(messages, 10000, 6)
-    expect(result).toEqual(messages)
+    expect(pruneToFit(messages, 10000, 6)).toEqual(messages)
   })
 
-  it('stubs tool results in older messages when over budget', () => {
+  it('stubs tool results in older messages when over budget, keeps protected tail full', () => {
     const messages = [
       msg({
         id: '1',
@@ -462,24 +501,34 @@ describe('compactForTokenBudget', () => {
       msg({ id: '3', role: 'assistant', parts: [{ type: 'text', text: 'response' }] }),
       msg({ id: '4', role: 'user', parts: [{ type: 'text', text: 'next' }] }),
     ]
-    const result = compactForTokenBudget(messages, 500, 2)
-    // Tail kept verbatim
+    const result = pruneToFit(messages, 500, 2)
+    // Never deletes — length unchanged
+    expect(result.length).toBe(messages.length)
+    // Protected tail kept verbatim
     expect(result.at(-1)).toEqual(messages.at(-1))
     expect(result.at(-2)).toEqual(messages.at(-2))
-    // Old tool result should be stubbed
-    const oldPart = part(result[0] as UIMessage)
-    expect(oldPart.output).not.toContain('x'.repeat(100))
+    // Old tool result stubbed
+    expect(part(result[0] as UIMessage).output).not.toContain('x'.repeat(100))
   })
 
-  it('drops oldest messages if still over budget after stubbing', () => {
-    const messages = Array.from({ length: 20 }, (_, i) => msg({
-      id: `${i}`,
-      role: i % 2 === 0 ? 'user' as const : 'assistant' as const,
-      parts: [{ type: 'text', text: 'a'.repeat(500) }],
-    }))
-    const result = compactForTokenBudget(messages, 1000, 4)
-    expect(result.length).toBeLessThan(messages.length)
-    expect(result.at(-1)!.id).toBe('19')
+  it('never stubs guidance tools', () => {
+    const messages = [
+      msg({
+        id: '1',
+        role: 'assistant',
+        parts: [{
+          type: 'tool-get_core_guidelines',
+          toolName: 'get_core_guidelines',
+          state: 'output-available',
+          output: 'CORE RULES '.repeat(500),
+        }],
+      }),
+      msg({ id: '2', role: 'user', parts: [{ type: 'text', text: 'hi' }] }),
+      msg({ id: '3', role: 'assistant', parts: [{ type: 'text', text: 'hello' }] }),
+    ]
+    const result = pruneToFit(messages, 100, 1)
+    expect(result.length).toBe(messages.length)
+    expect(part(result[0] as UIMessage).output).toContain('CORE RULES')
   })
 
   it('preserves user and assistant text in older messages', () => {
@@ -490,34 +539,15 @@ describe('compactForTokenBudget', () => {
         role: 'assistant',
         parts: [
           { type: 'text', text: 'important answer' },
-          {
-            type: 'tool-get_vocabulary',
-            toolName: 'get_vocabulary',
-            state: 'output-available',
-            output: 'x'.repeat(3000),
-          },
+          { type: 'tool-get_vocabulary', toolName: 'get_vocabulary', state: 'output-available', output: 'x'.repeat(3000) },
         ],
       }),
       msg({ id: '3', role: 'user', parts: [{ type: 'text', text: 'follow-up' }] }),
     ]
-    const result = compactForTokenBudget(messages, 500, 1)
-    // User text preserved
+    const result = pruneToFit(messages, 500, 1)
     expect(part(result[0] as UIMessage).text).toBe('important question')
-    // Assistant text preserved, tool result stubbed
     const assistantParts = (result[1] as any).parts
     expect(assistantParts.find((p: any) => p.type === 'text')?.text).toBe('important answer')
-  })
-
-  it('does not start on a tool-role message', () => {
-    const messages = [
-      msg({ id: '0', role: 'assistant' as any, parts: [{ type: 'tool-x', toolName: 'x', state: 'output-available', output: 'y' }] }),
-      msg({ id: '1', role: 'user', parts: [{ type: 'text', text: 'hi' }] }),
-      msg({ id: '2', role: 'assistant', parts: [{ type: 'text', text: 'hello' }] }),
-    ]
-    // Budget so low that message 0 would be dropped
-    const result = compactForTokenBudget(messages, 100, 2)
-    if (result.length < messages.length) {
-      expect(result[0]?.role).not.toBe('tool')
-    }
+    expect(assistantParts.find((p: any) => p.type?.startsWith('tool-'))?.output).not.toContain('x'.repeat(100))
   })
 })

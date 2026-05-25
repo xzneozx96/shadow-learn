@@ -109,6 +109,12 @@ export interface ThreadSummaryRecord {
   threadId: string
   summary: string
   coversThroughMessageId: string
+  /**
+   * Position of the cut in the history at summary time. Lets compaction trim by
+   * index when the id can't be found (paginated/restored threads), instead of
+   * falling back to sending the full untrimmed history. Optional for back-compat.
+   */
+  coversThroughIndex?: number
   tokenBudget: number
   createdAt: number
 }

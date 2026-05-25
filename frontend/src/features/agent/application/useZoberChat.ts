@@ -32,10 +32,12 @@ import {
   estimateTokens,
   normalizeMessagesForBackend,
   PAGE_SIZE,
-  TOKEN_BUDGET,
+  pruneToFit,
+  readUsageTokens,
+  USABLE,
 } from '@/features/agent/lib/agent-utils'
 import { buildPrompt, resolveThreadId } from '@/features/agent/lib/context-assembler'
-import { buildHistoryToStore, maybeRunBackgroundSummary } from '@/features/agent/lib/context-assembler/background-summary'
+import { buildHistoryToStore, maybeCompact } from '@/features/agent/lib/context-assembler/background-summary'
 import { computeLessonExhaustion } from '@/features/agent/lib/context-assembler/exhaustion'
 import { ToolExecutor } from '@/features/agent/lib/tools/executor'
 import {
@@ -51,8 +53,6 @@ import { getEffectiveDueItems } from '@/shared/lib/skillSessionProgress'
 const MAX_TOOL_ROUNDS_LESSON = 5
 const MAX_TOOL_ROUNDS_GLOBAL = 5
 const MAX_INPUT_CHARS = 8000
-const TOKEN_BUDGET_SOFT = 0.8
-const TOKEN_BUDGET_HARD = 1.0
 
 type AgentActionsDispatch = (action: AgentAction) => void
 
@@ -125,6 +125,9 @@ export function useZoberChat(args: ZoberChatArgs) {
   const toolCallCountRef = useRef(0)
   const errorCountRef = useRef(0)
   const exercisesThisSessionRef = useRef(0)
+  // Real token usage from the last completed turn (when the backend reports it),
+  // used as the primary overflow signal for compaction; undefined → fall back to estimate.
+  const lastUsageTokensRef = useRef<number | undefined>(undefined)
 
   // Live context built into a ref to avoid stale closures in transport
   const ctxRef = useRef<any>(null)
@@ -310,19 +313,23 @@ export function useZoberChat(args: ZoberChatArgs) {
 
           const builtPrompt = ctx ? buildPrompt(ctx) : ''
           const includeTools = !ctx?.lesson?.exhausted
+          const systemTokens = estimateTextTokens(builtPrompt)
 
-          const projectedTokens = estimateTokens(finalMessages) + estimateTextTokens(builtPrompt)
-
-          if (projectedTokens > TOKEN_BUDGET_HARD * TOKEN_BUDGET) {
-            throw new Error('Conversation too long. Please start a new chat.')
-          }
-          if (projectedTokens > TOKEN_BUDGET_SOFT * TOKEN_BUDGET) {
-            console.warn(`[useZoberChat] Approaching context limit: ${projectedTokens} / ${TOKEN_BUDGET}`)
+          // No hard block. Idle compaction (maybeCompact, post-response) is the
+          // primary sizing mechanism; here we apply the LLM-free pruneToFit
+          // backstop so a send is never refused. With a 1M window this rarely fires.
+          let outgoing = finalMessages
+          let projectedTokens = estimateTokens(outgoing) + systemTokens
+          if (projectedTokens > USABLE) {
+            outgoing = pruneToFit(outgoing, USABLE - systemTokens)
+            projectedTokens = estimateTokens(outgoing) + systemTokens
+            if (projectedTokens > USABLE)
+              console.warn(`[useZoberChat] still over budget after prune: ${projectedTokens} / ${USABLE}`)
           }
 
           return {
             body: {
-              messages: finalMessages,
+              messages: outgoing,
               system_prompt: builtPrompt,
               openrouter_api_key: apiKey || null,
               tools: includeTools ? getToolDefinitions(toolPool) : [],
@@ -403,6 +410,12 @@ export function useZoberChat(args: ZoberChatArgs) {
       errorCountRef.current += 1
       console.error('Agent chat error:', err)
       toast.error(err.message || 'Unknown error')
+    },
+    onFinish({ message }) {
+      // Capture real usage if the backend streams it on message metadata, so
+      // compaction keys off actual token counts (opencode-style) rather than the
+      // CJK estimate. undefined when absent → maybeCompact falls back to estimate.
+      lastUsageTokensRef.current = readUsageTokens(message)
     },
   })
 
@@ -486,7 +499,9 @@ export function useZoberChat(args: ZoberChatArgs) {
           exercisesCompleted: exercisesThisSessionRef.current,
         })
       }
-      void maybeRunBackgroundSummary(db, threadId, fullHistory, apiKey, API_BASE, locale)
+      // Post-response, idle: compact when the turn reached the usable budget.
+      // Prefers real usage from this turn; falls back to the CJK estimate.
+      void maybeCompact(db, threadId, fullHistory, apiKey, API_BASE, locale, lastUsageTokensRef.current)
     })()
   }, [status, messages, db, narrowed, threadId, apiKey, locale])
 

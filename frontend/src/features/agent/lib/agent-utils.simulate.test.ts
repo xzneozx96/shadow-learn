@@ -45,7 +45,7 @@ describe('agent Utils Compaction Pipeline', () => {
     expect(hasText, 'The text response was lost').toBe(true)
   })
 
-  it('lobotomy Bug: compactForTokenBudget should never stub GUIDANCE_TOOLS', () => {
+  it('lobotomy Bug: the normalize pipeline should never stub GUIDANCE_TOOLS', () => {
     // Simulate a message way over budget to force compaction of old messages
     const heavyString = 'x'.repeat(64_000 * 5)
 

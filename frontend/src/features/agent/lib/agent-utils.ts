@@ -11,6 +11,12 @@ const DATA_TOOLS = new Set([
   'get_vocabulary',
   'get_progress_summary',
   'recall_memory',
+  // NOTE: `search_document` is deliberately NOT here. Dedup keys by tool name and
+  // keeps only the latest occurrence — but each search_document call returns
+  // DIFFERENT passages for a different query. Deduping would rewrite earlier
+  // retrievals to {status:'superseded'}, so an agent that makes several queries in
+  // one turn reads its own results as "no results / not in knowledge base".
+  // Old RAG payloads are freed only by compaction (aging out) / pruneToFit (overflow).
 ])
 
 // ── Types ──
@@ -40,34 +46,75 @@ export function toolName(p: ToolPart): string {
 
 /**
  * [STAGE 0: Helper]
- * Rough approximation of token count: ~4 characters per token.
- * While not perfectly accurate for all models, it provides a stable heuristic for
- * budget-clearing decisions without needing a heavy tokenizer in the browser.
- *
- * Example: "Hello" (5 chars) -> ~1.25 tokens
- * @param messages - The array of UIMessages to calculate tokens for.
- * @returns The estimated token count.
+ * CJK-aware token estimate. Latin text runs ~4 chars/token, but CJK codepoints
+ * (Han, kana, Hangul) are ~1-2 tokens *each* — char/4 under-counts Mandarin by
+ * 3-4×, which is the dominant content here. We count CJK at ~1.7 tokens and
+ * everything else at char/4. This is only the FALLBACK signal; real usage from
+ * the model response is preferred when available.
  */
+function isCjkCodepoint(c: number): boolean {
+  return (
+    (c >= 0x4E00 && c <= 0x9FFF) // CJK Unified Ideographs
+    || (c >= 0x3400 && c <= 0x4DBF) // Extension A
+    || (c >= 0xF900 && c <= 0xFAFF) // Compatibility Ideographs
+    || (c >= 0x3040 && c <= 0x30FF) // Hiragana + Katakana
+    || (c >= 0xAC00 && c <= 0xD7A3) // Hangul syllables
+  )
+}
+
+function textTokens(s: string): number {
+  let cjk = 0
+  let other = 0
+  for (const ch of s) {
+    if (isCjkCodepoint(ch.codePointAt(0)!))
+      cjk++
+    else
+      other++
+  }
+  return cjk * 1.7 + other / 4
+}
+
 export function estimateTokens(messages: UIMessage[]): number {
   if (messages.length === 0)
     return 0
-  let chars = 0
+  let tokens = 0
   for (const msg of messages) {
     for (const part of msg.parts) {
       if (part.type === 'text')
-        chars += (part.text ?? '').length
+        tokens += textTokens(part.text ?? '')
       else if (isToolPart(part) && part.output != null)
-        chars += typeof part.output === 'string' ? part.output.length : JSON.stringify(part.output).length
-      chars += 20 // per-part overhead (role, type, toolName)
+        tokens += textTokens(typeof part.output === 'string' ? part.output : JSON.stringify(part.output))
+      tokens += 5 // per-part overhead (role, type, toolName)
     }
-    chars += 30 // per-message overhead
+    tokens += 8 // per-message overhead
   }
-  return Math.ceil(chars / 4)
+  return Math.ceil(tokens)
 }
 
-/** Cheap char-based token estimate for a single string (no UIMessage wrapping). */
+/** CJK-aware token estimate for a single string (no UIMessage wrapping). */
 export function estimateTextTokens(text: string): number {
-  return Math.ceil(text.length / 4)
+  return Math.ceil(textTokens(text))
+}
+
+/**
+ * Extract the real token count for the last turn from a UI message's metadata,
+ * used as the primary overflow signal (the CJK estimate is the fallback).
+ *
+ * CONTRACT — the backend must stream this on the assistant message metadata:
+ *   metadata: { usage: { totalTokens, promptTokens?, cachedTokens? } }
+ * camelCase is canonical; snake_case (`total_tokens` / `prompt_tokens`) is also
+ * accepted so a backend that forwards OpenRouter's raw shape still works.
+ *
+ * Prefers `totalTokens` (this turn's input+output ≈ next turn's context), then
+ * `promptTokens`. Returns undefined when absent → caller falls back to estimate.
+ */
+export function readUsageTokens(message: unknown): number | undefined {
+  const meta = (message as { metadata?: Record<string, any> } | null)?.metadata
+  if (!meta)
+    return undefined
+  const u = (meta.usage ?? meta) as Record<string, unknown>
+  const v = u.totalTokens ?? u.total_tokens ?? u.promptTokens ?? u.prompt_tokens
+  return typeof v === 'number' && v > 0 ? v : undefined
 }
 
 /**
@@ -318,80 +365,54 @@ function deduplicateDataToolResults(messages: UIMessage[]): UIMessage[] {
   })
 }
 
-export const TOKEN_BUDGET = 64_000
-export const VERBATIM_TAIL = 15
+// ── Token budget (mirrors opencode's overflow.ts `usable`) ──
+// The agent runs on deepseek-v4-flash (1M context). USABLE reserves room for the
+// model's output so a full-context request never gets truncated server-side.
+export const MODEL_CONTEXT_WINDOW = 1_000_000
+export const RESERVE = 20_000
+export const USABLE = MODEL_CONTEXT_WINDOW - RESERVE
+
+// No-LLM prune fallback protects this many trailing messages (active context).
+export const PROTECT_RECENT_MESSAGES = 15
+
+/** opencode `isOverflow`: a turn's token count has reached the usable budget. */
+export function isOverflow(tokens: number, budget: number = USABLE): boolean {
+  return tokens >= budget
+}
 
 /**
- * [STAGE 7]
- * The Final Defense. If history still exceeds the token budget (e.g. 64k),
- * we aggressively truncate the past.
- *
- * 1. Preserves a sliding window (VERBATIM_TAIL=15) at the bottom.
- * 2. In messages ABOVE that window, we stub ALL tool outputs.
- * 3. Never deletes Knowledge Tools (Whitelist) to prevent "lobotomy".
- *
- * Before: 70,000 tokens (Crashes API)
- * After:  60,000 tokens (Safe)
+ * LLM-free prune fallback. Stubs tool outputs in OLDER messages (beyond the
+ * protected recent window) to reclaim tokens WITHOUT summarizing. Never deletes
+ * messages, never touches GUIDANCE_TOOLS (rules must survive), and never touches
+ * the protected tail — so active context incl. live `search_document` passages
+ * stays full. `compact()` is the primary sizing mechanism; this is the no-network
+ * backstop when `/api/summarize` is slow or unavailable.
  */
-export function compactForTokenBudget(
+export function pruneToFit(
   messages: UIMessage[],
-  budget: number = TOKEN_BUDGET,
-  verbatimTail: number = VERBATIM_TAIL,
+  budget: number = USABLE,
+  protectRecent: number = PROTECT_RECENT_MESSAGES,
 ): UIMessage[] {
   if (messages.length === 0 || estimateTokens(messages) <= budget)
     return messages
 
-  const splitAt = Math.max(0, messages.length - verbatimTail)
-  const tail = messages.slice(splitAt)
-  const older = messages.slice(0, splitAt)
-
-  // Stub tool result content in older messages
-  const compacted = older.map((msg) => {
-    if (msg.role !== 'assistant')
+  const splitAt = Math.max(0, messages.length - protectRecent)
+  return messages.map((msg, i) => {
+    if (i >= splitAt || msg.role !== 'assistant')
       return msg
-    if (!msg.parts.some(p =>
-      isToolPart(p) && (p.state === 'output-available' || p.state === 'output-error'),
-    )) {
+    if (!msg.parts.some(p => isToolPart(p) && p.state === 'output-available'))
       return msg
-    }
     return {
       ...msg,
       parts: msg.parts.map((p) => {
-        if (!isToolPart(p))
+        if (!isToolPart(p) || p.state !== 'output-available')
           return p
-        if (p.state === 'output-available') {
-          // EXEMPT: Never stub guidance/knowledge tools, or the agent lobotomizes itself
-          if (GUIDANCE_TOOLS.has(toolName(p))) {
-            return p
-          }
-          return { ...p, output: `[${toolName(p)} result omitted]` }
-        }
-        return p
+        if (GUIDANCE_TOOLS.has(toolName(p)))
+          return p
+        return { ...p, output: `[${toolName(p)} result omitted]` }
       }),
     }
   })
-
-  const result = [...compacted, ...tail]
-
-  // Drop oldest if still over budget
-  while (result.length > verbatimTail && estimateTokens(result) > budget) {
-    const dropIndex = result.findIndex((msg, i) => {
-      // Stop searching if we hit the guarded verbatim tail
-      if (i >= result.length - verbatimTail)
-        return false
-      // Protect guidance tools from being deleted
-      if (msg.role === 'assistant' && msg.parts.some(p => isToolPart(p) && GUIDANCE_TOOLS.has(toolName(p)))) {
-        return false
-      }
-      return true
-    })
-
-    if (dropIndex === -1)
-      break
-    result.splice(dropIndex, 1)
-  }
-
-  return result
 }
 
 // ── Public API ──
@@ -441,23 +462,20 @@ export function compactVocab(e: { id: string, word: string, romanization?: strin
  * [ Stage 6: deduplicateDataToolResults ]
  * Similar to Stage 5, but for temporary Data. If the agent calls `get_vocabulary` at minute 1,
  * and `get_vocabulary` again at minute 20, the Minute 1 data is stale.
- * This finds older data fetches and stubs them:
+ * This finds older data fetches and stubs them (keeping the latest full):
  * - Output: `{ status: "superseded" }`
+ * `search_document` is included here so stale RAG duplicates are freed while the
+ * latest result stays intact (the answer's source-of-truth is never trimmed).
  *
- * [ Stage 7: compactForTokenBudget ]
- * The Last Resort. If the history is STILL heavily over the budget (e.g. > 64,000 tokens),
- * it aggressively prunes older chat history.
- * - Step A: It ring-fences the `VERBATIM_TAIL` (the last 15 messages) so immediate context is safe.
- * - Step B: In messages older than the Tail, it blanks out ALL normal tool outputs.
- * - Step C: It loops to literally delete the oldest messages one by one (`slice`) until
- *           budget is met.
- * - CRITICAL: It actively searches for and EXEMPTS knowledge tools (e.g., `get_core_guidelines`)
- *             from deletion so the agent never forgets its core instructions.
+ * Sizing is NOT done here anymore. Overflow is handled by `compact()`
+ * (background-summary.ts) — summarize old turns, keep the recent tail full — with
+ * `pruneToFit` as the LLM-free backstop. Mirrors opencode: this pipeline is the
+ * per-send cleanup; compaction owns the budget.
  *
- * Diagram of a heavily compressed history sent to the LLM:
+ * Diagram of a normalized history sent to the LLM:
  *
  *  [User] "How does this app work?"
- *  [Asst] <get_core_guidelines output=MARKDOWN_KEPT>   <-- Protected by Stage 7
+ *  [Asst] <get_core_guidelines output=MARKDOWN_KEPT>   <-- Guidance always kept
  *  [User] "What's my vocab?"
  *  [Asst] <get_vocabulary output=[superseded]>         <-- Deduplicated by Stage 6
  *  [User] "Wait show me again."
@@ -473,6 +491,5 @@ export function normalizeMessagesForBackend(messages: UIMessage[]): UIMessage[] 
   result = summarizeRenderOutputs(result)
   result = compressStaleGuidance(result)
   result = deduplicateDataToolResults(result)
-  result = compactForTokenBudget(result)
   return result
 }

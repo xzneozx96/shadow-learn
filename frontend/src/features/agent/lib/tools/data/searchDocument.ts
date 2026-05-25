@@ -28,11 +28,14 @@ export async function executeSearchDocument(
 
 export const searchDocumentTool = buildTool({
   name: 'search_document',
-  description: 'Search the knowledge base and return relevant verbatim passages to ground your answer. The knowledge base holds two kinds of documents: (1) the ShadowLearn app user manual — how to use features of the app; (2) a grammar-point reference compiled from well-known language-learning YouTube channels. Call this for questions like "how do I use shadowing mode?" (manual) or "explain the 把 construction" / "when do I use this grammar point?" (grammar reference). Pass a natural-language question, not keywords. Ground your answer in the returned passages and cite the source document; do not add facts beyond them.',
+  description: 'Search the knowledge base and return relevant verbatim passages to ground your answer. The knowledge base holds three kinds of documents: (1) the ShadowLearn app user manual — how to use features of the app; (2) a grammar-point reference compiled from well-known language-learning YouTube channels; (3) learning strategy content covering vocabulary acquisition methods, memorization techniques, study scheduling, and effective learning habits. Call this for: "how do I use shadowing mode?" (manual), "explain the 把 construction" (grammar), or "how do I memorize Chinese words / plan my study day / learn vocabulary effectively?" (learning strategies). Also call this when the user asks for a recommended video or lesson on any of these topics. Pass a natural-language question, not keywords. Ground your answer in the returned passages and cite the source; do not add facts beyond them.',
   inputSchema: SearchDocumentSchema,
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
-  maxResultSizeChars: 100_000,
-  searchHint: 'search app manual, how to use feature, grammar point explanation, construction pattern language reference',
+  // RAG passages are the source of truth the agent fetched to answer; never chop
+  // them at produce-time. Context is managed downstream by compaction (stale
+  // passages are pruned only after being summarized away, never the active one).
+  maxResultSizeChars: Number.MAX_SAFE_INTEGER,
+  searchHint: 'search app manual, how to use feature, grammar point explanation, construction pattern language reference, vocabulary memorization methods, study planning, learning tips, effective Chinese learning strategies',
   execute: async (input, _context) => executeSearchDocument(input as SearchDocumentArgs),
 })

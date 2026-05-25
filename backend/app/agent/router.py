@@ -472,6 +472,13 @@ async def _stream_agent(stream, stitch_message_id: str | None = None):
             total = getattr(usage_data, "total_tokens", None)
             if total is not None:
                 usage_payload["totalTokens"] = total
+            # Forward prompt-cache hit count so the client can observe cache
+            # effectiveness (OpenRouter-native accounting; may be absent on
+            # providers without caching).
+            finish_details = getattr(usage_data, "prompt_tokens_details", None)
+            finish_cached = getattr(finish_details, "cached_tokens", None) if finish_details else None
+            if finish_cached is not None:
+                usage_payload["cachedTokens"] = finish_cached
             finish_event["messageMetadata"] = {"usage": usage_payload}
 
         yield fmt(finish_event)
