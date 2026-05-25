@@ -32,7 +32,10 @@ export const searchDocumentTool = buildTool({
   inputSchema: SearchDocumentSchema,
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
-  maxResultSizeChars: 100_000,
+  // RAG passages are the source of truth the agent fetched to answer; never chop
+  // them at produce-time. Context is managed downstream by compaction (stale
+  // passages are pruned only after being summarized away, never the active one).
+  maxResultSizeChars: Number.MAX_SAFE_INTEGER,
   searchHint: 'search app manual, how to use feature, grammar point explanation, construction pattern language reference, vocabulary memorization methods, study planning, learning tips, effective Chinese learning strategies',
   execute: async (input, _context) => executeSearchDocument(input as SearchDocumentArgs),
 })
