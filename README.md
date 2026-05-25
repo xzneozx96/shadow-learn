@@ -33,6 +33,103 @@ A Chinese language learning platform built around the **shadowing technique**. U
 
 ---
 
+## AI Companion — Harness Architecture
+
+The AI companion is not a single LLM call — it's an engineered agent harness. A turn flows through five layers and loops back.
+
+### The Layers (one turn flows top → bottom → back)
+
+```mermaid
+flowchart TD
+    U([User message])
+
+    subgraph PROMPT[" 1 · Prompt Assembly "]
+        direction TB
+        P1[Role + behaviour instructions]
+        P2[Grammar &amp; learning protocols]
+        P3[Learner profile · memory · session state]
+        P4[Cache-stable prefix → cheap reuse]
+    end
+
+    subgraph LOOP[" 2 · Agent Loop "]
+        direction TB
+        L1[Stream model response]
+        L2{Model wants<br/>a tool?}
+        L3[Auto-resubmit with results<br/>up to N rounds]
+    end
+
+    subgraph TOOLS[" 3 · Tool Calling "]
+        direction TB
+        T1[Tool definitions<br/>name · purpose · when-to-use]
+        T2[Executor<br/>parallel-safe vs serialized]
+        T3[(Data tools<br/>RAG · vocabulary · memory · study context)]
+        T4[(Render tools<br/>study session · vocab card · charts)]
+        T5[(Guidance tools<br/>teaching guidelines &amp; manuals)]
+    end
+
+    subgraph CTX[" 4 · Context Management "]
+        direction TB
+        C1[Track real token usage per turn]
+        C2{Over budget?}
+        C3[Compact: keep recent turns whole,<br/>summarize older into structured recap]
+        C4[Strip stale tool output,<br/>protect active RAG passages]
+    end
+
+    subgraph BACK[" 5 · Backend &amp; Knowledge "]
+        direction TB
+        B1[Streaming model gateway]
+        B2[RAG pipeline:<br/>route → retrieve → ground]
+        B3[(Persisted chats<br/>+ summaries)]
+    end
+
+    U --> PROMPT --> LOOP
+    L1 --> L2
+    L2 -- yes --> TOOLS
+    T1 --> T2 --> T3 & T4 & T5
+    TOOLS -- results --> L3 --> L1
+    L2 -- no --> CTX
+    C1 --> C2
+    C2 -- yes --> C3 --> C4 --> BACK
+    C2 -- no --> BACK
+    B2 -.grounds.-> T3
+    BACK --> A([Grounded answer + source link])
+```
+
+### One Turn, End to End
+
+```mermaid
+sequenceDiagram
+    participant U as Learner
+    participant H as Harness
+    participant M as Model
+    participant T as Tools / RAG
+    participant X as Context Mgr
+
+    U->>H: "的 得 地 are so confusing…"
+    H->>H: Assemble prompt (protocols + profile,<br/>cached prefix reused)
+    H->>M: Stream request
+    M-->>H: Intent: this is a grammar struggle → search
+    H->>T: search knowledge base
+    T-->>H: Verbatim passages + source URL
+    H->>M: Resubmit grounded with passages
+    M-->>H: Explanation grounded in source
+    H->>X: Record real token usage
+    alt Over budget
+        X->>X: Keep recent turns whole,<br/>summarize older, protect active RAG
+    end
+    H-->>U: Answer + "watch the source" link
+```
+
+### Engineering Wins
+
+- **Infers intent** — fires retrieval on *implicit* struggle, not just explicit questions.
+- **Grounded, not guessed** — grammar answers come from retrieved source passages, always cited.
+- **Agentic loop** — multi-round tool use, not single-shot.
+- **Never dead-ends** — compaction keeps long sessions alive instead of "start a new chat."
+- **Cost-aware** — stable prompt prefix → cache hits → lower latency &amp; spend.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
