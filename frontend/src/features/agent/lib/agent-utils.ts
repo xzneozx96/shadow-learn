@@ -11,9 +11,12 @@ const DATA_TOOLS = new Set([
   'get_vocabulary',
   'get_progress_summary',
   'recall_memory',
-  // Stale RAG payloads are freed (latest kept full) so old retrievals don't
-  // accumulate; the active result the agent just fetched is never touched.
-  'search_document',
+  // NOTE: `search_document` is deliberately NOT here. Dedup keys by tool name and
+  // keeps only the latest occurrence — but each search_document call returns
+  // DIFFERENT passages for a different query. Deduping would rewrite earlier
+  // retrievals to {status:'superseded'}, so an agent that makes several queries in
+  // one turn reads its own results as "no results / not in knowledge base".
+  // Old RAG payloads are freed only by compaction (aging out) / pruneToFit (overflow).
 ])
 
 // ── Types ──
@@ -91,6 +94,27 @@ export function estimateTokens(messages: UIMessage[]): number {
 /** CJK-aware token estimate for a single string (no UIMessage wrapping). */
 export function estimateTextTokens(text: string): number {
   return Math.ceil(textTokens(text))
+}
+
+/**
+ * Extract the real token count for the last turn from a UI message's metadata,
+ * used as the primary overflow signal (the CJK estimate is the fallback).
+ *
+ * CONTRACT — the backend must stream this on the assistant message metadata:
+ *   metadata: { usage: { totalTokens, promptTokens?, cachedTokens? } }
+ * camelCase is canonical; snake_case (`total_tokens` / `prompt_tokens`) is also
+ * accepted so a backend that forwards OpenRouter's raw shape still works.
+ *
+ * Prefers `totalTokens` (this turn's input+output ≈ next turn's context), then
+ * `promptTokens`. Returns undefined when absent → caller falls back to estimate.
+ */
+export function readUsageTokens(message: unknown): number | undefined {
+  const meta = (message as { metadata?: Record<string, any> } | null)?.metadata
+  if (!meta)
+    return undefined
+  const u = (meta.usage ?? meta) as Record<string, unknown>
+  const v = u.totalTokens ?? u.total_tokens ?? u.promptTokens ?? u.prompt_tokens
+  return typeof v === 'number' && v > 0 ? v : undefined
 }
 
 /**

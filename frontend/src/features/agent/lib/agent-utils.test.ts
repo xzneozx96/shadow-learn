@@ -1,6 +1,6 @@
 import type { UIMessage } from 'ai'
 import { describe, expect, it } from 'vitest'
-import { estimateTokens, isOverflow, normalizeMessagesForBackend, pruneToFit, USABLE } from '@/features/agent/lib/agent-utils'
+import { estimateTokens, isOverflow, normalizeMessagesForBackend, pruneToFit, readUsageTokens, USABLE } from '@/features/agent/lib/agent-utils'
 
 /**
  * Build a UIMessage for tests. Parts often carry extra fields (toolName, args)
@@ -433,6 +433,33 @@ describe('estimateTokens', () => {
       }],
     })]
     expect(estimateTokens(large)).toBeGreaterThan(estimateTokens(small) * 5)
+  })
+})
+
+describe('readUsageTokens', () => {
+  it('reads canonical camelCase metadata.usage.totalTokens', () => {
+    expect(readUsageTokens({ metadata: { usage: { totalTokens: 22889 } } })).toBe(22889)
+  })
+
+  it('accepts snake_case total_tokens (raw OpenRouter shape)', () => {
+    expect(readUsageTokens({ metadata: { usage: { total_tokens: 22889 } } })).toBe(22889)
+  })
+
+  it('falls back to promptTokens when total is absent', () => {
+    expect(readUsageTokens({ metadata: { usage: { promptTokens: 22213 } } })).toBe(22213)
+    expect(readUsageTokens({ metadata: { usage: { prompt_tokens: 22213 } } })).toBe(22213)
+  })
+
+  it('reads usage placed directly on metadata', () => {
+    expect(readUsageTokens({ metadata: { totalTokens: 100 } })).toBe(100)
+  })
+
+  it('returns undefined when absent or non-numeric (→ estimate fallback)', () => {
+    expect(readUsageTokens({})).toBeUndefined()
+    expect(readUsageTokens(null)).toBeUndefined()
+    expect(readUsageTokens({ metadata: {} })).toBeUndefined()
+    expect(readUsageTokens({ metadata: { usage: { totalTokens: 0 } } })).toBeUndefined()
+    expect(readUsageTokens({ metadata: { usage: { totalTokens: 'x' } } })).toBeUndefined()
   })
 })
 

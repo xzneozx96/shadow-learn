@@ -38,6 +38,16 @@ export function toDateOnly(iso?: string): string {
   return (iso ?? new Date().toISOString()).slice(0, 10)
 }
 
+export function learningResourceProtocolBlock(): string {
+  return tag('learning_resource_protocol', [
+    'Learning tips and vocabulary methods = call `search_document` FIRST, then ground the answer in the returned passages.',
+    '- **TRIGGER:** any question about HOW to learn Chinese — memorizing words, building vocabulary, planning a study schedule, retention techniques, effective daily habits, or any request for a recommended video/lesson on a specific learning topic (e.g. "how do I memorize tones", "recommend a video about spaced repetition", "how should I plan my study day").',
+    '- **DO NOT answer from training data alone.** The knowledge base contains curated content from language-learning experts; prefer retrieved passages over generic advice.',
+    '- **NO REDUNDANT CALLS:** if a prior `search_document` result in this conversation already covers the topic, reuse those passages.',
+    '- **SHOW THE SOURCE URL** when one appears in the returned passages — link the learner directly to the original video.',
+  ])
+}
+
 // ── Static blocks (no per-session data → cacheable) ──────────────────────────
 
 export function roleBlock(surface: PromptSurface): string {
@@ -86,12 +96,14 @@ export function instructionsBlock(surface: PromptSurface): string {
         '- Skip filler and preamble. Use one sentence when possible.',
         '- Use save_memory() to remember important user preferences or observations.',
         '- **Call `recall_memory()` proactively when the user asks about their goals, preferences, history, or learning context** — do not rely solely on the Memory Summary above.',
-        '- Answer general learning questions, including grammar (see `<grammar_protocol>`). Only DECLINE questions about a specific YouTube lesson\'s content or lesson-specific actions (exercises, shadowing) — point the user into the lesson for those. Boundary: "what does 把 mean / how does 了 work" = general grammar, ANSWER it; "what does the 3rd sentence of my Daily Conversation lesson mean / start a drill" = lesson-specific, REDIRECT into the lesson.',
-        '- For grammar, follow `<grammar_protocol>` below — never `get_skill_guide`.',
+        '- Answer general learning questions, including grammar (see `<grammar_protocol>`) and learning strategies (see `<learning_resource_protocol>`). Only DECLINE questions about a specific YouTube lesson\'s content or lesson-specific actions (exercises, shadowing) — point the user into the lesson for those. Boundary: "what does 把 mean / how does 了 work" = general grammar, ANSWER it; "what does the 3rd sentence of my Daily Conversation lesson mean / start a drill" = lesson-specific, REDIRECT into the lesson.',
+        '- For grammar, follow `<grammar_protocol>` — never `get_skill_guide`.',
+        '- For learning tips, study planning, vocabulary methods, or video recommendations, follow `<learning_resource_protocol>` — call `search_document` first.',
         '- If asked for tips, advice, or a topic covered in core guidelines or skill guides, ALWAYS use get_core_guidelines() or get_skill_guide() to provide accurate info.',
         '- Do not re-call `get_core_guidelines` or `get_skill_guide` if already loaded this session.',
       ]),
       grammarProtocolBlock(),
+      learningResourceProtocolBlock(),
     ])
   }
   return compose([
@@ -100,7 +112,8 @@ export function instructionsBlock(surface: PromptSurface): string {
       '- Skip filler and preamble. Use one sentence when possible.',
       '- **Call `get_core_guidelines()` at session start — loads SLA principles, feedback templates, and session protocols.**',
       '- **ALWAYS call `get_skill_guide({ skill })` BEFORE giving advice, tips, or answering "how-to" questions about specific skills (tones, pronunciation, vocabulary, listening, speaking, characters).**',
-      '- For grammar, follow `<grammar_protocol>` below — never `get_skill_guide`.',
+      '- For grammar, follow `<grammar_protocol>` — never `get_skill_guide`.',
+      '- For learning tips, study planning, vocabulary methods, or video recommendations, follow `<learning_resource_protocol>` — call `search_document` first.',
       '- Chain tools when needed, but always end with a user-visible response.',
       '- Use get_study_context (composite) before suggesting exercises — it covers all data in one call.',
       '- Save important user observations with save_memory().',
@@ -108,6 +121,7 @@ export function instructionsBlock(surface: PromptSurface): string {
       '- Do not call `get_vocabulary` without a specific purpose — avoid speculative data fetching.',
     ]),
     grammarProtocolBlock(),
+    learningResourceProtocolBlock(),
     tag('exercise_rendering_rules', [
       'STRICT RULES — exercises MUST be rendered via tools, never as chat text.',
       '- **NEVER write exercise questions as plain text in the chat.** Exercises MUST always be rendered via `render_study_session`.',

@@ -33,6 +33,7 @@ import {
   normalizeMessagesForBackend,
   PAGE_SIZE,
   pruneToFit,
+  readUsageTokens,
   USABLE,
 } from '@/features/agent/lib/agent-utils'
 import { buildPrompt, resolveThreadId } from '@/features/agent/lib/context-assembler'
@@ -411,11 +412,10 @@ export function useZoberChat(args: ZoberChatArgs) {
       toast.error(err.message || 'Unknown error')
     },
     onFinish({ message }) {
-      // Capture real usage if the backend attaches it to message metadata, so
+      // Capture real usage if the backend streams it on message metadata, so
       // compaction keys off actual token counts (opencode-style) rather than the
-      // CJK estimate. Shape is defensive — undefined when not reported.
-      const usage = (message as { metadata?: { usage?: { totalTokens?: number } } }).metadata?.usage
-      lastUsageTokensRef.current = typeof usage?.totalTokens === 'number' ? usage.totalTokens : undefined
+      // CJK estimate. undefined when absent → maybeCompact falls back to estimate.
+      lastUsageTokensRef.current = readUsageTokens(message)
     },
   })
 
