@@ -114,7 +114,7 @@ export function useStudyQueue(
 
     // ── Shadowing done ────────────────────────────────────────────────────
     const logs = await getAllSessionLogs(db)
-    setShadowingDone(logs.some(l => l.skillPracticed === 'speaking' && l.date === today))
+    setShadowingDone(logs.some(l => (l.skillPracticed === 'speaking' || l.skillPracticed === 'listening') && l.date === today))
 
     // ── Custom tasks ──────────────────────────────────────────────────────
     setCustomTasks(await getDailyTasks(db))
