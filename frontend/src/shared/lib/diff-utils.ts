@@ -12,6 +12,13 @@ export interface DiffToken {
 const SPLIT_RE = /\s+/
 const FILTER_BOOL = Boolean as unknown as (s: string) => s is string
 const PINYIN_MN_RE = /\p{Mn}/gu
+// Chinese sentence markers + full-width punctuation + common ASCII sentence markers
+// “” = curly double quotes, ‘’ = curly single quotes
+const PUNCTUATION_RE = /[。，？！；：“”‘’（）【】《》〈〉…—～、·,.!?;:'"()[\]{}<>-]/g
+
+function stripPunctuation(text: string): string {
+  return text.replace(PUNCTUATION_RE, '')
+}
 
 function getGraphemeClusters(text: string): string[] {
   const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
@@ -25,8 +32,8 @@ function getGraphemeClusters(text: string): string[] {
  * Shorter side is padded with empty slots (counted as incorrect).
  */
 export function computeCharDiff(userInput: string, correctText: string): DiffToken[] {
-  const userClusters = getGraphemeClusters(userInput.trim())
-  const correctClusters = getGraphemeClusters(correctText.trim())
+  const userClusters = getGraphemeClusters(stripPunctuation(userInput.trim()))
+  const correctClusters = getGraphemeClusters(stripPunctuation(correctText.trim()))
   const len = Math.max(userClusters.length, correctClusters.length)
   const tokens: DiffToken[] = []
   for (let i = 0; i < len; i++) {

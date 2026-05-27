@@ -40,6 +40,38 @@ describe('computeCharDiff', () => {
   it('returns empty for two empty strings', () => {
     expect(computeCharDiff('', '')).toHaveLength(0)
   })
+
+  it('ignores trailing Chinese period when user omits it', () => {
+    const tokens = computeCharDiff('你好', '你好。')
+    expect(tokens.every(t => t.correct)).toBe(true)
+  })
+
+  it('ignores trailing ASCII period when user omits it', () => {
+    const tokens = computeCharDiff('hello', 'hello.')
+    expect(tokens.every(t => t.correct)).toBe(true)
+  })
+
+  it('ignores Chinese comma in correct text', () => {
+    const tokens = computeCharDiff('你好', '你好，')
+    expect(tokens.every(t => t.correct)).toBe(true)
+  })
+
+  it('ignores question mark in correct text', () => {
+    const tokens = computeCharDiff('你好吗', '你好吗？')
+    expect(tokens.every(t => t.correct)).toBe(true)
+  })
+
+  it('ignores punctuation typed by user that does not appear in correct text', () => {
+    const tokens = computeCharDiff('你好。', '你好')
+    expect(tokens.every(t => t.correct)).toBe(true)
+  })
+
+  it('still marks wrong hanzi as incorrect after punctuation strip', () => {
+    const tokens = computeCharDiff('你坏吗', '你好吗？')
+    expect(tokens[0].correct).toBe(true)
+    expect(tokens[1].correct).toBe(false)
+    expect(tokens[2].correct).toBe(true)
+  })
 })
 
 describe('stripPinyinTones', () => {
