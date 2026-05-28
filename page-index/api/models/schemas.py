@@ -55,8 +55,15 @@ class SearchPassage(BaseModel):
     title: str
     content: str
 
+class SearchDocument(BaseModel):
+    doc_id: str
+    doc_name: str
+    doc_description: Optional[str] = None
+    page_count: int = 0
+    structure: List[Any]
+
 class SearchResponse(BaseModel):
-    passages: List[SearchPassage]
+    documents: List[SearchDocument]
     routed_doc_ids: List[str]
 
 # === Retrieval ===

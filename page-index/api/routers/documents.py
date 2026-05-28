@@ -1,4 +1,11 @@
+import json
+import os
+import uuid
+
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from starlette.concurrency import run_in_threadpool
+
+from api.config import settings
 from api.models.schemas import (
     DocumentUploadResponse,
     DocumentResultResponse,
@@ -9,7 +16,7 @@ from api.models.schemas import (
 from api.services.document_service import DocumentService
 from api.utils.storage import enforce_size_limit
 from api.dependencies import get_db
-import uuid
+from pageindex.retrieve import get_page_content as _get_page_content
 
 router = APIRouter()
 
@@ -73,6 +80,26 @@ async def get_document_page(
         page_index=page_num,
         content=content
     )
+
+@router.get("/{doc_id}/pages")
+async def get_document_pages(doc_id: str, pages: str):
+    """Get text of specific pages. Use tight ranges: '5-7', '3,8', or '12'."""
+    result_path = os.path.join(settings.RESULTS_DIR, f"{doc_id}.json")
+    if not os.path.exists(result_path):
+        raise HTTPException(status_code=404, detail="Document not found or not yet processed")
+    with open(result_path) as f:
+        doc_info = json.load(f)
+    doc_info["id"] = doc_id
+    doc_info.setdefault("type", "pdf")
+    doc_info["path"] = os.path.join(settings.UPLOAD_DIR, f"{doc_id}.pdf")
+    result = await run_in_threadpool(
+        _get_page_content, {doc_id: doc_info}, doc_id, pages
+    )
+    result_data = json.loads(result)
+    if isinstance(result_data, dict) and 'error' in result_data:
+        raise HTTPException(status_code=400, detail=result_data['error'])
+    return result_data
+
 
 @router.delete("/{doc_id}/")
 async def delete_document(doc_id: str, db = Depends(get_db)):
