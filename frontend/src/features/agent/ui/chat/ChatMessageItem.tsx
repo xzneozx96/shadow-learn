@@ -2,14 +2,13 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { MessageAction } from './MessageActions'
 import type { ExerciseRenderResult } from '@/features/study/ui/ExerciseRenderer'
-import { Brain, ChevronDown, FileText } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { motion } from 'motion/react'
-import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { useI18n } from '@/app/providers/I18nContext'
 import {
   getToolName,
   isToolPart,
-  isWidePart,
 } from '@/features/agent/lib/companion-utils'
 import {
   EXERCISE_TOOLS,
@@ -18,12 +17,18 @@ import {
 import {
   ProgressChartRenderer,
   ToolCallCard,
+  ToolTraceCard,
   VocabCardRenderer,
 } from '@/features/agent/ui/AgentRenderers'
 import { ExerciseRenderer } from '@/features/study/ui/ExerciseRenderer'
 import { isSessionCompletePayload } from '@/shared/lib/study-utils'
-import { cn } from '@/shared/lib/utils'
-import { TextShimmer } from '@/shared/ui/text-shimmer'
+import {
+  ChainOfThought,
+  ChainOfThoughtContent,
+  ChainOfThoughtHeader,
+  ChainOfThoughtStep,
+} from '@/shared/ui/ai-elements/chain-of-thought'
+import { buildAssistantTrace } from './assistant-trace'
 import { MessageActions } from './MessageActions'
 import { MessageMarkdown } from './MessageMarkdown'
 import { SessionResultsCard } from './SessionResultsCard'
@@ -49,51 +54,6 @@ export function StreamingDots() {
       <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:150ms]" />
       <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:300ms]" />
     </span>
-  )
-}
-
-// Extracted so memo can skip re-renders when only the parent streaming/open state changes.
-const ThinkingExpandedContent = memo(({ text }: { text: string }) => (
-  <div className="px-3 pb-2 pt-0.5 whitespace-pre-wrap leading-relaxed border-t border-border/40 text-muted-foreground">
-    {text}
-  </div>
-))
-
-// Extracted so memo skips header re-renders on every reasoning delta (streaming=true doesn't change per chunk).
-const ThinkingHeader = memo(({ streaming, open, onToggle }: { streaming: boolean, open: boolean, onToggle: () => void }) => {
-  const { t } = useI18n()
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="flex w-full items-center gap-2 px-3 py-2 hover:bg-muted/40 transition-colors"
-    >
-      <Brain
-        className={cn(
-          'size-4 shrink-0 text-muted-foreground',
-          streaming && 'motion-safe:animate-pulse text-foreground/70',
-        )}
-      />
-      <span className="flex-1 text-left font-medium">
-        {streaming
-          ? <TextShimmer as="span" className="font-medium" duration={1.5}>{t('chat.thinking.streaming')}</TextShimmer>
-          : t('chat.thinking')}
-      </span>
-      <ChevronDown className={cn('size-4 text-muted-foreground shrink-0 transition-transform duration-200', open && 'rotate-180')} />
-    </button>
-  )
-})
-
-function ThinkingBlock({ text, streaming }: { text: string, streaming: boolean }) {
-  const [open, setOpen] = useState(false)
-  // Defer layout-heavy text renders so rapid reasoning deltas don't block the UI.
-  const deferredText = useDeferredValue(text)
-  const handleToggle = useCallback(() => setOpen(o => !o), [])
-  return (
-    <div className="mb-2 rounded-sm border border-border bg-input text-xs text-foreground overflow-hidden">
-      <ThinkingHeader streaming={streaming} open={open} onToggle={handleToggle} />
-      {open && <ThinkingExpandedContent text={deferredText} />}
-    </div>
   )
 }
 
@@ -198,18 +158,8 @@ export function renderMessageParts(
       return <ToolCallCard key={partKey} toolName={toolName} state={state as 'input-available'} input={part.input} />
     }
 
-    if (part.type === 'reasoning') {
-      const rp = part as { type: 'reasoning', text: string, state?: 'streaming' | 'done' }
-      if (!rp.text)
-        return null
-      return (
-        <ThinkingBlock
-          key={`reasoning-${i}`}
-          text={rp.text}
-          streaming={rp.state === 'streaming'}
-        />
-      )
-    }
+    if (part.type === 'reasoning')
+      return null
 
     if (part.type === 'text') {
       const partKey = `text-${i}`
@@ -262,12 +212,21 @@ interface MessageItemProps {
 
 export const MessageItem = memo(
   ({ msg, sendMessage, activeWideIds, isLast, isStreaming, onTimestampClick, actions, onRegenerate }: MessageItemProps) => {
+    const { t } = useI18n()
+    const [traceOpen, setTraceOpen] = useState(isStreaming)
+    useEffect(() => {
+      setTraceOpen(isStreaming)
+    }, [isStreaming])
     const assistantText = useMemo(
       () =>
         msg.role === 'assistant'
           ? msg.parts.filter(p => p.type === 'text').map(p => (p as { text: string }).text).join('')
           : '',
       [msg.role, msg.parts],
+    )
+    const trace = useMemo(
+      () => (msg.role === 'assistant' ? buildAssistantTrace(msg, isStreaming) : { steps: [], hasTextAnswer: false }),
+      [isStreaming, msg],
     )
 
     if (msg.role !== 'assistant') {
@@ -310,30 +269,51 @@ export const MessageItem = memo(
       )
     }
 
-    // Split assistant parts: text + tool indicator cards in bubble; wide parts
-    // (exercises, charts, vocab cards) render full-width below.
-    const parts = msg.parts
-    // Tool parts before text parts so indicators show above the response text
-    const bubbleParts = parts.filter(p => !isWidePart(p)).toSorted((a, b) => {
-      const aIsTool = isToolPart(a) ? 0 : 1
-      const bIsTool = isToolPart(b) ? 0 : 1
-      return aIsTool - bIsTool
-    })
-    const fullWidthParts = parts.filter(isWidePart)
-
-    const bubbleContent = renderMessageParts({ ...msg, parts: bubbleParts } as UIMessage, sendMessage, activeWideIds, onTimestampClick)
-    const fullWidthContent = renderMessageParts({ ...msg, parts: fullWidthParts } as UIMessage, sendMessage, activeWideIds, onTimestampClick)
-    const hasBubble = bubbleParts.some((p) => {
-      if (p.type === 'text' && 'text' in p)
-        return (p.text as string)?.trim()
-      if (p.type === 'reasoning' && 'text' in p)
-        return (p.text as string)?.trim()
-      if (isToolPart(p))
-        return true
-      return false
-    })
-
     const showActions = !isStreaming && actions && actions.length > 0 && assistantText.trim().length > 0
+
+    function renderTraceStep(step: ReturnType<typeof buildAssistantTrace>['steps'][number], index: number) {
+      if (step.kind === 'reasoning') {
+        return (
+          <ChainOfThoughtStep
+            key={`reasoning-${index}-${step.text.slice(0, 24)}`}
+            label={isStreaming ? t('chat.thinking.streaming') : t('chat.thinking')}
+            icon={undefined}
+            description={step.text}
+            status={step.status}
+          />
+        )
+      }
+
+      const isWide = activeWideIds.has(step.toolCallId) || activeWideIds.has(step.toolName)
+      const toolKey = `tool.${step.toolName}`
+      const translatedTool = t(toolKey as Parameters<typeof t>[0])
+      const toolLabel = translatedTool === toolKey ? step.toolName : translatedTool
+
+      return (
+        <ChainOfThoughtStep
+          key={step.toolCallId}
+          label={toolLabel}
+          status={step.status}
+        >
+          <ToolTraceCard
+            toolName={step.toolName}
+            state={
+              step.status === 'pending'
+                ? 'input-streaming'
+                : step.status === 'active'
+                  ? 'input-available'
+                  : step.status === 'error'
+                    ? 'output-error'
+                    : 'output-available'
+            }
+            isError={step.status === 'error'}
+            errorMessage={step.errorText}
+            input={step.input}
+            output={isWide ? undefined : step.output}
+          />
+        </ChainOfThoughtStep>
+      )
+    }
 
     return (
       <motion.div
@@ -342,11 +322,24 @@ export const MessageItem = memo(
         animate={{ opacity: 1, x: 0, y: 0 }}
         transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       >
-        {hasBubble && (
+        {(trace.steps.length > 0 || assistantText.trim().length > 0) && (
           <div className="flex flex-col w-full">
             <div className="flex justify-start w-full">
-              <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-card border text-foreground">
-                {bubbleContent}
+              <div className="max-w-[90%] px-3 py-2 text-sm text-foreground space-y-3">
+                {trace.steps.length > 0 && (
+                  <ChainOfThought open={traceOpen} onOpenChange={setTraceOpen}>
+                    <ChainOfThoughtHeader
+                      isStreaming={isStreaming}
+                      label={isStreaming ? t('chat.thinking.streaming') : t('chat.thinking')}
+                    />
+                    <ChainOfThoughtContent>
+                      {trace.steps.map((step, index) => renderTraceStep(step, index))}
+                    </ChainOfThoughtContent>
+                  </ChainOfThought>
+                )}
+                {assistantText.trim().length > 0 && (
+                  <MessageMarkdown text={assistantText} onTimestampClick={onTimestampClick} />
+                )}
               </div>
             </div>
             {showActions && (
@@ -358,11 +351,6 @@ export const MessageItem = memo(
                 onRegenerate={onRegenerate}
               />
             )}
-          </div>
-        )}
-        {fullWidthParts.length > 0 && (
-          <div className="w-full text-sm space-y-2">
-            {fullWidthContent}
           </div>
         )}
       </motion.div>

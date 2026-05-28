@@ -163,13 +163,13 @@ export function ToolOutput({
       </h4>
       <div
         className={cn(
-          'overflow-x-auto rounded-md text-xs [&_table]:w-full',
+          'max-h-[300px] overflow-auto rounded-sm text-xs',
           errorText
             ? 'bg-destructive/10 text-destructive'
             : 'bg-muted/50 text-foreground',
         )}
       >
-        {errorText && <div>{errorText}</div>}
+        {errorText && <div className="px-2 py-1">{errorText}</div>}
         {Output}
       </div>
     </div>
