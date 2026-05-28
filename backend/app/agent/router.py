@@ -55,6 +55,7 @@ class AgentRequest(BaseModel):
     model: str | None = None
     trigger: str | None = None
     stitch_message_id: str | None = None
+    thread_id: str | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -548,6 +549,9 @@ async def agent_chat(request: AgentRequest) -> StreamingResponse:
         # hit rate (cached_tokens) — see _stream_agent logging.
         "stream_options": {"include_usage": True},
         "extra_body": {
+            # Prompt cache key for OpenRouter sticky routing + prefix caching.
+            # Same thread_id across turns = same cache shard.
+            "prompt_cache_key": request.thread_id or "default",
             # OpenRouter-native usage accounting — includes cached_tokens / cost.
             "usage": {"include": True},
             "reasoning": {"budget_tokens": 256},

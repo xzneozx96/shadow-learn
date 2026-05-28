@@ -8,11 +8,17 @@ export const SearchDocumentSchema = z.object({
 
 export type SearchDocumentArgs = z.infer<typeof SearchDocumentSchema>
 
-interface Passage { doc_id: string, doc_name: string, title: string, content: string }
+interface SearchDocumentResult {
+  doc_id: string
+  doc_name: string
+  doc_description?: string
+  page_count: number
+  structure: any[]
+}
 
 export async function executeSearchDocument(
   args: SearchDocumentArgs,
-): Promise<{ passages: Passage[] } | { error: string }> {
+): Promise<{ documents: SearchDocumentResult[] } | { error: string }> {
   const resp = await fetch(`${API_BASE}/api/document-search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -20,22 +26,21 @@ export async function executeSearchDocument(
   })
   if (!resp.ok)
     return { error: `Document search failed (${resp.status})` }
-  const data = await resp.json() as { passages: Passage[] }
-  if (!data.passages?.length)
-    return { error: 'No relevant content found in the indexed documents.' }
-  return { passages: data.passages }
+  const data = await resp.json() as { documents: SearchDocumentResult[] }
+  if (!data.documents?.length)
+    return { error: 'No relevant documents found for this query.' }
+  return { documents: data.documents }
 }
 
 export const searchDocumentTool = buildTool({
   name: 'search_document',
-  description: 'Search the knowledge base and return relevant verbatim passages to ground your answer. The knowledge base holds three kinds of documents: (1) the ShadowLearn app user manual — how to use features of the app; (2) a grammar-point reference compiled from well-known language-learning YouTube channels; (3) learning strategy content covering vocabulary acquisition methods, memorization techniques, study scheduling, and effective learning habits. Call this for: "how do I use shadowing mode?" (manual), "explain the 把 construction" (grammar), or "how do I memorize Chinese words / plan my study day / learn vocabulary effectively?" (learning strategies). Also call this when the user asks for a recommended video or lesson on any of these topics. Pass a natural-language question, not keywords. Ground your answer in the returned passages and cite the source; do not add facts beyond them.',
+  description: 'Search the knowledge base and return document structures (tree index with titles, page ranges, summaries) for matching documents. Each result includes a doc_id — use get_page_content(doc_id, "5-7") to read specific sections. The knowledge base holds three kinds of documents: (1) the ShadowLearn app user manual — how to use features of the app; (2) a grammar-point reference compiled from well-known language-learning YouTube channels; (3) learning strategy content covering vocabulary acquisition methods, memorization techniques, study scheduling, and effective learning habits. Call this for: "how do I use shadowing mode?" (manual), "explain the 把 construction" (grammar), or "how do I memorize Chinese words / plan my study day?" (learning strategies). Pass a natural-language question, not keywords. Ground your answer in content you fetch via get_page_content; do not add facts beyond the retrieved sections.',
   inputSchema: SearchDocumentSchema,
   isConcurrencySafe: () => true,
   isReadOnly: () => true,
-  // RAG passages are the source of truth the agent fetched to answer; never chop
-  // them at produce-time. Context is managed downstream by compaction (stale
-  // passages are pruned only after being summarized away, never the active one).
+  // Structure can be large (50-100 nodes per doc, 30-150KB for 3 docs). Never
+  // truncate at produce-time — context management prunes stale results downstream.
   maxResultSizeChars: Number.MAX_SAFE_INTEGER,
-  searchHint: 'search app manual, how to use feature, grammar point explanation, construction pattern language reference, vocabulary memorization methods, study planning, learning tips, effective Chinese learning strategies',
+  searchHint: 'knowledge base, document search, grammar reference, user manual, learning guide, shadowing guide, resource lookup',
   execute: async (input, _context) => executeSearchDocument(input as SearchDocumentArgs),
 })

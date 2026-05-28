@@ -1,3 +1,4 @@
+import type { UIMessage } from '@ai-sdk/react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -41,5 +42,41 @@ describe('companionChatArea — streaming stop', () => {
 
     expect(onStop).toHaveBeenCalledOnce()
     expect(onSend).not.toHaveBeenCalled()
+  })
+
+  it('renders the shared unified trace path with the final assistant answer still after the trace', () => {
+    const assistantWithTrace = {
+      id: 'a-1',
+      role: 'assistant',
+      content: '',
+      parts: [
+        { type: 'reasoning', text: 'I should inspect the input.', state: 'done' },
+        {
+          type: 'tool-render_vocab_card',
+          toolName: 'render_vocab_card',
+          toolCallId: 'call-1',
+          state: 'output-available',
+          output: { entry: { id: '1', word: 'test', meaning: 'test' } },
+        },
+        { type: 'text', text: 'Done.' },
+      ],
+    } as UIMessage
+
+    render(
+      <CompanionChatArea
+        messages={[assistantWithTrace]}
+        isLoading
+        hasMore={false}
+        onLoadMore={vi.fn()}
+        chips={[]}
+        onRemoveChip={vi.fn()}
+        onSend={vi.fn()}
+      />,
+    )
+
+    expect(screen.getAllByRole('button', { name: /thinking|reasoning|trace|chain of thought/i })).toHaveLength(1)
+    expect(screen.getByText(/I should inspect the input\./i)).toBeTruthy()
+    expect(screen.getByText(/vocab|render.*card/i)).toBeTruthy()
+    expect(screen.getByText(/Done\./i)).toBeTruthy()
   })
 })

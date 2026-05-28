@@ -338,6 +338,7 @@ export function useZoberChat(args: ZoberChatArgs) {
               // into a single growing assistant message instead of N copies.
               trigger,
               stitch_message_id: messageId ?? null,
+              thread_id: threadId,
             },
           }
         },

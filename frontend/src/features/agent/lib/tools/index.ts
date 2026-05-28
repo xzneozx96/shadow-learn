@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { navigateToSegmentTool } from '@/features/agent/lib/tools/action/navigateToSegment'
 import { playSegmentAudioTool } from '@/features/agent/lib/tools/action/playSegmentAudio'
 import { startShadowingTool } from '@/features/agent/lib/tools/action/startShadowing'
+import { getPageContentTool } from '@/features/agent/lib/tools/data/getPageContent'
 import { getProgressSummaryTool } from '@/features/agent/lib/tools/data/getProgressSummary'
 import { getStudyContextTool } from '@/features/agent/lib/tools/data/getStudyContext'
 import { getVocabularyTool } from '@/features/agent/lib/tools/data/getVocabulary'
@@ -28,6 +29,7 @@ export function getAllBaseTools(openrouterApiKey: string, uiLanguage: string = '
     toolSearchTool, // ALWAYS first - never deferred
     getStudyContextTool,
     getVocabularyTool,
+    getPageContentTool,
     searchDocumentTool,
     getProgressSummaryTool,
     recallMemoryTool,
@@ -72,6 +74,7 @@ const GLOBAL_TOOL_NAMES = new Set([
   'recall_memory',
   'save_memory',
   'get_vocabulary',
+  'get_page_content',
   'search_document',
   'get_study_context',
   'get_progress_summary',
@@ -137,6 +140,7 @@ export function findTool(pool: AgentTool[], name: string): AgentTool | undefined
 export const SILENT_TOOLS = new Set([
   'get_study_context',
   'get_vocabulary',
+  'get_page_content',
   'search_document',
   'get_progress_summary',
   'recall_memory',

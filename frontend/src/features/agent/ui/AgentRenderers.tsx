@@ -43,9 +43,10 @@ export function ToolCallCard({
         toolName={toolName}
         title={title}
         state={effectiveState}
+        className="rounded-xl bg-input/60 px-3 py-2"
       />
       {hasContent && (
-        <ToolContent>
+        <ToolContent className="space-y-3 px-3 pb-3 pt-3">
           {input != null && <ToolInput input={input} />}
           {(output != null || (isError && errorMessage)) && (
             <ToolOutput
@@ -56,6 +57,42 @@ export function ToolCallCard({
         </ToolContent>
       )}
     </Tool>
+  )
+}
+
+// -------------------------------------------------------------------------- //
+// ToolTraceCard — static inline tool step for the unified chain-of-thought UI.
+// -------------------------------------------------------------------------- //
+
+export function ToolTraceCard({
+  // state,
+  isError = false,
+  errorMessage,
+  input,
+  output,
+}: {
+  toolName: string
+  state: 'input-streaming' | 'input-available' | 'output-available' | 'output-error'
+  isError?: boolean
+  errorMessage?: string
+  input?: unknown
+  output?: unknown
+}) {
+  const hasContent = input != null || output != null || (isError && errorMessage)
+
+  if (!hasContent)
+    return null
+
+  return (
+    <div className="space-y-2">
+      {input != null && <ToolInput input={input} />}
+      {(output != null || (isError && errorMessage)) && (
+        <ToolOutput
+          output={isError ? undefined : output}
+          errorText={isError ? (errorMessage ?? 'Tool execution failed') : undefined}
+        />
+      )}
+    </div>
   )
 }
 
