@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createBrowserRouter, Outlet, RouterProvider, useLocation, useRouteError } from 'react-router-dom'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { ErrorScreen } from '@/app/ErrorScreen'
@@ -134,12 +135,21 @@ function FloatingDock() {
 
   return (
     <div ref={containerRef} className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-4">
-      {/* Companion */}
+      {/* Companion — the panel is portaled to <body> at a high z-index so it
+          layers ABOVE modal dialogs (Radix dialogs portal to body at z-50 and,
+          being modal, would otherwise cover/inert an in-tree panel). The
+          floating button stays in the dock. */}
       <div className="relative">
+        {/* Hidden while the queue popup is open — its translucent glass would otherwise reveal this glowing button behind it */}
+        <div className={open ? 'opacity-0 pointer-events-none transition-opacity' : 'transition-opacity'}>
+          <CompanionFloatingButton open={isGlobalPanelOpen} onClick={toggleCompanion} />
+        </div>
+      </div>
+      {createPortal(
         <AnimatePresence>
           {isGlobalPanelOpen && (
             <motion.div
-              className="absolute bottom-full right-0 mb-3"
+              className="fixed bottom-24 right-6 z-100"
               style={{ transformOrigin: 'bottom right' }}
               initial={{ opacity: 0, scale: 0.88, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -149,12 +159,9 @@ function FloatingDock() {
               <GlobalCompanionPanel />
             </motion.div>
           )}
-        </AnimatePresence>
-        {/* Hidden while the queue popup is open — its translucent glass would otherwise reveal this glowing button behind it */}
-        <div className={open ? 'opacity-0 pointer-events-none transition-opacity' : 'transition-opacity'}>
-          <CompanionFloatingButton open={isGlobalPanelOpen} onClick={toggleCompanion} />
-        </div>
-      </div>
+        </AnimatePresence>,
+        document.body,
+      )}
 
       {/* Daily Review */}
       <div className="relative">
