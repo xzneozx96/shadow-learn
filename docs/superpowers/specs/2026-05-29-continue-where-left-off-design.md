@@ -57,7 +57,9 @@ to IDB, so the queue scan can't see them. Fix: persist them when recording progr
 
   These are optional fields on an existing object store. IndexedDB stores values
   schemalessly (only keyPath/indexes require migration), so **no DB_VERSION bump**.
-  Records written before this change simply lack the fields (see fallbacks).
+  They are optional purely for **backward compatibility**: every record written after
+  this change always populates both — only pre-existing records lack them, handled by
+  the fallbacks below. No migration; fallbacks are ~2 lines.
 
 - Extend `recordPosition` to accept and persist them:
 
