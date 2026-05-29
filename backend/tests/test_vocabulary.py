@@ -294,3 +294,97 @@ def test_build_vocab_prompt_english():
     assert "English" in prompt
     assert "IPA" in prompt
     assert "Chinese" not in prompt
+
+
+# ── enrich_vocabulary (deterministic segmentation + LLM meaning/usage) ──────────
+
+
+class _FakeRomanizer:
+    def romanize_text(self, text: str) -> str:
+        return f"T:{text}"
+
+    def romanize_word(self, word: str) -> str:
+        return f"R:{word}"
+
+
+def _enrich_content(seg_words: dict) -> str:
+    return json.dumps({
+        "segments": [
+            {"id": i, "words": [{"word": w, "meaning": f"m{w}", "usage": f"u{w}"} for w in words]}
+            for i, words in seg_words.items()
+        ]
+    })
+
+
+def test_build_enrich_prompt_has_no_romanization_and_lists_tokens():
+    from app.lessons.services.vocabulary import _build_enrich_prompt
+    segments = [{"id": 0, "text": "我喜欢", "tokens": ["我", "喜欢"]}]
+    prompt = _build_enrich_prompt(segments, source_language="zh-CN")
+    assert "romanization" not in prompt
+    assert '"words":' in prompt
+    assert "我" in prompt and "喜欢" in prompt
+    assert "ALREADY been segmented" in prompt
+
+
+@pytest.mark.asyncio
+async def test_enrich_vocabulary_fills_pinyin_in_python_not_llm():
+    """Romanization comes from the romanizer, not the LLM response."""
+    from app.lessons.services.vocabulary import enrich_vocabulary
+
+    segments = [{"id": 0, "text": "我喜欢学习", "tokens": ["我", "喜欢", "学习"]}]
+    content = _enrich_content({0: ["我", "喜欢", "学习"]})
+
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(return_value=_make_mock_response(200, content))
+        mock_cls.return_value = mock_client
+
+        result = await enrich_vocabulary(segments, _FakeRomanizer(), "test_key")
+
+    words = result[0]
+    assert [w["word"] for w in words] == ["我", "喜欢", "学习"]
+    assert [w["romanization"] for w in words] == ["R:我", "R:喜欢", "R:学习"]
+    assert words[1]["meaning"] == "m喜欢"
+    assert words[1]["usage"] == "u喜欢"
+    # enrich schema must omit romanization
+    sent = mock_client.post.call_args.kwargs["json"]
+    schema = sent["response_format"]["json_schema"]["schema"]
+    word_props = schema["properties"]["segments"]["items"]["properties"]["words"]["items"]["properties"]
+    assert "romanization" not in word_props
+
+
+@pytest.mark.asyncio
+async def test_enrich_vocabulary_guarantees_coverage_when_llm_omits():
+    """Every jieba token appears with pinyin even if the LLM drops some words."""
+    from app.lessons.services.vocabulary import enrich_vocabulary
+
+    segments = [{"id": 0, "text": "我喜欢学习", "tokens": ["我", "喜欢", "学习"]}]
+    # LLM omits "喜欢"
+    content = _enrich_content({0: ["我", "学习"]})
+
+    with patch("app.lessons.services.vocabulary.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.post = AsyncMock(return_value=_make_mock_response(200, content))
+        mock_cls.return_value = mock_client
+
+        result = await enrich_vocabulary(segments, _FakeRomanizer(), "test_key")
+
+    words = result[0]
+    assert [w["word"] for w in words] == ["我", "喜欢", "学习"]  # all tokens present, in order
+    assert all(w["romanization"] == f"R:{w['word']}" for w in words)
+    omitted = words[1]
+    assert omitted["word"] == "喜欢"
+    assert omitted["meaning"] == ""  # LLM omitted → blank, not vanished
+    assert words[0]["meaning"] == "m我"
+    assert words[2]["meaning"] == "m学习"
+
+
+@pytest.mark.asyncio
+async def test_enrich_vocabulary_empty_segments():
+    from app.lessons.services.vocabulary import enrich_vocabulary
+    result = await enrich_vocabulary([], _FakeRomanizer(), "test_key")
+    assert result == {}
