@@ -104,7 +104,10 @@ continueItem: ContinueItem | null
 2. Filter `!completed && watchedSec > 0`.
 3. Pick the most recent by `lastSeenAt`.
 4. Build the row:
-   - **label** = `title` if present, else generic i18n (`queue.continue`).
+   - **label** = persisted `TipProgress.title` if present, else the registered
+     material name (`getUserMaterialByExternalId(courseId)?.name` — recovers titles
+     for tips watched before title-persistence shipped, for user-registered "My
+     materials"), else generic i18n (`queue.continue`).
    - **route** = `resumeRoute` if present, else fallback heuristic on
      `courseId`/`videoId`: `courseId === videoId` → `/tips/video/{courseId}`, else
      `/tips/playlist/{courseId}?lesson={videoId}`. (Holds because a standalone video's
