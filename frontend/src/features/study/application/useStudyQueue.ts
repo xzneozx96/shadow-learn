@@ -22,6 +22,8 @@ import {
 
 const DAILY_WORDS_KEY = (date: string) => `daily-review-words-${date}`
 const MAX_WORDS = 20
+const CONTINUE_MIN_PROGRESS = 0.05 // ignore <5% accidental glances
+const CONTINUE_RECENT_DAYS = 7 // only resurface tips touched within a week
 
 function tipFallbackRoute(t: TipProgress): string {
   return t.courseId === t.videoId
@@ -139,8 +141,19 @@ export function useStudyQueue(
 
     // ── Continue where left off (most recent abandoned grammar tip) ─────────
     const tips = await getAllTipProgress(db)
+    const recentCutoff = Date.now() - CONTINUE_RECENT_DAYS * 24 * 60 * 60 * 1000
     const abandoned = tips
-      .filter(t => t.watchedSec > 0 && (!t.completed || (t.completedAt != null && localDateISO(t.completedAt) === today)))
+      .filter((t) => {
+        if (t.totalSec <= 0)
+          return false
+        const completedToday = t.completed && t.completedAt != null && localDateISO(t.completedAt) === today
+        const pct = t.watchedSec / t.totalSec
+        const inProgress = !t.completed && pct >= CONTINUE_MIN_PROGRESS && pct < 0.8
+        if (!inProgress && !completedToday)
+          return false
+        // recency window (a tip completed today is inherently recent)
+        return completedToday || new Date(t.lastSeenAt).getTime() >= recentCutoff
+      })
       .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt))[0]
     if (abandoned) {
       let title = abandoned.title ?? ''

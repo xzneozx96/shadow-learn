@@ -340,4 +340,39 @@ describe('useStudyQueue', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.continueItem?.title).toBe('Persisted Title')
   })
+
+  it('excludes a low-progress glance (<5% watched)', async () => {
+    await putTipProgress(db, makeTipProgress({ watchedSec: 3, totalSec: 100, lastSeenAt: '2026-05-13T08:00:00.000Z' }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem).toBeNull()
+  })
+
+  it('excludes a stale tip last seen more than 7 days ago', async () => {
+    await putTipProgress(db, makeTipProgress({ watchedSec: 30, totalSec: 100, lastSeenAt: '2026-05-01T08:00:00.000Z' }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem).toBeNull()
+  })
+
+  it('includes a meaningful recent partial watch (>=5%, <80%, within 7 days)', async () => {
+    await putTipProgress(db, makeTipProgress({
+      watchedSec: 30,
+      totalSec: 100,
+      lastSeenAt: '2026-05-12T08:00:00.000Z',
+      title: 'In Progress',
+      resumeRoute: '/tips/video/vidA?lesson=vidA',
+    }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem?.title).toBe('In Progress')
+    expect(result.current.continueDone).toBe(false)
+  })
+
+  it('excludes a near-complete but not-completed tip (>=80% watched)', async () => {
+    await putTipProgress(db, makeTipProgress({ watchedSec: 90, totalSec: 100, completed: false, lastSeenAt: '2026-05-13T08:00:00.000Z' }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem).toBeNull()
+  })
 })
