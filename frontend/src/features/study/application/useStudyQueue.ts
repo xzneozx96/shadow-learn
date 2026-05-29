@@ -1,9 +1,11 @@
 import type { DailyTask, ShadowLearnDB } from '@/db'
+import type { TipProgress } from '@/features/learning-materials/domain/tips'
 import type { DecryptedKeys, VocabEntry } from '@/shared/types'
 import { useCallback, useEffect, useState } from 'react'
 import {
   deleteDailyTask,
   getAllSessionLogs,
+  getAllTipProgress,
   getDailyTasks,
   getDueItems,
   getVocabEntryById,
@@ -19,6 +21,17 @@ import {
 
 const DAILY_WORDS_KEY = (date: string) => `daily-review-words-${date}`
 const MAX_WORDS = 20
+
+function tipFallbackRoute(t: TipProgress): string {
+  return t.courseId === t.videoId
+    ? `/tips/video/${t.courseId}`
+    : `/tips/playlist/${t.courseId}?lesson=${t.videoId}`
+}
+
+export interface ContinueItem {
+  title: string
+  route: string
+}
 
 export interface StudyQueueState {
   loading: boolean
@@ -36,6 +49,8 @@ export interface StudyQueueState {
   dailyReviewDone: boolean
 
   shadowingDone: boolean
+  continueItem: ContinueItem | null
+  continueDone: boolean
   customTasks: DailyTask[]
   addCustomTask: (title: string) => Promise<void>
   toggleCustomTask: (id: string) => Promise<void>
@@ -54,6 +69,8 @@ export function useStudyQueue(
   const [loading, setLoading] = useState(true)
   const [wordDrillsEntries, setWordDrillsEntries] = useState<VocabEntry[]>([])
   const [shadowingDone, setShadowingDone] = useState(false)
+  const [continueItem, setContinueItem] = useState<ContinueItem | null>(null)
+  const [continueDone, setContinueDone] = useState(false)
   const [customTasks, setCustomTasks] = useState<DailyTask[]>([])
   const [skillDone, setSkillDone] = useState({
     vocabulary: false,
@@ -118,6 +135,23 @@ export function useStudyQueue(
 
     // ── Custom tasks ──────────────────────────────────────────────────────
     setCustomTasks(await getDailyTasks(db))
+
+    // ── Continue where left off (most recent abandoned grammar tip) ─────────
+    const tips = await getAllTipProgress(db)
+    const abandoned = tips
+      .filter(t => !t.completed && t.watchedSec > 0)
+      .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt))[0]
+    if (abandoned) {
+      setContinueItem({
+        title: abandoned.title ?? '',
+        route: abandoned.resumeRoute ?? tipFallbackRoute(abandoned),
+      })
+      setContinueDone(abandoned.lastSeenAt.slice(0, 10) === today)
+    }
+    else {
+      setContinueItem(null)
+      setContinueDone(false)
+    }
 
     setLoading(false)
   }, [])
@@ -190,6 +224,7 @@ export function useStudyQueue(
   const incompleteCount
     = (hasDailyReview && !dailyReviewDone ? 1 : 0)
       + (hasLesson && !shadowingDone ? 1 : 0)
+      + (continueItem && !continueDone ? 1 : 0)
       + customTasks.filter(t => t.completedDate !== today).length
 
   const allDoneToday
@@ -210,6 +245,8 @@ export function useStudyQueue(
     writingDone: skillDone.writing,
     dailyReviewDone,
     shadowingDone,
+    continueItem,
+    continueDone,
     customTasks,
     addCustomTask,
     toggleCustomTask,

@@ -2,7 +2,7 @@ import type { ShadowLearnDB } from '@/db'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { initDB, saveSpacedRepetitionItem, saveVocabEntry } from '@/db'
+import { initDB, putTipProgress, saveSpacedRepetitionItem, saveVocabEntry } from '@/db'
 import { useStudyQueue } from '@/features/study/application/useStudyQueue'
 import 'fake-indexeddb/auto'
 
@@ -20,6 +20,22 @@ function makeVocab(id: string) {
     sourceSegmentTranslation: '',
     sourceLanguage: 'zh-CN',
     createdAt: '2026-05-13T00:00:00.000Z',
+  }
+}
+
+function makeTipProgress(over: Partial<import('@/features/learning-materials/domain/tips').TipProgress> = {}) {
+  const courseId = over.courseId ?? 'vidA'
+  const videoId = over.videoId ?? 'vidA'
+  return {
+    key: `${courseId}:${videoId}`,
+    courseId,
+    videoId,
+    watchedSec: 30,
+    totalSec: 100,
+    completed: false,
+    completedAt: null,
+    lastSeenAt: '2026-05-13T09:00:00.000Z',
+    ...over,
   }
 }
 
@@ -184,5 +200,91 @@ describe('useStudyQueue', () => {
     const { result } = renderHook(() => useStudyQueue(db, null))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.dailyReviewDone).toBe(true)
+  })
+
+  it('continueItem null when no tip progress exists', async () => {
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem).toBeNull()
+  })
+
+  it('surfaces an abandoned tip (incomplete, watched > 0)', async () => {
+    await putTipProgress(db, makeTipProgress({
+      title: 'Grammar 101',
+      resumeRoute: '/tips/video/vidA?lesson=vidA',
+    }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem).toEqual({
+      title: 'Grammar 101',
+      route: '/tips/video/vidA?lesson=vidA',
+    })
+  })
+
+  it('excludes completed tips', async () => {
+    await putTipProgress(db, makeTipProgress({ completed: true, completedAt: '2026-05-12T00:00:00.000Z' }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem).toBeNull()
+  })
+
+  it('excludes untouched tips (watchedSec === 0)', async () => {
+    await putTipProgress(db, makeTipProgress({ watchedSec: 0 }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem).toBeNull()
+  })
+
+  it('picks the most recent abandoned tip by lastSeenAt', async () => {
+    await putTipProgress(db, makeTipProgress({
+      courseId: 'old',
+      videoId: 'old',
+      lastSeenAt: '2026-05-10T00:00:00.000Z',
+      title: 'Old',
+      resumeRoute: '/tips/video/old?lesson=old',
+    }))
+    await putTipProgress(db, makeTipProgress({
+      courseId: 'new',
+      videoId: 'new',
+      lastSeenAt: '2026-05-13T08:00:00.000Z',
+      title: 'New',
+      resumeRoute: '/tips/video/new?lesson=new',
+    }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem?.title).toBe('New')
+  })
+
+  it('falls back to heuristic route and empty title for legacy records', async () => {
+    await putTipProgress(db, makeTipProgress({ courseId: 'soloVid', videoId: 'soloVid' }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem).toEqual({
+      title: '',
+      route: '/tips/video/soloVid',
+    })
+  })
+
+  it('falls back to playlist heuristic route when courseId !== videoId', async () => {
+    await putTipProgress(db, makeTipProgress({ courseId: 'PL123', videoId: 'vidX' }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem?.route).toBe('/tips/playlist/PL123?lesson=vidX')
+  })
+
+  it('continueDone true when tip last seen today; folds out of incompleteCount', async () => {
+    await putTipProgress(db, makeTipProgress({ lastSeenAt: '2026-05-13T08:00:00.000Z' }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueDone).toBe(true)
+    expect(result.current.incompleteCount).toBe(0)
+  })
+
+  it('continueDone false when tip last seen before today; counts as incomplete', async () => {
+    await putTipProgress(db, makeTipProgress({ lastSeenAt: '2026-05-12T08:00:00.000Z' }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueDone).toBe(false)
+    expect(result.current.incompleteCount).toBe(1)
   })
 })
