@@ -50,4 +50,18 @@ describe('useTipProgress persistence', () => {
     expect(saved?.title).toBe('Grammar 101')
     expect(saved?.resumeRoute).toBe('/tips/video/vid1?lesson=vid1')
   })
+
+  it('markIncomplete preserves existing title and resumeRoute', async () => {
+    const { result } = renderHook(() => useTipProgress('vid1', 'vid1'))
+    await waitFor(() => expect(result.current.loaded).toBe(true))
+    await act(() => result.current.recordPosition(10, 100, {
+      title: 'Grammar 101',
+      route: '/tips/video/vid1?lesson=vid1',
+    }))
+    await act(() => result.current.markIncomplete())
+    const saved = await getTipProgress(testDb, 'vid1:vid1')
+    expect(saved?.completed).toBe(false)
+    expect(saved?.title).toBe('Grammar 101')
+    expect(saved?.resumeRoute).toBe('/tips/video/vid1?lesson=vid1')
+  })
 })
