@@ -127,7 +127,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               <div
                 role="button"
                 tabIndex={0}
-                className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-secondary transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 onClick={() => setExpanded(e => !e)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(ex => !ex) } }}
               >
@@ -191,7 +191,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
             <div
               role="button"
               tabIndex={0}
-              className="w-full flex items-center gap-3 px-4 py-2.5 pr-3 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="w-full flex items-center gap-3 px-4 py-2.5 pr-3 hover:bg-secondary transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               onClick={handleStartShadowing}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStartShadowing() } }}
             >
@@ -218,18 +218,25 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
             <div
               role="button"
               tabIndex={0}
-              className="w-full flex items-center gap-3 px-4 py-2.5 pr-3 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="w-full flex items-center gap-3 px-4 py-2.5 pr-3 hover:bg-secondary transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               onClick={handleContinue}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleContinue() } }}
             >
               <CircleIndicator done={queue.continueDone} partial={false} />
-              <span className={cn(
-                'flex-1 text-sm font-semibold truncate',
-                queue.continueDone ? 'line-through text-muted-foreground' : '',
-              )}
-              >
-                {queue.continueItem.title || t('queue.continue')}
-              </span>
+              <div className="flex-1 min-w-0">
+                <div className={cn(
+                  'text-sm font-semibold',
+                  queue.continueDone ? 'line-through text-muted-foreground' : '',
+                )}
+                >
+                  {t('queue.continue')}
+                </div>
+                {queue.continueItem.title && (
+                  <div className="text-xs text-muted-foreground truncate">
+                    {queue.continueItem.title}
+                  </div>
+                )}
+              </div>
               {queue.continueDone
                 ? (
                     <Button size="icon-xs" variant="ghost" className="text-emerald-500 pointer-events-none">
@@ -384,7 +391,7 @@ function SkillRow({ label, done, onStart }: SkillRowProps) {
     <div
       role="button"
       tabIndex={done ? -1 : 0}
-      className="relative flex items-center gap-3 pl-6 pr-3 py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
+      className="relative flex items-center gap-3 pl-6 pr-3 py-2 rounded-md hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
       onClick={done ? undefined : onStart}
       onKeyDown={done ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStart() } }}
     >
