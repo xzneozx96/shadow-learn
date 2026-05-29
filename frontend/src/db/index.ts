@@ -955,6 +955,10 @@ export async function listTipProgressForCourse(db: ShadowLearnDB, courseId: stri
   return db.getAllFromIndex('tip-progress', 'by-course', courseId)
 }
 
+export async function getAllTipProgress(db: ShadowLearnDB): Promise<TipProgress[]> {
+  return db.getAll('tip-progress')
+}
+
 export async function putTipTranscript(db: ShadowLearnDB, record: TipTranscriptRecord): Promise<void> {
   await db.put('tip-transcripts', record)
 }

@@ -41,6 +41,10 @@ export interface TipProgress {
   completed: boolean
   completedAt: string | null
   lastSeenAt: string
+  // Optional for backward compatibility: records written before the
+  // "continue where left off" feature lack these. New writes always set them.
+  title?: string // resolved video title, for the queue row label
+  resumeRoute?: string // exact page link, e.g. /tips/video/abc?lesson=abc
 }
 
 export type TipTranscriptStatus = 'pending' | 'ready' | 'unavailable' | 'error' | 'too_long'
