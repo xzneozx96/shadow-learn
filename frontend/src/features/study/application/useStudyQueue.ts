@@ -11,7 +11,7 @@ import {
   getVocabEntryById,
   saveDailyTask,
 } from '@/db'
-import { todayISO } from '@/shared/lib/date'
+import { localDateISO, todayISO } from '@/shared/lib/date'
 import {
   clearExpiredSessionKeys,
   flushSM2Pending,
@@ -146,7 +146,7 @@ export function useStudyQueue(
         title: abandoned.title ?? '',
         route: abandoned.resumeRoute ?? tipFallbackRoute(abandoned),
       })
-      setContinueDone(abandoned.lastSeenAt.slice(0, 10) === today)
+      setContinueDone(localDateISO(abandoned.lastSeenAt) === today)
     }
     else {
       setContinueItem(null)
