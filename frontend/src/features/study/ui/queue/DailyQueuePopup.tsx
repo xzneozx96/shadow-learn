@@ -74,8 +74,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
   ]
 
   return (
-    <div className="relative w-[340px] rounded-2xl overflow-hidden bg-black/20 backdrop-blur-2xl border border-white/10 flex flex-col bg-linear-to-br from-zinc-800/30 to-zinc-800/50 shadow-xl">
-
+    <div className="relative w-[340px] rounded-2xl overflow-hidden border border-white/10 flex flex-col bg-card shadow-xl">
       {editingTaskId !== null && (
         <div
           className="absolute inset-0 z-10"
@@ -391,7 +390,7 @@ function SkillRow({ label, done, onStart }: SkillRowProps) {
     <div
       role="button"
       tabIndex={done ? -1 : 0}
-      className="relative flex items-center gap-3 pl-6 pr-3 py-2 rounded-md hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
+      className="relative flex items-center gap-3 pl-6 pr-3 py-2 rounded-md hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
       onClick={done ? undefined : onStart}
       onKeyDown={done ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStart() } }}
     >
