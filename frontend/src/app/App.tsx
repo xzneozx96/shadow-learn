@@ -119,8 +119,12 @@ function FloatingDock() {
   function toggleQueue() {
     setOpen((o) => {
       const next = !o
-      if (next)
+      if (next) {
         closePanel()
+        // Re-read IDB on open so progress made on lesson/tip pages
+        // (watch position, completion) is reflected without a reload.
+        void queue.refresh()
+      }
       return next
     })
   }
