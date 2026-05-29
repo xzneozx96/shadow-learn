@@ -385,8 +385,8 @@ describe('getActiveToolPool', () => {
     expect(names).toContain('search_document')
   })
 
-  it('returns 11 non-deferred tools by default (19 total - 1 disabled - 7 deferred)', () => {
-    expect(getActiveToolPool('test-key')).toHaveLength(11)
+  it('returns 12 non-deferred tools by default (20 total - 1 disabled - 7 deferred)', () => {
+    expect(getActiveToolPool('test-key')).toHaveLength(12)
   })
 })
 
