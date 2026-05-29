@@ -101,7 +101,9 @@ continueItem: ContinueItem | null
 ### Selection logic (in `useStudyQueue.load`)
 
 1. Scan all tips via new `getAllTipProgress(db)`.
-2. Filter `!completed && watchedSec > 0`.
+2. Filter `watchedSec > 0 && (!completed || completedAt is today)` — keep unfinished
+   tips AND tips completed today (so a just-finished tip stays visible as done for the
+   rest of the day instead of vanishing the moment it crosses 80%).
 3. Pick the most recent by `lastSeenAt`.
 4. Build the row:
    - **label** = persisted `TipProgress.title` if present, else the registered
@@ -132,10 +134,12 @@ New row after the Shadowing row, identical in shape (`DailyQueuePopup.tsx:183-20
 - Click → `navigate(continueItem.route)` then `onClose()`.
 - Hidden when `continueItem == null`.
 
-**Done semantics** — mirror Shadowing: `continueDone = continueItem != null &&
-continueItem.lastSeenAt` is today (`todayISO()`). Resuming updates `lastSeenAt` to
-today, so the row strikes through once engaged today, and drops out on the next
-refresh once it crosses 80%.
+**Done semantics** — `continueDone = candidate.completed`. The row strikes through
+once the tip is completed (≥80%). A tip completed today stays shown (clickable, marked
+done) for the rest of the day; tomorrow it drops out and the next unfinished tip
+surfaces. A partial (<80%) watch keeps it shown as still-to-continue. The queue
+re-reads IDB on popup open (`App.tsx` `toggleQueue`), so completing a tip on its page
+is reflected when the popup is next opened — no reload needed.
 
 ## Count integration
 
@@ -168,7 +172,8 @@ const incompleteCount
 - Multiple abandoned tips → most recent `lastSeenAt` wins.
 - Stored `resumeRoute`/`title` used for route/label; legacy record (no route/title) →
   heuristic route + generic label.
-- `continueDone` (lastSeenAt today) folds into `incompleteCount`.
+- `continueDone` (tip completed) folds into `incompleteCount`; a tip completed today
+  stays shown as done, a tip completed before today is excluded.
 
 ## Out of scope
 
