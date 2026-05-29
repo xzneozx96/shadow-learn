@@ -140,7 +140,7 @@ export function useStudyQueue(
     // ── Continue where left off (most recent abandoned grammar tip) ─────────
     const tips = await getAllTipProgress(db)
     const abandoned = tips
-      .filter(t => !t.completed && t.watchedSec > 0)
+      .filter(t => t.watchedSec > 0 && (!t.completed || (t.completedAt != null && localDateISO(t.completedAt) === today)))
       .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt))[0]
     if (abandoned) {
       let title = abandoned.title ?? ''
@@ -152,7 +152,7 @@ export function useStudyQueue(
         title,
         route: abandoned.resumeRoute ?? tipFallbackRoute(abandoned),
       })
-      setContinueDone(localDateISO(abandoned.lastSeenAt) === today)
+      setContinueDone(abandoned.completed)
     }
     else {
       setContinueItem(null)

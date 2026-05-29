@@ -235,7 +235,7 @@ describe('useStudyQueue', () => {
     })
   })
 
-  it('excludes completed tips', async () => {
+  it('excludes tips completed before today', async () => {
     await putTipProgress(db, makeTipProgress({ completed: true, completedAt: '2026-05-12T00:00:00.000Z' }))
     const { result } = renderHook(() => useStudyQueue(db, null))
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -286,20 +286,43 @@ describe('useStudyQueue', () => {
     expect(result.current.continueItem?.route).toBe('/tips/playlist/PL123?lesson=vidX')
   })
 
-  it('continueDone true when tip last seen today; folds out of incompleteCount', async () => {
-    await putTipProgress(db, makeTipProgress({ lastSeenAt: '2026-05-13T08:00:00.000Z' }))
+  it('continueDone true when tip completed today; stays shown and folds out of incompleteCount', async () => {
+    await putTipProgress(db, makeTipProgress({
+      completed: true,
+      completedAt: '2026-05-13T08:00:00.000Z',
+      lastSeenAt: '2026-05-13T08:00:00.000Z',
+      title: 'Finished Today',
+      resumeRoute: '/tips/video/vidA?lesson=vidA',
+    }))
     const { result } = renderHook(() => useStudyQueue(db, null))
     await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem?.title).toBe('Finished Today')
     expect(result.current.continueDone).toBe(true)
     expect(result.current.incompleteCount).toBe(0)
   })
 
-  it('continueDone false when tip last seen before today; counts as incomplete', async () => {
-    await putTipProgress(db, makeTipProgress({ lastSeenAt: '2026-05-12T08:00:00.000Z' }))
+  it('continueDone false for an unfinished tip; counts as incomplete', async () => {
+    await putTipProgress(db, makeTipProgress({ completed: false, lastSeenAt: '2026-05-13T08:00:00.000Z' }))
     const { result } = renderHook(() => useStudyQueue(db, null))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.continueDone).toBe(false)
     expect(result.current.incompleteCount).toBe(1)
+  })
+
+  it('shows a tip completed today as the done item (does not drop it)', async () => {
+    await putTipProgress(db, makeTipProgress({
+      courseId: 'doneVid',
+      videoId: 'doneVid',
+      completed: true,
+      completedAt: '2026-05-13T09:00:00.000Z',
+      lastSeenAt: '2026-05-13T09:30:00.000Z',
+      title: 'Done Lesson',
+      resumeRoute: '/tips/video/doneVid?lesson=doneVid',
+    }))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem).toEqual({ title: 'Done Lesson', route: '/tips/video/doneVid?lesson=doneVid' })
+    expect(result.current.continueDone).toBe(true)
   })
 
   it('falls back to UserMaterial name when tip has no persisted title', async () => {
