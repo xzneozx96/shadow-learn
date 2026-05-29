@@ -33,22 +33,25 @@ A tip is abandoned when started but `<80%` watched: `!completed && watchedSec > 
   `watchedSec`/`totalSec`/`lastSeenAt` and auto-completing at 80%
   (`useTipProgress.ts:45-59`).
 - Resume route `/tips/{source}/{id}?lesson={videoId}` already seeks the tip player to
-  `watchedSec`.
-- The video title and source are resolved on the frontend at watch time
-  (`TipCoursePage`: `activeLesson.title`, `safeSource`).
+  the exact timestamp: `LessonPlayer` sets YouTube `playerVars.start = resumeSec`
+  (`LessonPlayer.tsx:59`), fed `resumeSec={progress.watchedSec}` (`TipCoursePage.tsx:190`).
+  So `watchedSec` (already persisted) is the source of truth for the resume point — no
+  timestamp URL param is needed.
+- The video title and the page route are both known on the frontend at watch time
+  (`TipCoursePage`: `activeLesson.title`, `safeSource`, `safeId`, `activeVideoId`).
 
-## Persisting title + source onto TipProgress
+## Persisting title + resume link onto TipProgress
 
-The title/source exist on the frontend at watch time but are never written to IDB, so
-the queue scan can't see them. Fix: persist them when recording progress.
+The title and the page link exist on the frontend at watch time but are never written
+to IDB, so the queue scan can't see them. Fix: persist them when recording progress.
 
 - Extend the `TipProgress` value with two optional fields:
 
   ```ts
   interface TipProgress {
     // ...existing fields...
-    title?: string       // resolved video title, for the queue row label
-    source?: TipSource   // 'playlist' | 'video', for rebuilding the resume route
+    title?: string        // resolved video title, for the queue row label
+    resumeRoute?: string  // exact page link, e.g. /tips/video/abc?lesson=abc
   }
   ```
 
@@ -60,12 +63,20 @@ the queue scan can't see them. Fix: persist them when recording progress.
 
   ```ts
   recordPosition: (watchedSec: number, totalSec: number,
-                   meta?: { title?: string, source?: TipSource }) => Promise<void>
+                   meta?: { title?: string, route?: string }) => Promise<void>
   ```
 
   At the call site (`TipCoursePage.tsx:191`), pass
-  `{ title: activeLesson?.title, source: safeSource }`. `markComplete`/`markIncomplete`
-  preserve any existing `title`/`source` already on the record.
+  `{ title: activeLesson?.title, route: \`/tips/${safeSource}/${safeId}?lesson=${activeVideoId}\` }`.
+  `markComplete`/`markIncomplete` preserve any existing `title`/`resumeRoute` on the
+  record.
+
+  Clicking the queue item navigates to `resumeRoute`; the tip page then seeks the
+  player to `watchedSec` automatically. Exact page + exact timestamp.
+
+  **Tradeoff:** storing the link denormalizes the route. If the `/tips` route scheme
+  changes later, legacy records' links go stale — recovered by the heuristic fallback
+  below and overwritten on the next watch. Low risk, accepted.
 
 ## Architecture
 
@@ -92,13 +103,10 @@ continueItem: ContinueItem | null
 3. Pick the most recent by `lastSeenAt`.
 4. Build the row:
    - **label** = `title` if present, else generic i18n (`queue.continue`).
-   - **route**:
-     - `source === 'playlist'` → `/tips/playlist/{courseId}?lesson={videoId}`
-     - `source === 'video'` → `/tips/video/{courseId}`
-     - source absent (legacy record) → fallback heuristic: `courseId === videoId`
-       → `/tips/video/{courseId}`, else `/tips/playlist/{courseId}?lesson={videoId}`.
-       (Holds because a standalone video's `courseId` equals its `videoId`, while a
-       playlist's `courseId` is the playlist id.)
+   - **route** = `resumeRoute` if present, else fallback heuristic on
+     `courseId`/`videoId`: `courseId === videoId` → `/tips/video/{courseId}`, else
+     `/tips/playlist/{courseId}?lesson={videoId}`. (Holds because a standalone video's
+     `courseId` equals its `videoId`, while a playlist's `courseId` is the playlist id.)
 5. `continueItem = null` if no tip qualifies.
 
 ### New DB accessor (read-only, no DB_VERSION bump)
@@ -140,7 +148,7 @@ const incompleteCount
 ## Edge cases
 
 - Legacy `TipProgress` lacking `title`: show generic i18n label.
-- Legacy `TipProgress` lacking `source`: route via the `courseId === videoId`
+- Legacy `TipProgress` lacking `resumeRoute`: route via the `courseId === videoId`
   heuristic.
 - No abandoned tip: `continueItem = null`, row hidden.
 - `totalSec === 0` guards already prevent a record from being mis-flagged (recordPosition
@@ -153,7 +161,7 @@ const incompleteCount
 - Tip `!completed && watchedSec > 0` → surfaces; completed tip → excluded; untouched
   (`watchedSec === 0`) → excluded.
 - Multiple abandoned tips → most recent `lastSeenAt` wins.
-- Stored `source`/`title` used for route/label; legacy record (no source/title) →
+- Stored `resumeRoute`/`title` used for route/label; legacy record (no route/title) →
   heuristic route + generic label.
 - `continueDone` (lastSeenAt today) folds into `incompleteCount`.
 
@@ -167,11 +175,11 @@ const incompleteCount
 ## Files touched
 
 - `frontend/src/features/learning-materials/domain/tips.ts` — add optional
-  `title`/`source` to `TipProgress`.
+  `title`/`resumeRoute` to `TipProgress`.
 - `frontend/src/features/learning-materials/application/useTipProgress.ts` — persist
-  `title`/`source` in `recordPosition`; preserve in `markComplete`/`markIncomplete`.
+  `title`/`resumeRoute` in `recordPosition`; preserve in `markComplete`/`markIncomplete`.
 - `frontend/src/features/learning-materials/ui/TipCoursePage.tsx` — pass
-  `{ title, source }` to `recordPosition`.
+  `{ title, route }` to `recordPosition`.
 - `frontend/src/db/index.ts` — add `getAllTipProgress` accessor (read-only).
 - `frontend/src/features/study/application/useStudyQueue.ts` — derivation, new field,
   count.
