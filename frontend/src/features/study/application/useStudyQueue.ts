@@ -1,15 +1,18 @@
 import type { DailyTask, ShadowLearnDB } from '@/db'
+import type { TipProgress } from '@/features/learning-materials/domain/tips'
 import type { DecryptedKeys, VocabEntry } from '@/shared/types'
 import { useCallback, useEffect, useState } from 'react'
 import {
   deleteDailyTask,
   getAllSessionLogs,
+  getAllTipProgress,
   getDailyTasks,
   getDueItems,
+  getUserMaterialByExternalId,
   getVocabEntryById,
   saveDailyTask,
 } from '@/db'
-import { todayISO } from '@/shared/lib/date'
+import { localDateISO, todayISO } from '@/shared/lib/date'
 import {
   clearExpiredSessionKeys,
   flushSM2Pending,
@@ -19,6 +22,19 @@ import {
 
 const DAILY_WORDS_KEY = (date: string) => `daily-review-words-${date}`
 const MAX_WORDS = 20
+const CONTINUE_MIN_PROGRESS = 0.05 // ignore <5% accidental glances
+const CONTINUE_RECENT_DAYS = 7 // only resurface tips touched within a week
+
+function tipFallbackRoute(t: TipProgress): string {
+  return t.courseId === t.videoId
+    ? `/tips/video/${t.courseId}`
+    : `/tips/playlist/${t.courseId}?lesson=${t.videoId}`
+}
+
+export interface ContinueItem {
+  title: string
+  route: string
+}
 
 export interface StudyQueueState {
   loading: boolean
@@ -36,6 +52,8 @@ export interface StudyQueueState {
   dailyReviewDone: boolean
 
   shadowingDone: boolean
+  continueItem: ContinueItem | null
+  continueDone: boolean
   customTasks: DailyTask[]
   addCustomTask: (title: string) => Promise<void>
   toggleCustomTask: (id: string) => Promise<void>
@@ -54,6 +72,8 @@ export function useStudyQueue(
   const [loading, setLoading] = useState(true)
   const [wordDrillsEntries, setWordDrillsEntries] = useState<VocabEntry[]>([])
   const [shadowingDone, setShadowingDone] = useState(false)
+  const [continueItem, setContinueItem] = useState<ContinueItem | null>(null)
+  const [continueDone, setContinueDone] = useState(false)
   const [customTasks, setCustomTasks] = useState<DailyTask[]>([])
   const [skillDone, setSkillDone] = useState({
     vocabulary: false,
@@ -118,6 +138,39 @@ export function useStudyQueue(
 
     // ── Custom tasks ──────────────────────────────────────────────────────
     setCustomTasks(await getDailyTasks(db))
+
+    // ── Continue where left off (most recent abandoned grammar tip) ─────────
+    const tips = await getAllTipProgress(db)
+    const recentCutoff = Date.now() - CONTINUE_RECENT_DAYS * 24 * 60 * 60 * 1000
+    const abandoned = tips
+      .filter((t) => {
+        if (t.totalSec <= 0)
+          return false
+        const completedToday = t.completed && t.completedAt != null && localDateISO(t.completedAt) === today
+        const pct = t.watchedSec / t.totalSec
+        const inProgress = !t.completed && pct >= CONTINUE_MIN_PROGRESS && pct < 0.8
+        if (!inProgress && !completedToday)
+          return false
+        // recency window (a tip completed today is inherently recent)
+        return completedToday || new Date(t.lastSeenAt).getTime() >= recentCutoff
+      })
+      .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt))[0]
+    if (abandoned) {
+      let title = abandoned.title ?? ''
+      if (!title) {
+        const material = await getUserMaterialByExternalId(db, abandoned.courseId)
+        title = material?.name ?? ''
+      }
+      setContinueItem({
+        title,
+        route: abandoned.resumeRoute ?? tipFallbackRoute(abandoned),
+      })
+      setContinueDone(abandoned.completed)
+    }
+    else {
+      setContinueItem(null)
+      setContinueDone(false)
+    }
 
     setLoading(false)
   }, [])
@@ -190,6 +243,7 @@ export function useStudyQueue(
   const incompleteCount
     = (hasDailyReview && !dailyReviewDone ? 1 : 0)
       + (hasLesson && !shadowingDone ? 1 : 0)
+      + (continueItem && !continueDone ? 1 : 0)
       + customTasks.filter(t => t.completedDate !== today).length
 
   const allDoneToday
@@ -210,6 +264,8 @@ export function useStudyQueue(
     writingDone: skillDone.writing,
     dailyReviewDone,
     shadowingDone,
+    continueItem,
+    continueDone,
     customTasks,
     addCustomTask,
     toggleCustomTask,

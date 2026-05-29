@@ -250,7 +250,7 @@ function LessonViewContent() {
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
         <p className="text-sm text-red-400">{error ?? t('lesson.notFound')}</p>
-        <Button variant="outline" className="active:scale-[0.97] transition-transform" render={<Link to="/" />}>
+        <Button variant="outline" nativeButton={false} className="active:scale-[0.97] transition-transform" render={<Link to="/" />}>
           {t('lesson.backToLibrary')}
         </Button>
       </motion.div>

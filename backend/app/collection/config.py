@@ -68,12 +68,6 @@ STANDALONE_VIDEOS: list[VideoConfig] = [
 
 PLAYLISTS: list[PlaylistConfig] = [
     PlaylistConfig(
-        name="Radio | Luyện nghe tiếng Trung",
-        playlist_id="PLniHrP5FDBnjRxYSs0j8_siiNPVs58pZ_",
-        default_difficulty="HSK 1-2",
-        default_topic="Daily Conversation",
-    ),
-    PlaylistConfig(
         name="Mr.Chinese Channel",
         playlist_id="PLN7MEvFrgspUfsYuGJord_LVV9gp-L1bZ",
         default_difficulty="HSK 1-2",

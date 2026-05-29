@@ -36,7 +36,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
     .sort((a, b) => b.lastOpenedAt.localeCompare(a.lastOpenedAt))
     .find(l => !l.status || l.status === 'complete')
 
-  const hasAnyContent = queue.hasDailyReview || !!mostRecentLesson || queue.customTasks.length > 0
+  const hasAnyContent = queue.hasDailyReview || !!mostRecentLesson || queue.customTasks.length > 0 || !!queue.continueItem
 
   function openSkill(skill: ActivePanel) {
     openReviewModal(skill ?? undefined)
@@ -47,6 +47,13 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
       return
     onClose()
     navigate(`/lesson/${mostRecentLesson.id}?shadowing=true`)
+  }
+
+  function handleContinue() {
+    if (!queue.continueItem)
+      return
+    onClose()
+    navigate(queue.continueItem.route)
   }
 
   async function handleAddTask() {
@@ -67,8 +74,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
   ]
 
   return (
-    <div className="relative w-[340px] rounded-2xl overflow-hidden bg-black/20 backdrop-blur-2xl border border-white/10 flex flex-col bg-linear-to-br from-zinc-800/30 to-zinc-800/50 shadow-xl">
-
+    <div className="relative w-[340px] rounded-2xl overflow-hidden border border-white/10 flex flex-col bg-card shadow-xl">
       {editingTaskId !== null && (
         <div
           className="absolute inset-0 z-10"
@@ -120,7 +126,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
               <div
                 role="button"
                 tabIndex={0}
-                className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-secondary transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 onClick={() => setExpanded(e => !e)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(ex => !ex) } }}
               >
@@ -184,7 +190,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
             <div
               role="button"
               tabIndex={0}
-              className="w-full flex items-center gap-3 px-4 py-2.5 pr-3 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="w-full flex items-center gap-3 px-4 py-2.5 pr-3 hover:bg-secondary transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               onClick={handleStartShadowing}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStartShadowing() } }}
             >
@@ -197,6 +203,40 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 {t('queue.shadowing')}
               </span>
               {queue.shadowingDone
+                ? (
+                    <Button size="icon-xs" variant="ghost" className="text-emerald-500 pointer-events-none">
+                      <Check className="size-3" />
+                    </Button>
+                  )
+                : <StartButton />}
+            </div>
+          )}
+
+          {/* Continue where left off */}
+          {queue.continueItem && (
+            <div
+              role="button"
+              tabIndex={0}
+              className="w-full flex items-center gap-3 px-4 py-2.5 pr-3 hover:bg-secondary transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              onClick={handleContinue}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleContinue() } }}
+            >
+              <CircleIndicator done={queue.continueDone} partial={false} />
+              <div className="flex-1 min-w-0">
+                <div className={cn(
+                  'text-sm font-semibold',
+                  queue.continueDone ? 'line-through text-muted-foreground' : '',
+                )}
+                >
+                  {t('queue.continue')}
+                </div>
+                {queue.continueItem.title && (
+                  <div className="text-xs text-muted-foreground truncate">
+                    {queue.continueItem.title}
+                  </div>
+                )}
+              </div>
+              {queue.continueDone
                 ? (
                     <Button size="icon-xs" variant="ghost" className="text-emerald-500 pointer-events-none">
                       <Check className="size-3" />
@@ -350,7 +390,7 @@ function SkillRow({ label, done, onStart }: SkillRowProps) {
     <div
       role="button"
       tabIndex={done ? -1 : 0}
-      className="relative flex items-center gap-3 pl-6 pr-3 py-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
+      className="relative flex items-center gap-3 pl-6 pr-3 py-2 rounded-md hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors cursor-pointer"
       onClick={done ? undefined : onStart}
       onKeyDown={done ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStart() } }}
     >

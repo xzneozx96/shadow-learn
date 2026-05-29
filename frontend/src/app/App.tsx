@@ -117,12 +117,16 @@ function FloatingDock() {
   }
 
   function toggleQueue() {
-    setOpen((o) => {
-      const next = !o
-      if (next)
-        closePanel()
-      return next
-    })
+    const next = !open
+    setOpen(next)
+    if (next) {
+      closePanel()
+      // Re-read IDB on open so progress made on lesson/tip pages
+      // (watch position, completion) is reflected without a reload.
+      // Side effects must live outside the setState updater (which runs
+      // during render) to avoid setState-in-render on StudyQueueProvider.
+      void queue.refresh()
+    }
   }
 
   if (location.pathname.startsWith('/lesson/') || location.pathname.startsWith('/tips/'))

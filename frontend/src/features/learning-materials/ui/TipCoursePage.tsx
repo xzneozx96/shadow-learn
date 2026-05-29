@@ -188,7 +188,12 @@ export function TipCoursePage() {
               key={activeVideoId}
               videoId={activeVideoId}
               resumeSec={progress.watchedSec || undefined}
-              onTimeUpdate={(cur, dur) => { void progress.recordPosition(cur, dur) }}
+              onTimeUpdate={(cur, dur) => {
+                void progress.recordPosition(cur, dur, {
+                  title: activeLesson?.title,
+                  route: `/tips/${safeSource}/${safeId}?lesson=${activeVideoId}`,
+                })
+              }}
               onEnded={() => { void progress.markComplete() }}
             />
           </div>

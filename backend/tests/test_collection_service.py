@@ -878,6 +878,84 @@ def test_get_playlist_videos_returns_data_for_non_curated_playlist(monkeypatch):
     assert v["content_type"] is None
 
 
+# ── resolve_curated_video ─────────────────────────────────────────────────────
+
+def test_resolve_curated_video_standalone(monkeypatch):
+    """A standalone tip video resolves to the single-video route."""
+    import app.collection.service as svc
+    from app.collection.config import VideoConfig
+
+    monkeypatch.setattr(svc, "STANDALONE_VIDEOS", [VideoConfig(video_id="solo1", content_type="tip", skill="Grammar")])
+    monkeypatch.setattr(svc, "PLAYLISTS", [])
+
+    assert svc.resolve_curated_video("solo1") == {"status": "video", "video_id": "solo1"}
+
+
+def test_resolve_curated_video_playlist_member(monkeypatch):
+    """A video in a curated tip playlist resolves to that playlist."""
+    import app.collection.service as svc
+    from app.collection.config import PlaylistConfig
+
+    monkeypatch.setattr(svc, "STANDALONE_VIDEOS", [])
+    monkeypatch.setattr(svc, "PLAYLISTS", [
+        PlaylistConfig(name="Grammar", playlist_id="PL_TIP", default_content_type="tip", default_skill="Grammar"),
+    ])
+    monkeypatch.setattr(svc, "get_cached_playlist", lambda pid: [{"id": "vidX"}, {"id": "vidY"}])
+
+    assert svc.resolve_curated_video("vidY") == {
+        "status": "playlist", "playlist_id": "PL_TIP", "video_id": "vidY",
+    }
+
+
+def test_resolve_curated_video_skips_non_tip_playlists(monkeypatch):
+    """Material playlists are not scanned; a video only there is not curated (as a tip)."""
+    import app.collection.service as svc
+    from app.collection.config import PlaylistConfig
+
+    monkeypatch.setattr(svc, "STANDALONE_VIDEOS", [])
+    monkeypatch.setattr(svc, "PLAYLISTS", [
+        PlaylistConfig(name="Material", playlist_id="PL_MAT", default_content_type="material"),
+    ])
+    called = {"n": 0}
+
+    def fake_cached(pid):
+        called["n"] += 1
+        return [{"id": "vidZ"}]
+
+    monkeypatch.setattr(svc, "get_cached_playlist", fake_cached)
+
+    assert svc.resolve_curated_video("vidZ") == {"status": "not_curated"}
+    assert called["n"] == 0  # material playlist never fetched
+
+
+def test_resolve_curated_video_not_curated(monkeypatch):
+    """No match across fully-fetched tip playlists -> definitive not_curated."""
+    import app.collection.service as svc
+    from app.collection.config import PlaylistConfig
+
+    monkeypatch.setattr(svc, "STANDALONE_VIDEOS", [])
+    monkeypatch.setattr(svc, "PLAYLISTS", [
+        PlaylistConfig(name="Grammar", playlist_id="PL_TIP", default_content_type="tip", default_skill="Grammar"),
+    ])
+    monkeypatch.setattr(svc, "get_cached_playlist", lambda pid: [{"id": "other"}])
+
+    assert svc.resolve_curated_video("missing") == {"status": "not_curated"}
+
+
+def test_resolve_curated_video_unresolved_on_empty_fetch(monkeypatch):
+    """A tip playlist returning [] (fetch failed) with no match -> unresolved (transient)."""
+    import app.collection.service as svc
+    from app.collection.config import PlaylistConfig
+
+    monkeypatch.setattr(svc, "STANDALONE_VIDEOS", [])
+    monkeypatch.setattr(svc, "PLAYLISTS", [
+        PlaylistConfig(name="Grammar", playlist_id="PL_TIP", default_content_type="tip", default_skill="Grammar"),
+    ])
+    monkeypatch.setattr(svc, "get_cached_playlist", lambda pid: [])
+
+    assert svc.resolve_curated_video("anything") == {"status": "unresolved"}
+
+
 def test_fetch_standalone_video_entries_returns_full_metadata(monkeypatch):
     """fetch_standalone_video_entries returns title, channel, duration, view_count."""
     from unittest.mock import MagicMock, patch

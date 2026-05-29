@@ -1,5 +1,6 @@
 import type { TipLesson } from '@/features/learning-materials/domain/tips'
 import { ChevronLeft } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useI18n } from '@/app/providers/I18nContext'
 import { LessonRow } from './LessonRow'
@@ -34,6 +35,13 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
       navigate('/collection')
   }
 
+  // Bring the active lesson into view when arriving via ?lesson=<id> (it may be far
+  // down a long playlist). `block: 'nearest'` is a no-op when already visible.
+  const listRef = useRef<HTMLOListElement>(null)
+  useEffect(() => {
+    listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' })
+  }, [activeVideoId, lessons.length])
+
   return (
     <nav aria-label={navLabel} className="flex flex-col h-full border-r border-border">
       <header className="px-3 py-3.5 border-b border-border shrink-0">
@@ -49,7 +57,7 @@ export function CourseSidebar({ courseName, lessons, activeVideoId, completedVid
             : <h4 className="text-sm font-bold leading-snug">{courseName}</h4>}
         </button>
       </header>
-      <ol role="list" className="flex-1 overflow-y-auto">
+      <ol ref={listRef} role="list" className="flex-1 overflow-y-auto">
         {lessons.map(l => (
           <LessonRow
             key={l.videoId}

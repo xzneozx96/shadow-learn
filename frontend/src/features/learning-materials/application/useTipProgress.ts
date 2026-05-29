@@ -10,7 +10,7 @@ export interface UseTipProgressResult {
   watchedSec: number
   totalSec: number
   completed: boolean
-  recordPosition: (watchedSec: number, totalSec: number) => Promise<void>
+  recordPosition: (watchedSec: number, totalSec: number, meta?: { title?: string, route?: string }) => Promise<void>
   markComplete: () => Promise<void>
   markIncomplete: () => Promise<void>
 }
@@ -42,7 +42,7 @@ export function useTipProgress(courseId: string, videoId: string): UseTipProgres
       await putTipProgress(db, next)
   }, [db])
 
-  const recordPosition = useCallback(async (watchedSec: number, totalSec: number) => {
+  const recordPosition = useCallback(async (watchedSec: number, totalSec: number, meta?: { title?: string, route?: string }) => {
     const wasComplete = state.p?.completed ?? false
     const shouldComplete = wasComplete || (totalSec > 0 && watchedSec / totalSec >= WATCHED_THRESHOLD)
     const next: TipProgress = {
@@ -54,6 +54,8 @@ export function useTipProgress(courseId: string, videoId: string): UseTipProgres
       completed: shouldComplete,
       completedAt: shouldComplete ? (state.p?.completedAt ?? new Date().toISOString()) : null,
       lastSeenAt: new Date().toISOString(),
+      title: meta?.title ?? state.p?.title,
+      resumeRoute: meta?.route ?? state.p?.resumeRoute,
     }
     await writeState(next)
   }, [state.p, key, courseId, videoId, writeState])
@@ -68,6 +70,8 @@ export function useTipProgress(courseId: string, videoId: string): UseTipProgres
       completed: true,
       completedAt: state.p?.completedAt ?? new Date().toISOString(),
       lastSeenAt: new Date().toISOString(),
+      title: state.p?.title,
+      resumeRoute: state.p?.resumeRoute,
     }
     await writeState(next)
   }, [state.p, key, courseId, videoId, writeState])
@@ -82,6 +86,8 @@ export function useTipProgress(courseId: string, videoId: string): UseTipProgres
       completed: false,
       completedAt: null,
       lastSeenAt: new Date().toISOString(),
+      title: state.p?.title,
+      resumeRoute: state.p?.resumeRoute,
     }
     await writeState(next)
   }, [state.p, key, courseId, videoId, writeState])

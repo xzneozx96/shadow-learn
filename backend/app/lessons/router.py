@@ -25,12 +25,13 @@ from app.lessons.services.youtube_subtitles import (
     pick_manual_subtitle,
 )
 from app.lessons.services.romanization_provider import get_romanization_provider
+from app.lessons.services.segmentation_provider import get_segmentation_provider
 from app.lessons.services.chinese_normalizer import normalize_chinese
 from app.transcription.services.transcription_provider import STTProvider, TranscriptionKeys
 from app.translation.services.translation import translate_segments
 from app.lessons.services.validation import ValidationError, validate_upload_file, validate_youtube_url
 from app.shared.language_config import get_language_config
-from app.lessons.services.vocabulary import extract_vocabulary
+from app.lessons.services.vocabulary import enrich_vocabulary, extract_vocabulary
 from app.lessons.services.blog_scraper import scrape_article
 from app.tts.services.tts_provider import TTSProvider, TTSKeys
 
@@ -70,6 +71,21 @@ async def _shared_pipeline(
         enriched_segments.append({**seg, "romanization": romanizer.romanize_text(seg["text"])})
     logger.info("[pipeline] romanization: done in %.1fs (source_language=%s)", time.monotonic() - t0, source_language)
 
+    meaning_language = get_language_config(translation_languages[0])["language_name"]
+    segmenter = get_segmentation_provider(source_language)
+    if segmenter is not None:
+        for seg in enriched_segments:
+            seg["tokens"] = segmenter.segment(seg["text"])
+        vocab_coro = enrich_vocabulary(
+            enriched_segments, romanizer, api_key,
+            source_language=source_language, meaning_language=meaning_language,
+        )
+    else:
+        vocab_coro = extract_vocabulary(
+            enriched_segments, api_key,
+            source_language=source_language, meaning_language=meaning_language,
+        )
+
     jobs[job_id].step = "translation"
     t0 = time.monotonic()
     translated_segments, vocab_map = await asyncio.gather(
@@ -77,11 +93,7 @@ async def _shared_pipeline(
             enriched_segments, translation_languages, api_key,
             source_language=source_language,
         ),
-        extract_vocabulary(
-            enriched_segments, api_key,
-            source_language=source_language,
-            meaning_language=get_language_config(translation_languages[0])["language_name"],
-        ),
+        vocab_coro,
     )
     logger.info(
         "[pipeline] translation+vocabulary: done in %.1fs, %d segments, %d vocab entries",

@@ -107,6 +107,7 @@ export function Layout({ children }: LayoutProps) {
             <div key={to} className="group relative">
               <Button
                 variant="ghost"
+                nativeButton={false}
                 title={collapsed ? label : undefined}
                 className={cn(
                   'w-full h-10 rounded-lg text-sm font-medium',
@@ -180,6 +181,7 @@ export function Layout({ children }: LayoutProps) {
           {/* Settings */}
           <Button
             variant="ghost"
+            nativeButton={false}
             title={collapsed ? t('nav.settings') : undefined}
             className={cn(
               'group w-full h-9 text-sm font-medium text-foreground/60 hover:text-foreground/70 hover:bg-white/4 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',

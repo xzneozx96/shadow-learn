@@ -252,8 +252,8 @@ describe('getAllBaseTools includes tool_search', () => {
     expect(tools[0]?.name).toBe('tool_search')
   })
 
-  it('returns 19 tools (18 existing + tool_search)', () => {
+  it('returns 20 tools (19 existing + tool_search)', () => {
     const tools = getAllBaseTools('test-key')
-    expect(tools).toHaveLength(19)
+    expect(tools).toHaveLength(20)
   })
 })
