@@ -97,3 +97,51 @@ async def test_get_playlist_returns_404_for_unknown(monkeypatch):
         response = await client.get("/api/playlist/UNKNOWN")
 
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_resolve_video_returns_playlist_route(monkeypatch):
+    """GET /api/collection/resolve/:id returns 200 + playlist route for a tip member."""
+    from app.main import app
+    from app.collection import router as collection_router
+
+    monkeypatch.setattr(collection_router, "resolve_curated_video", lambda vid: {
+        "status": "playlist", "playlist_id": "PL_TIP", "video_id": vid,
+    })
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/collection/resolve/vid1")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "playlist", "playlist_id": "PL_TIP", "video_id": "vid1"}
+
+
+@pytest.mark.asyncio
+async def test_resolve_video_404_when_not_curated(monkeypatch):
+    """GET /api/collection/resolve/:id returns 404 when definitively not curated."""
+    from app.main import app
+    from app.collection import router as collection_router
+
+    monkeypatch.setattr(collection_router, "resolve_curated_video", lambda vid: {"status": "not_curated"})
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/collection/resolve/vid1")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_resolve_video_503_when_unresolved(monkeypatch):
+    """GET /api/collection/resolve/:id returns 503 on transient resolution failure."""
+    from app.main import app
+    from app.collection import router as collection_router
+
+    monkeypatch.setattr(collection_router, "resolve_curated_video", lambda vid: {"status": "unresolved"})
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/collection/resolve/vid1")
+
+    assert response.status_code == 503

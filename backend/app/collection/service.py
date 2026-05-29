@@ -175,6 +175,40 @@ def get_cached_playlist(playlist_id: str) -> list[dict]:
     return entries
 
 
+def resolve_curated_video(video_id: str) -> dict:
+    """Resolve a YouTube video_id to its curated tip home.
+
+    The YouTube Data API has no reverse video→playlist lookup, so we enumerate the
+    curated tip playlists and check membership (reusing the cached playlistItems fetch).
+
+    Returns one of:
+    - {"status": "video", "video_id": ...}        standalone tip video
+    - {"status": "playlist", "playlist_id": ..., "video_id": ...}   tip-playlist member
+    - {"status": "not_curated"}   every tip playlist fetched, no match (definitive)
+    - {"status": "unresolved"}    a tip playlist fetch was empty/failed, no match (transient)
+    """
+    for video in STANDALONE_VIDEOS:
+        if video.video_id == video_id and video.content_type == "tip":
+            return {"status": "video", "video_id": video_id}
+
+    had_empty_fetch = False
+    for playlist in PLAYLISTS:
+        if playlist.default_content_type != "tip":
+            continue
+        entries = get_cached_playlist(playlist.playlist_id)
+        if not entries:
+            had_empty_fetch = True
+            continue
+        if any(entry["id"] == video_id for entry in entries):
+            return {
+                "status": "playlist",
+                "playlist_id": playlist.playlist_id,
+                "video_id": video_id,
+            }
+
+    return {"status": "unresolved"} if had_empty_fetch else {"status": "not_curated"}
+
+
 # Separate cache for playlist-level metadata (thumbnail, video_count)
 _meta_cache: dict[str, tuple[float, dict]] = {}
 

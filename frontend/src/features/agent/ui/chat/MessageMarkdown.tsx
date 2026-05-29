@@ -1,6 +1,8 @@
 import type { ComponentProps } from 'react'
 import { memo, useMemo } from 'react'
 import { Streamdown } from 'streamdown'
+import { extractYouTubeVideoId } from '@/features/lesson/domain/youtube'
+import { RecommendedVideoLink } from './RecommendedVideoLink'
 
 type StreamdownProps = ComponentProps<typeof Streamdown>
 
@@ -20,28 +22,35 @@ function linkifyTimestamps(text: string): string {
   return text.replace(TIMESTAMP_TOKEN_RE, (_, token) => `[${token}](${TIMESTAMP_HASH_PREFIX}${tokenToSeconds(token)})`)
 }
 
-function makeTimestampComponents(onSeek: (seconds: number) => void): NonNullable<StreamdownProps['components']> {
+// Always-on link override: rewrites timestamp tokens (when a seek handler exists) and
+// recommended YouTube links (→ internal tip route); everything else stays an external link.
+function makeLinkComponents(onSeek?: (seconds: number) => void): NonNullable<StreamdownProps['components']> {
   return {
     a: ({ href, children }) => {
-      const decoded = typeof href === 'string' ? decodeURIComponent(href) : ''
-      if (decoded.startsWith(TIMESTAMP_HASH_PREFIX)) {
-        const sec = Number.parseInt(decoded.slice(TIMESTAMP_HASH_PREFIX.length), 10)
-        if (Number.isFinite(sec)) {
-          return (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onSeek(sec)
-              }}
-              className="inline-flex items-center rounded bg-primary/15 px-1.5 py-0.5 text-[0.7rem] font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer not-prose tabular-nums"
-            >
-              {children}
-            </button>
-          )
+      if (onSeek) {
+        const decoded = typeof href === 'string' ? decodeURIComponent(href) : ''
+        if (decoded.startsWith(TIMESTAMP_HASH_PREFIX)) {
+          const sec = Number.parseInt(decoded.slice(TIMESTAMP_HASH_PREFIX.length), 10)
+          if (Number.isFinite(sec)) {
+            return (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onSeek(sec)
+                }}
+                className="inline-flex items-center rounded bg-primary/15 px-1.5 py-0.5 text-[0.7rem] font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer not-prose tabular-nums"
+              >
+                {children}
+              </button>
+            )
+          }
         }
       }
+      const videoId = typeof href === 'string' ? extractYouTubeVideoId(href) : null
+      if (href && videoId)
+        return <RecommendedVideoLink href={href} videoId={videoId}>{children}</RecommendedVideoLink>
       return <a href={href} target="_blank" rel="noreferrer">{children}</a>
     },
   }
@@ -53,22 +62,12 @@ interface MessageMarkdownProps {
 }
 
 export const MessageMarkdown = memo(({ text, onTimestampClick }: MessageMarkdownProps) => {
-  const components = useMemo(
-    () => (onTimestampClick ? makeTimestampComponents(onTimestampClick) : undefined),
-    [onTimestampClick],
-  )
-  if (onTimestampClick) {
-    return (
-      <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-[#080a0d]/50 [&_table]:block [&_table]:overflow-x-auto [&_table]:whitespace-nowrap">
-        <Streamdown components={components}>
-          {linkifyTimestamps(text)}
-        </Streamdown>
-      </div>
-    )
-  }
+  const components = useMemo(() => makeLinkComponents(onTimestampClick), [onTimestampClick])
   return (
     <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-[#080a0d]/50 [&_table]:block [&_table]:overflow-x-auto [&_table]:whitespace-nowrap">
-      <Streamdown>{text}</Streamdown>
+      <Streamdown components={components}>
+        {onTimestampClick ? linkifyTimestamps(text) : text}
+      </Streamdown>
     </div>
   )
 })
