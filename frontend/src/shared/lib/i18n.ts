@@ -1651,7 +1651,7 @@ export const TRANSLATIONS = {
     'queue.roleplay': 'Nhập vai',
     'queue.roleplayHint': 'Hội thoại tự do',
     'queue.shadowing': 'Luyện Shadowing',
-    'queue.continue': 'Tiếp tục bài đang học dở',
+    'queue.continue': 'Tiếp tục bài giảng ngữ pháp',
     'queue.addTask': 'Thêm hoạt động',
     'queue.addTaskPlaceholder': 'Bạn muốn luyện gì?',
     'queue.subtask.done': '✓ Xong',
