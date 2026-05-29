@@ -8,6 +8,7 @@ import {
   getAllTipProgress,
   getDailyTasks,
   getDueItems,
+  getUserMaterialByExternalId,
   getVocabEntryById,
   saveDailyTask,
 } from '@/db'
@@ -142,8 +143,13 @@ export function useStudyQueue(
       .filter(t => !t.completed && t.watchedSec > 0)
       .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt))[0]
     if (abandoned) {
+      let title = abandoned.title ?? ''
+      if (!title) {
+        const material = await getUserMaterialByExternalId(db, abandoned.courseId)
+        title = material?.name ?? ''
+      }
       setContinueItem({
-        title: abandoned.title ?? '',
+        title,
         route: abandoned.resumeRoute ?? tipFallbackRoute(abandoned),
       })
       setContinueDone(localDateISO(abandoned.lastSeenAt) === today)

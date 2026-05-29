@@ -2,7 +2,7 @@ import type { ShadowLearnDB } from '@/db'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { initDB, putTipProgress, saveSpacedRepetitionItem, saveVocabEntry } from '@/db'
+import { initDB, putTipProgress, putUserMaterial, saveSpacedRepetitionItem, saveVocabEntry } from '@/db'
 import { useStudyQueue } from '@/features/study/application/useStudyQueue'
 import 'fake-indexeddb/auto'
 
@@ -36,6 +36,20 @@ function makeTipProgress(over: Partial<import('@/features/learning-materials/dom
     completedAt: null,
     lastSeenAt: '2026-05-13T09:00:00.000Z',
     ...over,
+  }
+}
+
+function makeUserMaterial(externalId: string, name: string) {
+  return {
+    id: `um-${externalId}`,
+    source: 'video' as const,
+    externalId,
+    name,
+    skill: 'Grammar' as const,
+    instructionLanguage: 'Vietnamese' as const,
+    contentType: 'tip' as const,
+    cachedMeta: { thumbnailUrl: null, channel: null, videoCount: null, publishedAt: null, duration: null, viewCount: null },
+    createdAt: '2026-05-01T00:00:00.000Z',
   }
 }
 
@@ -286,5 +300,21 @@ describe('useStudyQueue', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.continueDone).toBe(false)
     expect(result.current.incompleteCount).toBe(1)
+  })
+
+  it('falls back to UserMaterial name when tip has no persisted title', async () => {
+    await putTipProgress(db, makeTipProgress({ courseId: 'vidZ', videoId: 'vidZ' })) // legacy: no title
+    await putUserMaterial(db, makeUserMaterial('vidZ', 'My Grammar Video'))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem?.title).toBe('My Grammar Video')
+  })
+
+  it('prefers persisted tip title over UserMaterial name', async () => {
+    await putTipProgress(db, makeTipProgress({ courseId: 'vidZ', videoId: 'vidZ', title: 'Persisted Title' }))
+    await putUserMaterial(db, makeUserMaterial('vidZ', 'Material Name'))
+    const { result } = renderHook(() => useStudyQueue(db, null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.continueItem?.title).toBe('Persisted Title')
   })
 })
