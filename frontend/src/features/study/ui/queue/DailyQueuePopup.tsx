@@ -36,7 +36,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
     .sort((a, b) => b.lastOpenedAt.localeCompare(a.lastOpenedAt))
     .find(l => !l.status || l.status === 'complete')
 
-  const hasAnyContent = queue.hasDailyReview || !!mostRecentLesson || queue.customTasks.length > 0
+  const hasAnyContent = queue.hasDailyReview || !!mostRecentLesson || queue.customTasks.length > 0 || !!queue.continueItem
 
   function openSkill(skill: ActivePanel) {
     openReviewModal(skill ?? undefined)
@@ -47,6 +47,13 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
       return
     onClose()
     navigate(`/lesson/${mostRecentLesson.id}?shadowing=true`)
+  }
+
+  function handleContinue() {
+    if (!queue.continueItem)
+      return
+    onClose()
+    navigate(queue.continueItem.route)
   }
 
   async function handleAddTask() {
@@ -197,6 +204,33 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
                 {t('queue.shadowing')}
               </span>
               {queue.shadowingDone
+                ? (
+                    <Button size="icon-xs" variant="ghost" className="text-emerald-500 pointer-events-none">
+                      <Check className="size-3" />
+                    </Button>
+                  )
+                : <StartButton />}
+            </div>
+          )}
+
+          {/* Continue where left off */}
+          {queue.continueItem && (
+            <div
+              role="button"
+              tabIndex={0}
+              className="w-full flex items-center gap-3 px-4 py-2.5 pr-3 hover:bg-muted/30 transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              onClick={handleContinue}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleContinue() } }}
+            >
+              <CircleIndicator done={queue.continueDone} partial={false} />
+              <span className={cn(
+                'flex-1 text-sm font-semibold truncate',
+                queue.continueDone ? 'line-through text-muted-foreground' : '',
+              )}
+              >
+                {queue.continueItem.title || t('queue.continue')}
+              </span>
+              {queue.continueDone
                 ? (
                     <Button size="icon-xs" variant="ghost" className="text-emerald-500 pointer-events-none">
                       <Check className="size-3" />
