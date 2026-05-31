@@ -50,7 +50,7 @@ export function SpeakingSkillSession({ entries, date, onComplete, onProgress, on
   }
 
   function handleNext(score: number, opts?: { skipped?: boolean }) {
-    void logExerciseResult({ vocabEntry: current, exerciseType: 'pronunciation', score })
+    void logExerciseResult({ vocabEntry: current, exerciseType: 'pronunciation', score, skipped: opts?.skipped })
     if (opts?.skipped) {
       setSkippedIds(prev => new Set([...prev, current.id]))
     }

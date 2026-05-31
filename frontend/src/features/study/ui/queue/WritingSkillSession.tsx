@@ -92,13 +92,13 @@ export function WritingSkillSession({ entries, date, onComplete, onProgress, onB
   }
 
   function handleCharacterWritingNext(score: number, opts?: { skipped?: boolean }) {
-    void logExerciseResult({ vocabEntry: current, exerciseType: 'writing', score })
+    void logExerciseResult({ vocabEntry: current, exerciseType: 'writing', score, skipped: opts?.skipped })
     setCharacterSkipped(!!opts?.skipped)
     setStep('reconstruction')
   }
 
   function handleReconstructionNext(score: number, opts?: { skipped?: boolean }) {
-    void logExerciseResult({ vocabEntry: current, exerciseType: 'reconstruction', score })
+    void logExerciseResult({ vocabEntry: current, exerciseType: 'reconstruction', score, skipped: opts?.skipped })
     advanceWord(characterSkipped && !!opts?.skipped)
   }
 

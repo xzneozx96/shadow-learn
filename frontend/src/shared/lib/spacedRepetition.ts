@@ -42,7 +42,11 @@ export function updateSpacedRepetition(
     consecutiveIncorrect = 0
     if (repetitions === 1)
       intervalDays = 1
-    else intervalDays = Math.round(intervalDays * easinessFactor)
+    // Floor growth at +1 day. `round(interval × EF)` collapses to the same
+    // interval when interval=1 and EF<1.5 (e.g. round(1×1.3)=1), trapping a
+    // word at a 1-day gap forever even with perfect reviews. The max() guarantees
+    // the gap always advances on a pass.
+    else intervalDays = Math.max(intervalDays + 1, Math.round(intervalDays * easinessFactor))
   }
   else {
     repetitions = 0

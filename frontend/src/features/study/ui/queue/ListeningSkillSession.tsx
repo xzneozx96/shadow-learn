@@ -48,7 +48,7 @@ export function ListeningSkillSession({ entries, date, onComplete, onProgress, o
   const current = remaining[0]
 
   function handleNext(score: number, opts?: { skipped?: boolean }) {
-    void logExerciseResult({ vocabEntry: current, exerciseType: 'dictation', score })
+    void logExerciseResult({ vocabEntry: current, exerciseType: 'dictation', score, skipped: opts?.skipped })
     if (opts?.skipped) {
       setSkippedIds(prev => new Set([...prev, current.id]))
     }

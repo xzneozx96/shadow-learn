@@ -103,6 +103,35 @@ describe('updateSpacedRepetition', () => {
     expect(item.masteryLevel).toBe(0)
   })
 
+  it('grows the interval out of the interval=1 / low-EF trap on a passing review', () => {
+    // Regression: a word ground down to interval=1 with EF floored at 1.3 used to
+    // compute round(1 × 1.3) = 1, freezing the gap at one day forever despite
+    // perfect reviews (production words 准备/事情 were stuck this way).
+    const trapped = {
+      ...createSpacedRepetitionItem('vocab-1'),
+      repetitions: 11,
+      intervalDays: 1,
+      easinessFactor: 1.3,
+    }
+    const updated = updateSpacedRepetition(trapped, 80) // quality 4 (pass)
+    expect(updated.intervalDays).toBeGreaterThan(1)
+  })
+
+  it('strictly increases the interval across consecutive passing reviews even at minimum EF', () => {
+    let item = {
+      ...createSpacedRepetitionItem('vocab-1'),
+      repetitions: 2,
+      intervalDays: 1,
+      easinessFactor: 1.3,
+    }
+    let prev = item.intervalDays
+    for (let i = 0; i < 5; i++) {
+      item = updateSpacedRepetition(item, 80)
+      expect(item.intervalDays).toBeGreaterThan(prev)
+      prev = item.intervalDays
+    }
+  })
+
   it('appends to reviewHistory on each update', () => {
     let item = createSpacedRepetitionItem('vocab-1')
     item = updateSpacedRepetition(item, 80)
