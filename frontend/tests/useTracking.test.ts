@@ -47,6 +47,28 @@ describe('useTracking', () => {
     vi.useRealTimers()
   })
 
+  it('does not buffer SM-2 for a skipped exercise (abstain ≠ fail)', async () => {
+    // Regression: skip used to send score 0, which won via worst-score-wins and
+    // reset the word's review interval. A skip must not touch scheduling.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
+    const { result } = renderHook(() => useTracking())
+    await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'pronunciation', score: 0, skipped: true })
+    expect(localStorage.getItem('sm2-pending-2026-05-14')).toBeNull()
+    vi.useRealTimers()
+  })
+
+  it('a skip does not overwrite an existing good buffered score', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
+    const { result } = renderHook(() => useTracking())
+    await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 90 })
+    await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'pronunciation', score: 0, skipped: true })
+    const pending = JSON.parse(localStorage.getItem('sm2-pending-2026-05-14') ?? '{}')
+    expect(pending['entry-1']).toBe(90)
+    vi.useRealTimers()
+  })
+
   it('sm2 buffer holds minimum across two calls', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))

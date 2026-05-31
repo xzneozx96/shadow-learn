@@ -76,8 +76,8 @@ export function VocabularySkillSession({ entries, date, onComplete, onProgress, 
     setStep('romanization')
   }
 
-  function handleRomanizationNext(score: number) {
-    void logExerciseResult({ vocabEntry: current, exerciseType: 'romanization-recall', score })
+  function handleRomanizationNext(score: number, opts?: { skipped?: boolean }) {
+    void logExerciseResult({ vocabEntry: current, exerciseType: 'romanization-recall', score, skipped: opts?.skipped })
     setStep('make-a-sentence')
   }
 

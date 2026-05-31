@@ -64,13 +64,21 @@ export async function logExerciseCompletion(
     exerciseType,
     score,
     mistakes,
+    skipped,
   }: {
     vocabEntry: VocabEntry
     exerciseType: ExerciseType
     score: number
     mistakes?: MistakeExample[]
+    skipped?: boolean
   },
 ): Promise<void> {
+  // Skipping is abstaining, not failing. It must not touch SM-2 scheduling or
+  // accuracy stats — otherwise the skip score (0) poisons the word's schedule
+  // via worst-score-wins and resets its review interval.
+  if (skipped)
+    return
+
   const today = todayISO()
   const isCorrect = score >= 60
 
@@ -144,6 +152,7 @@ export function useTracking() {
     exerciseType: ExerciseType
     score: number
     mistakes?: MistakeExample[]
+    skipped?: boolean
   }): Promise<void> {
     if (!db)
       return
