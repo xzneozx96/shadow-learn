@@ -1,5 +1,5 @@
 import type { TipProgress } from '@/features/learning-materials/domain/tips'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
 import { getTipProgress, putTipProgress } from '@/db'
 
@@ -20,8 +20,14 @@ export function useTipProgress(courseId: string, videoId: string): UseTipProgres
   const key = `${courseId}:${videoId}`
   const [state, setState] = useState<{ loaded: boolean, p: TipProgress | null }>({ loaded: false, p: null })
   const [lastKey, setLastKey] = useState(key)
-  // Reset immediately when the video changes so stale `completed`/`watchedSec`
-  // can't bleed into the completedSet effect in TipCoursePage before IDB loads.
+  // Updated on every render so in-flight IDB fetches for the old key can
+  // self-discard before the effect cleanup has a chance to set `cancelled`.
+  const currentKeyRef = useRef(key)
+  currentKeyRef.current = key
+
+  // Reset immediately during render when the key changes. Prevents stale
+  // `completed`/`watchedSec` from the old key bleeding into TipCoursePage's
+  // completedSet effect while IDB for the new key is loading.
   if (lastKey !== key) {
     setLastKey(key)
     setState({ loaded: false, p: null })
@@ -29,14 +35,17 @@ export function useTipProgress(courseId: string, videoId: string): UseTipProgres
 
   useEffect(() => {
     let cancelled = false
+    const snapshotKey = key
     async function load() {
       if (!db) {
-        if (!cancelled)
+        if (!cancelled && currentKeyRef.current === snapshotKey)
           setState({ loaded: true, p: null })
         return
       }
-      const p = await getTipProgress(db, key)
-      if (!cancelled)
+      const p = await getTipProgress(db, snapshotKey)
+      // Guard against both unmount (cancelled) and key-change races where the
+      // during-render reset fires but the cleanup hasn't run yet.
+      if (!cancelled && currentKeyRef.current === snapshotKey)
         setState({ loaded: true, p: p ?? null })
     }
     void load()
