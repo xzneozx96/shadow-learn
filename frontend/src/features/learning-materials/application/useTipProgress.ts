@@ -19,6 +19,13 @@ export function useTipProgress(courseId: string, videoId: string): UseTipProgres
   const { db } = useAuth()
   const key = `${courseId}:${videoId}`
   const [state, setState] = useState<{ loaded: boolean, p: TipProgress | null }>({ loaded: false, p: null })
+  const [lastKey, setLastKey] = useState(key)
+  // Reset immediately when the video changes so stale `completed`/`watchedSec`
+  // can't bleed into the completedSet effect in TipCoursePage before IDB loads.
+  if (lastKey !== key) {
+    setLastKey(key)
+    setState({ loaded: false, p: null })
+  }
 
   useEffect(() => {
     let cancelled = false

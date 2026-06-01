@@ -108,7 +108,7 @@ export function TipCoursePage() {
       const next = new URLSearchParams(prev)
       next.set('lesson', videoId)
       return next
-    })
+    }, { replace: true })
   }
 
   const handleNextLesson = () => {
