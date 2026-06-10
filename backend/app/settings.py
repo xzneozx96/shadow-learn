@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     pageindex_base_url: str = "http://pageindex-api:8000"  # env: SHADOWLEARN_PAGEINDEX_BASE_URL
     pageindex_api_key: str | None = None                   # env: SHADOWLEARN_PAGEINDEX_API_KEY
 
+    # agentic-rag retrieval backend. The companion proxies the RAG MCP tools to
+    # this externally-running service. Its /api/pageindex/tool route is
+    # CORS-gated and unauthenticated, so the proxy injects no key.
+    agentic_rag_base_url: str = "http://localhost:8000"  # env: SHADOWLEARN_AGENTIC_RAG_BASE_URL
+
     # Offshore Gemini proxy — see backend/livekit_agent/http_server.py.
     # The China-side backend forwards Gemini-bound traffic here so it never
     # crosses the GFW directly. Empty base_url disables the proxy and
