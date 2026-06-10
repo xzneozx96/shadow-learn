@@ -8,14 +8,7 @@ import { getSettings } from '@/db'
 import { useTTS } from '@/shared/hooks/useTTS'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { DeleteConfirmDialog } from '@/shared/ui/DeleteConfirmDialog'
 import { WordCard } from './WordCard'
 
 interface LessonGroupProps {
@@ -110,34 +103,17 @@ export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: L
         </>
       )}
 
-      {/* Delete confirmation modal */}
-      <Dialog
+      <DeleteConfirmDialog
         open={showDeleteConfirm}
-        onOpenChange={(open) => {
-          if (!open)
-            setShowDeleteConfirm(false)
+        onOpenChange={setShowDeleteConfirm}
+        title={t('lessonGroup.deleteTitle')}
+        description={t('lessonGroup.deleteDescription')}
+        onConfirm={() => {
+          setShowDeleteConfirm(false)
+          if (onDeleteGroup)
+            onDeleteGroup(lessonId)
         }}
-      >
-        <DialogContent className="max-w-xs">
-          <DialogHeader>
-            <DialogTitle>{t('lessonGroup.deleteTitle')}</DialogTitle>
-            <DialogDescription>{t('lessonGroup.deleteDescription')}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('common.cancel')}</Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setShowDeleteConfirm(false)
-                if (onDeleteGroup)
-                  onDeleteGroup(lessonId)
-              }}
-            >
-              {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      />
     </div>
   )
 }

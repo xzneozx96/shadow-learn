@@ -22,14 +22,7 @@ import {
   CutoutCorner,
   useCutoutContentStaggerVariants,
 } from '@/shared/ui/cutout-card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { DeleteConfirmDialog } from '@/shared/ui/DeleteConfirmDialog'
 import { GlowIconPlaceholder } from '@/shared/ui/GlowIconPlaceholder'
 import { MenuBackdrop, MenuItem, MenuPopup, MenuPortal, MenuPositioner, MenuRoot, MenuTrigger } from '@/shared/ui/menu'
 
@@ -325,32 +318,13 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry, onToggleDone }
         </CutoutCard>
       </Link>
 
-      {/* Delete confirmation modal */}
-      <Dialog
+      <DeleteConfirmDialog
         open={showDeleteConfirm}
-        onOpenChange={(open) => {
-          if (!open)
-            setShowDeleteConfirm(false)
-        }}
-      >
-        <DialogContent className="max-w-xs">
-          <DialogHeader>
-            <DialogTitle>{t('library.deleteTitle' as TranslationKey)}</DialogTitle>
-            <DialogDescription>{t('library.deleteDescription' as TranslationKey)}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button size="lg" variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('common.cancel' as TranslationKey)}</Button>
-            <Button
-              size="lg"
-              variant="destructive"
-              className="min-w-16"
-              onClick={() => { setShowDeleteConfirm(false); onDelete(lesson.id) }}
-            >
-              {t('common.delete' as TranslationKey)}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setShowDeleteConfirm}
+        title={t('library.deleteTitle' as TranslationKey)}
+        description={t('library.deleteDescription' as TranslationKey)}
+        onConfirm={() => { setShowDeleteConfirm(false); onDelete(lesson.id) }}
+      />
     </div>
   )
 }
