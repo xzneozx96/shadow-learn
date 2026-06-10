@@ -12,7 +12,6 @@ const browseDocumentsSchema = z.object({
 
 const getDocumentStructureSchema = z.object({
   doc_name: z.string().min(1).describe('Document name copied verbatim from a browse_documents() result.'),
-  part: z.number().int().min(1).optional().describe('Part number for pagination (1-based); see _pageindex_total_parts in the response.'),
 })
 
 const getPageContentSchema = z.object({
@@ -20,9 +19,10 @@ const getPageContentSchema = z.object({
   pages: z.string().min(1).describe('Page specification: "5", "3,7,10", "5-10", or "1-3,7,9-12". Use tight ranges; never the whole document.'),
 })
 
-// 64K cap — a long document's full outline blows past small-context models; the
-// agent should paginate via `part` instead of fetching the whole tree at once.
-const STRUCTURE_RESULT_CAP_CHARS = 64_000
+// Structure is returned whole (text fields are stripped server-side, keeping a
+// typical outline well under this). Generous cap guards only against a pathological
+// multi-MB tree; real truncation/pagination is a future redesign.
+const STRUCTURE_RESULT_CAP_CHARS = 1_000_000
 // A single page of Chinese text is 3000-5000 chars; a tight range can exceed 15000.
 const PAGE_CONTENT_CAP_CHARS = 100_000
 
@@ -39,7 +39,7 @@ export const browseDocumentsTool = buildTool({
 
 export const getDocumentStructureTool = buildTool({
   name: 'get_document_structure',
-  description: 'Get a document\'s hierarchical outline (section titles + page references) by doc_name. Use for long documents to locate the relevant section before reading pages. If the response has _pageindex_total_parts > 1, call part=2, 3, … up to _pageindex_total_parts until you find the section, then stop and call get_page_content.',
+  description: 'Get a document\'s hierarchical outline (section titles + page references) by doc_name. Use for long documents to locate the relevant section before reading pages, then call get_page_content for those pages.',
   inputSchema: getDocumentStructureSchema,
   isConcurrencySafe: () => true,
   isReadOnly: () => true,

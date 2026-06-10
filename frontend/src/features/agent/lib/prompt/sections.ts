@@ -43,7 +43,7 @@ export function learningResourceProtocolBlock(): string {
     'Learning tips and vocabulary methods = call `browse_documents(sort="relevance", query="…")` FIRST, then fetch relevant pages via `get_page_content(doc_name, "5-7")`, then ground the answer in the fetched content.',
     '- **TRIGGER:** any question about HOW to learn Chinese — memorizing words, building vocabulary, planning a study schedule, retention techniques, effective daily habits, or any request for a recommended video/lesson on a specific learning topic (e.g. "how do I memorize tones", "recommend a video about spaced repetition", "how should I plan my study day").',
     '- **DO NOT answer from training data alone.** The knowledge base contains curated content from language-learning experts; prefer retrieved content over generic advice.',
-    '- **LONG DOCUMENTS:** if a document is large, call `get_document_structure(doc_name)` to locate the relevant section before reading; if the response has `_pageindex_total_parts > 1`, page through `part=2, 3, …` until you find the section, then stop and call `get_page_content`.',
+    '- **LONG DOCUMENTS:** if a document is large, call `get_document_structure(doc_name)` to locate the relevant section before reading, then call `get_page_content` for those pages.',
     '- **NO REDUNDANT CALLS:** NEVER call `browse_documents` again for a `doc_name` already returned in this conversation. Reuse the results in context — go straight to `get_page_content`. Only re-`browse_documents` for a genuinely new topic not covered by any document already in context.',
     '- **SHOW THE SOURCE URL** when one appears in the fetched page content — link the learner directly to the original video.',
   ])
