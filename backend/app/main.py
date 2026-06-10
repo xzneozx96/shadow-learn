@@ -20,6 +20,7 @@ from app.collection.router import router as collection_router
 from app.daily_review.router import router as daily_review_router
 from app.tips.router import router as tips_router
 from app.document_search.router import router as document_search_router
+from app.pageindex_tool.router import router as pageindex_tool_router
 from app.tts.services.tts_factory import get_tts_provider
 from app.transcription.services.transcription_factory import get_stt_provider
 
@@ -61,6 +62,7 @@ app.include_router(collection_router)
 app.include_router(daily_review_router)
 app.include_router(tips_router)
 app.include_router(document_search_router)
+app.include_router(pageindex_tool_router)
 
 
 @app.get("/api/health")
