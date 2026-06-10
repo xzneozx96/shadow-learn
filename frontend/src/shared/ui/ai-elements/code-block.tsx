@@ -60,7 +60,6 @@ function addKeysToTokens(lines: ThemedToken[][]): KeyedLine[] {
 function TokenSpan({ token }: { token: ThemedToken }) {
   return (
     <span
-      className="dark:bg-(--shiki-dark-bg) dark:text-(--shiki-dark)"
       style={
         {
           backgroundColor: token.bgColor,
@@ -158,7 +157,7 @@ function getHighlighter(language: BundledLanguage): Promise<HighlighterGeneric<B
 
   const highlighterPromise = createHighlighter({
     langs: [language],
-    themes: ['github-light', 'github-dark'],
+    themes: ['github-dark-high-contrast'],
   })
 
   highlighterCache.set(language, highlighterPromise)
@@ -213,10 +212,7 @@ export function highlightCode(code: string, language: BundledLanguage,
 
       const result = highlighter.codeToTokens(code, {
         lang: langToUse,
-        themes: {
-          dark: 'github-dark',
-          light: 'github-light',
-        },
+        theme: 'github-dark-high-contrast',
       })
 
       const tokenized: TokenizedCode = {
@@ -272,7 +268,7 @@ const CodeBlockBody = memo(
     return (
       <pre
         className={cn(
-          'dark:bg-(--shiki-dark-bg) dark:text-(--shiki-dark) m-0 p-4 text-sm',
+          'm-0 p-4 text-sm',
           className,
         )}
         style={preStyle}
