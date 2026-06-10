@@ -5,14 +5,13 @@ import { z } from 'zod'
 import { navigateToSegmentTool } from '@/features/agent/lib/tools/action/navigateToSegment'
 import { playSegmentAudioTool } from '@/features/agent/lib/tools/action/playSegmentAudio'
 import { startShadowingTool } from '@/features/agent/lib/tools/action/startShadowing'
-import { getPageContentTool } from '@/features/agent/lib/tools/data/getPageContent'
 import { getProgressSummaryTool } from '@/features/agent/lib/tools/data/getProgressSummary'
 import { getStudyContextTool } from '@/features/agent/lib/tools/data/getStudyContext'
 import { getVocabularyTool } from '@/features/agent/lib/tools/data/getVocabulary'
 import { logMistakeTool } from '@/features/agent/lib/tools/data/logMistake'
+import { browseDocumentsTool, getDocumentStructureTool, getPageContentTool } from '@/features/agent/lib/tools/data/pageindexTools'
 import { recallMemoryTool } from '@/features/agent/lib/tools/data/recallMemory'
 import { saveMemoryTool } from '@/features/agent/lib/tools/data/saveMemory'
-import { searchDocumentTool } from '@/features/agent/lib/tools/data/searchDocument'
 import { updateLearnerProfileTool } from '@/features/agent/lib/tools/data/updateLearnerProfile'
 import { updateSrItemTool } from '@/features/agent/lib/tools/data/updateSrItem'
 import { getCoreGuidelinesTool } from '@/features/agent/lib/tools/guidance/getCoreGuidelines'
@@ -29,8 +28,9 @@ export function getAllBaseTools(openrouterApiKey: string, uiLanguage: string = '
     toolSearchTool, // ALWAYS first - never deferred
     getStudyContextTool,
     getVocabularyTool,
+    browseDocumentsTool,
+    getDocumentStructureTool,
     getPageContentTool,
-    searchDocumentTool,
     getProgressSummaryTool,
     recallMemoryTool,
     saveMemoryTool,
@@ -74,8 +74,9 @@ const GLOBAL_TOOL_NAMES = new Set([
   'recall_memory',
   'save_memory',
   'get_vocabulary',
+  'browse_documents',
+  'get_document_structure',
   'get_page_content',
-  'search_document',
   'get_study_context',
   'get_progress_summary',
   'update_learner_profile',
@@ -140,8 +141,9 @@ export function findTool(pool: AgentTool[], name: string): AgentTool | undefined
 export const SILENT_TOOLS = new Set([
   'get_study_context',
   'get_vocabulary',
+  'browse_documents',
+  'get_document_structure',
   'get_page_content',
-  'search_document',
   'get_progress_summary',
   'recall_memory',
   'get_core_guidelines',
