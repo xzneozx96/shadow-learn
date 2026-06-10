@@ -49,9 +49,11 @@ import {
 import { API_BASE } from '@/shared/lib/config'
 import { getEffectiveDueItems } from '@/shared/lib/skillSessionProgress'
 
-// Lesson + global use the same round budget today (legacy parity verified during plan audit)
-const MAX_TOOL_ROUNDS_LESSON = 5
-const MAX_TOOL_ROUNDS_GLOBAL = 5
+// Raised from 5 to 20 to match agentic-rag's MAX_TOOL_ROUNDS_RAG: the new RAG
+// sequence (browse → multi-part structure → multiple page reads) runs 6-10
+// sequential tool rounds for one answer; 5 starved retrieval mid-flight.
+const MAX_TOOL_ROUNDS_LESSON = 20
+const MAX_TOOL_ROUNDS_GLOBAL = 20
 const MAX_INPUT_CHARS = 8000
 
 type AgentActionsDispatch = (action: AgentAction) => void

@@ -354,7 +354,9 @@ describe('getActiveToolPool', () => {
     expect(names).toContain('play_segment_audio')
     expect(names).toContain('log_mistake')
     expect(names).toContain('update_sr_item')
-    expect(names).toContain('search_document')
+    expect(names).toContain('browse_documents')
+    expect(names).toContain('get_document_structure')
+    expect(names).toContain('get_page_content')
   })
 
   it('excludes deferred tools by default (render, data, guidance)', () => {
@@ -382,11 +384,11 @@ describe('getActiveToolPool', () => {
     expect(names).toContain('update_learner_profile')
     expect(names).toContain('get_core_guidelines')
     expect(names).toContain('get_skill_guide')
-    expect(names).toContain('search_document')
+    expect(names).toContain('browse_documents')
   })
 
-  it('returns 12 non-deferred tools by default (20 total - 1 disabled - 7 deferred)', () => {
-    expect(getActiveToolPool('test-key')).toHaveLength(12)
+  it('returns 13 non-deferred tools by default (21 total - 1 disabled - 7 deferred)', () => {
+    expect(getActiveToolPool('test-key')).toHaveLength(13)
   })
 })
 

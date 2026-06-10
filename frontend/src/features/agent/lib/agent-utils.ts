@@ -11,8 +11,8 @@ const DATA_TOOLS = new Set([
   'get_vocabulary',
   'get_progress_summary',
   'recall_memory',
-  // NOTE: `search_document` is deliberately NOT here. Dedup keys by tool name and
-  // keeps only the latest occurrence — but each search_document call returns
+  // NOTE: `browse_documents` is deliberately NOT here. Dedup keys by tool name and
+  // keeps only the latest occurrence — but each browse_documents call returns
   // DIFFERENT passages for a different query. Deduping would rewrite earlier
   // retrievals to {status:'superseded'}, so an agent that makes several queries in
   // one turn reads its own results as "no results / not in knowledge base".
@@ -384,7 +384,7 @@ export function isOverflow(tokens: number, budget: number = USABLE): boolean {
  * LLM-free prune fallback. Stubs tool outputs in OLDER messages (beyond the
  * protected recent window) to reclaim tokens WITHOUT summarizing. Never deletes
  * messages, never touches GUIDANCE_TOOLS (rules must survive), and never touches
- * the protected tail — so active context incl. live `search_document` passages
+ * the protected tail — so active context incl. live `browse_documents` passages
  * stays full. `compact()` is the primary sizing mechanism; this is the no-network
  * backstop when `/api/summarize` is slow or unavailable.
  */
@@ -464,7 +464,7 @@ export function compactVocab(e: { id: string, word: string, romanization?: strin
  * and `get_vocabulary` again at minute 20, the Minute 1 data is stale.
  * This finds older data fetches and stubs them (keeping the latest full):
  * - Output: `{ status: "superseded" }`
- * `search_document` is included here so stale RAG duplicates are freed while the
+ * `browse_documents` is included here so stale RAG duplicates are freed while the
  * latest result stays intact (the answer's source-of-truth is never trimmed).
  *
  * Sizing is NOT done here anymore. Overflow is handled by `compact()`

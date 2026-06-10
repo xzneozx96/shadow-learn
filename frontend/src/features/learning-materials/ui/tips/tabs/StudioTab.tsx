@@ -6,17 +6,8 @@ import { useI18n } from '@/app/providers/I18nContext'
 import { useTipCards } from '@/features/learning-materials/application/useTipCards'
 import { useTipStudio } from '@/features/learning-materials/application/useTipStudio'
 import { htmlToPlain } from '@/features/learning-materials/lib/htmlText'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/shared/ui/alert-dialog'
 import { Button } from '@/shared/ui/button'
+import { DeleteConfirmDialog } from '@/shared/ui/DeleteConfirmDialog'
 import { NotesEditorSurface } from '../notes/NotesEditorSurface'
 import { NotesList } from '../notes/NotesList'
 import { StudioTile } from '../studio/StudioTile'
@@ -265,20 +256,13 @@ export function StudioTab(props: Props) {
           />
         </div>
       </div>
-      <AlertDialog open={deleteNoteId !== null} onOpenChange={open => !open && setDeleteNoteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('tips.notes.delete.title')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('tips.notes.delete.body')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteNote} className="bg-destructive text-destructive-foreground">
-              {t('tips.notes.actions.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteNoteId !== null}
+        onOpenChange={open => !open && setDeleteNoteId(null)}
+        title={t('tips.notes.delete.title')}
+        description={t('tips.notes.delete.body')}
+        onConfirm={confirmDeleteNote}
+      />
     </>
   )
 }

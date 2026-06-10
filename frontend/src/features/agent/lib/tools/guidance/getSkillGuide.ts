@@ -25,7 +25,7 @@ export async function executeGetSkillGuide(input: { skill: string }) {
 
 export const getSkillGuideTool = buildTool({
   name: 'get_skill_guide',
-  description: 'Retrieve expert knowledge, tips, tricks, and teaching strategies for a specific skill. ALWAYS call this tool BEFORE answering questions on how to improve, asking for advice, or struggling with a skill area. For grammar rules and explanations, do NOT use this tool — call search_document instead.',
+  description: 'Retrieve expert knowledge, tips, tricks, and teaching strategies for a specific skill. ALWAYS call this tool BEFORE answering questions on how to improve, asking for advice, or struggling with a skill area. For grammar rules and explanations, do NOT use this tool — call browse_documents instead.',
   inputSchema: z.object({
     skill: z.enum(['tones', 'pronunciation', 'vocabulary', 'listening', 'speaking', 'characters']).describe('The skill area to retrieve'),
   }),

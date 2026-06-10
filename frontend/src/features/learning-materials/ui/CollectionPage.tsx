@@ -10,17 +10,8 @@ import { HubRow } from '@/features/learning-materials/ui/collection/HubRow'
 import { UserMaterialCard } from '@/features/learning-materials/ui/collection/UserMaterialCard'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
 import { cn } from '@/shared/lib/utils'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/shared/ui/alert-dialog'
-import { Button, buttonVariants } from '@/shared/ui/button'
+import { Button } from '@/shared/ui/button'
+import { DeleteConfirmDialog } from '@/shared/ui/DeleteConfirmDialog'
 import { EmptyState } from '@/shared/ui/EmptyState'
 
 const YOUTUBE_ID_REGEX = /[?&]v=([^&]+)|youtu\.be\/([^?&]+)/
@@ -307,29 +298,19 @@ export function CollectionPage() {
         </div>
       </div>
 
-      <AlertDialog open={pendingDeleteId !== null} onOpenChange={v => !v && setPendingDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('collection.deleteConfirm.title')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('collection.deleteConfirm.body')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: 'destructive' })}
-              onClick={async () => {
-                const id = pendingDeleteId
-                if (!id)
-                  return
-                setPendingDeleteId(null)
-                await userMats.remove(id)
-              }}
-            >
-              {t('common.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={v => !v && setPendingDeleteId(null)}
+        title={t('collection.deleteConfirm.title')}
+        description={t('collection.deleteConfirm.body')}
+        onConfirm={async () => {
+          const id = pendingDeleteId
+          if (!id)
+            return
+          setPendingDeleteId(null)
+          await userMats.remove(id)
+        }}
+      />
     </Layout>
   )
 }

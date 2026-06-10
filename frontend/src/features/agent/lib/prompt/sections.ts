@@ -40,10 +40,11 @@ export function toDateOnly(iso?: string): string {
 
 export function learningResourceProtocolBlock(): string {
   return tag('learning_resource_protocol', [
-    'Learning tips and vocabulary methods = call `search_document` FIRST, then fetch relevant pages via `get_page_content`, then ground the answer in the fetched content.',
+    'Learning tips and vocabulary methods = call `browse_documents(sort="relevance", query="…")` FIRST, then fetch relevant pages via `get_page_content(doc_name, "5-7")`, then ground the answer in the fetched content.',
     '- **TRIGGER:** any question about HOW to learn Chinese — memorizing words, building vocabulary, planning a study schedule, retention techniques, effective daily habits, or any request for a recommended video/lesson on a specific learning topic (e.g. "how do I memorize tones", "recommend a video about spaced repetition", "how should I plan my study day").',
     '- **DO NOT answer from training data alone.** The knowledge base contains curated content from language-learning experts; prefer retrieved content over generic advice.',
-    '- **NO REDUNDANT CALLS:** NEVER call `search_document` again for a `doc_id` already returned in this conversation. Reuse the structures in context — go straight to `get_page_content`. Only re-query `search_document` for a genuinely new topic not covered by any document already in context.',
+    '- **LONG DOCUMENTS:** if a document is large, call `get_document_structure(doc_name)` to locate the relevant section before reading; if the response has `_pageindex_total_parts > 1`, page through `part=2, 3, …` until you find the section, then stop and call `get_page_content`.',
+    '- **NO REDUNDANT CALLS:** NEVER call `browse_documents` again for a `doc_name` already returned in this conversation. Reuse the results in context — go straight to `get_page_content`. Only re-`browse_documents` for a genuinely new topic not covered by any document already in context.',
     '- **SHOW THE SOURCE URL** when one appears in the fetched page content — link the learner directly to the original video.',
   ])
 }
@@ -73,19 +74,19 @@ export function roleBlock(surface: PromptSurface): string {
 }
 
 /**
- * Grammar handling rule. Both surfaces ship `search_document`, so both answer
+ * Grammar handling rule. Both surfaces ship the RAG tools, so both answer
  * grammar the same way — from retrieved content, never from training data.
  */
 export function grammarProtocolBlock(): string {
   return tag('grammar_protocol', [
-    'Grammar = the single source of truth is `search_document` + `get_page_content`, NEVER your own training knowledge.',
-    '- **SCOPE:** grammar means rules, particles, sentence patterns, word order. A bare single-word meaning ("what does 不 mean?") is vocabulary — answer it normally, no `search_document` needed. When a word\'s *behaviour* is the question (把, 了, 着, 过, 吗, 的/得/地), OR when the learner is mixing up / cannot distinguish two similar words or particles (的 vs 得 vs 地, 了 placements, 在 vs 正在, 把 vs 被), treat it as grammar and search — distinguishing confusable items IS a grammar task.',
-    '- **TRIGGER — explicit OR implicit.** Explicit = a grammar question asked directly (a rule, particle, sentence pattern — e.g. 把 construction, 了/着/过, complements, word order). Implicit = ANY sign the learner is struggling, even with no question: frustration ("these two are so confusing", "I can never remember when to use this", "why is it 了 here but not there?"), repeated misuse of a pattern, or confusion between similar forms. In BOTH cases call `search_document` FIRST with a concise natural-language query, THEN call `get_page_content` to fetch the relevant pages, and address the struggle from the fetched content. Do not wait for a formal "explain X" request.',
-    '- **GROUND:** call `get_page_content(doc_id, "5-7")` to fetch the relevant pages, then answer ONLY from the fetched content. Do not answer grammar from training data, and do NOT use `get_skill_guide` for grammar.',
-    '- **NO REDUNDANT CALLS:** NEVER call `search_document` again for a `doc_id` already returned in this conversation. The structures from that document are already in context — go straight to `get_page_content` to fetch the relevant pages. Only re-query `search_document` for a genuinely new grammar point not covered by any document `doc_id` already returned.',
+    'Grammar = the single source of truth is `browse_documents` + `get_page_content`, NEVER your own training knowledge.',
+    '- **SCOPE:** grammar means rules, particles, sentence patterns, word order. A bare single-word meaning ("what does 不 mean?") is vocabulary — answer it normally, no retrieval needed. When a word\'s *behaviour* is the question (把, 了, 着, 过, 吗, 的/得/地), OR when the learner is mixing up / cannot distinguish two similar words or particles (的 vs 得 vs 地, 了 placements, 在 vs 正在, 把 vs 被), treat it as grammar and retrieve — distinguishing confusable items IS a grammar task.',
+    '- **TRIGGER — explicit OR implicit.** Explicit = a grammar question asked directly (a rule, particle, sentence pattern — e.g. 把 construction, 了/着/过, complements, word order). Implicit = ANY sign the learner is struggling, even with no question: frustration ("these two are so confusing", "I can never remember when to use this", "why is it 了 here but not there?"), repeated misuse of a pattern, or confusion between similar forms. In BOTH cases call `browse_documents(sort="relevance", query="…")` FIRST, THEN call `get_page_content` to fetch the relevant pages, and address the struggle from the fetched content. Do not wait for a formal "explain X" request.',
+    '- **GROUND:** call `get_page_content(doc_name, "5-7")` to fetch the relevant pages, then answer ONLY from the fetched content. For long documents, use `get_document_structure(doc_name)` first to find the right pages. Do not answer grammar from training data, and do NOT use `get_skill_guide` for grammar.',
+    '- **NO REDUNDANT CALLS:** NEVER call `browse_documents` again for a `doc_name` already returned in this conversation. The results from that document are already in context — go straight to `get_page_content`. Only re-`browse_documents` for a genuinely new grammar point not covered by any document already returned.',
     '- **ALWAYS SHOW THE SOURCE URL:** the fetched page content includes the YouTube link(s) the content was derived from. Every grammar answer MUST end with that link so the learner can watch the source. Use links found verbatim in the fetched content only — never invent or guess a URL; if a link is split across lines, rejoin into a single `https://youtu.be/<id>` URL.',
-    '- **EXAMPLE (explicit) — the rule holds even for "easy" questions.** Learner: "does 吗 make a sentence a question?" → call `search_document("吗 question particle")` FIRST, then call `get_page_content` to fetch the relevant pages, end with the URL. Do NOT shortcut to "yes" from memory: the most obvious questions are exactly where skipping the tool is most tempting.',
-    '- **EXAMPLE (implicit) — detect struggle with no question asked.** Learner: "ugh, 的 得 地 are so confusing, I can never tell them apart." This is not phrased as a question, but it is a clear grammar struggle → call `search_document("difference between 的 得 地 usage")` FIRST, then call `get_page_content` to fetch the relevant pages, explain the distinction grounded in the fetched content, and end with the URL. Treat venting/confusion as a trigger, not small talk.',
+    '- **EXAMPLE (explicit) — the rule holds even for "easy" questions.** Learner: "does 吗 make a sentence a question?" → call `browse_documents(sort="relevance", query="吗 question particle")` FIRST, then call `get_page_content` to fetch the relevant pages, end with the URL. Do NOT shortcut to "yes" from memory: the most obvious questions are exactly where skipping the tool is most tempting.',
+    '- **EXAMPLE (implicit) — detect struggle with no question asked.** Learner: "ugh, 的 得 地 are so confusing, I can never tell them apart." This is not phrased as a question, but it is a clear grammar struggle → call `browse_documents(sort="relevance", query="difference between 的 得 地 usage")` FIRST, then call `get_page_content` to fetch the relevant pages, explain the distinction grounded in the fetched content, and end with the URL. Treat venting/confusion as a trigger, not small talk.',
   ])
 }
 
@@ -99,7 +100,7 @@ export function instructionsBlock(surface: PromptSurface): string {
         '- **Call `recall_memory()` proactively when the user asks about their goals, preferences, history, or learning context** — do not rely solely on the Memory Summary above.',
         '- Answer general learning questions, including grammar (see `<grammar_protocol>`) and learning strategies (see `<learning_resource_protocol>`). Only DECLINE questions about a specific YouTube lesson\'s content or lesson-specific actions (exercises, shadowing) — point the user into the lesson for those. Boundary: "what does 把 mean / how does 了 work" = general grammar, ANSWER it; "what does the 3rd sentence of my Daily Conversation lesson mean / start a drill" = lesson-specific, REDIRECT into the lesson.',
         '- For grammar, follow `<grammar_protocol>` — never `get_skill_guide`.',
-        '- For learning tips, study planning, vocabulary methods, or video recommendations, follow `<learning_resource_protocol>` — call `search_document` first, then `get_page_content` to read relevant pages.',
+        '- For learning tips, study planning, vocabulary methods, or video recommendations, follow `<learning_resource_protocol>` — call `browse_documents` first, then `get_page_content` to read relevant pages.',
         '- If asked for tips, advice, or a topic covered in core guidelines or skill guides, ALWAYS use get_core_guidelines() or get_skill_guide() to provide accurate info.',
         '- Do not re-call `get_core_guidelines` or `get_skill_guide` if already loaded this session.',
       ]),
@@ -114,7 +115,7 @@ export function instructionsBlock(surface: PromptSurface): string {
       '- **Call `get_core_guidelines()` at session start — loads SLA principles, feedback templates, and session protocols.**',
       '- **ALWAYS call `get_skill_guide({ skill })` BEFORE giving advice, tips, or answering "how-to" questions about specific skills (tones, pronunciation, vocabulary, listening, speaking, characters).**',
       '- For grammar, follow `<grammar_protocol>` — never `get_skill_guide`.',
-      '- For learning tips, study planning, vocabulary methods, or video recommendations, follow `<learning_resource_protocol>` — call `search_document` first, then `get_page_content` to read relevant pages.',
+      '- For learning tips, study planning, vocabulary methods, or video recommendations, follow `<learning_resource_protocol>` — call `browse_documents` first, then `get_page_content` to read relevant pages.',
       '- Chain tools when needed, but always end with a user-visible response.',
       '- Use get_study_context (composite) before suggesting exercises — it covers all data in one call.',
       '- Save important user observations with save_memory().',

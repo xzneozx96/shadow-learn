@@ -5,7 +5,6 @@
     "dev:fe": "cd frontend && pnpm dev",
     "dev:be": "cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
     "dev:livekit": "cd backend/livekit_agent && uv run python entrypoint.py",
-    "dev:pageindex": "cd page-index && bash -c 'trap \"kill 0\" EXIT; .venv/bin/alembic upgrade head && { .venv/bin/celery -A api.tasks.celery_app worker --loglevel=info & .venv/bin/uvicorn api.main:app --port 8010 --reload; }'",
     "pipeline:tips": "cd backend && set -a && . ./.env && set +a && uv run python scripts/build_catalog.py && uv run python scripts/fetch_transcripts.py && uv run python scripts/enrich_videos.py",
     "prepare": "husky"
   },
