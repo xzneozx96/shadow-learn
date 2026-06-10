@@ -58,7 +58,9 @@ class Settings(BaseSettings):
     # agentic-rag retrieval backend. The companion proxies the RAG MCP tools to
     # this externally-running service. Its /api/pageindex/tool route is
     # CORS-gated and unauthenticated, so the proxy injects no key.
-    agentic_rag_base_url: str = "http://localhost:8000"  # env: SHADOWLEARN_AGENTIC_RAG_BASE_URL
+    # NOTE: must point at agentic-rag's OWN port (8010 in dev), NOT this backend's
+    # port (8000) — pointing at 8000 makes the proxy forward to itself.
+    agentic_rag_base_url: str = "http://localhost:8010"  # env: SHADOWLEARN_AGENTIC_RAG_BASE_URL
 
     # Offshore Gemini proxy — see backend/livekit_agent/http_server.py.
     # The China-side backend forwards Gemini-bound traffic here so it never
