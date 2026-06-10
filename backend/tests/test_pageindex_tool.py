@@ -24,6 +24,7 @@ class _FakeAsyncClient:
     """Captures the forwarded request and returns a canned response."""
 
     last_call = {}
+    raise_error = False
 
     def __init__(self, *args, **kwargs):
         pass
@@ -36,6 +37,8 @@ class _FakeAsyncClient:
 
     async def post(self, url, json=None, **kwargs):
         _FakeAsyncClient.last_call = {"url": url, "json": json}
+        if _FakeAsyncClient.raise_error:
+            raise httpx.HTTPError("boom")
         return _FakeResponse({"documents": [{"name": "GRAMMAR.pdf"}], "has_more": False})
 
 
@@ -56,3 +59,17 @@ def test_pageindex_tool_forwards_name_and_args(monkeypatch):
         "name": "browse_documents",
         "args": {"sort": "relevance", "query": "把"},
     }
+
+
+def test_pageindex_tool_returns_502_on_upstream_error(monkeypatch):
+    _FakeAsyncClient.raise_error = True
+    try:
+        monkeypatch.setattr(pageindex_router.httpx, "AsyncClient", _FakeAsyncClient)
+        client = TestClient(app)
+        resp = client.post(
+            "/api/pageindex/tool",
+            json={"name": "browse_documents", "args": {}},
+        )
+        assert resp.status_code == 502
+    finally:
+        _FakeAsyncClient.raise_error = False
