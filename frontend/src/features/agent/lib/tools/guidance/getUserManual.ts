@@ -21,7 +21,7 @@ export const getUserManualTool = buildTool({
   maxResultSizeChars: 20_000,
   searchHint: 'user manual help guide app features',
   isDeferred: () => true,
-  // Disabled — replaced by the search_document tool (PageIndex multi-doc retrieval).
+  // Disabled — replaced by the browse_documents tool (PageIndex multi-doc retrieval).
   isEnabled: () => false,
   execute: executeGetUserManual,
 })
