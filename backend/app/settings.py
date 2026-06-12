@@ -51,11 +51,13 @@ class Settings(BaseSettings):
     youtube_api_key: str | None = None          # env: SHADOWLEARN_YOUTUBE_API_KEY
 
     # agentic-rag retrieval backend. The companion proxies the RAG MCP tools to
-    # this externally-running service. Its /api/pageindex/tool route is
-    # CORS-gated and unauthenticated, so the proxy injects no key.
+    # this externally-running service. Its /api/pageindex/tool route is now
+    # authenticated: we are the external full-access consumer, so the proxy sends
+    # Authorization: Bearer <agentic_rag_api_key> (== agentic-rag's API_SECRET_KEY).
     # NOTE: must point at agentic-rag's OWN port (8010 in dev), NOT this backend's
     # port (8000) — pointing at 8000 makes the proxy forward to itself.
     agentic_rag_base_url: str = "http://localhost:8010"  # env: SHADOWLEARN_AGENTIC_RAG_BASE_URL
+    agentic_rag_api_key: str = ""                         # env: SHADOWLEARN_AGENTIC_RAG_API_KEY
 
     # Offshore Gemini proxy — see backend/livekit_agent/http_server.py.
     # The China-side backend forwards Gemini-bound traffic here so it never

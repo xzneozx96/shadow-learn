@@ -36,7 +36,7 @@ class _FakeAsyncClient:
         return False
 
     async def post(self, url, json=None, **kwargs):
-        _FakeAsyncClient.last_call = {"url": url, "json": json}
+        _FakeAsyncClient.last_call = {"url": url, "json": json, "headers": kwargs.get("headers")}
         if _FakeAsyncClient.raise_error:
             raise httpx.HTTPError("boom")
         return _FakeResponse({"documents": [{"name": "GRAMMAR.pdf"}], "has_more": False})
@@ -44,6 +44,7 @@ class _FakeAsyncClient:
 
 def test_pageindex_tool_forwards_name_and_args(monkeypatch):
     monkeypatch.setattr(pageindex_router.httpx, "AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(pageindex_router.settings, "agentic_rag_api_key", "test-secret")
     client = TestClient(app)
 
     resp = client.post(
@@ -59,6 +60,8 @@ def test_pageindex_tool_forwards_name_and_args(monkeypatch):
         "name": "browse_documents",
         "args": {"sort": "relevance", "query": "把"},
     }
+    # The shared API key is forwarded as a Bearer header (external full-access auth).
+    assert _FakeAsyncClient.last_call["headers"]["Authorization"] == "Bearer test-secret"
 
 
 def test_pageindex_tool_returns_502_on_upstream_error(monkeypatch):
