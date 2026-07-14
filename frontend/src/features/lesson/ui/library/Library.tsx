@@ -115,7 +115,7 @@ export function Library() {
   )
 
   const continueLesson = useMemo(
-    () => completeLessons.toSorted((a, b) => new Date(b.lastOpenedAt).getTime() - new Date(a.lastOpenedAt).getTime())[0] ?? null,
+    () => [...completeLessons].sort((a, b) => new Date(b.lastOpenedAt).getTime() - new Date(a.lastOpenedAt).getTime())[0] ?? null,
     [completeLessons],
   )
 

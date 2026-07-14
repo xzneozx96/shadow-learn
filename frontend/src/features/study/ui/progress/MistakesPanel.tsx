@@ -58,7 +58,7 @@ export function MistakesPanel({ mistakes = [], entries }: Props) {
   )
 
   const sortedAll = useMemo(
-    () => mistakes.toSorted((a, b) => b.frequency - a.frequency),
+    () => [...mistakes].sort((a, b) => b.frequency - a.frequency),
     [mistakes],
   )
 

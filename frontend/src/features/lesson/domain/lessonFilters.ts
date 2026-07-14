@@ -18,7 +18,7 @@ export function filterLessons(
     const q = search.toLowerCase()
     result = result.filter(l => l.title.toLowerCase().includes(q))
   }
-  return result.toSorted((a, b) => {
+  return [...result].sort((a, b) => {
     const aP = a.status === 'processing'
     const bP = b.status === 'processing'
     if (aP && !bP)

@@ -14,7 +14,7 @@ export function buildWordSpans(text: string, words: Word[]): WordSpan[] {
   if (usableWords.length === 0) {
     return [{ text, word: null }]
   }
-  const sorted = usableWords.toSorted((a, b) => b.word.length - a.word.length)
+  const sorted = [...usableWords].sort((a, b) => b.word.length - a.word.length)
   const spans: WordSpan[] = []
   let remaining = text
   while (remaining.length > 0) {

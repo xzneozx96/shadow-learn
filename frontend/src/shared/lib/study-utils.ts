@@ -160,7 +160,7 @@ export function shuffleArray<T>(arr: T[]): T[] {
 export function buildStudyPool(entries: VocabEntry[], forReview: boolean): VocabEntry[] {
   if (forReview)
     return shuffleArray(entries)
-  return entries.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
+  return [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
 export function charDiff(typed: string, expected: string): { char: string, ok: boolean }[] {

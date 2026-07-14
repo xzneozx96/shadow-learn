@@ -38,8 +38,8 @@ export function computeSessionSummary(
       ? Math.round(validScores.reduce((sum, r) => sum + r.score, 0) / validScores.length)
       : null
 
-  const weakestSegments = validScores
-    .toSorted((a, b) => a.score - b.score || a.segmentIndex - b.segmentIndex)
+  const weakestSegments = [...validScores]
+    .sort((a, b) => a.score - b.score || a.segmentIndex - b.segmentIndex)
     .slice(0, 3)
     .map(r => ({ segmentIndex: r.segmentIndex, score: r.score }))
 
