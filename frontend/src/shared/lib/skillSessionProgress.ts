@@ -1,5 +1,5 @@
 import type { ShadowLearnDB, SpacedRepetitionItem } from '@/db'
-import { getDueItems, getSpacedRepetitionItem, saveSpacedRepetitionItem } from '@/db'
+import { getDueItems, getSpacedRepetitionItem, getVocabEntryById, saveSpacedRepetitionItem } from '@/db'
 import { todayISO } from '@/shared/lib/date'
 import { createSpacedRepetitionItem, updateSpacedRepetition } from '@/shared/lib/spacedRepetition'
 
@@ -113,6 +113,13 @@ export async function flushSM2Pending(db: ShadowLearnDB, date: string): Promise<
     return
 
   for (const vocabId of vocabIds) {
+    // Skip words deleted before their pending score could be flushed —
+    // otherwise this would create (or keep alive) an orphaned schedule row
+    // for a word that no longer exists.
+    const entry = await getVocabEntryById(db, vocabId)
+    if (!entry)
+      continue
+
     const score = pending[vocabId]
     const existing = await getSpacedRepetitionItem(db, vocabId)
     const item = existing ?? createSpacedRepetitionItem(vocabId)

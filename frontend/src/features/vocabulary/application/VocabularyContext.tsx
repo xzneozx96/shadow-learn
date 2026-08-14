@@ -72,9 +72,9 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
       if (!db)
         return
       try {
-        await db.delete('vocabulary', id)
         await deleteSpacedRepetitionItem(db, id)
         await deleteErrorPattern(db, id)
+        await db.delete('vocabulary', id)
         setEntries(prev => prev.filter(e => e.id !== id))
       }
       catch {
@@ -90,13 +90,13 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
       if (!db)
         return
       const idsToDelete = entries.filter(e => e.sourceLessonId === lessonId).map(e => e.id)
-      const tx = db.transaction('vocabulary', 'readwrite')
-      await Promise.all(idsToDelete.map(id => tx.store.delete(id)))
-      await tx.done
       await Promise.all(idsToDelete.flatMap(id => [
         deleteSpacedRepetitionItem(db, id),
         deleteErrorPattern(db, id),
       ]))
+      const tx = db.transaction('vocabulary', 'readwrite')
+      await Promise.all(idsToDelete.map(id => tx.store.delete(id)))
+      await tx.done
       setEntries(prev => prev.filter(e => e.sourceLessonId !== lessonId))
     },
     [db, entries],

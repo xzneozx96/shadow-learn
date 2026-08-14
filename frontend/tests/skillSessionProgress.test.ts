@@ -1,7 +1,7 @@
 import type { ShadowLearnDB } from '@/db'
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getSpacedRepetitionItem, initDB } from '@/db'
+import { getSpacedRepetitionItem, initDB, saveVocabEntry } from '@/db'
 import {
   bufferSM2Score,
   clearExpiredSessionKeys,
@@ -128,6 +128,23 @@ describe('sM-2 buffer', () => {
   })
 })
 
+function makeVocab(id: string) {
+  return {
+    id,
+    word: `词${id}`,
+    romanization: 'cí',
+    meaning: 'word',
+    usage: '',
+    sourceLessonId: 'l1',
+    sourceLessonTitle: 'Lesson 1',
+    sourceSegmentId: 's1',
+    sourceSegmentText: '',
+    sourceSegmentTranslation: '',
+    sourceLanguage: 'zh-CN',
+    createdAt: '2026-05-13T00:00:00.000Z',
+  }
+}
+
 describe('flushSM2Pending', () => {
   let db: ShadowLearnDB
 
@@ -137,6 +154,8 @@ describe('flushSM2Pending', () => {
     localStorage.clear()
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
+    await saveVocabEntry(db, makeVocab('v1'))
+    await saveVocabEntry(db, makeVocab('v2'))
   })
 
   afterEach(async () => {
@@ -185,5 +204,20 @@ describe('flushSM2Pending', () => {
     // v1 has 2 successful reviews → intervalDays 3 (Anki-style: round(1×EF))
     // v2 failed on second review → intervalDays 1
     expect((item1?.intervalDays ?? 0) > (item2?.intervalDays ?? 0)).toBe(true)
+  })
+
+  it('skips words whose vocabulary entry no longer exists, without throwing', async () => {
+    bufferSM2Score('deleted-word', 80, '2026-05-14')
+    await expect(flushSM2Pending(db, '2026-05-14')).resolves.not.toThrow()
+    expect(await getSpacedRepetitionItem(db, 'deleted-word')).toBeUndefined()
+  })
+
+  it('still flushes surviving words when a deleted word is buffered alongside them', async () => {
+    bufferSM2Score('v1', 100, '2026-05-14')
+    bufferSM2Score('deleted-word', 100, '2026-05-14')
+    await flushSM2Pending(db, '2026-05-14')
+    expect(await getSpacedRepetitionItem(db, 'v1')).not.toBeUndefined()
+    expect(await getSpacedRepetitionItem(db, 'deleted-word')).toBeUndefined()
+    expect(getSM2Pending('2026-05-14')).toEqual({})
   })
 })

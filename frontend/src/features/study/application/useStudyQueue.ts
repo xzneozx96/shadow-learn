@@ -123,13 +123,19 @@ export function useStudyQueue(
     }
     setWordDrillsEntries(entries)
 
+    // Only entries that resolved to a real word can ever be marked complete
+    // by the UI, so the done-check must use this list, not the raw locked
+    // vocabIds — a dueItem whose word was deleted would otherwise make the
+    // skill permanently un-completable.
+    const resolvedIds = entries.map(e => e.id)
+
     // ── Per-skill done state ───────────────────────────────────────────────
     setSkillDone({
-      vocabulary: isSkillDone('vocabulary', today, vocabIds),
-      listening: isSkillDone('listening', today, vocabIds),
-      speaking: isSkillDone('speaking', today, vocabIds),
+      vocabulary: isSkillDone('vocabulary', today, resolvedIds),
+      listening: isSkillDone('listening', today, resolvedIds),
+      speaking: isSkillDone('speaking', today, resolvedIds),
       reading: isReadingDone(today),
-      writing: isSkillDone('writing', today, vocabIds),
+      writing: isSkillDone('writing', today, resolvedIds),
     })
 
     // ── Shadowing done ────────────────────────────────────────────────────
