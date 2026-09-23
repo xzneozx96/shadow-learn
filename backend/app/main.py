@@ -1,27 +1,33 @@
 import logging
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
-from fastapi import FastAPI
+from botocore.exceptions import BotoCoreError, ClientError
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
-from app.settings import settings
-from app.lessons.router import router as lessons_router
-from app.tts.router import router as tts_router
-from app.translation.router import router as translation_router
-from app.transcription.router import router as transcription_router
-from app.pronunciation.router import router as pronunciation_router
-from app.quiz.router import router as quiz_router
-from app.speak.router import router as speak_router
 from app.agent.router import router as agent_router
 from app.background.router import router as jobs_router
-from app.config.router import router as config_router
-from app.vocab.router import router as vocab_router
 from app.collection.router import router as collection_router
+from app.config.router import router as config_router
 from app.daily_review.router import router as daily_review_router
-from app.tips.router import router as tips_router
+from app.db import engine
+from app.lessons.router import router as lessons_router
 from app.pageindex_tool.router import router as pageindex_tool_router
-from app.tts.services.tts_factory import get_tts_provider
+from app.pronunciation.router import router as pronunciation_router
+from app.quiz.router import router as quiz_router
+from app.settings import settings
+from app.speak.router import router as speak_router
+from app.storage import create_s3_client, ensure_bucket
+from app.tips.router import router as tips_router
+from app.transcription.router import router as transcription_router
 from app.transcription.services.transcription_factory import get_stt_provider
+from app.translation.router import router as translation_router
+from app.tts.router import router as tts_router
+from app.tts.services.tts_factory import get_tts_provider
+from app.vocab.router import router as vocab_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,7 +40,11 @@ async def lifespan(app: FastAPI):
     app.state.tts_provider_name = settings.tts_provider
     app.state.stt_provider = get_stt_provider(settings)
     app.state.stt_provider_name = settings.stt_provider
-    yield
+    async with AsyncExitStack() as stack:
+        app.state.s3 = await stack.enter_async_context(create_s3_client(settings))
+        await ensure_bucket(app.state.s3, settings.s3_bucket)
+        yield
+    await engine.dispose()
 
 
 app = FastAPI(title="ShadowLearn API", lifespan=lifespan)
@@ -66,3 +76,18 @@ app.include_router(pageindex_tool_router)
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/api/health/deps")
+async def health_deps(request: Request):
+    deps = {"db": "ok", "s3": "ok"}
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except (SQLAlchemyError, OSError):
+        deps["db"] = "error"
+    try:
+        await request.app.state.s3.head_bucket(Bucket=settings.s3_bucket)
+    except (BotoCoreError, ClientError):
+        deps["s3"] = "error"
+    return JSONResponse(deps, status_code=503 if "error" in deps.values() else 200)

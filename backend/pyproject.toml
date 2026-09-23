@@ -22,6 +22,10 @@ dependencies = [
     "tenacity>=9.0.0",
     "opencc-python-reimplemented>=0.1.7",
     "livekit-api>=1.1.0",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "alembic>=1.13",
+    "aiobotocore>=2.15",
 ]
 
 [project.optional-dependencies]
