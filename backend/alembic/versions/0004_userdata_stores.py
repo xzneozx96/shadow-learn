@@ -1,7 +1,7 @@
 """userdata stores
 
 Revision ID: 0004_userdata_stores
-Revises: 0002_users
+Revises: 0003_provider_keys
 Create Date: 2026-09-23
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0004_userdata_stores"
-down_revision: str | Sequence[str] | None = "0002_users"
+down_revision: str | Sequence[str] | None = "0003_provider_keys"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
