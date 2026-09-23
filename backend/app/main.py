@@ -30,6 +30,7 @@ from app.quiz.router import router as quiz_router
 from app.settings import settings
 from app.speak.router import router as speak_router
 from app.storage import create_s3_client, ensure_bucket
+from app.testing.router import router as testing_router
 from app.tips.router import router as tips_router
 from app.transcription.router import router as transcription_router
 from app.transcription.services.transcription_factory import get_stt_provider
@@ -120,6 +121,9 @@ for router in (
     userdata_router,
 ):
     app.include_router(router, dependencies=[Depends(current_active_user)])
+
+if settings.enable_test_routes:
+    app.include_router(testing_router, dependencies=[Depends(current_active_user)])
 
 
 @app.get("/api/health")
