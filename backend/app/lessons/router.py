@@ -76,13 +76,11 @@ MediaUpload = asyncio.Task[MediaObject]
 
 
 def _start_upload(s3, user_id: uuid.UUID, lesson_id: uuid.UUID, path: Path) -> MediaUpload:
-    """Upload the lesson's media alongside the rest of the pipeline; the runner unlinks *path* afterwards."""
     kind = MediaKind.video if content_type_for(path).startswith("video/") else MediaKind.audio
     return asyncio.create_task(upload_file(s3, user_id=user_id, kind=kind, lesson_id=lesson_id, source_path=path))
 
 
 async def _discard_upload(s3, upload: MediaUpload | None) -> None:
-    """Delete the object of an upload whose lesson was never saved."""
     if upload is None:
         return
     upload.cancel()
@@ -297,6 +295,13 @@ async def _process_youtube_lesson(
                     exc,
                 )
                 segments = None
+                if video_path is None:
+                    try:
+                        video_path = await video_task
+                    except Exception:
+                        logger.warning("[pipeline] youtube video download failed, retrying", exc_info=True)
+                    else:
+                        upload = _start_upload(s3, user_id, lesson_id, video_path)
         else:
             logger.info("[pipeline] youtube subtitle: no manual track, falling back to STT")
 

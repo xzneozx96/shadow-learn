@@ -536,3 +536,34 @@ async def test_generate_blog_lesson_returns_job_id(mock_tts_provider, signed_in_
             )
     assert response.status_code == 200
     assert (await get_job(response.json()["job_id"])).user_id == signed_in_user.id
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_failed_subtitle_download_reuses_the_video_and_removes_it(stored_user, app_s3, start_upload, tmp_path):
+    from app.lessons.router import _process_youtube_lesson
+
+    job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)
+    stt = AsyncMock()
+    stt.transcribe = AsyncMock(return_value=[{"id": 0, "start": 0.0, "end": 1.0, "text": "x", "word_timings": []}])
+    video = tmp_path / "vid.mp4"
+
+    async def download(video_id):
+        video.write_bytes(b"video")
+        return video
+
+    download_video = AsyncMock(side_effect=download)
+    with (
+        patch(
+            "app.lessons.router.get_youtube_metadata",
+            new=AsyncMock(return_value={"duration": 30.0, "subtitles": {"zh-Hans": [{"ext": "vtt"}]}}),
+        ),
+        patch("app.lessons.router.download_youtube_video", new=download_video),
+        patch("app.lessons.router.download_subtitle_vtt", new=AsyncMock(side_effect=FileNotFoundError("no vtt"))),
+        patch("app.lessons.router.extract_audio_from_upload", new=AsyncMock(return_value=tmp_path / "vid.mp3")),
+        patch("app.lessons.router._shared_pipeline", new=AsyncMock()),
+    ):
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {}, stored_user.id, app_s3)
+
+    download_video.assert_awaited_once()
+    assert start_upload.call_args.args[3] == video
+    assert not video.exists()
