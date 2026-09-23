@@ -4,9 +4,10 @@ import uuid
 import pytest
 import pytest_asyncio
 from fastapi_users.jwt import generate_jwt
+from sqlalchemy.exc import IntegrityError
 
 from app.lessons.models import Lesson
-from app.media.models import MediaKind
+from app.media.models import MediaKind, MediaObject
 from app.media.service import MEDIA_AUDIENCE, mint_media_token, store_file
 from app.settings import settings
 from tests.conftest import register_and_login
@@ -163,3 +164,41 @@ async def test_stranger_cannot_mint_a_ticket(client, video, stranger):
     media, _ = video
     response = await client.post(f"/api/media/{media.id}/ticket", headers=_bearer(stranger))
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("kind", "has_user", "has_lesson", "allowed"),
+    [
+        (MediaKind.video, True, True, True),
+        (MediaKind.video, True, False, False),
+        (MediaKind.video, False, True, False),
+        (MediaKind.shadowing, True, False, False),
+        (MediaKind.tts, False, False, True),
+        (MediaKind.tts, True, False, False),
+        (MediaKind.tts, False, True, False),
+    ],
+)
+async def test_owner_check_needs_user_and_lesson_except_for_tts(db_session, owner, kind, has_user, has_lesson, allowed):
+    user_id = uuid.UUID(owner["id"])
+    lesson = Lesson(
+        user_id=user_id, title="t", source="upload", duration_s=1.0, source_language="zh-CN", translation_languages=[]
+    )
+    db_session.add(lesson)
+    await db_session.flush()
+    db_session.add(
+        MediaObject(
+            kind=kind,
+            user_id=user_id if has_user else None,
+            lesson_id=lesson.id if has_lesson else None,
+            object_key=f"k/{uuid.uuid4()}",
+            size=1,
+            sha256="x",
+            content_type="audio/mpeg",
+        )
+    )
+    if allowed:
+        await db_session.commit()
+    else:
+        with pytest.raises(IntegrityError, match="ck_media_objects_owner"):
+            await db_session.commit()
+        await db_session.rollback()

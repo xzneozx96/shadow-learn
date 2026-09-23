@@ -29,7 +29,9 @@ class MediaObject(Base):
     __tablename__ = "media_objects"
     __table_args__ = (
         CheckConstraint(
-            "(kind = 'tts') = (user_id IS NULL AND lesson_id IS NULL)", name="ck_media_objects_owner"
+            "(kind = 'tts' AND user_id IS NULL AND lesson_id IS NULL)"
+            " OR (kind <> 'tts' AND user_id IS NOT NULL AND lesson_id IS NOT NULL)",
+            name="ck_media_objects_owner",
         ),
         Index(
             "uq_media_objects_shadowing",

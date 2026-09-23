@@ -85,7 +85,11 @@ def upgrade() -> None:
         sa.Column("sha256", sa.Text(), nullable=False),
         sa.Column("content_type", sa.Text(), nullable=False),
         _created_at(),
-        sa.CheckConstraint("(kind = 'tts') = (user_id IS NULL AND lesson_id IS NULL)", name="ck_media_objects_owner"),
+        sa.CheckConstraint(
+            "(kind = 'tts' AND user_id IS NULL AND lesson_id IS NULL)"
+            " OR (kind <> 'tts' AND user_id IS NOT NULL AND lesson_id IS NOT NULL)",
+            name="ck_media_objects_owner",
+        ),
         sa.ForeignKeyConstraint(["lesson_id"], ["lessons.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
