@@ -66,8 +66,8 @@ class Settings(BaseSettings):
     offshore_base_url: str = ""                 # env: SHADOWLEARN_OFFSHORE_BASE_URL
     offshore_internal_token: str = ""           # env: SHADOWLEARN_OFFSHORE_INTERNAL_TOKEN
 
-    database_url: str = "postgresql+asyncpg://shadowlearn:shadowlearn@127.0.0.1:5433/shadowlearn"
-    s3_endpoint: str = "http://127.0.0.1:9002"
+    database_url: str = "postgresql+asyncpg://shadowlearn:shadowlearn@127.0.0.1:5435/shadowlearn"
+    s3_endpoint: str = "http://127.0.0.1:9005"
     s3_access_key: str = "shadowlearn"
     s3_secret_key: str = "shadowlearn"
     s3_bucket: str = "shadowlearn"

@@ -21,7 +21,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-shadowlearn}
       - POSTGRES_DB=shadowlearn
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:${SHADOWLEARN_PG_HOST_PORT:-5435}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -38,7 +38,7 @@ services:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-shadowlearn}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-shadowlearn}
     ports:
-      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:${SHADOWLEARN_MINIO_HOST_PORT:-9005}:9000"
     volumes:
       - miniodata:/data
     healthcheck:

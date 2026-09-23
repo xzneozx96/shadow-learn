@@ -13,7 +13,7 @@ from alembic import command
 
 TEST_DATABASE_URL = os.environ.get(
     "SHADOWLEARN_TEST_DATABASE_URL",
-    "postgresql+asyncpg://shadowlearn:shadowlearn@127.0.0.1:5433/shadowlearn_test",
+    "postgresql+asyncpg://shadowlearn:shadowlearn@127.0.0.1:5435/shadowlearn_test",
 )
 os.environ["SHADOWLEARN_DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["SHADOWLEARN_S3_BUCKET"] = f"shadowlearn-test-{os.getpid()}"
