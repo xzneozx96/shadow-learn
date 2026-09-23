@@ -1,9 +1,10 @@
 # backend/tests/test_tts_router.py
 """Tests for TTS router endpoints."""
 
-import pytest
 from unittest.mock import AsyncMock, patch
-from httpx import AsyncClient, ASGITransport
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
@@ -78,11 +79,12 @@ async def test_tts_minimax_returns_audio(mock_tts_provider):
     app.state.tts_provider_name = "minimax"
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/api/tts",
-            json={"text": "你好"},
-        )
+    with patch("app.tts.router.settings.minimax_api_key", "test-key"):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/tts",
+                json={"text": "你好"},
+            )
 
     assert response.status_code == 200
     assert response.content == fake_mp3
@@ -186,11 +188,12 @@ async def test_tts_endpoint_passes_minimax_voice_id_to_provider(mock_tts_provide
     app.state.tts_provider_name = "minimax"
 
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post(
-            "/api/tts",
-            json={"text": "你好", "minimax_voice_id": "Chinese (Mandarin)_Crisp_Girl"},
-        )
+    with patch("app.tts.router.settings.minimax_api_key", "test-key"):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/tts",
+                json={"text": "你好", "minimax_voice_id": "Chinese (Mandarin)_Crisp_Girl"},
+            )
 
     assert response.status_code == 200
     call_kwargs = mock_tts_provider.synthesize.call_args
