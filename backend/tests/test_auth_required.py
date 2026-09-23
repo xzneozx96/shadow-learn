@@ -5,7 +5,7 @@ from fastapi.routing import APIRoute
 
 from app.main import app
 
-pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.real_auth]
+pytestmark = pytest.mark.real_auth
 
 PUBLIC_PATHS = {
     "/api/health",
@@ -44,6 +44,7 @@ def _protected_calls() -> list[tuple[str, str]]:
     ]
 
 
+@pytest.mark.asyncio(loop_scope="session")
 @pytest.mark.parametrize(("method", "path"), _protected_calls())
 async def test_route_requires_a_token(client, method, path):
     response = await client.request(method, path)
