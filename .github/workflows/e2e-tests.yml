@@ -52,7 +52,7 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: .
+        working-directory: frontend
 
       - name: Install Playwright browsers (chromium only)
         run: pnpm exec playwright install --with-deps chromium
@@ -115,7 +115,7 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: .
+        working-directory: frontend
 
       - name: Install Playwright browsers (chromium only)
         run: pnpm exec playwright install --with-deps chromium
@@ -182,7 +182,7 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: .
+        working-directory: frontend
 
       - name: Install Playwright browsers (chromium only)
         run: pnpm exec playwright install --with-deps chromium
