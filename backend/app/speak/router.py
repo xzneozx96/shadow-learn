@@ -185,7 +185,6 @@ async def session_start(
             status_code=400,
             detail=f"Persona {request.persona_id!r} does not support language {request.target_language!r}",
         )
-    google = await keys(Provider.google)
 
     try:
         if request.situation_id.startswith("custom_"):
@@ -197,7 +196,7 @@ async def session_start(
                 persona_id=request.persona_id,
                 language=request.target_language,
                 level=request.proficiency_level,
-                google_key=google.value,
+                google_key=(await keys(Provider.google)).value,
                 situation_id=request.situation_id,
                 force_regenerate=request.force_regenerate,
                 interface_language=request.interface_language,

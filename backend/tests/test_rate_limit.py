@@ -61,19 +61,37 @@ def test_the_window_slides():
     limiter = RateLimiter(clock=lambda: now[0])
     user = uuid.uuid4()
 
-    assert limiter.retry_after(user, 2) is None
+    assert limiter.hit(user, 2) is None
     now[0] = 30.0
-    assert limiter.retry_after(user, 2) is None
-    assert limiter.retry_after(user, 2) == 30.0
+    assert limiter.hit(user, 2) is None
+    assert limiter.hit(user, 2) == 30.0
     now[0] = 60.0
-    assert limiter.retry_after(user, 2) is None
-    assert limiter.retry_after(user, 2) == 30.0
+    assert limiter.hit(user, 2) is None
+    assert limiter.hit(user, 2) == 30.0
 
 
 def test_accounts_have_separate_windows():
     limiter = RateLimiter(clock=lambda: 0.0)
     first, second = uuid.uuid4(), uuid.uuid4()
 
-    assert limiter.retry_after(first, 1) is None
-    assert limiter.retry_after(first, 1) is not None
-    assert limiter.retry_after(second, 1) is None
+    assert limiter.hit(first, 1) is None
+    assert limiter.hit(first, 1) is not None
+    assert limiter.hit(second, 1) is None
+
+
+def test_idle_accounts_are_evicted():
+    now = [0.0]
+    limiter = RateLimiter(clock=lambda: now[0])
+    limiter.hit("idle", 5)
+    now[0] = 61.0
+    limiter.hit("active", 5)
+    assert list(limiter._hits) == ["active"]
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_concurrent_requests_never_exceed_the_limit(client, minimax_tts, monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr("app.keys.usage.settings.rate_limit_per_minute", 5)
+    responses = await asyncio.gather(*(_tts(client) for _ in range(12)))
+    assert sorted(r.status_code for r in responses) == [200] * 5 + [429] * 7

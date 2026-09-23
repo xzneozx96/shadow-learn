@@ -108,7 +108,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     situation_id = session_info.get("situation_id", "casual_chat")
     target_language = session_info.get("target_language", "zh-CN")
 
-    google_key = await fetch_google_key(ctx.room.name.removeprefix("speak-"))
+    google_key = await fetch_google_key(session_info["session_id"])
     speechmatics_key = os.getenv("SPEECHMATICS_API_KEY", "")
 
     # System prompt and voice

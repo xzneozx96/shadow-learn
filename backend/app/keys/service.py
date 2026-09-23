@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.accounts.deps import CurrentUser
-from app.db import get_session
+from app.db import SessionLocal, get_session
 from app.keys.crypto import decrypt
 from app.keys.models import KeySource, Provider, ProviderKey, ProviderUsage
 from app.keys.usage import enforce_rate_limit
@@ -49,6 +49,13 @@ def env_key(provider: Provider) -> ResolvedKey | None:
     return ResolvedKey(value, region, KeySource.env) if value else None
 
 
+async def record_usage(user_id: uuid.UUID, provider: Provider, source: KeySource, endpoint: str) -> None:
+    """Write the usage row in its own transaction, so the caller's session is never committed early."""
+    async with SessionLocal() as usage_session:
+        usage_session.add(ProviderUsage(user_id=user_id, provider=provider, source=source, endpoint=endpoint))
+        await usage_session.commit()
+
+
 async def resolve_provider_key(
     session: AsyncSession, user_id: uuid.UUID, provider: Provider, endpoint: str
 ) -> ResolvedKey:
@@ -66,8 +73,7 @@ async def resolve_provider_key(
                 status_code=400,
                 detail=f"Your saved {PROVIDER_NAMES[provider]} key can no longer be read. Save it again in Settings.",
             ) from None
-    session.add(ProviderUsage(user_id=user_id, provider=provider, source=resolved.source, endpoint=endpoint))
-    await session.commit()
+    await record_usage(user_id, provider, resolved.source, endpoint)
     logger.info(
         "resolve_provider_key provider=%s source=%s took %.2f",
         provider,
