@@ -433,7 +433,6 @@ async def test_youtube_lesson_falls_back_when_subtitle_download_fails(stored_use
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit(stored_user, app_s3):
-    """Even on subtitle hit, video must be downloaded for playback (media_path)."""
     from app.lessons.router import _process_youtube_lesson
 
     job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)

@@ -35,9 +35,14 @@ _SHADOWING_EXTS = {
 _SHADOWING_EXTS["audio/webm"] = "webm"
 
 
-@router.get("/api/media/{media_id}")
+def _require_credentials(user: OptionalUser, token: str | None = None) -> None:
+    if user is None and token is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+@router.get("/api/media/{media_id}", dependencies=[Depends(_require_credentials)])
 async def get_media(
-    media_id: str,
+    media_id: uuid.UUID,
     request: Request,
     session: Session,
     user: OptionalUser,
@@ -47,15 +52,11 @@ async def get_media(
     """Stream one media object to its owner's bearer or to a ``?token=`` ticket for this id.
 
     ``<video>`` and ``<audio>`` cannot send headers, so the ticket is the capability.
-    The id is parsed by hand so a request without credentials is a 401 before any 422.
     """
     ticketed = token is not None and media_token_grants(token, media_id)
     if user is None and not ticketed:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        media = await session.get(MediaObject, uuid.UUID(media_id))
-    except ValueError:
-        media = None
+    media = await session.get(MediaObject, media_id)
     if media is None:
         raise HTTPException(status_code=404, detail="Media not found")
     if not ticketed and media.user_id != user.id:

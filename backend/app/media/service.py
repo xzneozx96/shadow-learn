@@ -54,7 +54,6 @@ def _sha256_of(path: Path) -> str:
 
 
 async def put_file(s3, key: str, path: Path, content_type: str) -> tuple[int, str]:
-    """Upload *path* to *key* and return its size and SHA-256. The file is streamed, never read whole."""
     size = path.stat().st_size
     sha256 = await asyncio.to_thread(_sha256_of, path)
     with path.open("rb") as body:
@@ -73,7 +72,6 @@ async def store_file(
     source_path: Path,
     segment_id: str | None = None,
 ) -> MediaObject:
-    """Upload *source_path* under the user's lesson prefix, unlink it, and return the unsaved row."""
     media_id = uuid.uuid4()
     content_type = content_type_for(source_path)
     key = object_key(user_id, lesson_id, kind, media_id, source_path.suffix.lstrip(".").lower() or "bin")
@@ -135,7 +133,6 @@ async def _iter_body(body) -> AsyncIterator[bytes]:
 
 
 async def stream(s3, media: MediaObject, range_header: str | None) -> Response:
-    """Stream *media* from S3, honoring a single ``Range`` like a static file server."""
     headers = {"Accept-Ranges": "bytes"}
     try:
         byte_range = parse_range(range_header, media.size)
@@ -169,7 +166,7 @@ def mint_media_token(media_id: uuid.UUID) -> str:
     )
 
 
-def media_token_grants(token: str, media_id: uuid.UUID | str) -> bool:
+def media_token_grants(token: str, media_id: uuid.UUID) -> bool:
     try:
         data = decode_jwt(token, settings.jwt_secret, [MEDIA_AUDIENCE])
     except jwt.PyJWTError:

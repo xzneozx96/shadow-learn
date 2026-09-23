@@ -1,5 +1,3 @@
-"""Global catalogs: a repeat request is served from Postgres and MinIO, not the provider."""
-
 import logging
 from unittest.mock import AsyncMock, patch
 
@@ -94,7 +92,6 @@ async def test_breakdown_provider_error_is_not_cached(client, providers):
 
 
 async def test_second_tip_transcript_request_skips_youtube(client):
-    """The transcript provider is yt-dlp, not httpx, so the probe is counted with a mock."""
     segments = [{"start": 0.0, "end": 1.0, "text": "hi"}]
     fetch = AsyncMock(return_value=("en", segments))
     duration = AsyncMock(return_value=(60.0, False))

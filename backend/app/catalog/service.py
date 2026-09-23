@@ -1,9 +1,3 @@
-"""Global, backend-managed caches shared by every user.
-
-Each lookup logs ``catalog hit`` so a repeat request is visible in the
-backend log without a provider call.
-"""
-
 import hashlib
 import logging
 from typing import Any

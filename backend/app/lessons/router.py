@@ -85,7 +85,6 @@ async def _save_lesson(
     segments: list[dict],
     media_path: Path | None,
 ) -> tuple[uuid.UUID, MediaObject | None]:
-    """Upload the lesson's media, then insert the lesson, its segments, and the media row in one transaction."""
     lesson_id = uuid.uuid4()
     media = None
     if media_path is not None:
@@ -135,7 +134,6 @@ async def _shared_pipeline(
     source_language: str = "zh-CN",
     media_path: Path | None = None,
 ) -> None:
-    """Background pipeline: romanization → translate + vocab → persist lesson and media → mark job complete."""
     t_pipeline = time.monotonic()
     logger.info("[pipeline] shared_pipeline: start segments=%d source=%s", len(segments), source)
 

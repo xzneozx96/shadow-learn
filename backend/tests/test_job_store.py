@@ -1,4 +1,3 @@
-"""Tests for the persisted job primitive in ``app/job_store.py``."""
 from __future__ import annotations
 
 import asyncio

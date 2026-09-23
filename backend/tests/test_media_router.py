@@ -1,5 +1,3 @@
-"""GET /api/media/{id}: Range streaming from MinIO and ticket or bearer authorization."""
-
 import os
 import uuid
 

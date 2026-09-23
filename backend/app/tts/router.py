@@ -48,7 +48,6 @@ async def text_to_speech(body: TTSRequest, request: Request, provider_keys: Prov
     if cached is not None:
         return Response(content=cached, media_type="audio/mpeg")
 
-    # Step 3: key validation
     keys: TTSKeys = {}
     if provider_name == "azure":
         azure = await provider_keys(Provider.azure_speech)
@@ -58,7 +57,6 @@ async def text_to_speech(body: TTSRequest, request: Request, provider_keys: Prov
             raise HTTPException(status_code=400, detail="No MiniMax API key configured on the server")
         keys = {"minimax_api_key": settings.minimax_api_key}
 
-    # Step 4: synthesize
     try:
         audio_bytes = await request.app.state.tts_provider.synthesize(
             body.text, keys, body.source_language,

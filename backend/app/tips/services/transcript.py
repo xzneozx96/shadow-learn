@@ -1,17 +1,3 @@
-"""Tips transcript orchestrator.
-
-Tries YouTube manual subtitles first (subtitle-fast path) and falls back to
-async STT transcription when no subtitle track is available.  The two public
-functions are called by the Tips transcript router (Task 7).
-
-  fetch_youtube_subtitles — synchronous subtitle fetch; returns (lang, segments)
-                            or (None, None) on any failure or absence.
-  kick_off_stt_job        — spawns an asyncio background task that downloads the
-                            video, extracts audio, runs STT, and writes the result
-                            into the job and the tip transcript catalog; returns the
-                            job_id string, or None if no STT provider is configured.
-"""
-
 from __future__ import annotations
 
 import logging

@@ -1,5 +1,3 @@
-"""PUT and GET /api/lessons/{lesson_id}/segments/{segment_id}/shadowing-audio."""
-
 import hashlib
 import os
 import uuid

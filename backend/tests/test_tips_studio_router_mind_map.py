@@ -11,7 +11,6 @@ pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.usefixtures
 
 
 async def _await_job(job_id: str, timeout: float = 2.0) -> JobRow:
-    """Drive the loop until the background runner finishes."""
     deadline = asyncio.get_running_loop().time() + timeout
     while asyncio.get_running_loop().time() < deadline:
         job = await get_job(job_id)

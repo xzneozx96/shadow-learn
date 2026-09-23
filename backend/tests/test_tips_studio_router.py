@@ -9,12 +9,6 @@ pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.usefixtures
 
 
 def _fake_kick_off(**job_state):
-    """Return a stub matching ``kick_off_studio_job``'s call shape.
-
-    The stub inserts a job in *job_state* and binds the studio key to it,
-    so the router's response synthesis + the status probe both see the
-    same job. No asyncio task is spawned.
-    """
     async def _stub(*, kind, video_id, transcript, locale):
         job_id = await register_job(id_prefix="tip-studio", user_id=None)
         await update_job(job_id, **job_state)

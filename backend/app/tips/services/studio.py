@@ -215,15 +215,6 @@ def studio_job_key(kind: StudioKind, video_id: str, locale: StudioLocale) -> str
 async def kick_off_studio_job(
     *, kind: StudioKind, video_id: str, transcript: str, locale: StudioLocale,
 ) -> str:
-    """Spawn (or resume) a background studio-generation job, return its id.
-
-    Dedupe key = (kind, videoId, locale). If a live job already exists for
-    that key, the existing id is returned and no new OpenRouter call is made.
-    The runner validates the LLM payload against the per-kind Pydantic model
-    inside the retry boundary (``_call_openrouter`` already does this), then
-    writes ``{"data": <validated dict>}`` onto the job result and the
-    validated dict into the studio catalog.
-    """
     async def _run(job_id: str) -> None:
         try:
             data = await generate_studio_artifact(

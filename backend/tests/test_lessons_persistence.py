@@ -1,5 +1,3 @@
-"""Lesson pipelines persist to Postgres and MinIO, and the lesson routes read them back."""
-
 import hashlib
 import io
 import re

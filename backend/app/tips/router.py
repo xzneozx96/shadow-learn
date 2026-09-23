@@ -50,14 +50,10 @@ async def get_transcript(video_id: str):
     if not _YOUTUBE_ID.match(video_id):
         raise HTTPException(status_code=400, detail="invalid video_id")
 
-    # Fast path: the catalog holds every transcript a subtitle fetch or an
-    # STT job already produced, so a repeat request skips ~5s of yt-dlp
-    # metadata + subtitle probing.
     cached = await catalog.get_tip_transcript(video_id)
     if cached is not None:
         return TranscriptReady(status="ready", **cached)
 
-    # An STT job still processing — frontend can resume polling it.
     running_job_id = await _transcript_svc._existing_job_for_video(video_id)
     if running_job_id is not None:
         running = await get_job(running_job_id)
@@ -153,8 +149,7 @@ async def get_studio_status(kind: str, video_id: str, locale: str = "en"):
 
     Looks up any live job for ``(kind, video_id, locale)``, then the studio
     catalog, without spending an OpenRouter call. Returns ``ready`` /
-    ``pending`` / ``none``. This is the analog of ``GET /api/tips/transcript/{video_id}`` — content-keyed
-    lookup is the resume mechanism, no client-side jobId persistence needed.
+    ``pending`` / ``none``.
     """
     if kind not in _VALID_KINDS:
         raise HTTPException(status_code=400, detail=f"invalid kind: {kind}")
@@ -170,7 +165,4 @@ async def get_studio_status(kind: str, video_id: str, locale: str = "en"):
     cached = await catalog.get_tip_studio(video_id, kind, locale)
     if cached is not None:
         return JSONResponse(status_code=200, content={"status": "ready", "data": cached})
-    # 200 instead of 404 so the absence of an in-flight job doesn't
-    # show as a network error in devtools. The hook treats both the
-    # same; this is purely cosmetic on the client console.
     return JSONResponse(status_code=200, content={"status": "none"})

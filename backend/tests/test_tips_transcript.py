@@ -187,7 +187,6 @@ async def test_kick_off_stt_job_spawns_fresh_after_error():
 
 @pytest.mark.usefixtures("fake_deepgram", "no_background_runner")
 async def test_kick_off_stt_job_spawns_fresh_after_prune():
-    """If the job for a video was pruned by TTL, spawn fresh."""
     from app.tips.services import transcript as svc
 
     first = await svc.kick_off_stt_job("abc123")
@@ -232,7 +231,6 @@ async def test_stt_job_writes_the_catalog_and_removes_its_temp_files(monkeypatch
 
 
 async def test_get_transcript_fast_path_reads_the_catalog(client, monkeypatch):
-    """A transcript already in the catalog is returned without any yt-dlp probe."""
     from app.tips.services import transcript as svc
 
     await catalog.put_tip_transcript(
