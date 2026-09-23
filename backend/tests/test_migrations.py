@@ -4,7 +4,8 @@ from alembic.migration import MigrationContext
 
 import app.accounts.models
 import app.keys.models
-import app.speak.models  # noqa: F401
+import app.speak.models
+import app.userdata.models  # noqa: F401
 from app.db import Base, engine
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
