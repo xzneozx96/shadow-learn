@@ -24,6 +24,11 @@ PROVIDER_NAMES = {
 }
 
 
+class NoProviderKey(HTTPException):
+    def __init__(self, provider: Provider) -> None:
+        super().__init__(status_code=400, detail=f"No {PROVIDER_NAMES[provider]} key configured. Add one in Settings.")
+
+
 @dataclass(frozen=True)
 class ResolvedKey:
     value: str
@@ -52,9 +57,7 @@ async def resolve_provider_key(
     if stored is None:
         resolved = env_key(provider)
         if resolved is None:
-            raise HTTPException(
-                status_code=400, detail=f"No {PROVIDER_NAMES[provider]} key configured. Add one in Settings."
-            )
+            raise NoProviderKey(provider)
     else:
         try:
             resolved = ResolvedKey(decrypt(stored.ciphertext), stored.region, KeySource.user)
@@ -76,8 +79,6 @@ async def resolve_provider_key(
 
 @dataclass
 class KeyResolver:
-    """Resolves each provider at most once per request, so one request logs one usage row per provider."""
-
     session: AsyncSession
     user_id: uuid.UUID
     endpoint: str

@@ -146,6 +146,26 @@ async def test_youtube_lesson_starts_without_an_azure_key_because_subtitles_may_
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_youtube_lesson_still_reports_an_unreadable_azure_key(stored_user, db_session):
+    from cryptography.fernet import Fernet
+
+    from app.keys.models import Provider, ProviderKey
+
+    foreign = Fernet(Fernet.generate_key()).encrypt(b"old-azure-key")
+    db_session.add(ProviderKey(user_id=stored_user.id, provider=Provider.azure_speech, ciphertext=foreign, region="eastus"))
+    await db_session.commit()
+    with patch("app.lessons.router.validate_youtube_url", return_value="abc123"):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/lessons/generate",
+                json={"source": "youtube", "youtube_url": "https://www.youtube.com/watch?v=abc123", "translation_languages": ["en"]},
+            )
+    assert response.status_code == 400
+    assert "Save it again in Settings" in response.json()["detail"]
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_blog_lesson_resolves_azure_once_for_tts_and_stt(mock_tts_provider, db_session):
     from sqlalchemy import func, select
 

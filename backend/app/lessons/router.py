@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict
 from app.accounts.deps import CurrentUser
 from app.job_store import jobs, register_job
 from app.keys.models import Provider
-from app.keys.service import KeyResolver, ProviderKeys
+from app.keys.service import KeyResolver, NoProviderKey, ProviderKeys
 from app.lessons.services.audio import (
     download_youtube_video,
     extract_audio_from_upload,
@@ -410,7 +410,7 @@ async def _azure_keys(keys: KeyResolver, provider_name: str, *, required: bool =
         return {}
     try:
         azure = await keys(Provider.azure_speech)
-    except HTTPException:
+    except NoProviderKey:
         if required:
             raise
         return {}
@@ -435,7 +435,6 @@ async def generate_lesson(
             raise HTTPException(status_code=400, detail=exc.message)
 
         openrouter_key = (await keys(Provider.openrouter)).value
-        # A video with a manual subtitle track never reaches STT, so it needs no Azure key.
         stt_keys = await _azure_keys(keys, req.app.state.stt_provider_name, required=False)
         stt_provider = req.app.state.stt_provider
         job_id = register_job(id_prefix="lesson", user_id=str(user.id))
