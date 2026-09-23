@@ -94,3 +94,15 @@ async def test_reset_password_rejects_a_bad_token(client, db_session):
     response = await client.post("/api/auth/reset-password", json={"token": "not-a-token", "password": "new-password-2"})
     assert response.status_code == 400
     assert response.json()["detail"] == "RESET_PASSWORD_BAD_TOKEN"
+
+
+async def test_logout_revokes_the_access_and_refresh_tokens(client, user):
+    response = await client.post("/api/auth/logout", headers=_bearer(user["access_token"]))
+    assert response.status_code == 204
+
+    stale_access = await client.get("/api/users/me", headers=_bearer(user["access_token"]))
+    assert stale_access.status_code == 401
+    stale_refresh = await client.post("/api/auth/refresh", json={"refresh_token": user["refresh_token"]})
+    assert stale_refresh.status_code == 401
+    relogin = await client.post("/api/auth/login", data={"username": user["email"], "password": user["password"]})
+    assert relogin.status_code == 200

@@ -1,8 +1,9 @@
 # backend/app/config.py
 import re
 from typing import Literal
+from urllib.parse import urlsplit
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -95,6 +96,15 @@ class Settings(BaseSettings):
         if len(value) < 32:
             raise ValueError("must be at least 32 characters; generate one with `openssl rand -hex 32`")
         return value
+
+    @model_validator(mode="after")
+    def _require_smtp_outside_local_dev(self) -> "Settings":
+        if not self.smtp_host and urlsplit(self.public_app_url).hostname not in {"localhost", "127.0.0.1"}:
+            raise ValueError(
+                "SHADOWLEARN_SMTP_HOST is required outside local dev: without it the backend would "
+                f"log password reset links for {self.public_app_url}"
+            )
+        return self
 
     def origin_allowed(self, origin: str | None) -> bool:
         """The CORS middleware's rule: an exact allowlist entry, ``*``, or a full regex match."""

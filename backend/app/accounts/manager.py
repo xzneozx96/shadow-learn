@@ -40,8 +40,11 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
     async def _update(self, user: User, update_dict: dict[str, Any]) -> User:
         if update_dict.get("password") is not None:
-            update_dict = {**update_dict, "token_version": user.token_version + 1}
+            update_dict = {**update_dict, "token_version": User.token_version + 1}
         return await super()._update(user, update_dict)
+
+    async def revoke_tokens(self, user: User) -> None:
+        await self.user_db.update(user, {"token_version": User.token_version + 1})
 
 
 # Function scope closes the lookup session when the endpoint returns, so a

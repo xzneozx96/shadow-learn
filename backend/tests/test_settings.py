@@ -1,0 +1,29 @@
+import pytest
+from pydantic import ValidationError
+
+from app.settings import Settings
+
+SECRETS = {"jwt_secret": "a" * 32, "jwt_refresh_secret": "b" * 32}
+
+
+def _settings(**overrides) -> Settings:
+    return Settings(_env_file=None, **SECRETS, **overrides)
+
+
+def test_missing_smtp_fails_startup_outside_local_dev():
+    with pytest.raises(ValidationError, match="SMTP_HOST is required outside local dev"):
+        _settings(smtp_host="", public_app_url="https://learning.example.com")
+
+
+@pytest.mark.parametrize("url", ["http://localhost:5173", "http://127.0.0.1:5352"])
+def test_local_dev_may_log_reset_links_without_smtp(url):
+    assert _settings(smtp_host="", public_app_url=url).smtp_host == ""
+
+
+def test_production_url_with_smtp_starts():
+    assert _settings(smtp_host="smtp.example.com", public_app_url="https://learning.example.com").smtp_host
+
+
+def test_short_jwt_secret_fails_startup():
+    with pytest.raises(ValidationError, match="at least 32 characters"):
+        Settings(_env_file=None, jwt_secret="short", jwt_refresh_secret="b" * 32)

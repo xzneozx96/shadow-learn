@@ -43,6 +43,14 @@ async def refresh(
     return await _token_pair(user)
 
 
+@auth_router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    user: CurrentUser,
+    user_manager: Annotated[UserManager, Depends(get_user_manager)],
+) -> None:
+    await user_manager.revoke_tokens(user)
+
+
 auth_router.include_router(fastapi_users.get_register_router(UserRead, UserCreate))
 auth_router.include_router(fastapi_users.get_reset_password_router())
 
