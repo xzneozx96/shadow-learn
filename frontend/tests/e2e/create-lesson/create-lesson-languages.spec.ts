@@ -96,6 +96,8 @@ test('US01.US06-E2E-022 @p1 @regression @create-lesson — ac-03.4: the pending 
   const sourceSelectTrigger = page.getByTestId('create-lesson-source-language-select')
   await sourceSelectTrigger.click()
   await page.getByRole('option', { name: /Japanese|日本語/i }).click()
+  // Let the source list finish closing so its options cannot match the next lookup
+  await expect(page.getByRole('listbox')).toHaveCount(0)
 
   // Change translation language to Vietnamese (vi)
   const translationSelectTrigger = page.getByTestId('create-lesson-translation-language-select')

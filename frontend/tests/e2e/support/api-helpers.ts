@@ -9,12 +9,26 @@
 import type { APIRequestContext, Page } from '@playwright/test'
 import type { Buffer } from 'node:buffer'
 import { randomUUID } from 'node:crypto'
+import { readdirSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 import process from 'node:process'
 import { expect } from '@playwright/test'
 
 export const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8000'
 
-const WHATS_NEW_TITLE = /what's new|có gì mới/i
+// Playwright runs from frontend/.
+const CHANGELOG_DIR = path.join(process.cwd(), 'src/data/changelog')
+const FRONTMATTER_ID = /^id: (\S+)$/m
+const FRONTMATTER_DATE = /^date: "?(\d{4}-\d{2}-\d{2})"?$/m
+
+// The id `getLatestAnnouncementId` returns, so a fresh account does not get the What's new dialog.
+function latestAnnouncementId(): string {
+  const entries = readdirSync(CHANGELOG_DIR).map((file) => {
+    const raw = readFileSync(path.join(CHANGELOG_DIR, file), 'utf8')
+    return { id: FRONTMATTER_ID.exec(raw)![1], date: FRONTMATTER_DATE.exec(raw)![1] }
+  })
+  return entries.sort((a, b) => b.date.localeCompare(a.date))[0].id
+}
 
 export interface TestUser {
   id: string
@@ -75,14 +89,11 @@ export async function signUpAndLogin(page: Page): Promise<TestUser> {
   const tokens: { access_token: string, refresh_token: string } = await login.json()
   const user = { id: (await created.json()).id, email, accessToken: tokens.access_token, refreshToken: tokens.refresh_token }
 
-  await page.addInitScript((refreshToken) => {
+  await page.addInitScript(({ refreshToken, announcement }) => {
     if (!localStorage.getItem('shadowlearn.refresh'))
       localStorage.setItem('shadowlearn.refresh', refreshToken)
-  }, user.refreshToken)
-  // A fresh account has not seen the latest announcement, so the dialog opens over the page.
-  await page.addLocatorHandler(page.getByRole('dialog', { name: WHATS_NEW_TITLE }), async () => {
-    await page.keyboard.press('Escape')
-  })
+    localStorage.setItem('shadowlearn:whats-new:last-seen', announcement)
+  }, { refreshToken: user.refreshToken, announcement: latestAnnouncementId() })
   return user
 }
 
