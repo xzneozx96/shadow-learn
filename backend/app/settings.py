@@ -1,4 +1,7 @@
 # backend/app/config.py
+from typing import Literal
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -41,10 +44,11 @@ class Settings(BaseSettings):
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
     gladia_api_keys: list[str] = []            # env: SHADOWLEARN_GLADIA_API_KEYS='["key1","key2"]' — tried in order, rotated on 402/403
-    # Allowlist of frontend origins permitted to call /api/transcription/session.
-    # Empty list disables the Origin check (dev convenience).
+    # Frontend origins allowed by CORS and by the /api/transcription/session Origin check.
+    # An empty list disables only the transcription Origin check.
     # env: SHADOWLEARN_FRONTEND_ORIGIN_ALLOWLIST='["http://localhost:5173","https://shadowlearn.app"]'
-    frontend_origin_allowlist: list[str] = []
+    frontend_origin_allowlist: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    frontend_origin_regex: str = ""  # env: SHADOWLEARN_FRONTEND_ORIGIN_REGEX; e.g. https://.*\.vercel\.app
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
     encryption_key: str | None = None          # env: SHADOWLEARN_ENCRYPTION_KEY
@@ -73,6 +77,25 @@ class Settings(BaseSettings):
     s3_bucket: str = "shadowlearn"
     s3_region: str = "us-east-1"
     temp_dir: str = "/tmp/shadowlearn"
+
+    jwt_secret: str
+    jwt_refresh_secret: str
+    access_token_minutes: int = 15
+    refresh_token_days: int = 30
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_security: Literal["none", "starttls", "ssl"] = "starttls"
+    public_app_url: str = "http://localhost:5173"
+
+    @field_validator("jwt_secret", "jwt_refresh_secret")
+    @classmethod
+    def _require_long_secret(cls, value: str) -> str:
+        if len(value) < 32:
+            raise ValueError("must be at least 32 characters; generate one with `openssl rand -hex 32`")
+        return value
 
     model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

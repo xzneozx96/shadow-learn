@@ -41,14 +41,14 @@ async def _await_terminal(job_id: str, *, timeout: float = 1.0) -> None:
 
 
 def test_register_job_mints_processing_row() -> None:
-    job_id = register_job(id_prefix="x")
+    job_id = register_job(id_prefix="x", user_id=None)
     assert job_id.startswith("x-")
     assert jobs[job_id].status == "processing"
     assert jobs[job_id].step == "queued"
 
 
 def test_register_keyed_job_and_get() -> None:
-    job_id = register_job(id_prefix="t")
+    job_id = register_job(id_prefix="t", user_id=None)
     register_keyed_job("k1", job_id)
     assert get_job_for_key("k1") == job_id
 
@@ -60,7 +60,7 @@ def test_get_job_for_key_drops_pruned_entries() -> None:
 
 
 def test_get_job_for_key_drops_errored_entries() -> None:
-    job_id = register_job(id_prefix="t")
+    job_id = register_job(id_prefix="t", user_id=None)
     jobs[job_id] = Job(status="error", step="failed", result=None, error="boom")
     register_keyed_job("k1", job_id)
     assert get_job_for_key("k1") is None
@@ -80,7 +80,7 @@ async def test_kick_off_job_runs_runner_to_completion() -> None:
         jobs[job_id].status = "complete"
         jobs[job_id].step = "complete"
 
-    job_id = kick_off_job(runner, id_prefix="test")
+    job_id = kick_off_job(runner, id_prefix="test", user_id=None)
     await _await_terminal(job_id)
     assert jobs[job_id].status == "complete"
     assert jobs[job_id].result == {"ok": True}
@@ -90,7 +90,7 @@ async def test_kick_off_job_records_runner_exceptions_as_error() -> None:
     async def runner(_job_id: str) -> None:
         raise RuntimeError("oops")
 
-    job_id = kick_off_job(runner, id_prefix="test")
+    job_id = kick_off_job(runner, id_prefix="test", user_id=None)
     await _await_terminal(job_id)
     assert jobs[job_id].status == "error"
     assert "oops" in (jobs[job_id].error or "")
@@ -104,8 +104,8 @@ async def test_kick_off_keyed_job_dedupes() -> None:
         await asyncio.sleep(0.05)  # stay "processing" long enough to dedupe
         jobs[job_id].status = "complete"
 
-    first = kick_off_keyed_job("artifact:abc", runner, id_prefix="test")
-    second = kick_off_keyed_job("artifact:abc", runner, id_prefix="test")
+    first = kick_off_keyed_job("artifact:abc", runner, id_prefix="test", user_id=None)
+    second = kick_off_keyed_job("artifact:abc", runner, id_prefix="test", user_id=None)
     assert first == second
     await _await_terminal(first)
     assert len(runs) == 1  # runner invoked exactly once
@@ -121,16 +121,16 @@ async def test_kick_off_keyed_job_spawns_fresh_after_error() -> None:
         jobs[job_id].status = "complete"
         jobs[job_id].result = {"value": 42}
 
-    first = kick_off_keyed_job("k", fail, id_prefix="t")
+    first = kick_off_keyed_job("k", fail, id_prefix="t", user_id=None)
     await _await_terminal(first)
-    second = kick_off_keyed_job("k", ok, id_prefix="t")
+    second = kick_off_keyed_job("k", ok, id_prefix="t", user_id=None)
     assert second != first
     await _await_terminal(second)
     assert jobs[second].result == {"value": 42}
 
 
 def test_prune_expired_jobs_removes_old_rows_and_keys() -> None:
-    job_id = register_job(id_prefix="t")
+    job_id = register_job(id_prefix="t", user_id=None)
     register_keyed_job("k", job_id)
     # Force the row to look ancient.
     jobs[job_id].created_at -= 7200  # 2h

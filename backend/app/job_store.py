@@ -40,6 +40,7 @@ class Job:
     step: str            # feature-defined. "queued" on creation; "complete" on terminal success.
     result: dict[str, Any] | None  # feature-defined payload when status == "complete"; None otherwise
     error: str | None    # error message if status == "error"; None otherwise
+    user_id: str | None = None  # owner; None for jobs whose result is shared by every user
     created_at: float = field(default_factory=time.time)
 
 
@@ -98,7 +99,7 @@ def _mint_job_id(id_prefix: str) -> str:
     return f"{id_prefix}-{uuid.uuid4().hex[:12]}"
 
 
-def register_job(id_prefix: str = "job") -> str:
+def register_job(id_prefix: str = "job", *, user_id: str | None) -> str:
     """Mint a new job_id and create a queued Job row. Return the id.
 
     Callers that schedule background work through a non-asyncio mechanism
@@ -108,14 +109,14 @@ def register_job(id_prefix: str = "job") -> str:
     ``jobs[job_id]`` as work progresses.
     """
     job_id = _mint_job_id(id_prefix)
-    jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    jobs[job_id] = Job(status="processing", step="queued", result=None, error=None, user_id=user_id)
     return job_id
 
 
 Runner = Callable[[str], Awaitable[None]]
 
 
-def kick_off_job(runner: Runner, *, id_prefix: str = "job") -> str:
+def kick_off_job(runner: Runner, *, id_prefix: str = "job", user_id: str | None) -> str:
     """Create a fresh ``Job`` and schedule *runner(job_id)* in the background.
 
     ``runner`` is responsible for mutating ``jobs[job_id]`` — setting ``step``
@@ -126,7 +127,7 @@ def kick_off_job(runner: Runner, *, id_prefix: str = "job") -> str:
     ``processing``.
     """
     job_id = _mint_job_id(id_prefix)
-    jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    jobs[job_id] = Job(status="processing", step="queued", result=None, error=None, user_id=user_id)
     asyncio.create_task(_run_with_guard(job_id, runner))
     return job_id
 
@@ -136,6 +137,7 @@ def kick_off_keyed_job(
     runner: Runner,
     *,
     id_prefix: str = "job",
+    user_id: str | None,
 ) -> str:
     """Like :func:`kick_off_job` but dedupes by *key*.
 
@@ -152,7 +154,7 @@ def kick_off_keyed_job(
         )
         return existing
     job_id = _mint_job_id(id_prefix)
-    jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    jobs[job_id] = Job(status="processing", step="queued", result=None, error=None, user_id=user_id)
     register_keyed_job(key, job_id)
     asyncio.create_task(_run_with_guard(job_id, runner))
     return job_id
@@ -162,8 +164,8 @@ async def _run_with_guard(job_id: str, runner: Runner) -> None:
     """Invoke *runner* and absorb unhandled exceptions onto the Job record."""
     try:
         await runner(job_id)
-    except Exception as e:  # noqa: BLE001 — last-resort guard
-        logger.exception("background job %s crashed: %s", job_id, e)
+    except Exception as e:
+        logger.exception("background job %s crashed", job_id)
         job = jobs.get(job_id)
         if job is not None and job.status == "processing":
             job.status = "error"

@@ -41,6 +41,7 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["real_auth: use the real bearer-token dependency instead of the signed-in stand-in"]
 
 [tool.uv.workspace]
 members = [

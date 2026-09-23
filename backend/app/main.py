@@ -2,12 +2,14 @@ import logging
 from contextlib import AsyncExitStack, asynccontextmanager
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.accounts.deps import current_active_user
+from app.accounts.router import auth_router, users_router
 from app.agent.router import router as agent_router
 from app.background.router import router as jobs_router
 from app.collection.router import router as collection_router
@@ -51,26 +53,34 @@ app = FastAPI(title="ShadowLearn API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.frontend_origin_allowlist,
+    allow_origin_regex=settings.frontend_origin_regex or None,
+    allow_credentials=False,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
-app.include_router(lessons_router)
-app.include_router(tts_router)
+app.include_router(auth_router)
 app.include_router(config_router)
-app.include_router(jobs_router)
-app.include_router(quiz_router)
-app.include_router(translation_router)
-app.include_router(transcription_router)
-app.include_router(pronunciation_router)
-app.include_router(agent_router)
-app.include_router(speak_router)
-app.include_router(vocab_router)
-app.include_router(collection_router)
-app.include_router(daily_review_router)
-app.include_router(tips_router)
-app.include_router(pageindex_tool_router)
+
+for router in (
+    users_router,
+    lessons_router,
+    tts_router,
+    jobs_router,
+    quiz_router,
+    translation_router,
+    transcription_router,
+    pronunciation_router,
+    agent_router,
+    speak_router,
+    vocab_router,
+    collection_router,
+    daily_review_router,
+    tips_router,
+    pageindex_tool_router,
+):
+    app.include_router(router, dependencies=[Depends(current_active_user)])
 
 
 @app.get("/api/health")

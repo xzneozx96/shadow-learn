@@ -230,7 +230,7 @@ def kick_off_studio_job(
             jobs[job_id].result = {"data": validated}
             jobs[job_id].status = "complete"
             jobs[job_id].step = "complete"
-        except Exception as exc:  # noqa: BLE001 — surface every failure on the Job
+        except Exception as exc:  # surface every failure on the Job
             logger.exception(
                 "kick_off_studio_job._run: failed job_id=%s kind=%s video_id=%s",
                 job_id, kind, video_id,
@@ -248,4 +248,4 @@ def kick_off_studio_job(
     if existing_id is not None and jobs[existing_id].status == "complete":
         clear_keyed_job(key)
 
-    return kick_off_keyed_job(key, _run, id_prefix="tip-studio")
+    return kick_off_keyed_job(key, _run, id_prefix="tip-studio", user_id=None)
