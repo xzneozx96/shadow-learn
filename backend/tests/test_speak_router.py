@@ -4,7 +4,9 @@ import jwt
 import pytest
 from sqlalchemy import select
 
+from app.accounts.deps import current_active_user
 from app.accounts.models import User
+from app.main import app
 from app.settings import settings
 from app.speak.models import SpeakLiveSession
 from app.speak.situations import SituationConfig, VocabItem
@@ -99,23 +101,56 @@ async def test_list_situations_returns_built_ins(client):
     assert any(s["id"] == "ordering_food" for s in body["situations"])
 
 
-async def test_generate_situation_returns_vocab_with_meaning(client):
+_GENERATE_BODY = {
+    "user_text": "I want to buy a SIM card at a mobile store",
+    "language": "zh-CN",
+    "level": "intermediate",
+    "persona_id": "friendly_buddy",
+    "interface_language": "vi",
+}
+
+_CUSTOM_START = {**_START, "situation_id": "custom_abc12345", "proficiency_level": "intermediate"}
+
+
+async def _generate(client):
     async def _ret(*args, **kwargs):
         return _sample_config()
 
     with patch("app.speak.router._generate_situation", side_effect=_ret):
-        resp = await client.post("/api/speak/situations/generate", json={
-            "user_text": "I want to buy a SIM card at a mobile store",
-            "language": "zh-CN",
-            "level": "intermediate",
-                "persona_id": "friendly_buddy",
-            "interface_language": "vi",
-        })
+        return await client.post("/api/speak/situations/generate", json=_GENERATE_BODY)
+
+
+async def test_generate_situation_returns_vocab_with_meaning(client):
+    resp = await _generate(client)
     assert resp.status_code == 200
     body = resp.json()
     assert body["situation_id"].startswith("custom_")
     assert body["target_vocab"][0]["term"] == "手机卡"
     assert body["target_vocab"][0]["meaning"] == "SIM điện thoại"
+
+
+async def test_generated_situation_starts_a_session(client):
+    await _generate(client)
+
+    resp = await client.post("/api/speak/session-start", json=_CUSTOM_START)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["situation"]["title"] == "Mua SIM"
+
+
+async def test_another_user_cannot_start_a_session_with_my_situation(client, db_session):
+    await _generate(client)
+    other = User(email="speak-other@example.com", hashed_password="", is_active=True)
+    db_session.add(other)
+    await db_session.commit()
+    app.dependency_overrides[current_active_user] = lambda: other
+
+    resp = await client.post("/api/speak/session-start", json=_CUSTOM_START)
+    assert resp.status_code == 404
+
+
+async def test_session_start_rejects_an_unknown_custom_situation(client):
+    resp = await client.post("/api/speak/session-start", json=_CUSTOM_START)
+    assert resp.status_code == 404
 
 
 async def test_generate_situation_bubbles_up_generation_error(client):
