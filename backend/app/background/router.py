@@ -1,5 +1,7 @@
 """Job status polling and cleanup endpoints."""
 
+import time
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse, Response
 
@@ -9,6 +11,18 @@ from app.job_store import delete_job, get_job, prune_expired_jobs
 from app.jobs.models import JobRow
 
 router = APIRouter(prefix="/api/jobs")
+
+PRUNE_INTERVAL_SECONDS = 60.0
+_next_prune = 0.0
+
+
+async def _prune_when_due() -> None:
+    global _next_prune
+    now = time.monotonic()
+    if now < _next_prune:
+        return
+    _next_prune = now + PRUNE_INTERVAL_SECONDS
+    await prune_expired_jobs()
 
 
 async def _visible_job(job_id: str, user: User) -> JobRow | None:
@@ -20,8 +34,8 @@ async def _visible_job(job_id: str, user: User) -> JobRow | None:
 
 @router.get("/{job_id}")
 async def get_job_status(job_id: str, user: CurrentUser):
-    """Return current job status. Prunes expired jobs on every call."""
-    await prune_expired_jobs()
+    """Return current job status. Prunes expired jobs at most once a minute."""
+    await _prune_when_due()
     job = await _visible_job(job_id, user)
     if job is None:
         return JSONResponse(status_code=404, content={"detail": "Job not found"})

@@ -1,13 +1,20 @@
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import func, text, update
 
+import app.background.router as jobs_router
 from app.db import SessionLocal
 from app.job_store import complete_job, fail_job, get_job, register_job, update_job
 from app.jobs.models import JobRow
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+
+@pytest.fixture(autouse=True)
+def prune_due(monkeypatch):
+    monkeypatch.setattr(jobs_router, "_next_prune", 0.0)
 
 
 @pytest.fixture
@@ -106,3 +113,14 @@ async def test_shared_job_is_readable_but_not_deletable(client, db_session):
     assert read.status_code == 200
     assert delete.status_code == 404
     assert await get_job(job_id) is not None
+
+
+async def test_polling_prunes_at_most_once_per_interval(client, owner, monkeypatch):
+    prune = AsyncMock()
+    monkeypatch.setattr(jobs_router, "prune_expired_jobs", prune)
+    job_id = await register_job(id_prefix="lesson", user_id=owner)
+
+    for _ in range(5):
+        assert (await client.get(f"/api/jobs/{job_id}")).status_code == 200
+
+    assert prune.await_count == 1
