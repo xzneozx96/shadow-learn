@@ -47,16 +47,8 @@ def _index_filter(spec: StoreSpec, index: str, value: str, op: Op):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="bad index value") from e
 
 
-def _validate(spec: StoreSpec, records: list[Any]) -> list[dict[str, Any]]:
-    valid, errors = [], []
-    for position, raw in enumerate(records):
-        try:
-            valid.append(spec.validate(raw))
-        except ValidationError as e:
-            errors += [{**error, "loc": ("body", position, *error["loc"])} for error in e.errors(include_url=False)]
-    if errors:
-        raise RequestValidationError(errors)
-    return valid
+def _errors_at(error: ValidationError, loc: tuple[str | int, ...]) -> list[dict[str, Any]]:
+    return [{**detail, "loc": (*loc, *detail["loc"])} for detail in error.errors(include_url=False)]
 
 
 @asynccontextmanager
@@ -94,7 +86,10 @@ async def get_record(spec: Spec, record_id: str, user: CurrentUser, session: Ses
 async def put_record(
     spec: WritableSpec, record_id: str, user: CurrentUser, session: Session, record: Annotated[Any, Body()]
 ) -> dict[str, Any]:
-    [data] = _validate(spec, [record])
+    try:
+        data = spec.validate(record)
+    except ValidationError as e:
+        raise RequestValidationError(_errors_at(e, ("body",))) from e
     if spec.record_id(data) != record_id:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="record id does not match the path")
     async with _unique_conflict_as_409():
@@ -124,7 +119,14 @@ async def delete_by_index(
 
 @router.post("/{store}/bulk")
 async def bulk(spec: WritableSpec, body: BulkRequest, user: CurrentUser, session: Session) -> BulkResponse:
-    records = _validate(spec, body.records)
+    records, errors = [], []
+    for position, raw in enumerate(body.records):
+        try:
+            records.append(spec.validate(raw))
+        except ValidationError as e:
+            errors += _errors_at(e, ("body", "records", position))
+    if errors:
+        raise RequestValidationError(errors)
     after = None
     async with _unique_conflict_as_409():
         if records and body.mode == "import":

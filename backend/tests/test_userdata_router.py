@@ -277,7 +277,7 @@ async def test_bulk_rejects_the_batch_when_one_record_is_bad(client, auth_header
         "/api/store/vocabulary/bulk", json={"mode": "replace", "records": records}, headers=auth_headers
     )
     assert response.status_code == 422
-    assert response.json()["detail"][0]["loc"][:2] == ["body", 1]
+    assert response.json()["detail"][0]["loc"][:3] == ["body", "records", 1]
     assert (await client.get("/api/store/vocabulary", headers=auth_headers)).json() == []
 
 
