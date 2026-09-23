@@ -114,7 +114,7 @@ class Settings(BaseSettings):
             return True
         return bool(self.frontend_origin_regex and re.fullmatch(self.frontend_origin_regex, origin))
 
-    model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore", "hide_input_in_errors": True}
 
 
 settings = Settings()

@@ -27,3 +27,10 @@ def test_production_url_with_smtp_starts():
 def test_short_jwt_secret_fails_startup():
     with pytest.raises(ValidationError, match="at least 32 characters"):
         Settings(_env_file=None, jwt_secret="short", jwt_refresh_secret="b" * 32)
+
+
+def test_startup_errors_do_not_echo_setting_values():
+    with pytest.raises(ValidationError) as excinfo:
+        Settings(_env_file=None, jwt_secret="short-but-real-secret", jwt_refresh_secret="b" * 32)
+    assert "short-but-real-secret" not in str(excinfo.value)
+    assert "input_value" not in str(excinfo.value)
