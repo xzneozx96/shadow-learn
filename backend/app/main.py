@@ -33,6 +33,7 @@ from app.transcription.services.transcription_factory import get_stt_provider
 from app.translation.router import router as translation_router
 from app.tts.router import router as tts_router
 from app.tts.services.tts_factory import get_tts_provider
+from app.userdata.router import router as userdata_router
 from app.vocab.router import router as vocab_router
 
 logging.basicConfig(
@@ -95,6 +96,7 @@ for router in (
     daily_review_router,
     tips_router,
     pageindex_tool_router,
+    userdata_router,
 ):
     app.include_router(router, dependencies=[Depends(current_active_user)])
 

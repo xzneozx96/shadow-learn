@@ -274,3 +274,13 @@ class SpeakCustomSituation(BaseModel):
     language: str
     level_label: str = ""
     interface_language: str = "en"
+
+
+class BulkRequest(BaseModel):
+    mode: Literal["import", "replace"]
+    records: list[dict[str, Any]]
+
+
+class BulkResponse(BaseModel):
+    count: int
+    after: list[dict[str, Any]] | None = None
