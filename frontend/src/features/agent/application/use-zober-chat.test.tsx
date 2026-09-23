@@ -13,16 +13,8 @@ function makeWrapper(db: any) {
       <AuthContext
         value={
           {
-            keys: { openrouterApiKey: 'k' },
             db,
-            isFirstSetup: false,
-            isUnlocked: true,
             trialMode: false,
-            unlock: async () => {},
-            setup: async () => {},
-            resetKeys: async () => {},
-            lock: () => {},
-            startTrial: () => {},
           } as any
         }
       >

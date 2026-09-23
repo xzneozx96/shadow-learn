@@ -32,7 +32,7 @@ vi.mock('@/app/providers/PlayerContext', () => ({
 }))
 
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: {}, keys: {} }),
+  useAuth: () => ({ db: {} }),
 }))
 
 vi.mock('@/features/lesson/application/LessonsContext', () => ({

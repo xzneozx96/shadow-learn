@@ -50,7 +50,7 @@ interface StudySessionProps {
 
 export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQuestions, onSessionComplete, onActiveChange, disableLeaveGuard = false }: StudySessionProps) {
   const { entriesByLesson } = useVocabulary()
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult, logSessionComplete, logActivityDay } = useTracking()
   const { generateQuiz, loading } = useQuizGeneration()
@@ -66,7 +66,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
+  const { playTTS, loadingText } = useTTS(db, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
 
   const [phase, setPhase] = useState<Phase>('picker')
   const [mode, setMode] = useState<ExerciseMode>('mixed')
@@ -177,8 +177,8 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
       setResults([])
       setPhase('session')
     }
-    catch {
-      toast.error(t('study.aiGenerationFailed'))
+    catch (err) {
+      toast.error(t('study.aiGenerationFailed'), { description: err instanceof Error ? err.message : undefined })
       const fallbackTypes = types.map(t => toFallbackType(t, caps.romanizationSystem !== 'none'))
       setQuestions(buildSessionQuestions(fallbackTypes, pool, [], [], []))
       setCurrent(0)

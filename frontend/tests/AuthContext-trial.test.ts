@@ -20,19 +20,6 @@ describe('trial mode sessionStorage contract', () => {
     expect(sessionStorage.getItem(TRIAL_KEY)).toBeNull()
   })
 
-  it('startTrial sets sessionStorage key to "trial"', () => {
-    // Simulate what startTrial() does
-    sessionStorage.setItem(TRIAL_KEY, 'trial')
-    expect(sessionStorage.getItem(TRIAL_KEY)).toBe('trial')
-  })
-
-  it('setup clears the sessionStorage key', () => {
-    sessionStorage.setItem(TRIAL_KEY, 'trial')
-    // Simulate what setup() does
-    sessionStorage.removeItem(TRIAL_KEY)
-    expect(sessionStorage.getItem(TRIAL_KEY)).toBeNull()
-  })
-
   it('initial trialMode reads from sessionStorage synchronously', () => {
     sessionStorage.setItem(TRIAL_KEY, 'trial')
     // Simulate useState initializer

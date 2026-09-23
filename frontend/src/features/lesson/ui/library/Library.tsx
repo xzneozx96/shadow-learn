@@ -19,7 +19,6 @@ import { StreakCard } from '@/features/study/ui/progress/StreakCard'
 import { useVocabulary } from '@/features/vocabulary/application/VocabularyContext'
 import { apiFetch } from '@/shared/lib/api'
 import { computeScrollState } from '@/shared/lib/carousel'
-import { getAppConfig } from '@/shared/lib/config'
 import { cn } from '@/shared/lib/utils'
 import { BentoCard } from '@/shared/ui/BentoCard'
 import { Button } from '@/shared/ui/button'
@@ -44,7 +43,7 @@ function getGreeting(t: TFn): { zh: string, sub: string } {
 }
 
 export function Library() {
-  const { keys, trialMode, db } = useAuth()
+  const { db } = useAuth()
   const { t } = useI18n()
   const { lessons, updateLesson, deleteLesson } = useLessons()
   const { entriesByLesson } = useVocabulary()
@@ -92,12 +91,6 @@ export function Library() {
     scrollRef.current.scrollBy({ left: dir === 'next' ? 600 : -600, behavior: 'smooth' })
   }
 
-  const [sttProvider, setSttProvider] = useState<string | null>(null)
-
-  useEffect(() => {
-    getAppConfig().then(cfg => setSttProvider(cfg.sttProvider))
-  }, [])
-
   const [activityDates, setActivityDates] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
@@ -143,7 +136,7 @@ export function Library() {
   }, [updateLesson])
 
   const handleRetry = useCallback(async (lesson: LessonMeta) => {
-    if ((!keys && !trialMode) || !sttProvider || lesson.source !== 'youtube' || !lesson.sourceUrl)
+    if (lesson.source !== 'youtube' || !lesson.sourceUrl)
       return
     try {
       const res = await apiFetch(`/api/lessons/generate`, {
@@ -154,10 +147,6 @@ export function Library() {
           youtube_url: lesson.sourceUrl,
           source_language: lesson.sourceLanguage ?? 'zh-CN',
           translation_languages: lesson.translationLanguages,
-          openrouter_api_key: keys?.openrouterApiKey ?? '',
-          ...(sttProvider === 'azure'
-            ? { azure_speech_key: keys?.azureSpeechKey ?? '', azure_speech_region: keys?.azureSpeechRegion ?? '' }
-            : {}),
         }),
       })
       if (!res.ok) {
@@ -170,7 +159,7 @@ export function Library() {
     catch {
       toast.error(t('library.retryFailed'))
     }
-  }, [keys, trialMode, sttProvider, updateLesson, t])
+  }, [updateLesson, t])
 
   const hasLessons = lessons.length > 0
 

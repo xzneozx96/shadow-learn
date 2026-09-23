@@ -27,7 +27,6 @@ describe('useWordBreakdown', () => {
         pinyin: 'xué',
         meaning: 'to learn',
         sourceLanguage: 'zh-CN',
-        openrouterApiKey: 'sk-test',
       }),
     )
 
@@ -54,7 +53,6 @@ describe('useWordBreakdown', () => {
         pinyin: 'xué',
         meaning: 'to learn',
         sourceLanguage: 'zh-CN',
-        openrouterApiKey: 'sk-test',
       }),
     )
 
@@ -73,7 +71,6 @@ describe('useWordBreakdown', () => {
         pinyin: 'xué',
         meaning: 'to learn',
         sourceLanguage: 'zh-CN',
-        openrouterApiKey: 'sk-test',
       }),
     )
 
@@ -97,7 +94,6 @@ describe('useWordBreakdown', () => {
         pinyin: 'xué',
         meaning: 'to learn',
         sourceLanguage: 'zh-CN',
-        openrouterApiKey: 'sk-test',
       }),
     )
 
@@ -119,7 +115,6 @@ describe('useWordBreakdown', () => {
         pinyin: 'xué',
         meaning: 'to learn',
         sourceLanguage: 'zh-CN',
-        openrouterApiKey: 'sk-test',
       }),
     )
 

@@ -6,9 +6,10 @@ import logging
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 
-from app.settings import settings
+from app.keys.models import Provider
+from app.keys.service import ProviderKeys
 from app.models import TTSRequest
-from app.shared.utils import _resolve_key
+from app.settings import settings
 from app.tts.services.tts_provider import TTSKeys
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ async def get_tts_provider(request: Request) -> dict:
 
 
 @router.post("/tts")
-async def text_to_speech(body: TTSRequest, request: Request) -> Response:
+async def text_to_speech(body: TTSRequest, request: Request, provider_keys: ProviderKeys) -> Response:
     """Convert text to speech via the active provider and return MP3 audio bytes.
 
     Validation order:
@@ -42,12 +43,12 @@ async def text_to_speech(body: TTSRequest, request: Request) -> Response:
     # Step 2: key validation
     keys: TTSKeys = {}
     if provider_name == "azure":
-        az_key = _resolve_key(body.azure_speech_key, settings.azure_speech_key, "Azure Speech key")
-        az_region = _resolve_key(body.azure_speech_region, settings.azure_speech_region, "Azure Speech region")
-        keys = {"azure_speech_key": az_key, "azure_speech_region": az_region}
+        azure = await provider_keys(Provider.azure_speech)
+        keys = {"azure_speech_key": azure.value, "azure_speech_region": azure.region}
     elif provider_name == "minimax":
-        mm_key = _resolve_key(None, settings.minimax_api_key, "MiniMax API key")
-        keys = {"minimax_api_key": mm_key}
+        if not settings.minimax_api_key:
+            raise HTTPException(status_code=400, detail="No MiniMax API key configured on the server")
+        keys = {"minimax_api_key": settings.minimax_api_key}
 
     # Step 3: synthesize
     try:
@@ -58,7 +59,7 @@ async def text_to_speech(body: TTSRequest, request: Request) -> Response:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.exception("TTS synthesis failed: %s", exc)
+        logger.exception("TTS synthesis failed")
         raise HTTPException(status_code=502, detail=str(exc))
 
     return Response(content=audio_bytes, media_type="audio/mpeg")

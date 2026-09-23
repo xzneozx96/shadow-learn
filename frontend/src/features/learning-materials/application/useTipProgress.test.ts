@@ -9,7 +9,7 @@ let testDb: ShadowLearnDB
 
 // useTipProgress reads `db` from AuthContext; mock it to our test DB.
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: testDb, keys: null }),
+  useAuth: () => ({ db: testDb }),
 }))
 
 // Imported after the mock so the hook picks up the mocked AuthContext.

@@ -6,12 +6,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.main import app
 from app.agent.router import (
     ClientMessage,
     ClientMessagePart,
     _convert_to_openai_messages,
 )
+from app.main import app
+
+pytestmark = pytest.mark.usefixtures("stored_user", "provider_env")
 
 class AsyncIteratorMock:
     def __init__(self, items):
@@ -134,7 +136,7 @@ class TestConvertToOpenAIMessages:
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_agent_rejects_empty_messages():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -143,14 +145,13 @@ async def test_agent_rejects_empty_messages():
             json={
                 "messages": [],
                 "system_prompt": "test",
-                "openrouter_api_key": "key",
                 "tools": [],
             },
         )
         assert response.status_code == 400
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_agent_rejects_missing_fields():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -158,11 +159,10 @@ async def test_agent_rejects_missing_fields():
             "/api/agent",
             json={"messages": [{"role": "user", "parts": [{"type": "text", "text": "hi"}]}]},
         )
-        # Missing system_prompt and openrouter_api_key
         assert response.status_code == 422
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_agent_streams_with_correct_headers():
     """Mock OpenAI client to verify streaming headers and SSE format."""
 
@@ -204,7 +204,6 @@ async def test_agent_streams_with_correct_headers():
                         }
                     ],
                     "system_prompt": "You are a tutor.",
-                    "openrouter_api_key": "test-key",
                     "tools": [],
                 },
             )
@@ -237,7 +236,7 @@ async def test_agent_streams_with_correct_headers():
             assert "finish" in types
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_agent_echoes_stitch_message_id_on_auto_resubmit():
     """On trigger == 'submit-message' with stitch_message_id, start event
     must echo that id so AI SDK v6 stitches tool-loop rounds into one message.
@@ -268,7 +267,6 @@ async def test_agent_echoes_stitch_message_id_on_auto_resubmit():
                         {"role": "user", "parts": [{"type": "text", "text": "hi"}]}
                     ],
                     "system_prompt": "sys",
-                    "openrouter_api_key": "key",
                     "tools": [],
                     "trigger": "submit-message",
                     "stitch_message_id": "msg-stitch-abc",
@@ -284,7 +282,7 @@ async def test_agent_echoes_stitch_message_id_on_auto_resubmit():
             assert start_events[0]["messageId"] == "msg-stitch-abc"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_agent_mints_fresh_message_id_on_user_turn():
     """Without trigger/stitch_message_id (fresh user turn), backend should
     mint its own id and NOT echo any client-provided value.
@@ -315,7 +313,6 @@ async def test_agent_mints_fresh_message_id_on_user_turn():
                         {"role": "user", "parts": [{"type": "text", "text": "hi"}]}
                     ],
                     "system_prompt": "sys",
-                    "openrouter_api_key": "key",
                     "tools": [],
                 },
             )
@@ -331,7 +328,7 @@ async def test_agent_mints_fresh_message_id_on_user_turn():
             assert start_events[0]["messageId"] != "msg-stitch-abc"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_agent_ignores_stitch_id_when_trigger_is_not_submit_message():
     """If stitch_message_id is provided but trigger != 'submit-message',
     backend mints a fresh id (only auto-resubmits trigger stitching).
@@ -362,7 +359,6 @@ async def test_agent_ignores_stitch_id_when_trigger_is_not_submit_message():
                         {"role": "user", "parts": [{"type": "text", "text": "hi"}]}
                     ],
                     "system_prompt": "sys",
-                    "openrouter_api_key": "key",
                     "tools": [],
                     "trigger": "regenerate-message",
                     "stitch_message_id": "msg-stitch-xyz",
@@ -378,7 +374,7 @@ async def test_agent_ignores_stitch_id_when_trigger_is_not_submit_message():
             assert start_events[0]["messageId"] != "msg-stitch-xyz"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_agent_passes_tools_to_openai():
     """Verify tool definitions are forwarded to OpenAI client."""
     tool_defs = [
@@ -419,7 +415,6 @@ async def test_agent_passes_tools_to_openai():
                         }
                     ],
                     "system_prompt": "test",
-                    "openrouter_api_key": "test-key",
                     "tools": tool_defs,
                 },
             )

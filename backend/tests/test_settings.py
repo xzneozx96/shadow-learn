@@ -34,3 +34,9 @@ def test_startup_errors_do_not_echo_setting_values():
         Settings(_env_file=None, jwt_secret="short-but-real-secret", jwt_refresh_secret="b" * 32)
     assert "short-but-real-secret" not in str(excinfo.value)
     assert "input_value" not in str(excinfo.value)
+
+
+@pytest.mark.parametrize("key", ["", "not-a-fernet-key"])
+def test_missing_or_invalid_encryption_key_fails_startup(key):
+    with pytest.raises(ValidationError, match="SHADOWLEARN_ENCRYPTION_KEY must be a Fernet key"):
+        _settings(encryption_key=key)

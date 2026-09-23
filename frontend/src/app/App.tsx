@@ -8,9 +8,7 @@ import { ErrorScreen } from '@/app/ErrorScreen'
 import { ForgotPassword } from '@/app/onboarding/ForgotPassword'
 import { Login } from '@/app/onboarding/Login'
 import { ResetPassword } from '@/app/onboarding/ResetPassword'
-import { Setup } from '@/app/onboarding/Setup'
 import { Signup } from '@/app/onboarding/Signup'
-import { Unlock } from '@/app/onboarding/Unlock'
 import { ChangelogPage } from '@/app/pages/ChangelogPage'
 import { DocumentationPage } from '@/app/pages/DocumentationPage'
 import { WorkbookPage } from '@/app/pages/WorkbookPage'
@@ -255,15 +253,13 @@ function AccountRouter() {
 }
 
 function AuthGate() {
-  const { session, sessionCheckFailed, isFirstSetup, isUnlocked, trialMode, db } = useAuth()
+  const { session, sessionCheckFailed, db } = useAuth()
 
   if (sessionCheckFailed) {
     return <ErrorScreen error={new Error('Could not reach the server to restore your session.')} />
   }
 
-  // Loading state — wait for the session check and the DB regardless of trial mode
-  // (trialMode is synchronous; db is async — show spinner until both are ready)
-  if (session === undefined || isFirstSetup === null || db === null) {
+  if (session === undefined || db === null) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -275,17 +271,6 @@ function AuthGate() {
     return <AccountRouter />
   }
 
-  // First launch — set up keys (skip if in trial)
-  if (isFirstSetup && !trialMode) {
-    return <Setup />
-  }
-
-  // Keys exist but locked (skip if in trial)
-  if (!isUnlocked && !trialMode) {
-    return <Unlock />
-  }
-
-  // Authenticated or trial mode — show app
   return (
     <ErrorBoundary>
       <VocabularyProvider>

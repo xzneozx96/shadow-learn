@@ -175,14 +175,14 @@ export function TranscriptPanel({
   speakingBests,
 }: TranscriptPanelProps) {
   const { t } = useI18n()
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
   useEffect(() => {
     if (!db)
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, keys, lesson.sourceLanguage ?? 'zh-CN', voiceId)
+  const { playTTS, loadingText } = useTTS(db, lesson.sourceLanguage ?? 'zh-CN', voiceId)
   const { entriesByLesson, save, remove, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
   // useDeferredValue keeps the text input responsive — the heavy list

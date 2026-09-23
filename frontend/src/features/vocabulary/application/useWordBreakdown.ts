@@ -11,7 +11,6 @@ interface UseWordBreakdownInput {
   pinyin: string
   meaning: string
   sourceLanguage: string
-  openrouterApiKey: string | null
   /**
    * When false, the hook performs no work — neither lookup nor LLM call.
    * Lets parent components mount the modal in JSX without firing N API calls
@@ -35,7 +34,7 @@ interface UseWordBreakdownReturn {
 }
 
 export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdownReturn {
-  const { db, word, pinyin, meaning, sourceLanguage, openrouterApiKey, enabled = true } = input
+  const { db, word, pinyin, meaning, sourceLanguage, enabled = true } = input
 
   const [characters, setCharacters] = useState<CharData[] | null>(null)
   const charactersLoading = enabled && characters === null
@@ -108,10 +107,6 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
           return
         }
 
-        // Don't gate on openrouterApiKey — backend falls back to env var
-        // when frontend sends null/empty (trial mode). If both missing,
-        // backend returns 400 and we surface it via the catch below.
-
         if (!cancel)
           setStoryLoading(true)
 
@@ -121,7 +116,6 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
           meaning,
           sinoVietnamese,
           characters: resolvedChars,
-          openrouterApiKey,
         })
 
         if (cancel)

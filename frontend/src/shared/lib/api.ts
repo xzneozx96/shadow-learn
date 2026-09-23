@@ -80,3 +80,12 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
   }
   return fetch(url, withAuth(accessToken, init))
 }
+
+export async function responseError(res: Response, fallback: string): Promise<Error> {
+  const detail = (await res.json().catch(() => null))?.detail
+  if (typeof detail === 'string')
+    return new Error(detail)
+  if (Array.isArray(detail) && typeof detail[0]?.msg === 'string')
+    return new Error(detail[0].msg)
+  return new Error(fallback)
+}

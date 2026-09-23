@@ -12,24 +12,24 @@ import {
 
 describe('getAllBaseTools', () => {
   it('returns exactly 21 tools (20 + tool_search)', () => {
-    const tools = getAllBaseTools('test-key')
+    const tools = getAllBaseTools()
     expect(tools).toHaveLength(21)
   })
 
   it('includes tool_search as first tool', () => {
-    const tools = getAllBaseTools('test-key')
+    const tools = getAllBaseTools()
     expect(tools[0]?.name).toBe('tool_search')
   })
 
   it('includes get_user_manual (previously missing from switch)', () => {
-    const tools = getAllBaseTools('test-key')
+    const tools = getAllBaseTools()
     expect(tools.map(t => t.name)).toContain('get_user_manual')
   })
 })
 
 describe('getActiveToolPool', () => {
   it('excludes deferred tools by default', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const names = pool.map(t => t.name)
     // Deferred tools should NOT be in the active pool
     expect(names).not.toContain('get_core_guidelines')
@@ -43,7 +43,7 @@ describe('getActiveToolPool', () => {
   })
 
   it('includes always-available tools', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const names = pool.map(t => t.name)
     // Always-available tools should be in the pool
     expect(names).toContain('tool_search')
@@ -54,20 +54,20 @@ describe('getActiveToolPool', () => {
   })
 
   it('returns 13 tools by default (21 total - 1 disabled - 7 deferred)', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     // 21 - 1 disabled (get_user_manual) - 7 deferred = 13
     expect(pool).toHaveLength(13)
   })
 
   it('returns all 20 tools when includeDeferred=true', () => {
-    const pool = getActiveToolPool('test-key', { includeDeferred: true })
+    const pool = getActiveToolPool({ includeDeferred: true })
     expect(pool).toHaveLength(20)
   })
 })
 
 describe('getToolDefinitions', () => {
   it('returns array with name and description for each tool', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const defs = getToolDefinitions(pool)
     expect(defs.length).toBe(pool.length)
     defs.forEach((def) => {
@@ -81,14 +81,14 @@ describe('getToolDefinitions', () => {
 
 describe('findTool', () => {
   it('finds tool by name', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const tool = findTool(pool, 'get_study_context')
     expect(tool).toBeDefined()
     expect(tool!.name).toBe('get_study_context')
   })
 
   it('returns undefined for unknown name', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     expect(findTool(pool, 'nonexistent')).toBeUndefined()
   })
 })

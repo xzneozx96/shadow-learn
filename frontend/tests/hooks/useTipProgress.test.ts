@@ -16,7 +16,7 @@ describe('useTipProgress', () => {
   beforeEach(async () => {
     globalThis.indexedDB = new IDBFactory()
     db = await initDB()
-    vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+    vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
   it('starts with no progress and exposes current state', async () => {

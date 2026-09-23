@@ -13,7 +13,7 @@ vi.mock('@/app/providers/I18nContext', async () => {
 
 let testDb: ShadowLearnDB | null = null
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: testDb, keys: null }),
+  useAuth: () => ({ db: testDb }),
 }))
 
 beforeEach(async () => {

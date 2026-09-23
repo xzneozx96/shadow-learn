@@ -22,14 +22,14 @@ const PREVIEW_COUNT = 5
 
 export function LessonGroup({ lessonId, lessonTitle, entries, onDeleteGroup }: LessonGroupProps) {
   const { t } = useI18n()
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
   useEffect(() => {
     if (!db)
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
+  const { playTTS, loadingText } = useTTS(db, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
   const [expanded, setExpanded] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const navigate = useNavigate()

@@ -9,7 +9,7 @@ import 'fake-indexeddb/auto'
 
 function wrapper(db: any) {
   return ({ children }: { children: React.ReactNode }) => (
-    React.createElement(AuthContext.Provider, { value: { db, keys: {} as any, locked: false } as any }, children)
+    React.createElement(AuthContext.Provider, { value: { db } as any }, children)
   )
 }
 

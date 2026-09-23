@@ -3,7 +3,6 @@ import { Check, Loader2, Pencil, RefreshCw, Volume2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { getSettings } from '@/db'
 import { useWordBreakdown } from '@/features/vocabulary/application/useWordBreakdown'
@@ -22,20 +21,18 @@ interface WordBreakdownModalProps {
   meaning: string
   sourceLanguage: string
   db: ShadowLearnDB | null
-  openrouterApiKey: string | null
 }
 
 export function WordBreakdownModal(props: WordBreakdownModalProps) {
-  const { open, onClose, word, pinyin, meaning, sourceLanguage, db, openrouterApiKey } = props
+  const { open, onClose, word, pinyin, meaning, sourceLanguage, db } = props
   const { t } = useI18n()
-  const { keys } = useAuth()
   const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
   useEffect(() => {
     if (!db)
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, keys, sourceLanguage, voiceId)
+  const { playTTS, loadingText } = useTTS(db, sourceLanguage, voiceId)
   const ttsLoading = loadingText === word
   const {
     characters,
@@ -53,7 +50,6 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
     pinyin,
     meaning,
     sourceLanguage,
-    openrouterApiKey,
     enabled: open,
   })
 

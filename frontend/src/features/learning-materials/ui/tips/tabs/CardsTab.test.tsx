@@ -13,7 +13,7 @@ vi.mock('@/app/providers/I18nContext', async () => {
 // Use real DB so we can verify persistence
 const mockDb = { value: null as any }
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: mockDb.value, keys: null }),
+  useAuth: () => ({ db: mockDb.value }),
 }))
 
 beforeEach(async () => {

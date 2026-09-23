@@ -8,7 +8,6 @@ export interface BreakdownStoryRequest {
   meaning: string
   sinoVietnamese: string
   characters: CharData[]
-  openrouterApiKey: string | null
 }
 
 export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<string> {
@@ -35,7 +34,6 @@ export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<s
         meaning: comp.meaning,
       })),
     })),
-    openrouter_api_key: req.openrouterApiKey,
   }
 
   let resp: Response

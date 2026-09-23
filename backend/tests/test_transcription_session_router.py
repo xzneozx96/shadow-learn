@@ -16,12 +16,12 @@ from app.transcription import router as transcription_router_module
 @pytest.fixture(autouse=True)
 def _reset_state(monkeypatch: pytest.MonkeyPatch):
     """Reset rate-limit buckets and allow the test client's origin by default."""
-    transcription_router_module._ip_buckets.clear()
+    transcription_router_module.ip_limiter.clear()
     monkeypatch.setattr(settings, "frontend_origin_allowlist", ["http://testserver"])
     monkeypatch.setattr(settings, "frontend_origin_regex", "")
     monkeypatch.setattr(settings, "gladia_api_keys", ["test-key"])
     yield
-    transcription_router_module._ip_buckets.clear()
+    transcription_router_module.ip_limiter.clear()
 
 
 @pytest.fixture

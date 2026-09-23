@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Word(BaseModel):
@@ -19,15 +19,14 @@ class Segment(BaseModel):
 
 
 class LessonRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     source: str = Field(pattern=r"^(youtube|upload|blog)$")
     youtube_url: str | None = None
     blog_url: str | None = None
     blog_text: str | None = None
     blog_title: str | None = None
     translation_languages: list[str] = Field(min_length=1)
-    openrouter_api_key: str | None = None
-    azure_speech_key: str | None = None
-    azure_speech_region: str | None = None
     source_language: str = "zh-CN"
     minimax_voice_id: str | None = None
 
@@ -51,12 +50,11 @@ class ChatRequest(BaseModel):
     video_title: str
     active_segment: Segment | None
     context_segments: list[Segment]
-    openrouter_api_key: str | None = None
 
 
 class TTSRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     text: str
     source_language: str = "zh-CN"
-    azure_speech_key: str | None = None
-    azure_speech_region: str | None = None
     minimax_voice_id: str | None = None

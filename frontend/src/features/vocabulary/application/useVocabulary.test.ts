@@ -17,7 +17,7 @@ const mockDb = {
 }
 
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: mockDb, keys: null }),
+  useAuth: () => ({ db: mockDb }),
 }))
 
 const word: Word = { word: '今天', romanization: 'jīntiān', meaning: 'today', usage: '今天很好。' }

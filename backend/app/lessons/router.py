@@ -5,12 +5,16 @@ import logging
 import time
 import uuid
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, ConfigDict
 
 from app.accounts.deps import CurrentUser
 from app.job_store import jobs, register_job
+from app.keys.models import Provider
+from app.keys.service import KeyResolver, NoProviderKey, ProviderKeys
 from app.lessons.services.audio import (
     download_youtube_video,
     extract_audio_from_upload,
@@ -35,7 +39,6 @@ from app.lessons.services.youtube_subtitles import (
 from app.models import LessonRequest
 from app.settings import settings
 from app.shared.language_config import get_language_config
-from app.shared.utils import _resolve_key
 from app.transcription.services.transcription_provider import (
     STTProvider,
     TranscriptionKeys,
@@ -152,6 +155,8 @@ async def _process_youtube_lesson(
     video_id: str,
     job_id: str,
     stt_provider: STTProvider,
+    openrouter_key: str,
+    stt_keys: TranscriptionKeys,
 ) -> None:
     """Background task: validate duration → (manual subtitle OR STT) → shared pipeline."""
     video_path: Path | None = None
@@ -206,14 +211,7 @@ async def _process_youtube_lesson(
             audio_path = await extract_audio_from_upload(video_path)
 
             jobs[job_id].step = "transcription"
-            keys: TranscriptionKeys = {}
-            azure_key = request.azure_speech_key or settings.azure_speech_key
-            azure_region = request.azure_speech_region or settings.azure_speech_region
-            if azure_key:
-                keys["azure_speech_key"] = azure_key
-            if azure_region:
-                keys["azure_speech_region"] = azure_region
-            segments = await stt_provider.transcribe(audio_path, keys, request.source_language)
+            segments = await stt_provider.transcribe(audio_path, stt_keys, request.source_language)
             if not segments:
                 raise ValueError("No speech detected in the video. Please try a different video.")
             audio_path.unlink(missing_ok=True)
@@ -222,9 +220,6 @@ async def _process_youtube_lesson(
         source_url = f"https://www.youtube.com/watch?v={video_id}"
         title = f"YouTube Video ({video_id})"
 
-        openrouter_key = _resolve_key(
-            request.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key"
-        )
         await _shared_pipeline(
             job_id,
             segments,
@@ -257,10 +252,9 @@ async def _process_youtube_lesson(
 async def _process_upload_lesson(
     file: UploadFile,
     translation_languages: list[str],
-    openrouter_api_key: str,
+    openrouter_key: str,
     job_id: str,
-    azure_speech_key: str | None = None,
-    azure_speech_region: str | None = None,
+    stt_keys: TranscriptionKeys,
     source_language: str = "zh-CN",
     stt_provider: STTProvider | None = None,
 ) -> None:
@@ -313,23 +307,13 @@ async def _process_upload_lesson(
 
         jobs[job_id].step = "transcription"
         t0 = time.monotonic()
-        keys: TranscriptionKeys = {}
-        azure_key = azure_speech_key or settings.azure_speech_key
-        azure_region = azure_speech_region or settings.azure_speech_region
-        if azure_key:
-            keys["azure_speech_key"] = azure_key
-        if azure_region:
-            keys["azure_speech_region"] = azure_region
         if stt_provider is None:
             raise RuntimeError("No STT provider configured")
-        segments = await stt_provider.transcribe(audio_path, keys, source_language)
+        segments = await stt_provider.transcribe(audio_path, stt_keys, source_language)
         if not segments:
             raise ValueError("No speech detected in the media file. Please try a different file.")
         logger.info("[pipeline] transcription: done in %.1fs, %d segments", time.monotonic() - t0, len(segments))
 
-        openrouter_key = _resolve_key(
-            openrouter_api_key or None, settings.openrouter_api_key, "OpenRouter API key"
-        )
         await _shared_pipeline(
             job_id,
             segments,
@@ -362,6 +346,9 @@ async def _process_blog_lesson(
     job_id: str,
     tts_provider: TTSProvider,
     stt_provider: STTProvider,
+    openrouter_key: str,
+    tts_keys: TTSKeys,
+    stt_keys: TranscriptionKeys,
 ) -> None:
     """Background task: (scrape URL or use pasted text) → TTS audio → Gladia transcription → shared pipeline."""
     audio_path: Path | None = None
@@ -376,13 +363,6 @@ async def _process_blog_lesson(
             logger.info("[pipeline] blog_lesson: scraped %d chars, title=%r", len(text), title)
 
         jobs[job_id].step = "tts"
-        tts_keys: TTSKeys = {}
-        if request.azure_speech_key:
-            tts_keys["azure_speech_key"] = request.azure_speech_key
-        if request.azure_speech_region:
-            tts_keys["azure_speech_region"] = request.azure_speech_region
-        if settings.minimax_api_key:
-            tts_keys["minimax_api_key"] = settings.minimax_api_key
         # TTS providers accept "zh" not "zh-CN" — strip the region suffix
         tts_lang = request.source_language.split("-")[0]
         audio_bytes = await tts_provider.synthesize(
@@ -398,21 +378,11 @@ async def _process_blog_lesson(
         logger.info("[pipeline] blog_lesson: TTS audio written to %s (%.1f KB)", audio_path.name, len(audio_bytes) / 1024)
 
         jobs[job_id].step = "transcription"
-        stt_keys: TranscriptionKeys = {}
-        azure_key = request.azure_speech_key or settings.azure_speech_key
-        azure_region = request.azure_speech_region or settings.azure_speech_region
-        if azure_key:
-            stt_keys["azure_speech_key"] = azure_key
-        if azure_region:
-            stt_keys["azure_speech_region"] = azure_region
         segments = await stt_provider.transcribe(audio_path, stt_keys, request.source_language)
         if not segments:
             raise ValueError("No speech detected in synthesized audio.")
         logger.info("[pipeline] blog_lesson: %d segments from Gladia", len(segments))
 
-        openrouter_key = _resolve_key(
-            request.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key"
-        )
         duration = segments[-1]["end"]
         await _shared_pipeline(
             job_id,
@@ -435,12 +405,25 @@ async def _process_blog_lesson(
             audio_path.unlink(missing_ok=True)
 
 
+async def _azure_keys(keys: KeyResolver, provider_name: str, *, required: bool = True) -> TranscriptionKeys:
+    if provider_name != "azure":
+        return {}
+    try:
+        azure = await keys(Provider.azure_speech)
+    except NoProviderKey:
+        if required:
+            raise
+        return {}
+    return {"azure_speech_key": azure.value, "azure_speech_region": azure.region}
+
+
 @router.post("/generate")
 async def generate_lesson(
     request: LessonRequest,
     background_tasks: BackgroundTasks,
     req: Request,
     user: CurrentUser,
+    keys: ProviderKeys,
 ) -> dict:
     """Accept a LessonRequest JSON body, start background pipeline, return job_id immediately."""
     if request.source == "youtube":
@@ -451,17 +434,28 @@ async def generate_lesson(
         except ValidationError as exc:
             raise HTTPException(status_code=400, detail=exc.message)
 
+        openrouter_key = (await keys(Provider.openrouter)).value
+        stt_keys = await _azure_keys(keys, req.app.state.stt_provider_name, required=False)
         stt_provider = req.app.state.stt_provider
         job_id = register_job(id_prefix="lesson", user_id=str(user.id))
-        background_tasks.add_task(_process_youtube_lesson, request, video_id, job_id, stt_provider)
+        background_tasks.add_task(
+            _process_youtube_lesson, request, video_id, job_id, stt_provider, openrouter_key, stt_keys
+        )
         return {"job_id": job_id}
     elif request.source == "blog":
         if not request.blog_url and not request.blog_text:
             raise HTTPException(status_code=400, detail="blog_url or blog_text is required for source 'blog'")
+        openrouter_key = (await keys(Provider.openrouter)).value
+        tts_keys: TTSKeys = {**await _azure_keys(keys, req.app.state.tts_provider_name)}
+        if settings.minimax_api_key:
+            tts_keys["minimax_api_key"] = settings.minimax_api_key
+        stt_keys = await _azure_keys(keys, req.app.state.stt_provider_name)
         tts_provider = req.app.state.tts_provider
         stt_provider = req.app.state.stt_provider
         job_id = register_job(id_prefix="lesson", user_id=str(user.id))
-        background_tasks.add_task(_process_blog_lesson, request, job_id, tts_provider, stt_provider)
+        background_tasks.add_task(
+            _process_blog_lesson, request, job_id, tts_provider, stt_provider, openrouter_key, tts_keys, stt_keys
+        )
         return {"job_id": job_id}
     else:
         raise HTTPException(
@@ -470,34 +464,39 @@ async def generate_lesson(
         )
 
 
+class UploadLessonForm(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    file: UploadFile
+    translation_languages: str
+    source_language: str = "zh-CN"
+
+
 @router.post("/generate-upload")
 async def generate_lesson_upload(
     background_tasks: BackgroundTasks,
     req: Request,
-    file: UploadFile,
+    form: Annotated[UploadLessonForm, Form()],
     user: CurrentUser,
-    translation_languages: str = Form(...),
-    openrouter_api_key: str = Form(default=""),
-    azure_speech_key: str | None = Form(None),
-    azure_speech_region: str | None = Form(None),
-    source_language: str = Form("zh-CN"),
+    keys: ProviderKeys,
 ) -> dict:
     """Accept a multipart upload, start background pipeline, return job_id immediately."""
-    languages = [lang.strip() for lang in translation_languages.split(",") if lang.strip()]
+    languages = [lang.strip() for lang in form.translation_languages.split(",") if lang.strip()]
     if not languages:
         raise HTTPException(status_code=400, detail="translation_languages must not be empty")
 
+    openrouter_key = (await keys(Provider.openrouter)).value
+    stt_keys = await _azure_keys(keys, req.app.state.stt_provider_name)
     stt_provider = req.app.state.stt_provider
     job_id = register_job(id_prefix="lesson", user_id=str(user.id))
     background_tasks.add_task(
         _process_upload_lesson,
-        file,
+        form.file,
         languages,
-        openrouter_api_key,
+        openrouter_key,
         job_id,
-        azure_speech_key,
-        azure_speech_region,
-        source_language,
+        stt_keys,
+        form.source_language,
         stt_provider,
     )
     return {"job_id": job_id}

@@ -1,6 +1,6 @@
 import type { DailyTask, ShadowLearnDB } from '@/db'
 import type { TipProgress } from '@/features/learning-materials/domain/tips'
-import type { DecryptedKeys, VocabEntry } from '@/shared/types'
+import type { VocabEntry } from '@/shared/types'
 import { useCallback, useEffect, useState } from 'react'
 import {
   deleteDailyTask,
@@ -66,7 +66,6 @@ export interface StudyQueueState {
 
 export function useStudyQueue(
   db: ShadowLearnDB | null,
-  _keys: DecryptedKeys | null,
   hasLesson: boolean = false,
 ): StudyQueueState {
   const [loading, setLoading] = useState(true)

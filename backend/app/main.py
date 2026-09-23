@@ -3,6 +3,8 @@ from contextlib import AsyncExitStack, asynccontextmanager
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import Depends, FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
@@ -16,6 +18,8 @@ from app.collection.router import router as collection_router
 from app.config.router import router as config_router
 from app.daily_review.router import router as daily_review_router
 from app.db import engine
+from app.internal.router import router as internal_router
+from app.keys.router import router as keys_router
 from app.lessons.router import router as lessons_router
 from app.pageindex_tool.router import router as pageindex_tool_router
 from app.pronunciation.router import router as pronunciation_router
@@ -51,6 +55,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ShadowLearn API", lifespan=lifespan)
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_without_extra_values(request: Request, exc: RequestValidationError) -> JSONResponse:
+    errors = [
+        {k: v for k, v in error.items() if k != "input"} if error["type"] == "extra_forbidden" else error
+        for error in exc.errors()
+    ]
+    return await request_validation_exception_handler(request, RequestValidationError(errors))
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.frontend_origin_allowlist,
@@ -62,9 +76,11 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(config_router)
+app.include_router(internal_router)
 
 for router in (
     users_router,
+    keys_router,
     lessons_router,
     tts_router,
     jobs_router,

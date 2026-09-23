@@ -98,9 +98,8 @@ function narrowArgs(args: ZoberChatArgs): NarrowedArgs {
 }
 
 export function useZoberChat(args: ZoberChatArgs) {
-  const { keys, db } = useAuth()
+  const { db } = useAuth()
   const { locale } = useI18n()
-  const apiKey = keys?.openrouterApiKey ?? ''
   const abortControllerRef = useRef(new AbortController())
 
   const narrowed = useMemo(() => narrowArgs(args), [args])
@@ -175,7 +174,7 @@ export function useZoberChat(args: ZoberChatArgs) {
             vocabularyDueCount: due.length,
           },
           accuracy,
-          deferredToolNames: getDeferredToolNames(apiKey, locale),
+          deferredToolNames: getDeferredToolNames(locale),
           exhausted: false,
           mode: args.mode,
         },
@@ -220,19 +219,19 @@ export function useZoberChat(args: ZoberChatArgs) {
         summaryCoversThroughId: summary?.coversThroughMessageId,
       }
     }
-  }, [db, threadId, apiKey, locale])
+  }, [db, threadId, locale])
 
   useEffect(() => {
     void refreshContext()
   }, [refreshContext])
 
   const toolPool = useMemo(
-    () => getToolPoolForSurface(args.surface, apiKey, { uiLanguage: locale }),
-    [args.surface, apiKey, locale],
+    () => getToolPoolForSurface(args.surface, { uiLanguage: locale }),
+    [args.surface, locale],
   )
   const executor = useMemo(
-    () => new ToolExecutor(getAllBaseTools(apiKey, locale)),
-    [apiKey, locale],
+    () => new ToolExecutor(getAllBaseTools(locale)),
+    [locale],
   )
 
   const toolContext = useMemo(() => {
@@ -334,7 +333,6 @@ export function useZoberChat(args: ZoberChatArgs) {
             body: {
               messages: outgoing,
               system_prompt: builtPrompt,
-              openrouter_api_key: apiKey || null,
               tools: includeTools ? getToolDefinitions(toolPool) : [],
               // Pass trigger + lastMessage id so backend can echo the id on
               // auto-resubmits, enabling AI SDK v6 to stitch tool-loop rounds
@@ -346,7 +344,7 @@ export function useZoberChat(args: ZoberChatArgs) {
           }
         },
       }),
-    [apiKey, refreshContext, toolPool],
+    [refreshContext, toolPool],
   )
 
   const {
@@ -505,9 +503,9 @@ export function useZoberChat(args: ZoberChatArgs) {
       }
       // Post-response, idle: compact when the turn reached the usable budget.
       // Prefers real usage from this turn; falls back to the CJK estimate.
-      void maybeCompact(db, threadId, fullHistory, apiKey, locale, lastUsageTokensRef.current)
+      void maybeCompact(db, threadId, fullHistory, locale, lastUsageTokensRef.current)
     })()
-  }, [status, messages, db, narrowed, threadId, apiKey, locale])
+  }, [status, messages, db, narrowed, threadId, locale])
 
   const loadMore = useCallback(() => {
     const next = Math.max(0, loadedOffsetRef.current - PAGE_SIZE)

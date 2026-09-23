@@ -43,10 +43,7 @@ vi.mock('@/features/speak/application/SpeakModalContext', () => ({
 // Mock AuthContext
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: vi.fn(() => ({
-    isUnlocked: true,
     db: {},
-    keys: {},
-    unlock: vi.fn(),
   })),
 }))
 

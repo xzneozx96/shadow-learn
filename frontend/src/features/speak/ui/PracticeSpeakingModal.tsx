@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { getSettings } from '@/db'
+import { listKeys } from '@/features/settings/api/keys'
 import { SpeakSessionProvider } from '@/features/speak/application/SpeakSessionContext'
 import { useSpeakSession } from '@/features/speak/application/useSpeakSession'
 import { apiFetch } from '@/shared/lib/api'
@@ -40,7 +41,7 @@ interface PracticeSpeakingModalProps {
 export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalProps) {
   const { t, locale } = useI18n()
   const navigate = useNavigate()
-  const { keys, db } = useAuth()
+  const { db } = useAuth()
   const { currentSession, startSession, endSession, clearSession, updateTranscript, updateFeedback, updateEvaluation } = useSpeakSession()
   const [step, setStep] = useState<Step>('language-level')
   const [targetLanguage, setTargetLanguage] = useState('zh-CN')
@@ -65,7 +66,16 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     })
   }, [db])
 
-  const hasGoogleKey = !!(keys?.googleRealtimeKey)
+  const [hasGoogleKey, setHasGoogleKey] = useState(true)
+
+  useEffect(() => {
+    if (!open)
+      return
+    listKeys().then(
+      keys => setHasGoogleKey(keys.some(k => k.provider === 'google' && k.source !== 'none')),
+      () => {},
+    )
+  }, [open])
 
   const handleAbandonedSession = useCallback(async () => {
     if (currentSession && step === 'active') {
@@ -134,10 +144,8 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     selectedPersona: Persona,
     forceRegenerate = false,
   ) => {
-    if (!hasGoogleKey || !keys?.googleRealtimeKey || !proficiencyLevel) {
-      setError(t('auth.error.googleRequired'))
+    if (!proficiencyLevel)
       return
-    }
 
     setLoading(true)
     setError(null)
@@ -147,7 +155,6 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          google_key: keys.googleRealtimeKey,
           persona_id: selectedPersona.id,
           situation_id: selectedSituation.id,
           target_language: targetLanguage,
@@ -178,7 +185,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     finally {
       setLoading(false)
     }
-  }, [hasGoogleKey, keys, proficiencyLevel, targetLanguage, locale, t])
+  }, [proficiencyLevel, targetLanguage, locale])
 
   // Moves the pending token into active use and connects to LiveKit.
   const connectToSession = useCallback(async (

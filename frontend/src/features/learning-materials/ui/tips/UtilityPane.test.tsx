@@ -5,7 +5,7 @@ import { UtilityPane } from '@/features/learning-materials/ui/tips/UtilityPane'
 
 // Stub useAuth so the chat hook can mount without an AuthProvider wrapper.
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: null, keys: null }),
+  useAuth: () => ({ db: null }),
 }))
 
 // Stub I18nContext with real EN translations so assertions match user-facing text.
