@@ -46,7 +46,7 @@ import {
   getToolDefinitions,
   getToolPoolForSurface,
 } from '@/features/agent/lib/tools/index'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { getEffectiveDueItems } from '@/shared/lib/skillSessionProgress'
 
 // Raised from 5 to 20 to match agentic-rag's MAX_TOOL_ROUNDS_RAG: the new RAG
@@ -257,7 +257,8 @@ export function useZoberChat(args: ZoberChatArgs) {
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: `${API_BASE}/api/agent`,
+        api: '/api/agent',
+        fetch: (input, init) => apiFetch(String(input), init),
         prepareSendMessagesRequest: async ({ messages, trigger, messageId }) => {
           await refreshContext()
           const ctx = ctxRef.current
@@ -504,7 +505,7 @@ export function useZoberChat(args: ZoberChatArgs) {
       }
       // Post-response, idle: compact when the turn reached the usable budget.
       // Prefers real usage from this turn; falls back to the CJK estimate.
-      void maybeCompact(db, threadId, fullHistory, apiKey, API_BASE, locale, lastUsageTokensRef.current)
+      void maybeCompact(db, threadId, fullHistory, apiKey, locale, lastUsageTokensRef.current)
     })()
   }, [status, messages, db, narrowed, threadId, apiKey, locale])
 

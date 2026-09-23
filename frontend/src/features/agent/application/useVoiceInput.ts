@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 export type VoiceInputState = 'idle' | 'connecting' | 'recording' | 'processing'
 
@@ -174,8 +174,7 @@ export function useVoiceInput({ onDraft, onConfirmed, onCancel }: UseVoiceInputA
   }, [stopAudioCapture])
 
   const ensureSession = useCallback(async () => {
-    const url = `${API_BASE}/api/transcription/session`
-    const response = await fetch(url, { method: 'POST' })
+    const response = await apiFetch('/api/transcription/session', { method: 'POST' })
     if (!response.ok) {
       throw new Error(`session http ${response.status}`)
     }

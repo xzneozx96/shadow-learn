@@ -2,7 +2,7 @@ import type { ShadowLearnDB } from '@/db'
 import type { ConceptCard, StudioLocale } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cardsKey, getTipCards, putTipCards } from '@/db'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 interface Args {
   db: ShadowLearnDB | null
@@ -89,7 +89,7 @@ export function useTipCards(args: Args) {
         return
       let res: Response
       try {
-        res = await fetch(`${API_BASE}/api/jobs/${encodeURIComponent(jobId)}`)
+        res = await apiFetch(`/api/jobs/${encodeURIComponent(jobId)}`)
       }
       catch {
         pollTimerRef.current = setTimeout(tick, POLL_INTERVAL_MS)
@@ -165,8 +165,8 @@ export function useTipCards(args: Args) {
       void probeNonce
       let res: Response
       try {
-        res = await fetch(
-          `${API_BASE}/api/tips/studio/cards/${encodeURIComponent(videoId)}?locale=${encodeURIComponent(locale)}`,
+        res = await apiFetch(
+          `/api/tips/studio/cards/${encodeURIComponent(videoId)}?locale=${encodeURIComponent(locale)}`,
         )
       }
       catch {
@@ -238,7 +238,7 @@ export function useTipCards(args: Args) {
     clearPoll()
     let res: Response
     try {
-      res = await fetch(`${API_BASE}/api/tips/studio/cards`, {
+      res = await apiFetch(`/api/tips/studio/cards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ video_id: videoId, transcript, locale }),

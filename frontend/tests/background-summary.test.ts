@@ -36,7 +36,7 @@ describe('maybeCompact', () => {
   it('skips when not over budget (real usage below USABLE)', async () => {
     const db = await initDB()
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response())
-    await maybeCompact(db, 'tid', bigMsgs(40), 'k', 'http://x', 'en', 100)
+    await maybeCompact(db, 'tid', bigMsgs(40), 'k', 'en', 100)
     expect(spy).not.toHaveBeenCalled()
     db.close()
   })
@@ -46,7 +46,7 @@ describe('maybeCompact', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ summary: 'hi' }), { headers: { 'content-type': 'application/json' } }),
     )
-    await maybeCompact(db, 'tid', bigMsgs(40), 'k', 'http://x', 'en', USABLE)
+    await maybeCompact(db, 'tid', bigMsgs(40), 'k', 'en', USABLE)
     const s = await getLatestSummary(db, 'tid')
     expect(s?.summary).toBe('hi')
     expect(typeof s?.coversThroughIndex).toBe('number')
@@ -61,14 +61,14 @@ describe('compact', () => {
   it('throws on summarize failure so the send-path can fall back to prune', async () => {
     const db = await initDB()
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 500 }))
-    await expect(compact(db, 'tid', bigMsgs(40), 'k', 'http://x', 'en')).rejects.toThrow()
+    await expect(compact(db, 'tid', bigMsgs(40), 'k', 'en')).rejects.toThrow()
     db.close()
   })
 
   it('returns false when nothing older than the tail', async () => {
     const db = await initDB()
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response())
-    const did = await compact(db, 'tid', [textMsg('1')], 'k', 'http://x', 'en')
+    const did = await compact(db, 'tid', [textMsg('1')], 'k', 'en')
     expect(did).toBe(false)
     expect(spy).not.toHaveBeenCalled()
     db.close()

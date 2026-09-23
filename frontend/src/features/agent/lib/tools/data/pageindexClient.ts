@@ -1,4 +1,4 @@
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 /**
  * Calls a single agentic-rag RAG tool via the companion backend forward
@@ -11,7 +11,7 @@ export async function callPageIndexTool(
 ): Promise<unknown> {
   let resp: Response
   try {
-    resp = await fetch(`${API_BASE}/api/pageindex/tool`, {
+    resp = await apiFetch(`/api/pageindex/tool`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, args }),

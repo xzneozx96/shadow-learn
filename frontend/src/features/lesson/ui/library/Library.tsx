@@ -17,8 +17,9 @@ import { WordsCard } from '@/features/lesson/ui/library/WordsCard'
 import { ActivityHeatmap } from '@/features/study/ui/progress/ActivityHeatmap'
 import { StreakCard } from '@/features/study/ui/progress/StreakCard'
 import { useVocabulary } from '@/features/vocabulary/application/VocabularyContext'
+import { apiFetch } from '@/shared/lib/api'
 import { computeScrollState } from '@/shared/lib/carousel'
-import { API_BASE, getAppConfig } from '@/shared/lib/config'
+import { getAppConfig } from '@/shared/lib/config'
 import { cn } from '@/shared/lib/utils'
 import { BentoCard } from '@/shared/ui/BentoCard'
 import { Button } from '@/shared/ui/button'
@@ -145,7 +146,7 @@ export function Library() {
     if ((!keys && !trialMode) || !sttProvider || lesson.source !== 'youtube' || !lesson.sourceUrl)
       return
     try {
-      const res = await fetch(`${API_BASE}/api/lessons/generate`, {
+      const res = await apiFetch(`/api/lessons/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

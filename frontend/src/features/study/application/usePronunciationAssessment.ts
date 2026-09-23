@@ -1,7 +1,7 @@
 import type { PronunciationAssessResult } from '@/shared/types'
 import { useCallback, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 interface UsePronunciationAssessmentReturn {
   submit: (blob: Blob, sentence: string, language?: string) => Promise<void>
@@ -29,7 +29,7 @@ export function usePronunciationAssessment(): UsePronunciationAssessmentReturn {
         form.append('azure_key', keys.azureSpeechKey)
       if (keys?.azureSpeechRegion)
         form.append('azure_region', keys.azureSpeechRegion)
-      const resp = await fetch(`${API_BASE}/api/pronunciation/assess`, { method: 'POST', body: form })
+      const resp = await apiFetch(`/api/pronunciation/assess`, { method: 'POST', body: form })
       if (!resp.ok)
         throw new Error(await resp.text())
       setResult(await resp.json())

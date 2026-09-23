@@ -16,10 +16,17 @@ import {
   saveCryptoData,
 
 } from '@/db'
+import { apiFetch, clearTokens, hasRefreshToken, onSessionLost, setTokens } from '@/shared/lib/api'
 import { decryptKeys, encryptKeys } from '@/shared/lib/crypto'
 import { captureAuthEvent } from '@/shared/lib/posthog-events'
 
+interface Session {
+  userId: string
+  email: string
+}
+
 interface AuthState {
+  session: Session | null | undefined // undefined = loading
   isFirstSetup: boolean | null // null = loading
   isUnlocked: boolean
   keys: DecryptedKeys | null
@@ -30,12 +37,33 @@ interface AuthState {
   resetKeys: () => Promise<void>
   lock: () => void
   startTrial: () => void
+  login: (email: string, password: string) => Promise<void>
+  signup: (email: string, password: string) => Promise<void>
+  logout: () => void
+  requestPasswordReset: (email: string) => Promise<void>
+  resetPassword: (token: string, password: string) => Promise<void>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthState | null>(null)
 
 const TRIAL_SESSION_KEY = 'shadowlearn_trial'
+
+/** Error whose message is the backend's error code, such as `LOGIN_BAD_CREDENTIALS`. */
+async function authError(res: Response): Promise<Error> {
+  const body = await res.json().catch(() => null)
+  const detail = body?.detail
+  const code = typeof detail === 'string' ? detail : detail?.code
+  return new Error(typeof code === 'string' ? code : `HTTP_${res.status}`)
+}
+
+async function fetchSession(): Promise<Session | null> {
+  const res = await apiFetch('/api/users/me')
+  if (!res.ok)
+    return null
+  const me: { id: string, email: string } = await res.json()
+  return { userId: me.id, email: me.email }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<ShadowLearnDB | null>(null)
@@ -45,6 +73,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [trialMode, setTrialMode] = useState<boolean>(
     () => sessionStorage.getItem(TRIAL_SESSION_KEY) === 'trial',
   )
+  const [session, setSession] = useState<Session | null | undefined>(
+    () => hasRefreshToken() ? undefined : null,
+  )
+
+  const lock = useCallback(() => {
+    setKeys(null)
+    setIsUnlocked(false)
+  }, [])
+
+  useEffect(() => {
+    onSessionLost(() => {
+      setSession(null)
+      lock()
+    })
+    if (hasRefreshToken())
+      fetchSession().then(setSession, () => setSession(null))
+  }, [lock])
 
   useEffect(() => {
     const connect = async (isReconnect = false) => {
@@ -97,11 +142,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [db],
   )
 
-  const lock = useCallback(() => {
-    setKeys(null)
-    setIsUnlocked(false)
-  }, [])
-
   const resetKeys = useCallback(async () => {
     if (!db)
       throw new Error('Database not initialized')
@@ -111,9 +151,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsFirstSetup(true)
   }, [db])
 
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: new URLSearchParams({ username: email, password }),
+    })
+    if (!res.ok)
+      throw await authError(res)
+    setTokens(await res.json())
+    setSession(await fetchSession())
+  }, [])
+
+  const signup = useCallback(async (email: string, password: string) => {
+    const res = await apiFetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (!res.ok)
+      throw await authError(res)
+    await login(email, password)
+  }, [login])
+
+  const logout = useCallback(() => {
+    clearTokens()
+    setSession(null)
+    lock()
+  }, [lock])
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const res = await apiFetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    if (!res.ok)
+      throw await authError(res)
+  }, [])
+
+  const resetPassword = useCallback(async (token: string, password: string) => {
+    const res = await apiFetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    })
+    if (!res.ok)
+      throw await authError(res)
+    // The reset bumps token_version, so any tokens held here are now dead.
+    logout()
+  }, [logout])
+
   return (
     <AuthContext
-      value={{ isFirstSetup, isUnlocked, keys, db, trialMode, unlock, setup, resetKeys, lock, startTrial }}
+      value={{
+        session,
+        isFirstSetup,
+        isUnlocked,
+        keys,
+        db,
+        trialMode,
+        unlock,
+        setup,
+        resetKeys,
+        lock,
+        startTrial,
+        login,
+        signup,
+        logout,
+        requestPasswordReset,
+        resetPassword,
+      }}
     >
       {children}
     </AuthContext>

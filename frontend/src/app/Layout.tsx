@@ -1,4 +1,4 @@
-import { AudioLines, BookOpenText, FileText, Library, Newspaper, PanelLeft, PanelRight, Settings, Sprout, TvMinimalPlay } from 'lucide-react'
+import { AudioLines, BookOpenText, FileText, Library, LogOut, Newspaper, PanelLeft, PanelRight, Settings, Sprout, TvMinimalPlay } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/app/providers/AuthContext'
@@ -17,7 +17,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const { t } = useI18n()
-  const { trialMode } = useAuth()
+  const { trialMode, logout } = useAuth()
   const { openSpeakModal } = useSpeakModal()
   const hasUnseen = useHasUnseenAnnouncement()
 
@@ -191,6 +191,19 @@ export function Layout({ children }: LayoutProps) {
           >
             <Settings className="size-4 shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-45" />
             {!collapsed && t('nav.settings')}
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={logout}
+            title={collapsed ? t('account.logout') : undefined}
+            className={cn(
+              'w-full h-9 text-sm font-medium text-foreground/60 hover:text-foreground/70 hover:bg-white/4 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+              collapsed ? 'justify-center px-0 gap-0' : 'justify-start gap-3 px-3',
+            )}
+          >
+            <LogOut className="size-4 shrink-0" />
+            {!collapsed && t('account.logout')}
           </Button>
         </div>
       </aside>

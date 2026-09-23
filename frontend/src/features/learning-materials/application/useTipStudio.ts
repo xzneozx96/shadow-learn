@@ -9,7 +9,7 @@ import type {
 } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getTipStudio, putTipStudio, studioKey } from '@/db'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 type DataFor<K extends StudioKind>
   = K extends 'summary' ? StudioSummaryData
@@ -133,7 +133,7 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
         return
       let res: Response
       try {
-        res = await fetch(`${API_BASE}/api/jobs/${encodeURIComponent(jobId)}`)
+        res = await apiFetch(`/api/jobs/${encodeURIComponent(jobId)}`)
       }
       catch {
         // Transient network error — retry on the next tick. Backend job
@@ -224,8 +224,8 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       // flight or freshly completed.
       let res: Response
       try {
-        res = await fetch(
-          `${API_BASE}/api/tips/studio/${kind}/${encodeURIComponent(videoId)}?locale=${encodeURIComponent(locale)}`,
+        res = await apiFetch(
+          `/api/tips/studio/${kind}/${encodeURIComponent(videoId)}?locale=${encodeURIComponent(locale)}`,
         )
       }
       catch {
@@ -276,7 +276,7 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
     clearPoll()
     let res: Response
     try {
-      res = await fetch(`${API_BASE}/api/tips/studio/${kind}`, {
+      res = await apiFetch(`/api/tips/studio/${kind}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ video_id: videoId, transcript, locale }),
