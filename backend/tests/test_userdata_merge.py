@@ -245,3 +245,12 @@ async def test_import_merges_into_a_record_written_by_put(client, auth_headers):
 
     stored = (await client.get("/api/store/exercise-stats/w:cloze", headers=auth_headers)).json()
     assert (stored["correct"], stored["total"]) == (1, 4)
+
+
+def test_mastery_leaves_unknown_top_level_fields_to_the_server():
+    server = {"writing": _mastery(1, 0.1, 5, None), "note": {"a": 1}, "speaking": None}
+    incoming = {"writing": _mastery(2, 0.2, 5, None), "note": {"b": 2}, "speaking": _mastery(1, 0.5, 3, None)}
+    merged = merge.mastery(server, incoming)
+    assert merged["note"] == {"a": 1}
+    assert merged["writing"] == _mastery(2, 0.2, 10, None)
+    assert merged["speaking"] == _mastery(1, 0.5, 3, None)

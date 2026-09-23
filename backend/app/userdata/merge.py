@@ -1,10 +1,13 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, get_args
+
+from app.userdata.schemas import Skill
 
 Data = dict[str, Any]
 MergeRule = Callable[[Data, Data], Data]
 
 MAX_MISTAKE_EXAMPLES = 20
+SKILLS = frozenset(get_args(Skill))
 
 
 def union(server: Data, incoming: Data) -> Data:
@@ -50,9 +53,10 @@ def _skill_stats(server: Data, incoming: Data) -> Data:
 
 
 def _per_skill(server: Data, incoming: Data, merge_skill: MergeRule) -> Data:
-    merged = {**incoming, **server}
-    for skill in server.keys() & incoming.keys():
-        merged[skill] = merge_skill(server[skill], incoming[skill])
+    merged = {**incoming, **{key: value for key, value in server.items() if value is not None}}
+    for skill in SKILLS & server.keys() & incoming.keys():
+        if server[skill] and incoming[skill]:
+            merged[skill] = merge_skill(server[skill], incoming[skill])
     return merged
 
 
