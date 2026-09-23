@@ -8,7 +8,12 @@ from sqlalchemy.exc import IntegrityError
 
 from app.lessons.models import Lesson
 from app.media.models import MediaKind, MediaObject
-from app.media.service import MEDIA_AUDIENCE, mint_media_token, store_file
+from app.media.service import (
+    MEDIA_AUDIENCE,
+    media_signing_key,
+    mint_media_token,
+    store_file,
+)
 from app.settings import settings
 from tests.conftest import register_and_login
 
@@ -109,9 +114,18 @@ async def test_ticket_for_another_media_id_is_401(client, video):
 
 async def test_expired_ticket_is_401(client, video):
     media, _ = video
-    expired = generate_jwt({"mid": str(media.id), "aud": [MEDIA_AUDIENCE]}, settings.jwt_secret, -60)
+    expired = generate_jwt({"mid": str(media.id), "aud": [MEDIA_AUDIENCE]}, media_signing_key(), -60)
 
     response = await client.get(f"/api/media/{media.id}", params={"token": expired})
+
+    assert response.status_code == 401
+
+
+async def test_ticket_signed_with_the_access_secret_is_401(client, video):
+    media, _ = video
+    forged = generate_jwt({"mid": str(media.id), "aud": [MEDIA_AUDIENCE]}, settings.jwt_secret, 600)
+
+    response = await client.get(f"/api/media/{media.id}", params={"token": forged})
 
     assert response.status_code == 401
 

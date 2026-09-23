@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import hmac
 import re
 import uuid
 from collections.abc import AsyncIterator
@@ -172,17 +173,21 @@ async def stream(s3, media: MediaObject, range_header: str | None) -> Response:
     )
 
 
+def media_signing_key() -> str:
+    return hmac.new(settings.jwt_secret.encode(), b"media-ticket", hashlib.sha256).hexdigest()
+
+
 def mint_media_token(media_id: uuid.UUID) -> str:
     return generate_jwt(
         {"mid": str(media_id), "aud": [MEDIA_AUDIENCE]},
-        settings.jwt_secret,
+        media_signing_key(),
         settings.media_token_minutes * 60,
     )
 
 
 def media_token_grants(token: str, media_id: uuid.UUID) -> bool:
     try:
-        data = decode_jwt(token, settings.jwt_secret, [MEDIA_AUDIENCE])
+        data = decode_jwt(token, media_signing_key(), [MEDIA_AUDIENCE])
     except jwt.PyJWTError:
         return False
     return data.get("mid") == str(media_id)
