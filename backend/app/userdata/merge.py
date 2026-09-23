@@ -1,9 +1,3 @@
-"""Import-mode merge rules.
-
-A rule takes the stored record and an incoming record with the same id and
-returns the record to store. Records are the camelCase JSON the client writes.
-"""
-
 from collections.abc import Callable
 from typing import Any
 

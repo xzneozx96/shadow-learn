@@ -88,10 +88,6 @@ async def _unmerged(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, 
 async def import_records(
     session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data]
 ) -> list[Data] | None:
-    """Merge records into the store and return the stored result, or None for union stores.
-
-    A record merges at most once, so importing the same batch again changes nothing.
-    """
     table = TABLES[spec.name]
     if spec.merge is union:
         await session.execute(insert(table).on_conflict_do_nothing(), [_row(spec, user_id, data) for data in records])

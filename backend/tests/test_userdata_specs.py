@@ -77,3 +77,9 @@ def test_singletons_keep_the_fixed_ids_the_client_uses(store, record_id):
 )
 def test_composite_keys_join_with_a_colon(store, data, record_id):
     assert STORES[store].record_id(data) == record_id
+
+
+@pytest.mark.parametrize("spec", [spec for spec in STORES.values() if spec.client_writable], ids=lambda spec: spec.name)
+def test_only_key_and_indexed_fields_are_required(spec):
+    required = {field.alias or name for name, field in spec.schema.model_fields.items() if field.is_required()}
+    assert required == set(spec.key_path) | {field.json_path for field in spec.indexed}

@@ -255,7 +255,6 @@ class SituationConfig:
 
 
 async def save_custom_situation(session: AsyncSession, user: User, config: SituationConfig) -> None:
-    """Store a generated custom situation for the user. The caller commits."""
     data = _CUSTOM_STORE.validate(config.to_json_dict())
     await repository.replace_records(session, user.id, _CUSTOM_STORE, [data])
 
@@ -282,7 +281,6 @@ def get_situation_seed(situation_id: str) -> str:
 
 
 async def get_custom_situation(session: AsyncSession, user: User, situation_id: str) -> SituationConfig:
-    """Look up one of the user's custom_<uuid> situations. Raises KeyError if unknown."""
     data = await repository.get_record(session, user.id, _CUSTOM_STORE, situation_id)
     if data is None:
         raise KeyError(f"Custom situation {situation_id!r} not found")

@@ -1,10 +1,3 @@
-"""Record shapes for the client-written stores.
-
-Each model mirrors a TypeScript interface from the frontend. Key and indexed
-fields are required. Every other field is optional so a row written by an older
-client never blocks a write, and unknown fields are kept as they are.
-"""
-
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -259,8 +252,6 @@ class TargetVocab(BaseModel):
 
 
 class SpeakCustomSituation(BaseModel):
-    """Mirrors ``SituationConfig.to_json_dict``, so its keys stay snake_case."""
-
     model_config = ConfigDict(extra="allow")
 
     id: str

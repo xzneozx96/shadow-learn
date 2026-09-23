@@ -1,9 +1,3 @@
-"""Registry of the client-written stores.
-
-Each spec names an IndexedDB store, how its record id is formed, which fields
-IndexedDB indexes, and how import mode merges a record the server already has.
-"""
-
 from dataclasses import dataclass
 from typing import Any
 
