@@ -26,6 +26,7 @@ from app.speak.situations import (
     get_custom_situation,
     get_situation_seed,
     list_built_in_situations,
+    save_custom_situation,
 )
 
 logger = logging.getLogger(__name__)
@@ -188,7 +189,7 @@ async def session_start(
 
     try:
         if request.situation_id.startswith("custom_"):
-            situation = get_custom_situation(request.situation_id)
+            situation = await get_custom_situation(session, user, request.situation_id)
         else:
             seed_text = get_situation_seed(request.situation_id)
             situation = await _generate_situation(
@@ -283,7 +284,12 @@ async def list_situations(
 
 
 @router.post("/situations/generate", response_model=GenerateSituationResponse)
-async def generate_situation(request: GenerateSituationRequest, keys: ProviderKeys) -> GenerateSituationResponse:
+async def generate_situation(
+    request: GenerateSituationRequest,
+    user: CurrentUser,
+    keys: ProviderKeys,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> GenerateSituationResponse:
     """Generate a custom situation from a free-text user description."""
     try:
         cfg = await _generate_situation(
@@ -297,6 +303,8 @@ async def generate_situation(request: GenerateSituationRequest, keys: ProviderKe
     except GenerationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
+    await save_custom_situation(session, user, cfg)
+    await session.commit()
     return GenerateSituationResponse.from_config(cfg)
 
 

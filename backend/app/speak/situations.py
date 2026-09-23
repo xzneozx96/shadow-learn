@@ -2,9 +2,14 @@
 
 import logging
 import random
-import time
 from dataclasses import dataclass, field
 from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.accounts.models import User
+from app.userdata import repository
+from app.userdata.specs import STORES
 
 logger = logging.getLogger(__name__)
 
@@ -172,10 +177,7 @@ BUILT_IN_SITUATIONS: dict[str, dict[str, Any]] = {
     },
 }
 
-_CUSTOM_TTL_SECONDS = 3600  # 1 hour
-
-# In-memory cache for custom situations: id -> (SituationConfig, expires_at)
-_custom_cache: dict[str, tuple["SituationConfig", float]] = {}
+_CUSTOM_STORE = STORES["speak-custom-situations"]
 
 
 @dataclass(frozen=True)
@@ -252,17 +254,9 @@ class SituationConfig:
         )
 
 
-def _prune_expired_custom() -> None:
-    now = time.time()
-    expired = [cid for cid, (_, exp) in _custom_cache.items() if exp < now]
-    for cid in expired:
-        _custom_cache.pop(cid, None)
-
-
-def cache_custom_situation(config: SituationConfig) -> None:
-    """Store a generated custom situation in-memory with TTL."""
-    _prune_expired_custom()
-    _custom_cache[config.id] = (config, time.time() + _CUSTOM_TTL_SECONDS)
+async def save_custom_situation(session: AsyncSession, user: User, config: SituationConfig) -> None:
+    data = _CUSTOM_STORE.validate(config.to_json_dict())
+    await repository.replace_records(session, user.id, _CUSTOM_STORE, [data])
 
 
 def list_built_in_situations(interface_language: str = "en") -> list[dict[str, str]]:
@@ -286,10 +280,8 @@ def get_situation_seed(situation_id: str) -> str:
     return random.choice(seeds)
 
 
-def get_custom_situation(situation_id: str) -> "SituationConfig":
-    """Look up a custom_<uuid> situation. Raises KeyError if expired or unknown."""
-    _prune_expired_custom()
-    entry = _custom_cache.get(situation_id)
-    if not entry:
-        raise KeyError(f"Custom situation {situation_id!r} not found or expired")
-    return entry[0]
+async def get_custom_situation(session: AsyncSession, user: User, situation_id: str) -> SituationConfig:
+    data = await repository.get_record(session, user.id, _CUSTOM_STORE, situation_id)
+    if data is None:
+        raise KeyError(f"Custom situation {situation_id!r} not found")
+    return SituationConfig.from_json_dict(data)
