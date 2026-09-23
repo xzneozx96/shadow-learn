@@ -1,103 +1,93 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+import pytest
 
-from app.job_store import Job, _keyed_jobs, jobs
-from app.main import app
+from app.catalog import service as catalog
+from app.job_store import register_job, register_keyed_job, update_job
 
-client = TestClient(app)
-
-
-def _reset_jobs() -> None:
-    jobs.clear()
-    _keyed_jobs.clear()
+pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.usefixtures("db_session")]
 
 
-def _fake_kick_off(job_state: Job, job_id: str = "test-job"):
+def _fake_kick_off(**job_state):
     """Return a stub matching ``kick_off_studio_job``'s call shape.
 
-    The stub places *job_state* into ``jobs`` under *job_id* and registers
-    the keyed-job index, so the router's response synthesis + the status
-    probe both see the same job. No asyncio task is spawned.
+    The stub inserts a job in *job_state* and binds the studio key to it,
+    so the router's response synthesis + the status probe both see the
+    same job. No asyncio task is spawned.
     """
-    def _stub(*, kind, video_id, transcript, locale):
-        jobs[job_id] = job_state
-        _keyed_jobs[f"tip-studio:{kind}:{video_id}:{locale}"] = job_id
+    async def _stub(*, kind, video_id, transcript, locale):
+        job_id = await register_job(id_prefix="tip-studio", user_id=None)
+        await update_job(job_id, **job_state)
+        await register_keyed_job(f"tip-studio:{kind}:{video_id}:{locale}", job_id)
         return job_id
     return _stub
 
 
-def test_post_studio_summary_complete_returns_200_ready(monkeypatch):
-    _reset_jobs()
+async def test_post_studio_summary_complete_returns_200_ready(client, monkeypatch):
     fake_data = {"abstract": "It is about tones.", "takeaways": ["a", "b", "c"]}
     monkeypatch.setattr(
         "app.tips.router._studio_svc.kick_off_studio_job",
-        _fake_kick_off(Job(status="complete", step="complete", result={"data": fake_data}, error=None)),
+        _fake_kick_off(status="complete", step="complete", result={"data": fake_data}),
     )
 
-    resp = client.post(
+    resp = await client.post(
         "/api/tips/studio/summary",
         json={"video_id": "abc123", "transcript": "hello world", "locale": "en"},
     )
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ready"
-    assert body["jobId"] == "test-job"
+    assert body["jobId"].startswith("tip-studio-")
     assert body["data"] == fake_data
 
 
-def test_post_studio_processing_returns_202_pending(monkeypatch):
-    _reset_jobs()
+async def test_post_studio_processing_returns_202_pending(client, monkeypatch):
     monkeypatch.setattr(
         "app.tips.router._studio_svc.kick_off_studio_job",
-        _fake_kick_off(Job(status="processing", step="queued", result=None, error=None)),
+        _fake_kick_off(),
     )
 
-    resp = client.post(
+    resp = await client.post(
         "/api/tips/studio/summary",
         json={"video_id": "abc123", "transcript": "hi", "locale": "en"},
     )
     assert resp.status_code == 202
     body = resp.json()
     assert body["status"] == "pending"
-    assert body["jobId"] == "test-job"
+    assert body["jobId"].startswith("tip-studio-")
 
 
-def test_post_studio_invalid_kind_returns_400():
-    _reset_jobs()
-    resp = client.post(
+async def test_post_studio_invalid_kind_returns_400(client):
+    resp = await client.post(
         "/api/tips/studio/notreal",
         json={"video_id": "abc123", "transcript": "x", "locale": "en"},
     )
     assert resp.status_code == 400
 
 
-def test_post_studio_empty_transcript_returns_422():
-    _reset_jobs()
-    resp = client.post(
+async def test_post_studio_empty_transcript_returns_422(client):
+    resp = await client.post(
         "/api/tips/studio/summary",
         json={"video_id": "abc123", "transcript": "", "locale": "en"},
     )
     assert resp.status_code in (400, 422)
 
 
-def test_post_studio_invalid_locale_returns_422():
-    _reset_jobs()
-    resp = client.post(
+async def test_post_studio_invalid_locale_returns_422(client):
+    resp = await client.post(
         "/api/tips/studio/summary",
         json={"video_id": "abc123", "transcript": "x", "locale": "fr"},
     )
     assert resp.status_code in (400, 422)
 
 
-def test_post_studio_upstream_error_returns_502(monkeypatch):
-    _reset_jobs()
+async def test_post_studio_upstream_error_returns_502(client, monkeypatch):
     monkeypatch.setattr(
         "app.tips.router._studio_svc.kick_off_studio_job",
-        _fake_kick_off(Job(status="error", step="error", result=None, error="openrouter down")),
+        _fake_kick_off(status="error", step="error", error="openrouter down"),
     )
 
-    resp = client.post(
+    resp = await client.post(
         "/api/tips/studio/summary",
         json={"video_id": "abc123", "transcript": "hi", "locale": "en"},
     )
@@ -107,8 +97,7 @@ def test_post_studio_upstream_error_returns_502(monkeypatch):
     assert "openrouter" in body["error"]
 
 
-def test_post_studio_cards_returns_valid_cards(monkeypatch):
-    _reset_jobs()
+async def test_post_studio_cards_returns_valid_cards(client, monkeypatch):
     fake_data = {
         "cards": [
             {"id": "le-guo", "front": "了 vs 过?", "rule": "Completed action vs experience.",
@@ -117,10 +106,10 @@ def test_post_studio_cards_returns_valid_cards(monkeypatch):
     }
     monkeypatch.setattr(
         "app.tips.router._studio_svc.kick_off_studio_job",
-        _fake_kick_off(Job(status="complete", step="complete", result={"data": fake_data}, error=None)),
+        _fake_kick_off(status="complete", step="complete", result={"data": fake_data}),
     )
 
-    resp = client.post(
+    resp = await client.post(
         "/api/tips/studio/cards",
         json={"video_id": "abc123", "transcript": "lesson on le and guo", "locale": "en"},
     )
@@ -134,21 +123,19 @@ def test_post_studio_cards_returns_valid_cards(monkeypatch):
 # ---- Status probe (GET) tests -----------------------------------------------
 
 
-def test_get_studio_status_no_job_returns_200_none():
-    _reset_jobs()
-    resp = client.get("/api/tips/studio/summary/abc123", params={"locale": "en"})
+async def test_get_studio_status_no_job_returns_200_none(client):
+    resp = await client.get("/api/tips/studio/summary/abc123", params={"locale": "en"})
     assert resp.status_code == 200
     assert resp.json()["status"] == "none"
 
 
-def test_get_studio_status_pending_after_post(monkeypatch):
-    _reset_jobs()
+async def test_get_studio_status_pending_after_post(client, monkeypatch):
     monkeypatch.setattr(
         "app.tips.router._studio_svc.kick_off_studio_job",
-        _fake_kick_off(Job(status="processing", step="queued", result=None, error=None)),
+        _fake_kick_off(),
     )
 
-    post_resp = client.post(
+    post_resp = await client.post(
         "/api/tips/studio/summary",
         json={"video_id": "abc123", "transcript": "hi", "locale": "en"},
     )
@@ -156,45 +143,51 @@ def test_get_studio_status_pending_after_post(monkeypatch):
 
     # Now resume via the probe — the same (kind, video_id, locale) tuple
     # surfaces the live job without spending a second OpenRouter call.
-    probe = client.get("/api/tips/studio/summary/abc123", params={"locale": "en"})
+    probe = await client.get("/api/tips/studio/summary/abc123", params={"locale": "en"})
     assert probe.status_code == 202
     body = probe.json()
     assert body["status"] == "pending"
-    assert body["jobId"] == "test-job"
+    assert body["jobId"].startswith("tip-studio-")
 
 
-def test_get_studio_status_ready_after_completion(monkeypatch):
-    _reset_jobs()
+async def test_get_studio_status_ready_after_completion(client, monkeypatch):
     fake_data = {"abstract": "x" * 20, "takeaways": ["a", "b", "c"]}
     monkeypatch.setattr(
         "app.tips.router._studio_svc.kick_off_studio_job",
-        _fake_kick_off(Job(status="complete", step="complete", result={"data": fake_data}, error=None)),
+        _fake_kick_off(status="complete", step="complete", result={"data": fake_data}),
     )
-    client.post(
+    await client.post(
         "/api/tips/studio/summary",
         json={"video_id": "abc123", "transcript": "hi", "locale": "en"},
     )
 
-    probe = client.get("/api/tips/studio/summary/abc123", params={"locale": "en"})
+    probe = await client.get("/api/tips/studio/summary/abc123", params={"locale": "en"})
     assert probe.status_code == 200
     body = probe.json()
     assert body["status"] == "ready"
     assert body["data"] == fake_data
 
 
-def test_get_studio_status_invalid_kind_returns_400():
-    _reset_jobs()
-    resp = client.get("/api/tips/studio/notreal/abc123", params={"locale": "en"})
+async def test_get_studio_status_invalid_kind_returns_400(client):
+    resp = await client.get("/api/tips/studio/notreal/abc123", params={"locale": "en"})
     assert resp.status_code == 400
 
 
-def test_get_studio_status_invalid_locale_returns_400():
-    _reset_jobs()
-    resp = client.get("/api/tips/studio/summary/abc123", params={"locale": "fr"})
+async def test_get_studio_status_invalid_locale_returns_400(client):
+    resp = await client.get("/api/tips/studio/summary/abc123", params={"locale": "fr"})
     assert resp.status_code == 400
 
 
-def test_get_studio_status_invalid_video_id_returns_400():
-    _reset_jobs()
-    resp = client.get("/api/tips/studio/summary/!!!", params={"locale": "en"})
+async def test_get_studio_status_invalid_video_id_returns_400(client):
+    resp = await client.get("/api/tips/studio/summary/!!!", params={"locale": "en"})
     assert resp.status_code == 400
+
+
+async def test_get_studio_status_reads_the_catalog_when_no_job_is_live(client):
+    fake_data = {"abstract": "x" * 20, "takeaways": ["a", "b", "c"]}
+    await catalog.put_tip_studio("abc123", "summary", "en", fake_data)
+
+    probe = await client.get("/api/tips/studio/summary/abc123", params={"locale": "en"})
+
+    assert probe.status_code == 200
+    assert probe.json() == {"status": "ready", "data": fake_data}

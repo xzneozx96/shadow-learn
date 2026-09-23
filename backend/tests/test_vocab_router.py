@@ -7,7 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
-pytestmark = pytest.mark.usefixtures("stored_user", "provider_env")
+pytestmark = pytest.mark.usefixtures("stored_user", "provider_env", "app_s3")
 
 
 def _ok_response():

@@ -2,37 +2,26 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi.testclient import TestClient
+import pytest
 
-from app.job_store import _keyed_jobs, jobs
-from app.main import app
+from app.job_store import get_job
+from app.jobs.models import JobRow
 
-
-def _reset_jobs() -> None:
-    jobs.clear()
-    _keyed_jobs.clear()
+pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.usefixtures("db_session")]
 
 
-def _await_job(job_id: str, timeout: float = 2.0) -> None:
-    """Drive the asyncio loop until the runner finishes.
-
-    TestClient pumps the loop during HTTP calls; once the response has
-    returned, the spawned task may still be pending. Polling via short
-    ``asyncio.sleep`` lets the event loop advance the task without coupling
-    the test to a specific scheduler.
-    """
-    async def _wait() -> None:
-        deadline = asyncio.get_event_loop().time() + timeout
-        while asyncio.get_event_loop().time() < deadline:
-            job = jobs.get(job_id)
-            if job is not None and job.status in {"complete", "error"}:
-                return
-            await asyncio.sleep(0.01)
-    asyncio.run(_wait())
+async def _await_job(job_id: str, timeout: float = 2.0) -> JobRow:
+    """Drive the loop until the background runner finishes."""
+    deadline = asyncio.get_running_loop().time() + timeout
+    while asyncio.get_running_loop().time() < deadline:
+        job = await get_job(job_id)
+        if job is not None and job.status in {"complete", "error"}:
+            return job
+        await asyncio.sleep(0.01)
+    raise AssertionError(f"job {job_id} did not finish in {timeout}s")
 
 
-def test_studio_mind_map_route_accepts_kind(monkeypatch):
-    _reset_jobs()
+async def test_studio_mind_map_route_accepts_kind(client, monkeypatch):
     async def fake_generate(*, kind, transcript, locale):
         return {
             "root": {
@@ -46,8 +35,7 @@ def test_studio_mind_map_route_accepts_kind(monkeypatch):
         "app.tips.services.studio.generate_studio_artifact", fake_generate,
     )
 
-    client = TestClient(app)
-    resp = client.post(
+    resp = await client.post(
         "/api/tips/studio/mind_map",
         json={"video_id": "abc123", "transcript": "hi", "locale": "en"},
     )
@@ -55,25 +43,22 @@ def test_studio_mind_map_route_accepts_kind(monkeypatch):
     # ready if the runner finished synchronously under TestClient.
     assert resp.status_code in (200, 202)
     job_id = resp.json()["jobId"]
-    _await_job(job_id)
-    assert jobs[job_id].status == "complete"
-    data = jobs[job_id].result["data"]
+    job = await _await_job(job_id)
+    assert job.status == "complete"
+    data = job.result["data"]
     assert data["root"]["label"] == "root"
     assert data["root"]["children"][0]["label"] == "c1"
 
 
-def test_studio_mind_map_invalid_kind_rejected():
-    _reset_jobs()
-    client = TestClient(app)
-    resp = client.post(
+async def test_studio_mind_map_invalid_kind_rejected(client):
+    resp = await client.post(
         "/api/tips/studio/zoobar",
         json={"video_id": "abc123", "transcript": "hi", "locale": "en"},
     )
     assert resp.status_code == 400
 
 
-def test_studio_mind_map_validates_depth(monkeypatch):
-    _reset_jobs()
+async def test_studio_mind_map_validates_depth(client, monkeypatch):
     async def fake_generate(*, kind, transcript, locale):
         # 5-deep linear chain — exceeds depth 4
         def chain(n):
@@ -85,8 +70,7 @@ def test_studio_mind_map_validates_depth(monkeypatch):
     monkeypatch.setattr(
         "app.tips.services.studio.generate_studio_artifact", fake_generate,
     )
-    client = TestClient(app)
-    resp = client.post(
+    resp = await client.post(
         "/api/tips/studio/mind_map",
         json={"video_id": "abc123", "transcript": "hi", "locale": "en"},
     )
@@ -94,14 +78,13 @@ def test_studio_mind_map_validates_depth(monkeypatch):
     # as 202 pending (then the runner errors after the response) or 502 error.
     assert resp.status_code in (202, 502)
     job_id = resp.json()["jobId"]
-    _await_job(job_id)
-    assert jobs[job_id].status == "error"
-    assert "depth" in (jobs[job_id].error or "").lower()
+    job = await _await_job(job_id)
+    assert job.status == "error"
+    assert "depth" in (job.error or "").lower()
 
 
-def test_studio_mind_map_full_validation_chain(monkeypatch):
+async def test_studio_mind_map_full_validation_chain(client, monkeypatch):
     """Service returns a tree at the validator boundary — must pass validation."""
-    _reset_jobs()
     async def fake_generate(*, kind, transcript, locale):
         # Exactly 60 nodes: 1 root + 59 children
         return {
@@ -118,14 +101,13 @@ def test_studio_mind_map_full_validation_chain(monkeypatch):
     monkeypatch.setattr(
         "app.tips.services.studio.generate_studio_artifact", fake_generate,
     )
-    client = TestClient(app)
-    resp = client.post(
+    resp = await client.post(
         "/api/tips/studio/mind_map",
         json={"video_id": "abc123", "transcript": "hi", "locale": "en"},
     )
     assert resp.status_code in (200, 202)
     job_id = resp.json()["jobId"]
-    _await_job(job_id)
-    assert jobs[job_id].status == "complete"
-    data = jobs[job_id].result["data"]
+    job = await _await_job(job_id)
+    assert job.status == "complete"
+    data = job.result["data"]
     assert len(data["root"]["children"]) == 59

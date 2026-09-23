@@ -9,12 +9,10 @@ from pathlib import Path
 
 import yt_dlp
 
-from app.lessons.services.audio import _ydl_extra_opts
+from app.lessons.services.audio import _ydl_extra_opts, ensure_temp_dir
 from app.transcription.services.transcription_provider import _Segment, _WordTiming
 
 logger = logging.getLogger(__name__)
-
-_TEMP_DIR = Path("/tmp/shadowlearn")
 
 
 _TIMESTAMP_RE = re.compile(
@@ -42,7 +40,7 @@ def _is_rolling_continuation(prev_text: str, curr_text: str) -> bool:
 
 
 def _is_cjk_lang(source_language: str) -> bool:
-    return source_language.startswith("zh") or source_language.startswith("ja")
+    return source_language.startswith(("zh", "ja"))
 
 
 def _synthesize_word_timings(
@@ -170,10 +168,10 @@ def _download_subtitle_blocking(video_id: str, yt_lang: str, work_dir: Path) -> 
 
 async def download_subtitle_vtt(video_id: str, yt_lang: str) -> str:
     """Download a single manual subtitle in VTT format and return its content."""
-    _TEMP_DIR.mkdir(parents=True, exist_ok=True)
-    before = set(_TEMP_DIR.glob("*.vtt"))
-    await asyncio.to_thread(_download_subtitle_blocking, video_id, yt_lang, _TEMP_DIR)
-    after = set(_TEMP_DIR.glob("*.vtt"))
+    temp_dir = ensure_temp_dir()
+    before = set(temp_dir.glob("*.vtt"))
+    await asyncio.to_thread(_download_subtitle_blocking, video_id, yt_lang, temp_dir)
+    after = set(temp_dir.glob("*.vtt"))
     new_files = list(after - before)
     if not new_files:
         raise FileNotFoundError(

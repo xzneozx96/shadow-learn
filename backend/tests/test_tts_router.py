@@ -10,7 +10,7 @@ from app.keys.crypto import encrypt
 from app.keys.models import Provider, ProviderKey
 from app.main import app
 
-pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.usefixtures("stored_user")]
+pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.usefixtures("stored_user", "app_s3")]
 
 
 async def test_get_provider_returns_provider_name(mock_tts_provider):

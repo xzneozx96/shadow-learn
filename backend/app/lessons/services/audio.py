@@ -14,12 +14,10 @@ from app.settings import settings
 logger = logging.getLogger(__name__)
 
 
-_TEMP_DIR = Path("/tmp/shadowlearn")
-
-
-def _ensure_temp_dir() -> Path:
-    _TEMP_DIR.mkdir(parents=True, exist_ok=True)
-    return _TEMP_DIR
+def ensure_temp_dir() -> Path:
+    temp_dir = Path(settings.temp_dir)
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir
 
 
 _VIDEO_EXTS = {".mp4", ".mkv", ".webm"}
@@ -69,7 +67,7 @@ def _download_youtube_video(video_id: str, file_uuid: str, temp_dir: Path) -> Pa
 async def download_youtube_video(video_id: str) -> Path:
     """Download a YouTube video, returning the path to the output file."""
     logger.info("[pipeline] download_youtube_video: start video_id=%s", video_id)
-    temp_dir = _ensure_temp_dir()
+    temp_dir = ensure_temp_dir()
     file_uuid = str(uuid.uuid4())
     t0 = time.monotonic()
     result = await asyncio.to_thread(_download_youtube_video, video_id, file_uuid, temp_dir)
@@ -90,7 +88,7 @@ def _extract_audio_ffmpeg(video_path: Path, output_path: Path) -> None:
     logger.debug("ffmpeg starting: input=%s (%.1f MB) → output=%s", video_path.name, file_size_mb, output_path.name)
     t0 = time.monotonic()
 
-    stdout, stderr = (
+    _stdout, stderr = (
         ffmpeg
         .input(str(video_path))
         .output(str(output_path), acodec="libmp3lame", audio_bitrate="192k")
@@ -131,7 +129,7 @@ async def extract_audio_from_upload(video_path: Path) -> Path:
     """Extract audio from an uploaded video file, returning the path to the mp3 file."""
     file_size_mb = video_path.stat().st_size / 1024 / 1024
     logger.info("[pipeline] extract_audio_from_upload: start file=%s (%.1f MB)", video_path.name, file_size_mb)
-    temp_dir = _ensure_temp_dir()
+    temp_dir = ensure_temp_dir()
     output_path = temp_dir / f"{uuid.uuid4()}.mp3"
     t0 = time.monotonic()
     await asyncio.to_thread(_extract_audio_ffmpeg, video_path, output_path)

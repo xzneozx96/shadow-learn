@@ -97,6 +97,14 @@ async def s3():
         await client.delete_bucket(Bucket=settings.s3_bucket)
 
 
+@pytest.fixture
+def app_s3(s3):
+    """Lifespan does not run under ASGITransport, so hand the routes the test bucket's client."""
+    app.state.s3 = s3
+    yield s3
+    del app.state.s3
+
+
 @pytest.fixture(autouse=True)
 def signed_in_user(request):
     if request.node.get_closest_marker("real_auth"):
