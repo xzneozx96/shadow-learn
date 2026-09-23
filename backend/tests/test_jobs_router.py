@@ -74,11 +74,11 @@ async def test_get_job_error():
 
 
 @pytest.mark.asyncio
-async def test_delete_job():
+async def test_delete_job(signed_in_user):
     from app.job_store import Job
 
     jobs_module.jobs["del"] = Job(
-        status="processing", step="transcription", result=None, error=None
+        status="processing", step="transcription", result=None, error=None, user_id=str(signed_in_user.id)
     )
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -129,3 +129,17 @@ async def test_job_is_hidden_from_other_users(client, db_session):
     assert bob_delete.status_code == 404
     as_alice = await client.get(f"/api/jobs/{job_id}", headers={"Authorization": f"Bearer {alice['access_token']}"})
     assert as_alice.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_shared_job_is_readable_but_not_deletable():
+    from app.job_store import register_job
+
+    job_id = register_job(id_prefix="tip-studio", user_id=None)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        read = await client.get(f"/api/jobs/{job_id}")
+        delete = await client.delete(f"/api/jobs/{job_id}")
+    assert read.status_code == 200
+    assert delete.status_code == 404
+    assert job_id in jobs_module.jobs

@@ -1,7 +1,7 @@
 # backend/app/config.py
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -44,8 +44,6 @@ class Settings(BaseSettings):
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
     gladia_api_keys: list[str] = []            # env: SHADOWLEARN_GLADIA_API_KEYS='["key1","key2"]' — tried in order, rotated on 402/403
-    # Frontend origins allowed by CORS and by the /api/transcription/session Origin check.
-    # An empty list disables only the transcription Origin check.
     # env: SHADOWLEARN_FRONTEND_ORIGIN_ALLOWLIST='["http://localhost:5173","https://shadowlearn.app"]'
     frontend_origin_allowlist: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     frontend_origin_regex: str = ""  # env: SHADOWLEARN_FRONTEND_ORIGIN_REGEX; e.g. https://.*\.vercel\.app
@@ -80,8 +78,8 @@ class Settings(BaseSettings):
 
     jwt_secret: str
     jwt_refresh_secret: str
-    access_token_minutes: int = 15
-    refresh_token_days: int = 30
+    access_token_minutes: int = Field(default=15, gt=0)
+    refresh_token_days: int = Field(default=30, gt=0)
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""

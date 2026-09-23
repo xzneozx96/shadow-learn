@@ -110,3 +110,16 @@ def test_rate_limit_blocks_after_20_requests(client: TestClient) -> None:
         assert ok.status_code == 200
     blocked = client.post("/api/transcription/session")
     assert blocked.status_code == 429
+
+
+@respx.mock
+def test_origin_check_allows_regex_match(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    monkeypatch.setattr(settings, "frontend_origin_allowlist", ["https://shadowlearn.app"])
+    monkeypatch.setattr(settings, "frontend_origin_regex", r"https://.*\.vercel\.app")
+    respx.post("https://api.gladia.io/v2/live").mock(
+        return_value=Response(201, json={"id": "a", "url": "wss://x"})
+    )
+    allowed = client.post("/api/transcription/session", headers={"Origin": "https://pr-12.vercel.app"})
+    rejected = client.post("/api/transcription/session", headers={"Origin": "https://evil.example"})
+    assert allowed.status_code == 200
+    assert rejected.status_code == 403

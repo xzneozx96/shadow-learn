@@ -17,7 +17,6 @@ PUBLIC_PATHS = {
     "/api/auth/forgot-password",
     "/api/auth/reset-password",
 }
-# FastAPI's generated schema and docs pages. They expose route shapes, not data.
 DOCS_PATHS = {"/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}
 
 

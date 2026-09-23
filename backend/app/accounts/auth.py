@@ -13,8 +13,6 @@ from app.settings import settings
 
 
 class VersionedJWTStrategy(JWTStrategy[User, models.ID]):
-    """A JWT strategy whose tokens die when the user's ``token_version`` moves."""
-
     async def write_token(self, user: User) -> str:
         data = {"sub": str(user.id), "aud": self.token_audience, "ver": user.token_version}
         return generate_jwt(data, self.encode_key, self.lifetime_seconds, algorithm=self.algorithm)

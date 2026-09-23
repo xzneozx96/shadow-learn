@@ -21,6 +21,7 @@ os.environ["SHADOWLEARN_DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["SHADOWLEARN_S3_BUCKET"] = f"shadowlearn-test-{os.getpid()}"
 os.environ.setdefault("SHADOWLEARN_JWT_SECRET", "test-access-secret-" + "a" * 32)
 os.environ.setdefault("SHADOWLEARN_JWT_REFRESH_SECRET", "test-refresh-secret-" + "b" * 32)
+os.environ["SHADOWLEARN_SMTP_HOST"] = ""
 
 from app.accounts.deps import current_active_user
 from app.accounts.models import User
@@ -96,10 +97,6 @@ async def s3():
 
 @pytest.fixture(autouse=True)
 def signed_in_user(request):
-    """Stand in for a signed-in caller so router tests can skip the login flow.
-
-    Tests marked ``real_auth`` get the real bearer-token dependency instead.
-    """
     if request.node.get_closest_marker("real_auth"):
         yield None
         return
@@ -124,7 +121,6 @@ async def client():
 
 
 async def register_and_login(client: AsyncClient, email: str, password: str = "correct-horse-1") -> dict:
-    """Register *email* through the app and return its id, credentials, and token pair."""
     created = await client.post("/api/auth/register", json={"email": email, "password": password})
     assert created.status_code == 201, created.text
     login = await client.post("/api/auth/login", data={"username": email, "password": password})

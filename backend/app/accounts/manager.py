@@ -1,8 +1,7 @@
 import logging
 import smtplib
 import uuid
-from collections.abc import AsyncIterator
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends, Request
 from fastapi_users import BaseUserManager, InvalidPasswordException, UUIDIDMixin
@@ -39,15 +38,20 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             # delivery failure must not surface as a 500 that confirms it does.
             logger.exception("reset email to user %s failed", user.id)
 
-    async def on_after_reset_password(self, user: User, request: Request | None = None) -> None:
-        await self.user_db.update(user, {"token_version": user.token_version + 1})
+    async def _update(self, user: User, update_dict: dict[str, Any]) -> User:
+        # Revoke outstanding tokens in the same write that changes the password.
+        if update_dict.get("password") is not None:
+            update_dict = {**update_dict, "token_version": user.token_version + 1}
+        return await super()._update(user, update_dict)
 
 
-async def get_user_db(session: Annotated[AsyncSession, Depends(get_session)]) -> AsyncIterator[SQLAlchemyUserDatabase]:
-    yield SQLAlchemyUserDatabase(session, User)
+# Function scope closes the lookup session when the endpoint returns, so a
+# streaming response or a background task does not hold a pooled connection.
+def get_user_db(
+    session: Annotated[AsyncSession, Depends(get_session, scope="function")],
+) -> SQLAlchemyUserDatabase:
+    return SQLAlchemyUserDatabase(session, User)
 
 
-async def get_user_manager(
-    user_db: Annotated[SQLAlchemyUserDatabase, Depends(get_user_db)],
-) -> AsyncIterator[UserManager]:
-    yield UserManager(user_db)
+def get_user_manager(user_db: Annotated[SQLAlchemyUserDatabase, Depends(get_user_db)]) -> UserManager:
+    return UserManager(user_db)

@@ -23,6 +23,13 @@ async def test_register_returns_the_new_user(client, db_session):
 async def test_register_rejects_a_short_password(client, db_session):
     response = await client.post("/api/auth/register", json={"email": "short@example.com", "password": "short"})
     assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "REGISTER_INVALID_PASSWORD"
+
+
+async def test_register_rejects_a_taken_email(client, user):
+    response = await client.post("/api/auth/register", json={"email": user["email"], "password": "correct-horse-1"})
+    assert response.status_code == 400
+    assert response.json()["detail"] == "REGISTER_USER_ALREADY_EXISTS"
 
 
 async def test_login_returns_an_access_and_refresh_pair(client, user):
@@ -33,6 +40,7 @@ async def test_login_returns_an_access_and_refresh_pair(client, user):
 async def test_login_rejects_a_wrong_password(client, user):
     response = await client.post("/api/auth/login", data={"username": user["email"], "password": "wrong-password"})
     assert response.status_code == 400
+    assert response.json()["detail"] == "LOGIN_BAD_CREDENTIALS"
 
 
 async def test_me_accepts_the_access_token(client, user):
@@ -75,3 +83,14 @@ async def test_reset_password_revokes_old_tokens(client, user, caplog):
     assert old_password.status_code == 400
     new_login = await client.post("/api/auth/login", data={"username": user["email"], "password": "new-password-2"})
     assert new_login.status_code == 200
+
+
+async def test_forgot_password_answers_202_for_an_unknown_email(client, db_session):
+    response = await client.post("/api/auth/forgot-password", json={"email": "nobody@example.com"})
+    assert response.status_code == 202
+
+
+async def test_reset_password_rejects_a_bad_token(client, db_session):
+    response = await client.post("/api/auth/reset-password", json={"token": "not-a-token", "password": "new-password-2"})
+    assert response.status_code == 400
+    assert response.json()["detail"] == "RESET_PASSWORD_BAD_TOKEN"
