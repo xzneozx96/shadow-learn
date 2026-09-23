@@ -95,15 +95,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [lock])
 
   useEffect(() => {
+    let disposed = false
+    let current: ShadowLearnDB | null = null
     const connect = async (isReconnect = false) => {
-      const database = await initDB(() => connect(true))
+      const database = await initDB(() => {
+        if (!disposed)
+          connect(true)
+      })
+      if (disposed) {
+        database.close()
+        return
+      }
+      current = database
       setDb(database)
       if (!isReconnect) {
         const cryptoData = await getCryptoData(database)
-        setIsFirstSetup(!cryptoData)
+        if (!disposed)
+          setIsFirstSetup(!cryptoData)
       }
     }
     connect()
+    return () => {
+      disposed = true
+      current?.close()
+    }
   }, [])
 
   const startTrial = useCallback(() => {

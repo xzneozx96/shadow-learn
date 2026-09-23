@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from '@/app/providers/AuthContext'
@@ -43,6 +43,7 @@ describe('trial mode sessionStorage contract', () => {
 
 describe('logout and trial mode', () => {
   afterEach(() => {
+    cleanup()
     vi.unstubAllGlobals()
     sessionStorage.clear()
     localStorage.clear()
