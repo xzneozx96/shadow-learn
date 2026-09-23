@@ -68,6 +68,7 @@ async def test_delete_job_idempotent(client, db_session):
 
 async def test_get_job_prunes_expired(client, owner):
     job_id = await register_job(id_prefix="lesson", user_id=owner)
+    await complete_job(job_id, {})
     async with SessionLocal() as session:
         await session.execute(
             update(JobRow).where(JobRow.id == job_id).values(created_at=func.now() - text("interval '2 hours'"))

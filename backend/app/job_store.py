@@ -50,7 +50,9 @@ async def delete_job(job_id: str) -> None:
 async def prune_expired_jobs(max_age_seconds: float = 3600.0) -> None:
     cutoff = func.now() - timedelta(seconds=max_age_seconds)
     async with SessionLocal() as session:
-        await session.execute(delete(JobRow).where(JobRow.created_at < cutoff))
+        await session.execute(
+            delete(JobRow).where(JobRow.created_at < cutoff, JobRow.status.in_(("complete", "error")))
+        )
         await session.commit()
 
 

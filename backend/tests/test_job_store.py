@@ -143,6 +143,8 @@ async def test_kick_off_keyed_job_spawns_fresh_after_error() -> None:
 async def test_prune_expired_jobs_deletes_rows_older_than_the_limit() -> None:
     old = await register_job(id_prefix="t", user_id=None)
     fresh = await register_job(id_prefix="t", user_id=None)
+    await complete_job(old, {})
+    await complete_job(fresh, {})
     async with SessionLocal() as session:
         await session.execute(
             update(JobRow).where(JobRow.id == old).values(created_at=func.now() - text("interval '2 hours'"))
@@ -153,3 +155,20 @@ async def test_prune_expired_jobs_deletes_rows_older_than_the_limit() -> None:
 
     assert await get_job(old) is None
     assert await get_job(fresh) is not None
+
+
+async def test_prune_keeps_a_job_that_is_still_processing_past_the_limit() -> None:
+    running = await register_job(id_prefix="t", user_id=None)
+    finished = await register_job(id_prefix="t", user_id=None)
+    failed = await register_job(id_prefix="t", user_id=None)
+    await complete_job(finished, {})
+    await fail_job(failed, "boom")
+    async with SessionLocal() as session:
+        await session.execute(update(JobRow).values(created_at=func.now() - text("interval '2 hours'")))
+        await session.commit()
+
+    await prune_expired_jobs(max_age_seconds=3600)
+
+    assert (await get_job(running)).status == "processing"
+    assert await get_job(finished) is None
+    assert await get_job(failed) is None
