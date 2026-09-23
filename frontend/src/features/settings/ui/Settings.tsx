@@ -1,39 +1,153 @@
-import type { Locale } from '@/shared/lib/i18n'
-import { Eye, EyeOff, Save } from 'lucide-react'
+import type { Provider, ProviderKeyState } from '@/features/settings/api/keys'
+import type { Locale, TranslationKey } from '@/shared/lib/i18n'
+import { Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Layout } from '@/app/Layout'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
-import { getCryptoData, getSettings, saveCryptoData, saveSettings } from '@/db'
+import { getSettings, saveSettings } from '@/db'
+import { listKeys, removeKey, saveKey } from '@/features/settings/api/keys'
 import { VoiceSelector } from '@/features/settings/ui/VoiceSelector'
 import { INTERFACE_LANGUAGES, LANGUAGES } from '@/shared/lib/constants'
-import { decryptKeys, encryptKeys } from '@/shared/lib/crypto'
 import { DEFAULT_VOICE_ID, MINIMAX_VOICES } from '@/shared/lib/voices'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
+const PROVIDER_LABELS: Record<Provider, TranslationKey> = {
+  openrouter: 'settings.provider.openrouter',
+  azure_speech: 'settings.provider.azureSpeech',
+  google: 'settings.provider.google',
+}
+
+function ProviderKeyRow({ state, onSaved, onRemoved }: {
+  state: ProviderKeyState
+  onSaved: (next: ProviderKeyState) => void
+  onRemoved: () => Promise<void>
+}) {
+  const { t } = useI18n()
+  const [value, setValue] = useState('')
+  const [region, setRegion] = useState(state.region ?? '')
+  const [busy, setBusy] = useState(false)
+  const needsRegion = state.provider === 'azure_speech'
+
+  async function handleSave() {
+    setBusy(true)
+    try {
+      onSaved(await saveKey(state.provider, value.trim(), needsRegion ? region.trim() : null))
+      setValue('')
+      toast.success(t('settings.keysSaved'))
+    }
+    catch (err) {
+      toast.error(err instanceof Error ? err.message : t('settings.failedToSaveKeys'))
+    }
+    finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleRemove() {
+    setBusy(true)
+    try {
+      await removeKey(state.provider)
+      await onRemoved()
+      toast.success(t('settings.keyRemoved'))
+    }
+    catch (err) {
+      toast.error(err instanceof Error ? err.message : t('settings.failedToRemoveKey'))
+    }
+    finally {
+      setBusy(false)
+    }
+  }
+
+  const status = state.source === 'user'
+    ? t('settings.keyStatus.user', { last4: state.last4 ?? '' })
+    : state.source === 'env'
+      ? t('settings.keyStatus.env')
+      : t('settings.keyStatus.none')
+
+  return (
+    <div className="space-y-2" data-testid={`provider-key-${state.provider}`}>
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium" htmlFor={`key-${state.provider}`}>{t(PROVIDER_LABELS[state.provider])}</label>
+        <span className="text-xs text-muted-foreground">{status}</span>
+      </div>
+      <div className="flex gap-2">
+        <Input
+          id={`key-${state.provider}`}
+          type="password"
+          autoComplete="off"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          className="font-mono text-sm"
+          placeholder={t('settings.keyPlaceholder')}
+        />
+        {needsRegion && (
+          <Input
+            aria-label={t('settings.azureSpeechRegion')}
+            value={region}
+            onChange={e => setRegion(e.target.value)}
+            className="w-32 text-sm"
+            placeholder="eastus"
+          />
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" onClick={handleSave} disabled={busy || !value.trim() || (needsRegion && !region.trim())}>
+          {t('settings.saveKey')}
+        </Button>
+        {state.source === 'user' && (
+          <Button size="sm" variant="outline" onClick={handleRemove} disabled={busy}>
+            {t('settings.removeKey')}
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ProviderKeysCard() {
+  const { t } = useI18n()
+  const [states, setStates] = useState<ProviderKeyState[] | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+
+  useEffect(() => {
+    listKeys().then(setStates, () => setLoadFailed(true))
+  }, [])
+
+  function replace(next: ProviderKeyState) {
+    setStates(prev => prev?.map(s => s.provider === next.provider ? next : s) ?? null)
+  }
+
+  async function reload() {
+    setStates(await listKeys())
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('settings.providerKeys')}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {loadFailed && <p className="text-sm text-destructive">{t('settings.failedToLoadKeys')}</p>}
+        {states?.map(state => (
+          <ProviderKeyRow key={state.provider} state={state} onSaved={replace} onRemoved={reload} />
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function Settings() {
-  const { db, keys, resetKeys, setup, trialMode } = useAuth()
+  const { db } = useAuth()
   const { locale, setLocale, t } = useI18n()
 
   const [language, setLanguage] = useState<string>(locale)
-  const [newPin, setNewPin] = useState('')
-  const [confirmPin, setConfirmPin] = useState('')
-  const [pinError, setPinError] = useState<string | null>(null)
-  const [pinSuccess, setPinSuccess] = useState(false)
-  const [showKeys, setShowKeys] = useState(false)
   const [saved, setSaved] = useState(false)
   const [voiceId, setVoiceId] = useState(DEFAULT_VOICE_ID)
-  const [editOpenrouterKey, setEditOpenrouterKey] = useState(keys?.openrouterApiKey ?? '')
-  const [editGeminiKey, setEditGeminiKey] = useState(keys?.googleRealtimeKey ?? '')
-  const [keysPin, setKeysPin] = useState('')
-  const [keysSaved, setKeysSaved] = useState(false)
-  const [keysError, setKeysError] = useState<string | null>(null)
-  const [newTrialPin, setNewTrialPin] = useState('')
-  const [newTrialPinConfirm, setNewTrialPinConfirm] = useState('')
 
   useEffect(() => {
     if (!db)
@@ -46,104 +160,6 @@ export function Settings() {
       }
     })
   }, [db, locale])
-
-  // Sync edit fields when keys load (setState-during-render pattern — avoids effect setter)
-  const [prevKeys, setPrevKeys] = useState(keys)
-  if (prevKeys !== keys) {
-    setPrevKeys(keys)
-    setEditOpenrouterKey(keys?.openrouterApiKey ?? '')
-    setEditGeminiKey(keys?.googleRealtimeKey ?? '')
-  }
-
-  async function handleSaveKeys() {
-    setKeysError(null)
-
-    const newKeys = {
-      openrouterApiKey: editOpenrouterKey.trim() || undefined,
-      googleRealtimeKey: editGeminiKey.trim() || undefined,
-    }
-
-    if (trialMode) {
-      // Trial path: create a new PIN (no existing one to verify)
-      if (newTrialPin.length < 4) {
-        setKeysError(t('settings.pinMinDigits'))
-        return
-      }
-      if (newTrialPin !== newTrialPinConfirm) {
-        setKeysError(t('settings.pinDoNotMatch'))
-        return
-      }
-      if (!db) {
-        setKeysError(t('settings.databaseNotReady'))
-        return
-      }
-      try {
-        await setup(newKeys, newTrialPin)
-        setNewTrialPin('')
-        setNewTrialPinConfirm('')
-        setKeysSaved(true)
-        toast.success(t('settings.keysSaved'))
-        setTimeout(setKeysSaved, 2000, false)
-      }
-      catch {
-        setKeysError(t('settings.failedToSaveKeys'))
-        toast.error(t('settings.failedToSaveKeys'))
-      }
-      return
-    }
-
-    // Own-keys path: verify existing PIN before saving
-    if (!keysPin) {
-      setKeysError(t('settings.enterPinToSaveChanges'))
-      return
-    }
-    if (!db)
-      return
-    try {
-      const cryptoData = await getCryptoData(db)
-      if (!cryptoData)
-        throw new Error('No stored keys found')
-      await decryptKeys(cryptoData, keysPin) // PIN verification — result intentionally discarded; no separate verifyPin() exists
-      await setup(newKeys, keysPin)
-      setKeysSaved(true)
-      setKeysPin('')
-      toast.success(t('settings.keysSaved'))
-      setTimeout(setKeysSaved, 2000, false)
-    }
-    catch {
-      setKeysError(t('settings.incorrectPinOrFailed'))
-      toast.error(t('settings.failedToSaveKeys'))
-    }
-  }
-
-  async function handleChangePin() {
-    if (!db || !keys)
-      return
-    setPinError(null)
-    setPinSuccess(false)
-
-    if (newPin.length < 4) {
-      setPinError(t('settings.pinTooShort'))
-      return
-    }
-    if (newPin !== confirmPin) {
-      setPinError(t('settings.pinMismatch'))
-      return
-    }
-
-    try {
-      const encrypted = await encryptKeys(keys, newPin)
-      await saveCryptoData(db, encrypted)
-      setNewPin('')
-      setConfirmPin('')
-      setPinSuccess(true)
-      toast.success(t('settings.pinChanged'))
-    }
-    catch {
-      setPinError(t('settings.pinChangeFailed'))
-      toast.error(t('settings.pinChangeFailed'))
-    }
-  }
 
   async function handleSaveSettings() {
     if (!db)
@@ -163,81 +179,7 @@ export function Settings() {
     <Layout>
       <div className="h-full overflow-y-auto">
         <div className="relative z-5 mx-auto max-w-2xl space-y-6 p-4 pt-10 pb-10">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.apiKeys')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{t('settings.visibility')}</span>
-                <Button variant="ghost" size="icon-sm" onClick={() => setShowKeys(!showKeys)}>
-                  {showKeys ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </Button>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">{t('settings.openrouterKey')}</label>
-                <Input
-                  type={showKeys ? 'text' : 'password'}
-                  value={editOpenrouterKey}
-                  onChange={e => setEditOpenrouterKey(e.target.value)}
-                  className="font-mono text-sm"
-                  placeholder={t('auth.placeholder.optionalKey')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  {t('auth.googleRealtimeKey')}
-                </label>
-                <Input
-                  type={showKeys ? 'text' : 'password'}
-                  value={editGeminiKey}
-                  onChange={e => setEditGeminiKey(e.target.value)}
-                  className="font-mono text-sm"
-                  placeholder={t('auth.placeholder.optionalKey')}
-                />
-              </div>
-
-              {trialMode
-                ? (
-                    <>
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">{t('settings.createPin')}</label>
-                        <Input
-                          type="password"
-                          value={newTrialPin}
-                          onChange={e => setNewTrialPin(e.target.value)}
-                          placeholder={t('settings.pinDigits')}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">{t('settings.confirmPinShort')}</label>
-                        <Input
-                          type="password"
-                          value={newTrialPinConfirm}
-                          onChange={e => setNewTrialPinConfirm(e.target.value)}
-                          placeholder={t('settings.repeatPin')}
-                        />
-                      </div>
-                    </>
-                  )
-                : (
-                    <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">{t('settings.confirmWithPin')}</label>
-                      <Input
-                        type="password"
-                        value={keysPin}
-                        onChange={e => setKeysPin(e.target.value)}
-                        placeholder={t('settings.enterPinToSave')}
-                      />
-                    </div>
-                  )}
-              {keysError && <p className="text-sm text-destructive">{keysError}</p>}
-              {keysSaved && <p className="text-sm text-emerald-400">{t('settings.keysSavedSuccess')}</p>}
-
-              <Button className="w-full mt-4" size="lg" onClick={handleSaveKeys}>{t('settings.saveKeys')}</Button>
-            </CardContent>
-          </Card>
+          <ProviderKeysCard />
 
           <Card>
             <CardHeader>
@@ -289,41 +231,6 @@ export function Settings() {
             </CardContent>
           </Card>
 
-          {!trialMode && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('settings.changePin')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">{t('settings.newPin')}</label>
-                  <Input
-                    type="password"
-                    value={newPin}
-                    onChange={e => setNewPin(e.target.value)}
-                    placeholder={t('settings.newPinPlaceholder')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">{t('settings.confirmPin')}</label>
-                  <Input
-                    type="password"
-                    value={confirmPin}
-                    onChange={e => setConfirmPin(e.target.value)}
-                    placeholder={t('settings.confirmPinPlaceholder')}
-                  />
-                </div>
-                {pinError && <p className="text-sm text-destructive">{pinError}</p>}
-                {pinSuccess && <p className="text-sm text-emerald-400">{t('settings.pinChanged')}</p>}
-                <div className="flex gap-2 mt-6">
-                  <Button className="flex-1" onClick={handleChangePin} size="lg">{t('settings.changePin')}</Button>
-                  <Button className="flex-1" variant="destructive" size="lg" onClick={resetKeys}>
-                    {t('settings.forgotPin')}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </Layout>

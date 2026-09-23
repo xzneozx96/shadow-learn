@@ -13,7 +13,7 @@ vi.mock('@/app/providers/I18nContext', () => ({
 }))
 
 const mockDb = {} as any
-let mockAuth: any = { keys: { openrouterApiKey: 'sk-test' }, db: mockDb }
+let mockAuth: any = { db: mockDb }
 
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => mockAuth,
@@ -73,7 +73,7 @@ const mockPool = [
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockAuth = { keys: { openrouterApiKey: 'sk-test' }, db: mockDb }
+  mockAuth = { db: mockDb }
   mockGetSegments.mockResolvedValue(mockSegments)
 })
 
@@ -143,7 +143,7 @@ describe('useQuizGeneration', () => {
   })
 
   it('throws when API returns non-ok', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 500 })))
 
     const { result } = renderHook(() => useQuizGeneration())
     const controller = new AbortController()
@@ -152,6 +152,20 @@ describe('useQuizGeneration', () => {
       await expect(
         result.current.generateQuiz(['cloze'], mockPool, controller.signal),
       ).rejects.toThrow('Quiz generation failed (500)')
+    })
+  })
+
+  it('throws the server detail when no key is configured', async () => {
+    const detail = 'No OpenRouter key configured. Add one in Settings.'
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail }), { status: 400 })))
+
+    const { result } = renderHook(() => useQuizGeneration())
+    const controller = new AbortController()
+
+    await act(async () => {
+      await expect(
+        result.current.generateQuiz(['cloze'], mockPool, controller.signal),
+      ).rejects.toThrow(detail)
     })
   })
 
@@ -315,7 +329,7 @@ describe('useQuizGeneration', () => {
     })
 
     it('returns empty translationSentences when db is null', async () => {
-      mockAuth = { keys: { openrouterApiKey: 'sk-test' }, db: null }
+      mockAuth = { db: null }
 
       const { result } = renderHook(() => useQuizGeneration())
       const controller = new AbortController()

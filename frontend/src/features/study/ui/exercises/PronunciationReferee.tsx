@@ -54,7 +54,7 @@ function useVerdict() {
 }
 
 export function PronunciationReferee({ sentence, language, progress = '', onNext }: Props) {
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
   useEffect(() => {
     if (!db)
@@ -63,7 +63,7 @@ export function PronunciationReferee({ sentence, language, progress = '', onNext
   }, [db])
   const { t } = useI18n()
   const verdict = useVerdict()
-  const { playTTS, loadingText } = useTTS(db, keys, language, voiceId)
+  const { playTTS, loadingText } = useTTS(db, language, voiceId)
   const isTTSLoading = loadingText === sentence.sentence
   const hint = useHint(sentence.romanization ? 1 : 0)
   const showPinyin = hint.level > 0

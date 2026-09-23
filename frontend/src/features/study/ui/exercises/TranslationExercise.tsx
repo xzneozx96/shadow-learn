@@ -4,7 +4,6 @@ import type { LanguageCapabilities } from '@/shared/lib/language-caps'
 import { Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { useHint } from '@/features/study/application/useHint'
 import { ExerciseCard } from '@/features/study/ui/exercises/ExerciseCard'
@@ -109,7 +108,6 @@ function ScoreRow({ label, feedback, delay = 0 }: { label: string, feedback: Cat
 }
 
 export function TranslationExercise({ sentence, direction, progress = '', onNext, caps }: Props) {
-  const { keys } = useAuth()
   const { t, locale } = useI18n()
   const nativeCaps = getLanguageCaps(locale)
   const scoreLabel = useScoreLabel()
@@ -144,7 +142,6 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          openrouter_api_key: keys?.openrouterApiKey ?? '',
           source,
           source_language: sourceLang,
           target_language: targetLang,

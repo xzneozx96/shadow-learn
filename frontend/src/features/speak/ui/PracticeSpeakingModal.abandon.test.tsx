@@ -12,7 +12,10 @@ vi.mock('@livekit/components-react', () => ({
   useSessionMessages: () => ({ messages: [] }),
 }))
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ keys: { googleRealtimeKey: 'test' }, db: null }),
+  useAuth: () => ({ db: null }),
+}))
+vi.mock('@/features/settings/api/keys', () => ({
+  listKeys: vi.fn().mockResolvedValue([{ provider: 'google', source: 'user', last4: 'test', region: null }]),
 }))
 vi.mock('@/app/providers/I18nContext', () => ({
   useI18n: () => ({ t: (k: string) => k, locale: 'en' }),

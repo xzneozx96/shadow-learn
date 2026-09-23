@@ -8,12 +8,7 @@ vi.mock('@/features/vocabulary/lib/api/breakdownStory', () => ({
   fetchBreakdownStory: vi.fn().mockResolvedValue('Người thợ kéo sợi ...'),
 }))
 
-// useAuth is needed for the TTS button. Modal only reads `keys`, no setup needed.
-vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ keys: null, db: null }),
-}))
-
-// useTTS depends on AuthContext + keys. Stub it out in tests.
+// useTTS calls the backend. Stub it out in tests.
 vi.mock('@/shared/hooks/useTTS', () => ({
   useTTS: () => ({ playTTS: vi.fn(), loadingText: null }),
 }))
@@ -33,7 +28,6 @@ function renderModal(overrides = {}) {
       meaning="to study"
       sourceLanguage="zh-CN"
       db={null}
-      openrouterApiKey="sk-test"
       {...overrides}
     />,
   )

@@ -8,10 +8,10 @@ import { useStudyQueue } from '@/features/study/application/useStudyQueue'
 const StudyQueueContext = createContext<StudyQueueState | null>(null)
 
 export function StudyQueueProvider({ children }: { children: ReactNode }) {
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const { lessons } = useLessons()
   const hasLesson = lessons.some(l => !l.status || l.status === 'complete')
-  const queue = useStudyQueue(db, keys, hasLesson)
+  const queue = useStudyQueue(db, hasLesson)
   return (
     <StudyQueueContext value={queue}>
       {children}

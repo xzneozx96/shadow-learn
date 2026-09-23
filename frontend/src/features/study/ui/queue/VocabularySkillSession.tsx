@@ -31,11 +31,11 @@ interface Props {
 }
 
 export function VocabularySkillSession({ entries, date, onComplete, onProgress, onBack, embedded }: Props) {
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
   const sourceLanguage = entries[0]?.sourceLanguage ?? 'zh-CN'
-  const { playTTS } = useTTS(db, keys, sourceLanguage)
+  const { playTTS } = useTTS(db, sourceLanguage)
   const caps = getLanguageCaps(sourceLanguage)
 
   const entryIds = new Set(entries.map(e => e.id))
@@ -88,15 +88,12 @@ export function VocabularySkillSession({ entries, date, onComplete, onProgress, 
     setSentenceGrading(true)
     setSentenceError(false)
     try {
-      if (!keys)
-        return
       const resp = await apiFetch(`/api/daily-review/grade-sentence`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           hanzi: current.word,
           meaning: current.meaning,
-          openrouter_api_key: keys.openrouterApiKey,
           user_sentence: sentence,
         }),
       })

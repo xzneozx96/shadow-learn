@@ -22,8 +22,8 @@ import { makeRenderStudySessionTool } from '@/features/agent/lib/tools/render/re
 import { renderVocabCardTool } from '@/features/agent/lib/tools/render/renderVocabCard'
 import { toolSearchTool } from './system/ToolSearchTool'
 
-// openrouterApiKey and uiLanguage are bound here (partial application for renderStudySession)
-export function getAllBaseTools(openrouterApiKey: string, uiLanguage: string = 'en'): AgentTool[] {
+// uiLanguage is bound here (partial application for renderStudySession)
+export function getAllBaseTools(uiLanguage: string = 'en'): AgentTool[] {
   return [
     toolSearchTool, // ALWAYS first - never deferred
     getStudyContextTool,
@@ -37,7 +37,7 @@ export function getAllBaseTools(openrouterApiKey: string, uiLanguage: string = '
     updateSrItemTool,
     logMistakeTool,
     updateLearnerProfileTool,
-    makeRenderStudySessionTool(openrouterApiKey, uiLanguage),
+    makeRenderStudySessionTool(uiLanguage),
     renderProgressChartTool,
     renderVocabCardTool,
     navigateToSegmentTool,
@@ -50,17 +50,16 @@ export function getAllBaseTools(openrouterApiKey: string, uiLanguage: string = '
 }
 
 // NEW: Get deferred tool names for system prompt
-export function getDeferredToolNames(openrouterApiKey: string, uiLanguage: string = 'en'): string[] {
-  return getAllBaseTools(openrouterApiKey, uiLanguage)
+export function getDeferredToolNames(uiLanguage: string = 'en'): string[] {
+  return getAllBaseTools(uiLanguage)
     .filter(tool => tool.isEnabled() && tool.isDeferred())
     .map(tool => tool.name)
 }
 
 export function getActiveToolPool(
-  openrouterApiKey: string,
   opts?: { uiLanguage?: string, includeDeferred?: boolean },
 ): AgentTool[] {
-  return getAllBaseTools(openrouterApiKey, opts?.uiLanguage ?? 'en').filter((tool) => {
+  return getAllBaseTools(opts?.uiLanguage ?? 'en').filter((tool) => {
     if (!tool.isEnabled())
       return false
     if (tool.isDeferred() && !opts?.includeDeferred)
@@ -88,8 +87,7 @@ const GLOBAL_TOOL_NAMES = new Set([
 ])
 
 export function getGlobalToolPool(): AgentTool[] {
-  // Global tools don't need openrouterApiKey (no render_study_session)
-  return getAllBaseTools('').filter(tool =>
+  return getAllBaseTools().filter(tool =>
     GLOBAL_TOOL_NAMES.has(tool.name) && tool.isEnabled(),
   )
 }
@@ -99,26 +97,25 @@ const TIP_TOOL_NAMES = new Set<string>([
   // Future product decision can populate.
 ])
 
-export function getTipToolPool(openrouterApiKey: string, uiLanguage: string = 'en'): AgentTool[] {
+export function getTipToolPool(uiLanguage: string = 'en'): AgentTool[] {
   if (TIP_TOOL_NAMES.size === 0)
     return []
-  return getAllBaseTools(openrouterApiKey, uiLanguage).filter(
+  return getAllBaseTools(uiLanguage).filter(
     t => TIP_TOOL_NAMES.has(t.name) && t.isEnabled(),
   )
 }
 
 export function getToolPoolForSurface(
   surface: 'lesson' | 'global' | 'tip',
-  openrouterApiKey: string,
   opts?: { uiLanguage?: string, includeDeferred?: boolean },
 ): AgentTool[] {
   switch (surface) {
     case 'lesson':
-      return getActiveToolPool(openrouterApiKey, opts)
+      return getActiveToolPool(opts)
     case 'global':
       return getGlobalToolPool()
     case 'tip':
-      return getTipToolPool(openrouterApiKey, opts?.uiLanguage)
+      return getTipToolPool(opts?.uiLanguage)
   }
 }
 

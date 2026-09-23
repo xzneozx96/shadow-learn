@@ -91,7 +91,6 @@ export async function compact(
   db: ShadowLearnDB,
   threadId: string,
   messages: UIMessage[],
-  apiKey: string,
   locale: string,
 ): Promise<boolean> {
   const tailStart = selectTailStart(messages)
@@ -107,7 +106,6 @@ export async function compact(
     body: JSON.stringify({
       messages: older.map((m: any) => ({ role: m.role, parts: m.parts })),
       template: TUTOR_SUMMARY_TEMPLATE,
-      openrouter_api_key: apiKey || null,
       locale,
     }),
   })
@@ -157,7 +155,6 @@ export async function maybeCompact(
   db: ShadowLearnDB,
   threadId: string,
   messages: UIMessage[],
-  apiKey: string,
   locale: string,
   tokens?: number,
 ): Promise<void> {
@@ -178,7 +175,7 @@ export async function maybeCompact(
     const previous = await getLatestSummary(db, threadId)
     if (previous && previous.coversThroughMessageId === messages[selectTailStart(messages) - 1]?.id)
       return
-    await compact(db, threadId, messages, apiKey, locale)
+    await compact(db, threadId, messages, locale)
   }
   catch (e) {
     console.warn('[maybeCompact] compaction failed', e)

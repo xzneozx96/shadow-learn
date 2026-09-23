@@ -26,7 +26,7 @@ import { VideoPanel } from './VideoPanel'
 function LessonViewContent() {
   const { id } = useParams<{ id: string }>()
   const { t } = useI18n()
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const { player } = usePlayer()
   const { updateLesson } = useLessons()
   const { meta, segments, loading, error, updateMeta } = useLesson(db, id)
@@ -279,8 +279,6 @@ function LessonViewContent() {
                 <ShadowingPanel
                   segments={shadowingMode.segments}
                   mode={shadowingMode.mode}
-                  azureKey={keys?.azureSpeechKey ?? ''}
-                  azureRegion={keys?.azureSpeechRegion ?? ''}
                   onExit={handleShadowingExit}
                   lesson={meta}
                   getBest={getBest}

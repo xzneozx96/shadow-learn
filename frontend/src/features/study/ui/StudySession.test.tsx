@@ -44,7 +44,7 @@ vi.mock('@/features/study/application/useQuizGeneration', () => ({
 }))
 
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: null, keys: null }),
+  useAuth: () => ({ db: null }),
 }))
 
 vi.mock('@/shared/hooks/useTTS', () => ({

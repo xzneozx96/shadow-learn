@@ -22,11 +22,11 @@ interface Props {
 }
 
 export function ListeningSkillSession({ entries, date, onComplete, onProgress, onBack, embedded }: Props) {
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
   const sourceLanguage = entries[0]?.sourceLanguage ?? 'zh-CN'
-  const { playTTS, loadingText } = useTTS(db, keys, sourceLanguage)
+  const { playTTS, loadingText } = useTTS(db, sourceLanguage)
   const caps = getLanguageCaps(sourceLanguage)
 
   const entryIds = new Set(entries.map(e => e.id))

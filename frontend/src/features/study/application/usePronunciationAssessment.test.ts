@@ -2,10 +2,6 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePronunciationAssessment } from '@/features/study/application/usePronunciationAssessment'
 
-vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ keys: { azureSpeechKey: 'az-key', azureSpeechRegion: 'eastus' } }),
-}))
-
 const mockBlob = new Blob(['audio'], { type: 'audio/webm' })
 const mockResult = {
   overall: { accuracy: 85, fluency: 80, completeness: 90, prosody: 75 },
@@ -57,7 +53,7 @@ describe('usePronunciationAssessment', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('sends correct FormData fields', async () => {
+  it('sends the recording and text without any provider key field', async () => {
     const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(mockResult) })
     vi.stubGlobal('fetch', mockFetch)
 
@@ -69,9 +65,8 @@ describe('usePronunciationAssessment', () => {
     const formData: FormData = mockFetch.mock.calls[0][1].body
     expect(formData.get('reference_text')).toBe('你好吗')
     expect(formData.get('language')).toBe('zh-CN')
-    expect(formData.get('azure_key')).toBe('az-key')
-    expect(formData.get('azure_region')).toBe('eastus')
     expect(formData.get('audio')).toBeInstanceOf(Blob)
+    expect([...formData.keys()].sort()).toEqual(['audio', 'language', 'reference_text'])
   })
 
   it('sets error on non-ok response', async () => {

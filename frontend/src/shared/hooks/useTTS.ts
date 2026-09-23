@@ -1,13 +1,8 @@
 import type { ShadowLearnDB } from '@/db'
-import type { DecryptedKeys } from '@/shared/types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { getTTSCache, saveTTSCache } from '@/db'
-import { apiFetch } from '@/shared/lib/api'
-import { getAppConfig } from '@/shared/lib/config'
-
-// Sentinel: undefined = not yet fetched, string = resolved provider name
-type ProviderState = string | null
+import { apiFetch, responseError } from '@/shared/lib/api'
 
 interface UseTTSReturn {
   playTTS: (text: string) => Promise<void>
@@ -16,17 +11,13 @@ interface UseTTSReturn {
 
 export function useTTS(
   db: ShadowLearnDB | null,
-  keys: DecryptedKeys | null,
   language: string = 'zh-CN',
   voiceId?: string,
 ): UseTTSReturn {
   const [loadingText, setLoadingText] = useState<string | null>(null)
-  // providerRef always holds the latest value — avoids stale closure in playTTS
-  const providerRef = useRef<ProviderState>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const urlRef = useRef<string | null>(null)
   const dbRef = useRef(db)
-  const keysRef = useRef(keys)
   const languageRef = useRef(language)
   const voiceIdRef = useRef(voiceId)
 
@@ -35,32 +26,15 @@ export function useTTS(
     dbRef.current = db
   }, [db])
   useEffect(() => {
-    keysRef.current = keys
-  }, [keys])
-  useEffect(() => {
     languageRef.current = language
   }, [language])
   useEffect(() => {
     voiceIdRef.current = voiceId
   }, [voiceId])
 
-  // Fetch the active provider once on mount
-  useEffect(() => {
-    getAppConfig().then((cfg) => {
-      providerRef.current = cfg.ttsProvider
-    })
-  }, [])
-
   const playTTS = useCallback(async (text: string) => {
     if (!text)
       return
-
-    // No-op while provider is still loading — use ref for current value
-    const currentProvider = providerRef.current
-    if (currentProvider === null)
-      return
-
-    const currentKeys = keysRef.current
 
     // Stop any currently playing audio
     if (audioRef.current) {
@@ -85,16 +59,10 @@ export function useTTS(
       }
 
       if (!blob) {
-        // Build request body based on active provider
         const body: Record<string, string> = { text, source_language: currentLanguage }
-        if (currentProvider === 'azure') {
-          body.azure_speech_key = currentKeys?.azureSpeechKey ?? ''
-          body.azure_speech_region = currentKeys?.azureSpeechRegion ?? ''
-        }
         if (voiceIdRef.current) {
           body.minimax_voice_id = voiceIdRef.current
         }
-        // minimax key is backend-only (env var), not sent from client
 
         const response = await apiFetch(`/api/tts`, {
           method: 'POST',
@@ -103,7 +71,7 @@ export function useTTS(
         })
 
         if (!response.ok) {
-          throw new Error(`TTS failed: ${response.statusText}`)
+          throw await responseError(response, `TTS failed: ${response.statusText}`)
         }
 
         blob = await response.blob()

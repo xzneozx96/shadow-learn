@@ -1,6 +1,5 @@
 import type { GeneratedSituation } from '../types'
 import { useState } from 'react'
-import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { apiFetch } from '@/shared/lib/api'
 import { Button } from '@/shared/ui/button'
@@ -14,19 +13,13 @@ export interface CustomSituationInputProps {
 }
 
 export function CustomSituationInput({ language, level, personaId, onGenerated, onCancel }: CustomSituationInputProps) {
-  const { keys } = useAuth()
   const { t, locale } = useI18n()
-  const hasGoogleKey = !!(keys?.googleRealtimeKey)
 
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleGenerate() {
-    if (!hasGoogleKey) {
-      setError(t('auth.error.googleRequired'))
-      return
-    }
     if (text.trim().length < 10) {
       setError(t('speak.customScene.minLength'))
       return
@@ -41,7 +34,6 @@ export function CustomSituationInput({ language, level, personaId, onGenerated, 
           user_text: text.trim(),
           language,
           level,
-          google_key: keys.googleRealtimeKey,
           persona_id: personaId,
           interface_language: locale,
         }),

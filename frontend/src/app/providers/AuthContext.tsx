@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import type { ShadowLearnDB } from '@/db'
-import type { DecryptedKeys } from '@/shared/types'
 import {
   createContext,
   use,
@@ -9,16 +8,8 @@ import {
   useState,
 
 } from 'react'
-import {
-  deleteCryptoData,
-  getCryptoData,
-  initDB,
-  saveCryptoData,
-
-} from '@/db'
+import { initDB } from '@/db'
 import { apiFetch, clearTokens, hasRefreshToken, onSessionLost, setTokens } from '@/shared/lib/api'
-import { decryptKeys, encryptKeys } from '@/shared/lib/crypto'
-import { captureAuthEvent } from '@/shared/lib/posthog-events'
 
 interface Session {
   userId: string
@@ -28,16 +19,8 @@ interface Session {
 interface AuthState {
   session: Session | null | undefined // undefined = loading
   sessionCheckFailed: boolean
-  isFirstSetup: boolean | null // null = loading
-  isUnlocked: boolean
-  keys: DecryptedKeys | null
   db: ShadowLearnDB | null
   trialMode: boolean
-  unlock: (pin: string) => Promise<void>
-  setup: (keys: DecryptedKeys, pin: string) => Promise<void>
-  resetKeys: () => Promise<void>
-  lock: () => void
-  startTrial: () => void
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -69,9 +52,6 @@ async function fetchSession(): Promise<Session | null> {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [db, setDb] = useState<ShadowLearnDB | null>(null)
-  const [isFirstSetup, setIsFirstSetup] = useState<boolean | null>(null)
-  const [isUnlocked, setIsUnlocked] = useState(false)
-  const [keys, setKeys] = useState<DecryptedKeys | null>(null)
   const [trialMode, setTrialMode] = useState<boolean>(
     () => sessionStorage.getItem(TRIAL_SESSION_KEY) === 'trial',
   )
@@ -80,27 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
   const [sessionCheckFailed, setSessionCheckFailed] = useState(false)
 
-  const lock = useCallback(() => {
-    setKeys(null)
-    setIsUnlocked(false)
-  }, [])
-
   useEffect(() => {
-    onSessionLost(() => {
-      setSession(null)
-      lock()
-    })
+    onSessionLost(() => setSession(null))
     if (hasRefreshToken())
       fetchSession().then(setSession, () => setSessionCheckFailed(true))
-  }, [lock])
+  }, [])
 
   useEffect(() => {
     let disposed = false
     let current: ShadowLearnDB | null = null
-    const connect = async (isReconnect = false) => {
+    const connect = async () => {
       const database = await initDB(() => {
         if (!disposed)
-          connect(true)
+          connect()
       })
       if (disposed) {
         database.close()
@@ -108,11 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       current = database
       setDb(database)
-      if (!isReconnect) {
-        const cryptoData = await getCryptoData(database)
-        if (!disposed)
-          setIsFirstSetup(!cryptoData)
-      }
     }
     connect()
     return () => {
@@ -120,54 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       current?.close()
     }
   }, [])
-
-  const startTrial = useCallback(() => {
-    sessionStorage.setItem(TRIAL_SESSION_KEY, 'trial')
-    window.history.replaceState({}, '', '/')
-    setTrialMode(true)
-    setIsUnlocked(true)
-    captureAuthEvent('trial_started')
-  }, [])
-
-  const setup = useCallback(
-    async (newKeys: DecryptedKeys, pin: string) => {
-      if (!db)
-        throw new Error('Database not initialized')
-      const encrypted = await encryptKeys(newKeys, pin)
-      await saveCryptoData(db, encrypted)
-      sessionStorage.removeItem(TRIAL_SESSION_KEY)
-      setKeys(newKeys)
-      setIsUnlocked(true)
-      setIsFirstSetup(false)
-      setTrialMode(false)
-      captureAuthEvent('app_setup_complete')
-    },
-    [db],
-  )
-
-  const unlock = useCallback(
-    async (pin: string) => {
-      if (!db)
-        throw new Error('Database not initialized')
-      const cryptoData = await getCryptoData(db)
-      if (!cryptoData)
-        throw new Error('No encrypted keys found')
-      const decrypted = await decryptKeys(cryptoData, pin)
-      setKeys(decrypted)
-      setIsUnlocked(true)
-      captureAuthEvent('app_unlocked')
-    },
-    [db],
-  )
-
-  const resetKeys = useCallback(async () => {
-    if (!db)
-      throw new Error('Database not initialized')
-    await deleteCryptoData(db)
-    setKeys(null)
-    setIsUnlocked(false)
-    setIsFirstSetup(true)
-  }, [db])
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await apiFetch('/api/auth/login', {
@@ -201,8 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem(TRIAL_SESSION_KEY)
     setTrialMode(false)
     setSession(null)
-    lock()
-  }, [lock])
+  }, [])
 
   const logout = useCallback(async () => {
     await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
@@ -235,16 +153,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         session,
         sessionCheckFailed,
-        isFirstSetup,
-        isUnlocked,
-        keys,
         db,
         trialMode,
-        unlock,
-        setup,
-        resetKeys,
-        lock,
-        startTrial,
         login,
         signup,
         logout,

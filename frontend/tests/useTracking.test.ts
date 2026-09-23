@@ -34,7 +34,7 @@ describe('useTracking', () => {
     localStorage.clear()
     globalThis.indexedDB = new IDBFactory()
     db = await initDB()
-    vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+    vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
   it('buffers SM-2 on first logExerciseResult call', async () => {
@@ -141,7 +141,7 @@ describe('useTracking', () => {
   })
 
   it('does nothing when db is null', async () => {
-    vi.mocked(useAuth).mockReturnValue({ db: null, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+    vi.mocked(useAuth).mockReturnValue({ db: null } as ReturnType<typeof useAuth>)
     const { result } = renderHook(() => useTracking())
     // Should not throw
     await expect(result.current.logExerciseResult({
@@ -183,7 +183,7 @@ describe('useTracking', () => {
     beforeEach(async () => {
       globalThis.indexedDB = new IDBFactory()
       db = await initDB()
-      vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+      vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
     })
 
     it('increments totalSessions from 0 to 1', async () => {
@@ -211,7 +211,7 @@ describe('useTracking', () => {
     })
 
     it('does nothing when db is null', async () => {
-      vi.mocked(useAuth).mockReturnValue({ db: null, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+      vi.mocked(useAuth).mockReturnValue({ db: null } as ReturnType<typeof useAuth>)
       const { result } = renderHook(() => useTracking())
       // Should not throw
       await expect(result.current.logSessionComplete()).resolves.toBeUndefined()
@@ -248,7 +248,7 @@ describe('exercise-type → skill routing', () => {
   beforeEach(async () => {
     globalThis.indexedDB = new IDBFactory()
     db = await initDB()
-    vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+    vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
   for (const { exerciseType, skill } of EXERCISE_CASES) {
@@ -308,7 +308,7 @@ describe('score thresholds', () => {
   beforeEach(async () => {
     globalThis.indexedDB = new IDBFactory()
     db = await initDB()
-    vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+    vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
   it('score >= 60 counts as correct', async () => {
@@ -350,7 +350,7 @@ describe('mistakes-db per exercise type', () => {
   beforeEach(async () => {
     globalThis.indexedDB = new IDBFactory()
     db = await initDB()
-    vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+    vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
   it('accumulates frequency across repeated wrong answers', async () => {
@@ -405,7 +405,7 @@ describe('mistake wiring — end-to-end contract', () => {
   beforeEach(async () => {
     globalThis.indexedDB = new IDBFactory()
     db = await initDB()
-    vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+    vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
   it('dictation wrong answer: userAnswer and correctAnswer stored in mistakes-db', async () => {

@@ -13,7 +13,7 @@ async function executeToolSearch(
   query: string,
   maxResults: number = 5,
 ): Promise<{ name: string, description: string, parameters: object }[]> {
-  const allTools = getAllBaseTools('')
+  const allTools = getAllBaseTools()
   const deferredTools = allTools.filter(t => t.isDeferred())
 
   // Parse query
@@ -182,14 +182,14 @@ describe('searchDeferredTools', () => {
 
 describe('deferred tools integration', () => {
   it('tool_search is NOT marked deferred', () => {
-    const allTools = getAllBaseTools('test-key')
+    const allTools = getAllBaseTools()
     const toolSearchTool = allTools.find(t => t.name === 'tool_search')
     expect(toolSearchTool).toBeDefined()
     expect(toolSearchTool?.isDeferred()).toBe(false)
   })
 
   it('getDeferredToolNames returns only deferred tool names', () => {
-    const deferredNames = getDeferredToolNames('test-key')
+    const deferredNames = getDeferredToolNames()
     expect(deferredNames).toContain('render_study_session')
     expect(deferredNames).toContain('render_progress_chart')
     expect(deferredNames).toContain('render_vocab_card')
@@ -201,8 +201,8 @@ describe('deferred tools integration', () => {
   })
 
   it('getActiveToolPool excludes deferred tools by default', () => {
-    const activePool = getActiveToolPool('test-key')
-    const deferredTools = getDeferredToolNames('test-key')
+    const activePool = getActiveToolPool()
+    const deferredTools = getDeferredToolNames()
 
     // Active pool should NOT contain deferred tools
     for (const name of deferredTools) {
@@ -211,11 +211,11 @@ describe('deferred tools integration', () => {
   })
 
   it('getActiveToolPool includes deferred tools when includeDeferred=true', () => {
-    const fullPool = getActiveToolPool('test-key', { includeDeferred: true })
-    const deferredTools = getDeferredToolNames('test-key')
+    const fullPool = getActiveToolPool({ includeDeferred: true })
+    const deferredTools = getDeferredToolNames()
 
     // Full pool should contain all enabled tools
-    expect(fullPool.length).toBe(getAllBaseTools('test-key').filter(t => t.isEnabled()).length)
+    expect(fullPool.length).toBe(getAllBaseTools().filter(t => t.isEnabled()).length)
 
     // Should include deferred tools
     for (const name of deferredTools) {
@@ -224,14 +224,14 @@ describe('deferred tools integration', () => {
   })
 
   it('render tools are marked deferred', () => {
-    const allTools = getAllBaseTools('test-key')
+    const allTools = getAllBaseTools()
     expect(allTools.find(t => t.name === 'render_study_session')?.isDeferred()).toBe(true)
     expect(allTools.find(t => t.name === 'render_progress_chart')?.isDeferred()).toBe(true)
     expect(allTools.find(t => t.name === 'render_vocab_card')?.isDeferred()).toBe(true)
   })
 
   it('data tools are NOT marked deferred', () => {
-    const allTools = getAllBaseTools('test-key')
+    const allTools = getAllBaseTools()
     expect(allTools.find(t => t.name === 'get_study_context')?.isDeferred()).toBe(false)
     expect(allTools.find(t => t.name === 'get_vocabulary')?.isDeferred()).toBe(false)
     expect(allTools.find(t => t.name === 'save_memory')?.isDeferred()).toBe(false)
@@ -239,7 +239,7 @@ describe('deferred tools integration', () => {
   })
 
   it('action tools are NOT marked deferred', () => {
-    const allTools = getAllBaseTools('test-key')
+    const allTools = getAllBaseTools()
     expect(allTools.find(t => t.name === 'navigate_to_segment')?.isDeferred()).toBe(false)
     expect(allTools.find(t => t.name === 'start_shadowing')?.isDeferred()).toBe(false)
     expect(allTools.find(t => t.name === 'play_segment_audio')?.isDeferred()).toBe(false)
@@ -248,12 +248,12 @@ describe('deferred tools integration', () => {
 
 describe('getAllBaseTools includes tool_search', () => {
   it('includes tool_search as first tool', () => {
-    const tools = getAllBaseTools('test-key')
+    const tools = getAllBaseTools()
     expect(tools[0]?.name).toBe('tool_search')
   })
 
   it('returns 21 tools (20 existing + tool_search)', () => {
-    const tools = getAllBaseTools('test-key')
+    const tools = getAllBaseTools()
     expect(tools).toHaveLength(21)
   })
 })

@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreateLesson } from '@/features/lesson/ui/create/CreateLesson'
-import { getAppConfig } from '@/shared/lib/config'
 
 vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
@@ -31,14 +30,7 @@ vi.mock('@/features/agent/application/GlobalCompanionContext', () => ({
 
 // Minimal auth context mock
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({
-    db: {},
-    keys: {
-      openrouterApiKey: 'or-key',
-      azureSpeechKey: 'az-key',
-      azureSpeechRegion: 'eastus',
-    },
-  }),
+  useAuth: () => ({ db: {} }),
 }))
 vi.mock('@/features/lesson/application/LessonsContext', () => ({
   useLessons: () => ({ updateLesson: vi.fn() }),
@@ -48,9 +40,7 @@ vi.mock('@/db', () => ({
   saveVideo: vi.fn(),
 }))
 
-// Mock getAppConfig so the module-level promise cache doesn't leak between tests
 vi.mock('@/shared/lib/config', () => ({
-  getAppConfig: vi.fn(),
   API_BASE: 'http://test-api',
 }))
 
@@ -62,54 +52,43 @@ function renderCreateLesson() {
   )
 }
 
-describe('createLesson STT key selection', () => {
+function mockJobResponse() {
+  globalThis.fetch = vi.fn().mockResolvedValueOnce({
+    ok: true,
+    json: () => Promise.resolve({ job_id: 'job-1' }),
+  } as Response)
+}
+
+function sentBody() {
+  const [lessonCall] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
+  return JSON.parse(lessonCall[1].body)
+}
+
+describe('createLesson request body', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('sends no stt key when stt_provider is deepgram', async () => {
-    vi.mocked(getAppConfig).mockResolvedValue({ sttProvider: 'deepgram', ttsProvider: 'azure', freeTrialAvailable: false })
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ job_id: 'job-1' }),
-    } as Response)
-
+  it('sends a youtube lesson without any provider key field', async () => {
+    mockJobResponse()
     renderCreateLesson()
 
     await userEvent.type(screen.getByPlaceholderText(/youtube/i), 'https://www.youtube.com/watch?v=abc12345678')
-    await waitFor(() => expect(screen.getByRole('button', { name: /generate lesson/i })).not.toBeDisabled())
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
-    await waitFor(() => {
-      const [lessonCall] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-      const body = JSON.parse(lessonCall[1].body)
-      expect(body.deepgram_api_key).toBeUndefined()
-      expect(body.gladia_api_key).toBeUndefined()
-      expect(body.azure_speech_key).toBeUndefined()
-      expect(body.azure_speech_region).toBeUndefined()
-    })
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    expect(Object.keys(sentBody()).sort()).toEqual(['source', 'source_language', 'translation_languages', 'youtube_url'])
   })
 
-  it('sends azure_speech_key and region when stt_provider is azure', async () => {
-    vi.mocked(getAppConfig).mockResolvedValue({ sttProvider: 'azure', ttsProvider: 'azure', freeTrialAvailable: false })
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ job_id: 'job-2' }),
-    } as Response)
-
+  it('sends a blog lesson without any provider key field', async () => {
+    mockJobResponse()
     renderCreateLesson()
 
-    await userEvent.type(screen.getByPlaceholderText(/youtube/i), 'https://www.youtube.com/watch?v=abc12345678')
-    // Wait for sttProvider to load (canGenerate becomes true) before clicking
-    await waitFor(() => expect(screen.getByRole('button', { name: /generate lesson/i })).not.toBeDisabled())
+    await userEvent.click(screen.getByTestId('create-lesson-blog-tab'))
+    await userEvent.type(screen.getByPlaceholderText('https://...'), 'https://example.com/post')
     await userEvent.click(screen.getByRole('button', { name: /generate lesson/i }))
 
-    await waitFor(() => {
-      const [lessonCall] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-      const body = JSON.parse(lessonCall[1].body)
-      expect(body.azure_speech_key).toBe('az-key')
-      expect(body.azure_speech_region).toBe('eastus')
-      expect(body.deepgram_api_key).toBeUndefined()
-    })
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    expect(Object.keys(sentBody()).sort()).toEqual(['blog_url', 'minimax_voice_id', 'source', 'source_language', 'translation_languages'])
   })
 })

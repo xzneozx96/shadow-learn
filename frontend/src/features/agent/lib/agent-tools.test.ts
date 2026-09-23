@@ -47,7 +47,7 @@ describe('agent-tools executors', () => {
       const result = await executeRenderStudySession(mockDb, {
         itemIds: ['vocab-w1', 'vocab-w2'],
         exerciseTypes: ['writing'],
-      }, 'test-key') as any
+      }) as any
 
       expect(result.type).toBe('study_session')
       expect(result.props.questions).toHaveLength(2)
@@ -70,7 +70,7 @@ describe('agent-tools executors', () => {
       const result = await executeRenderStudySession(mockDb, {
         itemIds: ['vocab-t1', 'vocab-t2'],
         exerciseTypes: ['translation'],
-      }, 'test-key') as any
+      }) as any
 
       expect(globalThis.fetch).toHaveBeenCalledTimes(2)
       expect(result.type).toBe('study_session')
@@ -94,7 +94,7 @@ describe('agent-tools executors', () => {
       const result = await executeRenderStudySession(mockDb, {
         itemIds: ['vocab-p1', 'vocab-p2'],
         exerciseTypes: ['pronunciation'],
-      }, 'test-key') as any
+      }) as any
 
       expect(globalThis.fetch).toHaveBeenCalledTimes(2)
       expect(result.type).toBe('study_session')
@@ -116,7 +116,7 @@ describe('agent-tools executors', () => {
         itemIds: ['vocab-t1'],
         exerciseTypes: ['translation'],
         sentencesPerWord: 2,
-      }, 'test-key') as any
+      }) as any
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
       expect(body.sentence_count).toBe(2)
@@ -137,7 +137,7 @@ describe('agent-tools executors', () => {
         itemIds: ['vocab-p1'],
         exerciseTypes: ['pronunciation'],
         sentencesPerWord: 2,
-      }, 'test-key') as any
+      }) as any
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
       expect(body.count).toBe(2)
@@ -152,7 +152,7 @@ describe('agent-tools executors', () => {
       const result = await executeRenderStudySession(mockDb, {
         itemIds: ['missing-1'],
         exerciseTypes: ['writing'],
-      }, 'test-key')
+      })
 
       expect(result).toEqual({ error: 'No vocabulary items found.' })
     })
@@ -217,7 +217,7 @@ describe('agent-tools executors', () => {
       const result = await executeRenderStudySession(mockDb, {
         itemIds: ['vocab-c1', 'vocab-c2'],
         exerciseTypes: ['cloze'],
-      }, 'test-key') as any
+      }) as any
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
       expect(body.story_count).toBe(1)
@@ -239,7 +239,7 @@ describe('agent-tools executors', () => {
         itemIds: ['vocab-c1', 'vocab-c2'],
         exerciseTypes: ['cloze'],
         storyCount: 2,
-      }, 'test-key') as any
+      }) as any
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
       expect(body.story_count).toBe(2)
@@ -251,7 +251,7 @@ describe('agent-tools executors', () => {
 })
 
 describe('tool input validation', () => {
-  const schema = makeRenderStudySessionTool('').inputSchema
+  const schema = makeRenderStudySessionTool().inputSchema
 
   it('render_study_session rejects invalid exerciseType', () => {
     const result = schema.safeParse({
@@ -342,7 +342,7 @@ describe('tool input validation', () => {
 
 describe('getActiveToolPool', () => {
   it('includes all expected non-deferred tools', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const names = pool.map(t => t.name)
 
     expect(names).toContain('recall_memory')
@@ -360,7 +360,7 @@ describe('getActiveToolPool', () => {
   })
 
   it('excludes deferred tools by default (render, data, guidance)', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const names = pool.map(t => t.name)
 
     expect(names).not.toContain('render_study_session')
@@ -374,7 +374,7 @@ describe('getActiveToolPool', () => {
   })
 
   it('includes deferred tools when includeDeferred=true', () => {
-    const pool = getActiveToolPool('test-key', { uiLanguage: 'en', includeDeferred: true })
+    const pool = getActiveToolPool({ uiLanguage: 'en', includeDeferred: true })
     const names = pool.map(t => t.name)
 
     expect(names).toContain('render_study_session')
@@ -388,7 +388,7 @@ describe('getActiveToolPool', () => {
   })
 
   it('returns 13 non-deferred tools by default (21 total - 1 disabled - 7 deferred)', () => {
-    expect(getActiveToolPool('test-key')).toHaveLength(13)
+    expect(getActiveToolPool()).toHaveLength(13)
   })
 })
 
@@ -459,7 +459,7 @@ describe('executeGetStudyContext', () => {
   })
 
   it('get_study_context tool definition does not require lessonId', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const tools = getToolDefinitions(pool)
     const def = tools.find((t: any) => t.function.name === 'get_study_context') as any
     expect(def).toBeDefined()
