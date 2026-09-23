@@ -18,7 +18,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -703,13 +703,14 @@ async def get_lesson(lesson_id: uuid.UUID, session: Session, user: CurrentUser) 
 class LessonPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)] = ""
     meta: dict[str, Any] = Field(default_factory=dict)
     last_opened_at: datetime | None = None
 
 
 @router.patch("/{lesson_id}")
 async def patch_lesson(lesson_id: uuid.UUID, body: LessonPatch, session: Session, user: CurrentUser) -> dict[str, Any]:
-    """Replace the client-owned ``meta`` exactly as sent, and set ``last_opened_at``."""
+    """Rename the lesson, replace the client-owned ``meta`` exactly as sent, and set ``last_opened_at``."""
     lesson = await owned_lesson(session, lesson_id, user)
     for field in body.model_fields_set:
         setattr(lesson, field, getattr(body, field))

@@ -225,8 +225,33 @@ async def test_patch_replaces_meta_as_sent_and_sets_last_opened_at(client, store
 
 
 async def test_patch_rejects_server_owned_fields(client, stored_user, stranger_lesson):
-    response = await client.patch(f"/api/lessons/{stranger_lesson.id}", json={"title": "x"})
+    response = await client.patch(f"/api/lessons/{stranger_lesson.id}", json={"source": "blog"})
     assert response.status_code == 422
+
+
+@pytest.mark.usefixtures("mocked_youtube")
+async def test_patch_renames_the_lesson_and_keeps_meta(client, stored_user, db_session):
+    lesson_id = (await _youtube_lesson(client))["lesson"]["id"]
+    await client.patch(f"/api/lessons/{lesson_id}", json={"meta": {"tags": ["a"]}})
+
+    renamed = await client.patch(f"/api/lessons/{lesson_id}", json={"title": "  Tones, part 2  "})
+
+    assert renamed.status_code == 200
+    assert renamed.json()["title"] == "Tones, part 2"
+    assert renamed.json()["meta"] == {"tags": ["a"]}
+    assert [item["title"] for item in (await client.get("/api/lessons")).json()] == ["Tones, part 2"]
+    assert (await db_session.get(Lesson, uuid.UUID(lesson_id))).title == "Tones, part 2"
+
+
+@pytest.mark.usefixtures("mocked_youtube")
+@pytest.mark.parametrize("title", ["", "   ", "x" * 201, None])
+async def test_patch_rejects_an_empty_or_oversized_title(client, stored_user, title):
+    lesson_id = (await _youtube_lesson(client))["lesson"]["id"]
+
+    response = await client.patch(f"/api/lessons/{lesson_id}", json={"title": title})
+
+    assert response.status_code == 422
+    assert (await client.get(f"/api/lessons/{lesson_id}")).json()["title"] == "YouTube Video (aaaaaaaaaaa)"
 
 
 async def test_patch_and_delete_of_another_users_lesson_are_404(client, stored_user, stranger_lesson):
