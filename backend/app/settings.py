@@ -84,6 +84,7 @@ class Settings(BaseSettings):
     jwt_refresh_secret: str
     access_token_minutes: int = Field(default=15, gt=0)
     refresh_token_days: int = Field(default=30, gt=0)
+    media_token_minutes: int = Field(default=10, gt=0)
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""

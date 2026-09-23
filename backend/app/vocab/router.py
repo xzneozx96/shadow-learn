@@ -11,6 +11,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.catalog import service as catalog
 from app.keys.models import Provider
 from app.keys.service import ProviderKeys
 from app.settings import settings
@@ -41,6 +42,10 @@ class BreakdownStoryResponse(BaseModel):
 
 @router.post("/breakdown-story", response_model=BreakdownStoryResponse)
 async def generate_breakdown_story(req: BreakdownStoryRequest, keys: ProviderKeys) -> BreakdownStoryResponse:
+    cached = await catalog.get_word_breakdown(req.word)
+    if cached is not None:
+        return BreakdownStoryResponse(**cached)
+
     api_key = (await keys(Provider.openrouter)).value
 
     user_prompt = build_story_prompt(
@@ -89,4 +94,6 @@ async def generate_breakdown_story(req: BreakdownStoryRequest, keys: ProviderKey
     except RetryableError as exc:
         raise HTTPException(502, f"OpenRouter error: {exc}") from exc
 
-    return BreakdownStoryResponse(story=story)
+    response = BreakdownStoryResponse(story=story)
+    await catalog.put_word_breakdown(req.word, response.model_dump())
+    return response

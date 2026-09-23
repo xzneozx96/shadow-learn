@@ -9,6 +9,7 @@ from app.lessons.services.youtube_subtitles import (
     parse_vtt_to_segments,
     pick_manual_subtitle,
 )
+from app.settings import settings
 
 
 def test_pick_manual_subtitle_zh_cn_matches_zh_hans():
@@ -270,9 +271,7 @@ async def test_download_subtitle_vtt_returns_file_content(tmp_path):
         produced = Path(work_dir) / f"sub.{yt_lang}.vtt"
         produced.write_text(_FAKE_VTT)
 
-    with patch(
-        "app.lessons.services.youtube_subtitles._TEMP_DIR", tmp_path
-    ), patch(
+    with patch.object(settings, "temp_dir", str(tmp_path)), patch(
         "app.lessons.services.youtube_subtitles.asyncio.to_thread", side_effect=fake_to_thread
     ):
         content = await download_subtitle_vtt("dQw4w9WgXcQ", "zh-Hans")
@@ -311,9 +310,7 @@ async def test_download_subtitle_vtt_passes_correct_ydl_options(tmp_path):
             lang = captured_opts["subtitleslangs"][0]
             Path(f"{base}{lang}.vtt").write_text(_FAKE_VTT)
 
-    with patch(
-        "app.lessons.services.youtube_subtitles._TEMP_DIR", tmp_path
-    ), patch("app.lessons.services.youtube_subtitles.yt_dlp.YoutubeDL", FakeYDL), patch(
+    with patch.object(settings, "temp_dir", str(tmp_path)), patch("app.lessons.services.youtube_subtitles.yt_dlp.YoutubeDL", FakeYDL), patch(
         "app.lessons.services.youtube_subtitles._ydl_extra_opts", return_value={}
     ):
         await download_subtitle_vtt("vid123", "zh-Hans")
@@ -332,13 +329,12 @@ async def test_download_subtitle_vtt_raises_when_no_file_produced(tmp_path):
     async def fake_to_thread(fn, *args, **kwargs):
         return None
 
-    with patch(
-        "app.lessons.services.youtube_subtitles._TEMP_DIR", tmp_path
-    ), patch(
-        "app.lessons.services.youtube_subtitles.asyncio.to_thread", side_effect=fake_to_thread
+    with (
+        patch.object(settings, "temp_dir", str(tmp_path)),
+        patch("app.lessons.services.youtube_subtitles.asyncio.to_thread", side_effect=fake_to_thread),
+        pytest.raises(FileNotFoundError),
     ):
-        with pytest.raises(FileNotFoundError):
-            await download_subtitle_vtt("vid123", "zh-Hans")
+        await download_subtitle_vtt("vid123", "zh-Hans")
 
 
 @pytest.mark.asyncio
@@ -363,9 +359,7 @@ async def test_download_subtitle_vtt_uses_extra_opts(tmp_path):
             Path(f"{base}{lang}.vtt").write_text(_FAKE_VTT)
 
     extras = {"proxy": "http://proxy:8080", "cookiefile": "/tmp/cookies.txt"}
-    with patch(
-        "app.lessons.services.youtube_subtitles._TEMP_DIR", tmp_path
-    ), patch("app.lessons.services.youtube_subtitles.yt_dlp.YoutubeDL", FakeYDL), patch(
+    with patch.object(settings, "temp_dir", str(tmp_path)), patch("app.lessons.services.youtube_subtitles.yt_dlp.YoutubeDL", FakeYDL), patch(
         "app.lessons.services.youtube_subtitles._ydl_extra_opts", return_value=extras
     ):
         await download_subtitle_vtt("vid123", "en")

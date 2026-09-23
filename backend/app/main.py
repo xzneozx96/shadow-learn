@@ -1,4 +1,5 @@
 import logging
+import re
 from contextlib import AsyncExitStack, asynccontextmanager
 
 from botocore.exceptions import BotoCoreError, ClientError
@@ -19,8 +20,10 @@ from app.config.router import router as config_router
 from app.daily_review.router import router as daily_review_router
 from app.db import engine
 from app.internal.router import router as internal_router
+from app.job_store import mark_interrupted_jobs
 from app.keys.router import router as keys_router
 from app.lessons.router import router as lessons_router
+from app.media.router import router as media_router
 from app.pageindex_tool.router import router as pageindex_tool_router
 from app.pronunciation.router import router as pronunciation_router
 from app.quiz.router import router as quiz_router
@@ -41,6 +44,22 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
+_MEDIA_TOKEN = re.compile(r"([?&]token=)[^&\s]+")
+
+
+class _RedactMediaTokens(logging.Filter):
+    """Keep ``?token=`` media tickets out of the access log. The path is the third access-log argument."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if isinstance(args, tuple) and len(args) > 2 and isinstance(args[2], str):
+            record.args = (*args[:2], _MEDIA_TOKEN.sub(r"\1<redacted>", args[2]), *args[3:])
+        return True
+
+
+logging.getLogger("uvicorn.access").addFilter(_RedactMediaTokens())
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.tts_provider = get_tts_provider(settings)
@@ -50,6 +69,7 @@ async def lifespan(app: FastAPI):
     async with AsyncExitStack() as stack:
         app.state.s3 = await stack.enter_async_context(create_s3_client(settings))
         await ensure_bucket(app.state.s3, settings.s3_bucket)
+        await mark_interrupted_jobs()
         yield
     await engine.dispose()
 
@@ -78,6 +98,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(config_router)
 app.include_router(internal_router)
+app.include_router(media_router)
 
 for router in (
     users_router,

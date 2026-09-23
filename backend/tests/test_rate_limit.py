@@ -7,7 +7,7 @@ from app.keys.usage import RateLimiter
 
 
 @pytest.fixture
-def minimax_tts(mock_tts_provider, monkeypatch):
+def minimax_tts(mock_tts_provider, monkeypatch, app_s3, db_session):
     from app.main import app
 
     mock_tts_provider.synthesize = AsyncMock(return_value=b"audio")

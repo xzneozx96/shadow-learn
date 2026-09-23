@@ -1,13 +1,15 @@
 import io
+import uuid
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-import app.job_store as jobs_module
+from app.job_store import complete_job, get_job, register_job
 from app.main import app
 
-pytestmark = pytest.mark.usefixtures("stored_user", "provider_env")
+pytestmark = pytest.mark.usefixtures("stored_user", "provider_env", "app_s3")
 
 
 @pytest.fixture(autouse=True)
@@ -18,10 +20,9 @@ def speech_providers():
 
 
 @pytest.fixture(autouse=True)
-def clear_jobs():
-    jobs_module.jobs.clear()
-    yield
-    jobs_module.jobs.clear()
+def start_upload():
+    with patch("app.lessons.router._start_upload") as start:
+        yield start
 
 
 @pytest.fixture(autouse=True)
@@ -86,7 +87,7 @@ async def test_generate_lesson_youtube_returns_job_id(signed_in_user):
     assert "job_id" in data
     assert isinstance(data["job_id"], str)
     assert len(data["job_id"]) > 0
-    assert jobs_module.jobs[data["job_id"]].user_id == str(signed_in_user.id)
+    assert (await get_job(data["job_id"])).user_id == signed_in_user.id
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -123,7 +124,7 @@ async def test_generate_lesson_hands_the_server_keys_to_the_pipeline():
                 },
             )
     assert response.status_code == 200
-    *_, openrouter_key, stt_keys = pipeline.call_args.args
+    *_, openrouter_key, stt_keys, _user_id, _s3 = pipeline.call_args.args
     assert openrouter_key == "env-openrouter-key"
     assert stt_keys == {"azure_speech_key": "env-azure-key", "azure_speech_region": "eastus"}
 
@@ -142,7 +143,8 @@ async def test_youtube_lesson_starts_without_an_azure_key_because_subtitles_may_
                 json={"source": "youtube", "youtube_url": "https://www.youtube.com/watch?v=abc123", "translation_languages": ["en"]},
             )
     assert response.status_code == 200
-    assert pipeline.call_args.args[-1] == {}
+    *_, stt_keys, _user_id, _s3 = pipeline.call_args.args
+    assert stt_keys == {}
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -179,7 +181,7 @@ async def test_blog_lesson_resolves_azure_once_for_tts_and_stt(mock_tts_provider
                 json={"source": "blog", "blog_text": "你好世界", "translation_languages": ["en"]},
             )
     assert response.status_code == 200
-    *_, tts_keys, stt_keys = pipeline.call_args.args
+    *_, tts_keys, stt_keys, _user_id, _s3 = pipeline.call_args.args
     assert tts_keys["azure_speech_key"] == stt_keys["azure_speech_key"] == "env-azure-key"
     azure_rows = await db_session.scalar(
         select(func.count()).select_from(ProviderUsage).where(ProviderUsage.provider == Provider.azure_speech)
@@ -226,46 +228,22 @@ async def test_generate_lesson_upload_rejects_key_form_fields():
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_get_video_serves_and_deletes_file(tmp_path):
-    """GET /api/lessons/video/{filename} streams the file and deletes it."""
-    import app.lessons.router as lessons_module
-
-    video_file = tmp_path / "test.mp4"
-    video_file.write_bytes(b"fake video content")
-
-    original_temp_dir = lessons_module._TEMP_DIR
-    lessons_module._TEMP_DIR = tmp_path
-    try:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/lessons/video/test.mp4")
-        assert response.status_code == 200
-        assert response.content == b"fake video content"
-        assert not video_file.exists()
-    finally:
-        lessons_module._TEMP_DIR = original_temp_dir
-
-
-@pytest.mark.asyncio(loop_scope="session")
-async def test_get_video_returns_404_for_missing_file():
-    """GET /api/lessons/video/{filename} returns 404 when file is not found."""
+@pytest.mark.parametrize("path", ["/api/lessons/video/test.mp4", "/api/lessons/audio/test.mp3"])
+async def test_stream_then_delete_endpoints_are_gone(path):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/lessons/video/nonexistent.mp4")
+        response = await client.get(path)
     assert response.status_code == 404
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_shared_pipeline_assembles_text_and_romanization_keys():
+async def test_shared_pipeline_assembles_text_and_romanization_keys(stored_user, app_s3):
     """Assembled segment dicts must use 'text'/'romanization', not 'chinese'/'pinyin'."""
     from unittest.mock import MagicMock
 
-    import app.job_store as jobs_module
-    from app.job_store import Job
     from app.lessons.router import _shared_pipeline
 
-    job_id = "test-field-rename"
-    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)
 
     raw_segments = [{"id": 0, "start": 0.0, "end": 1.0, "text": "Hello world"}]
 
@@ -279,16 +257,15 @@ async def test_shared_pipeline_assembles_text_and_romanization_keys():
     ):
         await _shared_pipeline(
             job_id, raw_segments, ["es"], "key", "title", "upload", None, 60.0,
-            source_language="en",
+            lesson_id=uuid.uuid4(), user_id=stored_user.id, source_language="en",
         )
 
-    result = jobs_module.jobs[job_id].result
+    result = (await get_job(job_id)).result
     seg = result["lesson"]["segments"][0]
     assert "text" in seg, "assembled segment must use 'text' not 'chinese'"
     assert "chinese" not in seg
     assert "romanization" in seg
     assert "pinyin" not in seg
-    del jobs_module.jobs[job_id]
 
 
 # --- _process_youtube_lesson: subtitle vs STT branch ---
@@ -313,13 +290,11 @@ def _make_youtube_request(source_language: str = "zh-CN"):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_youtube_lesson_uses_manual_subtitle_when_available():
+async def test_youtube_lesson_uses_manual_subtitle_when_available(stored_user, app_s3):
     """Manual subtitle in source_language → STT skipped; segments come from VTT."""
-    from app.job_store import Job
     from app.lessons.router import _process_youtube_lesson
 
-    job_id = "job-sub-hit"
-    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)
     stt = AsyncMock()
     stt.transcribe = AsyncMock(return_value=[])
 
@@ -327,10 +302,7 @@ async def test_youtube_lesson_uses_manual_subtitle_when_available():
 
     async def fake_shared(job_id, segments, *args, **kwargs):
         captured_segments["segs"] = segments
-        jobs_module.jobs[job_id].status = "complete"
-        jobs_module.jobs[job_id].result = {"lesson": {"segments": []}}
-
-    from pathlib import Path
+        await complete_job(job_id, {"lesson": {"segments": []}})
 
     with (
         patch(
@@ -348,7 +320,7 @@ async def test_youtube_lesson_uses_manual_subtitle_when_available():
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
         patch("app.lessons.router.extract_audio_from_upload", new=AsyncMock()) as mock_extract,
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {}, stored_user.id, app_s3)
 
     stt.transcribe.assert_not_called()
     mock_extract.assert_not_called()
@@ -357,23 +329,18 @@ async def test_youtube_lesson_uses_manual_subtitle_when_available():
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_youtube_lesson_falls_back_to_stt_when_no_manual_track():
+async def test_youtube_lesson_falls_back_to_stt_when_no_manual_track(stored_user, app_s3):
     """No manual subtitle in source_language → existing STT pipeline runs."""
-    from pathlib import Path
-
-    from app.job_store import Job
     from app.lessons.router import _process_youtube_lesson
 
-    job_id = "job-stt-fallback"
-    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)
     stt = AsyncMock()
     stt.transcribe = AsyncMock(
         return_value=[{"id": 0, "start": 0.0, "end": 1.0, "text": "你好", "word_timings": []}]
     )
 
     async def fake_shared(*args, **kwargs):
-        jobs_module.jobs[job_id].status = "complete"
-        jobs_module.jobs[job_id].result = {}
+        await complete_job(job_id, {})
 
     with (
         patch(
@@ -391,27 +358,23 @@ async def test_youtube_lesson_falls_back_to_stt_when_no_manual_track():
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
         patch("pathlib.Path.unlink"),
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {}, stored_user.id, app_s3)
 
     stt.transcribe.assert_called_once()
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_youtube_lesson_ignores_automatic_captions():
+async def test_youtube_lesson_ignores_automatic_captions(stored_user, app_s3):
     """Auto-generated captions never trigger the subtitle path."""
-    from pathlib import Path
-
-    from app.job_store import Job
     from app.lessons.router import _process_youtube_lesson
 
-    job_id = "job-auto-only"
-    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)
     stt = AsyncMock()
     stt.transcribe = AsyncMock(return_value=[{"id": 0, "start": 0.0, "end": 1.0, "text": "x", "word_timings": []}])
 
     download_sub = AsyncMock()
     async def fake_shared(*args, **kwargs):
-        jobs_module.jobs[job_id].status = "complete"
+        await complete_job(job_id, {})
 
     with (
         # subtitles dict is empty (auto-only would only appear in automatic_captions, which we never read)
@@ -431,27 +394,23 @@ async def test_youtube_lesson_ignores_automatic_captions():
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
         patch("pathlib.Path.unlink"),
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {}, stored_user.id, app_s3)
 
     download_sub.assert_not_called()
     stt.transcribe.assert_called_once()
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_youtube_lesson_falls_back_when_subtitle_download_fails():
+async def test_youtube_lesson_falls_back_when_subtitle_download_fails(stored_user, app_s3):
     """If yt-dlp fails to write the VTT, fall back to STT instead of erroring the job."""
-    from pathlib import Path
-
-    from app.job_store import Job
     from app.lessons.router import _process_youtube_lesson
 
-    job_id = "job-sub-download-fails"
-    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)
     stt = AsyncMock()
     stt.transcribe = AsyncMock(return_value=[{"id": 0, "start": 0.0, "end": 1.0, "text": "x", "word_timings": []}])
 
     async def fake_shared(*args, **kwargs):
-        jobs_module.jobs[job_id].status = "complete"
+        await complete_job(job_id, {})
 
     with (
         patch(
@@ -473,29 +432,24 @@ async def test_youtube_lesson_falls_back_when_subtitle_download_fails():
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
         patch("pathlib.Path.unlink"),
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {}, stored_user.id, app_s3)
 
     stt.transcribe.assert_called_once()
-    assert jobs_module.jobs[job_id].status == "complete"
+    assert (await get_job(job_id)).status == "complete"
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit():
-    """Even on subtitle hit, video must be downloaded for playback (media_filename)."""
-    from pathlib import Path
-
-    from app.job_store import Job
+async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit(stored_user, app_s3, start_upload):
     from app.lessons.router import _process_youtube_lesson
 
-    job_id = "job-video-still-needed"
-    jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
+    job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)
     stt = AsyncMock()
 
     captured_kwargs: dict = {}
 
     async def fake_shared(job_id, segments, *args, **kwargs):
         captured_kwargs.update(kwargs)
-        jobs_module.jobs[job_id].status = "complete"
+        await complete_job(job_id, {})
 
     download_video = AsyncMock(return_value=Path("/tmp/shadowlearn/vid.mp4"))
 
@@ -511,10 +465,11 @@ async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit():
         ),
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {}, stored_user.id, app_s3)
 
     download_video.assert_called_once()
-    assert captured_kwargs.get("media_filename") == "vid.mp4"
+    start_upload.assert_called_once_with(app_s3, stored_user.id, captured_kwargs["lesson_id"], Path("/tmp/shadowlearn/vid.mp4"))
+    assert captured_kwargs["media_upload"] is start_upload.return_value
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -535,7 +490,7 @@ async def test_generate_lesson_upload_returns_job_id(signed_in_user):
     assert response.status_code == 200
     data = response.json()
     assert "job_id" in data
-    assert jobs_module.jobs[data["job_id"]].user_id == str(signed_in_user.id)
+    assert (await get_job(data["job_id"])).user_id == signed_in_user.id
 
 
 @pytest.fixture()
@@ -580,29 +535,35 @@ async def test_generate_blog_lesson_returns_job_id(mock_tts_provider, signed_in_
                 },
             )
     assert response.status_code == 200
-    assert jobs_module.jobs[response.json()["job_id"]].user_id == str(signed_in_user.id)
+    assert (await get_job(response.json()["job_id"])).user_id == signed_in_user.id
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_get_audio_returns_404_for_missing_file():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/lessons/audio/nonexistent.mp3")
-    assert response.status_code == 404
+async def test_failed_subtitle_download_reuses_the_video_and_removes_it(stored_user, app_s3, start_upload, tmp_path):
+    from app.lessons.router import _process_youtube_lesson
 
+    job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)
+    stt = AsyncMock()
+    stt.transcribe = AsyncMock(return_value=[{"id": 0, "start": 0.0, "end": 1.0, "text": "x", "word_timings": []}])
+    video = tmp_path / "vid.mp4"
 
-@pytest.mark.asyncio(loop_scope="session")
-async def test_get_audio_streams_and_deletes_file(tmp_path):
-    from unittest.mock import patch
+    async def download(video_id):
+        video.write_bytes(b"video")
+        return video
 
-    fake_audio = tmp_path / "test.mp3"
-    fake_audio.write_bytes(b"fake-audio-content")
+    download_video = AsyncMock(side_effect=download)
+    with (
+        patch(
+            "app.lessons.router.get_youtube_metadata",
+            new=AsyncMock(return_value={"duration": 30.0, "subtitles": {"zh-Hans": [{"ext": "vtt"}]}}),
+        ),
+        patch("app.lessons.router.download_youtube_video", new=download_video),
+        patch("app.lessons.router.download_subtitle_vtt", new=AsyncMock(side_effect=FileNotFoundError("no vtt"))),
+        patch("app.lessons.router.extract_audio_from_upload", new=AsyncMock(return_value=tmp_path / "vid.mp3")),
+        patch("app.lessons.router._shared_pipeline", new=AsyncMock()),
+    ):
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {}, stored_user.id, app_s3)
 
-    with patch("app.lessons.router._TEMP_DIR", tmp_path):
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/lessons/audio/test.mp3")
-
-    assert response.status_code == 200
-    assert response.content == b"fake-audio-content"
-    assert not fake_audio.exists()  # deleted after streaming
+    download_video.assert_awaited_once()
+    assert start_upload.call_args.args[3] == video
+    assert not video.exists()

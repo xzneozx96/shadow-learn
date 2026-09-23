@@ -1,6 +1,7 @@
 """HTTP route for tips transcript fetching."""
 from __future__ import annotations
 
+import logging
 import re
 
 from fastapi import APIRouter, HTTPException
@@ -9,8 +10,11 @@ from pydantic import BaseModel
 
 import app.tips.services.studio as _studio_svc
 import app.tips.services.transcript as _transcript_svc
-from app.job_store import get_job_for_key, jobs
+from app.catalog import service as catalog
+from app.job_store import get_job, get_job_for_key
 from app.tips.schemas import StudioRequest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/tips", tags=["tips"])
 
@@ -46,28 +50,17 @@ async def get_transcript(video_id: str):
     if not _YOUTUBE_ID.match(video_id):
         raise HTTPException(status_code=400, detail="invalid video_id")
 
-    # Fast path: if a previous STT job for this video already completed and
-    # is still in memory, return its result immediately. Skips ~5s of yt-dlp
-    # metadata + subtitle probing on every repeat request. The frontend then
-    # caches to IDB so future opens are instant even after the in-memory
-    # job is pruned.
-    cached_job_id = _transcript_svc._existing_job_for_video(video_id)
-    if cached_job_id is not None:
-        from app.job_store import jobs as _jobs
-        cached = _jobs.get(cached_job_id)
-        if cached is not None and cached.status == "complete" and cached.result is not None:
-            result = cached.result
-            return TranscriptReady(
-                status="ready",
-                source=result.get("source", "stt"),
-                lang=result.get("lang"),
-                segments=result.get("segments", []),
-            )
-        # Job still processing — frontend can resume polling it.
-        if cached is not None and cached.status == "processing":
+    cached = await catalog.get_tip_transcript(video_id)
+    if cached is not None:
+        return TranscriptReady(status="ready", **cached)
+
+    running_job_id = await _transcript_svc._existing_job_for_video(video_id)
+    if running_job_id is not None:
+        running = await get_job(running_job_id)
+        if running is not None and running.status == "processing":
             return JSONResponse(
                 status_code=202,
-                content=TranscriptPending(status="pending", jobId=cached_job_id).model_dump(),
+                content=TranscriptPending(status="pending", jobId=running_job_id).model_dump(),
             )
 
     try:
@@ -75,6 +68,7 @@ async def get_transcript(video_id: str):
     except Exception:
         # If yt-dlp metadata fails, fall through to the normal subtitle path
         # (which has its own error handling). Don't block on a flaky probe.
+        logger.warning("tips transcript: duration probe failed for video_id=%s", video_id, exc_info=True)
         duration, too_long = 0.0, False
     if too_long:
         return TranscriptTooLong(
@@ -85,6 +79,7 @@ async def get_transcript(video_id: str):
 
     lang, segments = await _transcript_svc.fetch_youtube_subtitles(video_id)
     if segments is not None:
+        await catalog.put_tip_transcript(video_id, {"source": "subtitle", "lang": lang, "segments": segments})
         return TranscriptReady(status="ready", source="subtitle", lang=lang, segments=segments)
 
     job_id = await _transcript_svc.kick_off_stt_job(video_id)
@@ -100,14 +95,14 @@ async def get_transcript(video_id: str):
     )
 
 
-def _studio_response_for_job(job_id: str) -> JSONResponse:
+async def _studio_response_for_job(job_id: str) -> JSONResponse:
     """Translate a backend Job into the wire shape the studio client expects.
 
     Shape mirrors the transcript flow: 200 ``ready`` with data, 202
     ``pending``, 502 ``error``. Job pruning + dedupe keep the source of truth
     on the backend so the client never has to persist jobIds.
     """
-    job = jobs[job_id]
+    job = await get_job(job_id)
     if job.status == "complete":
         return JSONResponse(
             status_code=200,
@@ -139,23 +134,22 @@ async def post_studio(kind: str, req: StudioRequest):
     if kind not in _VALID_KINDS:
         raise HTTPException(status_code=400, detail=f"invalid kind: {kind}")
 
-    job_id = _studio_svc.kick_off_studio_job(
+    job_id = await _studio_svc.kick_off_studio_job(
         kind=kind,  # type: ignore[arg-type]
         video_id=req.video_id,
         transcript=req.transcript,
         locale=req.locale,
     )
-    return _studio_response_for_job(job_id)
+    return await _studio_response_for_job(job_id)
 
 
 @router.get("/studio/{kind}/{video_id}")
 async def get_studio_status(kind: str, video_id: str, locale: str = "en"):
     """Status probe used by the client on mount / reload.
 
-    Looks up any live job for ``(kind, video_id, locale)`` without spending
-    an OpenRouter call. Returns ``ready`` / ``pending`` / ``404 none``. This
-    is the analog of ``GET /api/tips/transcript/{video_id}`` — content-keyed
-    lookup is the resume mechanism, no client-side jobId persistence needed.
+    Looks up any live job for ``(kind, video_id, locale)``, then the studio
+    catalog, without spending an OpenRouter call. Returns ``ready`` /
+    ``pending`` / ``none``.
     """
     if kind not in _VALID_KINDS:
         raise HTTPException(status_code=400, detail=f"invalid kind: {kind}")
@@ -165,10 +159,10 @@ async def get_studio_status(kind: str, video_id: str, locale: str = "en"):
         raise HTTPException(status_code=400, detail="invalid video_id")
 
     key = _studio_svc.studio_job_key(kind, video_id, locale)  # type: ignore[arg-type]
-    job_id = get_job_for_key(key)
-    if job_id is None:
-        # 200 instead of 404 so the absence of an in-flight job doesn't
-        # show as a network error in devtools. The hook treats both the
-        # same; this is purely cosmetic on the client console.
-        return JSONResponse(status_code=200, content={"status": "none"})
-    return _studio_response_for_job(job_id)
+    job_id = await get_job_for_key(key)
+    if job_id is not None:
+        return await _studio_response_for_job(job_id)
+    cached = await catalog.get_tip_studio(video_id, kind, locale)
+    if cached is not None:
+        return JSONResponse(status_code=200, content={"status": "ready", "data": cached})
+    return JSONResponse(status_code=200, content={"status": "none"})

@@ -7,28 +7,58 @@ queued.
 """
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
 
-from app.job_store import _keyed_jobs
-from app.main import app
+from app.catalog import service as catalog
+from app.job_store import (
+    delete_job,
+    fail_job,
+    get_job,
+    get_job_for_key,
+    register_job,
+    register_keyed_job,
+    update_job,
+)
 from app.tips.services.transcript import fetch_youtube_subtitles
+
+pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.usefixtures("db_session")]
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+def within_duration_limit():
+    with patch("app.tips.services.transcript.check_video_duration", new=AsyncMock(return_value=(60.0, False))):
+        yield
 
 
-def test_returns_subtitle_segments_when_manual_track_exists(client: TestClient) -> None:
+@pytest.fixture
+def no_background_runner(monkeypatch):
+    import app.job_store as _js
+
+    monkeypatch.setattr(_js, "_run_with_guard", AsyncMock())
+
+
+@pytest.fixture
+def fake_deepgram(monkeypatch):
+    from app.tips.services import transcript as svc
+
+    class FakeProvider:
+        async def transcribe(self, *a, **kw):
+            return []
+
+    monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: FakeProvider())
+
+
+@pytest.mark.usefixtures("within_duration_limit")
+async def test_returns_subtitle_segments_when_manual_track_exists(client) -> None:
     fake_segments = [
         {"start": 0.0, "end": 2.5, "text": "Hello"},
         {"start": 2.5, "end": 5.0, "text": "World"},
     ]
     with patch("app.tips.services.transcript.fetch_youtube_subtitles", new=AsyncMock(return_value=("en", fake_segments))):
-        resp = client.get("/api/tips/transcript/abc123")
+        resp = await client.get("/api/tips/transcript/abc123")
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ready"
@@ -37,35 +67,37 @@ def test_returns_subtitle_segments_when_manual_track_exists(client: TestClient) 
     assert body["segments"] == fake_segments
 
 
-def test_returns_202_with_job_id_when_stt_falls_back(client: TestClient) -> None:
+@pytest.mark.usefixtures("within_duration_limit")
+async def test_returns_202_with_job_id_when_stt_falls_back(client) -> None:
     with patch("app.tips.services.transcript.fetch_youtube_subtitles", new=AsyncMock(return_value=(None, None))), \
          patch("app.tips.services.transcript.kick_off_stt_job", new=AsyncMock(return_value="job-42")):
-        resp = client.get("/api/tips/transcript/abc123")
+        resp = await client.get("/api/tips/transcript/abc123")
     assert resp.status_code == 202
     body = resp.json()
     assert body["status"] == "pending"
     assert body["jobId"] == "job-42"
 
 
-def test_returns_404_when_neither_subtitle_nor_stt_available(client: TestClient) -> None:
+@pytest.mark.usefixtures("within_duration_limit")
+async def test_returns_404_when_neither_subtitle_nor_stt_available(client) -> None:
     with patch("app.tips.services.transcript.fetch_youtube_subtitles", new=AsyncMock(return_value=(None, None))), \
          patch("app.tips.services.transcript.kick_off_stt_job", new=AsyncMock(return_value=None)):
-        resp = client.get("/api/tips/transcript/abc123")
+        resp = await client.get("/api/tips/transcript/abc123")
     assert resp.status_code == 404
     assert resp.json()["status"] == "unavailable"
 
 
-def test_validates_video_id_format(client: TestClient) -> None:
-    resp = client.get("/api/tips/transcript/" + "x" * 64)
+async def test_validates_video_id_format(client) -> None:
+    resp = await client.get("/api/tips/transcript/" + "x" * 64)
     assert resp.status_code == 400
 
 
-def test_get_transcript_blocks_over_30_min_video(client: TestClient) -> None:
+async def test_get_transcript_blocks_over_30_min_video(client) -> None:
     async def fake_check(_video_id: str) -> tuple[float, bool]:
         return (35 * 60, True)
 
     with patch("app.tips.services.transcript.check_video_duration", new=fake_check):
-        resp = client.get("/api/tips/transcript/abc123")
+        resp = await client.get("/api/tips/transcript/abc123")
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "too_long"
@@ -73,7 +105,6 @@ def test_get_transcript_blocks_over_30_min_video(client: TestClient) -> None:
     assert body["limitSec"] == 30 * 60
 
 
-@pytest.mark.asyncio
 async def test_fetch_subtitles_prefers_detected_language_over_english(monkeypatch):
     """Vietnamese video with EN manual track should still pick VI."""
     fake_meta = {
@@ -104,7 +135,6 @@ async def test_fetch_subtitles_prefers_detected_language_over_english(monkeypatc
     assert segments == [{"start": 0.0, "end": 1.0, "text": "xin chào"}]
 
 
-@pytest.mark.asyncio
 async def test_fetch_subtitles_no_auto_translate(monkeypatch):
     """Vietnamese video with only EN auto-captions should fall through to STT
     rather than serving auto-translated EN."""
@@ -128,125 +158,91 @@ async def test_fetch_subtitles_no_auto_translate(monkeypatch):
     assert segments is None
 
 
-@pytest.mark.asyncio
-async def test_kick_off_stt_job_dedupes_same_video(monkeypatch):
+@pytest.mark.usefixtures("fake_deepgram", "no_background_runner")
+async def test_kick_off_stt_job_dedupes_same_video():
     """Two calls for the same video_id while the first job is still processing
     must return the same job_id and only spawn one background task."""
-    from app.job_store import jobs
     from app.tips.services import transcript as svc
-
-    # Reset module-level state.
-    jobs.clear()
-    _keyed_jobs.clear()
-
-    # Stub DeepgramSTTProvider so we don't try to call out.
-    class FakeProvider:
-        async def transcribe(self, *a, **kw):
-            return []
-    monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: FakeProvider())
-
-    # Block the background _run coroutine from actually executing — we just
-    # care that kick_off_stt_job returns the right job_id and registers it.
-    # Suppress the actual background task — we only care about id minting + dedupe.
-    import app.job_store as _js
-    monkeypatch.setattr(_js.asyncio, "create_task", lambda coro: coro.close() or None)
 
     job_id_1 = await svc.kick_off_stt_job("abc123")
     assert job_id_1 is not None
-    assert _keyed_jobs["tip-stt:abc123"] == job_id_1
+    assert await get_job_for_key("tip-stt:abc123") == job_id_1
 
     job_id_2 = await svc.kick_off_stt_job("abc123")
     assert job_id_2 == job_id_1, "second call must reuse the in-flight job"
-    # Only one entry in jobs[] for this video.
-    assert sum(1 for j in jobs.values() if j is jobs[job_id_1]) == 1
 
 
-@pytest.mark.asyncio
-async def test_kick_off_stt_job_spawns_fresh_after_error(monkeypatch):
+@pytest.mark.usefixtures("fake_deepgram", "no_background_runner")
+async def test_kick_off_stt_job_spawns_fresh_after_error():
     """If the previous job for a video failed, a new call must spawn fresh."""
-    from app.job_store import jobs
     from app.tips.services import transcript as svc
 
-    jobs.clear()
-    _keyed_jobs.clear()
-
-    class FakeProvider:
-        async def transcribe(self, *a, **kw):
-            return []
-    monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: FakeProvider())
-    # Suppress the actual background task — we only care about id minting + dedupe.
-    import app.job_store as _js
-    monkeypatch.setattr(_js.asyncio, "create_task", lambda coro: coro.close() or None)
-
     first = await svc.kick_off_stt_job("abc123")
-    # Simulate the background task erroring out.
-    jobs[first].status = "error"
-    jobs[first].error = "deepgram blew up"
+    await fail_job(first, "deepgram blew up")
 
     second = await svc.kick_off_stt_job("abc123")
     assert second is not None
     assert second != first, "errored job must NOT be reused"
 
 
-@pytest.mark.asyncio
-async def test_kick_off_stt_job_spawns_fresh_after_prune(monkeypatch):
-    """If the stored job_id is no longer in jobs[] (pruned by TTL), spawn fresh."""
-    from app.job_store import jobs
+@pytest.mark.usefixtures("fake_deepgram", "no_background_runner")
+async def test_kick_off_stt_job_spawns_fresh_after_prune():
     from app.tips.services import transcript as svc
 
-    jobs.clear()
-    _keyed_jobs.clear()
-
-    class FakeProvider:
-        async def transcribe(self, *a, **kw):
-            return []
-    monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: FakeProvider())
-    # Suppress the actual background task — we only care about id minting + dedupe.
-    import app.job_store as _js
-    monkeypatch.setattr(_js.asyncio, "create_task", lambda coro: coro.close() or None)
-
     first = await svc.kick_off_stt_job("abc123")
-    # Simulate pruning.
-    del jobs[first]
+    await delete_job(first)
 
     second = await svc.kick_off_stt_job("abc123")
     assert second is not None
     assert second != first
-    # Index cleaned up to point at the new job.
-    assert _keyed_jobs["tip-stt:abc123"] == second
+    assert await get_job_for_key("tip-stt:abc123") == second
 
 
-def test_get_transcript_fast_path_for_completed_job(client, monkeypatch):
-    """If a complete STT job already exists for the video, return its
-    cached result without running any yt-dlp metadata probe."""
-    from app.job_store import Job, jobs
+@pytest.mark.usefixtures("fake_deepgram")
+async def test_stt_job_writes_the_catalog_and_removes_its_temp_files(monkeypatch, tmp_path):
     from app.tips.services import transcript as svc
 
-    jobs.clear()
-    _keyed_jobs.clear()
+    video = tmp_path / "v.mp4"
+    audio = tmp_path / "a.mp3"
+    video.write_bytes(b"v")
+    audio.write_bytes(b"a")
 
-    # Plant a complete job for the video.
-    job_id = "tip-stt-cached"
-    jobs[job_id] = Job(
-        status="complete",
-        step="indexing",
-        result={
-            "status": "ready",
-            "source": "stt",
-            "lang": "vi",
-            "segments": [{"start": 0.0, "end": 1.0, "text": "xin chào"}],
-        },
-        error=None,
+    class OneSegment:
+        async def transcribe(self, *a, **kw):
+            return [{"start": 0.0, "end": 1.0, "text": "hi"}]
+
+    monkeypatch.setattr(svc, "DeepgramSTTProvider", lambda: OneSegment())
+    monkeypatch.setattr(svc, "get_youtube_metadata", AsyncMock(return_value={"language": "en"}))
+    monkeypatch.setattr(svc, "download_youtube_video", AsyncMock(return_value=video))
+    monkeypatch.setattr(svc, "extract_audio_from_upload", AsyncMock(return_value=audio))
+
+    job_id = await svc.kick_off_stt_job("abc123")
+    for _ in range(200):
+        job = await get_job(job_id)
+        if job.status != "processing":
+            break
+        await asyncio.sleep(0.01)
+
+    assert job.status == "complete"
+    assert job.result == {"status": "ready", "source": "stt", "lang": "en", "segments": [{"start": 0.0, "end": 1.0, "text": "hi"}]}
+    assert await catalog.get_tip_transcript("abc123") == {k: v for k, v in job.result.items() if k != "status"}
+    assert not video.exists()
+    assert not audio.exists()
+
+
+async def test_get_transcript_fast_path_reads_the_catalog(client, monkeypatch):
+    from app.tips.services import transcript as svc
+
+    await catalog.put_tip_transcript(
+        "abc123", {"source": "stt", "lang": "vi", "segments": [{"start": 0.0, "end": 1.0, "text": "xin chào"}]}
     )
-    _keyed_jobs["tip-stt:abc123"] = job_id
 
-    # Sabotage yt-dlp — if the fast path doesn't kick in, this will throw.
     def boom(*a, **kw):
         raise AssertionError("fast path failed — yt-dlp was called")
     monkeypatch.setattr(svc, "check_video_duration", boom)
     monkeypatch.setattr(svc, "fetch_youtube_subtitles", boom)
 
-    resp = client.get("/api/tips/transcript/abc123")
+    resp = await client.get("/api/tips/transcript/abc123")
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ready"
@@ -255,30 +251,21 @@ def test_get_transcript_fast_path_for_completed_job(client, monkeypatch):
     assert len(body["segments"]) == 1
 
 
-def test_get_transcript_fast_path_resumes_in_flight_job(client, monkeypatch):
+async def test_get_transcript_fast_path_resumes_in_flight_job(client, monkeypatch):
     """If an STT job is still processing for the video, return 202 with
     the existing jobId — frontend resumes polling."""
-    from app.job_store import Job, jobs
     from app.tips.services import transcript as svc
 
-    jobs.clear()
-    _keyed_jobs.clear()
-
-    job_id = "tip-stt-inflight"
-    jobs[job_id] = Job(
-        status="processing",
-        step="transcription",
-        result=None,
-        error=None,
-    )
-    _keyed_jobs["tip-stt:abc123"] = job_id
+    job_id = await register_job(id_prefix="tip-stt", user_id=None)
+    await update_job(job_id, step="transcription")
+    await register_keyed_job("tip-stt:abc123", job_id)
 
     def boom(*a, **kw):
         raise AssertionError("fast path failed — yt-dlp was called")
     monkeypatch.setattr(svc, "check_video_duration", boom)
     monkeypatch.setattr(svc, "fetch_youtube_subtitles", boom)
 
-    resp = client.get("/api/tips/transcript/abc123")
+    resp = await client.get("/api/tips/transcript/abc123")
     assert resp.status_code == 202
     body = resp.json()
     assert body["status"] == "pending"

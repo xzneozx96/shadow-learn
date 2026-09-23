@@ -6,8 +6,13 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 import app.accounts.models
+import app.catalog.models
+import app.jobs.models
 import app.keys.models
-import app.speak.models  # noqa: F401
+import app.lessons.models
+import app.media.models
+import app.speak.models
+import app.userdata.models  # noqa: F401
 from alembic import context
 from app.db import Base
 from app.settings import settings

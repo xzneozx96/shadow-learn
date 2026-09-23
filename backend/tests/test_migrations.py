@@ -3,7 +3,11 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 
 import app.accounts.models
+import app.catalog.models
+import app.jobs.models
 import app.keys.models
+import app.lessons.models
+import app.media.models
 import app.speak.models
 import app.userdata.models  # noqa: F401
 from app.db import Base, engine

@@ -1,127 +1,100 @@
-import time
+import uuid
+from unittest.mock import AsyncMock
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from sqlalchemy import func, text, update
 
-import app.job_store as jobs_module
-from app.main import app
+import app.background.router as jobs_router
+from app.db import SessionLocal
+from app.job_store import complete_job, fail_job, get_job, register_job, update_job
+from app.jobs.models import JobRow
+
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 @pytest.fixture(autouse=True)
-def clear_jobs():
-    jobs_module.jobs.clear()
-    yield
-    jobs_module.jobs.clear()
+def prune_due(monkeypatch):
+    monkeypatch.setattr(jobs_router, "_next_prune", 0.0)
 
 
-@pytest.mark.asyncio
-async def test_get_job_not_found():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/jobs/nonexistent")
+@pytest.fixture
+def owner(stored_user):
+    return stored_user.id
+
+
+async def test_get_job_not_found(client, db_session):
+    response = await client.get("/api/jobs/nonexistent")
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
-async def test_get_job_processing():
-    from app.job_store import Job
+async def test_get_job_processing(client, owner):
+    job_id = await register_job(id_prefix="lesson", user_id=owner)
+    await update_job(job_id, step="transcription")
 
-    jobs_module.jobs["abc"] = Job(
-        status="processing", step="transcription", result=None, error=None
-    )
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/jobs/abc")
+    response = await client.get(f"/api/jobs/{job_id}")
+
     assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "processing"
-    assert data["step"] == "transcription"
-    assert data["result"] is None
-    assert data["error"] is None
+    assert response.json() == {"status": "processing", "step": "transcription", "result": None, "error": None}
 
 
-@pytest.mark.asyncio
-async def test_get_job_complete():
-    from app.job_store import Job
+async def test_get_job_complete(client, owner):
+    job_id = await register_job(id_prefix="lesson", user_id=owner)
+    await complete_job(job_id, {"lesson": {"title": "Test", "segments": [], "duration": 60.0}})
 
-    result = {"lesson": {"title": "Test", "segments": [], "duration": 60.0}}
-    jobs_module.jobs["xyz"] = Job(
-        status="complete", step="assembling", result=result, error=None
-    )
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/jobs/xyz")
+    response = await client.get(f"/api/jobs/{job_id}")
+
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "complete"
     assert data["result"]["lesson"]["title"] == "Test"
 
 
-@pytest.mark.asyncio
-async def test_get_job_error():
-    from app.job_store import Job
+async def test_get_job_error(client, owner):
+    job_id = await register_job(id_prefix="lesson", user_id=owner)
+    await fail_job(job_id, "API timeout")
 
-    jobs_module.jobs["err"] = Job(
-        status="error", step="transcription", result=None, error="API timeout"
-    )
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/jobs/err")
+    response = await client.get(f"/api/jobs/{job_id}")
+
     assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "error"
-    assert data["error"] == "API timeout"
+    assert (response.json()["status"], response.json()["error"]) == ("error", "API timeout")
 
 
-@pytest.mark.asyncio
-async def test_delete_job(signed_in_user):
-    from app.job_store import Job
+async def test_delete_job(client, owner):
+    job_id = await register_job(id_prefix="lesson", user_id=owner)
 
-    jobs_module.jobs["del"] = Job(
-        status="processing", step="transcription", result=None, error=None, user_id=str(signed_in_user.id)
-    )
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.delete("/api/jobs/del")
+    response = await client.delete(f"/api/jobs/{job_id}")
+
     assert response.status_code == 204
-    assert "del" not in jobs_module.jobs
+    assert await get_job(job_id) is None
 
 
-@pytest.mark.asyncio
-async def test_delete_job_idempotent():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.delete("/api/jobs/nonexistent")
+async def test_delete_job_idempotent(client, db_session):
+    response = await client.delete("/api/jobs/nonexistent")
     assert response.status_code == 204
 
 
-@pytest.mark.asyncio
-async def test_get_job_prunes_expired():
-    from app.job_store import Job
+async def test_get_job_prunes_expired(client, owner):
+    job_id = await register_job(id_prefix="lesson", user_id=owner)
+    await complete_job(job_id, {})
+    async with SessionLocal() as session:
+        await session.execute(
+            update(JobRow).where(JobRow.id == job_id).values(created_at=func.now() - text("interval '2 hours'"))
+        )
+        await session.commit()
 
-    jobs_module.jobs["old"] = Job(
-        status="processing",
-        step="transcription",
-        result=None,
-        error=None,
-        created_at=time.time() - 7200,  # 2 hours ago
-    )
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/jobs/other")
+    response = await client.get("/api/jobs/other")
+
     assert response.status_code == 404
-    assert "old" not in jobs_module.jobs
+    assert await get_job(job_id) is None
 
 
 @pytest.mark.real_auth
-@pytest.mark.asyncio(loop_scope="session")
 async def test_job_is_hidden_from_other_users(client, db_session):
-    from app.job_store import register_job
     from tests.conftest import register_and_login
 
     alice = await register_and_login(client, "alice@example.com")
     bob = await register_and_login(client, "bob@example.com")
-    job_id = register_job(id_prefix="lesson", user_id=alice["id"])
+    job_id = await register_job(id_prefix="lesson", user_id=uuid.UUID(alice["id"]))
 
     as_bob = await client.get(f"/api/jobs/{job_id}", headers={"Authorization": f"Bearer {bob['access_token']}"})
     assert as_bob.status_code == 404
@@ -131,15 +104,23 @@ async def test_job_is_hidden_from_other_users(client, db_session):
     assert as_alice.status_code == 200
 
 
-@pytest.mark.asyncio
-async def test_shared_job_is_readable_but_not_deletable():
-    from app.job_store import register_job
+async def test_shared_job_is_readable_but_not_deletable(client, db_session):
+    job_id = await register_job(id_prefix="tip-studio", user_id=None)
 
-    job_id = register_job(id_prefix="tip-studio", user_id=None)
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        read = await client.get(f"/api/jobs/{job_id}")
-        delete = await client.delete(f"/api/jobs/{job_id}")
+    read = await client.get(f"/api/jobs/{job_id}")
+    delete = await client.delete(f"/api/jobs/{job_id}")
+
     assert read.status_code == 200
     assert delete.status_code == 404
-    assert job_id in jobs_module.jobs
+    assert await get_job(job_id) is not None
+
+
+async def test_polling_prunes_at_most_once_per_interval(client, owner, monkeypatch):
+    prune = AsyncMock()
+    monkeypatch.setattr(jobs_router, "prune_expired_jobs", prune)
+    job_id = await register_job(id_prefix="lesson", user_id=owner)
+
+    for _ in range(5):
+        assert (await client.get(f"/api/jobs/{job_id}")).status_code == 200
+
+    assert prune.await_count == 1

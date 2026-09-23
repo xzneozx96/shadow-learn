@@ -1,23 +1,10 @@
-"""Tips transcript orchestrator.
-
-Tries YouTube manual subtitles first (subtitle-fast path) and falls back to
-async STT transcription when no subtitle track is available.  The two public
-functions are called by the Tips transcript router (Task 7).
-
-  fetch_youtube_subtitles — synchronous subtitle fetch; returns (lang, segments)
-                            or (None, None) on any failure or absence.
-  kick_off_stt_job        — spawns an asyncio background task that downloads the
-                            video, extracts audio, runs STT, and writes the result
-                            into the shared job store; returns the job_id string,
-                            or None if no STT provider is configured.
-"""
-
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-from app.job_store import get_job_for_key, jobs, kick_off_keyed_job
+from app.catalog import service as catalog
+from app.job_store import fail_job, get_job_for_key, kick_off_keyed_job, update_job
 from app.lessons.services.audio import (
     download_youtube_video,
     extract_audio_from_upload,
@@ -148,13 +135,13 @@ def _stt_key(video_id: str) -> str:
     return f"tip-stt:{video_id}"
 
 
-def _existing_job_for_video(video_id: str) -> str | None:
+async def _existing_job_for_video(video_id: str) -> str | None:
     """Return job_id of a still-usable STT job for *video_id*, or None.
 
     Thin shim around :func:`app.job_store.get_job_for_key` that preserves
     the legacy call sites' namespace.
     """
-    return get_job_for_key(_stt_key(video_id))
+    return await get_job_for_key(_stt_key(video_id))
 
 
 async def kick_off_stt_job(video_id: str) -> str | None:
@@ -179,6 +166,7 @@ async def kick_off_stt_job(video_id: str) -> str | None:
         return None
 
     async def _run(job_id: str) -> None:
+        video_path = None
         audio_path = None
         try:
             # Detect video language up-front so STT can target it.
@@ -190,19 +178,18 @@ async def kick_off_stt_job(video_id: str) -> str | None:
                 "ru", "it", "id", "th", "ar", "tr", "pl", "nl",
             } else "en"
 
-            jobs[job_id].step = "video_download"
+            await update_job(job_id, step="video_download")
             video_path = await download_youtube_video(video_id)
 
-            jobs[job_id].step = "audio_extraction"
+            await update_job(job_id, step="audio_extraction")
             audio_path = await extract_audio_from_upload(video_path)
 
-            jobs[job_id].step = "transcription"
+            await update_job(job_id, step="transcription")
             keys: TranscriptionKeys = {}
             segments = await stt_provider.transcribe(audio_path, keys, deepgram_lang)
 
-            jobs[job_id].step = "indexing"
-            result_dict: dict[str, Any] = {
-                "status": "ready",
+            await update_job(job_id, step="indexing")
+            transcript: dict[str, Any] = {
                 "source": "stt",
                 "lang": deepgram_lang,
                 "segments": [
@@ -210,8 +197,8 @@ async def kick_off_stt_job(video_id: str) -> str | None:
                     for s in segments
                 ],
             }
-            jobs[job_id].result = result_dict
-            jobs[job_id].status = "complete"
+            await catalog.put_tip_transcript(video_id, transcript)
+            await update_job(job_id, status="complete", result={"status": "ready", **transcript})
 
         except Exception as exc:
             logger.exception(
@@ -219,14 +206,11 @@ async def kick_off_stt_job(video_id: str) -> str | None:
                 job_id,
                 video_id,
             )
-            jobs[job_id].status = "error"
-            jobs[job_id].error = str(exc)
+            await fail_job(job_id, str(exc))
 
         finally:
-            if audio_path is not None:
-                try:
-                    audio_path.unlink(missing_ok=True)
-                except Exception:  # noqa: BLE001, S110
-                    pass
+            for path in (video_path, audio_path):
+                if path is not None:
+                    path.unlink(missing_ok=True)
 
-    return kick_off_keyed_job(_stt_key(video_id), _run, id_prefix="tip-stt", user_id=None)
+    return await kick_off_keyed_job(_stt_key(video_id), _run, id_prefix="tip-stt", user_id=None)

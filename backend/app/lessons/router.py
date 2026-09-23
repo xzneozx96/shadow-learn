@@ -4,19 +4,34 @@ import asyncio
 import logging
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request, UploadFile
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+from fastapi.responses import Response
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.accounts.deps import CurrentUser
-from app.job_store import jobs, register_job
+from app.accounts.models import User
+from app.db import SessionLocal, get_session
+from app.job_store import complete_job, fail_job, register_job, update_job
 from app.keys.models import Provider
 from app.keys.service import KeyResolver, NoProviderKey, ProviderKeys
+from app.lessons.models import Lesson, LessonSegment
 from app.lessons.services.audio import (
     download_youtube_video,
+    ensure_temp_dir,
     extract_audio_from_upload,
     get_youtube_metadata,
     probe_upload_duration,
@@ -36,6 +51,8 @@ from app.lessons.services.youtube_subtitles import (
     parse_vtt_to_segments,
     pick_manual_subtitle,
 )
+from app.media.models import MediaKind, MediaObject
+from app.media.service import content_type_for, delete_objects, media_url, upload_file
 from app.models import LessonRequest
 from app.settings import settings
 from app.shared.language_config import get_language_config
@@ -50,8 +67,72 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/lessons")
 
-_TEMP_DIR = Path("/tmp/shadowlearn")
+Session = Annotated[AsyncSession, Depends(get_session)]
+
 _CHUNK_SIZE = 1024 * 1024  # 1 MB
+
+
+MediaUpload = asyncio.Task[MediaObject]
+
+
+def _start_upload(s3, user_id: uuid.UUID, lesson_id: uuid.UUID, path: Path) -> MediaUpload:
+    kind = MediaKind.video if content_type_for(path).startswith("video/") else MediaKind.audio
+    return asyncio.create_task(upload_file(s3, user_id=user_id, kind=kind, lesson_id=lesson_id, source_path=path))
+
+
+async def _discard_upload(s3, upload: MediaUpload | None) -> None:
+    if upload is None:
+        return
+    upload.cancel()
+    try:
+        media = await upload
+    except asyncio.CancelledError:
+        return
+    except Exception:
+        logger.warning("[pipeline] media upload failed", exc_info=True)
+        return
+    async with SessionLocal() as session:
+        if await session.get(MediaObject, media.id) is not None:
+            return
+    await delete_objects(s3, [media.object_key])
+
+
+async def _save_lesson(
+    *,
+    lesson_id: uuid.UUID,
+    user_id: uuid.UUID,
+    title: str,
+    source: str,
+    source_url: str | None,
+    duration: float,
+    source_language: str,
+    translation_languages: list[str],
+    segments: list[dict],
+    media_upload: MediaUpload | None,
+) -> MediaObject | None:
+    media = await media_upload if media_upload is not None else None
+    async with SessionLocal() as session:
+        session.add(
+            Lesson(
+                id=lesson_id,
+                user_id=user_id,
+                title=title,
+                source=source,
+                source_url=source_url,
+                duration_s=duration,
+                source_language=source_language,
+                translation_languages=translation_languages,
+            )
+        )
+        await session.flush()
+        session.add_all(
+            LessonSegment(lesson_id=lesson_id, position=i, data=seg, start_s=seg["start"], end_s=seg["end"])
+            for i, seg in enumerate(segments)
+        )
+        if media is not None:
+            session.add(media)
+        await session.commit()
+    return media
 
 
 async def _shared_pipeline(
@@ -63,18 +144,20 @@ async def _shared_pipeline(
     source: str,
     source_url: str | None,
     duration: float,
+    *,
+    lesson_id: uuid.UUID,
+    user_id: uuid.UUID,
     source_language: str = "zh-CN",
-    media_filename: str | None = None,
+    media_upload: MediaUpload | None = None,
 ) -> None:
-    """Background pipeline: romanization → translate + vocab → assemble → mark job complete."""
     t_pipeline = time.monotonic()
     logger.info("[pipeline] shared_pipeline: start segments=%d source=%s", len(segments), source)
 
     if source_language.startswith("zh"):
-        jobs[job_id].step = "normalization"
+        await update_job(job_id, step="normalization")
         segments = [{**seg, "text": normalize_chinese(seg.get("text", ""))} for seg in segments]
 
-    jobs[job_id].step = "romanization"
+    await update_job(job_id, step="romanization")
     t0 = time.monotonic()
     romanizer = get_romanization_provider(source_language)
     enriched_segments = []
@@ -97,7 +180,7 @@ async def _shared_pipeline(
             source_language=source_language, meaning_language=meaning_language,
         )
 
-    jobs[job_id].step = "translation"
+    await update_job(job_id, step="translation")
     t0 = time.monotonic()
     translated_segments, vocab_map = await asyncio.gather(
         translate_segments(
@@ -113,7 +196,7 @@ async def _shared_pipeline(
         len(vocab_map),
     )
 
-    jobs[job_id].step = "assembling"
+    await update_job(job_id, step="assembling")
 
     lesson_segments = []
     for seg in translated_segments:
@@ -128,8 +211,22 @@ async def _shared_pipeline(
             "wordTimings": seg.get("word_timings") or None,
         })
 
+    media = await _save_lesson(
+        lesson_id=lesson_id,
+        user_id=user_id,
+        title=title,
+        source=source,
+        source_url=source_url,
+        duration=duration,
+        source_language=source_language,
+        translation_languages=translation_languages,
+        segments=lesson_segments,
+        media_upload=media_upload,
+    )
+
     result: dict = {
         "lesson": {
+            "id": str(lesson_id),
             "title": title,
             "source": source,
             "source_url": source_url,
@@ -138,15 +235,10 @@ async def _shared_pipeline(
             "translation_languages": translation_languages,
         }
     }
-    if media_filename:
-        if source == "blog":
-            result["audio_url"] = f"/api/lessons/audio/{media_filename}"
-        else:
-            result["video_url"] = f"/api/lessons/video/{media_filename}"
+    if media is not None:
+        result[f"{media.kind}_url"] = media_url(media.id)
 
-    jobs[job_id].status = "complete"
-    jobs[job_id].step = "complete"
-    jobs[job_id].result = result
+    await complete_job(job_id, result)
     logger.info("[pipeline] shared_pipeline: complete in %.1fs total", time.monotonic() - t_pipeline)
 
 
@@ -157,31 +249,35 @@ async def _process_youtube_lesson(
     stt_provider: STTProvider,
     openrouter_key: str,
     stt_keys: TranscriptionKeys,
+    user_id: uuid.UUID,
+    s3,
 ) -> None:
     """Background task: validate duration → (manual subtitle OR STT) → shared pipeline."""
+    lesson_id = uuid.uuid4()
+    upload: MediaUpload | None = None
     video_path: Path | None = None
     audio_path: Path | None = None
     try:
-        jobs[job_id].step = "duration_check"
+        await update_job(job_id, step="duration_check")
         meta = await get_youtube_metadata(video_id)
         duration = meta["duration"]
         if duration > settings.max_video_duration_seconds:
             max_mins = settings.max_video_duration_seconds / 60
             err_msg = f"Video exceeds the {max_mins:.0f}-minute duration limit."
             logger.warning("[pipeline] %s: %s", job_id, err_msg)
-            jobs[job_id].status = "error"
-            jobs[job_id].error = err_msg
+            await fail_job(job_id, err_msg)
             return
 
         yt_lang = pick_manual_subtitle(meta["subtitles"], request.source_language)
         segments: list[dict] | None = None
 
         if yt_lang:
-            jobs[job_id].step = "subtitle_download"
+            await update_job(job_id, step="subtitle_download")
             try:
                 vtt_task = asyncio.create_task(download_subtitle_vtt(video_id, yt_lang))
                 video_task = asyncio.create_task(download_youtube_video(video_id))
                 vtt_body, video_path = await asyncio.gather(vtt_task, video_task)
+                upload = _start_upload(s3, user_id, lesson_id, video_path)
                 segments = parse_vtt_to_segments(vtt_body, request.source_language)
                 if not segments:
                     logger.warning(
@@ -199,18 +295,26 @@ async def _process_youtube_lesson(
                     exc,
                 )
                 segments = None
+                if video_path is None:
+                    try:
+                        video_path = await video_task
+                    except Exception:
+                        logger.warning("[pipeline] youtube video download failed, retrying", exc_info=True)
+                    else:
+                        upload = _start_upload(s3, user_id, lesson_id, video_path)
         else:
             logger.info("[pipeline] youtube subtitle: no manual track, falling back to STT")
 
         if segments is None:
             if video_path is None:
-                jobs[job_id].step = "video_download"
+                await update_job(job_id, step="video_download")
                 video_path = await download_youtube_video(video_id)
+                upload = _start_upload(s3, user_id, lesson_id, video_path)
 
-            jobs[job_id].step = "audio_extraction"
+            await update_job(job_id, step="audio_extraction")
             audio_path = await extract_audio_from_upload(video_path)
 
-            jobs[job_id].step = "transcription"
+            await update_job(job_id, step="transcription")
             segments = await stt_provider.transcribe(audio_path, stt_keys, request.source_language)
             if not segments:
                 raise ValueError("No speech detected in the video. Please try a different video.")
@@ -229,23 +333,24 @@ async def _process_youtube_lesson(
             "youtube",
             source_url,
             duration,
+            lesson_id=lesson_id,
+            user_id=user_id,
             source_language=request.source_language,
-            media_filename=video_path.name if video_path else None,
+            media_upload=upload,
         )
 
     except Exception as exc:
+        await _discard_upload(s3, upload)
         error_str = str(exc)
         if "ffmpeg" in error_str.lower():
             error_str = "Media processing failed (FFmpeg error). The file might be corrupted or in an unsupported codec."
         
         logger.exception("[pipeline] YouTube lesson failed for job %s: %s", job_id, error_str)
-        jobs[job_id].status = "error"
-        jobs[job_id].error = error_str
+        await fail_job(job_id, error_str)
     finally:
-        if audio_path and audio_path.exists():
+        if audio_path:
             audio_path.unlink(missing_ok=True)
-        # Delete video only on failure; on success the /video endpoint deletes it after streaming
-        if video_path and video_path.exists() and jobs[job_id].status != "complete":
+        if video_path:
             video_path.unlink(missing_ok=True)
 
 
@@ -255,11 +360,15 @@ async def _process_upload_lesson(
     openrouter_key: str,
     job_id: str,
     stt_keys: TranscriptionKeys,
+    user_id: uuid.UUID,
+    s3,
     source_language: str = "zh-CN",
     stt_provider: STTProvider | None = None,
 ) -> None:
     """Background task: save file → probe duration → extract audio → transcribe → shared pipeline."""
-    _TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    temp_dir = ensure_temp_dir()
+    lesson_id = uuid.uuid4()
+    upload: MediaUpload | None = None
     video_path: Path | None = None
     audio_path: Path | None = None
     try:
@@ -268,9 +377,9 @@ async def _process_upload_lesson(
         title = Path(filename).stem
         logger.info("[pipeline] upload_lesson: start file=%s", filename)
 
-        jobs[job_id].step = "upload"
+        await update_job(job_id, step="upload")
         t0 = time.monotonic()
-        video_path = _TEMP_DIR / f"{uuid.uuid4()}.{ext}"
+        video_path = temp_dir / f"{uuid.uuid4()}.{ext}"
         total_bytes = 0
         with video_path.open("wb") as f:
             while True:
@@ -285,27 +394,26 @@ async def _process_upload_lesson(
             validate_upload_file(filename, total_bytes)
         except ValidationError as exc:
             logger.warning("[pipeline] %s: validation failed: %s", job_id, exc.message)
-            jobs[job_id].status = "error"
-            jobs[job_id].error = exc.message
+            await fail_job(job_id, exc.message)
             return
 
-        jobs[job_id].step = "duration_check"
+        await update_job(job_id, step="duration_check")
         duration = await probe_upload_duration(video_path)
         logger.info("[pipeline] duration_check: %.1fs", duration)
         if duration > settings.max_video_duration_seconds:
             max_mins = settings.max_video_duration_seconds / 60
             err_msg = f"Video exceeds the {max_mins:.0f}-minute duration limit."
             logger.warning("[pipeline] %s: %s", job_id, err_msg)
-            jobs[job_id].status = "error"
-            jobs[job_id].error = err_msg
+            await fail_job(job_id, err_msg)
             return
 
-        jobs[job_id].step = "audio_extraction"
+        upload = _start_upload(s3, user_id, lesson_id, video_path)
+        await update_job(job_id, step="audio_extraction")
         t0 = time.monotonic()
         audio_path = await extract_audio_from_upload(video_path)
         logger.info("[pipeline] audio_extraction: done in %.1fs", time.monotonic() - t0)
 
-        jobs[job_id].step = "transcription"
+        await update_job(job_id, step="transcription")
         t0 = time.monotonic()
         if stt_provider is None:
             raise RuntimeError("No STT provider configured")
@@ -323,21 +431,24 @@ async def _process_upload_lesson(
             "upload",
             None,
             duration,
+            lesson_id=lesson_id,
+            user_id=user_id,
             source_language=source_language,
+            media_upload=upload,
         )
 
     except Exception as exc:
+        await _discard_upload(s3, upload)
         error_str = str(exc)
         if "ffmpeg" in error_str.lower():
             error_str = "Media processing failed (FFmpeg error). The file might be corrupted or in an unsupported codec."
         
         logger.exception("[pipeline] Upload lesson failed for job %s: %s", job_id, error_str)
-        jobs[job_id].status = "error"
-        jobs[job_id].error = error_str
+        await fail_job(job_id, error_str)
     finally:
-        if video_path and video_path.exists():
+        if video_path:
             video_path.unlink(missing_ok=True)
-        if audio_path and audio_path.exists():
+        if audio_path:
             audio_path.unlink(missing_ok=True)
 
 
@@ -349,8 +460,12 @@ async def _process_blog_lesson(
     openrouter_key: str,
     tts_keys: TTSKeys,
     stt_keys: TranscriptionKeys,
+    user_id: uuid.UUID,
+    s3,
 ) -> None:
     """Background task: (scrape URL or use pasted text) → TTS audio → Gladia transcription → shared pipeline."""
+    lesson_id = uuid.uuid4()
+    upload: MediaUpload | None = None
     audio_path: Path | None = None
     try:
         if request.blog_text:
@@ -358,11 +473,11 @@ async def _process_blog_lesson(
             text = request.blog_text
             logger.info("[pipeline] blog_lesson: using pasted text, %d chars, title=%r", len(text), title)
         else:
-            jobs[job_id].step = "scraping"
+            await update_job(job_id, step="scraping")
             title, text = await scrape_article(request.blog_url, settings.max_article_chars)
             logger.info("[pipeline] blog_lesson: scraped %d chars, title=%r", len(text), title)
 
-        jobs[job_id].step = "tts"
+        await update_job(job_id, step="tts")
         # TTS providers accept "zh" not "zh-CN" — strip the region suffix
         tts_lang = request.source_language.split("-")[0]
         audio_bytes = await tts_provider.synthesize(
@@ -372,12 +487,12 @@ async def _process_blog_lesson(
         if not audio_bytes:
             raise ValueError("TTS synthesis returned empty audio.")
 
-        _TEMP_DIR.mkdir(parents=True, exist_ok=True)
-        audio_path = _TEMP_DIR / f"{uuid.uuid4()}.mp3"
+        audio_path = ensure_temp_dir() / f"{uuid.uuid4()}.mp3"
         audio_path.write_bytes(audio_bytes)
+        upload = _start_upload(s3, user_id, lesson_id, audio_path)
         logger.info("[pipeline] blog_lesson: TTS audio written to %s (%.1f KB)", audio_path.name, len(audio_bytes) / 1024)
 
-        jobs[job_id].step = "transcription"
+        await update_job(job_id, step="transcription")
         segments = await stt_provider.transcribe(audio_path, stt_keys, request.source_language)
         if not segments:
             raise ValueError("No speech detected in synthesized audio.")
@@ -393,15 +508,18 @@ async def _process_blog_lesson(
             "blog",
             request.blog_url or None,
             duration,
+            lesson_id=lesson_id,
+            user_id=user_id,
             source_language=request.source_language,
-            media_filename=audio_path.name,
+            media_upload=upload,
         )
 
     except Exception as exc:
+        await _discard_upload(s3, upload)
         logger.exception("[pipeline] Blog lesson failed for job %s", job_id)
-        jobs[job_id].status = "error"
-        jobs[job_id].error = str(exc)
-        if audio_path and audio_path.exists():
+        await fail_job(job_id, str(exc))
+    finally:
+        if audio_path:
             audio_path.unlink(missing_ok=True)
 
 
@@ -437,9 +555,17 @@ async def generate_lesson(
         openrouter_key = (await keys(Provider.openrouter)).value
         stt_keys = await _azure_keys(keys, req.app.state.stt_provider_name, required=False)
         stt_provider = req.app.state.stt_provider
-        job_id = register_job(id_prefix="lesson", user_id=str(user.id))
+        job_id = await register_job(id_prefix="lesson", user_id=user.id)
         background_tasks.add_task(
-            _process_youtube_lesson, request, video_id, job_id, stt_provider, openrouter_key, stt_keys
+            _process_youtube_lesson,
+            request,
+            video_id,
+            job_id,
+            stt_provider,
+            openrouter_key,
+            stt_keys,
+            user.id,
+            req.app.state.s3,
         )
         return {"job_id": job_id}
     elif request.source == "blog":
@@ -452,9 +578,18 @@ async def generate_lesson(
         stt_keys = await _azure_keys(keys, req.app.state.stt_provider_name)
         tts_provider = req.app.state.tts_provider
         stt_provider = req.app.state.stt_provider
-        job_id = register_job(id_prefix="lesson", user_id=str(user.id))
+        job_id = await register_job(id_prefix="lesson", user_id=user.id)
         background_tasks.add_task(
-            _process_blog_lesson, request, job_id, tts_provider, stt_provider, openrouter_key, tts_keys, stt_keys
+            _process_blog_lesson,
+            request,
+            job_id,
+            tts_provider,
+            stt_provider,
+            openrouter_key,
+            tts_keys,
+            stt_keys,
+            user.id,
+            req.app.state.s3,
         )
         return {"job_id": job_id}
     else:
@@ -488,7 +623,7 @@ async def generate_lesson_upload(
     openrouter_key = (await keys(Provider.openrouter)).value
     stt_keys = await _azure_keys(keys, req.app.state.stt_provider_name)
     stt_provider = req.app.state.stt_provider
-    job_id = register_job(id_prefix="lesson", user_id=str(user.id))
+    job_id = await register_job(id_prefix="lesson", user_id=user.id)
     background_tasks.add_task(
         _process_upload_lesson,
         form.file,
@@ -496,61 +631,99 @@ async def generate_lesson_upload(
         openrouter_key,
         job_id,
         stt_keys,
+        user.id,
+        req.app.state.s3,
         form.source_language,
         stt_provider,
     )
     return {"job_id": job_id}
 
 
-@router.get("/video/{filename}")
-async def get_video(filename: str) -> StreamingResponse:
-    """Serve a temporary video file and delete it after sending."""
-    safe_name = Path(filename).name
-    video_path = _TEMP_DIR / safe_name
+async def owned_lesson(session: AsyncSession, lesson_id: uuid.UUID, user: User) -> Lesson:
+    lesson = await session.get(Lesson, lesson_id)
+    if lesson is None or lesson.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    return lesson
 
-    if not video_path.exists() or not video_path.is_file():
-        raise HTTPException(status_code=404, detail="Video file not found")
 
-    def iterfile():
-        with video_path.open("rb") as f:
-            while chunk := f.read(1024 * 64):
-                yield chunk
-        video_path.unlink(missing_ok=True)
+def _summary(lesson: Lesson, segment_count: int) -> dict[str, Any]:
+    return {
+        "id": str(lesson.id),
+        "title": lesson.title,
+        "source": lesson.source,
+        "source_url": lesson.source_url,
+        "duration": lesson.duration_s,
+        "source_language": lesson.source_language,
+        "translation_languages": lesson.translation_languages,
+        "created_at": lesson.created_at.isoformat(),
+        "last_opened_at": lesson.last_opened_at.isoformat() if lesson.last_opened_at else None,
+        "segment_count": segment_count,
+        "meta": lesson.meta,
+    }
 
-    _VIDEO_MEDIA_TYPES = {"mp4": "video/mp4", "mkv": "video/x-matroska", "webm": "video/webm"}
-    ext = safe_name.rsplit(".", 1)[-1] if "." in safe_name else ""
-    media_type = _VIDEO_MEDIA_TYPES.get(ext, "video/mp4")
 
-    return StreamingResponse(
-        iterfile(),
-        media_type=media_type,
-        headers={
-            "Content-Disposition": f'attachment; filename="{safe_name}"',
-            "Content-Length": str(video_path.stat().st_size),
-        },
+async def _segment_count(session: AsyncSession, lesson_id: uuid.UUID) -> int:
+    return await session.scalar(select(func.count()).where(LessonSegment.lesson_id == lesson_id))
+
+
+@router.get("")
+async def list_lessons(session: Session, user: CurrentUser) -> list[dict[str, Any]]:
+    counts = (
+        select(LessonSegment.lesson_id, func.count().label("n")).group_by(LessonSegment.lesson_id).subquery()
     )
-
-
-@router.get("/audio/{filename}")
-async def get_audio(filename: str) -> StreamingResponse:
-    """Serve a temporary TTS audio file and delete it after sending."""
-    safe_name = Path(filename).name
-    audio_path = _TEMP_DIR / safe_name
-
-    if not audio_path.exists() or not audio_path.is_file():
-        raise HTTPException(status_code=404, detail="Audio file not found")
-
-    def iterfile():
-        with audio_path.open("rb") as f:
-            while chunk := f.read(1024 * 64):
-                yield chunk
-        audio_path.unlink(missing_ok=True)
-
-    return StreamingResponse(
-        iterfile(),
-        media_type="audio/mpeg",
-        headers={
-            "Content-Disposition": f'attachment; filename="{safe_name}"',
-            "Content-Length": str(audio_path.stat().st_size),
-        },
+    rows = await session.execute(
+        select(Lesson, func.coalesce(counts.c.n, 0))
+        .outerjoin(counts, counts.c.lesson_id == Lesson.id)
+        .where(Lesson.user_id == user.id)
+        .order_by(Lesson.created_at.desc())
     )
+    return [_summary(lesson, n) for lesson, n in rows]
+
+
+@router.get("/{lesson_id}")
+async def get_lesson(lesson_id: uuid.UUID, session: Session, user: CurrentUser) -> dict[str, Any]:
+    """Return the lesson, its segments in order, and media URLs with fresh tickets."""
+    lesson = await owned_lesson(session, lesson_id, user)
+    segments = (
+        await session.scalars(
+            select(LessonSegment.data).where(LessonSegment.lesson_id == lesson_id).order_by(LessonSegment.position)
+        )
+    ).all()
+    body = {**_summary(lesson, len(segments)), "segments": segments}
+    media = await session.scalars(
+        select(MediaObject).where(
+            MediaObject.lesson_id == lesson_id, MediaObject.kind.in_([MediaKind.video, MediaKind.audio])
+        )
+    )
+    for item in media:
+        body[f"{item.kind}_url"] = media_url(item.id)
+    return body
+
+
+class LessonPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)] = ""
+    meta: dict[str, Any] = Field(default_factory=dict)
+    last_opened_at: datetime | None = None
+
+
+@router.patch("/{lesson_id}")
+async def patch_lesson(lesson_id: uuid.UUID, body: LessonPatch, session: Session, user: CurrentUser) -> dict[str, Any]:
+    """Rename the lesson, replace the client-owned ``meta`` exactly as sent, and set ``last_opened_at``."""
+    lesson = await owned_lesson(session, lesson_id, user)
+    for field in body.model_fields_set:
+        setattr(lesson, field, getattr(body, field))
+    await session.commit()
+    return _summary(lesson, await _segment_count(session, lesson_id))
+
+
+@router.delete("/{lesson_id}", status_code=204)
+async def delete_lesson(lesson_id: uuid.UUID, request: Request, session: Session, user: CurrentUser) -> Response:
+    """Delete the lesson, its segments, its media rows, and their MinIO objects."""
+    lesson = await owned_lesson(session, lesson_id, user)
+    keys = (await session.scalars(select(MediaObject.object_key).where(MediaObject.lesson_id == lesson_id))).all()
+    await session.delete(lesson)
+    await session.commit()
+    await delete_objects(request.app.state.s3, list(keys))
+    return Response(status_code=204)
