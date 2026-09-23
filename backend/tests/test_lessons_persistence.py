@@ -133,7 +133,14 @@ def _wav(seconds: float = 1.0) -> bytes:
 async def test_upload_pipeline_persists_audio_and_leaves_no_temp_files(client, stored_user, db_session, temp_dir):
     audio = _wav()
 
+    async def extract(video_path):
+        extracted = temp_dir / "extracted.mp3"
+        extracted.write_bytes(b"mp3")
+        return extracted
+
     with (
+        patch("app.lessons.router.probe_upload_duration", new=AsyncMock(return_value=1.0)),
+        patch("app.lessons.router.extract_audio_from_upload", new=extract),
         patch("app.lessons.router.translate_segments", new=AsyncMock(side_effect=_translated)),
         patch("app.lessons.router.enrich_vocabulary", new=AsyncMock(return_value={})),
     ):
