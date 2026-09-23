@@ -9,7 +9,8 @@
  */
 
 import { expect, test } from '@playwright/test'
-import { authBypass, mockConfig, mockJobStatus, seedAndExpectJobError } from './helpers'
+import { signUpAndLogin } from '../support/api-helpers'
+import { mockConfig, mockJobStatus, seedAndExpectJobError } from './helpers'
 
 const VALID_YOUTUBE_URL = 'https://www.youtube.com/watch?v=DG1wRgEpdO4'
 const JOB_ID = 'test-job-analytics-001'
@@ -63,7 +64,7 @@ async function getPosthogEvents(
 }
 
 test('US01.US06-E2E-018 @p1 @regression @create-lesson @analytics — NFR: lesson_generation_failed analytics event fires on sync 4xx error', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await installPosthogSpy(page)
   await mockConfig(page)
 
@@ -108,7 +109,7 @@ test('US01.US06-E2E-018 @p1 @regression @create-lesson @analytics — NFR: lesso
 })
 
 test('US01.US06-E2E-019 @p1 @regression @create-lesson @analytics — NFR: lesson_job_failed analytics event fires on async pipeline error', async ({ page }) => {
-  await authBypass(page)
+  const user = await signUpAndLogin(page)
   await installPosthogSpy(page)
   await mockConfig(page)
   // Mock the job poll to return an async pipeline error
@@ -117,12 +118,12 @@ test('US01.US06-E2E-019 @p1 @regression @create-lesson @analytics — NFR: lesso
     error: 'Transcription failed: audio quality too low',
   })
 
-  // Navigate to / first to establish the page origin for IDB seeding
+  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing youtube lesson and wait for job poller to surface the error.
   // The poller calls captureLessonJobFailed in the same code path that updates status.
-  await seedAndExpectJobError(page, {
+  await seedAndExpectJobError(page, user, {
     lessonId: 'lesson-e2e-019',
     title: 'Test Analytics Lesson',
     source: 'youtube',

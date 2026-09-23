@@ -1,17 +1,13 @@
 import { expect, test } from '@playwright/test'
-import { seedSettings } from './support/idb-helpers'
+import { seedSettings, signUpAndLogin } from './support/api-helpers'
 
 // Manual debug test — skipped in CI. Run locally with: pnpm test:e2e tests/e2e/debug-sidebar.spec.ts
-// Requires a live backend (OpenRouter key in IDB) to get an AI response.
+// Requires a live backend with an OpenRouter key to get an AI response.
 test.skip(!!process.env.CI, 'Manual debug test — skipped in CI')
 
 test('debug sidebar html', async ({ page }) => {
-  await page.addInitScript(() => {
-    sessionStorage.setItem('shadowlearn_trial', 'trial')
-  })
-  await page.goto('/')
-  await expect(page.locator('main').first()).toBeVisible({ timeout: 10_000 })
-  await seedSettings(page, { translationLanguage: 'en', uiLanguage: 'en' })
+  const user = await signUpAndLogin(page)
+  await seedSettings(page.request, user, { translationLanguage: 'en', uiLanguage: 'en' })
   await page.goto('/')
   await expect(page.locator('main').first()).toBeVisible({ timeout: 10_000 })
 

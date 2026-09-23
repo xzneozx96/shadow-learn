@@ -13,13 +13,14 @@
  */
 
 import { expect, test } from '@playwright/test'
-import { authBypass, mockConfig, mockGenerateError, mockGenerateSuccess, mockJobStatus, seedAndExpectJobError } from './helpers'
+import { signUpAndLogin } from '../support/api-helpers'
+import { mockConfig, mockGenerateError, mockGenerateSuccess, mockJobStatus, seedAndExpectJobError } from './helpers'
 
 const VALID_YOUTUBE_URL = 'https://www.youtube.com/watch?v=DG1wRgEpdO4'
 const JOB_ID = 'test-job-123'
 
 test('US01.US06-E2E-001 @p0 @smoke @create-lesson @youtube — Generate button disabled when no YouTube URL entered', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   // Register intercepts BEFORE navigation
   await mockConfig(page)
   await page.goto('/create')
@@ -36,7 +37,7 @@ test('US01.US06-E2E-001 @p0 @smoke @create-lesson @youtube — Generate button d
 })
 
 test('US01.US06-E2E-003 @p1 @regression @create-lesson @youtube — Submitting an invalid YouTube URL shows inline 400 error and keeps form usable', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
   await mockGenerateError(page, 400, 'Invalid YouTube URL')
   await page.goto('/create')
@@ -60,7 +61,7 @@ test('US01.US06-E2E-003 @p1 @regression @create-lesson @youtube — Submitting a
 })
 
 test('US01.US06-E2E-004 @p0 @smoke @create-lesson @youtube — Happy path: valid YouTube URL queues lesson, shows confirmation, clears input', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
   await mockGenerateSuccess(page, JOB_ID)
   await mockJobStatus(page, JOB_ID, { status: 'complete' })
@@ -89,7 +90,7 @@ test('US01.US06-E2E-004 @p0 @smoke @create-lesson @youtube — Happy path: valid
 })
 
 test('US01.US06-E2E-005 @p1 @regression @create-lesson — Go to Library navigates home; Queue Another resets form', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
   await mockGenerateSuccess(page, JOB_ID)
   await mockJobStatus(page, JOB_ID, { status: 'complete' })
@@ -132,7 +133,7 @@ test('US01.US06-E2E-005 @p1 @regression @create-lesson — Go to Library navigat
 })
 
 test('US01.US06-E2E-006 @p1 @regression @create-lesson @youtube — Job pipeline error for YouTube over max duration surfaces in Library LessonCard', async ({ page }) => {
-  await authBypass(page)
+  const user = await signUpAndLogin(page)
   await mockConfig(page)
   // Mock the job poll to return error status (duration exceeded)
   await mockJobStatus(page, JOB_ID, {
@@ -140,11 +141,11 @@ test('US01.US06-E2E-006 @p1 @regression @create-lesson @youtube — Job pipeline
     error: 'Video exceeds maximum duration of 1200 seconds',
   })
 
-  // Navigate to / first so the page origin is established for IDB seeding
+  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing lesson and wait for job poller to surface the error
-  await seedAndExpectJobError(page, {
+  await seedAndExpectJobError(page, user, {
     lessonId: 'lesson-e2e-006',
     title: 'Test YouTube Lesson',
     source: 'youtube',
@@ -155,7 +156,7 @@ test('US01.US06-E2E-006 @p1 @regression @create-lesson @youtube — Job pipeline
 })
 
 test('US01.US06-E2E-017 @p2 @regression @create-lesson — Tab switch hides inactive tab DOM elements (conditional render guard)', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
   await page.goto('/create')
 

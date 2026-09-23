@@ -13,7 +13,8 @@
 
 import { Buffer } from 'node:buffer'
 import { expect, test } from '@playwright/test'
-import { authBypass, mockConfig, mockGenerateSuccess, mockJobStatus, seedAndExpectJobError } from './helpers'
+import { signUpAndLogin } from '../support/api-helpers'
+import { mockConfig, mockGenerateSuccess, mockJobStatus, seedAndExpectJobError } from './helpers'
 
 const JOB_ID = 'test-job-123'
 
@@ -38,7 +39,7 @@ async function attachFile(
 }
 
 test('US01.US06-E2E-012 @p1 @smoke @create-lesson @upload — Upload tab: Generate button disabled when no file selected', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
   await page.goto('/create')
   await switchToUploadTab(page)
@@ -50,7 +51,7 @@ test('US01.US06-E2E-012 @p1 @smoke @create-lesson @upload — Upload tab: Genera
 })
 
 test('US01.US06-E2E-013 @p0 @smoke @create-lesson @upload — Happy path: valid file upload queues lesson with multipart to /api/lessons/generate-upload', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
   await mockGenerateSuccess(page, JOB_ID)
   await mockJobStatus(page, JOB_ID, { status: 'complete' })
@@ -78,7 +79,7 @@ test('US01.US06-E2E-013 @p0 @smoke @create-lesson @upload — Happy path: valid 
 })
 
 test('US01.US06-E2E-014 @p1 @regression @create-lesson @upload — Upload with unsupported file extension: async job-poll error surfaces in Library LessonCard', async ({ page }) => {
-  await authBypass(page)
+  const user = await signUpAndLogin(page)
   await mockConfig(page)
   // Mock the job poll to return an unsupported-format error
   await mockJobStatus(page, JOB_ID, {
@@ -86,11 +87,11 @@ test('US01.US06-E2E-014 @p1 @regression @create-lesson @upload — Upload with u
     error: 'Unsupported file format. Allowed formats: mp4, mkv, webm, mov, wav, mp3, m4a, aac, flac, ogg, opus',
   })
 
-  // Navigate to / first to establish the page origin for IDB seeding
+  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing upload lesson and wait for job poller to surface the error
-  await seedAndExpectJobError(page, {
+  await seedAndExpectJobError(page, user, {
     lessonId: 'lesson-e2e-014',
     title: 'document.txt',
     source: 'upload',
@@ -101,7 +102,7 @@ test('US01.US06-E2E-014 @p1 @regression @create-lesson @upload — Upload with u
 })
 
 test('US01.US06-E2E-015 @p1 @regression @create-lesson @upload — Upload file exceeding 2 GB: async job-poll error surfaces in Library LessonCard', async ({ page }) => {
-  await authBypass(page)
+  const user = await signUpAndLogin(page)
   await mockConfig(page)
   // Mock the job poll to return a file-size-exceeded error
   await mockJobStatus(page, JOB_ID, {
@@ -109,11 +110,11 @@ test('US01.US06-E2E-015 @p1 @regression @create-lesson @upload — Upload file e
     error: 'File size exceeds the maximum allowed size of 2 GB (2147483648 bytes)',
   })
 
-  // Navigate to / first to establish the page origin for IDB seeding
+  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing upload lesson and wait for job poller to surface the error
-  await seedAndExpectJobError(page, {
+  await seedAndExpectJobError(page, user, {
     lessonId: 'lesson-e2e-015',
     title: 'huge-video.mp4',
     source: 'upload',
@@ -124,7 +125,7 @@ test('US01.US06-E2E-015 @p1 @regression @create-lesson @upload — Upload file e
 })
 
 test('US01.US06-E2E-016 @p1 @regression @create-lesson @upload — Upload valid file exceeding max duration: job-poll error surfaces in Library LessonCard', async ({ page }) => {
-  await authBypass(page)
+  const user = await signUpAndLogin(page)
   await mockConfig(page)
   // Mock the job poll to return a duration-exceeded error
   await mockJobStatus(page, JOB_ID, {
@@ -132,11 +133,11 @@ test('US01.US06-E2E-016 @p1 @regression @create-lesson @upload — Upload valid 
     error: 'Video exceeds maximum duration of 1200 seconds',
   })
 
-  // Navigate to / first to establish the page origin for IDB seeding
+  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing upload lesson and wait for job poller to surface the error
-  await seedAndExpectJobError(page, {
+  await seedAndExpectJobError(page, user, {
     lessonId: 'lesson-e2e-016',
     title: 'long-lecture.mp4',
     source: 'upload',
