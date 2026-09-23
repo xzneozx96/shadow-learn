@@ -1,4 +1,5 @@
 import io
+import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -16,6 +17,12 @@ def speech_providers():
     app.state.stt_provider = AsyncMock()
     app.state.stt_provider_name = "azure"
     app.state.tts_provider_name = "azure"
+
+
+@pytest.fixture(autouse=True)
+def start_upload():
+    with patch("app.lessons.router._start_upload") as start:
+        yield start
 
 
 @pytest.fixture(autouse=True)
@@ -250,7 +257,7 @@ async def test_shared_pipeline_assembles_text_and_romanization_keys(stored_user,
     ):
         await _shared_pipeline(
             job_id, raw_segments, ["es"], "key", "title", "upload", None, 60.0,
-            user_id=stored_user.id, s3=app_s3, source_language="en",
+            lesson_id=uuid.uuid4(), user_id=stored_user.id, source_language="en",
         )
 
     result = (await get_job(job_id)).result
@@ -432,7 +439,7 @@ async def test_youtube_lesson_falls_back_when_subtitle_download_fails(stored_use
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit(stored_user, app_s3):
+async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit(stored_user, app_s3, start_upload):
     from app.lessons.router import _process_youtube_lesson
 
     job_id = await register_job(id_prefix="lesson", user_id=stored_user.id)
@@ -461,7 +468,8 @@ async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit(stored_user
         await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {}, stored_user.id, app_s3)
 
     download_video.assert_called_once()
-    assert captured_kwargs.get("media_path") == Path("/tmp/shadowlearn/vid.mp4")
+    start_upload.assert_called_once_with(app_s3, stored_user.id, captured_kwargs["lesson_id"], Path("/tmp/shadowlearn/vid.mp4"))
+    assert captured_kwargs["media_upload"] is start_upload.return_value
 
 
 @pytest.mark.asyncio(loop_scope="session")

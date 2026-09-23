@@ -63,7 +63,7 @@ async def put_file(s3, key: str, path: Path, content_type: str) -> tuple[int, st
     return size, sha256
 
 
-async def store_file(
+async def upload_file(
     s3,
     *,
     user_id: uuid.UUID,
@@ -75,10 +75,7 @@ async def store_file(
     media_id = uuid.uuid4()
     content_type = content_type_for(source_path)
     key = object_key(user_id, lesson_id, kind, media_id, source_path.suffix.lstrip(".").lower() or "bin")
-    try:
-        size, sha256 = await put_file(s3, key, source_path, content_type)
-    finally:
-        source_path.unlink(missing_ok=True)
+    size, sha256 = await put_file(s3, key, source_path, content_type)
     return MediaObject(
         id=media_id,
         user_id=user_id,
@@ -90,6 +87,23 @@ async def store_file(
         sha256=sha256,
         content_type=content_type,
     )
+
+
+async def store_file(
+    s3,
+    *,
+    user_id: uuid.UUID,
+    kind: MediaKind,
+    lesson_id: uuid.UUID,
+    source_path: Path,
+    segment_id: str | None = None,
+) -> MediaObject:
+    try:
+        return await upload_file(
+            s3, user_id=user_id, kind=kind, lesson_id=lesson_id, source_path=source_path, segment_id=segment_id
+        )
+    finally:
+        source_path.unlink(missing_ok=True)
 
 
 async def delete_objects(s3, keys: list[str]) -> None:

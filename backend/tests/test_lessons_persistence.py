@@ -154,7 +154,9 @@ async def test_upload_pipeline_persists_audio_and_leaves_no_temp_files(client, s
     assert list(temp_dir.iterdir()) == []
 
 
-async def test_failed_pipeline_stores_nothing_and_leaves_no_temp_files(client, stored_user, db_session, temp_dir, mocked_youtube):
+async def test_failed_pipeline_stores_nothing_and_leaves_no_temp_files(
+    client, stored_user, db_session, app_s3, temp_dir, mocked_youtube
+):
     with patch("app.lessons.router.translate_segments", new=AsyncMock(side_effect=RuntimeError("openrouter down"))):
         response = await client.post(
             "/api/lessons/generate",
@@ -164,6 +166,8 @@ async def test_failed_pipeline_stores_nothing_and_leaves_no_temp_files(client, s
     job = await get_job(response.json()["job_id"])
     assert (job.status, job.error) == ("error", "openrouter down")
     assert (await db_session.scalars(select(Lesson))).all() == []
+    listing = await app_s3.list_objects_v2(Bucket=settings.s3_bucket, Prefix=f"users/{stored_user.id}/")
+    assert "Contents" not in listing
     assert list(temp_dir.iterdir()) == []
 
 

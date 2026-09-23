@@ -52,7 +52,7 @@ from app.lessons.services.youtube_subtitles import (
     pick_manual_subtitle,
 )
 from app.media.models import MediaKind, MediaObject
-from app.media.service import content_type_for, delete_objects, media_url, store_file
+from app.media.service import content_type_for, delete_objects, media_url, upload_file
 from app.models import LessonRequest
 from app.settings import settings
 from app.shared.language_config import get_language_config
@@ -72,9 +72,36 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 _CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 
+MediaUpload = asyncio.Task[MediaObject]
+
+
+def _start_upload(s3, user_id: uuid.UUID, lesson_id: uuid.UUID, path: Path) -> MediaUpload:
+    """Upload the lesson's media alongside the rest of the pipeline; the runner unlinks *path* afterwards."""
+    kind = MediaKind.video if content_type_for(path).startswith("video/") else MediaKind.audio
+    return asyncio.create_task(upload_file(s3, user_id=user_id, kind=kind, lesson_id=lesson_id, source_path=path))
+
+
+async def _discard_upload(s3, upload: MediaUpload | None) -> None:
+    """Delete the object of an upload whose lesson was never saved."""
+    if upload is None:
+        return
+    upload.cancel()
+    try:
+        media = await upload
+    except asyncio.CancelledError:
+        return
+    except Exception:
+        logger.warning("[pipeline] media upload failed", exc_info=True)
+        return
+    async with SessionLocal() as session:
+        if await session.get(MediaObject, media.id) is not None:
+            return
+    await delete_objects(s3, [media.object_key])
+
+
 async def _save_lesson(
-    s3,
     *,
+    lesson_id: uuid.UUID,
     user_id: uuid.UUID,
     title: str,
     source: str,
@@ -83,40 +110,31 @@ async def _save_lesson(
     source_language: str,
     translation_languages: list[str],
     segments: list[dict],
-    media_path: Path | None,
-) -> tuple[uuid.UUID, MediaObject | None]:
-    lesson_id = uuid.uuid4()
-    media = None
-    if media_path is not None:
-        kind = MediaKind.video if content_type_for(media_path).startswith("video/") else MediaKind.audio
-        media = await store_file(s3, user_id=user_id, kind=kind, lesson_id=lesson_id, source_path=media_path)
-    try:
-        async with SessionLocal() as session:
-            session.add(
-                Lesson(
-                    id=lesson_id,
-                    user_id=user_id,
-                    title=title,
-                    source=source,
-                    source_url=source_url,
-                    duration_s=duration,
-                    source_language=source_language,
-                    translation_languages=translation_languages,
-                )
+    media_upload: MediaUpload | None,
+) -> MediaObject | None:
+    media = await media_upload if media_upload is not None else None
+    async with SessionLocal() as session:
+        session.add(
+            Lesson(
+                id=lesson_id,
+                user_id=user_id,
+                title=title,
+                source=source,
+                source_url=source_url,
+                duration_s=duration,
+                source_language=source_language,
+                translation_languages=translation_languages,
             )
-            await session.flush()
-            session.add_all(
-                LessonSegment(lesson_id=lesson_id, position=i, data=seg, start_s=seg["start"], end_s=seg["end"])
-                for i, seg in enumerate(segments)
-            )
-            if media is not None:
-                session.add(media)
-            await session.commit()
-    except BaseException:
+        )
+        await session.flush()
+        session.add_all(
+            LessonSegment(lesson_id=lesson_id, position=i, data=seg, start_s=seg["start"], end_s=seg["end"])
+            for i, seg in enumerate(segments)
+        )
         if media is not None:
-            await delete_objects(s3, [media.object_key])
-        raise
-    return lesson_id, media
+            session.add(media)
+        await session.commit()
+    return media
 
 
 async def _shared_pipeline(
@@ -129,10 +147,10 @@ async def _shared_pipeline(
     source_url: str | None,
     duration: float,
     *,
+    lesson_id: uuid.UUID,
     user_id: uuid.UUID,
-    s3,
     source_language: str = "zh-CN",
-    media_path: Path | None = None,
+    media_upload: MediaUpload | None = None,
 ) -> None:
     t_pipeline = time.monotonic()
     logger.info("[pipeline] shared_pipeline: start segments=%d source=%s", len(segments), source)
@@ -195,8 +213,8 @@ async def _shared_pipeline(
             "wordTimings": seg.get("word_timings") or None,
         })
 
-    lesson_id, media = await _save_lesson(
-        s3,
+    media = await _save_lesson(
+        lesson_id=lesson_id,
         user_id=user_id,
         title=title,
         source=source,
@@ -205,7 +223,7 @@ async def _shared_pipeline(
         source_language=source_language,
         translation_languages=translation_languages,
         segments=lesson_segments,
-        media_path=media_path,
+        media_upload=media_upload,
     )
 
     result: dict = {
@@ -237,6 +255,8 @@ async def _process_youtube_lesson(
     s3,
 ) -> None:
     """Background task: validate duration → (manual subtitle OR STT) → shared pipeline."""
+    lesson_id = uuid.uuid4()
+    upload: MediaUpload | None = None
     video_path: Path | None = None
     audio_path: Path | None = None
     try:
@@ -259,6 +279,7 @@ async def _process_youtube_lesson(
                 vtt_task = asyncio.create_task(download_subtitle_vtt(video_id, yt_lang))
                 video_task = asyncio.create_task(download_youtube_video(video_id))
                 vtt_body, video_path = await asyncio.gather(vtt_task, video_task)
+                upload = _start_upload(s3, user_id, lesson_id, video_path)
                 segments = parse_vtt_to_segments(vtt_body, request.source_language)
                 if not segments:
                     logger.warning(
@@ -283,6 +304,7 @@ async def _process_youtube_lesson(
             if video_path is None:
                 await update_job(job_id, step="video_download")
                 video_path = await download_youtube_video(video_id)
+                upload = _start_upload(s3, user_id, lesson_id, video_path)
 
             await update_job(job_id, step="audio_extraction")
             audio_path = await extract_audio_from_upload(video_path)
@@ -306,13 +328,14 @@ async def _process_youtube_lesson(
             "youtube",
             source_url,
             duration,
+            lesson_id=lesson_id,
             user_id=user_id,
-            s3=s3,
             source_language=request.source_language,
-            media_path=video_path,
+            media_upload=upload,
         )
 
     except Exception as exc:
+        await _discard_upload(s3, upload)
         error_str = str(exc)
         if "ffmpeg" in error_str.lower():
             error_str = "Media processing failed (FFmpeg error). The file might be corrupted or in an unsupported codec."
@@ -339,6 +362,8 @@ async def _process_upload_lesson(
 ) -> None:
     """Background task: save file → probe duration → extract audio → transcribe → shared pipeline."""
     temp_dir = ensure_temp_dir()
+    lesson_id = uuid.uuid4()
+    upload: MediaUpload | None = None
     video_path: Path | None = None
     audio_path: Path | None = None
     try:
@@ -377,6 +402,7 @@ async def _process_upload_lesson(
             await fail_job(job_id, err_msg)
             return
 
+        upload = _start_upload(s3, user_id, lesson_id, video_path)
         await update_job(job_id, step="audio_extraction")
         t0 = time.monotonic()
         audio_path = await extract_audio_from_upload(video_path)
@@ -400,13 +426,14 @@ async def _process_upload_lesson(
             "upload",
             None,
             duration,
+            lesson_id=lesson_id,
             user_id=user_id,
-            s3=s3,
             source_language=source_language,
-            media_path=video_path,
+            media_upload=upload,
         )
 
     except Exception as exc:
+        await _discard_upload(s3, upload)
         error_str = str(exc)
         if "ffmpeg" in error_str.lower():
             error_str = "Media processing failed (FFmpeg error). The file might be corrupted or in an unsupported codec."
@@ -432,6 +459,8 @@ async def _process_blog_lesson(
     s3,
 ) -> None:
     """Background task: (scrape URL or use pasted text) → TTS audio → Gladia transcription → shared pipeline."""
+    lesson_id = uuid.uuid4()
+    upload: MediaUpload | None = None
     audio_path: Path | None = None
     try:
         if request.blog_text:
@@ -455,6 +484,7 @@ async def _process_blog_lesson(
 
         audio_path = ensure_temp_dir() / f"{uuid.uuid4()}.mp3"
         audio_path.write_bytes(audio_bytes)
+        upload = _start_upload(s3, user_id, lesson_id, audio_path)
         logger.info("[pipeline] blog_lesson: TTS audio written to %s (%.1f KB)", audio_path.name, len(audio_bytes) / 1024)
 
         await update_job(job_id, step="transcription")
@@ -473,13 +503,14 @@ async def _process_blog_lesson(
             "blog",
             request.blog_url or None,
             duration,
+            lesson_id=lesson_id,
             user_id=user_id,
-            s3=s3,
             source_language=request.source_language,
-            media_path=audio_path,
+            media_upload=upload,
         )
 
     except Exception as exc:
+        await _discard_upload(s3, upload)
         logger.exception("[pipeline] Blog lesson failed for job %s", job_id)
         await fail_job(job_id, str(exc))
     finally:
