@@ -7,6 +7,15 @@ from httpx import ASGITransport, AsyncClient
 import app.job_store as jobs_module
 from app.main import app
 
+pytestmark = pytest.mark.usefixtures("stored_user", "provider_env")
+
+
+@pytest.fixture(autouse=True)
+def speech_providers():
+    app.state.stt_provider = AsyncMock()
+    app.state.stt_provider_name = "azure"
+    app.state.tts_provider_name = "azure"
+
 
 @pytest.fixture(autouse=True)
 def clear_jobs():
@@ -24,7 +33,7 @@ def mock_stt_provider():
     del app.state.stt_provider
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_lesson_rejects_missing_url():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -34,14 +43,12 @@ async def test_generate_lesson_rejects_missing_url():
                 "source": "youtube",
                 "youtube_url": None,
                 "translation_languages": ["en"],
-                "openrouter_api_key": "key",
-                "model": "gpt-4o-mini",
             },
         )
     assert response.status_code == 400
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_lesson_rejects_invalid_source():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -50,14 +57,12 @@ async def test_generate_lesson_rejects_invalid_source():
             json={
                 "source": "invalid",
                 "translation_languages": ["en"],
-                "openrouter_api_key": "key",
-                "model": "gpt-4o-mini",
             },
         )
     assert response.status_code == 422
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_lesson_youtube_returns_job_id(signed_in_user):
     """Valid YouTube request returns a job_id immediately; pipeline runs in background."""
     from unittest.mock import AsyncMock, patch
@@ -74,9 +79,6 @@ async def test_generate_lesson_youtube_returns_job_id(signed_in_user):
                     "source": "youtube",
                     "youtube_url": "https://www.youtube.com/watch?v=abc123",
                     "translation_languages": ["en"],
-                    "openrouter_api_key": "sk-test",
-                    "deepgram_api_key": "dg-test",
-                    "model": "gpt-4o-mini",
                 },
             )
     assert response.status_code == 200
@@ -87,25 +89,66 @@ async def test_generate_lesson_youtube_returns_job_id(signed_in_user):
     assert jobs_module.jobs[data["job_id"]].user_id == str(signed_in_user.id)
 
 
-@pytest.mark.asyncio
-async def test_generate_lesson_accepts_azure_keys_in_body():
-    from app.models import LessonRequest
+@pytest.mark.asyncio(loop_scope="session")
+async def test_generate_lesson_rejects_a_key_in_the_body():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/lessons/generate",
+            json={
+                "source": "youtube",
+                "youtube_url": "https://www.youtube.com/watch?v=abc123",
+                "translation_languages": ["en"],
+                "openrouter_api_key": "sk-leaked",
+            },
+        )
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "openrouter_api_key"]
 
-    req = LessonRequest(
-        source="youtube",
-        youtube_url="https://www.youtube.com/watch?v=test",
-        translation_languages=["en"],
-        openrouter_api_key="sk-test",
-        azure_speech_key="az-key",
-        azure_speech_region="eastus",
-    )
-    assert req.azure_speech_key == "az-key"
-    assert req.azure_speech_region == "eastus"
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_generate_lesson_hands_the_server_keys_to_the_pipeline():
+    with (
+        patch("app.lessons.router.validate_youtube_url", return_value="abc123"),
+        patch("app.lessons.router._process_youtube_lesson", new=AsyncMock()) as pipeline,
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/lessons/generate",
+                json={
+                    "source": "youtube",
+                    "youtube_url": "https://www.youtube.com/watch?v=abc123",
+                    "translation_languages": ["en"],
+                },
+            )
+    assert response.status_code == 200
+    *_, openrouter_key, stt_keys = pipeline.call_args.args
+    assert openrouter_key == "env-openrouter-key"
+    assert stt_keys == {"azure_speech_key": "env-azure-key", "azure_speech_region": "eastus"}
 
 
-@pytest.mark.asyncio
-async def test_generate_lesson_upload_accepts_azure_form_fields():
-    """generate-upload accepts azure_speech_key and azure_speech_region as form fields."""
+@pytest.mark.asyncio(loop_scope="session")
+async def test_generate_lesson_returns_400_without_any_openrouter_key(monkeypatch):
+    monkeypatch.setattr("app.keys.service.settings.openrouter_api_key", None)
+    with patch("app.lessons.router.validate_youtube_url", return_value="abc123"):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/lessons/generate",
+                json={
+                    "source": "youtube",
+                    "youtube_url": "https://www.youtube.com/watch?v=abc123",
+                    "translation_languages": ["en"],
+                },
+            )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "No OpenRouter key configured. Add one in Settings."
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_generate_lesson_upload_rejects_key_form_fields():
+    """generate-upload rejects provider keys sent as form fields."""
     from unittest.mock import AsyncMock, patch
 
     with patch("app.lessons.router._process_upload_lesson", new=AsyncMock()):
@@ -116,16 +159,15 @@ async def test_generate_lesson_upload_accepts_azure_form_fields():
                 files={"file": ("test.mp4", io.BytesIO(b"fake"), "video/mp4")},
                 data={
                     "translation_languages": "en",
-                    "openrouter_api_key": "sk-test",
                     "azure_speech_key": "az-key",
                     "azure_speech_region": "eastus",
                 },
             )
-    assert response.status_code == 200
-    assert "job_id" in response.json()
+    assert response.status_code == 422
+    assert {error["loc"][-1] for error in response.json()["detail"]} == {"azure_speech_key", "azure_speech_region"}
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_video_serves_and_deletes_file(tmp_path):
     """GET /api/lessons/video/{filename} streams the file and deletes it."""
     import app.lessons.router as lessons_module
@@ -146,7 +188,7 @@ async def test_get_video_serves_and_deletes_file(tmp_path):
         lessons_module._TEMP_DIR = original_temp_dir
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_video_returns_404_for_missing_file():
     """GET /api/lessons/video/{filename} returns 404 when file is not found."""
     transport = ASGITransport(app=app)
@@ -155,7 +197,7 @@ async def test_get_video_returns_404_for_missing_file():
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_shared_pipeline_assembles_text_and_romanization_keys():
     """Assembled segment dicts must use 'text'/'romanization', not 'chinese'/'pinyin'."""
     from unittest.mock import MagicMock
@@ -208,12 +250,11 @@ def _make_youtube_request(source_language: str = "zh-CN"):
         source="youtube",
         youtube_url="https://www.youtube.com/watch?v=abc123",
         translation_languages=["en"],
-        openrouter_api_key="sk-test",
         source_language=source_language,
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_youtube_lesson_uses_manual_subtitle_when_available():
     """Manual subtitle in source_language → STT skipped; segments come from VTT."""
     from app.job_store import Job
@@ -249,7 +290,7 @@ async def test_youtube_lesson_uses_manual_subtitle_when_available():
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
         patch("app.lessons.router.extract_audio_from_upload", new=AsyncMock()) as mock_extract,
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
 
     stt.transcribe.assert_not_called()
     mock_extract.assert_not_called()
@@ -257,7 +298,7 @@ async def test_youtube_lesson_uses_manual_subtitle_when_available():
     assert captured_segments["segs"][0]["text"] == "你好世界"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_youtube_lesson_falls_back_to_stt_when_no_manual_track():
     """No manual subtitle in source_language → existing STT pipeline runs."""
     from pathlib import Path
@@ -292,12 +333,12 @@ async def test_youtube_lesson_falls_back_to_stt_when_no_manual_track():
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
         patch("pathlib.Path.unlink"),
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
 
     stt.transcribe.assert_called_once()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_youtube_lesson_ignores_automatic_captions():
     """Auto-generated captions never trigger the subtitle path."""
     from pathlib import Path
@@ -332,13 +373,13 @@ async def test_youtube_lesson_ignores_automatic_captions():
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
         patch("pathlib.Path.unlink"),
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
 
     download_sub.assert_not_called()
     stt.transcribe.assert_called_once()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_youtube_lesson_falls_back_when_subtitle_download_fails():
     """If yt-dlp fails to write the VTT, fall back to STT instead of erroring the job."""
     from pathlib import Path
@@ -374,13 +415,13 @@ async def test_youtube_lesson_falls_back_when_subtitle_download_fails():
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
         patch("pathlib.Path.unlink"),
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
 
     stt.transcribe.assert_called_once()
     assert jobs_module.jobs[job_id].status == "complete"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit():
     """Even on subtitle hit, video must be downloaded for playback (media_filename)."""
     from pathlib import Path
@@ -412,13 +453,13 @@ async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit():
         ),
         patch("app.lessons.router._shared_pipeline", side_effect=fake_shared),
     ):
-        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt)
+        await _process_youtube_lesson(_make_youtube_request("zh-CN"), "abc123", job_id, stt, "sk-test", {})
 
     download_video.assert_called_once()
     assert captured_kwargs.get("media_filename") == "vid.mp4"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_lesson_upload_returns_job_id(signed_in_user):
     """Valid upload request returns a job_id immediately."""
     from unittest.mock import AsyncMock, patch
@@ -431,9 +472,6 @@ async def test_generate_lesson_upload_returns_job_id(signed_in_user):
                 files={"file": ("test.mp4", io.BytesIO(b"fake"), "video/mp4")},
                 data={
                     "translation_languages": "en",
-                    "openrouter_api_key": "sk-test",
-                    "deepgram_api_key": "dg-test",
-                    "model": "gpt-4o-mini",
                 },
             )
     assert response.status_code == 200
@@ -453,7 +491,7 @@ def mock_tts_provider():
         del app.state.tts_provider
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_blog_lesson_missing_url():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -462,14 +500,13 @@ async def test_generate_blog_lesson_missing_url():
             json={
                 "source": "blog",
                 "translation_languages": ["en"],
-                "openrouter_api_key": "key",
             },
         )
     assert response.status_code == 400
     assert "blog_url" in response.json()["detail"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_blog_lesson_returns_job_id(mock_tts_provider, signed_in_user):
     from unittest.mock import AsyncMock, patch
 
@@ -482,14 +519,13 @@ async def test_generate_blog_lesson_returns_job_id(mock_tts_provider, signed_in_
                     "source": "blog",
                     "blog_url": "https://example.com/article",
                     "translation_languages": ["en"],
-                    "openrouter_api_key": "sk-test",
                 },
             )
     assert response.status_code == 200
     assert jobs_module.jobs[response.json()["job_id"]].user_id == str(signed_in_user.id)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_audio_returns_404_for_missing_file():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -497,7 +533,7 @@ async def test_get_audio_returns_404_for_missing_file():
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_audio_streams_and_deletes_file(tmp_path):
     from unittest.mock import patch
 

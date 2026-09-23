@@ -21,42 +21,31 @@ async def test_get_config_returns_provider_names():
 
 
 @pytest.mark.asyncio
-async def test_free_trial_available_true_when_all_keys_set():
+async def test_shared_keys_report_every_env_key(provider_env):
     from app.main import app
-    from app.settings import settings
 
     app.state.stt_provider_name = "deepgram"
     app.state.tts_provider_name = "azure"
-    original = (settings.openrouter_api_key, settings.deepgram_api_key,
-                settings.azure_speech_key, settings.azure_speech_region)
-    settings.openrouter_api_key = "or-key"
-    settings.deepgram_api_key = "dg-key"
-    settings.azure_speech_key = "az-key"
-    settings.azure_speech_region = "eastus"
-    try:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/config")
-    finally:
-        settings.openrouter_api_key, settings.deepgram_api_key, settings.azure_speech_key, settings.azure_speech_region = original
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/config")
+
     assert response.status_code == 200
-    assert response.json()["free_trial_available"] is True
+    assert response.json()["shared_keys"] == {"openrouter": True, "azure_speech": True, "google": True}
+    assert "free_trial_available" not in response.json()
 
 
 @pytest.mark.asyncio
-async def test_free_trial_available_false_when_key_missing():
+async def test_shared_keys_report_a_missing_env_key(provider_env, monkeypatch):
     from app.main import app
     from app.settings import settings
 
     app.state.stt_provider_name = "deepgram"
     app.state.tts_provider_name = "azure"
-    original_key = settings.openrouter_api_key
-    settings.openrouter_api_key = None  # missing openrouter key
-    try:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/api/config")
-    finally:
-        settings.openrouter_api_key = original_key
-    assert response.status_code == 200
-    assert response.json()["free_trial_available"] is False
+    monkeypatch.setattr(settings, "openrouter_api_key", None)
+    monkeypatch.setattr(settings, "azure_speech_region", None)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/config")
+
+    assert response.json()["shared_keys"] == {"openrouter": False, "azure_speech": False, "google": True}

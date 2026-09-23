@@ -7,6 +7,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
+pytestmark = pytest.mark.usefixtures("stored_user", "provider_env")
+
 
 def _ok_response():
     request = _httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
@@ -38,11 +40,10 @@ _BREAKDOWN_PAYLOAD = {
             "components": [{"name": "feather", "meaning": "young bird"}],
         },
     ],
-    "openrouter_api_key": "sk-test",
 }
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_breakdown_story_returns_story():
     with patch("app.vocab.router.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()
@@ -59,7 +60,7 @@ async def test_breakdown_story_returns_story():
     assert "Học" in body["story"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_breakdown_story_sends_system_and_user_prompts():
     captured = {}
 
@@ -86,17 +87,16 @@ async def test_breakdown_story_sends_system_and_user_prompts():
     assert "học" in msgs[1]["content"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_breakdown_story_400_when_no_api_key(monkeypatch):
-    monkeypatch.setattr("app.vocab.router.settings.openrouter_api_key", None)
-    payload = {**_BREAKDOWN_PAYLOAD, "openrouter_api_key": None}
+    monkeypatch.setattr("app.keys.service.settings.openrouter_api_key", None)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post("/api/vocab/breakdown-story", json=payload)
+        resp = await client.post("/api/vocab/breakdown-story", json=_BREAKDOWN_PAYLOAD)
     assert resp.status_code == 400
-    assert "OpenRouter" in resp.json()["detail"]
+    assert resp.json()["detail"] == "No OpenRouter key configured. Add one in Settings."
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_breakdown_story_500_on_openrouter_error():
     with patch("app.vocab.router.httpx.AsyncClient") as mock_client_cls:
         mock_client = AsyncMock()

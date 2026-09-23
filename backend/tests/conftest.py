@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 import pytest_asyncio
 from alembic.config import Config
+from cryptography.fernet import Fernet
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import make_url, pool, text
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -22,6 +23,7 @@ os.environ["SHADOWLEARN_S3_BUCKET"] = f"shadowlearn-test-{os.getpid()}"
 os.environ.setdefault("SHADOWLEARN_JWT_SECRET", "test-access-secret-" + "a" * 32)
 os.environ.setdefault("SHADOWLEARN_JWT_REFRESH_SECRET", "test-refresh-secret-" + "b" * 32)
 os.environ["SHADOWLEARN_SMTP_HOST"] = ""
+os.environ.setdefault("SHADOWLEARN_ENCRYPTION_KEY", Fernet.generate_key().decode())
 
 from app.accounts.deps import current_active_user
 from app.accounts.models import User
@@ -112,6 +114,23 @@ def signed_in_user(request):
     app.dependency_overrides[current_active_user] = lambda: user
     yield user
     app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def stored_user(db_session, signed_in_user):
+    """Persist the signed-in stand-in so rows that reference the user, such as provider usage, can insert."""
+    db_session.add(signed_in_user)
+    await db_session.commit()
+    return signed_in_user
+
+
+@pytest.fixture
+def provider_env(monkeypatch):
+    """Operator env keys for every provider, so handlers resolve a key without a stored one."""
+    monkeypatch.setattr(settings, "openrouter_api_key", "env-openrouter-key")
+    monkeypatch.setattr(settings, "azure_speech_key", "env-azure-key")
+    monkeypatch.setattr(settings, "azure_speech_region", "eastus")
+    monkeypatch.setattr(settings, "google_api_key", "env-google-key")
 
 
 @pytest_asyncio.fixture(loop_scope="session")

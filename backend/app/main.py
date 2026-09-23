@@ -16,6 +16,9 @@ from app.collection.router import router as collection_router
 from app.config.router import router as config_router
 from app.daily_review.router import router as daily_review_router
 from app.db import engine
+from app.internal.router import router as internal_router
+from app.keys.router import router as keys_router
+from app.keys.usage import enforce_rate_limit
 from app.lessons.router import router as lessons_router
 from app.pageindex_tool.router import router as pageindex_tool_router
 from app.pronunciation.router import router as pronunciation_router
@@ -62,25 +65,31 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(config_router)
+app.include_router(internal_router)
 
 for router in (
     users_router,
-    lessons_router,
-    tts_router,
+    keys_router,
     jobs_router,
-    quiz_router,
-    translation_router,
     transcription_router,
-    pronunciation_router,
-    agent_router,
-    speak_router,
-    vocab_router,
     collection_router,
-    daily_review_router,
     tips_router,
     pageindex_tool_router,
 ):
     app.include_router(router, dependencies=[Depends(current_active_user)])
+
+for router in (
+    lessons_router,
+    tts_router,
+    translation_router,
+    quiz_router,
+    agent_router,
+    vocab_router,
+    daily_review_router,
+    pronunciation_router,
+    speak_router,
+):
+    app.include_router(router, dependencies=[Depends(current_active_user), Depends(enforce_rate_limit)])
 
 
 @app.get("/api/health")

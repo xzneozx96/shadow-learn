@@ -3,14 +3,22 @@
 import json
 import logging
 import uuid
+from typing import Annotated, Any, Literal
 from urllib.parse import quote
-from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.accounts.deps import CurrentUser
+from app.db import get_session
+from app.keys.models import Provider
+from app.keys.service import ProviderKeys
+from app.settings import settings
 from app.speak.generation import GenerationError
 from app.speak.generation import generate_situation as _generate_situation
+from app.speak.models import SpeakLiveSession
 from app.speak.personas import get_persona_voice, is_persona_supported_in, list_personas
 from app.speak.prompt_builder import build_system_prompt
 from app.speak.situations import (
@@ -19,14 +27,10 @@ from app.speak.situations import (
     get_situation_seed,
     list_built_in_situations,
 )
-from app.settings import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/speak")
-
-# In-memory session cache: session_id -> session data
-session_cache: dict[str, dict[str, Any]] = {}
 
 
 class VocabItemResponse(BaseModel):
@@ -59,7 +63,6 @@ class SituationPreviewResponse(BaseModel):
 class SessionStartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    google_key: str = Field(..., min_length=1)
     persona_id: str = Field(..., pattern=r"^[a-z_]+$")
     situation_id: str = Field(..., pattern=r"^[a-z_0-9]+$")
     target_language: str = Field(..., pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
@@ -81,10 +84,11 @@ class SessionEndRequest(BaseModel):
 
 
 class GenerateSituationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     user_text: str = Field(..., min_length=10, max_length=500)
     language: str = Field(..., pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
     level: Literal["beginner", "intermediate", "advanced"]
-    google_key: str = Field(..., min_length=1)
     persona_id: str = Field(..., pattern=r"^[a-z_]+$")
     interface_language: str = Field(default="en", pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
 
@@ -116,7 +120,6 @@ class GenerateSituationResponse(BaseModel):
 def _generate_livekit_token(
     session_id: str,
     persona_id: str,
-    google_key: str,
     situation_config: SituationConfig,
     system_prompt: str,
     voice_id: str,
@@ -139,7 +142,6 @@ def _generate_livekit_token(
         f"session_id={session_id}"
         f",persona_id={persona_id}"
         f",situation_id={situation_config.id}"
-        f",google_key={quote(google_key)}"
         f",system_prompt={quote(system_prompt)}"
         f",voice_id={quote(voice_id)}"
         f",situation_config={situation_json}"
@@ -170,13 +172,19 @@ def _generate_livekit_token(
 
 
 @router.post("/session-start", response_model=SessionStartResponse)
-async def session_start(request: SessionStartRequest) -> SessionStartResponse:
+async def session_start(
+    request: SessionStartRequest,
+    user: CurrentUser,
+    keys: ProviderKeys,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> SessionStartResponse:
     """Start a new AI conversation session."""
     if not is_persona_supported_in(request.persona_id, request.target_language):
         raise HTTPException(
             status_code=400,
             detail=f"Persona {request.persona_id!r} does not support language {request.target_language!r}",
         )
+    google = await keys(Provider.google)
 
     try:
         if request.situation_id.startswith("custom_"):
@@ -188,7 +196,7 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
                 persona_id=request.persona_id,
                 language=request.target_language,
                 level=request.proficiency_level,
-                google_key=request.google_key,
+                google_key=google.value,
                 situation_id=request.situation_id,
                 force_regenerate=request.force_regenerate,
                 interface_language=request.interface_language,
@@ -218,7 +226,6 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
     livekit_token = _generate_livekit_token(
         session_id=session_id,
         persona_id=request.persona_id,
-        google_key=request.google_key,
         situation_config=situation,
         system_prompt=system_prompt,
         voice_id=voice_id,
@@ -228,14 +235,8 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
 
     livekit_url = settings.livekit_url or "wss://your-project.livekit.cloud"
 
-    session_cache[session_id] = {
-        "session_id": session_id,
-        "persona_id": request.persona_id,
-        "situation_id": request.situation_id,
-        "target_language": request.target_language,
-        "proficiency_level": request.proficiency_level,
-        "mode": request.mode,
-    }
+    session.add(SpeakLiveSession(session_id=session_id, user_id=user.id))
+    await session.commit()
 
     logger.info(
         f"[session_start] {session_id} persona={request.persona_id} "
@@ -252,12 +253,17 @@ async def session_start(request: SessionStartRequest) -> SessionStartResponse:
 
 
 @router.post("/session-end")
-async def session_end(request: SessionEndRequest) -> dict[str, str]:
+async def session_end(
+    request: SessionEndRequest, user: CurrentUser, session: Annotated[AsyncSession, Depends(get_session)]
+) -> dict[str, str]:
     """End an AI conversation session and cleanup resources."""
     session_id = request.session_id
-    if session_id not in session_cache:
+    ended = await session.execute(
+        delete(SpeakLiveSession).where(SpeakLiveSession.session_id == session_id, SpeakLiveSession.user_id == user.id)
+    )
+    await session.commit()
+    if ended.rowcount == 0:
         raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
-    del session_cache[session_id]
     logger.info(f"[session_end] Session ended: {session_id}")
     return {"session_id": session_id, "status": "ended"}
 
@@ -272,7 +278,7 @@ async def list_situations(
 
 
 @router.post("/situations/generate", response_model=GenerateSituationResponse)
-async def generate_situation(request: GenerateSituationRequest) -> GenerateSituationResponse:
+async def generate_situation(request: GenerateSituationRequest, keys: ProviderKeys) -> GenerateSituationResponse:
     """Generate a custom situation from a free-text user description."""
     try:
         cfg = await _generate_situation(
@@ -280,7 +286,7 @@ async def generate_situation(request: GenerateSituationRequest) -> GenerateSitua
             persona_id=request.persona_id,
             language=request.language,
             level=request.level,
-            google_key=request.google_key,
+            google_key=(await keys(Provider.google)).value,
             interface_language=request.interface_language,
         )
     except GenerationError as e:

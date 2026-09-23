@@ -14,20 +14,31 @@ import logging
 import os
 from pathlib import Path
 from urllib.parse import unquote
-from dotenv import load_dotenv
 
+import httpx
+from agents import PersonaAgent, start_observer
+from dotenv import load_dotenv
 from livekit import agents, rtc
 from livekit.agents import AgentServer, AgentSession, JobProcess, room_io
-from livekit.plugins import google, speechmatics
-from livekit.plugins import noise_cancellation
-from livekit.plugins import silero
-
+from livekit.plugins import google, noise_cancellation, silero, speechmatics
 from userdata import SpeakSessionData
-from agents import PersonaAgent, start_observer
 
 load_dotenv(Path(__file__).parent / ".env")
 
 logger = logging.getLogger("shadowlearn-agent")
+
+
+async def fetch_google_key(session_id: str) -> str:
+    """Fetch the session owner's Google key from the backend, server to server."""
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(
+            f"{os.environ['SHADOWLEARN_BACKEND_URL']}/api/internal/speak-sessions/{session_id}/google-key",
+            headers={"Authorization": f"Bearer {os.environ['INTERNAL_TOKEN']}"},
+        )
+    response.raise_for_status()
+    body = response.json()
+    logger.info(f"[SESSION] google key fetched from backend source={body['source']}")
+    return body["google_key"]
 
 
 def prewarm(proc: JobProcess) -> None:
@@ -69,7 +80,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
     )
 
     if not user:
-        raise Exception("No user joined the room")
+        raise RuntimeError("No user joined the room")
 
     user_identity = user.identity
     logger.info(f"[SESSION] User joined: {user_identity}")
@@ -89,7 +100,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
             session_info[key] = value
 
     # Check attributes
-    for key in ("persona_id", "situation_id", "google_key", "openai_key"):
+    for key in ("persona_id", "situation_id"):
         if key not in session_info and user.attributes.get(key):
             session_info[key] = user.attributes[key]
 
@@ -98,21 +109,16 @@ async def shadowlearn_session(ctx: agents.JobContext):
     situation_id = session_info.get("situation_id", "casual_chat")
     target_language = session_info.get("target_language", "zh-CN")
 
-    # Get API keys - prefer OpenAI for observer, fallback to Google for main.
-    # google_key is URL-encoded by the router (quote()) so unquote on read.
-    google_key_raw = session_info.get("google_key", "")
-    google_key = unquote(google_key_raw) if google_key_raw else os.getenv("GOOGLE_API_KEY", "")
+    # The backend names the room speak-<session_id> in the token it signs.
+    google_key = await fetch_google_key(ctx.room.name.removeprefix("speak-"))
     speechmatics_key = os.getenv("SPEECHMATICS_API_KEY", "")
-
-    if not google_key:
-        raise Exception("google_key required")
 
     # System prompt and voice
     system_prompt_encoded = session_info.get("system_prompt", "")
     system_prompt = unquote(system_prompt_encoded) if system_prompt_encoded else ""
 
     if not system_prompt:
-        raise Exception("No system_prompt provided")
+        raise RuntimeError("No system_prompt provided")
 
     voice_id_encoded = session_info.get("voice_id", "")
     voice_id = unquote(voice_id_encoded) if voice_id_encoded else "Puck"
@@ -131,9 +137,9 @@ async def shadowlearn_session(ctx: agents.JobContext):
     for k, v in session_info.items():
         if k == "situation_config":
             try:
-                from urllib.parse import unquote as _unquote
                 import json as _json
                 from types import SimpleNamespace as _SN
+                from urllib.parse import unquote as _unquote
                 situation_json = _unquote(v)
                 raw = _json.loads(situation_json)
                 # Normalize vocab: accept both new {term, meaning} shape and
@@ -157,7 +163,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
                     interface_language=raw.get("interface_language", "en"),
                 )
                 userdata.target_language = raw["language"]
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.error(f"Failed to parse situation_config metadata: {exc}")
         elif k == "target_language":
             userdata.target_language = v
@@ -165,7 +171,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
             userdata.proficiency_level = v
 
     if not speechmatics_key:
-        raise Exception("speechmatics_key required")
+        raise RuntimeError("speechmatics_key required")
 
     llm = google.LLM(
         model="gemini-3.1-flash-lite",
@@ -254,9 +260,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
         agent=PersonaAgent(instructions=system_prompt),
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
-                noise_cancellation=lambda params: noise_cancellation.BVC()
-                if params.participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP
-                else noise_cancellation.BVC(),
+                noise_cancellation=lambda params: noise_cancellation.BVC(),
             ),
         ),
     )

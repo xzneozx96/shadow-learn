@@ -5,7 +5,9 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
-import app.accounts.models  # noqa: F401
+import app.accounts.models
+import app.keys.models
+import app.speak.models  # noqa: F401
 from alembic import context
 from app.db import Base
 from app.settings import settings

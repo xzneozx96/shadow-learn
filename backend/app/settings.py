@@ -3,6 +3,7 @@ import re
 from typing import Literal
 from urllib.parse import urlsplit
 
+from cryptography.fernet import Fernet
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
@@ -41,7 +42,7 @@ class Settings(BaseSettings):
     livekit_api_key: str = ""  # env: SHADOWLEARN_LIVEKIT_API_KEY
     livekit_api_secret: str = ""  # env: SHADOWLEARN_LIVEKIT_API_SECRET
 
-    # Fallback API keys for free trial — all optional; unset means trial unavailable
+    # Shared fallback keys, used when an account has not saved its own key
     openrouter_api_key: str | None = None       # env: SHADOWLEARN_OPENROUTER_API_KEY
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
@@ -51,7 +52,9 @@ class Settings(BaseSettings):
     frontend_origin_regex: str = ""  # env: SHADOWLEARN_FRONTEND_ORIGIN_REGEX; e.g. https://.*\.vercel\.app
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
-    encryption_key: str | None = None          # env: SHADOWLEARN_ENCRYPTION_KEY
+    google_api_key: str | None = None           # env: SHADOWLEARN_GOOGLE_API_KEY
+    encryption_key: str = Field(default="", validate_default=True)  # env: SHADOWLEARN_ENCRYPTION_KEY
+    rate_limit_per_minute: int = Field(default=60, gt=0)  # env: SHADOWLEARN_RATE_LIMIT_PER_MINUTE
     youtube_api_key: str | None = None          # env: SHADOWLEARN_YOUTUBE_API_KEY
 
     # agentic-rag retrieval backend. The companion proxies the RAG MCP tools to
@@ -95,6 +98,18 @@ class Settings(BaseSettings):
     def _require_long_secret(cls, value: str) -> str:
         if len(value) < 32:
             raise ValueError("must be at least 32 characters; generate one with `openssl rand -hex 32`")
+        return value
+
+    @field_validator("encryption_key")
+    @classmethod
+    def _require_fernet_key(cls, value: str) -> str:
+        try:
+            Fernet(value)
+        except ValueError:
+            raise ValueError(
+                "SHADOWLEARN_ENCRYPTION_KEY must be a Fernet key; generate one with "
+                "`python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`"
+            ) from None
         return value
 
     @model_validator(mode="after")

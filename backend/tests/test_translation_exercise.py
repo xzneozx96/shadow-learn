@@ -8,6 +8,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
+pytestmark = pytest.mark.usefixtures("stored_user", "provider_env")
+
 _GENERATE_OK_BODY = {"sentences": [{"text": "今天很好。", "romanization": "jīntiān hěn hǎo", "translation": "Today is great."}]}
 _EVALUATE_OK_BODY = {
     "overall_score": 80,
@@ -18,35 +20,33 @@ _EVALUATE_OK_BODY = {
 }
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_rejects_missing_word():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/api/translation/generate",
             json={
-                "openrouter_api_key": "key",
                 # missing required fields: word, romanization, meaning
             },
         )
         assert response.status_code == 422
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_evaluate_rejects_missing_source():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/api/translation/evaluate",
             json={
-                "openrouter_api_key": "key",
                 # missing required fields
             },
         )
         assert response.status_code == 422
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_accepts_valid_payload(respx_mock):
     """Smoke test: valid payload reaches the LLM call (mocked)."""
     import httpx as _httpx
@@ -73,7 +73,6 @@ async def test_generate_accepts_valid_payload(respx_mock):
         response = await client.post(
             "/api/translation/generate",
             json={
-                "openrouter_api_key": "key",
                 "word": "今天",
                 "romanization": "jīntiān",
                 "meaning": "today",
@@ -88,7 +87,7 @@ async def test_generate_accepts_valid_payload(respx_mock):
         assert "translation" in data["sentences"][0]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_evaluate_accepts_valid_payload(respx_mock):
     """Smoke test: valid evaluate payload returns structured feedback."""
     import httpx as _httpx
@@ -115,7 +114,6 @@ async def test_evaluate_accepts_valid_payload(respx_mock):
         response = await client.post(
             "/api/translation/evaluate",
             json={
-                "openrouter_api_key": "key",
                 "source": "今天天气很好。",
                 "source_language": "chinese",
                 "target_language": "english",
@@ -132,7 +130,7 @@ async def test_evaluate_accepts_valid_payload(respx_mock):
         assert "tip" in data
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_uses_json_schema(respx_mock):
     """generate_sentences must send json_schema response_format."""
     import httpx as _httpx
@@ -148,11 +146,12 @@ async def test_generate_uses_json_schema(respx_mock):
 
     respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(side_effect=capture_post)
 
-    from httpx import AsyncClient, ASGITransport
+    from httpx import ASGITransport, AsyncClient
+
     from app.main import app
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post("/api/translation/generate", json={
-            "openrouter_api_key": "key", "word": "今天", "romanization": "jīntiān", "meaning": "today",
+            "word": "今天", "romanization": "jīntiān", "meaning": "today",
         })
     assert resp.status_code == 200
     assert captured["payload"]["response_format"]["type"] == "json_schema"
@@ -160,7 +159,7 @@ async def test_generate_uses_json_schema(respx_mock):
     assert captured["payload"]["reasoning"] == {"effort": "none"}
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_evaluate_uses_json_schema(respx_mock):
     """evaluate_translation must send json_schema response_format."""
     import httpx as _httpx
@@ -180,11 +179,12 @@ async def test_evaluate_uses_json_schema(respx_mock):
 
     respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(side_effect=capture_post)
 
-    from httpx import AsyncClient, ASGITransport
+    from httpx import ASGITransport, AsyncClient
+
     from app.main import app
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post("/api/translation/evaluate", json={
-            "openrouter_api_key": "key", "source": "今天。", "source_language": "chinese",
+            "source": "今天。", "source_language": "chinese",
             "target_language": "english", "reference": "Today.", "user_answer": "Today.",
         })
     assert resp.status_code == 200
@@ -193,7 +193,7 @@ async def test_evaluate_uses_json_schema(respx_mock):
     assert captured["payload"]["reasoning"] == {"effort": "none"}
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_sentences_retries_on_429(respx_mock):
     """generate_sentences retries and succeeds after an initial 429."""
     call_count = 0
@@ -210,7 +210,7 @@ async def test_generate_sentences_retries_on_429(respx_mock):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         with patch("asyncio.sleep", new_callable=AsyncMock):
             resp = await client.post("/api/translation/generate", json={
-                "openrouter_api_key": "key", "word": "今天", "romanization": "jīntiān",
+                "word": "今天", "romanization": "jīntiān",
                 "meaning": "today", "usage": "", "sentence_count": 1,
             })
 
@@ -218,7 +218,7 @@ async def test_generate_sentences_retries_on_429(respx_mock):
     assert call_count == 2
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_evaluate_translation_retries_on_429(respx_mock):
     """evaluate_translation retries and succeeds after an initial 429."""
     call_count = 0
@@ -235,7 +235,7 @@ async def test_evaluate_translation_retries_on_429(respx_mock):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         with patch("asyncio.sleep", new_callable=AsyncMock):
             resp = await client.post("/api/translation/evaluate", json={
-                "openrouter_api_key": "key", "source": "今天。", "source_language": "chinese",
+                "source": "今天。", "source_language": "chinese",
                 "target_language": "english", "reference": "Today.", "user_answer": "Today.",
             })
 

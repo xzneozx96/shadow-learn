@@ -2,7 +2,9 @@ import pytest
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 
-import app.accounts.models  # noqa: F401
+import app.accounts.models
+import app.keys.models
+import app.speak.models  # noqa: F401
 from app.db import Base, engine
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")

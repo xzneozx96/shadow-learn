@@ -9,10 +9,11 @@ import logging
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
+from app.keys.models import Provider
+from app.keys.service import ProviderKeys
 from app.settings import settings
-from app.shared.utils import _resolve_key
 from app.shared._retry import RetryableError, http_retry
 from app.vocab.prompt import (
     SYSTEM_PROMPT,
@@ -25,12 +26,13 @@ router = APIRouter(prefix="/api/vocab", tags=["vocab"])
 
 
 class BreakdownStoryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     word: str = Field(..., min_length=1, max_length=16)
     pinyin: str = Field("", max_length=64)
     meaning: str = Field("", max_length=500)
     sino_vietnamese: str = Field("", max_length=80)
     characters: list[CharPromptInput] = Field(..., min_length=1, max_length=16)
-    openrouter_api_key: str | None = Field(None, max_length=200)
 
 
 class BreakdownStoryResponse(BaseModel):
@@ -38,10 +40,8 @@ class BreakdownStoryResponse(BaseModel):
 
 
 @router.post("/breakdown-story", response_model=BreakdownStoryResponse)
-async def generate_breakdown_story(req: BreakdownStoryRequest) -> BreakdownStoryResponse:
-    api_key = _resolve_key(
-        req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key"
-    )
+async def generate_breakdown_story(req: BreakdownStoryRequest, keys: ProviderKeys) -> BreakdownStoryResponse:
+    api_key = (await keys(Provider.openrouter)).value
 
     user_prompt = build_story_prompt(
         word=req.word,

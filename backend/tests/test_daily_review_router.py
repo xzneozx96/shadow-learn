@@ -1,9 +1,9 @@
 import json
 from unittest.mock import AsyncMock, patch
-from fastapi.testclient import TestClient
-from app.main import app
 
-client = TestClient(app)
+import pytest
+
+pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.usefixtures("stored_user", "provider_env")]
 
 PASSAGE_RESP = {
     "choices": [{"message": {"content": json.dumps({"passage": "你好世界。", "pinyin": "Nǐ hǎo shìjiè."})}}]
@@ -26,10 +26,9 @@ def _mock_httpx(response_data):
     return mock
 
 
-def test_generate_passage_returns_passage():
+async def test_generate_passage_returns_passage(client):
     with patch("httpx.AsyncClient", return_value=_mock_httpx(PASSAGE_RESP)):
-        resp = client.post("/api/daily-review/passage", json={
-            "openrouter_api_key": "test-key",
+        resp = await client.post("/api/daily-review/passage", json={
             "words": [{"hanzi": "你好", "pinyin": "nǐ hǎo", "meaning": "hello"}],
             "source_language": "zh-CN",
         })
@@ -39,10 +38,9 @@ def test_generate_passage_returns_passage():
     assert "pinyin" in data
 
 
-def test_grade_passage_returns_score():
+async def test_grade_passage_returns_score(client):
     with patch("httpx.AsyncClient", return_value=_mock_httpx(GRADE_RESP)):
-        resp = client.post("/api/daily-review/grade-passage", json={
-            "openrouter_api_key": "test-key",
+        resp = await client.post("/api/daily-review/grade-passage", json={
             "passage": "你好世界。",
             "user_translation": "Hello world.",
             "source_language": "zh-CN",
@@ -53,10 +51,9 @@ def test_grade_passage_returns_score():
     assert "feedback" in data
 
 
-def test_grade_sentence_returns_correct():
+async def test_grade_sentence_returns_correct(client):
     with patch("httpx.AsyncClient", return_value=_mock_httpx(SENTENCE_GRADE_RESP)):
-        resp = client.post("/api/daily-review/grade-sentence", json={
-            "openrouter_api_key": "test-key",
+        resp = await client.post("/api/daily-review/grade-sentence", json={
             "hanzi": "你好",
             "meaning": "hello",
             "user_sentence": "Tôi nói 你好 với anh ấy.",
@@ -67,13 +64,11 @@ def test_grade_sentence_returns_correct():
     assert "feedback" in data
 
 
-def test_generate_passage_missing_api_key_raises():
-    with patch("app.daily_review.router.settings") as mock_settings:
-        mock_settings.openrouter_api_key = None
-        mock_settings.openrouter_structured_model = "qwen/qwen3.5-flash-02-23"
-        mock_settings.openrouter_chat_url = "https://openrouter.ai/api/v1/chat/completions"
-        resp = client.post("/api/daily-review/passage", json={
-            "words": [{"hanzi": "你好", "pinyin": "nǐ hǎo", "meaning": "hello"}],
-            "source_language": "zh-CN",
-        })
+async def test_generate_passage_missing_api_key_raises(client, monkeypatch):
+    monkeypatch.setattr("app.keys.service.settings.openrouter_api_key", None)
+    resp = await client.post("/api/daily-review/passage", json={
+        "words": [{"hanzi": "你好", "pinyin": "nǐ hǎo", "meaning": "hello"}],
+        "source_language": "zh-CN",
+    })
     assert resp.status_code == 400
+    assert resp.json()["detail"] == "No OpenRouter key configured. Add one in Settings."
