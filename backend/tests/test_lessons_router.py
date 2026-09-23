@@ -129,6 +129,45 @@ async def test_generate_lesson_hands_the_server_keys_to_the_pipeline():
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_youtube_lesson_starts_without_an_azure_key_because_subtitles_may_skip_stt(monkeypatch):
+    monkeypatch.setattr("app.keys.service.settings.azure_speech_key", None)
+    with (
+        patch("app.lessons.router.validate_youtube_url", return_value="abc123"),
+        patch("app.lessons.router._process_youtube_lesson", new=AsyncMock()) as pipeline,
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/lessons/generate",
+                json={"source": "youtube", "youtube_url": "https://www.youtube.com/watch?v=abc123", "translation_languages": ["en"]},
+            )
+    assert response.status_code == 200
+    assert pipeline.call_args.args[-1] == {}
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_blog_lesson_resolves_azure_once_for_tts_and_stt(mock_tts_provider, db_session):
+    from sqlalchemy import func, select
+
+    from app.keys.models import Provider, ProviderUsage
+
+    with patch("app.lessons.router._process_blog_lesson", new=AsyncMock()) as pipeline:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/lessons/generate",
+                json={"source": "blog", "blog_text": "你好世界", "translation_languages": ["en"]},
+            )
+    assert response.status_code == 200
+    *_, tts_keys, stt_keys = pipeline.call_args.args
+    assert tts_keys["azure_speech_key"] == stt_keys["azure_speech_key"] == "env-azure-key"
+    azure_rows = await db_session.scalar(
+        select(func.count()).select_from(ProviderUsage).where(ProviderUsage.provider == Provider.azure_speech)
+    )
+    assert azure_rows == 1
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_lesson_returns_400_without_any_openrouter_key(monkeypatch):
     monkeypatch.setattr("app.keys.service.settings.openrouter_api_key", None)
     with patch("app.lessons.router.validate_youtube_url", return_value="abc123"):
@@ -148,7 +187,6 @@ async def test_generate_lesson_returns_400_without_any_openrouter_key(monkeypatc
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_generate_lesson_upload_rejects_key_form_fields():
-    """generate-upload rejects provider keys sent as form fields."""
     from unittest.mock import AsyncMock, patch
 
     with patch("app.lessons.router._process_upload_lesson", new=AsyncMock()):

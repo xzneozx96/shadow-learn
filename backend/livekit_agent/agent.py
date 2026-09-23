@@ -29,7 +29,6 @@ logger = logging.getLogger("shadowlearn-agent")
 
 
 async def fetch_google_key(session_id: str) -> str:
-    """Fetch the session owner's Google key from the backend, server to server."""
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(
             f"{os.environ['SHADOWLEARN_BACKEND_URL']}/api/internal/speak-sessions/{session_id}/google-key",
@@ -109,7 +108,6 @@ async def shadowlearn_session(ctx: agents.JobContext):
     situation_id = session_info.get("situation_id", "casual_chat")
     target_language = session_info.get("target_language", "zh-CN")
 
-    # The backend names the room speak-<session_id> in the token it signs.
     google_key = await fetch_google_key(ctx.room.name.removeprefix("speak-"))
     speechmatics_key = os.getenv("SPEECHMATICS_API_KEY", "")
 
@@ -163,7 +161,7 @@ async def shadowlearn_session(ctx: agents.JobContext):
                     interface_language=raw.get("interface_language", "en"),
                 )
                 userdata.target_language = raw["language"]
-            except Exception as exc:  # noqa: BLE001
+            except (ValueError, KeyError, TypeError, AttributeError) as exc:
                 logger.error(f"Failed to parse situation_config metadata: {exc}")
         elif k == "target_language":
             userdata.target_language = v

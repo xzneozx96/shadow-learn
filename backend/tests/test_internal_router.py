@@ -67,3 +67,20 @@ async def test_falls_back_to_the_env_google_key(client, db_session, stored_user,
     response = await client.get(URL.format("session-env"), headers={"Authorization": f"Bearer {TOKEN}"})
 
     assert response.json() == {"google_key": "env-google-key", "source": "env"}
+
+
+async def test_an_expired_session_is_404(client, db_session, stored_user, provider_env):
+    from datetime import UTC, datetime
+
+    from app.speak.models import SESSION_TTL
+
+    db_session.add(
+        SpeakLiveSession(
+            session_id="session-old", user_id=stored_user.id, created_at=datetime.now(UTC) - SESSION_TTL - SESSION_TTL / 10
+        )
+    )
+    await db_session.commit()
+
+    response = await client.get(URL.format("session-old"), headers={"Authorization": f"Bearer {TOKEN}"})
+
+    assert response.status_code == 404

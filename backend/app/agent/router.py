@@ -430,7 +430,7 @@ async def _stream_agent(stream, stitch_message_id: str | None = None):
                 try:
                     parsed = json.loads(sanitized) if sanitized else {}
                     logger.info(f"[_stream_agent] Tool Call Parsed: {name} ID={tcid} Args={parsed}")
-                except Exception as e:  # noqa: BLE001
+                except json.JSONDecodeError as e:
                     logger.error(f"[_stream_agent] Invalid JSON in tool arguments for {name}: {sanitized!r} - Error: {e}")
                     yield fmt(
                         {
@@ -674,7 +674,6 @@ class SummarizeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     messages: list[ClientMessage]
-    template: str | None = None
     locale: str | None = None
 
 

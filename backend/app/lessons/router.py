@@ -405,11 +405,15 @@ async def _process_blog_lesson(
             audio_path.unlink(missing_ok=True)
 
 
-async def _azure_keys(keys: KeyResolver, provider_name: str) -> TranscriptionKeys:
-    """Azure credentials for an Azure-backed STT or TTS provider; other providers read their own env keys."""
+async def _azure_keys(keys: KeyResolver, provider_name: str, *, required: bool = True) -> TranscriptionKeys:
     if provider_name != "azure":
         return {}
-    azure = await keys(Provider.azure_speech)
+    try:
+        azure = await keys(Provider.azure_speech)
+    except HTTPException:
+        if required:
+            raise
+        return {}
     return {"azure_speech_key": azure.value, "azure_speech_region": azure.region}
 
 
@@ -431,7 +435,8 @@ async def generate_lesson(
             raise HTTPException(status_code=400, detail=exc.message)
 
         openrouter_key = (await keys(Provider.openrouter)).value
-        stt_keys = await _azure_keys(keys, req.app.state.stt_provider_name)
+        # A video with a manual subtitle track never reaches STT, so it needs no Azure key.
+        stt_keys = await _azure_keys(keys, req.app.state.stt_provider_name, required=False)
         stt_provider = req.app.state.stt_provider
         job_id = register_job(id_prefix="lesson", user_id=str(user.id))
         background_tasks.add_task(

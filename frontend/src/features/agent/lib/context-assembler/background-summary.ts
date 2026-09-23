@@ -9,17 +9,6 @@ const TAIL_TURNS = 2
 const MIN_PRESERVE_RECENT_TOKENS = 2_000
 const MAX_PRESERVE_RECENT_TOKENS = 8_000
 
-// Structured but TUTOR-shaped (not opencode's coding-agent template). Passed to
-// /api/summarize so the backend produces a summary that preserves teaching
-// continuity — what was taught, what the learner struggles with, what drill is mid-flight.
-export const TUTOR_SUMMARY_TEMPLATE = `Summarise the tutoring conversation so far using EXACTLY this Markdown structure (keep the headings, fill each with bullets or "(none)"):
-## Topics Covered
-## Grammar Points Explained
-## Vocabulary Touched
-## Mistake Patterns
-## Pending Drill or Exercise State
-## Open Questions`
-
 const inFlight = new Set<string>()
 
 /**
@@ -105,7 +94,6 @@ export async function compact(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       messages: older.map((m: any) => ({ role: m.role, parts: m.parts })),
-      template: TUTOR_SUMMARY_TEMPLATE,
       locale,
     }),
   })

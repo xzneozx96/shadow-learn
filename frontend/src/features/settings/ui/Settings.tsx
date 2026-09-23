@@ -64,7 +64,7 @@ function ProviderKeyRow({ state, onSaved, onRemoved }: {
   }
 
   const status = state.source === 'user'
-    ? t('settings.keyStatus.user', { last4: state.last4 ?? '' })
+    ? state.last4 === null ? t('settings.keyStatus.unreadable') : t('settings.keyStatus.user', { last4: state.last4 })
     : state.source === 'env'
       ? t('settings.keyStatus.env')
       : t('settings.keyStatus.none')

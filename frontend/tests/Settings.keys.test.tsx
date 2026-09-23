@@ -67,6 +67,14 @@ describe('settings provider keys card', () => {
     expect(row('google').getByText('Not configured')).toBeInTheDocument()
   })
 
+  it('offers to save again when the server can no longer read a saved key', async () => {
+    server.openrouter = { provider: 'openrouter', source: 'user', last4: null, region: null }
+    await renderSettings()
+
+    expect(row('openrouter').getByText('Saved key can no longer be read. Save it again.')).toBeInTheDocument()
+    expect(row('openrouter').getByRole('button', { name: 'Save' })).toBeInTheDocument()
+  })
+
   it('saves a key and shows only its last four characters', async () => {
     await renderSettings()
 

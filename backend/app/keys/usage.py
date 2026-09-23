@@ -13,14 +13,11 @@ WINDOW_SECONDS = 60.0
 
 
 class RateLimiter:
-    """Sliding one-minute window per account, held in memory by the single uvicorn worker."""
-
     def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
         self._clock = clock
         self._hits: defaultdict[uuid.UUID, deque[float]] = defaultdict(deque)
 
     def retry_after(self, user_id: uuid.UUID, limit: int) -> float | None:
-        """Record a hit and return None, or return the seconds until the oldest hit leaves the window."""
         now = self._clock()
         hits = self._hits[user_id]
         while hits and hits[0] <= now - WINDOW_SECONDS:
@@ -34,7 +31,7 @@ class RateLimiter:
 rate_limiter = RateLimiter()
 
 
-def enforce_rate_limit(user: CurrentUser) -> None:
+async def enforce_rate_limit(user: CurrentUser) -> None:
     wait = rate_limiter.retry_after(user.id, settings.rate_limit_per_minute)
     if wait is not None:
         seconds = max(1, math.ceil(wait))

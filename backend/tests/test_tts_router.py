@@ -36,7 +36,6 @@ async def test_get_provider_returns_minimax_when_set(mock_tts_provider):
 
 
 async def test_tts_azure_returns_audio(mock_tts_provider, provider_env):
-    """POST /api/tts with the Azure provider returns audio/mpeg."""
     fake_mp3 = b"\xff\xfb\x90\x00" * 10
     mock_tts_provider.synthesize = AsyncMock(return_value=fake_mp3)
     app.state.tts_provider_name = "azure"
@@ -51,7 +50,6 @@ async def test_tts_azure_returns_audio(mock_tts_provider, provider_env):
 
 
 async def test_tts_azure_returns_400_when_keys_missing(mock_tts_provider):
-    """POST /api/tts returns 400 when no Azure key is saved or configured and provider is azure."""
     app.state.tts_provider_name = "azure"
 
     transport = ASGITransport(app=app)

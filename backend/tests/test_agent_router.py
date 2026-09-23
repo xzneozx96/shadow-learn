@@ -159,7 +159,6 @@ async def test_agent_rejects_missing_fields():
             "/api/agent",
             json={"messages": [{"role": "user", "parts": [{"type": "text", "text": "hi"}]}]},
         )
-        # Missing system_prompt
         assert response.status_code == 422
 
 

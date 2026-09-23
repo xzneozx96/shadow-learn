@@ -118,7 +118,6 @@ def signed_in_user(request):
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def stored_user(db_session, signed_in_user):
-    """Persist the signed-in stand-in so rows that reference the user, such as provider usage, can insert."""
     db_session.add(signed_in_user)
     await db_session.commit()
     return signed_in_user
@@ -126,7 +125,6 @@ async def stored_user(db_session, signed_in_user):
 
 @pytest.fixture
 def provider_env(monkeypatch):
-    """Operator env keys for every provider, so handlers resolve a key without a stored one."""
     monkeypatch.setattr(settings, "openrouter_api_key", "env-openrouter-key")
     monkeypatch.setattr(settings, "azure_speech_key", "env-azure-key")
     monkeypatch.setattr(settings, "azure_speech_region", "eastus")

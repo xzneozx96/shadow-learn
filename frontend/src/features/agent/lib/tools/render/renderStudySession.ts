@@ -131,7 +131,6 @@ export async function executeRenderStudySession(
   return { type: 'study_session', props: { questions } }
 }
 
-// uiLanguage is bound at construction time via factory pattern
 export function makeRenderStudySessionTool(uiLanguage: string = 'en') {
   return buildTool({
     name: 'render_study_session',

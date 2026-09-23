@@ -22,7 +22,6 @@ import { makeRenderStudySessionTool } from '@/features/agent/lib/tools/render/re
 import { renderVocabCardTool } from '@/features/agent/lib/tools/render/renderVocabCard'
 import { toolSearchTool } from './system/ToolSearchTool'
 
-// uiLanguage is bound here (partial application for renderStudySession)
 export function getAllBaseTools(uiLanguage: string = 'en'): AgentTool[] {
   return [
     toolSearchTool, // ALWAYS first - never deferred

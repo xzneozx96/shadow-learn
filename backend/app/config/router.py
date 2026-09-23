@@ -1,5 +1,3 @@
-"""Config endpoint — exposes active provider names and which shared keys the server holds."""
-
 from fastapi import APIRouter, Request
 
 from app.keys.models import Provider

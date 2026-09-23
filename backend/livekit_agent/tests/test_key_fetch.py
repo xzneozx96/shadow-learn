@@ -1,4 +1,3 @@
-"""The agent fetches the Google key from the backend instead of the participant token."""
 import logging
 import os
 import sys

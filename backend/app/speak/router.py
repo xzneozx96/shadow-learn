@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import delete
+from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.accounts.deps import CurrentUser
@@ -18,7 +18,7 @@ from app.keys.service import ProviderKeys
 from app.settings import settings
 from app.speak.generation import GenerationError
 from app.speak.generation import generate_situation as _generate_situation
-from app.speak.models import SpeakLiveSession
+from app.speak.models import SESSION_TTL, SpeakLiveSession
 from app.speak.personas import get_persona_voice, is_persona_supported_in, list_personas
 from app.speak.prompt_builder import build_system_prompt
 from app.speak.situations import (
@@ -154,6 +154,7 @@ def _generate_livekit_token(
         .with_identity(f"user-{session_id}")
         .with_name(f"ShadowLearn-User-{session_id}")
         .with_metadata(metadata)
+        .with_ttl(SESSION_TTL)
         .with_grants(
             livekit_api.VideoGrants(
                 room_join=True,
@@ -235,6 +236,11 @@ async def session_start(
 
     livekit_url = settings.livekit_url or "wss://your-project.livekit.cloud"
 
+    await session.execute(
+        delete(SpeakLiveSession).where(
+            SpeakLiveSession.user_id == user.id, SpeakLiveSession.created_at < func.now() - SESSION_TTL
+        )
+    )
     session.add(SpeakLiveSession(session_id=session_id, user_id=user.id))
     await session.commit()
 

@@ -186,3 +186,25 @@ async def test_session_end_removes_only_the_callers_session(client, db_session, 
 
     remaining = (await db_session.scalars(select(SpeakLiveSession.session_id))).all()
     assert remaining == ["session-theirs"]
+
+
+async def test_session_start_prunes_the_callers_expired_sessions(client, db_session, stored_user):
+    from datetime import UTC, datetime
+
+    from app.speak.models import SESSION_TTL
+
+    old = datetime.now(UTC) - SESSION_TTL * 2
+    db_session.add_all([
+        SpeakLiveSession(session_id="session-stale", user_id=stored_user.id, created_at=old),
+        SpeakLiveSession(session_id="session-recent", user_id=stored_user.id),
+    ])
+    await db_session.commit()
+
+    async def _gen(*args, **kwargs):
+        return _sample_config(id="ordering_food")
+
+    with patch("app.speak.router._generate_situation", side_effect=_gen):
+        resp = await client.post("/api/speak/session-start", json=_START)
+
+    ids = set((await db_session.scalars(select(SpeakLiveSession.session_id))).all())
+    assert ids == {"session-recent", resp.json()["session_id"]}

@@ -88,3 +88,28 @@ async def test_keys_are_scoped_to_the_signed_in_account(client, db_session, stor
     app.dependency_overrides[current_active_user] = lambda: signed_in_user
     assert listed[0]["source"] != "user"
     assert (await client.get("/api/keys")).json()[0]["last4"] == "aaaa"
+
+
+async def test_list_survives_a_key_saved_under_another_encryption_key(client, db_session, stored_user):
+    from cryptography.fernet import Fernet
+
+    foreign = Fernet(Fernet.generate_key()).encrypt(b"old-openrouter-key")
+    db_session.add(ProviderKey(user_id=stored_user.id, provider=Provider.openrouter, ciphertext=foreign))
+    await db_session.commit()
+
+    response = await client.get("/api/keys")
+
+    assert response.status_code == 200
+    assert response.json()[0] == {"provider": "openrouter", "source": "user", "last4": None, "region": None}
+    saved = await client.put("/api/keys/openrouter", json={"value": "new-openrouter-key-5678"})
+    assert saved.json()["last4"] == "5678"
+
+
+async def test_put_lowercases_the_azure_region(client):
+    response = await client.put("/api/keys/azure_speech", json={"value": "azure-key-9f3c", "region": " EastUS "})
+    assert response.json()["region"] == "eastus"
+
+
+async def test_put_rejects_a_key_short_enough_to_echo_in_full(client):
+    response = await client.put("/api/keys/openrouter", json={"value": "abc123"})
+    assert response.status_code == 422

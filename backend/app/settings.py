@@ -42,7 +42,6 @@ class Settings(BaseSettings):
     livekit_api_key: str = ""  # env: SHADOWLEARN_LIVEKIT_API_KEY
     livekit_api_secret: str = ""  # env: SHADOWLEARN_LIVEKIT_API_SECRET
 
-    # Shared fallback keys, used when an account has not saved its own key
     openrouter_api_key: str | None = None       # env: SHADOWLEARN_OPENROUTER_API_KEY
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
@@ -52,9 +51,9 @@ class Settings(BaseSettings):
     frontend_origin_regex: str = ""  # env: SHADOWLEARN_FRONTEND_ORIGIN_REGEX; e.g. https://.*\.vercel\.app
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
-    google_api_key: str | None = None           # env: SHADOWLEARN_GOOGLE_API_KEY
-    encryption_key: str = Field(default="", validate_default=True)  # env: SHADOWLEARN_ENCRYPTION_KEY
-    rate_limit_per_minute: int = Field(default=60, gt=0)  # env: SHADOWLEARN_RATE_LIMIT_PER_MINUTE
+    google_api_key: str | None = None
+    encryption_key: str = Field(default="", validate_default=True)
+    rate_limit_per_minute: int = Field(default=60, gt=0)
     youtube_api_key: str | None = None          # env: SHADOWLEARN_YOUTUBE_API_KEY
 
     # agentic-rag retrieval backend. The companion proxies the RAG MCP tools to

@@ -1,7 +1,7 @@
 import logging
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated
 
 from cryptography.fernet import InvalidToken
@@ -12,6 +12,7 @@ from app.accounts.deps import CurrentUser
 from app.db import get_session
 from app.keys.crypto import decrypt
 from app.keys.models import KeySource, Provider, ProviderKey, ProviderUsage
+from app.keys.usage import enforce_rate_limit
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,6 @@ def env_key(provider: Provider) -> ResolvedKey | None:
 async def resolve_provider_key(
     session: AsyncSession, user_id: uuid.UUID, provider: Provider, endpoint: str
 ) -> ResolvedKey:
-    """Return the account's own key, else the operator's env key, and log one usage row."""
     started = time.perf_counter()
     stored = await session.get(ProviderKey, (user_id, provider))
     if stored is None:
@@ -74,18 +74,26 @@ async def resolve_provider_key(
     return resolved
 
 
-@dataclass(frozen=True)
+@dataclass
 class KeyResolver:
+    """Resolves each provider at most once per request, so one request logs one usage row per provider."""
+
     session: AsyncSession
     user_id: uuid.UUID
     endpoint: str
+    _resolved: dict[Provider, ResolvedKey] = field(default_factory=dict)
 
     async def __call__(self, provider: Provider) -> ResolvedKey:
-        return await resolve_provider_key(self.session, self.user_id, provider, self.endpoint)
+        if provider not in self._resolved:
+            self._resolved[provider] = await resolve_provider_key(self.session, self.user_id, provider, self.endpoint)
+        return self._resolved[provider]
 
 
 def get_key_resolver(
-    request: Request, user: CurrentUser, session: Annotated[AsyncSession, Depends(get_session)]
+    request: Request,
+    user: CurrentUser,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    _: Annotated[None, Depends(enforce_rate_limit)],
 ) -> KeyResolver:
     return KeyResolver(session, user.id, request.scope["route"].path)
 

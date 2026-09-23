@@ -1,10 +1,12 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
+
+SESSION_TTL = timedelta(hours=6)
 
 
 class SpeakLiveSession(Base):

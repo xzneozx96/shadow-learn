@@ -8,7 +8,6 @@ vi.mock('@/features/vocabulary/lib/api/breakdownStory', () => ({
   fetchBreakdownStory: vi.fn().mockResolvedValue('Người thợ kéo sợi ...'),
 }))
 
-// useTTS calls the backend. Stub it out in tests.
 vi.mock('@/shared/hooks/useTTS', () => ({
   useTTS: () => ({ playTTS: vi.fn(), loadingText: null }),
 }))
