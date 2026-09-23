@@ -1,4 +1,9 @@
 # backend/app/config.py
+import re
+from typing import Literal
+from urllib.parse import urlsplit
+
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -41,10 +46,9 @@ class Settings(BaseSettings):
     deepgram_api_key: str | None = None         # env: SHADOWLEARN_DEEPGRAM_API_KEY
     azure_speech_key: str | None = None         # env: SHADOWLEARN_AZURE_SPEECH_KEY
     gladia_api_keys: list[str] = []            # env: SHADOWLEARN_GLADIA_API_KEYS='["key1","key2"]' — tried in order, rotated on 402/403
-    # Allowlist of frontend origins permitted to call /api/transcription/session.
-    # Empty list disables the Origin check (dev convenience).
     # env: SHADOWLEARN_FRONTEND_ORIGIN_ALLOWLIST='["http://localhost:5173","https://shadowlearn.app"]'
-    frontend_origin_allowlist: list[str] = []
+    frontend_origin_allowlist: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    frontend_origin_regex: str = ""  # env: SHADOWLEARN_FRONTEND_ORIGIN_REGEX; e.g. https://.*\.vercel\.app
     azure_speech_region: str | None = None      # env: SHADOWLEARN_AZURE_SPEECH_REGION
     minimax_api_key: str | None = None          # env: SHADOWLEARN_MINIMAX_API_KEY
     encryption_key: str | None = None          # env: SHADOWLEARN_ENCRYPTION_KEY
@@ -74,7 +78,43 @@ class Settings(BaseSettings):
     s3_region: str = "us-east-1"
     temp_dir: str = "/tmp/shadowlearn"
 
-    model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    jwt_secret: str
+    jwt_refresh_secret: str
+    access_token_minutes: int = Field(default=15, gt=0)
+    refresh_token_days: int = Field(default=30, gt=0)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_security: Literal["none", "starttls", "ssl"] = "starttls"
+    public_app_url: str = "http://localhost:5173"
+
+    @field_validator("jwt_secret", "jwt_refresh_secret")
+    @classmethod
+    def _require_long_secret(cls, value: str) -> str:
+        if len(value) < 32:
+            raise ValueError("must be at least 32 characters; generate one with `openssl rand -hex 32`")
+        return value
+
+    @model_validator(mode="after")
+    def _require_smtp_outside_local_dev(self) -> "Settings":
+        if not self.smtp_host and urlsplit(self.public_app_url).hostname not in {"localhost", "127.0.0.1"}:
+            raise ValueError(
+                "SHADOWLEARN_SMTP_HOST is required outside local dev: without it the backend would "
+                f"log password reset links for {self.public_app_url}"
+            )
+        return self
+
+    def origin_allowed(self, origin: str | None) -> bool:
+        """The CORS middleware's rule: an exact allowlist entry, ``*``, or a full regex match."""
+        if origin is None:
+            return False
+        if "*" in self.frontend_origin_allowlist or origin in self.frontend_origin_allowlist:
+            return True
+        return bool(self.frontend_origin_regex and re.fullmatch(self.frontend_origin_regex, origin))
+
+    model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore", "hide_input_in_errors": True}
 
 
 settings = Settings()

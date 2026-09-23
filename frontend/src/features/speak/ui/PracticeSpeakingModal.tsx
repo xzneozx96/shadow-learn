@@ -15,7 +15,7 @@ import { useI18n } from '@/app/providers/I18nContext'
 import { getSettings } from '@/db'
 import { SpeakSessionProvider } from '@/features/speak/application/SpeakSessionContext'
 import { useSpeakSession } from '@/features/speak/application/useSpeakSession'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { captureSpeakPersonaSelected, captureSpeakSessionAbandoned, captureSpeakSessionCompleted, captureSpeakSessionStarted, captureSpeakSituationSelected } from '@/shared/lib/posthog-events'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -143,7 +143,7 @@ export function PracticeSpeakingModal({ open, onClose }: PracticeSpeakingModalPr
     setError(null)
 
     try {
-      const res = await fetch(`${API_BASE}/api/speak/session-start`, {
+      const res = await apiFetch(`/api/speak/session-start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

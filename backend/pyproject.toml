@@ -26,6 +26,7 @@ dependencies = [
     "asyncpg>=0.30",
     "alembic>=1.13",
     "aiobotocore>=2.15",
+    "fastapi-users[sqlalchemy]>=14",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +41,7 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["real_auth: use the real bearer-token dependency instead of the signed-in stand-in"]
 
 [tool.uv.workspace]
 members = [

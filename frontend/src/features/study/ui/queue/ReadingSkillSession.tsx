@@ -4,7 +4,7 @@ import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import {
   getReadingDraft,
   getReadingPassage,
@@ -67,7 +67,7 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
       return
 
     const controller = new AbortController()
-    void fetch(`${API_BASE}/api/daily-review/passage`, {
+    void apiFetch(`/api/daily-review/passage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ words, openrouter_api_key: keys.openrouterApiKey, source_language: sourceLanguage }),
@@ -102,7 +102,7 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
     try {
       if (!keys)
         return
-      const resp = await fetch(`${API_BASE}/api/daily-review/grade-passage`, {
+      const resp = await apiFetch(`/api/daily-review/grade-passage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

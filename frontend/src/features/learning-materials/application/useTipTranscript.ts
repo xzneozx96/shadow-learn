@@ -2,7 +2,7 @@ import type { TipSegment, TipTranscriptStatus } from '@/features/learning-materi
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
 import { getTipTranscript, putTipTranscript } from '@/db'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 const POLL_INTERVAL_MS = 1500
 const POLL_TIMEOUT_MS = 300_000
@@ -186,7 +186,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
       setResult(r => ({ ...r, hydrated: true }))
 
       try {
-        const res = await fetch(`${API_BASE}/api/tips/transcript/${encodeURIComponent(videoId)}`, { signal: controller.signal })
+        const res = await apiFetch(`/api/tips/transcript/${encodeURIComponent(videoId)}`, { signal: controller.signal })
         if (state.cancelled) {
           return
         }
@@ -279,7 +279,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
         if (state.cancelled || controller.signal.aborted)
           return
         try {
-          const res = await fetch(`${API_BASE}/api/jobs/${encodeURIComponent(jobId)}`, { signal: controller.signal })
+          const res = await apiFetch(`/api/jobs/${encodeURIComponent(jobId)}`, { signal: controller.signal })
           if (!res.ok)
             continue
           const job = (await res.json()) as JobShape

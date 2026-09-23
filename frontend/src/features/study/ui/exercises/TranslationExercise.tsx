@@ -9,7 +9,7 @@ import { useI18n } from '@/app/providers/I18nContext'
 import { useHint } from '@/features/study/application/useHint'
 import { ExerciseCard } from '@/features/study/ui/exercises/ExerciseCard'
 import { HintButton } from '@/features/study/ui/exercises/HintButton'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { getLanguageCaps } from '@/shared/lib/language-caps'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -140,7 +140,7 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
       return
     setLoading(true)
     try {
-      const resp = await fetch(`${API_BASE}/api/translation/evaluate`, {
+      const resp = await apiFetch(`/api/translation/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

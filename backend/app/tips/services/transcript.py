@@ -115,7 +115,7 @@ async def fetch_youtube_subtitles(
             try:
                 vtt = await download_subtitle_vtt(video_id, yt_lang)
                 segments = parse_vtt_to_segments(vtt, yt_lang)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.info(
                     "fetch_youtube_subtitles: download/parse failed for video_id=%s lang=%s, trying next candidate",
                     video_id,
@@ -226,7 +226,7 @@ async def kick_off_stt_job(video_id: str) -> str | None:
             if audio_path is not None:
                 try:
                     audio_path.unlink(missing_ok=True)
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass
 
-    return kick_off_keyed_job(_stt_key(video_id), _run, id_prefix="tip-stt")
+    return kick_off_keyed_job(_stt_key(video_id), _run, id_prefix="tip-stt", user_id=None)

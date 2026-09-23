@@ -7,7 +7,7 @@ import {
   listUserMaterials,
   putUserMaterial,
 } from '@/db'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 const TIP_GROUP_ORDER: Skill[] = ['Grammar', 'Pronunciation', 'Vocabulary', 'Speaking', 'Learning Tips']
 
@@ -60,7 +60,7 @@ interface VideoMeta {
 
 async function fetchPlaylistMeta(playlistId: string): Promise<PlaylistMeta | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/playlist/${encodeURIComponent(playlistId)}`)
+    const res = await apiFetch(`/api/playlist/${encodeURIComponent(playlistId)}`)
     if (!res.ok)
       return null
     const data = (await res.json()) as RelaxedPlaylistResponse
@@ -79,7 +79,7 @@ async function fetchPlaylistMeta(playlistId: string): Promise<PlaylistMeta | nul
 
 async function fetchVideoMeta(videoId: string): Promise<VideoMeta | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/video/${encodeURIComponent(videoId)}`)
+    const res = await apiFetch(`/api/video/${encodeURIComponent(videoId)}`)
     if (!res.ok)
       return null
     const data = (await res.json()) as VideoResponse

@@ -1,6 +1,6 @@
 import type { CharData } from '@/shared/lib/hanzi/types'
 
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 export interface BreakdownStoryRequest {
   word: string
@@ -40,7 +40,7 @@ export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<s
 
   let resp: Response
   try {
-    resp = await fetch(`${API_BASE}/api/vocab/breakdown-story`, {
+    resp = await apiFetch(`/api/vocab/breakdown-story`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

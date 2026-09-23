@@ -2,10 +2,14 @@ import { Loader2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { createBrowserRouter, Outlet, RouterProvider, useLocation, useRouteError } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation, useRouteError } from 'react-router-dom'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { ErrorScreen } from '@/app/ErrorScreen'
+import { ForgotPassword } from '@/app/onboarding/ForgotPassword'
+import { Login } from '@/app/onboarding/Login'
+import { ResetPassword } from '@/app/onboarding/ResetPassword'
 import { Setup } from '@/app/onboarding/Setup'
+import { Signup } from '@/app/onboarding/Signup'
 import { Unlock } from '@/app/onboarding/Unlock'
 import { ChangelogPage } from '@/app/pages/ChangelogPage'
 import { DocumentationPage } from '@/app/pages/DocumentationPage'
@@ -201,7 +205,9 @@ function AppLayout() {
   )
 }
 
-const router = createBrowserRouter([
+const appRoutes = [
+  { path: '/signup', element: <Navigate to="/" replace /> },
+  { path: '/forgot-password', element: <Navigate to="/" replace /> },
   {
     element: <AppLayout />,
     errorElement: <RouteErrorElement />,
@@ -227,19 +233,46 @@ const router = createBrowserRouter([
       },
     ],
   },
-])
+]
+
+const accountRoutes = [
+  { path: '/signup', element: <Signup /> },
+  { path: '/forgot-password', element: <ForgotPassword /> },
+  { path: '/reset-password', element: <ResetPassword /> },
+  { path: '*', element: <Login /> },
+]
+
+// createBrowserRouter reads the URL once, at creation. Create each router on
+// mount so it starts from the current URL, not the one the page loaded with.
+function AppRouter() {
+  const [router] = useState(() => createBrowserRouter(appRoutes))
+  return <RouterProvider router={router} />
+}
+
+function AccountRouter() {
+  const [router] = useState(() => createBrowserRouter(accountRoutes))
+  return <RouterProvider router={router} />
+}
 
 function AuthGate() {
-  const { isFirstSetup, isUnlocked, trialMode, db } = useAuth()
+  const { session, sessionCheckFailed, isFirstSetup, isUnlocked, trialMode, db } = useAuth()
 
-  // Loading state — wait for DB regardless of trial mode
+  if (sessionCheckFailed) {
+    return <ErrorScreen error={new Error('Could not reach the server to restore your session.')} />
+  }
+
+  // Loading state — wait for the session check and the DB regardless of trial mode
   // (trialMode is synchronous; db is async — show spinner until both are ready)
-  if (isFirstSetup === null || db === null) {
+  if (session === undefined || isFirstSetup === null || db === null) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     )
+  }
+
+  if (session === null || window.location.pathname === '/reset-password') {
+    return <AccountRouter />
   }
 
   // First launch — set up keys (skip if in trial)
@@ -259,7 +292,7 @@ function AuthGate() {
         <LessonsProvider>
           <StudyQueueProvider>
             <DailyReviewProvider>
-              <RouterProvider router={router} />
+              <AppRouter />
             </DailyReviewProvider>
           </StudyQueueProvider>
         </LessonsProvider>

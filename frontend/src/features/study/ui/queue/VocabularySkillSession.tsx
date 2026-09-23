@@ -8,7 +8,7 @@ import { FlashcardExercise } from '@/features/study/ui/exercises/FlashcardExerci
 import { RomanizationRecallExercise } from '@/features/study/ui/exercises/RomanizationRecallExercise'
 import { useTracking } from '@/shared/hooks/useTracking'
 import { useTTS } from '@/shared/hooks/useTTS'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { getLanguageCaps } from '@/shared/lib/language-caps'
 import { getSkillProgress, markWordComplete } from '@/shared/lib/skillSessionProgress'
 import { cn } from '@/shared/lib/utils'
@@ -90,7 +90,7 @@ export function VocabularySkillSession({ entries, date, onComplete, onProgress, 
     try {
       if (!keys)
         return
-      const resp = await fetch(`${API_BASE}/api/daily-review/grade-sentence`, {
+      const resp = await apiFetch(`/api/daily-review/grade-sentence`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

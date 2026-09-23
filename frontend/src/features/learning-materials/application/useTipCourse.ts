@@ -1,7 +1,7 @@
 import type { PlaylistDetail } from '@/features/learning-materials/domain/collection'
 import type { TipCourse, TipLesson, TipSource } from '@/features/learning-materials/domain/tips'
 import { useEffect, useState } from 'react'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 interface State {
   course: TipCourse | null
@@ -49,7 +49,7 @@ export function useTipCourse(source: TipSource, id: string): State {
     async function run() {
       try {
         if (source === 'playlist') {
-          const res = await fetch(`${API_BASE}/api/playlist/${encodeURIComponent(id)}`, { signal: controller.signal })
+          const res = await apiFetch(`/api/playlist/${encodeURIComponent(id)}`, { signal: controller.signal })
           if (!res.ok)
             throw new Error(`playlist ${id} returned ${res.status}`)
           const data = (await res.json()) as PlaylistDetail

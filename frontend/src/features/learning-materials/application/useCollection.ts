@@ -1,6 +1,6 @@
 import type { HubResponse } from '@/features/learning-materials/domain/collection'
 import { useEffect, useState } from 'react'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 interface State {
   data: HubResponse | null
@@ -13,7 +13,7 @@ export function useCollection(): State {
 
   useEffect(() => {
     let cancelled = false
-    fetch(`${API_BASE}/api/collection`)
+    apiFetch(`/api/collection`)
       .then(async (res) => {
         if (!res.ok)
           throw new Error(`Server error: ${res.status}`)

@@ -2,7 +2,7 @@ import type { GeneratedSituation } from '../types'
 import { useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { Button } from '@/shared/ui/button'
 
 export interface CustomSituationInputProps {
@@ -34,7 +34,7 @@ export function CustomSituationInput({ language, level, personaId, onGenerated, 
     setLoading(true)
     setError(null)
     try {
-      const resp = await fetch(`${API_BASE}/api/speak/situations/generate`, {
+      const resp = await apiFetch(`/api/speak/situations/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

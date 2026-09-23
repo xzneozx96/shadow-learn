@@ -2,6 +2,7 @@ import type { UIMessage } from '@ai-sdk/react'
 import type { ShadowLearnDB, ThreadSummaryRecord } from '@/db'
 import { getLatestSummary, getThread, putThreadSummary, saveThreadMessages } from '@/db'
 import { estimateTokens, isOverflow } from '@/features/agent/lib/agent-utils'
+import { apiFetch } from '@/shared/lib/api'
 
 // Mirrors opencode compaction.ts: keep the recent tail verbatim, summarize the rest.
 const TAIL_TURNS = 2
@@ -91,7 +92,6 @@ export async function compact(
   threadId: string,
   messages: UIMessage[],
   apiKey: string,
-  apiBase: string,
   locale: string,
 ): Promise<boolean> {
   const tailStart = selectTailStart(messages)
@@ -101,7 +101,7 @@ export async function compact(
   const cutMsg = messages[tailStart - 1]
   const older = messages.slice(0, tailStart)
 
-  const resp = await fetch(`${apiBase}/api/summarize`, {
+  const resp = await apiFetch('/api/summarize', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -158,7 +158,6 @@ export async function maybeCompact(
   threadId: string,
   messages: UIMessage[],
   apiKey: string,
-  apiBase: string,
   locale: string,
   tokens?: number,
 ): Promise<void> {
@@ -179,7 +178,7 @@ export async function maybeCompact(
     const previous = await getLatestSummary(db, threadId)
     if (previous && previous.coversThroughMessageId === messages[selectTailStart(messages) - 1]?.id)
       return
-    await compact(db, threadId, messages, apiKey, apiBase, locale)
+    await compact(db, threadId, messages, apiKey, locale)
   }
   catch (e) {
     console.warn('[maybeCompact] compaction failed', e)

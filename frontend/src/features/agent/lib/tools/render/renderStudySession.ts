@@ -3,7 +3,7 @@ import type { SessionQuestion } from '@/shared/lib/study-utils'
 import type { ExerciseMode, VocabEntry } from '@/shared/types'
 import { z } from 'zod'
 import { buildTool } from '@/features/agent/lib/tools/types'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { buildSessionQuestions } from '@/shared/lib/study-utils'
 
 export const RenderStudySessionSchema = z.object({
@@ -52,7 +52,7 @@ export async function executeRenderStudySession(
     if (type === 'translation') {
       const results = await Promise.all(
         entries.map(async (entry) => {
-          const resp = await fetch(`${API_BASE}/api/translation/generate`, {
+          const resp = await apiFetch(`/api/translation/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -77,7 +77,7 @@ export async function executeRenderStudySession(
     else if (type === 'pronunciation') {
       const results = await Promise.all(
         entries.map(async (entry) => {
-          const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
+          const resp = await apiFetch(`/api/quiz/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -97,7 +97,7 @@ export async function executeRenderStudySession(
       results.forEach(exercises => exercises.forEach(ex => pronExercises.push(ex)))
     }
     else if (type === 'cloze') {
-      const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
+      const resp = await apiFetch(`/api/quiz/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

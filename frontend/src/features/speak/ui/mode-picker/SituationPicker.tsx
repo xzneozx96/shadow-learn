@@ -4,7 +4,7 @@ import { Briefcase, DollarSign, Heart, Hospital, MapPin, MessageCircle, Mic, Sho
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/app/providers/I18nContext'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 interface ApiSituation {
   id: string
@@ -39,7 +39,7 @@ export function SituationPicker({ targetLanguage, onSelect, onRequestCustom }: S
 
   useEffect(() => {
     setLoading(true)
-    fetch(`${API_BASE}/api/speak/situations?target_lang=${encodeURIComponent(targetLanguage)}&interface_lang=${encodeURIComponent(locale)}`)
+    apiFetch(`/api/speak/situations?target_lang=${encodeURIComponent(targetLanguage)}&interface_lang=${encodeURIComponent(locale)}`)
       .then(r => r.json())
       .then((d: any) => setSituations(d.situations ?? []))
       .catch(() => {})

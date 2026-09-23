@@ -1,11 +1,13 @@
 import asyncio
 import os
+import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
 from alembic.config import Config
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import make_url, pool, text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -17,7 +19,12 @@ TEST_DATABASE_URL = os.environ.get(
 )
 os.environ["SHADOWLEARN_DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["SHADOWLEARN_S3_BUCKET"] = f"shadowlearn-test-{os.getpid()}"
+os.environ.setdefault("SHADOWLEARN_JWT_SECRET", "test-access-secret-" + "a" * 32)
+os.environ.setdefault("SHADOWLEARN_JWT_REFRESH_SECRET", "test-refresh-secret-" + "b" * 32)
+os.environ["SHADOWLEARN_SMTP_HOST"] = ""
 
+from app.accounts.deps import current_active_user
+from app.accounts.models import User
 from app.db import SessionLocal, engine
 from app.main import app
 from app.settings import settings
@@ -86,3 +93,46 @@ async def s3():
         for obj in listing.get("Contents", []):
             await client.delete_object(Bucket=settings.s3_bucket, Key=obj["Key"])
         await client.delete_bucket(Bucket=settings.s3_bucket)
+
+
+@pytest.fixture(autouse=True)
+def signed_in_user(request):
+    if request.node.get_closest_marker("real_auth"):
+        yield None
+        return
+    user = User(
+        id=uuid.uuid4(),
+        email="tester@example.com",
+        hashed_password="",
+        is_active=True,
+        is_superuser=False,
+        is_verified=False,
+        token_version=0,
+    )
+    app.dependency_overrides[current_active_user] = lambda: user
+    yield user
+    app.dependency_overrides.pop(current_active_user, None)
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def client():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
+        yield http
+
+
+async def register_and_login(client: AsyncClient, email: str, password: str = "correct-horse-1") -> dict:
+    created = await client.post("/api/auth/register", json={"email": email, "password": password})
+    assert created.status_code == 201, created.text
+    login = await client.post("/api/auth/login", data={"username": email, "password": password})
+    assert login.status_code == 200, login.text
+    return {"id": created.json()["id"], "email": email, "password": password, **login.json()}
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def user(db_session, client):
+    return await register_and_login(client, f"user-{uuid.uuid4().hex[:8]}@example.com")
+
+
+@pytest.fixture
+def auth_headers(user):
+    return {"Authorization": f"Bearer {user['access_token']}"}

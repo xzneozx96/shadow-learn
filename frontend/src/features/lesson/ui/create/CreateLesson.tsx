@@ -8,7 +8,8 @@ import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { getSettings, saveVideo } from '@/db'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
-import { API_BASE, getAppConfig } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
+import { getAppConfig } from '@/shared/lib/config'
 import { LANGUAGES } from '@/shared/lib/constants'
 import { captureLessonCreated, captureLessonGenerationFailed } from '@/shared/lib/posthog-events'
 import { DEFAULT_VOICE_ID } from '@/shared/lib/voices'
@@ -81,7 +82,7 @@ export function CreateLesson() {
       let capturedFile: File | null = null
 
       if (isYoutube) {
-        const res = await fetch(`${API_BASE}/api/lessons/generate`, {
+        const res = await apiFetch(`/api/lessons/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -121,7 +122,7 @@ export function CreateLesson() {
           formData.append('azure_speech_region', keys?.azureSpeechRegion ?? '')
         }
 
-        const res = await fetch(`${API_BASE}/api/lessons/generate-upload`, { method: 'POST', body: formData })
+        const res = await apiFetch(`/api/lessons/generate-upload`, { method: 'POST', body: formData })
         if (!res.ok) {
           const detail = await res.json().catch(() => null)
           const msg = detail?.detail || `Server error: ${res.status}`
@@ -150,7 +151,7 @@ export function CreateLesson() {
         else {
           body.blog_url = blogUrl
         }
-        const res = await fetch(`${API_BASE}/api/lessons/generate`, {
+        const res = await apiFetch(`/api/lessons/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),

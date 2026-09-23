@@ -9,7 +9,8 @@ import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { getSettings } from '@/db'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
-import { API_BASE, getAppConfig } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
+import { getAppConfig } from '@/shared/lib/config'
 import { captureLessonCreated, captureLessonGenerationFailed } from '@/shared/lib/posthog-events'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -96,7 +97,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
       const translationLanguage = settings?.translationLanguage ?? 'en'
       const youtubeUrl = `https://www.youtube.com/watch?v=${video.video_id}`
 
-      const res = await fetch(`${API_BASE}/api/lessons/generate`, {
+      const res = await apiFetch(`/api/lessons/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

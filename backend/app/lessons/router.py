@@ -9,31 +9,39 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
-from app.settings import settings
+from app.accounts.deps import CurrentUser
 from app.job_store import jobs, register_job
-from app.models import LessonRequest
-from app.shared.utils import _resolve_key
 from app.lessons.services.audio import (
     download_youtube_video,
     extract_audio_from_upload,
     get_youtube_metadata,
     probe_upload_duration,
 )
+from app.lessons.services.blog_scraper import scrape_article
+from app.lessons.services.chinese_normalizer import normalize_chinese
+from app.lessons.services.romanization_provider import get_romanization_provider
+from app.lessons.services.segmentation_provider import get_segmentation_provider
+from app.lessons.services.validation import (
+    ValidationError,
+    validate_upload_file,
+    validate_youtube_url,
+)
+from app.lessons.services.vocabulary import enrich_vocabulary, extract_vocabulary
 from app.lessons.services.youtube_subtitles import (
     download_subtitle_vtt,
     parse_vtt_to_segments,
     pick_manual_subtitle,
 )
-from app.lessons.services.romanization_provider import get_romanization_provider
-from app.lessons.services.segmentation_provider import get_segmentation_provider
-from app.lessons.services.chinese_normalizer import normalize_chinese
-from app.transcription.services.transcription_provider import STTProvider, TranscriptionKeys
-from app.translation.services.translation import translate_segments
-from app.lessons.services.validation import ValidationError, validate_upload_file, validate_youtube_url
+from app.models import LessonRequest
+from app.settings import settings
 from app.shared.language_config import get_language_config
-from app.lessons.services.vocabulary import enrich_vocabulary, extract_vocabulary
-from app.lessons.services.blog_scraper import scrape_article
-from app.tts.services.tts_provider import TTSProvider, TTSKeys
+from app.shared.utils import _resolve_key
+from app.transcription.services.transcription_provider import (
+    STTProvider,
+    TranscriptionKeys,
+)
+from app.translation.services.translation import translate_segments
+from app.tts.services.tts_provider import TTSKeys, TTSProvider
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +188,7 @@ async def _process_youtube_lesson(
                         "[pipeline] youtube subtitle: using manual track lang=%s, %d cues",
                         yt_lang, len(segments),
                     )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "[pipeline] youtube subtitle: download/parse failed (%s), falling back to STT",
                     exc,
@@ -420,7 +428,7 @@ async def _process_blog_lesson(
         )
 
     except Exception as exc:
-        logger.exception("[pipeline] Blog lesson failed for job %s: %s", job_id, exc)
+        logger.exception("[pipeline] Blog lesson failed for job %s", job_id)
         jobs[job_id].status = "error"
         jobs[job_id].error = str(exc)
         if audio_path and audio_path.exists():
@@ -428,7 +436,12 @@ async def _process_blog_lesson(
 
 
 @router.post("/generate")
-async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTasks, req: Request) -> dict:
+async def generate_lesson(
+    request: LessonRequest,
+    background_tasks: BackgroundTasks,
+    req: Request,
+    user: CurrentUser,
+) -> dict:
     """Accept a LessonRequest JSON body, start background pipeline, return job_id immediately."""
     if request.source == "youtube":
         if not request.youtube_url:
@@ -439,7 +452,7 @@ async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTa
             raise HTTPException(status_code=400, detail=exc.message)
 
         stt_provider = req.app.state.stt_provider
-        job_id = register_job(id_prefix="lesson")
+        job_id = register_job(id_prefix="lesson", user_id=str(user.id))
         background_tasks.add_task(_process_youtube_lesson, request, video_id, job_id, stt_provider)
         return {"job_id": job_id}
     elif request.source == "blog":
@@ -447,7 +460,7 @@ async def generate_lesson(request: LessonRequest, background_tasks: BackgroundTa
             raise HTTPException(status_code=400, detail="blog_url or blog_text is required for source 'blog'")
         tts_provider = req.app.state.tts_provider
         stt_provider = req.app.state.stt_provider
-        job_id = register_job(id_prefix="lesson")
+        job_id = register_job(id_prefix="lesson", user_id=str(user.id))
         background_tasks.add_task(_process_blog_lesson, request, job_id, tts_provider, stt_provider)
         return {"job_id": job_id}
     else:
@@ -462,6 +475,7 @@ async def generate_lesson_upload(
     background_tasks: BackgroundTasks,
     req: Request,
     file: UploadFile,
+    user: CurrentUser,
     translation_languages: str = Form(...),
     openrouter_api_key: str = Form(default=""),
     azure_speech_key: str | None = Form(None),
@@ -474,7 +488,7 @@ async def generate_lesson_upload(
         raise HTTPException(status_code=400, detail="translation_languages must not be empty")
 
     stt_provider = req.app.state.stt_provider
-    job_id = register_job(id_prefix="lesson")
+    job_id = register_job(id_prefix="lesson", user_id=str(user.id))
     background_tasks.add_task(
         _process_upload_lesson,
         file,

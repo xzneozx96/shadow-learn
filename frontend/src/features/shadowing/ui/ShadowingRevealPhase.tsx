@@ -5,7 +5,7 @@ import { X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '@/app/providers/I18nContext'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import {
   computeAccuracyScore,
   computeCharDiff,
@@ -352,7 +352,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
           form.append('azure_key', azureKey)
         if (azureRegion)
           form.append('azure_region', azureRegion)
-        const resp = await fetch(`${API_BASE}/api/pronunciation/assess`, {
+        const resp = await apiFetch(`/api/pronunciation/assess`, {
           method: 'POST',
           body: form,
           signal: controller.signal,

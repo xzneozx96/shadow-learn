@@ -58,7 +58,7 @@ async def test_generate_lesson_rejects_invalid_source():
 
 
 @pytest.mark.asyncio
-async def test_generate_lesson_youtube_returns_job_id():
+async def test_generate_lesson_youtube_returns_job_id(signed_in_user):
     """Valid YouTube request returns a job_id immediately; pipeline runs in background."""
     from unittest.mock import AsyncMock, patch
 
@@ -84,6 +84,7 @@ async def test_generate_lesson_youtube_returns_job_id():
     assert "job_id" in data
     assert isinstance(data["job_id"], str)
     assert len(data["job_id"]) > 0
+    assert jobs_module.jobs[data["job_id"]].user_id == str(signed_in_user.id)
 
 
 @pytest.mark.asyncio
@@ -157,10 +158,11 @@ async def test_get_video_returns_404_for_missing_file():
 @pytest.mark.asyncio
 async def test_shared_pipeline_assembles_text_and_romanization_keys():
     """Assembled segment dicts must use 'text'/'romanization', not 'chinese'/'pinyin'."""
-    from app.lessons.router import _shared_pipeline
+    from unittest.mock import MagicMock
+
     import app.job_store as jobs_module
     from app.job_store import Job
-    from unittest.mock import MagicMock
+    from app.lessons.router import _shared_pipeline
 
     job_id = "test-field-rename"
     jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
@@ -214,8 +216,8 @@ def _make_youtube_request(source_language: str = "zh-CN"):
 @pytest.mark.asyncio
 async def test_youtube_lesson_uses_manual_subtitle_when_available():
     """Manual subtitle in source_language → STT skipped; segments come from VTT."""
-    from app.lessons.router import _process_youtube_lesson
     from app.job_store import Job
+    from app.lessons.router import _process_youtube_lesson
 
     job_id = "job-sub-hit"
     jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
@@ -260,8 +262,8 @@ async def test_youtube_lesson_falls_back_to_stt_when_no_manual_track():
     """No manual subtitle in source_language → existing STT pipeline runs."""
     from pathlib import Path
 
-    from app.lessons.router import _process_youtube_lesson
     from app.job_store import Job
+    from app.lessons.router import _process_youtube_lesson
 
     job_id = "job-stt-fallback"
     jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
@@ -300,8 +302,8 @@ async def test_youtube_lesson_ignores_automatic_captions():
     """Auto-generated captions never trigger the subtitle path."""
     from pathlib import Path
 
-    from app.lessons.router import _process_youtube_lesson
     from app.job_store import Job
+    from app.lessons.router import _process_youtube_lesson
 
     job_id = "job-auto-only"
     jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
@@ -341,8 +343,8 @@ async def test_youtube_lesson_falls_back_when_subtitle_download_fails():
     """If yt-dlp fails to write the VTT, fall back to STT instead of erroring the job."""
     from pathlib import Path
 
-    from app.lessons.router import _process_youtube_lesson
     from app.job_store import Job
+    from app.lessons.router import _process_youtube_lesson
 
     job_id = "job-sub-download-fails"
     jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
@@ -383,8 +385,8 @@ async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit():
     """Even on subtitle hit, video must be downloaded for playback (media_filename)."""
     from pathlib import Path
 
-    from app.lessons.router import _process_youtube_lesson
     from app.job_store import Job
+    from app.lessons.router import _process_youtube_lesson
 
     job_id = "job-video-still-needed"
     jobs_module.jobs[job_id] = Job(status="processing", step="queued", result=None, error=None)
@@ -417,7 +419,7 @@ async def test_youtube_lesson_video_still_downloaded_on_subtitle_hit():
 
 
 @pytest.mark.asyncio
-async def test_generate_lesson_upload_returns_job_id():
+async def test_generate_lesson_upload_returns_job_id(signed_in_user):
     """Valid upload request returns a job_id immediately."""
     from unittest.mock import AsyncMock, patch
 
@@ -437,6 +439,7 @@ async def test_generate_lesson_upload_returns_job_id():
     assert response.status_code == 200
     data = response.json()
     assert "job_id" in data
+    assert jobs_module.jobs[data["job_id"]].user_id == str(signed_in_user.id)
 
 
 @pytest.fixture()
@@ -467,7 +470,7 @@ async def test_generate_blog_lesson_missing_url():
 
 
 @pytest.mark.asyncio
-async def test_generate_blog_lesson_returns_job_id(mock_tts_provider):
+async def test_generate_blog_lesson_returns_job_id(mock_tts_provider, signed_in_user):
     from unittest.mock import AsyncMock, patch
 
     with patch("app.lessons.router._process_blog_lesson", new=AsyncMock()):
@@ -483,7 +486,7 @@ async def test_generate_blog_lesson_returns_job_id(mock_tts_provider):
                 },
             )
     assert response.status_code == 200
-    assert "job_id" in response.json()
+    assert jobs_module.jobs[response.json()["job_id"]].user_id == str(signed_in_user.id)
 
 
 @pytest.mark.asyncio

@@ -25,14 +25,8 @@ _ip_buckets: dict[str, deque[float]] = defaultdict(deque)
 
 
 def _check_origin(origin: str | None) -> None:
-    """Reject if Origin header is not in the configured allowlist.
-
-    Empty allowlist disables the check (dev mode).
-    """
-    allowlist = settings.frontend_origin_allowlist
-    if not allowlist:
-        return
-    if origin is None or origin not in allowlist:
+    """Reject any Origin that CORS would reject."""
+    if not settings.origin_allowed(origin):
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
 

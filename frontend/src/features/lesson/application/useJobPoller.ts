@@ -2,7 +2,7 @@ import type { ShadowLearnDB } from '@/db'
 import type { LessonMeta } from '@/shared/types'
 import { useCallback, useEffect, useRef } from 'react'
 import { saveSegments, saveVideo } from '@/db'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { captureLessonJobFailed } from '@/shared/lib/posthog-events'
 
 interface UseJobPollerProps {
@@ -33,7 +33,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
         continue
       let res: Response
       try {
-        res = await fetch(`${API_BASE}/api/jobs/${lesson.jobId}`)
+        res = await apiFetch(`/api/jobs/${lesson.jobId}`)
       }
       catch {
         continue // network error — retry on next tick
@@ -66,8 +66,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
         await saveSegments(db, lesson.id, resultLesson.segments)
         if (lesson.source === 'youtube' && video_url) {
           try {
-            const absoluteUrl = video_url.startsWith('http') ? video_url : `${API_BASE}${video_url}`
-            const videoRes = await fetch(absoluteUrl)
+            const videoRes = await (video_url.startsWith('http') ? fetch(video_url) : apiFetch(video_url))
             if (!videoRes.ok)
               throw new Error(`Video fetch failed: ${videoRes.status}`)
             const contentType = videoRes.headers.get('content-type') ?? ''
@@ -84,8 +83,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
         }
         if (lesson.source === 'blog' && audio_url) {
           try {
-            const absoluteUrl = audio_url.startsWith('http') ? audio_url : `${API_BASE}${audio_url}`
-            const audioRes = await fetch(absoluteUrl)
+            const audioRes = await (audio_url.startsWith('http') ? fetch(audio_url) : apiFetch(audio_url))
             if (!audioRes.ok)
               throw new Error(`Audio fetch failed: ${audioRes.status}`)
             const audioBlob = await audioRes.blob()
@@ -105,7 +103,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
           duration: resultLesson.duration,
           segmentCount: resultLesson.segments.length,
         })
-        await fetch(`${API_BASE}/api/jobs/${jobId}`, { method: 'DELETE' })
+        await apiFetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
       }
       else if (job.status === 'error') {
         const jobId = lesson.jobId
@@ -117,7 +115,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
           jobId: undefined,
           currentStep: undefined,
         })
-        await fetch(`${API_BASE}/api/jobs/${jobId}`, { method: 'DELETE' })
+        await apiFetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
       }
     }
   }, [db, updateLesson])
