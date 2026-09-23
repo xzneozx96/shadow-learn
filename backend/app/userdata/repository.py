@@ -1,17 +1,16 @@
 import hashlib
 import json
 import uuid
-from typing import Any, Literal
+from typing import Literal
 
 from sqlalchemy import ColumnElement, delete, func, select
 from sqlalchemy.dialects.postgresql import JSONB, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.userdata.merge import union
+from app.userdata.merge import Data, union
 from app.userdata.models import TABLES, import_digests
 from app.userdata.specs import IndexedField, StoreSpec
 
-Data = dict[str, Any]
 Op = Literal["eq", "lte"]
 
 

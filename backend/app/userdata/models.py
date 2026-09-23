@@ -11,12 +11,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
+from app.accounts.models import User
 from app.db import Base
 from app.userdata.specs import STORES, StoreSpec
 
 
 def _user_id() -> Column:
-    return Column("user_id", Uuid, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    return Column("user_id", Uuid, ForeignKey(User.id, ondelete="CASCADE"), nullable=False)
 
 
 def build_table(spec: StoreSpec) -> Table:
