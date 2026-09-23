@@ -37,7 +37,6 @@ async def delete_job(job_id: str, user: CurrentUser):
     """Remove the caller's job from the store. Idempotent — no error if already gone."""
     job = jobs.get(job_id)
     if job is not None and job.user_id != str(user.id):
-        # Shared jobs (user_id None) stay: other users may be polling them.
         return JSONResponse(status_code=404, content={"detail": "Job not found"})
     jobs.pop(job_id, None)
     return Response(status_code=204)

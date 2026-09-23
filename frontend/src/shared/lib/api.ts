@@ -8,7 +8,6 @@ export interface TokenPair {
 }
 
 let accessToken: string | null = null
-// Bumped on sign-out so a refresh already in flight cannot sign the user back in.
 let generation = 0
 let refreshing: Promise<boolean> | null = null
 let sessionLost = () => {}

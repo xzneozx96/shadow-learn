@@ -39,7 +39,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             logger.exception("reset email to user %s failed", user.id)
 
     async def _update(self, user: User, update_dict: dict[str, Any]) -> User:
-        # Revoke outstanding tokens in the same write that changes the password.
         if update_dict.get("password") is not None:
             update_dict = {**update_dict, "token_version": user.token_version + 1}
         return await super()._update(user, update_dict)

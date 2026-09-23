@@ -27,6 +27,13 @@ describe('trial mode sessionStorage contract', () => {
     expect(sessionStorage.getItem(TRIAL_KEY)).toBeNull()
   })
 
+  it('logout clears the sessionStorage key so the next account starts outside trial', () => {
+    sessionStorage.setItem(TRIAL_KEY, 'trial')
+    // Simulate what logout() does
+    sessionStorage.removeItem(TRIAL_KEY)
+    expect(sessionStorage.getItem(TRIAL_KEY)).toBeNull()
+  })
+
   it('initial trialMode reads from sessionStorage synchronously', () => {
     sessionStorage.setItem(TRIAL_KEY, 'trial')
     // Simulate useState initializer

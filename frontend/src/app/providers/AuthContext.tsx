@@ -57,7 +57,6 @@ async function authError(res: Response): Promise<Error> {
   return new Error(typeof code === 'string' ? code : `HTTP_${res.status}`)
 }
 
-/** Null when the server rejects the tokens; throws when it cannot answer. */
 async function fetchSession(): Promise<Session | null> {
   const res = await apiFetch('/api/users/me')
   if (res.status === 401)
@@ -184,6 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     clearTokens()
+    sessionStorage.removeItem(TRIAL_SESSION_KEY)
+    setTrialMode(false)
     setSession(null)
     lock()
   }, [lock])
