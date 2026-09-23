@@ -1,4 +1,5 @@
 # backend/app/config.py
+import re
 from typing import Literal
 
 from pydantic import Field, field_validator
@@ -94,6 +95,14 @@ class Settings(BaseSettings):
         if len(value) < 32:
             raise ValueError("must be at least 32 characters; generate one with `openssl rand -hex 32`")
         return value
+
+    def origin_allowed(self, origin: str | None) -> bool:
+        """The CORS middleware's rule: an exact allowlist entry, ``*``, or a full regex match."""
+        if origin is None:
+            return False
+        if "*" in self.frontend_origin_allowlist or origin in self.frontend_origin_allowlist:
+            return True
+        return bool(self.frontend_origin_regex and re.fullmatch(self.frontend_origin_regex, origin))
 
     model_config = {"env_prefix": "SHADOWLEARN_", "env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 import time
 from collections import defaultdict, deque
 from typing import Annotated
@@ -26,17 +25,9 @@ _ip_buckets: dict[str, deque[float]] = defaultdict(deque)
 
 
 def _check_origin(origin: str | None) -> None:
-    """Reject if Origin header matches neither the allowlist nor the origin regex, as CORS does.
-
-    Empty allowlist disables the check (dev mode).
-    """
-    allowlist = settings.frontend_origin_allowlist
-    if not allowlist:
-        return
-    regex = settings.frontend_origin_regex
-    if origin is not None and (origin in allowlist or (regex and re.fullmatch(regex, origin))):
-        return
-    raise HTTPException(status_code=403, detail="Origin not allowed")
+    """Reject any Origin that CORS would reject."""
+    if not settings.origin_allowed(origin):
+        raise HTTPException(status_code=403, detail="Origin not allowed")
 
 
 def _check_rate_limit(client_ip: str) -> None:
