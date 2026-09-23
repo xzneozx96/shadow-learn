@@ -27,6 +27,7 @@ interface Session {
 
 interface AuthState {
   session: Session | null | undefined // undefined = loading
+  sessionCheckFailed: boolean
   isFirstSetup: boolean | null // null = loading
   isUnlocked: boolean
   keys: DecryptedKeys | null
@@ -49,7 +50,6 @@ export const AuthContext = createContext<AuthState | null>(null)
 
 const TRIAL_SESSION_KEY = 'shadowlearn_trial'
 
-/** Error whose message is the backend's error code, such as `LOGIN_BAD_CREDENTIALS`. */
 async function authError(res: Response): Promise<Error> {
   const body = await res.json().catch(() => null)
   const detail = body?.detail
@@ -57,10 +57,13 @@ async function authError(res: Response): Promise<Error> {
   return new Error(typeof code === 'string' ? code : `HTTP_${res.status}`)
 }
 
+/** Null when the server rejects the tokens; throws when it cannot answer. */
 async function fetchSession(): Promise<Session | null> {
   const res = await apiFetch('/api/users/me')
-  if (!res.ok)
+  if (res.status === 401)
     return null
+  if (!res.ok)
+    throw new Error(`Session check failed: ${res.status}`)
   const me: { id: string, email: string } = await res.json()
   return { userId: me.id, email: me.email }
 }
@@ -76,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(
     () => hasRefreshToken() ? undefined : null,
   )
+  const [sessionCheckFailed, setSessionCheckFailed] = useState(false)
 
   const lock = useCallback(() => {
     setKeys(null)
@@ -88,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lock()
     })
     if (hasRefreshToken())
-      fetchSession().then(setSession, () => setSession(null))
+      fetchSession().then(setSession, () => setSessionCheckFailed(true))
   }, [lock])
 
   useEffect(() => {
@@ -159,7 +163,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok)
       throw await authError(res)
     setTokens(await res.json())
-    setSession(await fetchSession())
+    const signedIn = await fetchSession()
+    if (!signedIn) {
+      clearTokens()
+      throw new Error('SESSION_UNAVAILABLE')
+    }
+    setSession(signedIn)
   }, [])
 
   const signup = useCallback(async (email: string, password: string) => {
@@ -197,7 +206,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
     if (!res.ok)
       throw await authError(res)
-    // The reset bumps token_version, so any tokens held here are now dead.
     logout()
   }, [logout])
 
@@ -205,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext
       value={{
         session,
+        sessionCheckFailed,
         isFirstSetup,
         isUnlocked,
         keys,

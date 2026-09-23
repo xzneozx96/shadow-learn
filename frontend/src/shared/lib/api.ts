@@ -8,6 +8,8 @@ export interface TokenPair {
 }
 
 let accessToken: string | null = null
+// Bumped on sign-out so a refresh already in flight cannot sign the user back in.
+let generation = 0
 let refreshing: Promise<boolean> | null = null
 let sessionLost = () => {}
 
@@ -18,6 +20,7 @@ export function setTokens(pair: TokenPair) {
 
 export function clearTokens() {
   accessToken = null
+  generation++
   localStorage.removeItem(REFRESH_KEY)
 }
 
@@ -33,6 +36,7 @@ async function refresh(): Promise<boolean> {
   const refreshToken = localStorage.getItem(REFRESH_KEY)
   if (!refreshToken)
     return false
+  const started = generation
   const res = await fetch(`${API_BASE}/api/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -42,7 +46,10 @@ async function refresh(): Promise<boolean> {
     return false
   if (!res.ok)
     throw new Error(`Token refresh failed: ${res.status}`)
-  setTokens(await res.json())
+  const pair: TokenPair = await res.json()
+  if (generation !== started)
+    return false
+  setTokens(pair)
   return true
 }
 
@@ -65,9 +72,8 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
   const url = `${API_BASE}${path}`
   const sent = accessToken
   const res = await fetch(url, withAuth(sent, init))
-  if (res.status !== 401 || !hasRefreshToken())
+  if (res.status !== 401 || (sent === null && !hasRefreshToken()))
     return res
-  // Another request may have refreshed while this one was in flight.
   if (accessToken === sent && !(await refreshOnce())) {
     clearTokens()
     sessionLost()

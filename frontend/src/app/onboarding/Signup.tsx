@@ -1,13 +1,11 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AccountCard, accountErrorKey } from '@/app/onboarding/AccountCard'
+import { AccountCard, accountErrorKey, MIN_PASSWORD_LENGTH } from '@/app/onboarding/AccountCard'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
-
-const MIN_PASSWORD_LENGTH = 8
 
 export function Signup() {
   const { signup } = useAuth()

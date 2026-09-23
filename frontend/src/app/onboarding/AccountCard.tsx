@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import type { TranslationKey } from '@/shared/lib/i18n'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
+export const MIN_PASSWORD_LENGTH = 8
+
 const ERROR_MESSAGES: Record<string, TranslationKey> = {
   LOGIN_BAD_CREDENTIALS: 'account.error.badCredentials',
   REGISTER_USER_ALREADY_EXISTS: 'account.error.userExists',

@@ -206,7 +206,6 @@ function AppLayout() {
 }
 
 const appRoutes = [
-  // Account screens live in the signed-out router; land on the Library once signed in.
   { path: '/signup', element: <Navigate to="/" replace /> },
   { path: '/forgot-password', element: <Navigate to="/" replace /> },
   {
@@ -243,8 +242,8 @@ const accountRoutes = [
   { path: '*', element: <Login /> },
 ]
 
-// Each router is created on mount so it starts from the current URL, not the
-// URL the page first loaded with.
+// createBrowserRouter reads the URL once, at creation. Create each router on
+// mount so it starts from the current URL, not the one the page loaded with.
 function AppRouter() {
   const [router] = useState(() => createBrowserRouter(appRoutes))
   return <RouterProvider router={router} />
@@ -256,7 +255,11 @@ function AccountRouter() {
 }
 
 function AuthGate() {
-  const { session, isFirstSetup, isUnlocked, trialMode, db } = useAuth()
+  const { session, sessionCheckFailed, isFirstSetup, isUnlocked, trialMode, db } = useAuth()
+
+  if (sessionCheckFailed) {
+    return <ErrorScreen error={new Error('Could not reach the server to restore your session.')} />
+  }
 
   // Loading state — wait for the session check and the DB regardless of trial mode
   // (trialMode is synchronous; db is async — show spinner until both are ready)
