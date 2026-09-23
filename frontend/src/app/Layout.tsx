@@ -195,7 +195,7 @@ export function Layout({ children }: LayoutProps) {
 
           <Button
             variant="ghost"
-            onClick={logout}
+            onClick={() => void logout()}
             title={collapsed ? t('account.logout') : undefined}
             className={cn(
               'w-full h-9 text-sm font-medium text-foreground/60 hover:text-foreground/70 hover:bg-white/4 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',

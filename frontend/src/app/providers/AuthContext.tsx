@@ -40,7 +40,7 @@ interface AuthState {
   startTrial: () => void
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   requestPasswordReset: (email: string) => Promise<void>
   resetPassword: (token: string, password: string) => Promise<void>
 }
@@ -181,13 +181,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await login(email, password)
   }, [login])
 
-  const logout = useCallback(() => {
+  const endLocalSession = useCallback(() => {
     clearTokens()
     sessionStorage.removeItem(TRIAL_SESSION_KEY)
     setTrialMode(false)
     setSession(null)
     lock()
   }, [lock])
+
+  const logout = useCallback(async () => {
+    await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
+    endLocalSession()
+  }, [endLocalSession])
 
   const requestPasswordReset = useCallback(async (email: string) => {
     const res = await apiFetch('/api/auth/forgot-password', {
@@ -207,8 +212,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
     if (!res.ok)
       throw await authError(res)
-    logout()
-  }, [logout])
+    endLocalSession()
+  }, [endLocalSession])
 
   return (
     <AuthContext
