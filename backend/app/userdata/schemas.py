@@ -47,14 +47,14 @@ class LearnerProfile(Record):
 
 class DailyAccuracy(Record):
     date: str
-    accuracy: Number
-    exercises: int
+    accuracy: Number | None = None
+    exercises: int | None = None
 
 
 class SkillStats(Record):
-    sessions: int
-    accuracy: Number
-    last_practiced: str | None
+    sessions: int | None = None
+    accuracy: Number | None = None
+    last_practiced: str | None = None
 
 
 class ProgressStats(Record):
@@ -69,10 +69,10 @@ class ProgressStats(Record):
 
 
 class SkillMastery(Record):
-    mastery_level: Number
-    confidence_score: Number
-    total_practice_time: Number
-    last_practiced: str | None
+    mastery_level: Number | None = None
+    confidence_score: Number | None = None
+    total_practice_time: Number | None = None
+    last_practiced: str | None = None
 
 
 class MasteryData(Record):
@@ -84,9 +84,9 @@ class MasteryData(Record):
 
 
 class ReviewEntry(Record):
-    date: str
-    quality: Number
-    interval_days: Number
+    date: str | None = None
+    quality: Number | None = None
+    interval_days: Number | None = None
 
 
 class SpacedRepetitionItem(Record):
@@ -115,10 +115,10 @@ class SessionLog(Record):
 
 
 class MistakeExample(Record):
-    user_answer: str
-    correct_answer: str
+    user_answer: str | None = None
+    correct_answer: str | None = None
     context: str | None = None
-    date: str
+    date: str | None = None
 
 
 class ErrorPattern(Record):
@@ -155,9 +155,9 @@ class DailyTask(Record):
 
 class SpeakTurn(Record):
     id: str | None = None
-    role: Literal["user", "assistant"]
-    content: str
-    timestamp: str
+    role: Literal["user", "assistant"] | None = None
+    content: str | None = None
+    timestamp: str | None = None
     translation: str | None = None
     romanization: str | None = None
 

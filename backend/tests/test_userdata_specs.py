@@ -1,6 +1,7 @@
 import re
 
 import pytest
+from pydantic import BaseModel
 
 from app.userdata.models import TABLES
 from app.userdata.specs import STORES
@@ -83,3 +84,24 @@ def test_composite_keys_join_with_a_colon(store, data, record_id):
 def test_only_key_and_indexed_fields_are_required(spec):
     required = {field.alias or name for name, field in spec.schema.model_fields.items() if field.is_required()}
     assert required == set(spec.key_path) | {field.json_path for field in spec.indexed}
+
+
+def _nested_models(model, seen=None):
+    seen = set() if seen is None else seen
+    for field in model.model_fields.values():
+        for arg in (field.annotation, *getattr(field.annotation, "__args__", ())):
+            for inner in (arg, *getattr(arg, "__args__", ())):
+                if isinstance(inner, type) and issubclass(inner, BaseModel) and inner not in seen:
+                    seen.add(inner)
+                    _nested_models(inner, seen)
+    return seen
+
+
+NESTED_KEYS = {"DailyAccuracy": {"date"}}
+
+
+@pytest.mark.parametrize("spec", [spec for spec in STORES.values() if spec.client_writable], ids=lambda spec: spec.name)
+def test_nested_records_require_only_their_key(spec):
+    for model in _nested_models(spec.schema):
+        required = {field.alias or name for name, field in model.model_fields.items() if field.is_required()}
+        assert required == NESTED_KEYS.get(model.__name__, set()), model.__name__

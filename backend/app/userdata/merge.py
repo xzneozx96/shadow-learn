@@ -33,7 +33,7 @@ def _earliest(a: str | None, b: str | None) -> str | None:
 def learner_profile(server: Data, incoming: Data) -> Data:
     return {
         **server,
-        "currentStreakDays": max(server.get("currentStreakDays") or 0, incoming.get("currentStreakDays") or 0),
+        "currentStreakDays": _max(server, incoming, "currentStreakDays"),
         "totalSessions": _sum(server, incoming, "totalSessions"),
         "totalStudyMinutes": _sum(server, incoming, "totalStudyMinutes"),
         "lastStudyDate": _latest(server.get("lastStudyDate"), incoming.get("lastStudyDate")),
@@ -41,21 +41,25 @@ def learner_profile(server: Data, incoming: Data) -> Data:
     }
 
 
+def _max(server: Data, incoming: Data, key: str) -> int | float:
+    return max(server.get(key) or 0, incoming.get(key) or 0)
+
+
 def _skill_stats(server: Data, incoming: Data) -> Data:
-    sessions = server["sessions"] + incoming["sessions"]
-    weighted = server["accuracy"] * server["sessions"] + incoming["accuracy"] * incoming["sessions"]
+    sessions = _sum(server, incoming, "sessions")
+    weighted = sum((side.get("accuracy") or 0) * (side.get("sessions") or 0) for side in (server, incoming))
     return {
         **server,
         "sessions": sessions,
-        "accuracy": weighted / sessions if sessions else server["accuracy"],
-        "lastPracticed": _latest(server["lastPracticed"], incoming["lastPracticed"]),
+        "accuracy": weighted / sessions if sessions else server.get("accuracy"),
+        "lastPracticed": _latest(server.get("lastPracticed"), incoming.get("lastPracticed")),
     }
 
 
 def _per_skill(server: Data, incoming: Data, merge_skill: MergeRule) -> Data:
     merged = {**incoming, **{key: value for key, value in server.items() if value is not None}}
     for skill in SKILLS & server.keys() & incoming.keys():
-        if server[skill] and incoming[skill]:
+        if server[skill] is not None and incoming[skill] is not None:
             merged[skill] = merge_skill(server[skill], incoming[skill])
     return merged
 
@@ -67,7 +71,7 @@ def progress(server: Data, incoming: Data) -> Data:
 
     trend = {day["date"]: day for day in server.get("accuracyTrend") or []}
     for day in incoming.get("accuracyTrend") or []:
-        if day["exercises"] > trend.get(day["date"], {"exercises": -1})["exercises"]:
+        if day["date"] not in trend or (day.get("exercises") or 0) > (trend[day["date"]].get("exercises") or 0):
             trend[day["date"]] = day
     merged["accuracyTrend"] = [trend[date] for date in sorted(trend)]
 
@@ -80,10 +84,10 @@ def progress(server: Data, incoming: Data) -> Data:
 def _skill_mastery(server: Data, incoming: Data) -> Data:
     return {
         **server,
-        "masteryLevel": max(server["masteryLevel"], incoming["masteryLevel"]),
-        "confidenceScore": max(server["confidenceScore"], incoming["confidenceScore"]),
-        "totalPracticeTime": server["totalPracticeTime"] + incoming["totalPracticeTime"],
-        "lastPracticed": _latest(server["lastPracticed"], incoming["lastPracticed"]),
+        "masteryLevel": _max(server, incoming, "masteryLevel"),
+        "confidenceScore": _max(server, incoming, "confidenceScore"),
+        "totalPracticeTime": _sum(server, incoming, "totalPracticeTime"),
+        "lastPracticed": _latest(server.get("lastPracticed"), incoming.get("lastPracticed")),
     }
 
 

@@ -254,3 +254,21 @@ def test_mastery_leaves_unknown_top_level_fields_to_the_server():
     assert merged["note"] == {"a": 1}
     assert merged["writing"] == _mastery(2, 0.2, 10, None)
     assert merged["speaking"] == _mastery(1, 0.5, 3, None)
+
+
+def test_legacy_nested_records_validate_and_merge():
+    progress = STORES["progress-db"]
+    server = progress.validate({"accuracyTrend": [{"date": "2026-09-01"}], "skillProgress": {"writing": {}}})
+    incoming = progress.validate(
+        {"accuracyTrend": [{"date": "2026-09-01", "exercises": 2}], "skillProgress": {"writing": {"sessions": 2}}}
+    )
+    merged = merge.progress(server, incoming)
+    assert merged["accuracyTrend"] == [{"date": "2026-09-01", "exercises": 2}]
+    assert merged["skillProgress"]["writing"]["sessions"] == 2
+
+    mastery = STORES["mastery-db"]
+    merged = merge.mastery(mastery.validate({"writing": {}}), mastery.validate({"writing": {"totalPracticeTime": 4}}))
+    assert merged["writing"]["totalPracticeTime"] == 4
+
+    STORES["mistakes-db"].validate({"patternId": "p", "examples": [{"userAnswer": "a"}]})
+    STORES["speak-sessions"].validate({"sessionId": "s", "startedAt": "t", "transcript": [{"content": "hi"}]})
