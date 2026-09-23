@@ -1,5 +1,5 @@
 import type { UIMessage } from '@ai-sdk/react'
-import type { ShadowLearnDB, ThreadSummaryRecord } from '@/db'
+import type { DataClient, ThreadSummaryRecord } from '@/db'
 import { getLatestSummary, getThread, putThreadSummary, saveThreadMessages } from '@/db'
 import { estimateTokens, isOverflow } from '@/features/agent/lib/agent-utils'
 import { apiFetch } from '@/shared/lib/api'
@@ -77,7 +77,7 @@ export function buildHistoryToStore(
  * (`maybeCompact`) swallows + logs.
  */
 export async function compact(
-  db: ShadowLearnDB,
+  db: DataClient,
   threadId: string,
   messages: UIMessage[],
   locale: string,
@@ -140,7 +140,7 @@ export async function compact(
  * Errors are swallowed (logged) — this runs in an effect and must not throw.
  */
 export async function maybeCompact(
-  db: ShadowLearnDB,
+  db: DataClient,
   threadId: string,
   messages: UIMessage[],
   locale: string,

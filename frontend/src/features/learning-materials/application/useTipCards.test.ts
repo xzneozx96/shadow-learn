@@ -1,16 +1,17 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cardsKey, initDB, putTipCards } from '@/db'
 import { useTipCards } from '@/features/learning-materials/application/useTipCards'
+import { fakeDataClient } from '../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
-let db: ShadowLearnDB
+let db: DataClient
 
 beforeEach(async () => {
   const { deleteDB } = await import('idb')
   await deleteDB('shadowlearn')
-  db = await initDB()
+  db = fakeDataClient(await initDB())
   // Default probe response: backend has no live job. Tests that exercise
   // the regen path override this with a more specific mockResolvedValue.
   globalThis.fetch = vi.fn().mockResolvedValue({
@@ -21,7 +22,7 @@ beforeEach(async () => {
 })
 
 afterEach(() => {
-  db?.close()
+  db?.legacy.close()
   vi.restoreAllMocks()
 })
 
@@ -73,7 +74,7 @@ describe('useTipCards', () => {
     await waitFor(() => expect(result.current.cards.length).toBe(1))
 
     await act(async () => { await result.current.markKnown() })
-    const stored = await db.get('tip-cards', cardsKey('v2', 'en'))
+    const stored = await db.legacy.get('tip-cards', cardsKey('v2', 'en'))
     expect(stored?.cards[0].state).toBe('known')
   })
 
@@ -109,7 +110,7 @@ describe('useTipCards', () => {
     await waitFor(() => expect(result.current.cards.length).toBe(2))
     await act(async () => { await result.current.regenerate() })
 
-    const stored = await db.get('tip-cards', cardsKey('v3', 'en'))
+    const stored = await db.legacy.get('tip-cards', cardsKey('v3', 'en'))
     expect(stored?.cards).toHaveLength(2)
     const q1 = stored!.cards.find(c => c.front === 'Q1')!
     expect(q1.state).toBe('known') // preserved

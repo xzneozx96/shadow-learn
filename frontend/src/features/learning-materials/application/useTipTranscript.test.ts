@@ -1,11 +1,13 @@
+import type { DataClient } from '@/db'
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initDB, putTipTranscript } from '@/db'
 import { useTipTranscript } from '@/features/learning-materials/application/useTipTranscript'
+import { fakeDataClient } from '../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
 // vi.hoisted so the factory closure captures a mutable reference that tests can update
-const mocks = vi.hoisted(() => ({ db: null as Awaited<ReturnType<typeof initDB>> | null }))
+const mocks = vi.hoisted(() => ({ db: null as DataClient | null }))
 
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: mocks.db }),
@@ -22,7 +24,7 @@ afterEach(async () => {
   vi.restoreAllMocks()
   // Close and delete the IDB to keep tests isolated
   if (mocks.db) {
-    mocks.db.close()
+    mocks.db.legacy.close()
     mocks.db = null
   }
   await new Promise<void>((resolve) => {
@@ -76,7 +78,7 @@ describe('useTipTranscript', () => {
 
   describe('behavior 2: IDB cache hit', () => {
     it('returns cached transcript without fetching', async () => {
-      mocks.db = await initDB()
+      mocks.db = fakeDataClient(await initDB())
       await putTipTranscript(mocks.db, {
         videoId: 'vid-cached',
         status: 'ready',

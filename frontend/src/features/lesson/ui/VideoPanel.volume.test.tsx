@@ -19,6 +19,10 @@ vi.mock('@/app/providers/PlayerContext', () => ({
 }))
 
 // Mock react-router-dom Link (VideoPanel uses it for the Home button)
+vi.mock('@/app/providers/AuthContext', () => ({
+  useAuth: () => ({ db: null }),
+}))
+
 vi.mock('react-router-dom', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
 }))

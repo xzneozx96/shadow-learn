@@ -1,11 +1,11 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
 import { getSpacedRepetitionItem, saveSpacedRepetitionItem } from '@/db'
 import { buildTool } from '@/features/agent/lib/tools/types'
 import { updateSpacedRepetition } from '@/shared/lib/spacedRepetition'
 
 export async function executeUpdateSrItem(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: { itemId: string, result: 'correct' | 'incorrect' | 'partial' },
 ) {
   const item = await getSpacedRepetitionItem(db, args.itemId)

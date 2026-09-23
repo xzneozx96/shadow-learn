@@ -1,4 +1,4 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { Check, Loader2, Pencil, RefreshCw, Volume2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -20,7 +20,7 @@ interface WordBreakdownModalProps {
   pinyin: string
   meaning: string
   sourceLanguage: string
-  db: ShadowLearnDB | null
+  db: DataClient | null
 }
 
 export function WordBreakdownModal(props: WordBreakdownModalProps) {

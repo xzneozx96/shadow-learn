@@ -1,17 +1,15 @@
-import type { ShadowLearnDB } from '@/db'
 import type { LessonMeta } from '@/shared/types'
 import { useCallback, useEffect, useRef } from 'react'
-import { saveSegments, saveVideo } from '@/db'
 import { apiFetch } from '@/shared/lib/api'
 import { captureLessonJobFailed } from '@/shared/lib/posthog-events'
 
 interface UseJobPollerProps {
   lessons: LessonMeta[]
-  db: ShadowLearnDB | null
   updateLesson: (meta: LessonMeta) => Promise<void>
+  completeLesson: (id: string) => Promise<void>
 }
 
-export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): void {
+export function useJobPoller({ lessons, updateLesson, completeLesson }: UseJobPollerProps): void {
   // Stable ref so pollJobs can read latest lessons without being in its dep array
   const lessonsRef = useRef(lessons)
   useEffect(() => {
@@ -25,8 +23,6 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
     .join(',')
 
   const pollJobs = useCallback(async () => {
-    if (!db)
-      return
     const processing = lessonsRef.current.filter(l => l.status === 'processing')
     for (const lesson of processing) {
       if (!lesson.jobId)
@@ -60,49 +56,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
       }
       else if (job.status === 'complete') {
         const jobId = lesson.jobId
-        // job.result has the nested shape { lesson: {...}, video_url? } —
-        // matches the backend _shared_pipeline result dict.
-        const { lesson: resultLesson, video_url, audio_url } = job.result
-        await saveSegments(db, lesson.id, resultLesson.segments)
-        if (lesson.source === 'youtube' && video_url) {
-          try {
-            const videoRes = await (video_url.startsWith('http') ? fetch(video_url) : apiFetch(video_url))
-            if (!videoRes.ok)
-              throw new Error(`Video fetch failed: ${videoRes.status}`)
-            const contentType = videoRes.headers.get('content-type') ?? ''
-            if (!contentType.startsWith('audio/') && !contentType.startsWith('video/'))
-              throw new Error(`Unexpected content type: ${contentType}`)
-            const videoBlob = await videoRes.blob()
-            await saveVideo(db, lesson.id, videoBlob)
-          }
-          catch {
-            // Video fetch failed (network error, server restart, etc.).
-            // Continue completing the lesson without a local video — the player will
-            // fall back to the YouTube thumbnail + audio layout.
-          }
-        }
-        if (lesson.source === 'blog' && audio_url) {
-          try {
-            const audioRes = await (audio_url.startsWith('http') ? fetch(audio_url) : apiFetch(audio_url))
-            if (!audioRes.ok)
-              throw new Error(`Audio fetch failed: ${audioRes.status}`)
-            const audioBlob = await audioRes.blob()
-            await saveVideo(db, lesson.id, audioBlob)
-          }
-          catch {
-            // Audio fetch failed — lesson completes without local audio.
-            // Shadowing mode will fall back to re-synthesizing via /api/tts.
-          }
-        }
-        await updateLesson({
-          ...lesson,
-          title: resultLesson.title,
-          status: 'complete',
-          jobId: undefined,
-          currentStep: undefined,
-          duration: resultLesson.duration,
-          segmentCount: resultLesson.segments.length,
-        })
+        await completeLesson(lesson.id)
         await apiFetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
       }
       else if (job.status === 'error') {
@@ -118,7 +72,7 @@ export function useJobPoller({ lessons, db, updateLesson }: UseJobPollerProps): 
         await apiFetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
       }
     }
-  }, [db, updateLesson])
+  }, [updateLesson, completeLesson])
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 

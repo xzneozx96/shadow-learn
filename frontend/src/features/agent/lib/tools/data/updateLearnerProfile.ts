@@ -1,11 +1,11 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
 import { getLearnerProfile, saveLearnerProfile } from '@/db'
 import { clearSystemPromptCache } from '@/features/agent/lib/agent-system-prompt'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
 export async function executeUpdateLearnerProfile(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: Partial<{ name: string, currentLevel: string, dailyGoalMinutes: number, nativeLanguage: string, targetLanguage: string }>,
 ) {
   const existing = await getLearnerProfile(db)

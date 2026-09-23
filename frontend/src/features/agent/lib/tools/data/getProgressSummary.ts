@@ -1,9 +1,9 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
 import { getProgressStats } from '@/db'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
-export async function executeGetProgressSummary(db: ShadowLearnDB) {
+export async function executeGetProgressSummary(db: DataClient) {
   const stats = await getProgressStats(db)
   if (!stats)
     return { message: 'No progress data yet.' }

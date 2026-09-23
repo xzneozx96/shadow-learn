@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { getTipCourse, getTipProgress, initDB, listTipProgressForCourse, putTipCourse, putTipProgress } from '../src/db'
+import { fakeDataClient } from './fake-api'
 import 'fake-indexeddb/auto'
 
 afterEach(async () => {
@@ -13,7 +14,7 @@ afterEach(async () => {
 
 describe('tip DB accessors', () => {
   it('persists and reads a TipCourse', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await putTipCourse(db, {
       id: 'PL123',
       source: 'playlist',
@@ -25,11 +26,11 @@ describe('tip DB accessors', () => {
       fetchedAt: '2026-05-17T00:00:00Z',
     })
     expect(await getTipCourse(db, 'PL123')).toMatchObject({ id: 'PL123', videoIds: ['v1', 'v2'] })
-    db.close()
+    db.legacy.close()
   })
 
   it('lists progress entries for a course via by-course index', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await putTipProgress(db, {
       key: 'PL123:v1',
       courseId: 'PL123',
@@ -63,12 +64,12 @@ describe('tip DB accessors', () => {
     const rows = await listTipProgressForCourse(db, 'PL123')
     expect(rows).toHaveLength(2)
     expect(rows.map(r => r.videoId).sort()).toEqual(['v1', 'v2'])
-    db.close()
+    db.legacy.close()
   })
 
   it('returns undefined for missing progress', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     expect(await getTipProgress(db, 'NOPE:NOPE')).toBeUndefined()
-    db.close()
+    db.legacy.close()
   })
 })

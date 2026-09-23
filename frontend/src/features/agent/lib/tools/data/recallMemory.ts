@@ -1,10 +1,10 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
 import { recallMemory } from '@/features/agent/lib/agent-memory'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
 export async function executeRecallMemory(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: { query: string, tags?: string[] },
 ) {
   const memories = await recallMemory(db, args.query, args.tags)

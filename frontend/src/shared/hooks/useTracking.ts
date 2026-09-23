@@ -1,4 +1,4 @@
-import type { MistakeExample, SessionLog, ShadowLearnDB, SpacedRepetitionItem } from '@/db'
+import type { DataClient, MistakeExample, SessionLog, SpacedRepetitionItem } from '@/db'
 import type { ExerciseMode, VocabEntry } from '@/shared/types'
 import { useAuth } from '@/app/providers/AuthContext'
 import {
@@ -58,7 +58,7 @@ function defaultMasteryData() {
 // -------------------------------------------------------------------------- //
 
 export async function logExerciseCompletion(
-  db: ShadowLearnDB,
+  db: DataClient,
   {
     vocabEntry,
     exerciseType,

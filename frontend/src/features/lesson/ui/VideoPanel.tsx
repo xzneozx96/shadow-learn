@@ -1,9 +1,12 @@
+import type { LessonMedia } from '@/db'
 import type { LessonMeta, Segment } from '@/shared/types'
 import { Download, ExternalLink, Home, Pause, Pencil, Play, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { usePlayer } from '@/app/providers/PlayerContext'
+import { refreshMediaTicket } from '@/db'
 import { HTML5Player } from '@/shared/lib/player/HTML5Player'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -70,12 +73,13 @@ interface VideoPanelProps {
   lesson: LessonMeta
   segments: Segment[]
   activeSegment: Segment | null
-  videoBlob?: Blob
+  media?: LessonMedia | null
   onRename?: (newTitle: string) => void
 }
 
-export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
+export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
   const { t } = useI18n()
+  const { db } = useAuth()
   const { player, subscribeTime, getTime, playbackRate, volume, setPlayer, setPlaybackRate, setVolume } = usePlayer()
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -131,31 +135,55 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
   }
 
   const isBlog = lesson.source === 'blog'
-  const isAudioOnly = !isBlog && lesson.source === 'youtube' && (!videoBlob || videoBlob.type.startsWith('audio/'))
+  const isAudioOnly = !isBlog && lesson.source === 'youtube' && (!media || media.kind === 'audio')
   const youtubeVideoId = lesson.sourceUrl ? extractYouTubeVideoId(lesson.sourceUrl) : null
 
   const [ambientIdx, setAmbientIdx] = useState(() => Math.floor(Math.random() * AMBIENT_VIDEOS.length))
 
   // Initialize HTML5 player for both YouTube (audio) and upload (video)
   useEffect(() => {
-    if (!videoBlob || !mediaRef.current)
+    const element = mediaRef.current
+    if (!media || !element)
       return
 
-    let destroyed = false
-    const objectUrl = URL.createObjectURL(videoBlob)
-    mediaRef.current.src = objectUrl
+    // A ticket expires after a few minutes; the next range request then fails
+    // with 401. Mint one fresh ticket per successful load and resume in place.
+    let refreshed = false
+    let disposed = false
+    const handleCanPlay = () => {
+      refreshed = false
+    }
+    const handleError = async () => {
+      if (refreshed || !db)
+        return
+      refreshed = true
+      const resumeAt = element.currentTime
+      const wasPlaying = !element.paused
+      const url = await refreshMediaTicket(db, media.id)
+      if (disposed)
+        return
+      element.src = url
+      element.currentTime = resumeAt
+      if (wasPlaying)
+        void element.play()
+    }
+    element.addEventListener('canplay', handleCanPlay)
+    element.addEventListener('error', handleError)
+    element.src = media.url
 
-    const h5Player = new HTML5Player(mediaRef.current)
-    if (!destroyed)
-      setPlayer(h5Player)
+    const h5Player = new HTML5Player(element)
+    setPlayer(h5Player)
 
     return () => {
-      destroyed = true
+      disposed = true
+      element.removeEventListener('canplay', handleCanPlay)
+      element.removeEventListener('error', handleError)
       h5Player.destroy()
       setPlayer(null)
-      URL.revokeObjectURL(objectUrl)
+      element.removeAttribute('src')
+      element.load()
     }
-  }, [videoBlob, setPlayer])
+  }, [media, db, setPlayer])
 
   // Track duration
   useEffect(() => {
@@ -226,12 +254,16 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
     setVolume(val)
   }
 
-  const handleDownload = useCallback(() => {
-    if (!videoBlob)
+  const handleDownload = useCallback(async () => {
+    if (!media || !db)
       return
-    const ext = videoBlob.type.startsWith('video/') ? getMimeExtension(videoBlob.type) : '.mp3'
+    const res = await db.api.fetch(`/api/media/${media.id}`)
+    if (!res.ok)
+      return
+    const blob = await res.blob()
+    const ext = blob.type.startsWith('video/') ? getMimeExtension(blob.type) : '.mp3'
     const filename = sanitizeBaseName(lesson.title) + ext
-    const objectUrl = URL.createObjectURL(videoBlob)
+    const objectUrl = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = objectUrl
     a.download = filename
@@ -239,7 +271,7 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
     a.click()
     document.body.removeChild(a)
     setTimeout(() => URL.revokeObjectURL(objectUrl), 100)
-  }, [videoBlob, lesson.title])
+  }, [media, db, lesson.title])
 
   return (
     <div className="flex h-full flex-col backdrop-blur-md">
@@ -279,13 +311,13 @@ export function VideoPanel({ lesson, videoBlob, onRename }: VideoPanelProps) {
             </Button>
           )}
         </div>
-        {videoBlob && (
+        {media && (
           <Button
             variant="ghost"
             size="icon-sm"
             className="ml-auto shrink-0"
             onClick={handleDownload}
-            aria-label={videoBlob.type.startsWith('video/') ? t('lesson.downloadVideo') : t('lesson.downloadAudio')}
+            aria-label={media.kind === 'video' ? t('lesson.downloadVideo') : t('lesson.downloadAudio')}
           >
             <Download className="size-4" />
           </Button>

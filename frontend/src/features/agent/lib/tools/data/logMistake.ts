@@ -1,10 +1,10 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
 import { getErrorPattern, saveErrorPattern } from '@/db'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
 export async function executeLogMistake(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: { word: string, context: string, errorType: string },
 ) {
   const patternId = `err-${args.word}`

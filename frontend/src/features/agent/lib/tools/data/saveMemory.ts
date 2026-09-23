@@ -1,10 +1,10 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
 import { saveMemory } from '@/features/agent/lib/agent-memory'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
 export async function executeSaveMemory(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: { content: string, tags?: string[], importance?: 1 | 2 | 3 },
   lessonId?: string,
 ) {

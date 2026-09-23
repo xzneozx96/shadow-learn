@@ -259,16 +259,16 @@ function AuthGate() {
     return <ErrorScreen error={new Error('Could not reach the server to restore your session.')} />
   }
 
+  if (session === null || window.location.pathname === '/reset-password') {
+    return <AccountRouter />
+  }
+
   if (session === undefined || db === null) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     )
-  }
-
-  if (session === null || window.location.pathname === '/reset-password') {
-    return <AccountRouter />
   }
 
   return (

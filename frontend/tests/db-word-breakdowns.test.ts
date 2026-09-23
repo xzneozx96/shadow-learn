@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { getBreakdown, initDB, saveBreakdown } from '@/db'
+import { fakeDataClient } from './fake-api'
 import 'fake-indexeddb/auto'
 
 afterEach(() => {
@@ -10,7 +11,7 @@ afterEach(() => {
 
 describe('word-breakdowns store (v11)', () => {
   it('saveBreakdown then getBreakdown returns the same entry', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const entry = {
       word: '练习',
       sourceLanguage: 'zh-CN',
@@ -25,12 +26,12 @@ describe('word-breakdowns store (v11)', () => {
   })
 
   it('getBreakdown returns undefined for unknown word', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     expect(await getBreakdown(db, '不存在的词')).toBeUndefined()
   })
 
   it('saveBreakdown overwrites prior entry for the same word', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await saveBreakdown(db, {
       word: '学习',
       sourceLanguage: 'zh-CN',

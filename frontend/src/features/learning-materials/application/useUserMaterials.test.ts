@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext } from '@/app/providers/AuthContext'
 import { initDB } from '@/db'
 import { useUserMaterials } from '@/features/learning-materials/application/useUserMaterials'
+import { fakeDataClient } from '../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
 function wrapper(db: any) {
@@ -47,7 +48,7 @@ beforeEach(() => {
 
 describe('useUserMaterials', () => {
   it('starts empty, adds a playlist, groups by skill', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const { result } = renderHook(() => useUserMaterials(), { wrapper: wrapper(db) })
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.groups).toHaveLength(0)
@@ -69,7 +70,7 @@ describe('useUserMaterials', () => {
   })
 
   it('rejects duplicate externalId', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const { result } = renderHook(() => useUserMaterials(), { wrapper: wrapper(db) })
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {
@@ -95,7 +96,7 @@ describe('useUserMaterials', () => {
   })
 
   it('remove deletes the record', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const { result } = renderHook(() => useUserMaterials(), { wrapper: wrapper(db) })
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {

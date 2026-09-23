@@ -1,24 +1,25 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { deleteDB } from 'idb'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { initDB } from '@/db'
 import { useTipNotes } from '@/features/learning-materials/application/useTipNotes'
 import { _resetTipNoteBusForTest, saveTipNote } from '@/features/learning-materials/lib/tipNoteBus'
+import { fakeDataClient } from '../fake-api'
 import 'fake-indexeddb/auto'
 
 const DB_NAME = 'shadowlearn'
 
 describe('useTipNotes', () => {
-  let db: ShadowLearnDB
+  let db: DataClient
 
   beforeEach(async () => {
     _resetTipNoteBusForTest()
-    db = await initDB()
+    db = fakeDataClient(await initDB())
   })
 
   afterEach(async () => {
-    db.close()
+    db.legacy.close()
     await deleteDB(DB_NAME).catch(() => undefined)
   })
 

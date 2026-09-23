@@ -1,11 +1,11 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { NewTipNote, TipNote } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { deleteTipNote, getTipNotesForVideo, putTipNote } from '@/db'
 import { registerSaveTipNote } from '@/features/learning-materials/lib/tipNoteBus'
 
 interface Args {
-  db: ShadowLearnDB | null
+  db: DataClient | null
   videoId: string
 }
 

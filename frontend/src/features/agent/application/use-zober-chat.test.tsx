@@ -5,6 +5,7 @@ import { AuthContext } from '@/app/providers/AuthContext'
 import { I18nProvider } from '@/app/providers/I18nContext'
 import { initDB } from '@/db'
 import { useZoberChat } from '@/features/agent/application/useZoberChat'
+import { fakeDataClient } from '../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
 function makeWrapper(db: any) {
@@ -26,7 +27,7 @@ function makeWrapper(db: any) {
 
 describe('useZoberChat smoke', () => {
   it('lesson surface returns expected shape', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const { result } = renderHook(
       () =>
         useZoberChat({
@@ -41,20 +42,20 @@ describe('useZoberChat smoke', () => {
     await waitFor(() => expect(typeof result.current.sendMessage).toBe('function'))
     expect(result.current.messages).toEqual([])
     expect(typeof result.current.loadMore).toBe('function')
-    db.close()
+    db.legacy.close()
   })
 
   it('global surface returns expected shape', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const { result } = renderHook(() => useZoberChat({ surface: 'global' }), {
       wrapper: makeWrapper(db),
     })
     await waitFor(() => expect(typeof result.current.sendMessage).toBe('function'))
-    db.close()
+    db.legacy.close()
   })
 
   it('tip surface exposes disabled when no transcript', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const { result } = renderHook(
       () =>
         useZoberChat({
@@ -71,6 +72,6 @@ describe('useZoberChat smoke', () => {
     await waitFor(() => expect(typeof result.current.sendMessage).toBe('function'))
     expect(result.current.disabled).toBe(true)
     expect(result.current.disabledReason).toBe('no-transcript')
-    db.close()
+    db.legacy.close()
   })
 })

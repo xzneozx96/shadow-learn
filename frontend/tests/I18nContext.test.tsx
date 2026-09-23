@@ -5,6 +5,7 @@ import { use } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nContext, I18nProvider } from '@/app/providers/I18nContext'
 import { initDB, saveSettings } from '@/db'
+import { fakeDataClient } from './fake-api'
 import 'fake-indexeddb/auto'
 
 vi.mock('@/app/providers/AuthContext', () => ({
@@ -13,7 +14,7 @@ vi.mock('@/app/providers/AuthContext', () => ({
 
 beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory()
-  ;(globalThis as any).__testDb = await initDB()
+  ;(globalThis as any).__testDb = fakeDataClient(await initDB())
 })
 
 // Consumer component

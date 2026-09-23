@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getLatestSummary, initDB } from '@/db'
 import { USABLE } from '@/features/agent/lib/agent-utils'
 import { buildHistoryToStore, compact, maybeCompact, selectTailStart } from '@/features/agent/lib/context-assembler/background-summary'
+import { fakeDataClient } from './fake-api'
 import 'fake-indexeddb/auto'
 
 function bigMsgs(n: number): UIMessage[] {
@@ -34,15 +35,15 @@ describe('maybeCompact', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('skips when not over budget (real usage below USABLE)', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response())
     await maybeCompact(db, 'tid', bigMsgs(40), 'en', 100)
     expect(spy).not.toHaveBeenCalled()
-    db.close()
+    db.legacy.close()
   })
 
   it('compacts + persists when over budget, recording the cut index', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ summary: 'hi' }), { headers: { 'content-type': 'application/json' } }),
     )
@@ -50,7 +51,7 @@ describe('maybeCompact', () => {
     const s = await getLatestSummary(db, 'tid')
     expect(s?.summary).toBe('hi')
     expect(typeof s?.coversThroughIndex).toBe('number')
-    db.close()
+    db.legacy.close()
   })
 })
 
@@ -59,19 +60,19 @@ describe('compact', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('throws on summarize failure so the send-path can fall back to prune', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 500 }))
     await expect(compact(db, 'tid', bigMsgs(40), 'en')).rejects.toThrow()
-    db.close()
+    db.legacy.close()
   })
 
   it('returns false when nothing older than the tail', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response())
     const did = await compact(db, 'tid', [textMsg('1')], 'en')
     expect(did).toBe(false)
     expect(spy).not.toHaveBeenCalled()
-    db.close()
+    db.legacy.close()
   })
 })
 

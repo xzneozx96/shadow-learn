@@ -1,4 +1,4 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { SessionQuestion } from '@/shared/lib/study-utils'
 import type { ExerciseMode, VocabEntry } from '@/shared/types'
 import { z } from 'zod'
@@ -25,13 +25,13 @@ export const RenderStudySessionSchema = z.object({
 
 export type RenderStudySessionArgs = z.infer<typeof RenderStudySessionSchema>
 
-async function fetchVocabEntries(db: ShadowLearnDB, itemIds: string[]): Promise<VocabEntry[]> {
-  const fetched = await Promise.all(itemIds.map(id => db.get('vocabulary', id)))
+async function fetchVocabEntries(db: DataClient, itemIds: string[]): Promise<VocabEntry[]> {
+  const fetched = await Promise.all(itemIds.map(id => db.legacy.get('vocabulary', id)))
   return fetched.filter((e): e is VocabEntry => e !== undefined)
 }
 
 export async function executeRenderStudySession(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: RenderStudySessionArgs,
   uiLanguage: string = 'en',
 ): Promise<{ type: 'study_session', props: { questions: SessionQuestion[] } } | { error: string }> {

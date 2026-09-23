@@ -13,7 +13,6 @@ export function useUploadThumbnail(lessonId: string, enabled: boolean): string |
     if (!enabled || !db || cache.has(lessonId))
       return
 
-    let objectUrl: string | null = null
     let cancelled = false
     let video: HTMLVideoElement | null = null
 
@@ -37,25 +36,24 @@ export function useUploadThumbnail(lessonId: string, enabled: boolean): string |
         setDataUrl(url)
     }
 
-    getVideo(db, lessonId).then((blob) => {
-      if (!blob || cancelled)
+    getVideo(db, lessonId).then((url) => {
+      if (!url || cancelled)
         return
 
-      objectUrl = URL.createObjectURL(blob)
       video = document.createElement('video')
+      // Media is served cross-origin; CORS mode keeps the canvas readable.
+      video.crossOrigin = 'anonymous'
       video.preload = 'metadata'
       video.muted = true
       video.playsInline = true
-      video.src = objectUrl
+      video.src = url
 
       video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true })
       video.addEventListener('seeked', handleSeeked, { once: true })
-    })
+    }).catch(() => {}) // the card falls back to its placeholder art
 
     return () => {
       cancelled = true
-      if (objectUrl)
-        URL.revokeObjectURL(objectUrl)
       if (video) {
         video.removeEventListener('loadedmetadata', handleLoadedMetadata)
         video.removeEventListener('seeked', handleSeeked)
