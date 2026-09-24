@@ -7,9 +7,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
+from sqlalchemy import event, select
 
 from app.accounts.models import User
+from app.db import engine
 from app.job_store import get_job
 from app.lessons.models import Lesson, LessonSegment
 from app.main import app
@@ -206,6 +207,77 @@ async def test_list_and_get_return_only_the_callers_lessons(client, stored_user,
     assert _MEDIA_URL.match(body["video_url"])
     assert (await client.get(body["video_url"])).content == _VIDEO_BYTES
     assert (await client.get(f"/api/lessons/{stranger_lesson.id}")).status_code == 404
+
+
+@pytest.mark.usefixtures("mocked_youtube")
+async def test_list_carries_streamable_media_urls_for_the_callers_lessons_only(
+    client, stored_user, stranger_lesson, db_session
+):
+    lesson_id = (await _youtube_lesson(client))["lesson"]["id"]
+    stranger_media = MediaObject(
+        user_id=stranger_lesson.user_id,
+        kind=MediaKind.video,
+        lesson_id=stranger_lesson.id,
+        object_key=f"users/{stranger_lesson.user_id}/lessons/{stranger_lesson.id}/video/x.mp4",
+        size=1,
+        sha256="0",
+        content_type="video/mp4",
+    )
+    db_session.add(stranger_media)
+    await db_session.commit()
+
+    [item] = (await client.get("/api/lessons")).json()
+
+    assert item["id"] == lesson_id
+    assert _MEDIA_URL.match(item["video_url"])
+    assert str(stranger_media.id) not in item["video_url"]
+    assert (await client.get(item["video_url"])).content == _VIDEO_BYTES
+
+
+async def _add_lessons_with_media(db_session, user, count):
+    for _ in range(count):
+        lesson = Lesson(
+            user_id=user.id, title="t", source="upload", duration_s=1.0, source_language="zh-CN", translation_languages=[]
+        )
+        db_session.add(lesson)
+        await db_session.flush()
+        db_session.add(
+            MediaObject(
+                user_id=user.id,
+                kind=MediaKind.video,
+                lesson_id=lesson.id,
+                object_key=f"users/{user.id}/lessons/{lesson.id}/video/{uuid.uuid4()}.mp4",
+                size=1,
+                sha256="0",
+                content_type="video/mp4",
+            )
+        )
+    await db_session.commit()
+
+
+async def _list_statement_count(client) -> tuple[int, int]:
+    statements = []
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+
+    event.listen(engine.sync_engine, "before_cursor_execute", record)
+    try:
+        listed = (await client.get("/api/lessons")).json()
+    finally:
+        event.remove(engine.sync_engine, "before_cursor_execute", record)
+    assert all("video_url" in item for item in listed)
+    return len(listed), len(statements)
+
+
+async def test_list_issues_the_same_number_of_queries_for_one_or_many_lessons(client, stored_user, db_session):
+    await _add_lessons_with_media(db_session, stored_user, 1)
+    one = await _list_statement_count(client)
+    await _add_lessons_with_media(db_session, stored_user, 4)
+    five = await _list_statement_count(client)
+
+    assert (one[0], five[0]) == (1, 5)
+    assert five[1] == one[1]
 
 
 @pytest.mark.usefixtures("mocked_youtube")
