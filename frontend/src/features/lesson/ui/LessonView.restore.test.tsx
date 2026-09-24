@@ -36,7 +36,7 @@ vi.mock('@/app/providers/AuthContext', () => ({
 }))
 
 vi.mock('@/features/lesson/application/LessonsContext', () => ({
-  useLessons: () => ({ updateLesson: vi.fn() }),
+  useLessons: () => ({ renameLesson: vi.fn() }),
 }))
 
 vi.mock('@/app/providers/I18nContext', () => ({

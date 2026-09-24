@@ -3,7 +3,7 @@ import type { LessonMeta } from '@/shared/types'
 import * as React from 'react'
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
-import { deleteFullLesson, getAllLessonMetas, saveLessonMeta } from '@/db'
+import { deleteFullLesson, getAllLessonMetas, renameLesson as renameServerLesson, saveLessonMeta } from '@/db'
 import { useJobPoller } from '@/features/lesson/application/useJobPoller'
 
 type LessonsStatus = 'loading' | 'ready' | 'error'
@@ -15,6 +15,7 @@ interface LessonsContextValue {
   reload: () => Promise<void>
   db: DataClient | null
   updateLesson: (meta: LessonMeta) => Promise<void>
+  renameLesson: (meta: LessonMeta, title: string) => Promise<void>
   deleteLesson: (id: string) => Promise<void>
 }
 
@@ -96,6 +97,18 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
     setServerLessons(prev => upsert(prev, meta))
   }, [db])
 
+  const renameLesson = useCallback(async (meta: LessonMeta, title: string) => {
+    if (!db)
+      return
+    const renamed = { ...meta, title }
+    if (isPlaceholder(meta)) {
+      setPending(prev => upsert(prev, renamed))
+      return
+    }
+    await renameServerLesson(db, meta.id, title)
+    setServerLessons(prev => upsert(prev, renamed))
+  }, [db])
+
   const deleteLesson = useCallback(async (id: string) => {
     if (!db)
       return
@@ -121,7 +134,7 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
   useJobPoller({ lessons, updateLesson, completeLesson })
 
   return (
-    <LessonsContext value={{ lessons, status, error, reload, db, updateLesson, deleteLesson }}>
+    <LessonsContext value={{ lessons, status, error, reload, db, updateLesson, renameLesson, deleteLesson }}>
       {children}
     </LessonsContext>
   )

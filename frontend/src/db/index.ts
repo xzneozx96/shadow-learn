@@ -33,7 +33,7 @@ export type {
 } from './legacy'
 export { initDB } from './legacy'
 
-type ClientLessonMeta = Partial<Pick<LessonMeta, 'title' | 'progressSegmentId' | 'tags' | 'isDone'>>
+type ClientLessonMeta = Partial<Pick<LessonMeta, 'progressSegmentId' | 'tags' | 'isDone'>>
 
 export interface LessonSummary {
   id: string
@@ -72,7 +72,7 @@ const MEDIA_ID = /\/api\/media\/([^/?]+)/
 export function toLessonMeta(summary: LessonSummary): LessonMeta {
   return {
     id: summary.id,
-    title: summary.meta.title ?? summary.title,
+    title: summary.title,
     source: summary.source,
     sourceUrl: summary.source_url,
     duration: summary.duration,
@@ -113,20 +113,27 @@ export async function getLesson(db: DataClient, id: string): Promise<LessonDetai
   return { meta: toLessonMeta(body), segments: body.segments, media }
 }
 
+async function patchLesson(db: DataClient, id: string, body: object): Promise<void> {
+  const res = await db.api.fetch(lessonPath(id), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok)
+    throw await responseError(res, `Saving lesson failed: ${res.status}`)
+}
+
 export async function saveLessonMeta(db: DataClient, meta: LessonMeta): Promise<void> {
   const clientMeta: ClientLessonMeta = {
-    title: meta.title,
     progressSegmentId: meta.progressSegmentId,
     tags: meta.tags,
     isDone: meta.isDone,
   }
-  const res = await db.api.fetch(lessonPath(meta.id), {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ meta: clientMeta, last_opened_at: meta.lastOpenedAt }),
-  })
-  if (!res.ok)
-    throw await responseError(res, `Saving lesson failed: ${res.status}`)
+  await patchLesson(db, meta.id, { meta: clientMeta, last_opened_at: meta.lastOpenedAt })
+}
+
+export async function renameLesson(db: DataClient, id: string, title: string): Promise<void> {
+  await patchLesson(db, id, { title })
 }
 
 export async function getLessonMeta(db: DataClient, id: string): Promise<LessonMeta | undefined> {

@@ -61,7 +61,7 @@ function LibrarySkeleton() {
 export function Library() {
   const { db } = useAuth()
   const { t } = useI18n()
-  const { lessons, status, error, reload, updateLesson, deleteLesson } = useLessons()
+  const { lessons, status, error, reload, updateLesson, renameLesson, deleteLesson } = useLessons()
   const { entriesByLesson } = useVocabulary()
   const [search, setSearch] = useState('')
   const [sort] = useState<SortMode>('recent')
@@ -144,8 +144,8 @@ export function Library() {
   }, [deleteLesson])
 
   const handleRename = useCallback(async (lesson: LessonMeta, newTitle: string) => {
-    await updateLesson({ ...lesson, title: newTitle })
-  }, [updateLesson])
+    await renameLesson(lesson, newTitle)
+  }, [renameLesson])
 
   const handleToggleDone = useCallback(async (lesson: LessonMeta) => {
     await updateLesson({ ...lesson, isDone: !lesson.isDone })

@@ -28,7 +28,7 @@ function LessonViewContent() {
   const { t } = useI18n()
   const { db } = useAuth()
   const { player } = usePlayer()
-  const { updateLesson } = useLessons()
+  const { renameLesson } = useLessons()
   const { meta, segments, media, loading, error, updateMeta } = useLesson(db, id)
   const activeSegment = useActiveSegment(segments)
   const { bests, getBest, saveBest, getAudio } = useSpeakingBests(id ?? '')
@@ -143,9 +143,9 @@ function LessonViewContent() {
   const handleRename = useCallback(async (newTitle: string) => {
     if (!meta)
       return
-    await updateLesson({ ...meta, title: newTitle })
+    await renameLesson(meta, newTitle)
     updateMeta({ title: newTitle })
-  }, [meta, updateLesson, updateMeta])
+  }, [meta, renameLesson, updateMeta])
 
   const handleShadowingStart = useCallback(
     (mode: 'dictation' | 'speaking', count: number | 'all') => {

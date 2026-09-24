@@ -77,24 +77,60 @@ describe('lessonsProvider', () => {
   })
 
   it('updateLesson PATCHes a server lesson with its client-owned fields', async () => {
+    api.seedLesson(makeMeta())
+
+    const { result } = renderHook(() => useLessons(), { wrapper })
+    await waitFor(() => expect(result.current.lessons).toHaveLength(1))
+
+    await act(async () => {
+      await result.current.updateLesson({ ...result.current.lessons[0], isDone: true })
+    })
+
+    expect(result.current.lessons[0].isDone).toBe(true)
+    expect(api.calls.at(-1)).toEqual({
+      method: 'PATCH',
+      path: '/api/lessons/lesson_1',
+      body: {
+        meta: { progressSegmentId: null, tags: [], isDone: true },
+        last_opened_at: '2026-09-01T00:00:00.000Z',
+      },
+    })
+  })
+
+  it('renameLesson PATCHes the title of a server lesson and keeps it after a reload', async () => {
     api.seedLesson(makeMeta({ title: 'Original' }))
 
     const { result } = renderHook(() => useLessons(), { wrapper })
     await waitFor(() => expect(result.current.lessons).toHaveLength(1))
 
     await act(async () => {
-      await result.current.updateLesson({ ...result.current.lessons[0], title: 'Updated', isDone: true })
+      await result.current.renameLesson(result.current.lessons[0], 'Updated')
     })
 
     expect(result.current.lessons[0].title).toBe('Updated')
-    expect(api.calls.at(-1)).toEqual({
-      method: 'PATCH',
-      path: '/api/lessons/lesson_1',
-      body: {
-        meta: { title: 'Updated', progressSegmentId: null, tags: [], isDone: true },
-        last_opened_at: '2026-09-01T00:00:00.000Z',
-      },
+    expect(api.calls.at(-1)).toEqual({ method: 'PATCH', path: '/api/lessons/lesson_1', body: { title: 'Updated' } })
+
+    await act(async () => {
+      await result.current.reload()
     })
+    expect(result.current.lessons[0].title).toBe('Updated')
+  })
+
+  it('renameLesson keeps a placeholder rename in this browser', async () => {
+    const placeholder = makeMeta({ id: 'pending_1', status: 'processing', jobId: 'job_1' })
+    const { result } = renderHook(() => useLessons(), { wrapper })
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    await act(async () => {
+      await result.current.updateLesson(placeholder)
+    })
+    const callsBefore = api.calls.length
+
+    await act(async () => {
+      await result.current.renameLesson(placeholder, 'Pending rename')
+    })
+
+    expect(result.current.lessons[0].title).toBe('Pending rename')
+    expect(api.calls).toHaveLength(callsBefore)
   })
 
   it('keeps a processing placeholder in this browser across a remount', async () => {

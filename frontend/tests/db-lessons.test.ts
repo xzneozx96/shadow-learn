@@ -23,6 +23,7 @@ import {
   putThreadSummary,
   putTipChat,
   refreshMediaTicket,
+  renameLesson,
   saveChatMessages,
   saveLessonMeta,
   saveSettings,
@@ -73,12 +74,12 @@ describe('lesson helpers', () => {
     expect(lessons).toEqual([{ ...meta, segmentCount: 2, isDone: undefined }])
   })
 
-  it('prefers a renamed title in meta and falls back to created_at for a never-opened lesson', async () => {
-    api.seed('/api/lessons/l1', { ...lessonBody(meta), last_opened_at: null, meta: { title: 'Renamed' } })
+  it('reads the title column over a stale meta.title and falls back to created_at for a never-opened lesson', async () => {
+    api.seed('/api/lessons/l1', { ...lessonBody(meta), last_opened_at: null, meta: { title: 'Stale' } })
 
     const [lesson] = await getAllLessonMetas(db)
 
-    expect(lesson.title).toBe('Renamed')
+    expect(lesson.title).toBe('Server Title')
     expect(lesson.lastOpenedAt).toBe(meta.createdAt)
     expect(lesson.progressSegmentId).toBeNull()
     expect(lesson.tags).toEqual([])
@@ -116,10 +117,18 @@ describe('lesson helpers', () => {
       method: 'PATCH',
       path: '/api/lessons/l1',
       body: {
-        meta: { title: 'Renamed', progressSegmentId: 's2', tags: ['hsk3'], isDone: true },
+        meta: { progressSegmentId: 's2', tags: ['hsk3'], isDone: true },
         last_opened_at: meta.lastOpenedAt,
       },
     }])
+  })
+
+  it('renameLesson PATCHes only the title', async () => {
+    api.seedLesson(meta)
+
+    await renameLesson(db, 'l1', 'Renamed')
+
+    expect(api.calls).toEqual([{ method: 'PATCH', path: '/api/lessons/l1', body: { title: 'Renamed' } }])
   })
 
   it('saveLessonMeta throws when the server rejects the PATCH', async () => {
