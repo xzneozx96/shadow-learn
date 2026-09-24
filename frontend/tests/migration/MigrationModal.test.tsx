@@ -116,7 +116,7 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     await start()
 
     const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
-    expect([...failing.querySelectorAll('li')].map(li => li.textContent)).toEqual(['Saved words'])
+    expect(Array.from(failing.querySelectorAll('li'), li => li.textContent)).toEqual(['Saved words'])
     expect(screen.getByText('25 of 26 checks matched.')).toBeInTheDocument()
     expect(steps()).toMatchObject({ current: 'Check', checked: ['Copy'] })
     expect(await databaseExists()).toBe(true)
@@ -135,7 +135,7 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     await seeded
     await start()
     const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
-    expect([...failing.querySelectorAll('li')].map(li => li.textContent)).toEqual(['Saved words', 'Study progress'])
+    expect(Array.from(failing.querySelectorAll('li'), li => li.textContent)).toEqual(['Saved words', 'Study progress'])
     expect(screen.getByText('23 of 26 checks matched.')).toBeInTheDocument()
   })
 
@@ -262,7 +262,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     await seeded
     await start()
     const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
-    expect([...failing.querySelectorAll('li')].map(li => li.textContent)).toEqual(['Saved words'])
+    expect(Array.from(failing.querySelectorAll('li'), li => li.textContent)).toEqual(['Saved words'])
     expect(await databaseExists()).toBe(true)
   })
 
