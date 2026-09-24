@@ -84,6 +84,8 @@ function checkLabel(t: T, check: Check): string {
       return check.missing > 0 ? t('migration.check.missing', { store: check.store, n: check.missing }) : check.store
     case 'quarantine':
       return t('migration.check.quarantine')
+    case 'conflict':
+      return t('migration.check.conflict', { store: check.store, id: check.recordId })
     case 'media':
       if (check.key.kind === 'shadowing')
         return t('migration.check.recording', { segment: check.key.segmentId ?? '' })

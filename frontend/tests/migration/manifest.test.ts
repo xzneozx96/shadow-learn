@@ -39,6 +39,7 @@ describe('verify', () => {
       source: 'device-a',
       stores: { 'lessons': ['l1'], 'vocabulary': ['w1'], 'learner-profile': ['profile'] },
       present: {},
+      dominance: {},
       quarantine: [],
       media: [],
     })
@@ -49,7 +50,7 @@ describe('verify', () => {
     const { api } = stubApi(() => ({ body: manifest }))
     const result = await verify(api, ledgerWith(STORES))
     expect(result.ok).toBe(false)
-    expect(result.checks.filter(check => !check.ok)).toEqual([{ kind: 'store', store: 'vocabulary', count: 1, missing: 0, belowLocal: 0, absent: 0, ok: false }])
+    expect(result.checks.filter(check => !check.ok)).toEqual([{ kind: 'store', store: 'vocabulary', count: 1, missing: 0, undominated: 0, absent: 0, ok: false }])
   })
 
   it('fails a blob whose server copy differs', async () => {
@@ -107,15 +108,26 @@ describe('anchoring to the local read', () => {
     expect((await verify(stubApi(() => ({ body: gone })).api, ledger)).ok).toBe(false)
   })
 
-  it('fails a merged sum that holds less than this device contributed', async () => {
+  it('fails a merged record the server says it does not dominate, and sends the local copy to judge', async () => {
     const local = { name: 'Ada', totalSessions: 4 }
     const merged = { name: 'Ada', totalSessions: 3 }
     const { api } = stubApi(() => ({ body: { count: 1, after: [merged], outcomes: { profile: 'merged' } } }))
     const ledger = emptyLedger('device-b', [])
     await uploadStore(api, ledger, 'learner-profile', [{ id: 'profile', data: local }], () => {})
-    const server = await manifestFor({ 'learner-profile': { profile: merged } })
-    const result = await verify(stubApi(() => ({ body: server })).api, ledger)
-    expect(result.checks).toContainEqual(expect.objectContaining({ store: 'learner-profile', belowLocal: 1, ok: false }))
+    const server = { ...(await manifestFor({ 'learner-profile': { profile: merged } })), undominated: { 'learner-profile': ['profile'] } }
+    const { api: manifestApi, calls } = stubApi(() => ({ body: server }))
+    const result = await verify(manifestApi, ledger)
+    expect(calls[0].body).toEqual(expect.objectContaining({ dominance: { 'learner-profile': [local] } }))
+    expect(result.checks).toContainEqual(expect.objectContaining({ store: 'learner-profile', undominated: 1, ok: false }))
+  })
+
+  it('fails a record that changed both here and in the account', async () => {
+    const { api } = stubApi(() => ({ body: { count: 1, after: [{ id: '__global' }], outcomes: { __global: 'conflict' } } }))
+    const ledger = emptyLedger('device-a', [])
+    await uploadStore(api, ledger, 'threads', [{ id: '__global', data: { id: '__global', messages: [] } }], () => {})
+    const result = await verify(stubApi(async () => ({ body: await manifestFor({ threads: {} }) })).api, ledger)
+    expect(result.checks).toContainEqual({ kind: 'conflict', store: 'threads', recordId: '__global', ok: false })
+    expect(result.ok).toBe(false)
   })
 })
 
@@ -127,7 +139,7 @@ describe('the after path', () => {
     await uploadStore(api, ledger, 'learner-profile', [{ id: 'profile', data: { name: 'Ada', totalSessions: 4 } }], () => {})
     expect(storeLedger(ledger, 'learner-profile').expected.get('profile')).toEqual(merged)
 
-    const manifest = await manifestFor({ 'learner-profile': { profile: merged } })
+    const manifest = { ...(await manifestFor({ 'learner-profile': { profile: merged } })), undominated: { 'learner-profile': [] } }
     expect((await verify(stubApi(() => ({ body: manifest })).api, ledger)).ok).toBe(true)
   })
 
@@ -137,6 +149,6 @@ describe('the after path', () => {
     await uploadStore(api, ledger, 'vocabulary', [{ id: 'w1', data: { id: 'w1' } }], () => {})
     const manifest = await manifestFor({ vocabulary: {} })
     const result = await verify(stubApi(() => ({ body: manifest })).api, ledger)
-    expect(result.checks).toContainEqual({ kind: 'store', store: 'vocabulary', count: 1, missing: 1, belowLocal: 0, absent: 0, ok: false })
+    expect(result.checks).toContainEqual({ kind: 'store', store: 'vocabulary', count: 1, missing: 1, undominated: 0, absent: 0, ok: false })
   })
 })

@@ -214,8 +214,15 @@ async def test_shadowing_media_needs_a_segment_id(client, owner, app_s3):
 async def test_a_retry_from_the_same_device_never_counts_twice(client, owner):
     await _bulk(client, owner, "learner-profile", [PROFILE], "device-a")
     await _bulk(client, owner, "learner-profile", [PROFILE], "device-a")
-    changed = await _bulk(client, owner, "learner-profile", [{**PROFILE, "totalSessions": 9}], "device-a")
-    assert changed["after"][0]["totalSessions"] == 3
+    assert (await client.get("/api/store/learner-profile/profile", headers=_bearer(owner))).json()["totalSessions"] == 3
+
+
+async def test_a_changed_resend_counts_its_growth_once(client, owner):
+    await _bulk(client, owner, "learner-profile", [PROFILE], "device-a")
+    await _bulk(client, owner, "learner-profile", [{**PROFILE, "totalSessions": 4}], "device-b")
+    for _ in range(2):
+        changed = await _bulk(client, owner, "learner-profile", [{**PROFILE, "totalSessions": 9}], "device-a")
+        assert changed["after"][0]["totalSessions"] == 9 + 4
 
 
 async def test_a_second_device_with_an_identical_record_is_summed(client, owner):
@@ -335,9 +342,10 @@ async def test_a_retry_never_overwrites_a_newer_server_edit(client, owner, store
     edited = {**first["after"][0], "editedOnServer": True}
     assert (await client.put(path, json=edited, headers=_bearer(owner))).status_code == 200
 
-    retry = await _bulk(client, owner, store, [record["data"]], "device-a")
-    assert retry["after"] == [edited]
-    assert (await client.get(path, headers=_bearer(owner))).json() == edited
+    resent = {**record["data"], "resentWithAnotherField": True}
+    await _bulk(client, owner, store, [resent], "device-a")
+    held = (await client.get(path, headers=_bearer(owner))).json()
+    assert edited.items() <= held.items()
 
 
 async def test_a_lesson_retry_is_stored_until_the_account_edits_it(client, owner):
@@ -365,7 +373,8 @@ async def test_merge_outcomes(client, owner):
     assert (await _bulk(client, owner, "learner-profile", [PROFILE], "device-a"))["outcomes"] == {"profile": "merged"}
     settings_record = {"translationLanguage": "vi"}
     assert (await _bulk(client, owner, "settings", [settings_record], "device-a"))["outcomes"] == {"settings": "stored"}
-    assert (await _bulk(client, owner, "settings", [settings_record], "device-b"))["outcomes"] == {"settings": "kept_server"}
+    other_device = {"translationLanguage": "en"}
+    assert (await _bulk(client, owner, "settings", [other_device], "device-b"))["outcomes"] == {"settings": "kept_server"}
 
 
 async def test_manifest_counts_the_ids_that_must_be_present(client, owner):

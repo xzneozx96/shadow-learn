@@ -22,6 +22,7 @@ export async function uploadMedia(
   ledger: Ledger,
   media: OutgoingMedia[],
   onProgress: (sent: number) => void,
+  accountKept: ReadonlySet<string> = new Set(),
 ): Promise<void> {
   const started = performance.now()
   const sent: SentMedia[] = []
@@ -34,7 +35,8 @@ export async function uploadMedia(
     : []
   for (const [i, item] of media.entries()) {
     const stored = server[i]
-    if (!stored || stored.size !== sent[i].size || stored.sha256 !== sent[i].sha256)
+    const matches = stored?.size === sent[i].size && stored.sha256 === sent[i].sha256
+    if (!matches && !accountKept.has(item.key.lessonId))
       await upload(api, item)
     ledger.media.push(sent[i])
     onProgress(1)

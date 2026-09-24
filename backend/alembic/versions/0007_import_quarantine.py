@@ -32,7 +32,23 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("user_id", "source", "store", "record_id"),
     )
+    op.create_table(
+        "userdata_import_snapshots",
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("source", sa.Text(), nullable=False),
+        sa.Column("store", sa.Text(), nullable=False),
+        sa.Column("record_id", sa.Text(), nullable=False),
+        sa.Column("data", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("version", sa.BigInteger(), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("user_id", "source", "store", "record_id"),
+    )
+    for column in ("import_source", "import_sent_hash", "import_row_hash"):
+        op.add_column("lessons", sa.Column(column, sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
+    for column in ("import_source", "import_sent_hash", "import_row_hash"):
+        op.drop_column("lessons", column)
+    op.drop_table("userdata_import_snapshots")
     op.drop_table("import_quarantine")

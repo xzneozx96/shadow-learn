@@ -7,12 +7,12 @@ from sqlalchemy import ColumnElement, delete, func, select, update
 from sqlalchemy.dialects.postgresql import JSONB, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.userdata.merge import Data, keep_server, union
-from app.userdata.models import TABLES, import_digests
+from app.userdata.merge import DELTAS, Data, keep_server, union
+from app.userdata.models import TABLES, import_digests, import_snapshots
 from app.userdata.specs import IndexedField, StoreSpec
 
 Op = Literal["eq", "lte"]
-Outcome = Literal["stored", "merged", "kept_server"]
+Outcome = Literal["stored", "merged", "kept_server", "conflict"]
 
 
 def index_filter(spec: StoreSpec, field: IndexedField, value: str, op: Op) -> ColumnElement[bool]:
@@ -147,11 +147,6 @@ async def _versions(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, 
 
 
 def _outcome(spec: StoreSpec, version_before: int | None, merged_now: bool, written_by_source: bool) -> Outcome:
-    """How the stored record relates to the incoming one, so the importer knows what to verify it against.
-
-    ``stored`` means the row holds the incoming payload as written, now or by an
-    earlier request from the same source, untouched since (version 1).
-    """
     if version_before is None or (written_by_source and version_before == 1 and not merged_now):
         return "stored"
     if spec.merge is union or spec.merge is keep_server:
@@ -159,15 +154,100 @@ def _outcome(spec: StoreSpec, version_before: int | None, merged_now: bool, writ
     return "merged"
 
 
+async def _snapshots(
+    session: AsyncSession, user_id: uuid.UUID, source: str, spec: StoreSpec, ids: list[str]
+) -> dict[str, tuple[Data, int]]:
+    rows = await session.execute(
+        select(import_snapshots.c.record_id, import_snapshots.c.data, import_snapshots.c.version).where(
+            import_snapshots.c.user_id == user_id,
+            import_snapshots.c.source == source,
+            import_snapshots.c.store == spec.name,
+            import_snapshots.c.record_id.in_(ids),
+        )
+    )
+    return {record_id: (data, version) for record_id, data, version in rows}
+
+
+async def _import_from_source(
+    session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data], source: str
+) -> tuple[list[Data], dict[str, Outcome]]:
+    """Import one device's records, converging however often it resends, even with newer content.
+
+    A snapshot per (source, record) holds what this device last sent and the row
+    version it left. Counting rules merge only the change since that snapshot, so a
+    retry never counts twice. Idempotent rules merge again as is. Union and
+    keep-server records take the device's newer copy only while the account has
+    not edited the row since; when both changed, the outcome is ``conflict``.
+    """
+    rule = spec.merge
+    incoming = {spec.record_id(data): data for data in records}
+    ids = list(incoming)
+    await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"{user_id}:{spec.name}"))))
+    stored = await _stored(session, user_id, spec, ids)
+    versions = await _versions(session, user_id, spec, ids)
+    snapshots = await _snapshots(session, user_id, source, spec, ids)
+    writes: dict[str, Data] = {}
+    outcomes: dict[str, Outcome] = {}
+    ours: set[str] = set()
+    for record_id, data in incoming.items():
+        row = stored.get(record_id)
+        previous, version = snapshots.get(record_id, (None, None))
+        untouched = previous is not None and versions.get(record_id) == version
+        if row is None:
+            writes[record_id], outcomes[record_id] = data, "stored"
+        elif rule is union or rule is keep_server:
+            if row == data or untouched:
+                writes[record_id], outcomes[record_id] = data, "stored"
+            elif previous is None or previous == data:
+                outcomes[record_id] = "kept_server"
+                continue
+            else:
+                outcomes[record_id] = "conflict"
+                continue
+        elif rule in DELTAS:
+            if previous is None:
+                writes[record_id], outcomes[record_id] = rule(row, data), "merged"
+            elif previous != data:
+                writes[record_id], outcomes[record_id] = rule(row, DELTAS[rule](data, previous)), "merged"
+            else:
+                outcomes[record_id] = "stored" if untouched and row == data else "merged"
+        else:
+            merged = rule(row, data)
+            if merged != row:
+                writes[record_id] = merged
+            outcomes[record_id] = "stored" if merged == data else "merged"
+        ours.add(record_id)
+    await replace_records(session, user_id, spec, [writes[record_id] for record_id in writes if writes[record_id] != stored.get(record_id)])
+    after = await _stored(session, user_id, spec, ids)
+    if ours:
+        now = await _versions(session, user_id, spec, list(ours))
+        stmt = insert(import_snapshots)
+        await session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=["user_id", "source", "store", "record_id"],
+                set_={"data": stmt.excluded.data, "version": stmt.excluded.version},
+            ),
+            [
+                {"user_id": user_id, "source": source, "store": spec.name, "record_id": record_id, "data": incoming[record_id], "version": now[record_id]}
+                for record_id in ours
+            ],
+        )
+    return [after[record_id] for record_id in ids], outcomes
+
+
 async def import_records(
     session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data], source: str | None = None
 ) -> tuple[list[Data], dict[str, Outcome]]:
-    """Merge ``records`` into the caller's store; return the stored record and the outcome for every present id.
+    """Merge ``records`` into the caller's store; return the stored record and the outcome for every id."""
+    if source is None:
+        return await _import_by_content(session, user_id, spec, records, None)
+    return await _import_from_source(session, user_id, spec, records, source)
 
-    With a ``source``, each (source, record id) pair merges at most once, so a
-    retry from the same device never counts twice and a second device always does.
-    A record whose row is gone since its first merge merges again rather than vanish.
-    """
+
+async def _import_by_content(
+    session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data], source: str | None
+) -> tuple[list[Data], dict[str, Outcome]]:
+    """The source-less path: an identical record merges once, and every distinct one counts."""
     table = TABLES[spec.name]
     ids = list(dict.fromkeys(spec.record_id(data) for data in records))
     if spec.merge is not union:

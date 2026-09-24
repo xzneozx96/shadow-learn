@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from pydantic import AwareDatetime, BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,6 +35,8 @@ from app.lessons.services.audio import ensure_temp_dir
 from app.media.models import MediaKind
 from app.media.service import CONTENT_TYPES, delete_objects, store_file
 from app.settings import settings
+from app.userdata.merge import DOMINANCE
+from app.userdata.specs import STORES
 
 router = APIRouter(prefix="/api/import", tags=["import"])
 
@@ -62,6 +64,7 @@ class ImportedLesson(Camel):
 
 class LessonsImport(BaseModel):
     lessons: list[ImportedLesson]
+    source: Source | None = None
 
 
 class QuarantinedItem(Camel):
@@ -80,6 +83,7 @@ class ManifestRequest(Camel):
     source: Source
     stores: dict[str, list[str]]
     present: dict[str, list[str]] = Field(default_factory=dict)
+    dominance: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     quarantine: list[QuarantineKey] = Field(default_factory=list)
     media: list[MediaKey] = Field(default_factory=list)
 
@@ -87,6 +91,7 @@ class ManifestRequest(Camel):
 class ManifestResponse(BaseModel):
     stores: dict[str, Digest]
     present: dict[str, int] = Field(default_factory=dict)
+    undominated: dict[str, list[str]] = Field(default_factory=dict)
     quarantine: Digest
     media: list[MediaDigest | None]
 
@@ -101,10 +106,13 @@ class ImportedLessonState(BaseModel):
     segments: list[Any]
 
 
+LessonOutcome = Literal["stored", "kept_server", "conflict"]
+
+
 class LessonsImported(BaseModel):
     count: int
     after: list[ImportedLessonState]
-    outcomes: dict[str, Literal["stored", "kept_server"]]
+    outcomes: dict[str, LessonOutcome]
 
 
 def _sent_record(item: ImportedLesson) -> dict[str, Any]:
@@ -124,34 +132,38 @@ def _sent_record(item: ImportedLesson) -> dict[str, Any]:
 
 @router.post("/lessons")
 async def import_lessons(body: LessonsImport, user: CurrentUser, session: Session) -> LessonsImported:
-    """Create each lesson the account lacks, keep the ones it has, and return what the account now holds.
+    """Create or refresh each lesson this device sends, and return what the account now holds.
 
-    Segments are stored exactly as sent. A segment without numeric timing indexes at 0.
+    A lesson this device imported before takes its newer copy while the account has
+    not edited it. When the account edited it and the device's copy is unchanged, the
+    account copy stands (``kept_server``); when both changed, the outcome is
+    ``conflict`` and the device keeps its copy. Segments are stored exactly as sent,
+    and a segment without numeric timing indexes at 0.
     """
     incoming = {lesson.id: lesson for lesson in body.lessons}
     existing = {lesson.id: lesson for lesson in await session.scalars(select(Lesson).where(Lesson.id.in_(incoming)))}
     foreign = sorted(str(lesson_id) for lesson_id, lesson in existing.items() if lesson.user_id != user.id)
     if foreign:
         raise HTTPException(status_code=409, detail=f"Lesson {foreign[0]} was already imported into another account")
+    ids = [str(lesson_id) for lesson_id in incoming]
+    held = await _lesson_hashes(session, user.id, ids)
+    outcomes: dict[str, LessonOutcome] = {}
+    written: dict[str, Lesson] = {}
     for lesson_id, item in incoming.items():
-        if lesson_id in existing:
+        key, lesson = str(lesson_id), existing.get(lesson_id)
+        sent = _hash([_sent_record(item), item.segments])
+        if lesson is None:
+            lesson = Lesson(id=lesson_id, user_id=user.id)
+            session.add(lesson)
+        elif held[key] == sent:
+            outcomes[key] = "stored"
             continue
-        session.add(
-            Lesson(
-                id=lesson_id,
-                user_id=user.id,
-                title=item.title,
-                source=item.source,
-                source_url=item.source_url,
-                duration_s=item.duration,
-                source_language=item.source_language,
-                translation_languages=item.translation_languages,
-                created_at=item.created_at,
-                last_opened_at=item.last_opened_at,
-                meta=item.meta,
-            )
-        )
+        elif lesson.import_source != body.source or held[key] != lesson.import_row_hash:
+            outcomes[key] = "kept_server" if lesson.import_sent_hash == sent else "conflict"
+            continue
+        _write_lesson(lesson, item)
         await session.flush()
+        await session.execute(delete(LessonSegment).where(LessonSegment.lesson_id == lesson_id))
         session.add_all(
             LessonSegment(
                 lesson_id=lesson_id,
@@ -162,20 +174,41 @@ async def import_lessons(body: LessonsImport, user: CurrentUser, session: Sessio
             )
             for position, segment in enumerate(item.segments)
         )
+        lesson.import_source, lesson.import_sent_hash = body.source, sent
+        outcomes[key], written[key] = "stored", lesson
+    await session.flush()
+    for key, row_hash in (await _lesson_hashes(session, user.id, list(written))).items():
+        written[key].import_row_hash = row_hash
     await session.commit()
-    ids = [str(lesson_id) for lesson_id in incoming]
     lessons = dict(await stored_records(session, user.id, LESSONS, ids))
     segments = dict(await stored_records(session, user.id, SEGMENTS, ids))
-    outcomes: dict[str, Literal["stored", "kept_server"]] = {}
-    for lesson_id, item in incoming.items():
-        key = str(lesson_id)
-        unchanged = canonical([lessons[key], segments[key]]) == canonical([_sent_record(item), item.segments])
-        outcomes[key] = "stored" if lesson_id not in existing or unchanged else "kept_server"
     return LessonsImported(
         count=len(incoming),
         after=[ImportedLessonState(lesson=lessons[lesson_id], segments=segments[lesson_id]) for lesson_id in ids],
         outcomes=outcomes,
     )
+
+
+def _hash(value: Any) -> str:
+    return hashlib.sha256(canonical(value)).hexdigest()
+
+
+async def _lesson_hashes(session: AsyncSession, user_id: uuid.UUID, ids: list[str]) -> dict[str, str]:
+    lessons = dict(await stored_records(session, user_id, LESSONS, ids))
+    segments = dict(await stored_records(session, user_id, SEGMENTS, ids))
+    return {key: _hash([lesson, segments[key]]) for key, lesson in lessons.items()}
+
+
+def _write_lesson(lesson: Lesson, item: ImportedLesson) -> None:
+    lesson.title = item.title
+    lesson.source = item.source
+    lesson.source_url = item.source_url
+    lesson.duration_s = item.duration
+    lesson.source_language = item.source_language
+    lesson.translation_languages = item.translation_languages
+    lesson.created_at = item.created_at
+    lesson.last_opened_at = item.last_opened_at
+    lesson.meta = item.meta
 
 
 @router.post("/quarantine")
@@ -272,15 +305,25 @@ async def import_media(
     return MediaDigest(**key.model_dump(), size=media.size, sha256=media.sha256)
 
 
+async def _undominated(session: AsyncSession, user_id: uuid.UUID, store: str, local: list[dict[str, Any]]) -> list[str]:
+    """The ids whose stored record does not yet reflect everything in the device's copy, by the store's merge rule."""
+    spec = STORES[store]
+    dominates = DOMINANCE[spec.merge]
+    by_id = {spec.record_id(record): record for record in local}
+    stored = dict(await stored_records(session, user_id, store, list(by_id)))
+    return sorted(record_id for record_id, record in by_id.items() if record_id not in stored or not dominates(stored[record_id], record))
+
+
 @router.post("/manifest")
 async def manifest(body: ManifestRequest, user: CurrentUser, session: Session) -> ManifestResponse:
     """Digest the caller's stored copy of exactly the records and blobs this device sent."""
-    unknown = sorted((body.stores.keys() | body.present.keys()) - RECORD_STORES)
+    unknown = sorted((body.stores.keys() | body.present.keys()) - RECORD_STORES) or sorted(body.dominance.keys() - STORES.keys())
     if unknown:
         raise HTTPException(status_code=422, detail=f"Unknown store {unknown[0]}")
     return ManifestResponse(
         stores={store: await store_digest(session, user.id, store, ids) for store, ids in body.stores.items()},
         present={store: len(await stored_records(session, user.id, store, ids)) for store, ids in body.present.items()},
+        undominated={store: await _undominated(session, user.id, store, local) for store, local in body.dominance.items()},
         quarantine=await quarantine_digest(session, user.id, body.source, body.quarantine),
         media=[await media_digest(session, user.id, key) for key in body.media],
     )

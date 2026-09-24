@@ -109,7 +109,7 @@ export async function uploadLessons(
       api,
       ledger,
       batch,
-      { path: '/api/import/lessons', listField: 'lessons', body: items => ({ lessons: items.map(item => ({ ...item.lesson, segments: item.segments })) }) },
+      { path: '/api/import/lessons', listField: 'lessons', body: items => ({ source: ledger.source, lessons: items.map(item => ({ ...item.lesson, segments: item.segments })) }) },
       (item, error) => ({ store: 'lessons', recordId: item.id, raw: { ...item.lesson, segments: item.segments }, error }),
     )
     const outcomes = outcomesOf(body)
@@ -122,6 +122,9 @@ export async function uploadLessons(
       else if (outcome === 'kept_server') {
         lessonLedger.present.add(lesson.id)
         segmentLedger.present.add(lesson.id)
+      }
+      else if (outcome === 'conflict') {
+        lessonLedger.conflicts.push(lesson.id)
       }
       else {
         lessonLedger.missing.push(lesson.id)
@@ -140,35 +143,18 @@ function afterRecords(body: unknown): JsonObject[] {
   return Array.isArray(after) ? after.filter(isObject) : []
 }
 
-type Outcome = 'stored' | 'merged' | 'kept_server'
-const OUTCOMES = new Set<Json>(['stored', 'merged', 'kept_server'])
+type Outcome = 'stored' | 'merged' | 'kept_server' | 'conflict'
+const OUTCOMES = new Set<Json>(['stored', 'merged', 'kept_server', 'conflict'])
 
 function outcomesOf(body: unknown): Map<string, Outcome> {
   const outcomes = isObject(body) && isObject(body.outcomes) ? body.outcomes : {}
   return new Map(Object.entries(outcomes).filter((entry): entry is [string, Outcome] => OUTCOMES.has(entry[1])))
 }
 
-type Counters = (record: JsonObject) => number[]
-
-const numbers = (record: JsonObject, fields: string[]) => fields.map(field => typeof record[field] === 'number' ? record[field] : 0)
-
-// The counters each sum merge adds up, so a merged record can be checked against this device's share.
-const SUMMED: Partial<Record<RecordStore, Counters>> = {
-  'learner-profile': record => numbers(record, ['totalSessions', 'totalStudyMinutes']),
-  'progress-db': record => numbers(record, ['totalSessions', 'totalExercises', 'totalCorrect', 'totalIncorrect', 'totalStudyMinutes']),
-  'mastery-db': record => ['writing', 'speaking', 'vocabulary', 'reading', 'listening'].flatMap(skill => isObject(record[skill]) ? numbers(record[skill], ['totalPracticeTime']) : [0]),
-  'exercise-stats': record => numbers(record, ['correct', 'total']),
-  'mistakes-db': record => numbers(record, ['frequency']),
-}
-
-function holdsLocalShare(store: RecordStore, local: JsonObject, merged: JsonObject): boolean {
-  const counters = SUMMED[store]
-  if (!counters)
-    return true
-  const theirs = counters(merged)
-  return counters(local).every((value, i) => theirs[i] >= value)
-}
-
+/**
+ * The account may already hold a material with the same unique externalId under
+ * another id. The server keeps that copy, so the device's duplicate is not sent.
+ */
 async function withoutAccountDuplicates(api: ApiClient, records: OutgoingRecord[]): Promise<{ records: OutgoingRecord[], kept: number }> {
   if (records.length === 0)
     return { records, kept: 0 }
@@ -211,8 +197,10 @@ export async function uploadStore(
       }
       else if (outcome === 'merged' && merged !== undefined) {
         entry.expected.set(id, merged)
-        if (!holdsLocalShare(store, data, merged))
-          entry.belowLocal.push(id)
+        entry.dominance.set(id, data)
+      }
+      else if (outcome === 'conflict') {
+        entry.conflicts.push(id)
       }
       else {
         entry.missing.push(id)

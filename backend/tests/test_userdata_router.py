@@ -3,7 +3,7 @@ import uuid
 import pytest
 import pytest_asyncio
 
-from app.userdata.specs import STORES
+from app.userdata.specs import STORES, StoreSpec
 from tests.conftest import register_and_login
 
 pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.real_auth]
@@ -363,3 +363,21 @@ async def test_delete_with_a_stale_if_match_keeps_the_record(client, auth_header
 
     assert (stale.status_code, fresh.status_code) == (409, 204)
     assert (await client.get(url, headers=auth_headers)).status_code == 404
+
+
+class _NotAValidationError(Exception):
+    def errors(self, **_):
+        return [{"loc": ("word",), "msg": "boom", "type": "boom"}]
+
+
+async def test_a_bulk_failure_that_is_not_validation_is_a_server_error(client, auth_headers, monkeypatch):
+    def explode(self, raw):
+        raise _NotAValidationError()
+
+    monkeypatch.setattr(StoreSpec, "validate", explode)
+    with pytest.raises(_NotAValidationError):
+        await client.post(
+            "/api/store/vocabulary/bulk",
+            json={"mode": "import", "records": [SAMPLES["vocabulary"]], "source": "device-a"},
+            headers=auth_headers,
+        )

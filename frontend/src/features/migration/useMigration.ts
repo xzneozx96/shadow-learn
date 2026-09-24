@@ -8,7 +8,7 @@ import { decryptKeys } from '@/shared/lib/crypto'
 import { canonical, toJson } from './canonical'
 import { deleteLegacyDatabase, openLegacy } from './detectLegacyData'
 import { claimImport, readSnapshot, RECORD_STORES } from './exportStores'
-import { emptyLedger, verify } from './manifest'
+import { emptyLedger, storeLedger, verify } from './manifest'
 import { uploadMedia } from './uploadMedia'
 import { uploadLessons, uploadStore } from './uploadRecords'
 
@@ -175,7 +175,8 @@ async function importSnapshot(api: ApiClient, source: string, snapshot: LegacySn
   const media = snapshot.media.filter(item => !setAside.has(item.key.lessonId))
   ledger.unsentMedia = snapshot.media.filter(item => setAside.has(item.key.lessonId)).map(item => item.key)
   dispatch({ type: 'media', total: media.length })
-  await uploadMedia(api, ledger, media, sent)
+  const lessons = storeLedger(ledger, 'lessons')
+  await uploadMedia(api, ledger, media, sent, new Set([...lessons.present, ...lessons.conflicts]))
 
   dispatch({ type: 'verify', records: recordTotal(snapshot), media: media.length })
   const quarantined = Array.from(ledger.quarantine.values(), record => record.store)
