@@ -38,11 +38,10 @@ export function useSpeakingBests(lessonId: string): UseSpeakingBestsReturn {
     async (best: ShadowingBest, blob: Blob) => {
       if (!db)
         return
-      await Promise.all([
-        saveSpeakingBest(db, best),
-        saveSpeakingAudio(db, best.lessonId, best.segmentId, blob),
-      ])
-      setBests(prev => new Map(prev).set(best.segmentId, best))
+      const kept = await saveSpeakingBest(db, best)
+      if (kept === best)
+        await saveSpeakingAudio(db, best.lessonId, best.segmentId, blob)
+      setBests(prev => new Map(prev).set(kept.segmentId, kept))
     },
     [db],
   )

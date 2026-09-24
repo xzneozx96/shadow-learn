@@ -7,7 +7,7 @@ import type { AppSettings, LessonMedia, LessonMeta, Segment, ShadowingBest, Voca
 import { responseError } from '@/shared/lib/api'
 import { API_BASE } from '@/shared/lib/config'
 
-export type { ApiClient, DataClient } from './client'
+export type { ApiClient, DataClient, Versioned, VersionedPut } from './client'
 export { createApiClient } from './client'
 export type {
   AgentMemory,
@@ -224,8 +224,8 @@ export async function getLatestSummary(db: DataClient, threadId: string): Promis
 }
 
 // Settings
-export async function saveSettings(db: DataClient, settings: AppSettings): Promise<void> {
-  await db.api.put(storePath('settings', 'settings'), settings)
+export async function updateSettings(db: DataClient, mutate: (prev: AppSettings | undefined) => AppSettings): Promise<void> {
+  await updateRecord(db, 'settings', 'settings', mutate)
 }
 
 export async function getSettings(db: DataClient): Promise<AppSettings | undefined> {
@@ -240,6 +240,28 @@ export async function deleteFullLesson(db: DataClient, lessonId: string): Promis
     deleteChatMessages(db, lessonId),
     deleteSpeakingBestsByLesson(db, lessonId),
   ])
+}
+
+const MAX_CONFLICT_RETRIES = 3
+
+// Read-modify-write under optimistic concurrency: on a version conflict,
+// `mutate` runs again on the record another device just wrote.
+export async function updateRecord<T>(
+  db: DataClient,
+  store: string,
+  id: string,
+  mutate: (prev: T | undefined) => T,
+): Promise<T> {
+  const path = storePath(store, id)
+  let current = await db.api.getVersioned<T>(path)
+  for (let attempt = 0; attempt <= MAX_CONFLICT_RETRIES; attempt++) {
+    const next = mutate(current.value === undefined ? undefined : structuredClone(current.value))
+    const result = await db.api.putVersioned(path, next, current.version)
+    if (result.ok)
+      return next
+    current = result.current
+  }
+  throw new Error(`Saving ${store}/${id} failed: it kept changing on another device`)
 }
 
 function storeList<T>(db: DataClient, store: string, index?: string, value?: string, op?: 'lte'): Promise<T[]> {
@@ -278,8 +300,12 @@ export async function getVocabEntryById(db: DataClient, id: string): Promise<Voc
 export async function getSpacedRepetitionItem(db: DataClient, itemId: string): Promise<SpacedRepetitionItem | undefined> {
   return db.api.get<SpacedRepetitionItem>(storePath('spaced-repetition', itemId))
 }
-export async function saveSpacedRepetitionItem(db: DataClient, item: SpacedRepetitionItem) {
-  await db.api.put(storePath('spaced-repetition', item.itemId), item)
+export async function updateSpacedRepetitionItem(
+  db: DataClient,
+  itemId: string,
+  mutate: (prev: SpacedRepetitionItem | undefined) => SpacedRepetitionItem,
+): Promise<SpacedRepetitionItem> {
+  return updateRecord(db, 'spaced-repetition', itemId, mutate)
 }
 export async function deleteSpacedRepetitionItem(db: DataClient, itemId: string) {
   await db.api.del(storePath('spaced-repetition', itemId))
@@ -292,16 +318,16 @@ export async function getDueItems(db: DataClient, today: string): Promise<Spaced
 export async function getProgressStats(db: DataClient): Promise<ProgressStats | undefined> {
   return db.api.get<ProgressStats>(storePath('progress-db', 'global'))
 }
-export async function saveProgressStats(db: DataClient, stats: ProgressStats) {
-  await db.api.put(storePath('progress-db', 'global'), stats)
+export async function updateProgressStats(db: DataClient, mutate: (prev: ProgressStats | undefined) => ProgressStats): Promise<void> {
+  await updateRecord(db, 'progress-db', 'global', mutate)
 }
 
 // Mastery
 export async function getMasteryData(db: DataClient): Promise<MasteryData | undefined> {
   return db.api.get<MasteryData>(storePath('mastery-db', 'global'))
 }
-export async function saveMasteryData(db: DataClient, data: MasteryData) {
-  await db.api.put(storePath('mastery-db', 'global'), data)
+export async function updateMasteryData(db: DataClient, mutate: (prev: MasteryData | undefined) => MasteryData): Promise<void> {
+  await updateRecord(db, 'mastery-db', 'global', mutate)
 }
 
 // Mistakes
@@ -311,8 +337,12 @@ export async function getErrorPattern(db: DataClient, patternId: string): Promis
 export async function deleteErrorPattern(db: DataClient, patternId: string) {
   await db.api.del(storePath('mistakes-db', patternId))
 }
-export async function saveErrorPattern(db: DataClient, pattern: ErrorPattern) {
-  await db.api.put(storePath('mistakes-db', pattern.patternId), pattern)
+export async function updateErrorPattern(
+  db: DataClient,
+  patternId: string,
+  mutate: (prev: ErrorPattern | undefined) => ErrorPattern,
+): Promise<ErrorPattern> {
+  return updateRecord(db, 'mistakes-db', patternId, mutate)
 }
 export async function getRecentMistakes(db: DataClient, limit = 20): Promise<ErrorPattern[]> {
   const all = await storeList<ErrorPattern>(db, 'mistakes-db')
@@ -333,8 +363,8 @@ export async function getLearnerProfile(db: DataClient): Promise<LearnerProfile 
   return db.api.get<LearnerProfile>(storePath('learner-profile', 'profile'))
 }
 
-export async function saveLearnerProfile(db: DataClient, profile: LearnerProfile): Promise<void> {
-  await db.api.put(storePath('learner-profile', 'profile'), profile)
+export async function updateLearnerProfile(db: DataClient, mutate: (prev: LearnerProfile | undefined) => LearnerProfile): Promise<void> {
+  await updateRecord(db, 'learner-profile', 'profile', mutate)
 }
 
 // Agent Memory
@@ -372,16 +402,13 @@ export async function upsertExerciseStat(
   { vocabId, exerciseType }: Pick<ExerciseStatRecord, 'vocabId' | 'exerciseType'>,
   correct: boolean,
 ): Promise<void> {
-  const path = storePath('exercise-stats', `${vocabId}:${exerciseType}`)
-  const existing = await db.api.get<ExerciseStatRecord>(path)
-  const stat: ExerciseStatRecord = {
+  await updateRecord<ExerciseStatRecord>(db, 'exercise-stats', `${vocabId}:${exerciseType}`, prev => ({
     vocabId,
     exerciseType,
-    correct: (existing?.correct ?? 0) + (correct ? 1 : 0),
-    total: (existing?.total ?? 0) + 1,
+    correct: (prev?.correct ?? 0) + (correct ? 1 : 0),
+    total: (prev?.total ?? 0) + 1,
     lastAttempt: new Date().toISOString().split('T')[0],
-  }
-  await db.api.put(path, stat)
+  }))
 }
 
 export async function getExerciseAccuracy(
@@ -420,8 +447,7 @@ export async function getWordStory(db: DataClient, word: string, lang: string): 
 }
 
 export async function saveWordStory(db: DataClient, word: string, lang: string, story: string): Promise<void> {
-  const record: WordStory = { word, lang, story, updatedAt: new Date().toISOString() }
-  await db.api.put(wordStoryPath(word, lang), record)
+  await updateRecord<WordStory>(db, 'word-stories', `${word}:${lang}`, () => ({ word, lang, story, updatedAt: new Date().toISOString() }))
 }
 
 export async function deleteWordStory(db: DataClient, word: string, lang: string): Promise<void> {
@@ -442,8 +468,10 @@ export async function getSpeakingBest(db: DataClient, lessonId: string, segmentI
   return db.api.get<ShadowingBest>(storePath('shadowing-bests', segmentKey(lessonId, segmentId)))
 }
 
-export async function saveSpeakingBest(db: DataClient, best: ShadowingBest): Promise<void> {
-  await db.api.put(storePath('shadowing-bests', segmentKey(best.lessonId, best.segmentId)), best)
+// Keeps whichever of the stored and the new attempt scored higher; returns the kept record.
+export async function saveSpeakingBest(db: DataClient, best: ShadowingBest): Promise<ShadowingBest> {
+  return updateRecord<ShadowingBest>(db, 'shadowing-bests', segmentKey(best.lessonId, best.segmentId), prev =>
+    prev && prev.score > best.score ? prev : best)
 }
 
 export async function getAllSpeakingBestsByLesson(db: DataClient, lessonId: string): Promise<ShadowingBest[]> {
@@ -479,8 +507,12 @@ export async function getDailyTasks(db: DataClient): Promise<DailyTask[]> {
   return storeList<DailyTask>(db, 'daily-tasks')
 }
 
-export async function saveDailyTask(db: DataClient, task: DailyTask): Promise<void> {
-  await db.api.put(storePath('daily-tasks', task.id), task)
+export async function updateDailyTask(
+  db: DataClient,
+  id: string,
+  mutate: (prev: DailyTask | undefined) => DailyTask,
+): Promise<DailyTask> {
+  return updateRecord(db, 'daily-tasks', id, mutate)
 }
 
 export async function deleteDailyTask(db: DataClient, id: string): Promise<void> {
@@ -489,8 +521,12 @@ export async function deleteDailyTask(db: DataClient, id: string): Promise<void>
 
 // Tips LMS accessors
 
-export async function putTipProgress(db: DataClient, progress: TipProgress): Promise<void> {
-  await db.api.put(storePath('tip-progress', progress.key), progress)
+export async function updateTipProgress(
+  db: DataClient,
+  key: string,
+  mutate: (prev: TipProgress | undefined) => TipProgress,
+): Promise<TipProgress> {
+  return updateRecord(db, 'tip-progress', key, mutate)
 }
 
 export async function getTipProgress(db: DataClient, key: string): Promise<TipProgress | undefined> {
@@ -513,8 +549,13 @@ export async function getTipCardStates(db: DataClient, videoId: string, locale: 
   return db.api.get<TipCardStatesRecord>(storePath('tip-card-states', cardsKey(videoId, locale)))
 }
 
-export async function putTipCardStates(db: DataClient, record: TipCardStatesRecord): Promise<void> {
-  await db.api.put(storePath('tip-card-states', cardsKey(record.videoId, record.locale)), record)
+export async function updateTipCardStates(
+  db: DataClient,
+  videoId: string,
+  locale: StudioLocale,
+  mutate: (prev: TipCardStatesRecord | undefined) => TipCardStatesRecord,
+): Promise<TipCardStatesRecord> {
+  return updateRecord(db, 'tip-card-states', cardsKey(videoId, locale), mutate)
 }
 
 export function chatKey(courseId: string, videoId: string): string {

@@ -1,7 +1,7 @@
 import type { DataClient } from '@/db'
 import type { ConceptCard, StudioLocale, TipCardStatesRecord } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cardsKey, getTipCardStates, putTipCardStates } from '@/db'
+import { cardsKey, getTipCardStates, updateTipCardStates } from '@/db'
 import { apiFetch } from '@/shared/lib/api'
 
 interface Args {
@@ -187,8 +187,10 @@ export function useTipCards(args: Args) {
       i === index ? { ...c, state: newState, updatedAt } : c,
     )
     setCards(updated)
-    statesRef.current = { ...statesRef.current, [cards[index].front]: { state: newState, updatedAt } }
-    await putTipCardStates(db, { videoId, locale, states: statesRef.current })
+    const mark = { [cards[index].front]: { state: newState, updatedAt } }
+    statesRef.current = { ...statesRef.current, ...mark }
+    const saved = await updateTipCardStates(db, videoId, locale, prev => ({ videoId, locale, states: { ...prev?.states, ...mark } }))
+    statesRef.current = saved.states
     if (index < cards.length - 1) {
       setIndex(i => i + 1)
       setFlipped(false)

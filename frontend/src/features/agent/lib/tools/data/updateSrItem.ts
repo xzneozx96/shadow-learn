@@ -1,6 +1,6 @@
 import type { DataClient } from '@/db'
 import { z } from 'zod'
-import { getSpacedRepetitionItem, saveSpacedRepetitionItem } from '@/db'
+import { getSpacedRepetitionItem, updateSpacedRepetitionItem } from '@/db'
 import { buildTool } from '@/features/agent/lib/tools/types'
 import { updateSpacedRepetition } from '@/shared/lib/spacedRepetition'
 
@@ -13,8 +13,7 @@ export async function executeUpdateSrItem(
     return { error: `Item ${args.itemId} not found` }
 
   const scoreMap = { correct: 100, partial: 50, incorrect: 0 }
-  const updated = updateSpacedRepetition(item, scoreMap[args.result])
-  await saveSpacedRepetitionItem(db, updated)
+  const updated = await updateSpacedRepetitionItem(db, args.itemId, prev => updateSpacedRepetition(prev ?? item, scoreMap[args.result]))
   return { nextReview: updated.dueDate, masteryLevel: updated.masteryLevel }
 }
 

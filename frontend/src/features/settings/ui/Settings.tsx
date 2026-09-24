@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Layout } from '@/app/Layout'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
-import { getSettings, saveSettings } from '@/db'
+import { getSettings, updateSettings } from '@/db'
 import { listKeys, removeKey, saveKey } from '@/features/settings/api/keys'
 import { VoiceSelector } from '@/features/settings/ui/VoiceSelector'
 import { INTERFACE_LANGUAGES, LANGUAGES } from '@/shared/lib/constants'
@@ -164,12 +164,11 @@ export function Settings() {
   async function handleSaveSettings() {
     if (!db)
       return
-    const current = await getSettings(db)
-    await saveSettings(db, {
-      ...(current ?? { translationLanguage: '' }),
+    await updateSettings(db, current => ({
+      ...current,
       translationLanguage: language,
       minimaxVoiceId: voiceId,
-    })
+    }))
     setSaved(true)
     toast.success(t('settings.saved'))
     setTimeout(setSaved, 2000, false)

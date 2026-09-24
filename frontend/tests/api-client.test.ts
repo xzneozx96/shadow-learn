@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createApiClient } from '@/db/client'
 
 vi.mock('@/shared/lib/config', () => ({ API_BASE: 'http://api.test' }))
 
@@ -171,5 +172,55 @@ describe('apiFetch', () => {
     await api.apiFetch('/api/config', init)
 
     expect(fetchMock).toHaveBeenCalledWith('http://api.test/api/config', init)
+  })
+})
+
+describe('versioned store requests', () => {
+  function reply(status: number, body: unknown, etag?: string) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json', ...(etag ? { ETag: etag } : {}) },
+    })
+  }
+
+  it('getVersioned returns the record with its ETag, and no version for a missing record', async () => {
+    const send = vi.fn()
+      .mockResolvedValueOnce(reply(200, { id: 't1' }, '"3"'))
+      .mockResolvedValueOnce(reply(404, { detail: 'record not found' }))
+    const api = createApiClient(send)
+
+    expect(await api.getVersioned('/api/store/daily-tasks/t1')).toEqual({ value: { id: 't1' }, version: '"3"' })
+    expect(await api.getVersioned('/api/store/daily-tasks/t2')).toEqual({ value: undefined, version: null })
+  })
+
+  it('putVersioned sends If-Match for a known version and If-None-Match for a new record', async () => {
+    const send = vi.fn(async () => reply(200, {}, '"4"'))
+    const api = createApiClient(send)
+
+    await api.putVersioned('/api/store/daily-tasks/t1', { id: 't1' }, '"3"')
+    await api.putVersioned('/api/store/daily-tasks/t2', { id: 't2' }, null)
+
+    const headers = send.mock.calls.map(call => new Headers((call as unknown as [string, RequestInit])[1].headers))
+    expect(headers[0].get('If-Match')).toBe('"3"')
+    expect(headers[0].get('If-None-Match')).toBeNull()
+    expect(headers[1].get('If-None-Match')).toBe('*')
+    expect(headers[1].get('If-Match')).toBeNull()
+  })
+
+  it('maps a version conflict to the current record and version', async () => {
+    const send = vi.fn(async () => reply(409, { detail: 'version conflict', record: { id: 't1', title: 'phone' } }, '"5"'))
+    const api = createApiClient(send)
+
+    expect(await api.putVersioned('/api/store/daily-tasks/t1', { id: 't1', title: 'laptop' }, '"4"')).toEqual({
+      ok: false,
+      current: { value: { id: 't1', title: 'phone' }, version: '"5"' },
+    })
+  })
+
+  it('treats any other 409 as an error', async () => {
+    const send = vi.fn(async () => reply(409, { detail: 'record conflicts with a unique index' }))
+    const api = createApiClient(send)
+
+    await expect(api.putVersioned('/api/store/user-materials/m1', { id: 'm1' }, null)).rejects.toThrow('record conflicts with a unique index')
   })
 })

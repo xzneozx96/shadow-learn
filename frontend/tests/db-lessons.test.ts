@@ -21,8 +21,8 @@ import {
   renameLesson,
   saveChatMessages,
   saveLessonMeta,
-  saveSettings,
   saveThreadMessages,
+  updateSettings,
 } from '@/db'
 import { FakeApiClient, fakeDataClient, lessonBody } from './fake-api'
 
@@ -158,10 +158,11 @@ describe('settings helpers', () => {
   it('round-trips through /api/store/settings/settings', async () => {
     expect(await getSettings(db)).toBeUndefined()
 
-    await saveSettings(db, { translationLanguage: 'vi', uiLanguage: 'en' })
+    await updateSettings(db, () => ({ translationLanguage: 'vi', uiLanguage: 'en' }))
 
     expect(await getSettings(db)).toEqual({ translationLanguage: 'vi', uiLanguage: 'en' })
     expect(api.calls.map(c => `${c.method} ${c.path}`)).toEqual([
+      'GET /api/store/settings/settings',
       'GET /api/store/settings/settings',
       'PUT /api/store/settings/settings',
       'GET /api/store/settings/settings',

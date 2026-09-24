@@ -1,4 +1,4 @@
-import type { ApiClient, DataClient, LessonSummary } from '@/db'
+import type { ApiClient, DataClient, LessonSummary, Versioned, VersionedPut } from '@/db'
 import type { LessonMeta, Segment } from '@/shared/types'
 
 export interface ApiCall {
@@ -89,10 +89,10 @@ export function lessonBody(meta: LessonMeta, segments: Segment[] = []): LessonSu
   }
 }
 
-function json(status: number, body?: unknown): Response {
+function json(status: number, body?: unknown, headers: Record<string, string> = {}): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
   })
 }
 
@@ -128,11 +128,24 @@ function matches(spec: StoreSpec, row: Row, query: URLSearchParams): boolean {
 export class FakeApiClient implements ApiClient {
   records = new Map<string, unknown>()
   calls: ApiCall[] = []
+  private versions = new Map<string, number>()
   private failures = new Map<string, number>()
+  private beforePut: (() => Promise<void>) | null = null
 
   seed(path: string, body: unknown): this {
     this.records.set(path, structuredClone(body))
+    this.versions.set(path, (this.versions.get(path) ?? 0) + 1)
     return this
+  }
+
+  // Runs once, between the next conditional PUT's read and its write, as another device would.
+  interleaveBeforeNextPut(write: () => Promise<void>): void {
+    this.beforePut = write
+  }
+
+  private etag(path: string): Record<string, string> {
+    const version = this.versions.get(path)
+    return version === undefined ? {} : { ETag: `"${version}"` }
   }
 
   seedLesson(meta: LessonMeta, segments: Segment[] = []): this {
@@ -164,7 +177,7 @@ export class FakeApiClient implements ApiClient {
       .map(([, value]) => structuredClone(value))
   }
 
-  private respond(method: string, path: string, body?: unknown): Response {
+  private respond(method: string, path: string, body?: unknown, precondition?: { version: string | null }): Response {
     const [bare, search] = path.split('?')
     const query = new URLSearchParams(search)
     const verb = method === 'LIST' ? 'GET' : method
@@ -180,7 +193,7 @@ export class FakeApiClient implements ApiClient {
     switch (method) {
       case 'GET':
         if (this.records.has(bare))
-          return json(200, structuredClone(this.records.get(bare)))
+          return json(200, structuredClone(this.records.get(bare)), this.etag(bare))
         return json(404, { detail: 'not found' })
       case 'LIST': {
         const rows = this.collection(bare) as Row[]
@@ -196,8 +209,14 @@ export class FakeApiClient implements ApiClient {
           if (problem)
             return json(422, { detail: problem })
         }
+        if (precondition) {
+          const current = this.etag(bare).ETag ?? null
+          if (current !== precondition.version)
+            return json(409, { detail: 'version conflict', record: this.records.get(bare) ?? null }, this.etag(bare))
+        }
         this.records.set(bare, structuredClone(body))
-        return json(200, body)
+        this.versions.set(bare, (this.versions.get(bare) ?? 0) + 1)
+        return json(200, body, this.etag(bare))
       }
       case 'PATCH': {
         const existing = this.records.get(bare)
@@ -211,10 +230,11 @@ export class FakeApiClient implements ApiClient {
         if (spec && storeId === undefined) {
           const doomed = [...this.records].filter(([key, row]) =>
             key.startsWith(`${bare}/`) && matches(spec, row as Row, query))
-          doomed.forEach(([key]) => this.records.delete(key))
+          doomed.forEach(([key]) => { this.records.delete(key); this.versions.delete(key) })
           return json(200, { deleted: doomed.length })
         }
         this.records.delete(bare)
+        this.versions.delete(bare)
         return json(204)
       }
       case 'POST':
@@ -244,6 +264,27 @@ export class FakeApiClient implements ApiClient {
     if (!res.ok)
       throw new Error(`GET ${path} failed: ${res.status}`)
     return res.json()
+  }
+
+  async getVersioned<T>(path: string): Promise<Versioned<T>> {
+    const res = this.respond('GET', path)
+    if (res.status === 404)
+      return { value: undefined, version: null }
+    return { value: await res.json(), version: res.headers.get('ETag') }
+  }
+
+  async putVersioned<T>(path: string, body: T, version: string | null): Promise<VersionedPut<T>> {
+    const interleaved = this.beforePut
+    this.beforePut = null
+    await interleaved?.()
+    const res = this.respond('PUT', path, body, { version })
+    if (res.status === 409) {
+      const conflict = await res.json()
+      return { ok: false, current: { value: conflict.record ?? undefined, version: res.headers.get('ETag') } }
+    }
+    if (!res.ok)
+      throw new Error(`PUT ${path} failed: ${res.status} ${(await res.json()).detail}`)
+    return { ok: true }
   }
 
   async put(path: string, body: unknown): Promise<void> {

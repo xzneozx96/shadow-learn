@@ -1,6 +1,6 @@
 import type { DataClient } from '@/db'
 import { z } from 'zod'
-import { getErrorPattern, saveErrorPattern } from '@/db'
+import { updateErrorPattern } from '@/db'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
 export async function executeLogMistake(
@@ -8,7 +8,6 @@ export async function executeLogMistake(
   args: { word: string, context: string, errorType: string },
 ) {
   const patternId = `err-${args.word}`
-  const existing = await getErrorPattern(db, patternId)
   const today = new Date().toISOString().split('T')[0]
 
   const example = {
@@ -18,21 +17,10 @@ export async function executeLogMistake(
     date: today,
   }
 
-  if (existing) {
-    existing.frequency += 1
-    existing.lastOccurred = today
-    existing.examples = [...existing.examples.slice(-9), example]
-    await saveErrorPattern(db, existing)
-    return { id: patternId, frequency: existing.frequency }
-  }
-
-  await saveErrorPattern(db, {
-    patternId,
-    frequency: 1,
-    lastOccurred: today,
-    examples: [example],
-  })
-  return { id: patternId, frequency: 1 }
+  const saved = await updateErrorPattern(db, patternId, prev => prev
+    ? { ...prev, frequency: prev.frequency + 1, lastOccurred: today, examples: [...prev.examples.slice(-9), example] }
+    : { patternId, frequency: 1, lastOccurred: today, examples: [example] })
+  return { id: patternId, frequency: saved.frequency }
 }
 
 export const logMistakeTool = buildTool({

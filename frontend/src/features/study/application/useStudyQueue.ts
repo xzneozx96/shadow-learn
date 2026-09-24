@@ -10,7 +10,7 @@ import {
   getDailyTasks,
   getDueItems,
   getUserMaterialByExternalId,
-  saveDailyTask,
+  updateDailyTask,
 } from '@/db'
 import { localDateISO, todayISO } from '@/shared/lib/date'
 import {
@@ -204,7 +204,7 @@ export function useStudyQueue(
       createdDate: todayISO(),
       completedDate: null,
     }
-    await saveDailyTask(db, task)
+    await updateDailyTask(db, task.id, () => task)
     setCustomTasks(prev => [...prev, task])
   }
 
@@ -215,8 +215,8 @@ export function useStudyQueue(
     const task = customTasks.find(t => t.id === id)
     if (!task)
       return
-    const updated = { ...task, completedDate: task.completedDate === today ? null : today }
-    await saveDailyTask(db, updated)
+    const completedDate = task.completedDate === today ? null : today
+    const updated = await updateDailyTask(db, id, prev => ({ ...(prev ?? task), completedDate }))
     setCustomTasks(prev => prev.map(t => t.id === id ? updated : t))
   }
 
@@ -226,8 +226,7 @@ export function useStudyQueue(
     const task = customTasks.find(t => t.id === id)
     if (!task)
       return
-    const updated = { ...task, title }
-    await saveDailyTask(db, updated)
+    const updated = await updateDailyTask(db, id, prev => ({ ...(prev ?? task), title }))
     setCustomTasks(prev => prev.map(t => t.id === id ? updated : t))
   }
 

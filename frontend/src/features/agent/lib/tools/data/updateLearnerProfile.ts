@@ -1,6 +1,6 @@
 import type { DataClient } from '@/db'
 import { z } from 'zod'
-import { getLearnerProfile, saveLearnerProfile } from '@/db'
+import { updateLearnerProfile } from '@/db'
 import { clearSystemPromptCache } from '@/features/agent/lib/agent-system-prompt'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
@@ -8,23 +8,24 @@ export async function executeUpdateLearnerProfile(
   db: DataClient,
   args: Partial<{ name: string, currentLevel: string, dailyGoalMinutes: number, nativeLanguage: string, targetLanguage: string }>,
 ) {
-  const existing = await getLearnerProfile(db)
-  const profile = existing ?? {
-    name: '',
-    nativeLanguage: '',
-    targetLanguage: '',
-    currentLevel: 'Beginner',
-    dailyGoalMinutes: 30,
-    currentStreakDays: 0,
-    totalSessions: 0,
-    totalStudyMinutes: 0,
-    lastStudyDate: null,
-    profileCreated: new Date().toISOString(),
-  }
-
-  const updated = { ...profile, ...args }
-  await saveLearnerProfile(db, updated)
-  return { ok: true, created: !existing }
+  let created = false
+  await updateLearnerProfile(db, (prev) => {
+    created = !prev
+    const profile = prev ?? {
+      name: '',
+      nativeLanguage: '',
+      targetLanguage: '',
+      currentLevel: 'Beginner',
+      dailyGoalMinutes: 30,
+      currentStreakDays: 0,
+      totalSessions: 0,
+      totalStudyMinutes: 0,
+      lastStudyDate: null,
+      profileCreated: new Date().toISOString(),
+    }
+    return { ...profile, ...args }
+  })
+  return { ok: true, created }
 }
 
 export const updateLearnerProfileTool = buildTool({

@@ -136,8 +136,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     })()
 
     return () => { cancel = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, word, lang, characters, storyRequest, enabled])
+  }, [db, word, lang, pinyin, meaning, sinoVietnamese, resolvedChars, characters, storyRequest, enabled])
 
   const retryStory = useCallback(() => {
     setStory(null)

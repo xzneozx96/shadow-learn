@@ -43,22 +43,23 @@ import {
   getWordStory,
   listTipProgressForCourse,
   listUserMaterials,
-  putTipCardStates,
   putTipNote,
-  putTipProgress,
   putUserMaterial,
   saveAgentMemory,
-  saveDailyTask,
-  saveErrorPattern,
-  saveLearnerProfile,
-  saveMasteryData,
-  saveProgressStats,
   saveSessionLog,
-  saveSpacedRepetitionItem,
   saveSpeakingAudio,
   saveSpeakingBest,
   saveVocabEntry,
   saveWordStory,
+  updateDailyTask,
+  updateErrorPattern,
+  updateLearnerProfile,
+  updateMasteryData,
+  updateProgressStats,
+  updateRecord,
+  updateSpacedRepetitionItem,
+  updateTipCardStates,
+  updateTipProgress,
   upsertExerciseStat,
 } from '@/db'
 import {
@@ -163,7 +164,7 @@ describe('spaced repetition', () => {
   })
 
   it('round-trips and deletes an item by itemId', async () => {
-    await saveSpacedRepetitionItem(db, srItem('w1', '2026-09-24'))
+    await updateSpacedRepetitionItem(db, 'w1', () => srItem('w1', '2026-09-24'))
     expect((await getSpacedRepetitionItem(db, 'w1'))?.dueDate).toBe('2026-09-24')
 
     await deleteSpacedRepetitionItem(db, 'w1')
@@ -177,9 +178,9 @@ describe('singletons', () => {
     expect(await getProgressStats(db)).toBeUndefined()
 
     const progress = { totalSessions: 1, totalExercises: 2, totalCorrect: 1, totalIncorrect: 1, accuracyRate: 0.5, totalStudyMinutes: 3, accuracyTrend: [], skillProgress: {} as any }
-    await saveProgressStats(db, progress)
-    await saveMasteryData(db, { writing: { masteryLevel: 1, confidenceScore: 0.5, totalPracticeTime: 1, lastPracticed: null } } as any)
-    await saveLearnerProfile(db, { name: 'Ross', nativeLanguage: 'English', targetLanguage: 'Chinese', currentLevel: 'advanced', dailyGoalMinutes: 60, currentStreakDays: 0, totalSessions: 0, totalStudyMinutes: 0, lastStudyDate: null, profileCreated: '2026-01-01' })
+    await updateProgressStats(db, () => progress)
+    await updateMasteryData(db, () => ({ writing: { masteryLevel: 1, confidenceScore: 0.5, totalPracticeTime: 1, lastPracticed: null } } as any))
+    await updateLearnerProfile(db, () => ({ name: 'Ross', nativeLanguage: 'English', targetLanguage: 'Chinese', currentLevel: 'advanced', dailyGoalMinutes: 60, currentStreakDays: 0, totalSessions: 0, totalStudyMinutes: 0, lastStudyDate: null, profileCreated: '2026-01-01' }))
 
     expect(await getProgressStats(db)).toEqual(progress)
     expect((await getMasteryData(db))?.writing.masteryLevel).toBe(1)
@@ -202,8 +203,8 @@ describe('mistakes', () => {
   })
 
   it('deleting one pattern leaves agent-created err-word patterns alone', async () => {
-    await saveErrorPattern(db, pattern('entry-1', '2026-09-01'))
-    await saveErrorPattern(db, pattern('err-好', '2026-09-01'))
+    await updateErrorPattern(db, 'entry-1', () => pattern('entry-1', '2026-09-01'))
+    await updateErrorPattern(db, 'err-好', () => pattern('err-好', '2026-09-01'))
 
     await deleteErrorPattern(db, 'entry-1')
 
@@ -300,6 +301,14 @@ describe('shadowing bests', () => {
     expect(api.calls[0].path).toBe('/api/store/shadowing-bests/lesson-1%3Aseg-1')
   })
 
+  it('keeps the higher score when a lower attempt arrives', async () => {
+    await saveSpeakingBest(db, best('lesson-1', 'seg-1', 90))
+    const kept = await saveSpeakingBest(db, best('lesson-1', 'seg-1', 70))
+
+    expect(kept.score).toBe(90)
+    expect((await getSpeakingBest(db, 'lesson-1', 'seg-1'))?.score).toBe(90)
+  })
+
   it('deleteSpeakingBestsByLesson uses the delete-by-index route and keeps other lessons', async () => {
     await saveSpeakingBest(db, best('lesson-1', 'seg-1'))
     await saveSpeakingBest(db, best('lesson-2', 'seg-1'))
@@ -356,7 +365,7 @@ describe('shadowing audio', () => {
 
 describe('daily tasks', () => {
   it('saves, lists, and deletes by id', async () => {
-    await saveDailyTask(db, { id: 't1', title: 'Review', createdDate: '2026-09-24', completedDate: null })
+    await updateDailyTask(db, 't1', () => ({ id: 't1', title: 'Review', createdDate: '2026-09-24', completedDate: null }))
     expect((await getDailyTasks(db)).map(t => t.title)).toEqual(['Review'])
 
     await deleteDailyTask(db, 't1')
@@ -377,9 +386,9 @@ describe('tip progress', () => {
   })
 
   it('reads by key, lists by course through by-course, and lists all', async () => {
-    await putTipProgress(db, progress('PL123', 'v1'))
-    await putTipProgress(db, progress('PL123', 'v2'))
-    await putTipProgress(db, progress('OTHER', 'v1'))
+    await updateTipProgress(db, 'PL123:v1', () => progress('PL123', 'v1'))
+    await updateTipProgress(db, 'PL123:v2', () => progress('PL123', 'v2'))
+    await updateTipProgress(db, 'OTHER:v1', () => progress('OTHER', 'v1'))
 
     expect((await getTipProgress(db, 'PL123:v1'))?.videoId).toBe('v1')
     expect(await getTipProgress(db, 'NOPE:NOPE')).toBeUndefined()
@@ -394,7 +403,7 @@ describe('tip card states', () => {
   it('stores one record per video and locale', async () => {
     const record = { videoId: 'vid', locale: 'en' as const, states: { 'What is a tone?': { state: 'known' as const, updatedAt: '2026-09-24' } } }
 
-    await putTipCardStates(db, record)
+    await updateTipCardStates(db, 'vid', 'en', () => record)
 
     expect(await getTipCardStates(db, 'vid', 'en')).toEqual(record)
     expect(await getTipCardStates(db, 'vid', 'vi')).toBeUndefined()
@@ -493,5 +502,58 @@ describe('speak sessions', () => {
     const progress = await getSpeakProgress(db)
 
     expect(progress).toMatchObject({ totalSessions: 1, totalMinutes: 2, totalTurns: 1, lastSessionDate: '2026-09-20T10:00:00Z' })
+  })
+})
+
+describe('concurrent writes from two devices', () => {
+  const mark = (state: 'known' | 'learning') => ({ state, updatedAt: '2026-09-24T09:00:00.000Z' })
+
+  it('keeps both devices\' card marks when a stale write retries', async () => {
+    const path = '/api/store/tip-card-states/vid%3Aen'
+    api.seedStore('tip-card-states', [{ videoId: 'vid', locale: 'en', states: {} }])
+    api.interleaveBeforeNextPut(() => api.put(path, { videoId: 'vid', locale: 'en', states: { X: mark('known') } }))
+
+    await updateTipCardStates(db, 'vid', 'en', prev => ({ videoId: 'vid', locale: 'en', states: { ...prev?.states, Y: mark('learning') } }))
+
+    expect((await getTipCardStates(db, 'vid', 'en'))?.states).toEqual({ X: mark('known'), Y: mark('learning') })
+  })
+
+  it('keeps both devices\' exercise-stat increments', async () => {
+    const other = fakeDataClient(api)
+    const id = { vocabId: 'vocab-1', exerciseType: 'dictation' }
+    api.interleaveBeforeNextPut(() => upsertExerciseStat(other, id, true))
+
+    await upsertExerciseStat(db, id, false)
+
+    expect(await getAllExerciseStats(db)).toEqual([expect.objectContaining({ ...id, correct: 1, total: 2 })])
+  })
+
+  it('keeps both devices\' progress-db increments', async () => {
+    const other = fakeDataClient(api)
+    const bump = (prev: any) => ({ ...prev, totalExercises: (prev?.totalExercises ?? 0) + 1 })
+    api.seedStore('progress-db', [{ totalExercises: 5 }])
+    api.interleaveBeforeNextPut(() => updateProgressStats(other, bump))
+
+    await updateProgressStats(db, bump)
+
+    expect((await getProgressStats(db))?.totalExercises).toBe(7)
+  })
+
+  it('does not overwrite a record another device created first', async () => {
+    const put = vi.spyOn(api, 'putVersioned')
+    const path = '/api/store/exercise-stats/vocab-1%3Adictation'
+    api.interleaveBeforeNextPut(() => api.put(path, { vocabId: 'vocab-1', exerciseType: 'dictation', correct: 1, total: 1, lastAttempt: '2026-09-24' }))
+
+    await upsertExerciseStat(db, { vocabId: 'vocab-1', exerciseType: 'dictation' }, false)
+
+    expect(put.mock.calls[0][2]).toBeNull()
+    expect(await getAllExerciseStats(db)).toEqual([expect.objectContaining({ correct: 1, total: 2 })])
+  })
+
+  it('gives up after three retries when every write conflicts', async () => {
+    const put = vi.spyOn(api, 'putVersioned').mockResolvedValue({ ok: false, current: { value: undefined, version: '"9"' } })
+
+    await expect(updateRecord(db, 'daily-tasks', 't1', () => ({ id: 't1' }))).rejects.toThrow('kept changing on another device')
+    expect(put).toHaveBeenCalledTimes(4)
   })
 })
