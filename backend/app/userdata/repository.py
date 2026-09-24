@@ -3,7 +3,7 @@ import json
 import uuid
 from typing import Literal
 
-from sqlalchemy import ColumnElement, delete, func, select
+from sqlalchemy import ColumnElement, delete, func, select, update
 from sqlalchemy.dialects.postgresql import JSONB, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,43 @@ async def get_record(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec,
     return await session.scalar(select(table.c.data).where(table.c.user_id == user_id, table.c.id == record_id))
 
 
+async def get_versioned(
+    session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, record_id: str
+) -> tuple[Data, int] | None:
+    table = TABLES[spec.name]
+    row = await session.execute(
+        select(table.c.data, table.c.version).where(table.c.user_id == user_id, table.c.id == record_id)
+    )
+    found = row.first()
+    return (found.data, found.version) if found else None
+
+
+async def create_record(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, data: Data) -> int | None:
+    """Insert only when the id is free; return the new version, or None when a row already exists."""
+    stmt = insert(TABLES[spec.name]).on_conflict_do_nothing().returning(TABLES[spec.name].c.version)
+    return await session.scalar(stmt, [_row(spec, user_id, data)])
+
+
+async def swap_record(
+    session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, data: Data, expected: int
+) -> int | None:
+    """Replace the row only at version `expected`; return the new version, or None on a version mismatch."""
+    table = TABLES[spec.name]
+    row = _row(spec, user_id, data)
+    stmt = (
+        update(table)
+        .where(table.c.user_id == user_id, table.c.id == row["id"], table.c.version == expected)
+        .values(
+            data=data,
+            version=table.c.version + 1,
+            updated_at=func.now(),
+            **{field.column: row[field.column] for field in spec.indexed},
+        )
+        .returning(table.c.version)
+    )
+    return await session.scalar(stmt)
+
+
 async def delete_records(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, where: ColumnElement[bool]) -> int:
     table = TABLES[spec.name]
     result = await session.execute(delete(table).where(table.c.user_id == user_id, where))
@@ -45,6 +82,10 @@ async def delete_records(session: AsyncSession, user_id: uuid.UUID, spec: StoreS
 
 def id_filter(spec: StoreSpec, record_id: str) -> ColumnElement[bool]:
     return TABLES[spec.name].c.id == record_id
+
+
+def version_filter(spec: StoreSpec, version: int) -> ColumnElement[bool]:
+    return TABLES[spec.name].c.version == version
 
 
 def _row(spec: StoreSpec, user_id: uuid.UUID, data: Data) -> Data:
@@ -64,7 +105,11 @@ async def replace_records(session: AsyncSession, user_id: uuid.UUID, spec: Store
     columns = ["data", *(field.column for field in spec.indexed)]
     stmt = stmt.on_conflict_do_update(
         index_elements=["user_id", "id"],
-        set_={**{column: stmt.excluded[column] for column in columns}, "updated_at": func.now()},
+        set_={
+            **{column: stmt.excluded[column] for column in columns},
+            "updated_at": func.now(),
+            "version": TABLES[spec.name].c.version + 1,
+        },
     )
     await session.execute(stmt, rows)
 

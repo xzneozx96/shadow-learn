@@ -314,3 +314,51 @@ async def test_bulk_with_no_records_is_a_no_op(client, auth_headers):
 async def test_custom_situations_are_read_only_over_the_store_api(client, auth_headers, method, path):
     response = await client.request(method, path, json={"mode": "replace", "records": []}, headers=auth_headers)
     assert response.status_code == 405
+
+
+async def test_get_and_put_carry_the_row_version(client, auth_headers):
+    url = "/api/store/vocabulary/w1"
+    created = await client.put(url, json=SAMPLES["vocabulary"], headers=auth_headers)
+    fetched = await client.get(url, headers=auth_headers)
+    updated = await client.put(
+        url, json={**SAMPLES["vocabulary"], "word": "再见"}, headers={**auth_headers, "If-Match": fetched.headers["ETag"]}
+    )
+
+    assert (created.headers["ETag"], fetched.headers["ETag"], updated.headers["ETag"]) == ('"1"', '"1"', '"2"')
+    assert updated.status_code == 200
+
+
+async def test_a_stale_if_match_is_a_409_with_the_current_record(client, auth_headers):
+    url = "/api/store/vocabulary/w1"
+    await client.put(url, json=SAMPLES["vocabulary"], headers=auth_headers)
+    await client.put(url, json={**SAMPLES["vocabulary"], "word": "phone"}, headers={**auth_headers, "If-Match": '"1"'})
+
+    stale = await client.put(url, json={**SAMPLES["vocabulary"], "word": "laptop"}, headers={**auth_headers, "If-Match": '"1"'})
+
+    assert stale.status_code == 409
+    assert stale.headers["ETag"] == '"2"'
+    assert stale.json()["record"]["word"] == "phone"
+    assert (await client.get(url, headers=auth_headers)).json()["word"] == "phone"
+
+
+async def test_if_none_match_creates_once(client, auth_headers):
+    url = "/api/store/vocabulary/w1"
+    headers = {**auth_headers, "If-None-Match": "*"}
+    first = await client.put(url, json=SAMPLES["vocabulary"], headers=headers)
+    second = await client.put(url, json={**SAMPLES["vocabulary"], "word": "late"}, headers=headers)
+
+    assert (first.status_code, first.headers["ETag"]) == (200, '"1"')
+    assert second.status_code == 409
+    assert second.json()["record"]["word"] == SAMPLES["vocabulary"]["word"]
+
+
+async def test_delete_with_a_stale_if_match_keeps_the_record(client, auth_headers):
+    url = "/api/store/vocabulary/w1"
+    await client.put(url, json=SAMPLES["vocabulary"], headers=auth_headers)
+    await client.put(url, json=SAMPLES["vocabulary"], headers=auth_headers)
+
+    stale = await client.delete(url, headers={**auth_headers, "If-Match": '"1"'})
+    fresh = await client.delete(url, headers={**auth_headers, "If-Match": '"2"'})
+
+    assert (stale.status_code, fresh.status_code) == (409, 204)
+    assert (await client.get(url, headers=auth_headers)).status_code == 404

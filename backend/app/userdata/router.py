@@ -2,8 +2,18 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    Header,
+    HTTPException,
+    Query,
+    Response,
+    status,
+)
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,6 +69,30 @@ async def _unique_conflict_as_409() -> AsyncIterator[None]:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="record conflicts with a unique index") from e
 
 
+IfMatch = Annotated[str | None, Header()]
+
+
+def _etag(version: int) -> str:
+    return f'"{version}"'
+
+
+def _expected_version(if_match: str) -> int:
+    try:
+        return int(if_match.removeprefix("W/").strip('"'))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="bad If-Match version") from e
+
+
+async def _version_conflict(session: AsyncSession, user_id, spec: StoreSpec, record_id: str) -> JSONResponse:
+    current = await repository.get_versioned(session, user_id, spec, record_id)
+    headers = {"ETag": _etag(current[1])} if current else {}
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": "version conflict", "record": current[0] if current else None},
+        headers=headers,
+    )
+
+
 @router.get("/{store}")
 async def list_records(
     spec: Spec,
@@ -75,17 +109,27 @@ async def list_records(
 
 
 @router.get("/{store}/{record_id}")
-async def get_record(spec: Spec, record_id: str, user: CurrentUser, session: Session) -> dict[str, Any]:
-    data = await repository.get_record(session, user.id, spec, record_id)
-    if data is None:
+async def get_record(
+    spec: Spec, record_id: str, user: CurrentUser, session: Session, response: Response
+) -> dict[str, Any]:
+    found = await repository.get_versioned(session, user.id, spec, record_id)
+    if found is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="record not found")
-    return data
+    response.headers["ETag"] = _etag(found[1])
+    return found[0]
 
 
 @router.put("/{store}/{record_id}")
 async def put_record(
-    spec: WritableSpec, record_id: str, user: CurrentUser, session: Session, record: Annotated[Any, Body()]
-) -> dict[str, Any]:
+    spec: WritableSpec,
+    record_id: str,
+    user: CurrentUser,
+    session: Session,
+    record: Annotated[Any, Body()],
+    response: Response,
+    if_match: IfMatch = None,
+    if_none_match: IfMatch = None,
+) -> Any:
     try:
         data = spec.validate(record)
     except ValidationError as e:
@@ -93,15 +137,34 @@ async def put_record(
     if spec.record_id(data) != record_id:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="record id does not match the path")
     async with _unique_conflict_as_409():
-        await repository.replace_records(session, user.id, spec, [data])
+        if if_match is not None:
+            version = await repository.swap_record(session, user.id, spec, data, _expected_version(if_match))
+        elif if_none_match == "*":
+            version = await repository.create_record(session, user.id, spec, data)
+        else:
+            await repository.replace_records(session, user.id, spec, [data])
+            version = (await repository.get_versioned(session, user.id, spec, record_id))[1]
+        if version is None:
+            await session.rollback()
+            return await _version_conflict(session, user.id, spec, record_id)
         await session.commit()
+    response.headers["ETag"] = _etag(version)
     return data
 
 
 @router.delete("/{store}/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_record(spec: WritableSpec, record_id: str, user: CurrentUser, session: Session) -> None:
-    await repository.delete_records(session, user.id, spec, repository.id_filter(spec, record_id))
+async def delete_record(
+    spec: WritableSpec, record_id: str, user: CurrentUser, session: Session, if_match: IfMatch = None
+) -> Response:
+    where = repository.id_filter(spec, record_id)
+    if if_match is not None:
+        where = where & repository.version_filter(spec, _expected_version(if_match))
+    deleted = await repository.delete_records(session, user.id, spec, where)
+    if if_match is not None and deleted == 0:
+        await session.rollback()
+        return await _version_conflict(session, user.id, spec, record_id)
     await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.delete("/{store}")
