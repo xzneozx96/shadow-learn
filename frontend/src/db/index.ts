@@ -159,15 +159,6 @@ export async function refreshMediaTicket(db: DataClient, mediaId: string): Promi
 }
 
 // Chat history
-export async function saveChatMessages(db: DataClient, lessonId: string, messages: UIMessage[]): Promise<void> {
-  const surface: ThreadSurface = lessonId === '__global' ? 'global' : 'lesson'
-  await saveThreadMessages(db, lessonId, messages, surface, surface === 'lesson' ? lessonId : null)
-}
-
-export async function getChatMessages(db: DataClient, lessonId: string): Promise<UIMessage[] | undefined> {
-  return (await getThread(db, lessonId))?.messages
-}
-
 export async function deleteChatMessages(db: DataClient, lessonId: string): Promise<void> {
   await deleteThread(db, lessonId)
 }
@@ -176,28 +167,33 @@ export async function getThread(db: DataClient, id: string): Promise<ThreadRecor
   return db.api.get<ThreadRecord>(storePath('threads', id))
 }
 
-export async function saveThreadMessages(
-  db: DataClient,
-  id: string,
-  messages: UIMessage[],
-  surface: ThreadSurface,
-  ownerId: string | null,
-  courseId?: string,
-  videoId?: string,
-): Promise<void> {
-  const existing = await getThread(db, id)
+export interface ThreadWrite {
+  messages: UIMessage[]
+  // Message ids this device has read or written; stored messages outside it came from another device.
+  seen: ReadonlySet<string>
+  surface: ThreadSurface
+  ownerId: string | null
+  courseId?: string
+  videoId?: string
+}
+
+// Keeps messages another device appended; drops the ones this device removed.
+export async function saveThreadMessages(db: DataClient, id: string, write: ThreadWrite): Promise<ThreadRecord> {
   const now = Date.now()
-  const thread: ThreadRecord = {
+  const local = new Set(write.messages.map(m => m.id))
+  return updateRecord<ThreadRecord>(db, 'threads', id, prev => ({
     id,
-    surface,
-    ownerId,
-    courseId: courseId ?? existing?.courseId,
-    videoId: videoId ?? existing?.videoId,
-    messages,
+    surface: write.surface,
+    ownerId: write.ownerId,
+    courseId: write.courseId ?? prev?.courseId,
+    videoId: write.videoId ?? prev?.videoId,
+    messages: [
+      ...write.messages,
+      ...(prev?.messages ?? []).filter(m => !local.has(m.id) && !write.seen.has(m.id)),
+    ],
     updatedAt: now,
-    createdAt: existing?.createdAt ?? now,
-  }
-  await db.api.put(storePath('threads', id), thread)
+    createdAt: prev?.createdAt ?? now,
+  }))
 }
 
 export async function deleteThread(db: DataClient, id: string): Promise<void> {

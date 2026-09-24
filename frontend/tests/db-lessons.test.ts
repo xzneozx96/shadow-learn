@@ -8,7 +8,6 @@ import {
   deleteLessonMeta,
   deleteThread,
   getAllLessonMetas,
-  getChatMessages,
   getLatestSummary,
   getLesson,
   getLessonMeta,
@@ -19,7 +18,6 @@ import {
   putThreadSummary,
   refreshMediaTicket,
   renameLesson,
-  saveChatMessages,
   saveLessonMeta,
   saveThreadMessages,
   updateSettings,
@@ -173,10 +171,10 @@ describe('settings helpers', () => {
 describe('thread helpers', () => {
   it('saveThreadMessages PUTs the thread and keeps createdAt and tip ids from the stored one', async () => {
     const msgs = [{ id: 'a', role: 'user', parts: [{ type: 'text', text: 'hello' }] }] as any
-    await saveThreadMessages(db, 'c:v', [], 'tip', 'c:v', 'c', 'v')
+    await saveThreadMessages(db, 'c:v', { messages: [], seen: new Set(), surface: 'tip', ownerId: 'c:v', courseId: 'c', videoId: 'v' })
     const createdAt = (await getThread(db, 'c:v'))!.createdAt
 
-    await saveThreadMessages(db, 'c:v', msgs, 'tip', 'c:v')
+    await saveThreadMessages(db, 'c:v', { messages: msgs, seen: new Set(), surface: 'tip', ownerId: 'c:v' })
 
     const thread = await getThread(db, 'c:v')
     expect(thread).toMatchObject({ id: 'c:v', surface: 'tip', ownerId: 'c:v', courseId: 'c', videoId: 'v', messages: msgs, createdAt })
@@ -187,8 +185,8 @@ describe('thread helpers', () => {
   })
 
   it('listThreadsBySurface queries the by-surface index', async () => {
-    await saveThreadMessages(db, 'l1', [], 'lesson', 'l1')
-    await saveThreadMessages(db, '__global', [], 'global', null)
+    await saveThreadMessages(db, 'l1', { messages: [], seen: new Set(), surface: 'lesson', ownerId: 'l1' })
+    await saveThreadMessages(db, '__global', { messages: [], seen: new Set(), surface: 'global', ownerId: null })
     api.calls = []
 
     const threads = await listThreadsBySurface(db, 'lesson')
@@ -215,18 +213,12 @@ describe('thread helpers', () => {
     ])
   })
 
-  it('chat helpers are thin wrappers over the lesson and global threads', async () => {
-    const msgs = [{ id: 'm', role: 'user', parts: [] }] as any
-    await saveChatMessages(db, 'l1', msgs)
-    await saveChatMessages(db, '__global', msgs)
-
-    expect(await getChatMessages(db, 'l1')).toEqual(msgs)
-    expect((await getThread(db, 'l1'))?.surface).toBe('lesson')
-    expect((await getThread(db, '__global'))).toMatchObject({ surface: 'global', ownerId: null })
+  it('deleteChatMessages deletes the lesson thread', async () => {
+    await saveThreadMessages(db, 'l1', { messages: [], seen: new Set(), surface: 'lesson', ownerId: 'l1' })
 
     await deleteChatMessages(db, 'l1')
-    expect(await getChatMessages(db, 'l1')).toBeUndefined()
-    expect(api.calls.some(c => c.path.includes('chats'))).toBe(false)
+
+    expect(await getThread(db, 'l1')).toBeUndefined()
   })
 })
 
