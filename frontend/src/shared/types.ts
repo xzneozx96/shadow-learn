@@ -22,6 +22,12 @@ export interface Segment {
   wordTimings?: WordTiming[]
 }
 
+export interface LessonMedia {
+  id: string
+  kind: 'video' | 'audio'
+  url: string
+}
+
 export interface LessonMeta {
   id: string
   title: string
@@ -40,6 +46,7 @@ export interface LessonMeta {
   errorMessage?: string
   currentStep?: string
   isDone?: boolean
+  media?: LessonMedia
 }
 
 export interface ChatMessage {

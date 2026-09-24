@@ -1,5 +1,4 @@
-import type { LessonMedia } from '@/db'
-import type { LessonMeta, Segment } from '@/shared/types'
+import type { LessonMedia, LessonMeta, Segment } from '@/shared/types'
 import { Download, ExternalLink, Home, Pause, Pencil, Play, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'

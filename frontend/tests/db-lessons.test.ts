@@ -17,7 +17,6 @@ import {
   getSettings,
   getThread,
   getTipChat,
-  getVideo,
   initDB,
   listThreadsBySurface,
   putThreadSummary,
@@ -85,7 +84,7 @@ describe('lesson helpers', () => {
     expect(lesson.tags).toEqual([])
   })
 
-  it('getLesson, getLessonMeta, getSegments, and getVideo read GET /api/lessons/{id}', async () => {
+  it('getLesson, getLessonMeta, and getSegments read GET /api/lessons/{id}', async () => {
     api.seed('/api/lessons/l1', { ...lessonBody(meta, segments), video_url: '/api/media/m-9?token=abc' })
 
     const lesson = await getLesson(db, 'l1')
@@ -93,8 +92,16 @@ describe('lesson helpers', () => {
     expect(lesson?.media).toEqual({ id: 'm-9', kind: 'video', url: '/api/media/m-9?token=abc' })
     expect((await getLessonMeta(db, 'l1'))?.title).toBe('Server Title')
     expect(await getSegments(db, 'l1')).toEqual(segments)
-    expect(await getVideo(db, 'l1')).toBe('/api/media/m-9?token=abc')
     expect(api.calls.every(c => c.method === 'GET' && c.path === '/api/lessons/l1')).toBe(true)
+  })
+
+  it('getAllLessonMetas carries the summary media ticket on each lesson', async () => {
+    api.seed('/api/lessons/l1', { ...lessonBody(meta), video_url: '/api/media/m-9?token=abc' })
+
+    const [lesson] = await getAllLessonMetas(db)
+
+    expect(lesson.media).toEqual({ id: 'm-9', kind: 'video', url: '/api/media/m-9?token=abc' })
+    expect(api.calls).toEqual([{ method: 'GET', path: '/api/lessons' }])
   })
 
   it('reads an audio-only lesson as audio media', async () => {
@@ -105,7 +112,6 @@ describe('lesson helpers', () => {
 
   it('returns undefined for a lesson the server does not have', async () => {
     expect(await getLesson(db, 'missing')).toBeUndefined()
-    expect(await getVideo(db, 'missing')).toBeUndefined()
   })
 
   it('saveLessonMeta PATCHes only the client-owned fields and last_opened_at', async () => {

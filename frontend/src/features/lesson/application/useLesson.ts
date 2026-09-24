@@ -1,5 +1,5 @@
-import type { DataClient, LessonMedia } from '@/db'
-import type { LessonMeta, Segment } from '@/shared/types'
+import type { DataClient } from '@/db'
+import type { LessonMedia, LessonMeta, Segment } from '@/shared/types'
 import { useCallback, useEffect, useState } from 'react'
 import { getLesson, saveLessonMeta } from '@/db'
 

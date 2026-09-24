@@ -68,7 +68,7 @@ export function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
   const { t, locale } = useI18n()
   const isYoutube = lesson.source === 'youtube'
   const thumbnailUrl = isYoutube ? getYoutubeThumbnail(lesson.sourceUrl) : null
-  const uploadThumbnail = useUploadThumbnail(lesson.id, !isYoutube && lesson.source !== 'blog')
+  const { ref: thumbnailRef, dataUrl: uploadThumbnail } = useUploadThumbnail(lesson.id, lesson.media, !isYoutube && lesson.source !== 'blog')
   const [imgFailed, setImgFailed] = useState(false)
 
   const segmentsDone = lesson.progressSegmentId ? Number.parseInt(lesson.progressSegmentId, 10) : 0
@@ -86,7 +86,7 @@ export function CurrentLessonHero({ lesson }: { lesson: LessonMeta }) {
   const langStr = languageLabel(lesson.sourceLanguage, t)
 
   return (
-    <Link to={`/lesson/${lesson.id}`} className="group block h-full">
+    <Link ref={thumbnailRef} to={`/lesson/${lesson.id}`} className="group block h-full">
       <article className="relative h-full min-h-[340px] overflow-hidden rounded-2xl border bg-card">
         {/* Background image — full bleed (scale-110 crops baked-in YouTube letterbox bars) */}
         {showThumbnail

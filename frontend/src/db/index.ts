@@ -3,7 +3,7 @@ import type { DataClient } from './client'
 import type { AgentLog, AgentMemory, DailyTask, ErrorPattern, LearnerProfile, MasteryData, ProgressStats, SessionLog, SpacedRepetitionItem, ThreadRecord, ThreadSummaryRecord, ThreadSurface } from './legacy'
 import type { UserMaterial } from '@/features/learning-materials/domain/collection'
 import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse, TipNote, TipProgress, TipStudioRecord, TipTranscriptRecord } from '@/features/learning-materials/domain/tips'
-import type { AppSettings, LessonMeta, Segment, ShadowingBest, VocabEntry } from '@/shared/types'
+import type { AppSettings, LessonMedia, LessonMeta, Segment, ShadowingBest, VocabEntry } from '@/shared/types'
 import { responseError } from '@/shared/lib/api'
 import { API_BASE } from '@/shared/lib/config'
 
@@ -47,18 +47,12 @@ export interface LessonSummary {
   last_opened_at: string | null
   segment_count: number
   meta: ClientLessonMeta
-}
-
-interface LessonDetailResponse extends LessonSummary {
-  segments: Segment[]
   video_url?: string
   audio_url?: string
 }
 
-export interface LessonMedia {
-  id: string
-  kind: 'video' | 'audio'
-  url: string
+interface LessonDetailResponse extends LessonSummary {
+  segments: Segment[]
 }
 
 export interface LessonDetail {
@@ -84,7 +78,16 @@ export function toLessonMeta(summary: LessonSummary): LessonMeta {
     progressSegmentId: summary.meta.progressSegmentId ?? null,
     tags: summary.meta.tags ?? [],
     isDone: summary.meta.isDone,
+    media: summaryMedia(summary),
   }
+}
+
+function summaryMedia(summary: LessonSummary): LessonMedia | undefined {
+  if (summary.video_url)
+    return toLessonMedia('video', summary.video_url)
+  if (summary.audio_url)
+    return toLessonMedia('audio', summary.audio_url)
+  return undefined
 }
 
 export function toLessonMedia(kind: LessonMedia['kind'], path: string): LessonMedia {
@@ -106,10 +109,8 @@ export async function getLesson(db: DataClient, id: string): Promise<LessonDetai
   const body = await db.api.get<LessonDetailResponse>(lessonPath(id))
   if (!body)
     return undefined
-  const media = body.video_url
-    ? toLessonMedia('video', body.video_url)
-    : body.audio_url ? toLessonMedia('audio', body.audio_url) : null
-  return { meta: toLessonMeta(body), segments: body.segments, media }
+  const meta = toLessonMeta(body)
+  return { meta, segments: body.segments, media: meta.media ?? null }
 }
 
 async function patchLesson(db: DataClient, id: string, body: object): Promise<void> {
@@ -153,10 +154,6 @@ export async function getSegments(db: DataClient, lessonId: string): Promise<Seg
 }
 
 export async function deleteSegments(_db: DataClient, _lessonId: string): Promise<void> {}
-
-export async function getVideo(db: DataClient, lessonId: string): Promise<string | undefined> {
-  return (await getLesson(db, lessonId))?.media?.url
-}
 
 export async function refreshMediaTicket(db: DataClient, mediaId: string): Promise<string> {
   const res = await db.api.fetch(`/api/media/${encodeURIComponent(mediaId)}/ticket`, { method: 'POST' })

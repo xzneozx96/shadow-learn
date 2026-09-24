@@ -1,30 +1,50 @@
+import type { LessonMedia } from '@/shared/types'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
-import { getVideo } from '@/db/index'
+import { refreshMediaTicket } from '@/db'
 
 // Module-level cache — survives re-renders and card remounts for the session
 const cache = new Map<string, string>()
 
-export function useUploadThumbnail(lessonId: string, enabled: boolean): string | null {
+interface UploadThumbnail {
+  ref: (element: Element | null) => void
+  dataUrl: string | null
+}
+
+export function useUploadThumbnail(lessonId: string, media: LessonMedia | undefined, enabled: boolean): UploadThumbnail {
   const { db } = useAuth()
   const [dataUrl, setDataUrl] = useState<string | null>(() => cache.get(lessonId) ?? null)
+  const [element, setElement] = useState<Element | null>(null)
+  const [inView, setInView] = useState(false)
 
   useEffect(() => {
-    if (!enabled || !db || cache.has(lessonId))
+    if (!element || inView)
+      return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some(entry => entry.isIntersecting))
+        setInView(true)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element, inView])
+
+  useEffect(() => {
+    if (!enabled || !inView || !db || media?.kind !== 'video' || cache.has(lessonId))
       return
 
+    const client = db
+    const mediaId = media.id
     let cancelled = false
-    let video: HTMLVideoElement | null = null
+    let ticketRefreshed = false
+    const video = document.createElement('video')
 
     const handleLoadedMetadata = () => {
-      if (video) {
-        // Seek to 10% through the video, capped at 2s, to avoid a black first frame
-        video.currentTime = Math.min(video.duration * 0.1, 2)
-      }
+      // Seek to 10% through the video, capped at 2s, to avoid a black first frame
+      video.currentTime = Math.min(video.duration * 0.1, 2)
     }
 
     const handleSeeked = () => {
-      if (cancelled || !video)
+      if (cancelled)
         return
       const canvas = document.createElement('canvas')
       canvas.width = video.videoWidth || 320
@@ -32,36 +52,38 @@ export function useUploadThumbnail(lessonId: string, enabled: boolean): string |
       canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height)
       const url = canvas.toDataURL('image/jpeg', 0.8)
       cache.set(lessonId, url)
-      if (!cancelled)
-        setDataUrl(url)
+      setDataUrl(url)
     }
 
-    getVideo(db, lessonId).then((url) => {
-      if (!url || cancelled)
+    const handleError = () => {
+      if (ticketRefreshed)
         return
+      ticketRefreshed = true
+      refreshMediaTicket(client, mediaId).then((url) => {
+        if (!cancelled)
+          video.src = url
+      }).catch(() => {})
+    }
 
-      video = document.createElement('video')
-      // Media is served cross-origin; CORS mode keeps the canvas readable.
-      video.crossOrigin = 'anonymous'
-      video.preload = 'metadata'
-      video.muted = true
-      video.playsInline = true
-      video.src = url
-
-      video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true })
-      video.addEventListener('seeked', handleSeeked, { once: true })
-    }).catch(() => {})
+    // Media is served cross-origin; CORS mode keeps the canvas readable.
+    video.crossOrigin = 'anonymous'
+    video.preload = 'metadata'
+    video.muted = true
+    video.playsInline = true
+    video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true })
+    video.addEventListener('seeked', handleSeeked, { once: true })
+    video.addEventListener('error', handleError)
+    video.src = media.url
 
     return () => {
       cancelled = true
-      if (video) {
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata)
-        video.removeEventListener('seeked', handleSeeked)
-        video.src = ''
-        video.load() // Stop any pending video loading
-      }
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      video.removeEventListener('seeked', handleSeeked)
+      video.removeEventListener('error', handleError)
+      video.src = ''
+      video.load() // Stop any pending video loading
     }
-  }, [lessonId, enabled, db])
+  }, [enabled, inView, db, media, lessonId])
 
-  return dataUrl
+  return { ref: setElement, dataUrl }
 }
