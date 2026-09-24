@@ -290,7 +290,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     db.close()
     await start()
     expect(await screen.findByText(/already being moved to another account/)).toBeInTheDocument()
-    expect(steps()).toBeNull()
+    expect(screen.queryAllByRole('list')).toHaveLength(0)
     expect(first.server.stores.size).toBe(0)
     expect(await databaseExists()).toBe(true)
   })
