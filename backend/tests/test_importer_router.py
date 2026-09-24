@@ -3,6 +3,7 @@ import json
 import os
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 
 import pytest
 import pytest_asyncio
@@ -317,3 +318,19 @@ async def test_exported_lessons_digest_on_the_server_as_the_browser_sent_them(cl
     digest = await _manifest(client, owner, {"stores": {"lessons": ids, "segments": ids}})
     assert digest["stores"]["lessons"]["sha256"] == store_hash([(item["id"], item["lesson"]) for item in exported])
     assert digest["stores"]["segments"]["sha256"] == store_hash([(item["id"], item["segments"]) for item in exported])
+
+
+EXPORT = json.loads((Path(__file__).parent / "fixtures" / "legacy-export.json").read_text())
+
+
+@pytest.mark.parametrize("store", sorted(EXPORT["stores"]))
+async def test_a_retry_never_overwrites_a_newer_server_edit(client, owner, store):
+    record = EXPORT["stores"][store][0]
+    first = await _bulk(client, owner, store, [record["data"]], "device-a")
+    path = f"/api/store/{store}/{quote(record['id'], safe='')}"
+    edited = {**first["after"][0], "editedOnServer": True}
+    assert (await client.put(path, json=edited, headers=_bearer(owner))).status_code == 200
+
+    retry = await _bulk(client, owner, store, [record["data"]], "device-a")
+    assert retry["after"] == [edited]
+    assert (await client.get(path, headers=_bearer(owner))).json() == edited

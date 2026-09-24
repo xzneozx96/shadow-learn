@@ -141,7 +141,7 @@ function KeysStep({ phase, onPin, onSkip, onConfirmSkip }: {
     return (
       <div className="flex flex-col gap-4">
         <p className="text-sm">Skip your keys? They stay encrypted with your old PIN and are deleted with the local copy. You can re-enter keys in Settings.</p>
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={() => onConfirmSkip(false)}>Back</Button>
           <Button variant="destructive" onClick={onSkip}>Skip keys</Button>
         </div>
@@ -187,10 +187,11 @@ interface ModalProps {
   account: string
   counts: Record<string, number>
   onFinished: () => void
+  onKeepLocal: () => void
   onSignOut: () => void
 }
 
-export function MigrationModal({ api, account, counts, onFinished, onSignOut }: ModalProps) {
+export function MigrationModal({ api, account, counts, onFinished, onKeepLocal, onSignOut }: ModalProps) {
   const { phase, start, submitPin, skipKeys, confirmSkip, retry } = useMigration(api, account)
   const found = countLine(counts)
 
@@ -232,11 +233,12 @@ export function MigrationModal({ api, account, counts, onFinished, onSignOut }: 
             <>
               <p className="flex items-center gap-2 text-sm font-medium">
                 <AlertTriangle className="size-4 text-amber-400" />
-                Some data did not match the server. Nothing was deleted from this browser.
+                Some data did not match the server. Nothing was deleted from this browser, and ShadowLearn asks again the next time you sign in.
               </p>
               <Results verification={phase.verification} />
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button variant="ghost" onClick={onSignOut}>Sign out</Button>
+                <Button variant="outline" onClick={onKeepLocal}>Use the app now, keep my local copy</Button>
                 <Button onClick={() => void retry()}>Retry</Button>
               </div>
             </>
@@ -253,8 +255,9 @@ export function MigrationModal({ api, account, counts, onFinished, onSignOut }: 
                 The move stopped before it finished. Your data is still in this browser.
               </p>
               <p className="text-sm text-muted-foreground">{phase.message}</p>
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button variant="ghost" onClick={onSignOut}>Sign out</Button>
+                <Button variant="outline" onClick={onKeepLocal}>Use the app now, keep my local copy</Button>
                 <Button onClick={() => void retry()}>Retry</Button>
               </div>
             </>
@@ -280,7 +283,7 @@ export function MigrationModal({ api, account, counts, onFinished, onSignOut }: 
                 {summary(phase.verification)}
               </p>
               {noteLines(phase.notes).map(line => <p key={line} className="text-sm text-muted-foreground">{line}</p>)}
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 {needsSettings(phase.notes) && (
                   <Button variant="outline" onClick={openSettings}>Open Settings</Button>
                 )}
@@ -338,8 +341,9 @@ export function MigrationGate({ api, children }: { api: ApiClient, children: Rea
         <DialogContent showCloseButton={false} className="sm:max-w-lg" data-testid="migration-modal">
           <DialogTitle>Move your data to your account</DialogTitle>
           <DialogDescription>{`This browser holds earlier ShadowLearn data, but it could not be read: ${state.message}`}</DialogDescription>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button variant="ghost" onClick={() => void logout()}>Sign out</Button>
+            <Button variant="outline" onClick={() => setState({ kind: 'clear' })}>Use the app now, keep my local copy</Button>
             <Button onClick={() => {
               setState({ kind: 'checking' })
               detect()
@@ -358,6 +362,7 @@ export function MigrationGate({ api, children }: { api: ApiClient, children: Rea
       account={session?.userId ?? ''}
       counts={state.data.counts}
       onFinished={() => setState({ kind: 'clear' })}
+      onKeepLocal={() => setState({ kind: 'clear' })}
       onSignOut={() => void logout()}
     />
   )

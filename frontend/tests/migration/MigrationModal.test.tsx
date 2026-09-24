@@ -148,6 +148,16 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     expect(logout).toHaveBeenCalled()
   })
 
+  it('lets the user into the app after a failure and keeps the local copy', async () => {
+    const { server, seeded } = renderGate()
+    server.state.down = true
+    await seeded
+    await start()
+    fireEvent.click(await screen.findByRole('button', { name: 'Use the app now, keep my local copy' }))
+    expect(await screen.findByText('the app')).toBeInTheDocument()
+    expect(await databaseExists()).toBe(true)
+  })
+
   it('keeps a key the account already holds', async () => {
     const { server, seeded } = renderGate({ withKeys: true })
     server.keys.set('openrouter', { value: 'sk-or-account-key' })
