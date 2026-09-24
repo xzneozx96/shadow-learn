@@ -40,3 +40,13 @@ def test_startup_errors_do_not_echo_setting_values():
 def test_missing_or_invalid_encryption_key_fails_startup(key):
     with pytest.raises(ValidationError, match="SHADOWLEARN_ENCRYPTION_KEY must be a Fernet key"):
         _settings(encryption_key=key)
+
+
+def test_test_routes_fail_startup_outside_local_dev():
+    with pytest.raises(ValidationError, match="SHADOWLEARN_ENABLE_TEST_ROUTES is refused outside local dev"):
+        _settings(smtp_host="smtp.example.com", public_app_url="https://learning.example.com", enable_test_routes=True)
+
+
+@pytest.mark.parametrize("url", ["http://localhost:5173", "http://127.0.0.1:5601"])
+def test_local_dev_may_enable_test_routes(url):
+    assert _settings(public_app_url=url, enable_test_routes=True).enable_test_routes

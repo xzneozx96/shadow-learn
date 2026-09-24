@@ -113,12 +113,24 @@ class Settings(BaseSettings):
             ) from None
         return value
 
+    def _is_local_dev(self) -> bool:
+        return urlsplit(self.public_app_url).hostname in {"localhost", "127.0.0.1"}
+
     @model_validator(mode="after")
     def _require_smtp_outside_local_dev(self) -> "Settings":
-        if not self.smtp_host and urlsplit(self.public_app_url).hostname not in {"localhost", "127.0.0.1"}:
+        if not self.smtp_host and not self._is_local_dev():
             raise ValueError(
                 "SHADOWLEARN_SMTP_HOST is required outside local dev: without it the backend would "
                 f"log password reset links for {self.public_app_url}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _refuse_test_routes_outside_local_dev(self) -> "Settings":
+        if self.enable_test_routes and not self._is_local_dev():
+            raise ValueError(
+                "SHADOWLEARN_ENABLE_TEST_ROUTES is refused outside local dev: the seed routes write "
+                f"lessons without the pipeline for {self.public_app_url}"
             )
         return self
 
