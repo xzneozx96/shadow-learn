@@ -113,7 +113,7 @@ export async function getLesson(db: DataClient, id: string): Promise<LessonDetai
   return { meta, segments: body.segments, media: meta.media ?? null }
 }
 
-function lessonPatch(meta: LessonMeta): object {
+function lessonPatch(meta: LessonMeta): { title: string, meta: ClientLessonMeta, last_opened_at: string } {
   const clientMeta: ClientLessonMeta = {
     progressSegmentId: meta.progressSegmentId,
     tags: meta.tags,
