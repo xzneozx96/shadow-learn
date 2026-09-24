@@ -1,11 +1,9 @@
 import type { DataClient } from '@/db'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { initDB, putTipProgress, putUserMaterial, saveSpacedRepetitionItem, saveVocabEntry } from '@/db'
+import { putTipProgress, putUserMaterial, saveSpacedRepetitionItem, saveVocabEntry } from '@/db'
 import { useStudyQueue } from '@/features/study/application/useStudyQueue'
 import { fakeDataClient } from '../../../../tests/fake-api'
-import 'fake-indexeddb/auto'
 
 function makeVocab(id: string) {
   return {
@@ -76,14 +74,12 @@ beforeEach(async () => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-05-13T10:00:00.000Z'))
   localStorage.clear()
-  db = fakeDataClient(await initDB())
+  db = fakeDataClient()
 })
 
 afterEach(() => {
   vi.useRealTimers()
   localStorage.clear()
-  db.legacy.close()
-  globalThis.indexedDB = new IDBFactory()
 })
 
 describe('useStudyQueue', () => {

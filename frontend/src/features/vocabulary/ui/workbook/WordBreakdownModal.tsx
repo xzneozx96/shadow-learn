@@ -32,7 +32,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, sourceLanguage, voiceId)
+  const { playTTS, loadingText } = useTTS(sourceLanguage, voiceId)
   const ttsLoading = loadingText === word
   const {
     characters,
@@ -49,7 +49,6 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
     word,
     pinyin,
     meaning,
-    sourceLanguage,
     enabled: open,
   })
 

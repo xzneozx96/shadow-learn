@@ -2,10 +2,8 @@ import type { DataClient } from '@/db'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { initDB } from '@/db'
 import { StudioTab } from '@/features/learning-materials/ui/tips/tabs/StudioTab'
 import { fakeDataClient } from '../../../../../../tests/fake-api'
-import 'fake-indexeddb/auto'
 
 vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
@@ -17,13 +15,10 @@ vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: testDb }),
 }))
 
-beforeEach(async () => {
-  const { deleteDB } = await import('idb')
-  testDb?.legacy.close()
-  testDb = null
-  await deleteDB('shadowlearn')
-  testDb = fakeDataClient(await initDB())
-  globalThis.fetch = vi.fn() as any
+beforeEach(() => {
+  testDb = fakeDataClient()
+  // Probes find no artifact and no live job.
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ status: 'none' }) }) as any
 })
 
 describe('studioTab', () => {
@@ -49,11 +44,11 @@ describe('studioTab', () => {
     expect(screen.queryByRole('heading', { level: 3, name: /^summary$/i })).not.toBeInTheDocument()
   })
 
-  it('mind Map tile renders in empty (unlocked) state when no artifact is cached', () => {
+  it('mind Map tile renders in empty (unlocked) state when the server has no artifact', async () => {
     render(<StudioTab {...baseProps} />)
     const mindMapTile = screen.getByRole('heading', { level: 3, name: /mind map/i }).closest('[data-tile]')
     expect(mindMapTile).toHaveAttribute('data-locked', 'false')
-    expect(mindMapTile).toHaveAttribute('data-state', 'empty')
+    await waitFor(() => expect(mindMapTile).toHaveAttribute('data-state', 'empty'))
   })
 
   it('shows disabled state on tiles when transcriptStatus = unavailable', () => {

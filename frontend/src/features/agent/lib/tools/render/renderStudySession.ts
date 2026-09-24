@@ -2,6 +2,7 @@ import type { DataClient } from '@/db'
 import type { SessionQuestion } from '@/shared/lib/study-utils'
 import type { ExerciseMode, VocabEntry } from '@/shared/types'
 import { z } from 'zod'
+import { getVocabEntryById } from '@/db'
 import { buildTool } from '@/features/agent/lib/tools/types'
 import { apiFetch } from '@/shared/lib/api'
 import { buildSessionQuestions } from '@/shared/lib/study-utils'
@@ -26,7 +27,7 @@ export const RenderStudySessionSchema = z.object({
 export type RenderStudySessionArgs = z.infer<typeof RenderStudySessionSchema>
 
 async function fetchVocabEntries(db: DataClient, itemIds: string[]): Promise<VocabEntry[]> {
-  const fetched = await Promise.all(itemIds.map(id => db.legacy.get('vocabulary', id)))
+  const fetched = await Promise.all(itemIds.map(id => getVocabEntryById(db, id)))
   return fetched.filter((e): e is VocabEntry => e !== undefined)
 }
 

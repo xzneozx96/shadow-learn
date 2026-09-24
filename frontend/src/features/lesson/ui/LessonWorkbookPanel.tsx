@@ -37,7 +37,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
+  const { playTTS, loadingText } = useTTS(entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
   const count = entries.length
 
   const [pickerOpen, setPickerOpen] = useState(false)

@@ -1,7 +1,6 @@
 import type { DataClient } from '@/db'
 import type { LessonMeta, Segment } from '@/shared/types'
-import { IDBFactory } from 'fake-indexeddb'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createApiClient,
   deleteChatMessages,
@@ -16,11 +15,8 @@ import {
   getSegments,
   getSettings,
   getThread,
-  getTipChat,
-  initDB,
   listThreadsBySurface,
   putThreadSummary,
-  putTipChat,
   refreshMediaTicket,
   renameLesson,
   saveChatMessages,
@@ -29,7 +25,6 @@ import {
   saveThreadMessages,
 } from '@/db'
 import { FakeApiClient, fakeDataClient, lessonBody } from './fake-api'
-import 'fake-indexeddb/auto'
 
 const meta: LessonMeta = {
   id: 'l1',
@@ -53,14 +48,9 @@ const segments: Segment[] = [
 let api: FakeApiClient
 let db: DataClient
 
-beforeEach(async () => {
-  globalThis.indexedDB = new IDBFactory()
+beforeEach(() => {
   api = new FakeApiClient()
-  db = fakeDataClient(await initDB(), api)
-})
-
-afterEach(() => {
-  db.legacy.close()
+  db = fakeDataClient(api)
 })
 
 describe('lesson helpers', () => {
@@ -157,7 +147,7 @@ describe('lesson helpers', () => {
 
   it('refreshMediaTicket POSTs /api/media/{id}/ticket and returns its url', async () => {
     const send = vi.fn(async () => new Response(JSON.stringify({ token: 't', url: '/api/media/m1?token=t', expires_in: 600 })))
-    const client: DataClient = { api: createApiClient(send), legacy: db.legacy }
+    const client: DataClient = { api: createApiClient(send) }
 
     expect(await refreshMediaTicket(client, 'm1')).toBe('/api/media/m1?token=t')
     expect(send).toHaveBeenCalledWith('/api/media/m1/ticket', { method: 'POST' })
@@ -236,15 +226,6 @@ describe('thread helpers', () => {
     await deleteChatMessages(db, 'l1')
     expect(await getChatMessages(db, 'l1')).toBeUndefined()
     expect(api.calls.some(c => c.path.includes('chats'))).toBe(false)
-  })
-
-  it('putTipChat writes the server thread, and getTipChat reads it back', async () => {
-    const rec = { key: 'c:v', courseId: 'c', videoId: 'v', messages: [{ id: 'tm' }] as any, updatedAt: '2026-05-20T00:00:00Z' }
-
-    await putTipChat(db, rec)
-
-    expect((await getThread(db, 'c:v'))).toMatchObject({ surface: 'tip', courseId: 'c', videoId: 'v' })
-    expect((await getTipChat(db, 'c:v'))?.messages).toEqual(rec.messages)
   })
 })
 

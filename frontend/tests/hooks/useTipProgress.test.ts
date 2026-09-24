@@ -1,12 +1,9 @@
 import type { DataClient } from '@/db'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth } from '@/app/providers/AuthContext'
-import { initDB } from '@/db'
 import { useTipProgress } from '@/features/learning-materials/application/useTipProgress'
 import { fakeDataClient } from '../fake-api'
-import 'fake-indexeddb/auto'
 
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: vi.fn(),
@@ -16,8 +13,7 @@ describe('useTipProgress', () => {
   let db: DataClient
 
   beforeEach(async () => {
-    globalThis.indexedDB = new IDBFactory()
-    db = fakeDataClient(await initDB())
+    db = fakeDataClient()
     vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 

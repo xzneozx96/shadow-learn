@@ -1,5 +1,5 @@
 import type { ErrorPattern, ProgressStats } from '@/db'
-import { ArrowUpRight, Bookmark } from 'lucide-react'
+import { ArrowUpRight, Bookmark, CloudOff } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Layout } from '@/app/Layout'
@@ -21,9 +21,21 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
+function WorkbookSkeleton() {
+  return (
+    <div className="animate-pulse flex flex-col gap-7" data-testid="workbook-skeleton" aria-busy="true">
+      <div className="h-5 w-64 rounded bg-white/5" />
+      <div className="h-20 rounded-xl bg-white/5" />
+      {Array.from({ length: 3 }, (_, i) => (
+        <div key={i} className="h-40 rounded-xl bg-white/5" />
+      ))}
+    </div>
+  )
+}
+
 export function WorkbookPage() {
   const { t } = useI18n()
-  const { entries, entriesByLesson, removeGroup } = useVocabulary()
+  const { entries, status, error, reload, entriesByLesson, removeGroup } = useVocabulary()
   const { db } = useAuth()
   const { isOpen: dailyReviewOpen } = useDailyReview()
   const { getDueItemsList } = useTracking()
@@ -31,6 +43,8 @@ export function WorkbookPage() {
   // Workbook State
   const [search, setSearch] = useState('')
   const [dueItems, setDueItems] = useState<typeof entries>([])
+  const [dueError, setDueError] = useState<string | null>(null)
+  const [retryTick, setRetryTick] = useState(0)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [sessionActive, setSessionActive] = useState(false)
   const [activeTab, setActiveTab] = useState('workbook')
@@ -39,13 +53,20 @@ export function WorkbookPage() {
   const [stats, setStats] = useState<ProgressStats | undefined>()
   const [mistakes, setMistakes] = useState<ErrorPattern[]>([])
   const [loadingProgress, setLoadingProgress] = useState(true)
+  const [progressError, setProgressError] = useState<string | null>(null)
 
   // Fetch Due Items
   useEffect(() => {
     async function fetchDue() {
-      const list = await getDueItemsList()
-      const ids = new Set(list.map(i => i.itemId))
-      setDueItems(entries.filter(e => ids.has(e.id)))
+      try {
+        const list = await getDueItemsList()
+        const ids = new Set(list.map(i => i.itemId))
+        setDueItems(entries.filter(e => ids.has(e.id)))
+        setDueError(null)
+      }
+      catch (e) {
+        setDueError(e instanceof Error ? e.message : String(e))
+      }
     }
     if (db)
       void fetchDue()
@@ -53,7 +74,7 @@ export function WorkbookPage() {
     // dailyReviewOpen + reviewOpen included so closing either modal refetches the
     // due list (pending SM2 scores from those sessions filter out completed words).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, entries, dailyReviewOpen, reviewOpen])
+  }, [db, entries, dailyReviewOpen, reviewOpen, retryTick])
 
   // Fetch Progress Stats
   useEffect(() => {
@@ -67,13 +88,23 @@ export function WorkbookPage() {
         ])
         setStats(s)
         setMistakes(m)
+        setProgressError(null)
+      }
+      catch (e) {
+        setProgressError(e instanceof Error ? e.message : String(e))
       }
       finally {
         setLoadingProgress(false)
       }
     }
     void fetchData()
-  }, [db, reviewOpen])
+  }, [db, reviewOpen, retryTick])
+
+  const loadError = status === 'error' ? error : dueError
+  const retry = () => {
+    void reload()
+    setRetryTick(n => n + 1)
+  }
 
   const lastSaved = entries.length
     ? entries.reduce((a, b) => (a.createdAt > b.createdAt ? a : b)).createdAt
@@ -128,75 +159,91 @@ export function WorkbookPage() {
             </div>
 
             <TabsContent value="workbook" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-              <div className="flex items-center justify-between mb-6">
-                <div className="text-sm text-muted-foreground font-medium">
-                  {entries.length}
-                  {' '}
-                  {t('workbook.wordCount')}
-                  {' · '}
-                  {sortedLessonIds.length}
-                  {' '}
-                  {t('workbook.lessonCount')}
-                  {lastSaved && ` · ${t('workbook.lastSaved')} ${new Date(lastSaved).toLocaleDateString()}`}
-                </div>
-                <Input
-                  className="w-48 bg-background backdrop-blur-sm"
-                  placeholder={t('workbook.searchPlaceholder')}
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
-              </div>
+              {status === 'loading' && <WorkbookSkeleton />}
 
-              {/* Review Banner */}
-              <div className="mb-6">
-                <ReviewQueueBanner count={dueItems.length} onStartReview={() => setReviewOpen(true)} />
-              </div>
-
-              {/* Empty state */}
-              {sortedLessonIds.length === 0 && (
+              {status !== 'loading' && loadError !== null && (
                 <EmptyState
                   className="min-h-[340px]"
-                  icon={<Bookmark className="size-7 text-primary" strokeWidth={1.5} />}
-                  description={t('workbook.noWords')}
-                  action={{
-                    label: t('nav.library'),
-                    href: '/',
-                    icon: <ArrowUpRight className="size-4" />,
-                  }}
+                  icon={<CloudOff className="size-7 text-primary" strokeWidth={1.5} />}
+                  title={t('common.error')}
+                  description={loadError}
+                  action={{ label: t('common.retry'), onClick: retry }}
                 />
               )}
 
-              {/* No search results state */}
-              {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
-                <div className="text-center py-20 text-muted-foreground text-sm">
-                  {t('workbook.noSearchResults')}
-                  {' "'}
-                  {search}
-                  ".
-                  {' '}
-                </div>
-              )}
+              {status === 'ready' && loadError === null && (
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="text-sm text-muted-foreground font-medium">
+                      {entries.length}
+                      {' '}
+                      {t('workbook.wordCount')}
+                      {' · '}
+                      {sortedLessonIds.length}
+                      {' '}
+                      {t('workbook.lessonCount')}
+                      {lastSaved && ` · ${t('workbook.lastSaved')} ${new Date(lastSaved).toLocaleDateString()}`}
+                    </div>
+                    <Input
+                      className="w-48 bg-background backdrop-blur-sm"
+                      placeholder={t('workbook.searchPlaceholder')}
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                    />
+                  </div>
 
-              {/* Groups */}
-              <div className="flex flex-col gap-7">
-                {sortedLessonIds
-                  .filter(id => filteredByLesson[id])
-                  .map((id, index) => (
-                    <motion.div
-                      key={id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.25, delay: Math.min(index, 8) * 0.05, ease: [0.16, 1, 0.3, 1] }}
-                    >
-                      <LessonGroup
-                        lessonId={id}
-                        lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
-                        entries={filteredByLesson[id]}
-                        onDeleteGroup={removeGroup}
-                      />
-                    </motion.div>
-                  ))}
-              </div>
+                  {/* Review Banner */}
+                  <div className="mb-6">
+                    <ReviewQueueBanner count={dueItems.length} onStartReview={() => setReviewOpen(true)} />
+                  </div>
+
+                  {/* Empty state */}
+                  {sortedLessonIds.length === 0 && (
+                    <EmptyState
+                      className="min-h-[340px]"
+                      icon={<Bookmark className="size-7 text-primary" strokeWidth={1.5} />}
+                      description={t('workbook.noWords')}
+                      action={{
+                        label: t('nav.library'),
+                        href: '/',
+                        icon: <ArrowUpRight className="size-4" />,
+                      }}
+                    />
+                  )}
+
+                  {/* No search results state */}
+                  {sortedLessonIds.length > 0 && search.trim() && Object.keys(filteredByLesson).length === 0 && (
+                    <div className="text-center py-20 text-muted-foreground text-sm">
+                      {t('workbook.noSearchResults')}
+                      {' "'}
+                      {search}
+                      ".
+                      {' '}
+                    </div>
+                  )}
+
+                  {/* Groups */}
+                  <div className="flex flex-col gap-7">
+                    {sortedLessonIds
+                      .filter(id => filteredByLesson[id])
+                      .map((id, index) => (
+                        <motion.div
+                          key={id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.25, delay: Math.min(index, 8) * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                          <LessonGroup
+                            lessonId={id}
+                            lessonTitle={filteredByLesson[id][0].sourceLessonTitle}
+                            entries={filteredByLesson[id]}
+                            onDeleteGroup={removeGroup}
+                          />
+                        </motion.div>
+                      ))}
+                  </div>
+                </>
+              )}
             </TabsContent>
 
             <TabsContent value="progress" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
@@ -216,36 +263,46 @@ export function WorkbookPage() {
                             <span className="text-sm font-medium tracking-widest uppercase">{t('workbook.loadingMetrics')}</span>
                           </div>
                         )
-                      : (
-                          <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-min gap-4 md:gap-6 pt-4">
-                            {/* Row 1: Accuracy Trend (left) + Pie Chart (right) */}
-                            <div className="md:col-span-8 flex flex-col">
-                              <AccuracyTrendChart trend={stats?.accuracyTrend} />
-                            </div>
-                            <div className="md:col-span-4 flex flex-col">
-                              <AccuracyPieCard stats={stats} />
-                            </div>
+                      : progressError !== null
+                        ? (
+                            <EmptyState
+                              className="min-h-[340px]"
+                              icon={<CloudOff className="size-7 text-primary" strokeWidth={1.5} />}
+                              title={t('common.error')}
+                              description={progressError}
+                              action={{ label: t('common.retry'), onClick: retry }}
+                            />
+                          )
+                        : (
+                            <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-min gap-4 md:gap-6 pt-4">
+                              {/* Row 1: Accuracy Trend (left) + Pie Chart (right) */}
+                              <div className="md:col-span-8 flex flex-col">
+                                <AccuracyTrendChart trend={stats?.accuracyTrend} />
+                              </div>
+                              <div className="md:col-span-4 flex flex-col">
+                                <AccuracyPieCard stats={stats} />
+                              </div>
 
-                            {/* Row 2: Exercises + Sessions + Mistakes */}
-                            <div className="md:col-span-4 flex flex-col">
-                              <ExercisesCard stats={stats} />
-                            </div>
-                            <div className="md:col-span-4 flex flex-col">
-                              <SessionsCard stats={stats} />
-                            </div>
-                            <div className="md:col-span-4 flex flex-col">
-                              <MistakesPanel mistakes={mistakes} entries={entries} />
-                            </div>
+                              {/* Row 2: Exercises + Sessions + Mistakes */}
+                              <div className="md:col-span-4 flex flex-col">
+                                <ExercisesCard stats={stats} />
+                              </div>
+                              <div className="md:col-span-4 flex flex-col">
+                                <SessionsCard stats={stats} />
+                              </div>
+                              <div className="md:col-span-4 flex flex-col">
+                                <MistakesPanel mistakes={mistakes} entries={entries} />
+                              </div>
 
-                            {/* Row 3: Skill Mastery Grid */}
-                            <div className="md:col-span-12 mt-2">
-                              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1">
-                                {t('workbook.skillBreakdown')}
-                              </h3>
-                              <SkillMasteryGrid stats={stats} />
+                              {/* Row 3: Skill Mastery Grid */}
+                              <div className="md:col-span-12 mt-2">
+                                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1">
+                                  {t('workbook.skillBreakdown')}
+                                </h3>
+                                <SkillMasteryGrid stats={stats} />
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                   </motion.div>
                 )}
               </AnimatePresence>

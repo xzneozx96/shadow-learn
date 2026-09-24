@@ -1,11 +1,9 @@
 import type { DataClient, SessionLog } from '@/db'
 import { renderHook, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { initDB, saveSessionLog } from '@/db'
+import { saveSessionLog } from '@/db'
 import { useStudyQueue } from '@/features/study/application/useStudyQueue'
 import { fakeDataClient } from './fake-api'
-import 'fake-indexeddb/auto'
 
 const TODAY = '2026-05-27'
 
@@ -30,8 +28,7 @@ describe('useStudyQueue — shadowingDone', () => {
   let db: DataClient
 
   beforeEach(async () => {
-    globalThis.indexedDB = new IDBFactory()
-    db = fakeDataClient(await initDB())
+    db = fakeDataClient()
     localStorage.clear()
   })
 

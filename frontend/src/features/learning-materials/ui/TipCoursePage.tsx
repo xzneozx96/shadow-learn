@@ -33,6 +33,8 @@ export function TipCoursePage() {
 
   const [completedSet, setCompletedSet] = useState<Set<string>>(() => new Set())
   const [inProgressSet, setInProgressSet] = useState<Set<string>>(() => new Set())
+  const [progressStatus, setProgressStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [progressTick, setProgressTick] = useState(0)
   useEffect(() => {
     let cancelled = false
     async function load() {
@@ -43,17 +45,25 @@ export function TipCoursePage() {
         }
         return
       }
-      const rows = await listTipProgressForCourse(db, course.id)
-      if (cancelled)
-        return
-      setCompletedSet(new Set(rows.filter(r => r.completed).map(r => r.videoId)))
-      setInProgressSet(new Set(
-        rows.filter(r => !r.completed && r.watchedSec > 0).map(r => r.videoId),
-      ))
+      setProgressStatus('loading')
+      try {
+        const rows = await listTipProgressForCourse(db, course.id)
+        if (cancelled)
+          return
+        setCompletedSet(new Set(rows.filter(r => r.completed).map(r => r.videoId)))
+        setInProgressSet(new Set(
+          rows.filter(r => !r.completed && r.watchedSec > 0).map(r => r.videoId),
+        ))
+        setProgressStatus('ready')
+      }
+      catch {
+        if (!cancelled)
+          setProgressStatus('error')
+      }
     }
     void load()
     return () => { cancelled = true }
-  }, [db, course])
+  }, [db, course, progressTick])
 
   const lessonParam = searchParams.get('lesson')
   const activeVideoId = useMemo(() => {
@@ -118,12 +128,28 @@ export function TipCoursePage() {
       handleSelectLesson(next.videoId)
   }
 
-  if (loading) {
+  if (loading || (course && progressStatus === 'loading')) {
     return (
       <Layout>
         <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
           <Loader2 className="size-8 animate-spin" />
           {t('tips.loading')}
+        </div>
+      </Layout>
+    )
+  }
+  if (progressStatus === 'error') {
+    return (
+      <Layout>
+        <div role="alert" className="h-full flex items-center justify-center text-destructive">
+          {t('common.error')}
+          <button
+            type="button"
+            className="underline ml-2"
+            onClick={() => setProgressTick(n => n + 1)}
+          >
+            {t('common.retry')}
+          </button>
         </div>
       </Layout>
     )

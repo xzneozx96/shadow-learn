@@ -1,6 +1,7 @@
 import type { DataClient } from '@/db'
 import { z } from 'zod'
 import {
+  getAllExerciseStats,
   getMasteryData,
   getProgressStats,
   getRecentMistakes,
@@ -22,15 +23,11 @@ export async function executeGetStudyContext(
 
   const lessonVocab = args.lessonId ? await getVocabEntriesByLesson(db, args.lessonId) : []
 
-  const allStatKeys = await db.legacy.getAllKeys('exercise-stats') as string[]
-  const allStats = await Promise.all(allStatKeys.map(k => db.legacy.get('exercise-stats', k)))
-
-  const weakItems = allStatKeys
-    .map((key, i) => ({ key, stat: allStats[i]! }))
-    .filter(({ stat }) => stat && stat.total >= 3)
-    .sort((a, b) => (a.stat.correct / a.stat.total) - (b.stat.correct / b.stat.total))
+  const weakItems = (await getAllExerciseStats(db))
+    .filter(stat => stat.total >= 3)
+    .sort((a, b) => (a.correct / a.total) - (b.correct / b.total))
     .slice(0, 5)
-    .map(({ key, stat }) => ({ key, accuracy: stat.correct / stat.total, total: stat.total }))
+    .map(stat => ({ key: `${stat.vocabId}:${stat.exerciseType}`, accuracy: stat.correct / stat.total, total: stat.total }))
 
   return {
     dueItems: dueItems.slice(0, 10).map(i => ({

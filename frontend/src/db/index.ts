@@ -1,8 +1,8 @@
 import type { UIMessage } from '@ai-sdk/react'
 import type { DataClient } from './client'
-import type { AgentLog, AgentMemory, DailyTask, ErrorPattern, LearnerProfile, MasteryData, ProgressStats, SessionLog, SpacedRepetitionItem, ThreadRecord, ThreadSummaryRecord, ThreadSurface } from './legacy'
+import type { AgentMemory, DailyTask, ErrorPattern, ExerciseStat, LearnerProfile, MasteryData, ProgressStats, SessionLog, SpacedRepetitionItem, ThreadRecord, ThreadSummaryRecord, ThreadSurface } from './legacy'
 import type { UserMaterial } from '@/features/learning-materials/domain/collection'
-import type { StudioKind, StudioLocale, TipCardsRecord, TipChatRecord, TipCourse, TipNote, TipProgress, TipStudioRecord, TipTranscriptRecord } from '@/features/learning-materials/domain/tips'
+import type { StudioLocale, TipCardStatesRecord, TipNote, TipProgress } from '@/features/learning-materials/domain/tips'
 import type { AppSettings, LessonMedia, LessonMeta, Segment, ShadowingBest, VocabEntry } from '@/shared/types'
 import { responseError } from '@/shared/lib/api'
 import { API_BASE } from '@/shared/lib/config'
@@ -10,7 +10,6 @@ import { API_BASE } from '@/shared/lib/config'
 export type { ApiClient, DataClient } from './client'
 export { createApiClient } from './client'
 export type {
-  AgentLog,
   AgentMemory,
   DailyAccuracy,
   DailyTask,
@@ -21,7 +20,6 @@ export type {
   MistakeExample,
   ProgressStats,
   SessionLog,
-  ShadowLearnDB,
   SkillMastery,
   SkillStats,
   SpacedRepetitionItem,
@@ -31,7 +29,6 @@ export type {
   ThreadSummaryRecord,
   ThreadSurface,
 } from './legacy'
-export { initDB } from './legacy'
 
 type ClientLessonMeta = Partial<Pick<LessonMeta, 'progressSegmentId' | 'tags' | 'isDone'>>
 
@@ -235,28 +232,7 @@ export async function getSettings(db: DataClient): Promise<AppSettings | undefin
   return db.api.get<AppSettings>(storePath('settings', 'settings'))
 }
 
-// Crypto store
-export async function saveCryptoData(db: DataClient, data: { encrypted: ArrayBuffer, salt: Uint8Array, iv: Uint8Array }): Promise<void> {
-  await db.legacy.put('crypto', data, 'keys')
-}
-
-export async function getCryptoData(db: DataClient): Promise<{ encrypted: ArrayBuffer, salt: Uint8Array, iv: Uint8Array } | undefined> {
-  const data = await db.legacy.get('crypto', 'keys')
-  if (!data)
-    return undefined
-  // Normalize typed arrays in case of cross-realm issues (e.g. in tests with fake-indexeddb)
-  return {
-    encrypted: data.encrypted,
-    salt: new Uint8Array(data.salt),
-    iv: new Uint8Array(data.iv),
-  }
-}
-
-export async function deleteCryptoData(db: DataClient): Promise<void> {
-  await db.legacy.delete('crypto', 'keys')
-}
-
-// Full lesson delete (all stores)
+// Full lesson delete. DELETE /api/lessons/{id} also removes the shadowing recordings.
 export async function deleteFullLesson(db: DataClient, lessonId: string): Promise<void> {
   await Promise.all([
     deleteLessonMeta(db, lessonId),
@@ -264,168 +240,161 @@ export async function deleteFullLesson(db: DataClient, lessonId: string): Promis
     deleteVideo(db, lessonId),
     deleteChatMessages(db, lessonId),
     deleteSpeakingBestsByLesson(db, lessonId),
-    deleteSpeakingAudioByLesson(db, lessonId),
   ])
 }
 
-// TTS audio cache (keyed by "language::text" to avoid cross-language collisions)
-function _ttsCacheKey(text: string, language: string): string {
-  return `${language}::${text}`
+function storeList<T>(db: DataClient, store: string, index?: string, value?: string, op?: 'lte'): Promise<T[]> {
+  if (!index || value === undefined)
+    return db.api.list<T>(`/api/store/${store}`)
+  return db.api.list<T>(`/api/store/${store}`, op ? { index, value, op } : { index, value })
 }
 
-export async function getTTSCache(db: DataClient, text: string, language: string): Promise<Blob | undefined> {
-  return db.legacy.get('tts-cache', _ttsCacheKey(text, language))
-}
-
-export async function saveTTSCache(db: DataClient, text: string, blob: Blob, language: string): Promise<void> {
-  await db.legacy.put('tts-cache', blob, _ttsCacheKey(text, language))
+function deleteByIndex(db: DataClient, store: string, index: string, value: string): Promise<void> {
+  return db.api.del(`/api/store/${store}?${new URLSearchParams({ index, value })}`)
 }
 
 // Vocabulary store
 export async function saveVocabEntry(db: DataClient, entry: VocabEntry): Promise<void> {
-  await db.legacy.put('vocabulary', entry)
+  await db.api.put(storePath('vocabulary', entry.id), entry)
+}
+
+export async function getAllVocabEntries(db: DataClient): Promise<VocabEntry[]> {
+  return storeList<VocabEntry>(db, 'vocabulary')
 }
 
 export async function getVocabEntriesByLesson(db: DataClient, lessonId: string): Promise<VocabEntry[]> {
-  return db.legacy.getAllFromIndex('vocabulary', 'by-lesson', lessonId)
+  return storeList<VocabEntry>(db, 'vocabulary', 'by-lesson', lessonId)
 }
 
 export async function deleteVocabEntry(db: DataClient, id: string): Promise<void> {
-  await db.legacy.delete('vocabulary', id)
+  await db.api.del(storePath('vocabulary', id))
 }
 
 // Vocabulary by ID (needed for SM-2 review sessions)
 export async function getVocabEntryById(db: DataClient, id: string): Promise<VocabEntry | undefined> {
-  return db.legacy.get('vocabulary', id)
+  return db.api.get<VocabEntry>(storePath('vocabulary', id))
 }
 
 // Spaced Repetition
-export async function getSpacedRepetitionItem(db: DataClient, itemId: string) {
-  return db.legacy.get('spaced-repetition', itemId)
+export async function getSpacedRepetitionItem(db: DataClient, itemId: string): Promise<SpacedRepetitionItem | undefined> {
+  return db.api.get<SpacedRepetitionItem>(storePath('spaced-repetition', itemId))
 }
 export async function saveSpacedRepetitionItem(db: DataClient, item: SpacedRepetitionItem) {
-  await db.legacy.put('spaced-repetition', item)
+  await db.api.put(storePath('spaced-repetition', item.itemId), item)
 }
 export async function deleteSpacedRepetitionItem(db: DataClient, itemId: string) {
-  await db.legacy.delete('spaced-repetition', itemId)
+  await db.api.del(storePath('spaced-repetition', itemId))
 }
 export async function getDueItems(db: DataClient, today: string): Promise<SpacedRepetitionItem[]> {
-  return db.legacy.getAllFromIndex('spaced-repetition', 'by-due', IDBKeyRange.upperBound(today))
+  return storeList<SpacedRepetitionItem>(db, 'spaced-repetition', 'by-due', today, 'lte')
 }
 
 // Progress Stats
-export async function getProgressStats(db: DataClient) {
-  return db.legacy.get('progress-db', 'global')
+export async function getProgressStats(db: DataClient): Promise<ProgressStats | undefined> {
+  return db.api.get<ProgressStats>(storePath('progress-db', 'global'))
 }
 export async function saveProgressStats(db: DataClient, stats: ProgressStats) {
-  await db.legacy.put('progress-db', stats, 'global')
+  await db.api.put(storePath('progress-db', 'global'), stats)
 }
 
 // Mastery
-export async function getMasteryData(db: DataClient) {
-  return db.legacy.get('mastery-db', 'global')
+export async function getMasteryData(db: DataClient): Promise<MasteryData | undefined> {
+  return db.api.get<MasteryData>(storePath('mastery-db', 'global'))
 }
 export async function saveMasteryData(db: DataClient, data: MasteryData) {
-  await db.legacy.put('mastery-db', data, 'global')
+  await db.api.put(storePath('mastery-db', 'global'), data)
 }
 
 // Mistakes
-export async function getErrorPattern(db: DataClient, patternId: string) {
-  return db.legacy.get('mistakes-db', patternId)
+export async function getErrorPattern(db: DataClient, patternId: string): Promise<ErrorPattern | undefined> {
+  return db.api.get<ErrorPattern>(storePath('mistakes-db', patternId))
 }
 export async function deleteErrorPattern(db: DataClient, patternId: string) {
-  await db.legacy.delete('mistakes-db', patternId)
+  await db.api.del(storePath('mistakes-db', patternId))
 }
 export async function saveErrorPattern(db: DataClient, pattern: ErrorPattern) {
-  await db.legacy.put('mistakes-db', pattern)
+  await db.api.put(storePath('mistakes-db', pattern.patternId), pattern)
 }
 export async function getRecentMistakes(db: DataClient, limit = 20): Promise<ErrorPattern[]> {
-  const all = await db.legacy.getAll('mistakes-db')
+  const all = await storeList<ErrorPattern>(db, 'mistakes-db')
   return all.sort((a, b) => b.lastOccurred.localeCompare(a.lastOccurred)).slice(0, limit)
 }
 
 // Session Logs
 export async function saveSessionLog(db: DataClient, log: SessionLog) {
-  await db.legacy.put('session-logs', log)
+  await db.api.put(storePath('session-logs', log.sessionId), log)
 }
 
 export async function getAllSessionLogs(db: DataClient): Promise<SessionLog[]> {
-  return db.legacy.getAll('session-logs')
+  return storeList<SessionLog>(db, 'session-logs')
 }
 
 // Learner Profile
 export async function getLearnerProfile(db: DataClient): Promise<LearnerProfile | undefined> {
-  return db.legacy.get('learner-profile', 'profile')
+  return db.api.get<LearnerProfile>(storePath('learner-profile', 'profile'))
 }
 
 export async function saveLearnerProfile(db: DataClient, profile: LearnerProfile): Promise<void> {
-  await db.legacy.put('learner-profile', profile, 'profile')
+  await db.api.put(storePath('learner-profile', 'profile'), profile)
 }
 
 // Agent Memory
 export async function saveAgentMemory(db: DataClient, memory: AgentMemory): Promise<void> {
-  await db.legacy.put('agent-memory', memory)
+  await db.api.put(storePath('agent-memory', memory.id), memory)
 }
 
 export async function getAgentMemory(db: DataClient, id: string): Promise<AgentMemory | undefined> {
-  return db.legacy.get('agent-memory', id)
+  return db.api.get<AgentMemory>(storePath('agent-memory', id))
 }
 
 export async function getAllAgentMemories(db: DataClient): Promise<AgentMemory[]> {
-  return db.legacy.getAll('agent-memory')
+  return storeList<AgentMemory>(db, 'agent-memory')
 }
 
 export async function getAgentMemoriesByTag(db: DataClient, tag: string): Promise<AgentMemory[]> {
-  return db.legacy.getAllFromIndex('agent-memory', 'tags', tag)
+  return storeList<AgentMemory>(db, 'agent-memory', 'tags', tag)
 }
 
 export async function deleteAgentMemory(db: DataClient, id: string): Promise<void> {
-  await db.legacy.delete('agent-memory', id)
+  await db.api.del(storePath('agent-memory', id))
 }
 
-// Exercise Stats
+// Exercise Stats, keyed `<vocabId>:<exerciseType>`
+
+export interface ExerciseStatRecord extends ExerciseStat {
+  vocabId: string
+  exerciseType: string
+}
+
+export async function getAllExerciseStats(db: DataClient): Promise<ExerciseStatRecord[]> {
+  return storeList<ExerciseStatRecord>(db, 'exercise-stats')
+}
 
 export async function upsertExerciseStat(
   db: DataClient,
   key: string,
   correct: boolean,
 ): Promise<void> {
-  const existing = await db.legacy.get('exercise-stats', key)
-  const today = new Date().toISOString().split('T')[0]
-  if (existing) {
-    await db.legacy.put('exercise-stats', {
-      correct: existing.correct + (correct ? 1 : 0),
-      total: existing.total + 1,
-      lastAttempt: today,
-    }, key)
+  const colonIdx = key.lastIndexOf(':')
+  const existing = await db.api.get<ExerciseStatRecord>(storePath('exercise-stats', key))
+  const stat: ExerciseStatRecord = {
+    vocabId: key.slice(0, colonIdx),
+    exerciseType: key.slice(colonIdx + 1),
+    correct: (existing?.correct ?? 0) + (correct ? 1 : 0),
+    total: (existing?.total ?? 0) + 1,
+    lastAttempt: new Date().toISOString().split('T')[0],
   }
-  else {
-    await db.legacy.put('exercise-stats', {
-      correct: correct ? 1 : 0,
-      total: 1,
-      lastAttempt: today,
-    }, key)
-  }
+  await db.api.put(storePath('exercise-stats', key), stat)
 }
 
 export async function getExerciseAccuracy(
   db: DataClient,
 ): Promise<Record<string, { accuracy: number, attempts: number }>> {
-  const all = await db.legacy.getAll('exercise-stats')
-  const keys = await db.legacy.getAllKeys('exercise-stats')
   const byType: Record<string, { correct: number, total: number }> = {}
-
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i] as string
-    const colonIdx = key.lastIndexOf(':')
-    if (colonIdx === -1)
-      continue
-    const exerciseType = key.slice(colonIdx + 1)
-    const stat = all[i]
-    if (!byType[exerciseType])
-      byType[exerciseType] = { correct: 0, total: 0 }
-    byType[exerciseType].correct += stat.correct
-    byType[exerciseType].total += stat.total
+  for (const stat of await getAllExerciseStats(db)) {
+    byType[stat.exerciseType] ??= { correct: 0, total: 0 }
+    byType[stat.exerciseType].correct += stat.correct
+    byType[stat.exerciseType].total += stat.total
   }
 
   const result: Record<string, { accuracy: number, attempts: number }> = {}
@@ -438,192 +407,149 @@ export async function getExerciseAccuracy(
   return result
 }
 
-// Agent Logs
+// User-owned word-breakdown stories, which take precedence over the shared catalog story.
 
-export async function appendAgentLog(
-  db: DataClient,
-  log: Omit<AgentLog, 'id'>,
-): Promise<void> {
-  await db.legacy.add('agent-logs', log as AgentLog)
+export interface WordStory {
+  word: string
+  story: string
+  updatedAt: string
 }
 
-export async function saveBreakdown(
-  db: DataClient,
-  entry: import('@/shared/types').WordBreakdown,
-): Promise<void> {
-  await db.legacy.put('word-breakdowns', entry)
+export async function getWordStory(db: DataClient, word: string): Promise<WordStory | undefined> {
+  return db.api.get<WordStory>(storePath('word-stories', word))
 }
 
-export async function getBreakdown(
-  db: DataClient,
-  word: string,
-): Promise<import('@/shared/types').WordBreakdown | undefined> {
-  return db.legacy.get('word-breakdowns', word)
+export async function saveWordStory(db: DataClient, word: string, story: string): Promise<void> {
+  const record: WordStory = { word, story, updatedAt: new Date().toISOString() }
+  await db.api.put(storePath('word-stories', word), record)
 }
 
-export async function deleteBreakdown(db: DataClient, word: string): Promise<void> {
-  await db.legacy.delete('word-breakdowns', word)
+export async function deleteWordStory(db: DataClient, word: string): Promise<void> {
+  await db.api.del(storePath('word-stories', word))
 }
 
 // Shadowing personal bests
 
+function segmentKey(lessonId: string, segmentId: string): string {
+  return `${lessonId}:${segmentId}`
+}
+
+function shadowingAudioPath(lessonId: string, segmentId: string): string {
+  return `${lessonPath(lessonId)}/segments/${encodeURIComponent(segmentId)}/shadowing-audio`
+}
+
 export async function getSpeakingBest(db: DataClient, lessonId: string, segmentId: string): Promise<ShadowingBest | undefined> {
-  return db.legacy.get('shadowing-bests', [lessonId, segmentId])
+  return db.api.get<ShadowingBest>(storePath('shadowing-bests', segmentKey(lessonId, segmentId)))
 }
 
 export async function saveSpeakingBest(db: DataClient, best: ShadowingBest): Promise<void> {
-  await db.legacy.put('shadowing-bests', best)
+  await db.api.put(storePath('shadowing-bests', segmentKey(best.lessonId, best.segmentId)), best)
 }
 
 export async function getAllSpeakingBestsByLesson(db: DataClient, lessonId: string): Promise<ShadowingBest[]> {
-  return db.legacy.getAllFromIndex('shadowing-bests', 'by-lesson', lessonId)
+  return storeList<ShadowingBest>(db, 'shadowing-bests', 'by-lesson', lessonId)
 }
 
 export async function deleteSpeakingBestsByLesson(db: DataClient, lessonId: string): Promise<void> {
-  const all = await getAllSpeakingBestsByLesson(db, lessonId)
-  await Promise.all(all.map(b => db.legacy.delete('shadowing-bests', [b.lessonId, b.segmentId])))
+  await deleteByIndex(db, 'shadowing-bests', 'by-lesson', lessonId)
 }
 
 export async function getSpeakingAudio(db: DataClient, lessonId: string, segmentId: string): Promise<Blob | undefined> {
-  const record = await db.legacy.get('shadowing-audio', [lessonId, segmentId])
-  return record?.blob
+  const res = await db.api.fetch(shadowingAudioPath(lessonId, segmentId))
+  if (res.status === 404)
+    return undefined
+  if (!res.ok)
+    throw await responseError(res, `Loading recording failed: ${res.status}`)
+  return res.blob()
 }
 
 export async function saveSpeakingAudio(db: DataClient, lessonId: string, segmentId: string, blob: Blob): Promise<void> {
-  await db.legacy.put('shadowing-audio', { lessonId, segmentId, blob })
-}
-
-export async function deleteSpeakingAudioByLesson(db: DataClient, lessonId: string): Promise<void> {
-  const all = await db.legacy.getAllFromIndex('shadowing-audio', 'by-lesson', lessonId)
-  await Promise.all(all.map(a => db.legacy.delete('shadowing-audio', [a.lessonId, a.segmentId])))
+  const res = await db.api.fetch(shadowingAudioPath(lessonId, segmentId), {
+    method: 'PUT',
+    headers: { 'Content-Type': blob.type || 'audio/webm' },
+    body: blob,
+  })
+  if (!res.ok)
+    throw await responseError(res, `Saving recording failed: ${res.status}`)
 }
 
 // Daily Tasks
 
 export async function getDailyTasks(db: DataClient): Promise<DailyTask[]> {
-  return db.legacy.getAll('daily-tasks')
+  return storeList<DailyTask>(db, 'daily-tasks')
 }
 
 export async function saveDailyTask(db: DataClient, task: DailyTask): Promise<void> {
-  await db.legacy.put('daily-tasks', task)
+  await db.api.put(storePath('daily-tasks', task.id), task)
 }
 
 export async function deleteDailyTask(db: DataClient, id: string): Promise<void> {
-  await db.legacy.delete('daily-tasks', id)
+  await db.api.del(storePath('daily-tasks', id))
 }
 
 // Tips LMS accessors
 
-export async function putTipCourse(db: DataClient, course: TipCourse): Promise<void> {
-  await db.legacy.put('tip-courses', course)
-}
-
-export async function getTipCourse(db: DataClient, courseId: string): Promise<TipCourse | undefined> {
-  return db.legacy.get('tip-courses', courseId)
-}
-
 export async function putTipProgress(db: DataClient, progress: TipProgress): Promise<void> {
-  await db.legacy.put('tip-progress', progress)
+  await db.api.put(storePath('tip-progress', progress.key), progress)
 }
 
 export async function getTipProgress(db: DataClient, key: string): Promise<TipProgress | undefined> {
-  return db.legacy.get('tip-progress', key)
+  return db.api.get<TipProgress>(storePath('tip-progress', key))
 }
 
 export async function listTipProgressForCourse(db: DataClient, courseId: string): Promise<TipProgress[]> {
-  return db.legacy.getAllFromIndex('tip-progress', 'by-course', courseId)
+  return storeList<TipProgress>(db, 'tip-progress', 'by-course', courseId)
 }
 
 export async function getAllTipProgress(db: DataClient): Promise<TipProgress[]> {
-  return db.legacy.getAll('tip-progress')
-}
-
-export async function putTipTranscript(db: DataClient, record: TipTranscriptRecord): Promise<void> {
-  await db.legacy.put('tip-transcripts', record)
-}
-
-export async function getTipTranscript(db: DataClient, videoId: string): Promise<TipTranscriptRecord | undefined> {
-  return db.legacy.get('tip-transcripts', videoId)
-}
-
-export async function putTipChat(db: DataClient, chat: TipChatRecord): Promise<void> {
-  await db.legacy.put('tip-chats', chat)
-  await saveThreadMessages(db, chat.key, chat.messages, 'tip', chat.key, chat.courseId, chat.videoId)
-}
-
-export async function getTipChat(db: DataClient, key: string): Promise<TipChatRecord | undefined> {
-  const thread = await getThread(db, key)
-  if (thread && thread.surface === 'tip') {
-    return {
-      key: thread.id,
-      courseId: thread.courseId ?? '',
-      videoId: thread.videoId ?? '',
-      messages: thread.messages,
-      updatedAt: new Date(thread.updatedAt).toISOString(),
-    }
-  }
-  return db.legacy.get('tip-chats', key)
-}
-
-// Tips B2 — composite-key helpers and accessors for tip-studio + tip-cards.
-
-export function studioKey(videoId: string, kind: StudioKind, locale: StudioLocale): string {
-  return `${videoId}:${kind}:${locale}`
+  return storeList<TipProgress>(db, 'tip-progress')
 }
 
 export function cardsKey(videoId: string, locale: StudioLocale): string {
   return `${videoId}:${locale}`
 }
 
+export async function getTipCardStates(db: DataClient, videoId: string, locale: StudioLocale): Promise<TipCardStatesRecord | undefined> {
+  return db.api.get<TipCardStatesRecord>(storePath('tip-card-states', cardsKey(videoId, locale)))
+}
+
+export async function putTipCardStates(db: DataClient, record: TipCardStatesRecord): Promise<void> {
+  await db.api.put(storePath('tip-card-states', cardsKey(record.videoId, record.locale)), record)
+}
+
 export function chatKey(courseId: string, videoId: string): string {
   return `${courseId}:${videoId}`
 }
 
-export async function getTipStudio(db: DataClient, key: string): Promise<TipStudioRecord | undefined> {
-  return db.legacy.get('tip-studio', key)
-}
-
-export async function putTipStudio(db: DataClient, record: TipStudioRecord): Promise<void> {
-  await db.legacy.put('tip-studio', record)
-}
-
-export async function getTipCards(db: DataClient, key: string): Promise<TipCardsRecord | undefined> {
-  return db.legacy.get('tip-cards', key)
-}
-
-export async function putTipCards(db: DataClient, record: TipCardsRecord): Promise<void> {
-  await db.legacy.put('tip-cards', record)
-}
-
 export async function putTipNote(db: DataClient, note: TipNote): Promise<void> {
-  await db.legacy.put('tip-notes', note)
+  await db.api.put(storePath('tip-notes', `${note.videoId}:${note.id}`), note)
 }
 
 export async function getTipNotesForVideo(db: DataClient, videoId: string): Promise<TipNote[]> {
-  const rows = await db.legacy.getAllFromIndex('tip-notes', 'by-video', videoId)
+  const rows = await storeList<TipNote>(db, 'tip-notes', 'by-video', videoId)
   return rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
 export async function deleteTipNote(db: DataClient, videoId: string, id: string): Promise<void> {
-  await db.legacy.delete('tip-notes', [videoId, id])
+  await db.api.del(storePath('tip-notes', `${videoId}:${id}`))
 }
 
 // User-registered materials
 export async function listUserMaterials(db: DataClient): Promise<UserMaterial[]> {
-  return db.legacy.getAll('user-materials')
+  return storeList<UserMaterial>(db, 'user-materials')
 }
 
 export async function getUserMaterialByExternalId(
   db: DataClient,
   externalId: string,
 ): Promise<UserMaterial | undefined> {
-  return db.legacy.getFromIndex('user-materials', 'by-external', externalId)
+  return (await storeList<UserMaterial>(db, 'user-materials', 'by-external', externalId))[0]
 }
 
 export async function putUserMaterial(db: DataClient, m: UserMaterial): Promise<void> {
-  await db.legacy.put('user-materials', m)
+  await db.api.put(storePath('user-materials', m.id), m)
 }
 
 export async function deleteUserMaterial(db: DataClient, id: string): Promise<void> {
-  await db.legacy.delete('user-materials', id)
+  await db.api.del(storePath('user-materials', id))
 }

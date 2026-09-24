@@ -8,7 +8,6 @@ import type {
   StudioSummaryData,
 } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getTipStudio, putTipStudio, studioKey } from '@/db'
 import { apiFetch } from '@/shared/lib/api'
 
 type DataFor<K extends StudioKind>
@@ -33,10 +32,9 @@ interface Returns<K extends StudioKind> {
   data: DataFor<K> | null
   disabled: boolean
   /**
-   * False until the first IDB read settles. Lets callers render a
-   *  neutral skeleton during the brief async hydration window, instead
-   *  of flashing the wrong default branch (empty tile → filled tile)
-   *  before the cached data lands.
+   * False until the first backend probe settles. Lets callers render a
+   *  neutral skeleton during the probe, instead of flashing the wrong
+   *  default branch (empty tile → filled tile) before the data lands.
    */
   hydrated: boolean
   /**
@@ -82,13 +80,11 @@ type StatusBody<K extends StudioKind> = StatusReady<K> | StatusPending | StatusN
 /**
  * Studio artifact state machine.
  *
- * Backend is the source of truth for in-flight work. On mount we:
- *   1. Check IDB for a previously-cached final result.
- *   2. Otherwise probe ``GET /api/tips/studio/{kind}/{videoId}?locale=`` —
- *      a content-keyed lookup that returns either a completed result (rare
- *      after IDB miss but possible mid-prune), an in-flight ``jobId``, or
- *      ``none``. The probe is what makes reload-resume work without the
- *      client persisting any jobId.
+ * Backend is the source of truth. On mount we probe
+ * ``GET /api/tips/studio/{kind}/{videoId}?locale=`` — a content-keyed lookup
+ * that returns the catalog result, an in-flight ``jobId``, or ``none``. The
+ * probe is what makes reload-resume work without the client persisting any
+ * jobId.
  *
  * ``generate`` POSTs the trigger; the backend dedupes by the same content
  * key, so a second click during an in-flight run rejoins the existing job
@@ -104,7 +100,7 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
   const cancelledRef = useRef(false)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const cacheKey = studioKey(videoId, kind, locale)
+  const cacheKey = `${videoId}:${kind}:${locale}`
   const disabled = transcript.trim().length === 0
 
   const clearPoll = useCallback(() => {
@@ -113,19 +109,6 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       pollTimerRef.current = null
     }
   }, [])
-
-  const persistData = useCallback(async (value: DataFor<K>) => {
-    if (!db)
-      return
-    await putTipStudio(db, {
-      key: cacheKey,
-      kind,
-      videoId,
-      locale,
-      data: value,
-      generatedAt: new Date().toISOString(),
-    } as any)
-  }, [db, cacheKey, kind, videoId, locale])
 
   const pollJob = useCallback((jobId: string) => {
     const tick = async () => {
@@ -166,9 +149,6 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
         return
       }
       if (body.status === 'complete' && body.result?.data) {
-        await persistData(body.result.data)
-        if (cancelledRef.current)
-          return
         setData(body.result.data)
         setStatus('ready')
         return
@@ -179,7 +159,7 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
     // Schedule the first tick immediately rather than after an interval —
     // there's usually no value in waiting before the first poll.
     pollTimerRef.current = setTimeout(tick, 0)
-  }, [persistData])
+  }, [])
 
   // Reset state on key change (setState-during-render).
   // Resets hydrated on key change so a navigation between videos shows the
@@ -193,7 +173,7 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
     setHydrated(false)
   }
 
-  // Mount / key-change effect. Reads IDB cache → probes backend → drives state.
+  // Mount / key-change effect. Probes backend → drives state.
   useEffect(() => {
     cancelledRef.current = false
     clearPoll()
@@ -201,27 +181,10 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       return
 
     void (async () => {
-      const cached = await getTipStudio(db, cacheKey)
-      if (cancelledRef.current)
-        return
-      setHydrated(true)
-      if (cached) {
-        // Paint the IDB cache immediately so the tile doesn't flash empty,
-        // then fall through to the backend probe. The probe is an
-        // in-memory dict lookup on the backend (cheap), and skipping it
-        // hides in-flight regen jobs from cold remounts — e.g. a tab
-        // switch that fully unmounts StudioTab and brings up new hook
-        // instances. Without the probe, the new instance would show
-        // 'ready' over a still-running job and the user couldn't tell.
-        setData(cached.data as DataFor<K>)
-        setStatus('ready')
-      }
       // probeNonce is only here so refresh() can force a re-run; the
       // probe itself runs every mount.
       void probeNonce
 
-      // No final cache (or refreshing) — ask backend if anything is in
-      // flight or freshly completed.
       let res: Response
       try {
         res = await apiFetch(
@@ -231,10 +194,13 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       catch {
         // Network error during probe — leave state as idle. The user can
         // click Generate to retry; no inflight job is lost on the server.
+        if (!cancelledRef.current)
+          setHydrated(true)
         return
       }
       if (cancelledRef.current)
         return
+      setHydrated(true)
       if (res.status === 404)
         return // idle
 
@@ -242,9 +208,6 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       if (cancelledRef.current)
         return
       if (body.status === 'ready') {
-        await persistData(body.data)
-        if (cancelledRef.current)
-          return
         setData(body.data)
         setStatus('ready')
         return
@@ -259,7 +222,7 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       cancelledRef.current = true
       clearPoll()
     }
-  // persistData / pollJob / clearPoll are stable per key set; explicit deps
+  // pollJob / clearPoll are stable per key set; explicit deps
   // mirror the key inputs to keep behavior predictable across remounts.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db, cacheKey, probeNonce])
@@ -297,9 +260,6 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
     if (cancelledRef.current)
       return
     if (body.status === 'ready') {
-      await persistData(body.data)
-      if (cancelledRef.current)
-        return
       setData(body.data)
       setStatus('ready')
       return
@@ -309,7 +269,7 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       return
     }
     setStatus('error')
-  }, [db, kind, videoId, transcript, locale, disabled, status, persistData, pollJob, clearPoll])
+  }, [db, kind, videoId, transcript, locale, disabled, status, pollJob, clearPoll])
 
   return {
     status,

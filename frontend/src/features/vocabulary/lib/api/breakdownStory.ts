@@ -8,6 +8,8 @@ export interface BreakdownStoryRequest {
   meaning: string
   sinoVietnamese: string
   characters: CharData[]
+  /** Skip the shared catalog and ask the LLM for a new story. */
+  force?: boolean
 }
 
 export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<string> {
@@ -34,6 +36,7 @@ export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<s
         meaning: comp.meaning,
       })),
     })),
+    force: req.force ?? false,
   }
 
   let resp: Response

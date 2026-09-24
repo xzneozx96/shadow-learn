@@ -49,6 +49,21 @@ export interface SeedLesson {
   media?: { body: Buffer, contentType: string }
 }
 
+export interface SeedVocabEntry {
+  id: string
+  word: string
+  romanization: string
+  meaning: string
+  usage: string
+  sourceLessonId: string
+  sourceLessonTitle: string
+  sourceSegmentId: string
+  sourceSegmentText: string
+  sourceSegmentTranslation: string
+  sourceLanguage: string
+  createdAt: string
+}
+
 export interface PendingLesson {
   id: string
   title: string
@@ -108,6 +123,20 @@ export async function seedSettings(
 ): Promise<void> {
   const res = await request.put(`${API_URL}/api/store/settings/settings`, { headers: bearer(user), data: settings })
   expect(res.status(), await res.text()).toBe(200)
+}
+
+export async function seedVocabEntries(request: APIRequestContext, user: TestUser, entries: SeedVocabEntry[]): Promise<void> {
+  const res = await request.post(`${API_URL}/api/store/vocabulary/bulk`, {
+    headers: bearer(user),
+    data: { mode: 'replace', records: entries },
+  })
+  expect(res.status(), await res.text()).toBe(200)
+}
+
+export async function listVocabEntries(request: APIRequestContext, user: TestUser): Promise<SeedVocabEntry[]> {
+  const res = await request.get(`${API_URL}/api/store/vocabulary`, { headers: bearer(user) })
+  expect(res.status(), await res.text()).toBe(200)
+  return res.json()
 }
 
 export async function seedPendingLesson(page: Page, user: TestUser, lesson: PendingLesson): Promise<void> {

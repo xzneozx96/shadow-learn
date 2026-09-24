@@ -85,6 +85,9 @@ const defaultProps = {
 function mockVocabContext(overrides: Partial<ReturnType<typeof useVocabulary>> = {}): ReturnType<typeof useVocabulary> {
   return {
     entries: [],
+    status: 'ready',
+    error: null,
+    reload: vi.fn(),
     entriesByLesson: {},
     save: vi.fn(),
     remove: vi.fn(),

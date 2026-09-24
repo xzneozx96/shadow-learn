@@ -3,9 +3,9 @@
  * Uses fake-indexeddb.
  */
 
-import type { ShadowLearnDB } from '@/db'
+import type { ShadowLearnDB } from '@/db/legacy'
 import { afterEach, describe, expect, it } from 'vitest'
-import { initDB } from '@/db'
+import { initDB } from '@/db/legacy'
 import 'fake-indexeddb/auto'
 
 let db: ShadowLearnDB

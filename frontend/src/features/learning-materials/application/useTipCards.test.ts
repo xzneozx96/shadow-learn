@@ -1,41 +1,48 @@
 import type { DataClient } from '@/db'
+import type { TipCardStatesRecord } from '@/features/learning-materials/domain/tips'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cardsKey, initDB, putTipCards } from '@/db'
 import { useTipCards } from '@/features/learning-materials/application/useTipCards'
-import { fakeDataClient } from '../../../../tests/fake-api'
-import 'fake-indexeddb/auto'
+import { FakeApiClient, fakeDataClient } from '../../../../tests/fake-api'
 
+let api: FakeApiClient
 let db: DataClient
 
-beforeEach(async () => {
-  const { deleteDB } = await import('idb')
-  await deleteDB('shadowlearn')
-  db = fakeDataClient(await initDB())
-  // Default probe response: backend has no live job. Tests that exercise
-  // the regen path override this with a more specific mockResolvedValue.
-  globalThis.fetch = vi.fn().mockResolvedValue({
-    ok: false,
-    status: 404,
-    json: async () => ({ status: 'none' }),
-  }) as any
+function jsonResponse(status: number, body: unknown): Response {
+  return { ok: status >= 200 && status < 300, status, json: async () => body } as Response
+}
+
+function deck(...fronts: string[]) {
+  return { status: 'ready', jobId: 'jc', data: { cards: fronts.map(front => ({ id: front, front, rule: 'r', example: 'e', trap: null })) } }
+}
+
+function serveDeck(...fronts: string[]) {
+  vi.mocked(globalThis.fetch).mockResolvedValue(jsonResponse(200, deck(...fronts)))
+}
+
+beforeEach(() => {
+  api = new FakeApiClient()
+  db = fakeDataClient(api)
+  // Default probe response: backend has no deck and no live job.
+  globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse(404, { status: 'none' })) as any
 })
 
 afterEach(() => {
-  db?.legacy.close()
   vi.restoreAllMocks()
 })
 
 describe('useTipCards', () => {
-  it('starts with empty deck and index 0', () => {
+  it('starts with empty deck and index 0', async () => {
     const { result } = renderHook(() => useTipCards({ db, videoId: 'v1', transcript: 'x', locale: 'en' }))
     expect(result.current.cards).toEqual([])
     expect(result.current.index).toBe(0)
     expect(result.current.flipped).toBe(false)
+    await waitFor(() => expect(result.current.hydrated).toBe(true))
   })
 
-  it('flip() toggles the flipped state', () => {
+  it('flip() toggles the flipped state', async () => {
     const { result } = renderHook(() => useTipCards({ db, videoId: 'v1', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(result.current.hydrated).toBe(true))
     act(() => { result.current.flip() })
     expect(result.current.flipped).toBe(true)
     act(() => { result.current.flip() })
@@ -43,16 +50,7 @@ describe('useTipCards', () => {
   })
 
   it('next() advances and resets flip', async () => {
-    await putTipCards(db, {
-      key: cardsKey('v1', 'en'),
-      videoId: 'v1',
-      locale: 'en',
-      cards: [
-        { id: 'a', front: 'q1', rule: 'r1', example: 'e1', trap: null, state: 'new', updatedAt: '' },
-        { id: 'b', front: 'q2', rule: 'r2', example: 'e2', trap: null, state: 'new', updatedAt: '' },
-      ],
-      generatedAt: '',
-    })
+    serveDeck('q1', 'q2')
     const { result } = renderHook(() => useTipCards({ db, videoId: 'v1', transcript: 'x', locale: 'en' }))
     await waitFor(() => expect(result.current.cards.length).toBe(2))
 
@@ -62,59 +60,67 @@ describe('useTipCards', () => {
     expect(result.current.flipped).toBe(false)
   })
 
-  it('markKnown() persists state and advances', async () => {
-    await putTipCards(db, {
-      key: cardsKey('v2', 'en'),
-      videoId: 'v2',
+  it('applies the saved known/learning marks to the server deck', async () => {
+    api.seedStore('tip-card-states', [{
+      videoId: 'v1',
       locale: 'en',
-      cards: [{ id: 'a', front: 'q', rule: 'r', example: 'e', trap: null, state: 'new', updatedAt: '' }],
-      generatedAt: '',
-    })
-    const { result } = renderHook(() => useTipCards({ db, videoId: 'v2', transcript: 'x', locale: 'en' }))
-    await waitFor(() => expect(result.current.cards.length).toBe(1))
+      states: { q2: { state: 'learning', updatedAt: '2026-09-01T00:00:00.000Z' } },
+    }])
+    serveDeck('q1', 'q2')
 
-    await act(async () => { await result.current.markKnown() })
-    const stored = await db.legacy.get('tip-cards', cardsKey('v2', 'en'))
-    expect(stored?.cards[0].state).toBe('known')
+    const { result } = renderHook(() => useTipCards({ db, videoId: 'v1', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(result.current.cards.length).toBe(2))
+
+    expect(result.current.cards.map(c => c.state)).toEqual(['new', 'learning'])
   })
 
-  it('regen replaces deck but preserves state for cards with matching front-question', async () => {
-    await putTipCards(db, {
-      key: cardsKey('v3', 'en'),
+  it('markKnown() stores the mark by card front and advances', async () => {
+    serveDeck('q1', 'q2')
+    const { result } = renderHook(() => useTipCards({ db, videoId: 'v2', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(result.current.cards.length).toBe(2))
+
+    await act(async () => { await result.current.markKnown() })
+
+    expect(result.current.index).toBe(1)
+    expect(result.current.cards[0].state).toBe('known')
+    const [stored] = api.storeRows<TipCardStatesRecord>('tip-card-states')
+    expect(stored.videoId).toBe('v2')
+    expect(stored.locale).toBe('en')
+    expect(stored.states.q1.state).toBe('known')
+    expect(Object.keys(stored.states)).toEqual(['q1'])
+  })
+
+  it('regen replaces the deck but keeps marks for cards with a matching front', async () => {
+    api.seedStore('tip-card-states', [{
       videoId: 'v3',
       locale: 'en',
-      cards: [
-        { id: 'old1', front: 'Q1', rule: 'r', example: 'e', trap: null, state: 'known', updatedAt: '' },
-        { id: 'old2', front: 'Q2', rule: 'r', example: 'e', trap: null, state: 'learning', updatedAt: '' },
-      ],
-      generatedAt: '',
-    });
-    // POST returns the artifact synchronously as a ready envelope. The
-    // probe call on mount is short-circuited by the IDB cache hit above.
-    (globalThis.fetch as any).mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        status: 'ready',
-        jobId: 'jc',
-        data: {
-          cards: [
-            { id: 'new1', front: 'Q1', rule: 'r2', example: 'e2', trap: null },
-            { id: 'new3', front: 'Q3', rule: 'r3', example: 'e3', trap: null },
-          ],
-        },
-      }),
-    })
+      states: {
+        Q1: { state: 'known', updatedAt: '2026-09-01T00:00:00.000Z' },
+        Q2: { state: 'learning', updatedAt: '2026-09-01T00:00:00.000Z' },
+      },
+    }])
+    serveDeck('Q1', 'Q2')
 
     const { result } = renderHook(() => useTipCards({ db, videoId: 'v3', transcript: 'x', locale: 'en' }))
     await waitFor(() => expect(result.current.cards.length).toBe(2))
+
+    serveDeck('Q1', 'Q3')
     await act(async () => { await result.current.regenerate() })
 
-    const stored = await db.legacy.get('tip-cards', cardsKey('v3', 'en'))
-    expect(stored?.cards).toHaveLength(2)
-    const q1 = stored!.cards.find(c => c.front === 'Q1')!
-    expect(q1.state).toBe('known') // preserved
-    const q3 = stored!.cards.find(c => c.front === 'Q3')!
-    expect(q3.state).toBe('new') // brand new
+    expect(result.current.cards.map(c => [c.front, c.state])).toEqual([['Q1', 'known'], ['Q3', 'new']])
+  })
+
+  it('keeps marks per locale', async () => {
+    api.seedStore('tip-card-states', [{
+      videoId: 'v4',
+      locale: 'vi',
+      states: { q1: { state: 'known', updatedAt: '2026-09-01T00:00:00.000Z' } },
+    }])
+    serveDeck('q1')
+
+    const { result } = renderHook(() => useTipCards({ db, videoId: 'v4', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(result.current.cards.length).toBe(1))
+
+    expect(result.current.cards[0].state).toBe('new')
   })
 })

@@ -1,25 +1,18 @@
-import type { DataClient } from '@/db'
-/**
- * Tests for agent-memory.ts — saveMemory, recallMemory, getMemorySummary
- * Uses fake-indexeddb for IDB testing.
- */
-
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { initDB } from '@/db'
+import type { AgentMemory, DataClient } from '@/db'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { getMemorySummary, recallMemory, removeMemory, saveMemory } from '@/features/agent/lib/agent-memory'
-import { fakeDataClient } from '../../../../tests/fake-api'
-import 'fake-indexeddb/auto'
+import { FakeApiClient, fakeDataClient } from '../../../../tests/fake-api'
 
+let api: FakeApiClient
 let db: DataClient
 
-beforeEach(async () => {
-  db = fakeDataClient(await initDB())
-})
+function stored(id: string): Promise<AgentMemory | undefined> {
+  return api.get<AgentMemory>(`/api/store/agent-memory/${id}`)
+}
 
-afterEach(() => {
-  db.legacy.close()
-  // Reset IDB between tests
-  globalThis.indexedDB = new IDBFactory()
+beforeEach(() => {
+  api = new FakeApiClient()
+  db = fakeDataClient(api)
 })
 
 describe('saveMemory', () => {
@@ -40,12 +33,12 @@ describe('saveMemory', () => {
       importance: 1,
       lessonId: 'lesson-1',
     })
-    const stored = await db.legacy.get('agent-memory', id)
-    expect(stored).toBeDefined()
-    expect(stored!.content).toBe('Loves cooking vocabulary')
-    expect(stored!.tags).toEqual(['vocab', 'cooking'])
-    expect(stored!.importance).toBe(1)
-    expect(stored!.lessonId).toBe('lesson-1')
+    const memory = await stored(id)
+    expect(memory).toBeDefined()
+    expect(memory!.content).toBe('Loves cooking vocabulary')
+    expect(memory!.tags).toEqual(['vocab', 'cooking'])
+    expect(memory!.importance).toBe(1)
+    expect(memory!.lessonId).toBe('lesson-1')
   })
 })
 
@@ -114,8 +107,8 @@ describe('getMemorySummary', () => {
 describe('removeMemory', () => {
   it('deletes a memory by id', async () => {
     const { id } = await saveMemory(db, { content: 'temp', tags: [], importance: 1 })
-    expect(await db.legacy.get('agent-memory', id)).toBeDefined()
+    expect(await stored(id)).toBeDefined()
     await removeMemory(db, id)
-    expect(await db.legacy.get('agent-memory', id)).toBeUndefined()
+    expect(await stored(id)).toBeUndefined()
   })
 })

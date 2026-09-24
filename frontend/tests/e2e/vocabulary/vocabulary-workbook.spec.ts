@@ -3,29 +3,19 @@
  *
  * E2E tests for the vocabulary / workbook feature.
  *
- * Auth strategy: `page.addInitScript()` sets `sessionStorage.shadowlearn_trial = 'trial'`
- * before every page load, bypassing the PIN gate and entering trial mode.
- * After every `page.reload()` the script re-runs automatically (addInitScript persists
- * for the lifetime of the page object).
+ * Auth strategy: each test signs up a fresh account through api-helpers.ts, so
+ * no cleanup is needed between tests.
  *
- * Lesson setup: tests that navigate to a lesson page seed a minimal LessonMeta +
- * Segment record into IDB before the first navigation. This is infrastructure data
+ * Lesson setup: tests that navigate to a lesson page seed a minimal lesson and its
+ * segments over the API before the first navigation. This is infrastructure data
  * required to render the page — it is NOT vocabulary data, so it does not violate the
- * "no programmatic seeding for setup" rule.
- *
- * IDB helpers: imported from ../support/idb-helpers.ts. All helpers call page.evaluate()
- * and therefore run inside the browser context.
+ * "no programmatic seeding for setup" rule. Assertions read the vocabulary store
+ * back through `GET /api/store/vocabulary`.
  */
 
-import type { SeedSegment, TestUser } from '../support/api-helpers'
-import type { IDBVocabEntry } from '../support/idb-helpers'
+import type { SeedSegment, SeedVocabEntry, TestUser } from '../support/api-helpers'
 import { expect, test } from '@playwright/test'
-import { seedLesson, seedSettings, signUpAndLogin } from '../support/api-helpers'
-import {
-  clearVocabStore,
-  getAllVocabEntries,
-  seedVocabEntries,
-} from '../support/idb-helpers'
+import { API_URL, listVocabEntries, seedLesson, seedSettings, seedVocabEntries, signUpAndLogin } from '../support/api-helpers'
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
@@ -79,7 +69,7 @@ async function switchToWorkbookTab(page: import('@playwright/test').Page) {
 /**
  * Helper: after a page reload, switch to the Workbook tab and wait for the
  * expected word count to appear. This ensures VocabularyContext has finished
- * loading entries from IDB before the caller interacts with the popup.
+ * loading entries from the server before the caller interacts with the popup.
  */
 async function waitForVocabLoaded(page: import('@playwright/test').Page, expectedCount: number) {
   await switchToWorkbookTab(page)
@@ -109,26 +99,9 @@ async function saveWordViaUI(page: import('@playwright/test').Page) {
   await expect(page.getByTitle('Remove from Workbook')).toBeVisible({ timeout: 5_000 })
 }
 
-// ── afterEach cleanup ─────────────────────────────────────────────────────────
-
-test.afterEach(async ({ page }) => {
-  // Ensure we're on the app's origin before accessing IDB.
-  // If a test failed before its first navigation the page is still on about:blank.
-  try {
-    if (!page.url().startsWith('http://localhost')) {
-      await page.goto('/')
-      await expect(page.locator('main').first()).toBeVisible({ timeout: 5_000 })
-    }
-    await clearVocabStore(page)
-  }
-  catch {
-    // Swallow cleanup errors — they must not mask the actual test failure.
-  }
-})
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-test('VOC.SAVE-E2E-001 @p0 @smoke — save-word-happy-path: clicking Save to Workbook persists entry in IDB and increments panel count', async ({ page }) => {
+test('VOC.SAVE-E2E-001 @p0 @smoke — save-word-happy-path: clicking Save to Workbook persists entry on the server and increments panel count', async ({ page }) => {
   await signIn(page)
   await goToLesson(page)
 
@@ -143,8 +116,8 @@ test('VOC.SAVE-E2E-001 @p0 @smoke — save-word-happy-path: clicking Save to Wor
   // After saving: count increments to 1 (workbook tab is still active)
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // Assert IDB has exactly 1 entry
-  const entries = await getAllVocabEntries(page)
+  // Assert the server has exactly 1 entry
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(1)
   expect(entries[0].word).toBe('你好')
   expect(entries[0].sourceLessonId).toBe(LESSON_ID)
@@ -161,7 +134,7 @@ test('VOC.SAVED-E2E-002 @p1 @regression — already-saved-shows-filled-bookmark:
   await expect(page.getByText('你好').first()).toBeVisible({ timeout: 10_000 })
 
   // Switch to workbook tab and wait for "1 word saved" — this confirms VocabularyContext
-  // has finished loading entries from IDB before we open the popup.
+  // has finished loading entries from the server before we open the popup.
   await waitForVocabLoaded(page, 1)
 
   // Open popup for the same word — VocabularyContext has loaded, isSaved returns true
@@ -188,7 +161,7 @@ test('VOC.STUDY-E2E-003 @p1 @regression — study-button-navigates-to-session: S
   await expect(page).toHaveURL(new RegExp(`/vocabulary/${LESSON_ID}/study`))
 })
 
-test('VOC.REMOVE-E2E-004 @p0 @smoke — remove-word-with-confirmation: X button opens dialog; confirming removes word from UI and IDB', async ({ page }) => {
+test('VOC.REMOVE-E2E-004 @p0 @smoke — remove-word-with-confirmation: X button opens dialog; confirming removes word from UI and the server', async ({ page }) => {
   await signIn(page)
   await goToLesson(page)
 
@@ -216,12 +189,12 @@ test('VOC.REMOVE-E2E-004 @p0 @smoke — remove-word-with-confirmation: X button 
   // Word card disappears; panel shows 0 words
   await expect(page.getByText(/0\s+words?\s+saved/i)).toBeVisible()
 
-  // IDB is now empty
-  const entries = await getAllVocabEntries(page)
+  // The server store is now empty
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
 
-test('VOC.CANCEL-E2E-005 @p1 @regression — cancel-remove-leaves-word-intact: cancelling the remove dialog keeps entry in panel and IDB', async ({ page }) => {
+test('VOC.CANCEL-E2E-005 @p1 @regression — cancel-remove-leaves-word-intact: cancelling the remove dialog keeps entry in panel and on the server', async ({ page }) => {
   await signIn(page)
   await goToLesson(page)
 
@@ -245,12 +218,12 @@ test('VOC.CANCEL-E2E-005 @p1 @regression — cancel-remove-leaves-word-intact: c
   // Dialog dismissed; word still shows
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // IDB still has 1 entry
-  const entries = await getAllVocabEntries(page)
+  // The server still has 1 entry
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(1)
 })
 
-test('VOC.TOGGLE-E2E-006 @p1 @regression — toggle-bookmark-removes-word: clicking the filled bookmark in the popup calls remove directly and empties IDB', async ({ page }) => {
+test('VOC.TOGGLE-E2E-006 @p1 @regression — toggle-bookmark-removes-word: clicking the filled bookmark in the popup calls remove directly and empties the store', async ({ page }) => {
   await signIn(page)
   await goToLesson(page)
 
@@ -273,8 +246,8 @@ test('VOC.TOGGLE-E2E-006 @p1 @regression — toggle-bookmark-removes-word: click
   // Wait for removal to complete — popup changes back to "Save to Workbook"
   await expect(page.getByRole('button', { name: /save to workbook/i })).toBeVisible({ timeout: 5_000 })
 
-  // IDB should now be empty
-  const entries = await getAllVocabEntries(page)
+  // The server store should now be empty
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
 
@@ -291,7 +264,7 @@ test('VOC.DISABLED-E2E-007 @p1 @regression — study-button-disabled-zero-words:
   await expect(studyBtn).toBeDisabled()
 })
 
-test('VOC.DELGRP-E2E-008 @p1 @regression — delete-lesson-group-from-workbook: trash button on workbook page removes entire lesson group and clears IDB', async ({ page }) => {
+test('VOC.DELGRP-E2E-008 @p1 @regression — delete-lesson-group-from-workbook: trash button on workbook page removes entire lesson group and clears the store', async ({ page }) => {
   await signIn(page)
   await goToLesson(page)
 
@@ -319,8 +292,8 @@ test('VOC.DELGRP-E2E-008 @p1 @regression — delete-lesson-group-from-workbook: 
   // Lesson group disappears
   await expect(page.getByRole('button', { name: /^study$/i })).not.toBeVisible()
 
-  // IDB is empty
-  const entries = await getAllVocabEntries(page)
+  // The server store is empty
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
 
@@ -359,8 +332,8 @@ test('VOC.RMREL-E2E-010 @p1 @regression — remove-durable-across-reload: remove
   // Wait for removal to complete — popup changes back to "Save to Workbook"
   await expect(page.getByRole('button', { name: /save to workbook/i })).toBeVisible({ timeout: 5_000 })
 
-  // Verify IDB is empty before reload
-  const entriesBefore = await getAllVocabEntries(page)
+  // Verify the server store is empty before reload
+  const entriesBefore = await listVocabEntries(page.request, user)
   expect(entriesBefore).toHaveLength(0)
 
   // Reload
@@ -380,12 +353,7 @@ test('VOC.PERF-E2E-011 @p2 @regression — workbook-renders-fast-500-entries: /v
   for (let i = 0; i < 10; i++)
     lessonIds.push(await seedLesson(page.request, user, { title: `Perf Lesson ${i}`, source: 'youtube', duration: 1 }))
 
-  // Navigate first so the app opens IDB and creates the schema, then seed data.
-  // This also ensures IDB is accessible (requires an origin page, not about:blank).
-  await page.goto('/')
-  await expect(page.locator('main').first()).toBeVisible({ timeout: 10_000 })
-
-  const entries: IDBVocabEntry[] = []
+  const entries: SeedVocabEntry[] = []
 
   for (let i = 0; i < 500; i++) {
     const lessonId = lessonIds[i % 10]
@@ -405,7 +373,7 @@ test('VOC.PERF-E2E-011 @p2 @regression — workbook-renders-fast-500-entries: /v
     })
   }
 
-  await seedVocabEntries(page, entries)
+  await seedVocabEntries(page.request, user, entries)
 
   // Measure time from navigation to workbook content visible.
   // We wait for the word-count stat line ("500 words") rather than a button
@@ -418,26 +386,15 @@ test('VOC.PERF-E2E-011 @p2 @regression — workbook-renders-fast-500-entries: /v
   const elapsed = Date.now() - t0
 
   expect(elapsed).toBeLessThan(2_000)
-
-  await clearVocabStore(page)
 })
 
-test('VOC.ERRTOAST-E2E-012 @p2 @regression — AC-005: error toast when IDB write fails during save', async ({ page }) => {
+test('VOC.ERRTOAST-E2E-012 @p2 @regression — AC-005: error toast when the vocabulary write fails during save', async ({ page }) => {
   await signIn(page)
   await goToLesson(page)
 
-  // Monkey-patch IDBObjectStore.prototype.put so vocabulary writes throw synchronously.
-  // This simulates a database write failure (IDB unavailable / quota exceeded / etc.).
-  // The patch is scoped to the vocabulary store only so infrastructure stores are unaffected.
-  await page.evaluate(() => {
-    const origPut = IDBObjectStore.prototype.put
-    IDBObjectStore.prototype.put = function (value, key) {
-      if (this.name === 'vocabulary') {
-        throw new DOMException('Simulated IDB write failure', 'UnknownError')
-      }
-      return origPut.call(this, value, key)
-    }
-  })
+  // Fail vocabulary writes on the server; other stores are unaffected.
+  await page.route(`${API_URL}/api/store/vocabulary/*`, route =>
+    route.request().method() === 'PUT' ? route.fulfill({ status: 500, json: { detail: 'Simulated write failure' } }) : route.fallback())
 
   // Attempt to save a word — the error toast should appear; success toast must NOT appear
   await openWordPopup(page)
@@ -446,36 +403,28 @@ test('VOC.ERRTOAST-E2E-012 @p2 @regression — AC-005: error toast when IDB writ
   // Exactly one toast (the error toast) should be visible
   await expect(page.locator('[data-sonner-toast]')).toHaveCount(1, { timeout: 5_000 })
 
-  // Nothing should have been written to IDB
-  const entries = await getAllVocabEntries(page)
+  // Nothing should have been written to the server
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
 
-test('VOC.RMTOAST-E2E-013 @p2 @regression — AC-006: error toast when IDB delete fails during remove, word stays in panel', async ({ page }) => {
+test('VOC.RMTOAST-E2E-013 @p2 @regression — AC-006: error toast when the vocabulary delete fails during remove, word stays in panel', async ({ page }) => {
   await signIn(page)
   await goToLesson(page)
 
-  // Save the word first (IDB is healthy at this point)
+  // Save the word first (the server is healthy at this point)
   await saveWordViaUI(page)
 
-  const entriesBefore = await getAllVocabEntries(page)
+  const entriesBefore = await listVocabEntries(page.request, user)
   expect(entriesBefore).toHaveLength(1)
 
   // Switch to workbook tab to access the word card X button
   await switchToWorkbookTab(page)
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // Now patch IDBObjectStore.prototype.delete so vocabulary deletes throw.
-  // Scoped to vocabulary store only.
-  await page.evaluate(() => {
-    const origDelete = IDBObjectStore.prototype.delete
-    IDBObjectStore.prototype.delete = function (key) {
-      if (this.name === 'vocabulary') {
-        throw new DOMException('Simulated IDB delete failure', 'UnknownError')
-      }
-      return origDelete.call(this, key)
-    }
-  })
+  // Now fail vocabulary deletes on the server.
+  await page.route(`${API_URL}/api/store/vocabulary/*`, route =>
+    route.request().method() === 'DELETE' ? route.fulfill({ status: 500, json: { detail: 'Simulated delete failure' } }) : route.fallback())
 
   // Click the X remove button on the word card — scope to tabpanel to avoid matching
   // the word card div[role="button"] whose accessible name also contains "Remove from Workbook".
@@ -495,7 +444,7 @@ test('VOC.RMTOAST-E2E-013 @p2 @regression — AC-006: error toast when IDB delet
   // Word should still be visible in the panel (no optimistic removal on failure)
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // IDB entry should still be present
-  const entriesAfter = await getAllVocabEntries(page)
+  // The server entry should still be present
+  const entriesAfter = await listVocabEntries(page.request, user)
   expect(entriesAfter).toHaveLength(1)
 })

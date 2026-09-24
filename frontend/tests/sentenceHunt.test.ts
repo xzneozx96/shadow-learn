@@ -1,11 +1,8 @@
 import type { DataClient } from '@/db'
 import type { LessonMeta, Segment } from '@/shared/types'
-import { IDBFactory } from 'fake-indexeddb'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { initDB } from '@/db'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { findSegmentsForWords } from '@/shared/lib/sentenceHunt'
 import { FakeApiClient, fakeDataClient } from './fake-api'
-import 'fake-indexeddb/auto'
 
 function makeLesson(id: string, createdAt: string): LessonMeta {
   return {
@@ -39,12 +36,7 @@ let api: FakeApiClient
 
 beforeEach(async () => {
   api = new FakeApiClient()
-  db = fakeDataClient(await initDB(), api)
-})
-
-afterEach(() => {
-  db.legacy.close()
-  globalThis.indexedDB = new IDBFactory()
+  db = fakeDataClient(api)
 })
 
 describe('findSegmentsForWords', () => {

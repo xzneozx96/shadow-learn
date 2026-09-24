@@ -1,4 +1,3 @@
-import type { ShadowLearnDB } from './legacy'
 import { apiFetch, responseError } from '@/shared/lib/api'
 
 export interface ApiClient {
@@ -12,7 +11,6 @@ export interface ApiClient {
 
 export interface DataClient {
   api: ApiClient
-  legacy: ShadowLearnDB
 }
 
 function jsonInit(method: string, body: unknown): RequestInit {

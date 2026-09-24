@@ -1,7 +1,7 @@
 import type { DataClient } from '@/db'
 import type { CharData } from '@/shared/lib/hanzi/types'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { deleteBreakdown, getBreakdown, saveBreakdown } from '@/db'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { deleteWordStory, getWordStory, saveWordStory } from '@/db'
 import { fetchBreakdownStory } from '@/features/vocabulary/lib/api/breakdownStory'
 import { buildCharData } from '@/shared/lib/hanzi/lookup'
 
@@ -10,7 +10,6 @@ interface UseWordBreakdownInput {
   word: string
   pinyin: string
   meaning: string
-  sourceLanguage: string
   /**
    * When false, the hook performs no work — neither lookup nor LLM call.
    * Lets parent components mount the modal in JSX without firing N API calls
@@ -27,14 +26,14 @@ interface UseWordBreakdownReturn {
   storyLoading: boolean
   storyError: Error | null
   retryStory: () => void
-  /** Discard cached story and force a fresh LLM generation. */
+  /** Discard the user's story and force a fresh LLM generation. */
   regenerateStory: () => Promise<void>
-  /** Save user-edited story text. Persists to IDB; survives re-opens until regenerated. */
+  /** Save user-edited story text to the account; survives re-opens until regenerated. */
   saveCustomStory: (text: string) => Promise<void>
 }
 
 export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdownReturn {
-  const { db, word, pinyin, meaning, sourceLanguage, enabled = true } = input
+  const { db, word, pinyin, meaning, enabled = true } = input
 
   const [characters, setCharacters] = useState<CharData[] | null>(null)
   const charactersLoading = enabled && characters === null
@@ -42,6 +41,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
   const [storyLoading, setStoryLoading] = useState(false)
   const [storyError, setStoryError] = useState<Error | null>(null)
   const [retryTick, setRetryTick] = useState(0)
+  const forceRef = useRef(false)
 
   // Build per-character data from local lookup (only when enabled)
   useEffect(() => {
@@ -82,7 +82,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     .map(c => c.sinoVietnamese ?? '?')
     .join(' ')
 
-  // Resolve story: IDB cache first, then LLM
+  // Resolve story: the user's own story first, then the shared catalog or LLM
   useEffect(() => {
     if (!enabled || !db || characters === null || characters.length === 0)
       return
@@ -92,18 +92,12 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
       try {
         setStoryError(null)
 
-        let cached: Awaited<ReturnType<typeof getBreakdown>>
-        try {
-          cached = await getBreakdown(db, word)
-        }
-        catch (err) {
-          console.error('[useWordBreakdown] getBreakdown failed:', err)
-          throw new Error(`Cache lookup failed: ${err instanceof Error ? err.message : String(err)}`)
-        }
-
-        if (cached?.story) {
+        const force = forceRef.current
+        forceRef.current = false
+        const own = force ? undefined : await getWordStory(db, word)
+        if (own) {
           if (!cancel)
-            setStory(cached.story)
+            setStory(own.story)
           return
         }
 
@@ -116,6 +110,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
           meaning,
           sinoVietnamese,
           characters: resolvedChars,
+          force,
         })
 
         if (cancel)
@@ -123,19 +118,14 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
 
         setStory(fresh)
 
-        try {
-          await saveBreakdown(db, {
-            word,
-            sourceLanguage,
-            characters: resolvedChars,
-            story: fresh,
-            storyLanguage: 'vi',
-            generatedAt: new Date().toISOString(),
-          })
-        }
-        catch (err) {
-          // Persistence failure shouldn't block the user — story is in memory.
-          console.warn('[useWordBreakdown] saveBreakdown failed:', err)
+        if (force) {
+          try {
+            await saveWordStory(db, word, fresh)
+          }
+          catch (err) {
+            // Persistence failure shouldn't block the user — story is in memory.
+            console.warn('[useWordBreakdown] saveWordStory failed:', err)
+          }
         }
       }
       catch (err) {
@@ -162,12 +152,13 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
   const regenerateStory = useCallback(async () => {
     if (db) {
       try {
-        await deleteBreakdown(db, word)
+        await deleteWordStory(db, word)
       }
       catch (err) {
-        console.warn('[useWordBreakdown] deleteBreakdown failed:', err)
+        console.warn('[useWordBreakdown] deleteWordStory failed:', err)
       }
     }
+    forceRef.current = true
     setStory(null)
     setStoryError(null)
     setRetryTick(t => t + 1)
@@ -179,19 +170,12 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     if (!db)
       return
     try {
-      await saveBreakdown(db, {
-        word,
-        sourceLanguage,
-        characters: resolvedChars,
-        story: text,
-        storyLanguage: 'vi',
-        generatedAt: new Date().toISOString(),
-      })
+      await saveWordStory(db, word, text)
     }
     catch (err) {
       console.warn('[useWordBreakdown] saveCustomStory persist failed:', err)
     }
-  }, [db, word, sourceLanguage, resolvedChars])
+  }, [db, word])
 
   return {
     characters: resolvedChars,

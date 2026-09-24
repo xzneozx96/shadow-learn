@@ -1,11 +1,12 @@
 import type { StudyQueueState } from '@/features/study/application/useStudyQueue'
-import { AlertTriangle, ArrowLeft, BookOpen, Check, Ear, FileText, Mic, PenLine, Sparkles } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, BookOpen, Check, Ear, FileText, Loader2, Mic, PenLine, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 
 import { useI18n } from '@/app/providers/I18nContext'
 import { todayISO } from '@/shared/lib/date'
 import { getSkillProgress, isReadingDone } from '@/shared/lib/skillSessionProgress'
 import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog'
 import { ListeningSkillSession } from './ListeningSkillSession'
 import { ReadingSkillSession } from './ReadingSkillSession'
@@ -119,6 +120,8 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
   }
 
   const allDone = (queue.dailyReviewDone || sessionVisited.size === SKILL_ORDER.length) && activeSkill === null
+  const firstLoad = queue.status === 'loading' && queue.dailyEntries.length === 0
+  const unavailable = activeSkill === null && (queue.status === 'error' || firstLoad)
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()} disablePointerDismissal>
@@ -235,7 +238,21 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
 
         {/* Main panel */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          {allDone && (
+          {unavailable && queue.status === 'loading' && (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground" aria-busy="true">
+              <Loader2 className="size-6 animate-spin" />
+            </div>
+          )}
+          {unavailable && queue.status === 'error' && (
+            <div role="alert" className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
+              <div className="text-base font-semibold">{t('common.error')}</div>
+              {queue.error && <div className="text-sm text-muted-foreground">{queue.error}</div>}
+              <Button variant="outline" size="sm" onClick={() => { void queue.refresh() }}>
+                {t('common.retry')}
+              </Button>
+            </div>
+          )}
+          {!unavailable && allDone && (
             <AllDoneView skills={skills} skillDone={skillDone} t={t} />
           )}
           {activeSkill === 'vocabulary' && (
@@ -272,7 +289,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
               onProgress={onProgress}
             />
           )}
-          {!activeSkill && !allDone && (
+          {!unavailable && !activeSkill && !allDone && (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
               <div className="size-14 rounded-full bg-primary/10 flex items-center justify-center">
                 <Sparkles className="size-6 text-primary" />

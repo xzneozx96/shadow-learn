@@ -1,12 +1,17 @@
 import type { LessonMeta, Segment, VocabEntry, Word } from '@/shared/types'
-import { createContext, use, useCallback, useEffect, useMemo, useState } from 'react'
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/app/providers/AuthContext'
-import { deleteErrorPattern, deleteSpacedRepetitionItem } from '@/db'
+import { deleteErrorPattern, deleteSpacedRepetitionItem, deleteVocabEntry, getAllVocabEntries, saveVocabEntry } from '@/db'
 import { captureVocabularyWordSaved } from '@/shared/lib/posthog-events'
+
+type VocabularyStatus = 'loading' | 'ready' | 'error'
 
 interface VocabularyContextValue {
   entries: VocabEntry[]
+  status: VocabularyStatus
+  error: string | null
+  reload: () => Promise<void>
   entriesByLesson: Record<string, VocabEntry[]>
   save: (word: Word, segment: Segment, lesson: LessonMeta, activeLang: string) => Promise<void>
   remove: (id: string) => Promise<void>
@@ -19,12 +24,34 @@ const VocabularyContext = createContext<VocabularyContextValue | null>(null)
 export function VocabularyProvider({ children }: { children: React.ReactNode }) {
   const { db } = useAuth()
   const [entries, setEntries] = useState<VocabEntry[]>([])
+  const [status, setStatus] = useState<VocabularyStatus>('loading')
+  const [error, setError] = useState<string | null>(null)
+  const requestRef = useRef(0)
 
-  useEffect(() => {
+  const reload = useCallback(async () => {
     if (!db)
       return
-    db.legacy.getAll('vocabulary').then(setEntries)
+    const request = ++requestRef.current
+    setStatus(s => s === 'ready' ? 'ready' : 'loading')
+    try {
+      const all = await getAllVocabEntries(db)
+      if (request !== requestRef.current)
+        return
+      setEntries(all)
+      setError(null)
+      setStatus('ready')
+    }
+    catch (e) {
+      if (request !== requestRef.current)
+        return
+      setError(e instanceof Error ? e.message : String(e))
+      setStatus('error')
+    }
   }, [db])
+
+  useEffect(() => {
+    void reload()
+  }, [reload])
 
   const entriesByLesson = useMemo(() => {
     const map: Record<string, VocabEntry[]> = {}
@@ -55,7 +82,7 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
         createdAt: new Date().toISOString(),
       }
       try {
-        await db.legacy.put('vocabulary', entry)
+        await saveVocabEntry(db, entry)
         setEntries(prev => [...prev, entry])
         captureVocabularyWordSaved({ source_language: entry.sourceLanguage })
       }
@@ -74,7 +101,7 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
       try {
         await deleteSpacedRepetitionItem(db, id)
         await deleteErrorPattern(db, id)
-        await db.legacy.delete('vocabulary', id)
+        await deleteVocabEntry(db, id)
         setEntries(prev => prev.filter(e => e.id !== id))
       }
       catch {
@@ -93,10 +120,8 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
       await Promise.all(idsToDelete.flatMap(id => [
         deleteSpacedRepetitionItem(db, id),
         deleteErrorPattern(db, id),
+        deleteVocabEntry(db, id),
       ]))
-      const tx = db.legacy.transaction('vocabulary', 'readwrite')
-      await Promise.all(idsToDelete.map(id => tx.store.delete(id)))
-      await tx.done
       setEntries(prev => prev.filter(e => e.sourceLessonId !== lessonId))
     },
     [db, entries],
@@ -109,7 +134,7 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
   )
 
   return (
-    <VocabularyContext value={{ entries, entriesByLesson, save, remove, removeGroup, isSaved }}>
+    <VocabularyContext value={{ entries, status, error, reload, entriesByLesson, save, remove, removeGroup, isSaved }}>
       {children}
     </VocabularyContext>
   )
