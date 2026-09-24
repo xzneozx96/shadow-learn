@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { posthog } from '@/shared/lib/posthog'
 import {
-  captureAuthEvent,
   captureCompanionMessageSent,
   captureExerciseCompleted,
   captureLessonCreated,
@@ -64,13 +63,6 @@ describe('posthog event schemas', () => {
       step: 'transcription',
       error_message: 'API timeout',
     })
-  })
-
-  it('captureAuthEvent sends the named event with no extra properties', () => {
-    captureAuthEvent('app_unlocked')
-    expect(posthog.capture).toHaveBeenCalledWith('app_unlocked')
-    captureAuthEvent('trial_started')
-    expect(posthog.capture).toHaveBeenCalledWith('trial_started')
   })
 
   it('captureCompanionMessageSent sends companion_message_sent with context and file count', () => {

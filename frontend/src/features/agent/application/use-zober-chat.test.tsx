@@ -13,7 +13,6 @@ function makeWrapper(db: any) {
         value={
           {
             db,
-            trialMode: false,
           } as any
         }
       >

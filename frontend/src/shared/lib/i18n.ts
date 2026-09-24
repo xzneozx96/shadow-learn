@@ -11,16 +11,8 @@ export const TRANSLATIONS = {
     'nav.collection': 'Explore',
     'nav.search': 'Search lessons...',
 
-    // Auth — Setup & Unlock
-    'auth.azureSpeechKey': 'Azure Speech Key',
-    'auth.azureSpeechRegion': 'Azure Speech Region',
-    'auth.pinPlaceholder': 'Enter PIN',
-    'auth.error.openrouterRequired': 'OpenRouter API key is required.',
-    'auth.error.azureRequired': 'Azure Speech key and region are required for pronunciation.',
+    // Auth
     'auth.error.googleRequired': 'Google Gemini API key is required for voice practice.',
-    'auth.placeholder.azureRegion': 'Optional (e.g. eastus)',
-    'auth.setup.azureHint': 'Used for word and sentence pronunciation (TTS) and pronunciation assessment. Free tier: 500K characters/month.',
-    'auth.trial.banner': 'Free trial mode — add your own API keys in Settings anytime.',
 
     // Accounts — Login, Signup, password reset
     'account.email': 'Email',
@@ -1004,15 +996,7 @@ export const TRANSLATIONS = {
     'nav.documentation': 'Hướng dẫn',
     'nav.collection': 'Khám phá',
     'nav.search': 'Tìm kiếm bài học...',
-    'auth.azureSpeechKey': 'Khóa Azure Speech',
-    'auth.azureSpeechRegion': 'Vùng Azure Speech',
-    'auth.pinPlaceholder': 'Nhập mã PIN',
-    'auth.error.openrouterRequired': 'Vui lòng điền khóa API OpenRouter.',
-    'auth.error.azureRequired': 'Vui lòng điền khóa và chọn vùng Azure Speech.',
     'auth.error.googleRequired': 'Cần khóa API Google Gemini để luyện nói.',
-    'auth.placeholder.azureRegion': 'Tùy chọn (vd. eastus)',
-    'auth.setup.azureHint': 'Dùng để chuyển văn bản thành giọng nói và chấm điểm phát âm của bạn.',
-    'auth.trial.banner': 'Đang dùng thử miễn phí — thêm API key của bạn trong Cài đặt bất cứ lúc nào.',
 
     // Accounts — Login, Signup, password reset
     'account.email': 'Email',

@@ -28,7 +28,7 @@ const mockPlayer = {
 }
 
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: null, trialMode: false }),
+  useAuth: () => ({ db: null }),
 }))
 
 vi.mock('@/app/providers/I18nContext', () => ({

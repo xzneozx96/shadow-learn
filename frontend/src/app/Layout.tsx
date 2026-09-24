@@ -1,4 +1,4 @@
-import { AudioLines, BookOpenText, FileText, Library, LogOut, Newspaper, PanelLeft, PanelRight, Settings, Sprout, TvMinimalPlay } from 'lucide-react'
+import { AudioLines, BookOpenText, FileText, Library, LogOut, Newspaper, PanelLeft, PanelRight, Settings, TvMinimalPlay } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/app/providers/AuthContext'
@@ -17,7 +17,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const { t } = useI18n()
-  const { trialMode, logout } = useAuth()
+  const { logout } = useAuth()
   const { openSpeakModal } = useSpeakModal()
   const hasUnseen = useHasUnseenAnnouncement()
 
@@ -51,17 +51,6 @@ export function Layout({ children }: LayoutProps) {
           collapsed ? 'w-16' : 'w-48 xl:w-56',
         )}
       >
-        {trialMode && (
-          <div className={cn(
-            'flex items-start gap-2 border-b border-amber-400/20 bg-amber-400/8 px-3 py-2.5 text-[12px] leading-snug text-amber-200/90',
-            collapsed && 'justify-center',
-          )}
-          >
-            <Sprout className="size-4 mt-0.5 shrink-0 text-amber-300" />
-            {!collapsed && <span>{t('auth.trial.banner')}</span>}
-          </div>
-        )}
-
         {/* Logo + collapse toggle */}
         <div className={cn('flex items-center py-4', collapsed ? 'justify-center px-2' : 'justify-between px-4')}>
           <Link

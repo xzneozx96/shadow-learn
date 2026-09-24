@@ -22,10 +22,6 @@ export function captureLessonJobFailed(data: { step: string, error_message: stri
   posthog.capture('lesson_job_failed', data)
 }
 
-export function captureAuthEvent(event: 'app_unlocked' | 'app_setup_complete' | 'trial_started') {
-  posthog.capture(event)
-}
-
 export function captureCompanionMessageSent(data: { with_context: boolean, file_count: number }) {
   posthog.capture('companion_message_sent', data)
 }
