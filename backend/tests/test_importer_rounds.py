@@ -156,14 +156,15 @@ async def test_a_union_conflict_is_kept_for_repair_with_the_account_row_hash_onc
     assert rows == [(device, [{"type": "conflict", "accountSha256": _sha256(account)}])]
 
 
-async def test_a_lesson_conflict_is_kept_for_repair_with_the_account_lesson_hash(client, owner, db_session):
+async def test_a_lesson_conflict_is_kept_for_repair_with_the_account_lesson_hash_once(client, owner, db_session):
     await _lessons(client, owner, LESSON)
     await client.patch(f"/api/lessons/{LESSON_ID}", json={"title": "Renamed on the server"}, headers=_bearer(owner))
     changed = {**LESSON, "title": "Renamed on the device"}
-    after = await _lessons(client, owner, changed)
-    assert after["outcomes"] == {LESSON_ID: "conflict"}
     raw = {**changed, "segments": SEGMENTS}
-    await _quarantine_conflict(client, owner, "lessons", LESSON_ID, raw)
+    for _ in range(2):
+        after = await _lessons(client, owner, changed)
+        assert after["outcomes"] == {LESSON_ID: "conflict"}
+        await _quarantine_conflict(client, owner, "lessons", LESSON_ID, raw)
     account = after["after"][0]
     rows = (await db_session.execute(select(QuarantinedRecord.raw, QuarantinedRecord.error))).all()
     assert rows == [(raw, [{"type": "conflict", "accountSha256": _sha256([account["lesson"], account["segments"]])}])]
