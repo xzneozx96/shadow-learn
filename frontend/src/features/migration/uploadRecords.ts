@@ -1,4 +1,4 @@
-import type { JsonObject } from './canonical'
+import type { Json, JsonObject } from './canonical'
 import type { OutgoingLesson, OutgoingRecord, RecordStore } from './exportStores'
 import type { Ledger, QuarantinedRecord } from './manifest'
 import type { ApiClient } from '@/db'
@@ -30,7 +30,8 @@ export function batches<T>(items: T[], size: (item: T) => number): T[][] {
   return out
 }
 
-const jsonBytes = (value: unknown) => JSON.stringify(value).length
+const utf8 = new TextEncoder()
+const jsonBytes = (value: unknown) => utf8.encode(JSON.stringify(value)).length
 
 interface ValidationDetail {
   loc: (string | number)[]
@@ -111,16 +112,22 @@ export async function uploadLessons(
   const lessonLedger = storeLedger(ledger, 'lessons')
   const segmentLedger = storeLedger(ledger, 'segments')
   for (const batch of batches(lessons, lesson => jsonBytes(lesson))) {
-    const { accepted } = await sendBatch(
+    const { accepted, body } = await sendBatch(
       api,
       ledger,
       batch,
       { path: '/api/import/lessons', listField: 'lessons', body: items => ({ lessons: items.map(item => ({ ...item.lesson, segments: item.segments })) }) },
       (item, error) => ({ store: 'lessons', recordId: item.id, raw: { ...item.lesson, segments: item.segments }, error }),
     )
-    for (const lesson of accepted) {
-      lessonLedger.expected.set(lesson.id, lesson.lesson)
-      segmentLedger.expected.set(lesson.id, lesson.segments)
+    const after = new Map(lessonStates(body).map(state => [String(state.lesson.id), state]))
+    for (const { id } of accepted) {
+      const stored = after.get(id)
+      if (stored === undefined) {
+        lessonLedger.missing.push(id)
+        continue
+      }
+      lessonLedger.expected.set(id, stored.lesson)
+      segmentLedger.expected.set(id, stored.segments)
     }
     onProgress(batch.length)
   }
@@ -133,6 +140,10 @@ function isObject(value: unknown): value is JsonObject {
 function afterRecords(body: unknown): JsonObject[] {
   const after = isObject(body) ? body.after : null
   return Array.isArray(after) ? after.filter(isObject) : []
+}
+
+function lessonStates(body: unknown): { lesson: JsonObject, segments: Json }[] {
+  return afterRecords(body).flatMap(item => isObject(item.lesson) ? [{ lesson: item.lesson, segments: item.segments ?? [] }] : [])
 }
 
 /**

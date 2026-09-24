@@ -6,8 +6,9 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from sqlalchemy import select, tuple_
+from sqlalchemy import ARRAY, Text, Uuid, any_, bindparam, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.types import TypeEngine
 
 from app.importer.canonical import store_hash
 from app.importer.models import QuarantinedRecord
@@ -84,23 +85,30 @@ def _lesson_ids(ids: Iterable[str]) -> list[uuid.UUID]:
     return parsed
 
 
-async def _records(session: AsyncSession, user_id: uuid.UUID, store: str, ids: list[str]) -> list[Record]:
-    if store == LESSONS:
-        lessons = await session.scalars(select(Lesson).where(Lesson.user_id == user_id, Lesson.id.in_(_lesson_ids(ids))))
-        return [(str(lesson.id), lesson_record(lesson)) for lesson in lessons]
-    if store == SEGMENTS:
+def _any(values: list[Any], item_type: TypeEngine[Any]) -> Any:
+    """One array parameter, so a store of any size stays under asyncpg's 32767 bind limit."""
+    return any_(bindparam("ids", values, type_=ARRAY(item_type)))
+
+
+async def stored_records(session: AsyncSession, user_id: uuid.UUID, store: str, ids: list[str]) -> list[Record]:
+    if store in (LESSONS, SEGMENTS):
+        lesson_ids = _any(_lesson_ids(ids), Uuid())
+        lessons = (await session.scalars(select(Lesson).where(Lesson.user_id == user_id, Lesson.id == lesson_ids))).all()
+        if store == LESSONS:
+            return [(str(lesson.id), lesson_record(lesson)) for lesson in lessons]
+        grouped: dict[str, list[Any]] = {str(lesson.id): [] for lesson in lessons}
         rows = await session.execute(
             select(LessonSegment.lesson_id, LessonSegment.data)
-            .join(Lesson, Lesson.id == LessonSegment.lesson_id)
-            .where(Lesson.user_id == user_id, Lesson.id.in_(_lesson_ids(ids)))
+            .where(LessonSegment.lesson_id == _any([lesson.id for lesson in lessons], Uuid()))
             .order_by(LessonSegment.lesson_id, LessonSegment.position)
         )
-        grouped: dict[str, list[Any]] = {}
         for lesson_id, data in rows:
-            grouped.setdefault(str(lesson_id), []).append(data)
+            grouped[str(lesson_id)].append(data)
         return list(grouped.items())
     table = TABLES[store]
-    rows = await session.execute(select(table.c.id, table.c.data).where(table.c.user_id == user_id, table.c.id.in_(ids)))
+    rows = await session.execute(
+        select(table.c.id, table.c.data).where(table.c.user_id == user_id, table.c.id == _any(ids, Text()))
+    )
     return list(rows.tuples())
 
 
@@ -112,22 +120,21 @@ def _digest(store: str, records: list[Record]) -> Digest:
 
 
 async def store_digest(session: AsyncSession, user_id: uuid.UUID, store: str, ids: list[str]) -> Digest:
-    return _digest(store, await _records(session, user_id, store, ids))
+    return _digest(store, await stored_records(session, user_id, store, ids))
 
 
 async def quarantine_digest(
     session: AsyncSession, user_id: uuid.UUID, source: str, keys: list[QuarantineKey]
 ) -> Digest:
-    if not keys:
-        return _digest("quarantine", [])
+    key = QuarantinedRecord.store + literal(":") + QuarantinedRecord.record_id
     rows = await session.execute(
-        select(QuarantinedRecord.store, QuarantinedRecord.record_id, QuarantinedRecord.raw).where(
+        select(key, QuarantinedRecord.raw).where(
             QuarantinedRecord.user_id == user_id,
             QuarantinedRecord.source == source,
-            tuple_(QuarantinedRecord.store, QuarantinedRecord.record_id).in_([(k.store, k.record_id) for k in keys]),
+            key == _any([f"{k.store}:{k.record_id}" for k in keys], Text()),
         )
     )
-    return _digest("quarantine", [(f"{store}:{record_id}", raw) for store, record_id, raw in rows])
+    return _digest("quarantine", list(rows.tuples()))
 
 
 async def media_object(session: AsyncSession, user_id: uuid.UUID, key: MediaKey) -> MediaObject | None:

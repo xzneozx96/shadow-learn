@@ -46,10 +46,16 @@ export async function openLegacy(): Promise<ShadowLearnDB> {
   return db
 }
 
+/** False when the browser cannot list databases at all, since then it cannot hold a legacy one either. */
 async function legacyDatabaseExists(): Promise<boolean> {
   if (typeof indexedDB.databases !== 'function')
     return true
-  return (await indexedDB.databases()).some(info => info.name === LEGACY_DB_NAME)
+  try {
+    return (await indexedDB.databases()).some(info => info.name === LEGACY_DB_NAME)
+  }
+  catch {
+    return false
+  }
 }
 
 export function deleteLegacyDatabase(onBlocked: () => void = () => {}): Promise<void> {

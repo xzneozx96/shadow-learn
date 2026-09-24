@@ -146,6 +146,7 @@ async def import_records(
 
     With a ``source``, each (source, record id) pair merges at most once, so a
     retry from the same device never counts twice and a second device always does.
+    A record whose row is gone since its first merge merges again rather than vanish.
     """
     table = TABLES[spec.name]
     ids = list(dict.fromkeys(spec.record_id(data) for data in records))
@@ -156,8 +157,11 @@ async def import_records(
 
     await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"{user_id}:{spec.name}"))))
     stored = await _stored(session, user_id, spec, ids)
+    fresh = await _unmerged(session, user_id, spec, records, source)
+    known = stored.keys() | {spec.record_id(data) for data in fresh}
+    vanished = [data for data in records if spec.record_id(data) not in known]
     touched = set()
-    for data in await _unmerged(session, user_id, spec, records, source):
+    for data in [*fresh, *vanished]:
         record_id = spec.record_id(data)
         stored[record_id] = spec.merge(stored[record_id], data) if record_id in stored else data
         touched.add(record_id)

@@ -4,7 +4,8 @@ import type { Check, Verification } from './manifest'
 import type { Notes, Phase } from './useMigration'
 import type { ApiClient } from '@/db'
 import { AlertTriangle, CheckCircle2, Loader2, XCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useAuth } from '@/app/providers/AuthContext'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog'
@@ -15,15 +16,16 @@ import { useMigration } from './useMigration'
 const STEPS = ['Explain', 'Keys', 'Records', 'Media', 'Verify', 'Delete', 'Done'] as const
 
 const STEP_OF: Record<Phase['step'], typeof STEPS[number]> = {
-  explain: 'Explain',
-  keys: 'Keys',
-  records: 'Records',
-  media: 'Media',
-  verify: 'Verify',
-  failed: 'Verify',
-  delete: 'Delete',
-  done: 'Done',
-  error: 'Verify',
+  'explain': 'Explain',
+  'keys': 'Keys',
+  'records': 'Records',
+  'media': 'Media',
+  'verify': 'Verify',
+  'failed': 'Verify',
+  'delete': 'Delete',
+  'done': 'Done',
+  'other-account': 'Explain',
+  'error': 'Verify',
 }
 
 function Stepper({ phase }: { phase: Phase }) {
@@ -77,8 +79,9 @@ function Results({ verification }: { verification: Verification }) {
       <p>{`${passing} of ${verification.checks.length} checks matched.`}</p>
       {failing.length > 0 && (
         <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto" aria-label="Failing stores">
-          {failing.map(check => (
-            <li key={checkLabel(check)} className="flex items-center gap-2 text-red-400">
+          {failing.map((check, i) => (
+
+            <li key={i} className="flex items-center gap-2 text-red-400">
               <XCircle className="size-4 shrink-0" />
               {checkLabel(check)}
             </li>
@@ -101,6 +104,8 @@ function noteLines(notes: Notes): string[] {
     lines.push('Your API keys were not moved. Re-enter them in Settings.')
   if (notes.keys.kind === 'saved' && notes.keys.failed.length > 0)
     lines.push(`The server did not accept your ${notes.keys.failed.join(', ')} key. Re-enter it in Settings.`)
+  if (notes.keys.kind === 'saved' && notes.keys.kept.length > 0)
+    lines.push(`Your account already had a ${notes.keys.kept.join(', ')} key, so it was kept.`)
   if (notes.keptAccountCopy > 0)
     lines.push(`${notes.keptAccountCopy} saved materials were already in your account, so the account's copy was kept.`)
   if (notes.quarantined > 0)
@@ -109,6 +114,8 @@ function noteLines(notes: Notes): string[] {
     lines.push(`${notes.skipped.unfinishedLessons} lessons that never finished processing were not moved.`)
   if (notes.skipped.orphanMedia > 0)
     lines.push(`${notes.skipped.orphanMedia} media files belonged to no lesson and were not moved.`)
+  if (notes.skipped.storylessBreakdowns > 0)
+    lines.push(`${notes.skipped.storylessBreakdowns} word breakdowns had no story, so they were not moved. Breakdowns are rebuilt when you open a word.`)
   return lines
 }
 
@@ -175,8 +182,16 @@ function Waiting({ children }: { children: ReactNode }) {
   )
 }
 
-export function MigrationModal({ api, counts, onFinished }: { api: ApiClient, counts: Record<string, number>, onFinished: () => void }) {
-  const { phase, start, submitPin, skipKeys, confirmSkip, retry } = useMigration(api)
+interface ModalProps {
+  api: ApiClient
+  account: string
+  counts: Record<string, number>
+  onFinished: () => void
+  onSignOut: () => void
+}
+
+export function MigrationModal({ api, account, counts, onFinished, onSignOut }: ModalProps) {
+  const { phase, start, submitPin, skipKeys, confirmSkip, retry } = useMigration(api, account)
   const found = countLine(counts)
 
   function openSettings() {
@@ -200,7 +215,7 @@ export function MigrationModal({ api, counts, onFinished }: { api: ApiClient, co
               </DialogDescription>
               <p className="text-sm text-muted-foreground">If this account already has data from another device, counts such as total sessions add up and the account keeps its own settings.</p>
               <div className="flex justify-end">
-                <Button onClick={() => void start()}>Start</Button>
+                <Button disabled={phase.busy} onClick={() => void start()}>{phase.busy ? 'Reading…' : 'Start'}</Button>
               </div>
             </>
           )}
@@ -220,7 +235,8 @@ export function MigrationModal({ api, counts, onFinished }: { api: ApiClient, co
                 Some data did not match the server. Nothing was deleted from this browser.
               </p>
               <Results verification={phase.verification} />
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={onSignOut}>Sign out</Button>
                 <Button onClick={() => void retry()}>Retry</Button>
               </div>
             </>
@@ -237,8 +253,22 @@ export function MigrationModal({ api, counts, onFinished }: { api: ApiClient, co
                 The move stopped before it finished. Your data is still in this browser.
               </p>
               <p className="text-sm text-muted-foreground">{phase.message}</p>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={onSignOut}>Sign out</Button>
                 <Button onClick={() => void retry()}>Retry</Button>
+              </div>
+            </>
+          )}
+
+          {phase.step === 'other-account' && (
+            <>
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <AlertTriangle className="size-4 text-amber-400" />
+                The data in this browser is already being moved to a different account.
+              </p>
+              <p className="text-sm text-muted-foreground">Sign in with the account you started with to finish. Nothing was changed.</p>
+              <div className="flex justify-end">
+                <Button onClick={onSignOut}>Sign out</Button>
               </div>
             </>
           )}
@@ -267,28 +297,32 @@ export function MigrationModal({ api, counts, onFinished }: { api: ApiClient, co
 type GateState
   = | { kind: 'checking' }
     | { kind: 'import', data: LegacyData }
+    | { kind: 'failed', message: string }
     | { kind: 'clear' }
 
 /** Hold the app back until this device's legacy data is on the server, so nothing writes defaults over it first. */
 export function MigrationGate({ api, children }: { api: ApiClient, children: ReactNode }) {
+  const { session, logout } = useAuth()
   const [state, setState] = useState<GateState>({ kind: 'checking' })
 
-  useEffect(() => {
+  const detect = useCallback(() => {
     let live = true
     detectLegacyData().then(
       (data) => {
         if (live)
           setState(data.present ? { kind: 'import', data } : { kind: 'clear' })
       },
-      () => {
+      (err: unknown) => {
         if (live)
-          setState({ kind: 'clear' })
+          setState({ kind: 'failed', message: err instanceof Error ? err.message : String(err) })
       },
     )
     return () => {
       live = false
     }
   }, [])
+
+  useEffect(detect, [detect])
 
   if (state.kind === 'clear')
     return children
@@ -299,5 +333,33 @@ export function MigrationGate({ api, children }: { api: ApiClient, children: Rea
       </div>
     )
   }
-  return <MigrationModal api={api} counts={state.data.counts} onFinished={() => setState({ kind: 'clear' })} />
+  if (state.kind === 'failed') {
+    return (
+      <Dialog open onOpenChange={() => {}}>
+        <DialogContent showCloseButton={false} className="sm:max-w-lg" data-testid="migration-modal">
+          <DialogTitle>Move your data to your account</DialogTitle>
+          <DialogDescription>{`This browser holds earlier ShadowLearn data, but it could not be read: ${state.message}`}</DialogDescription>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => void logout()}>Sign out</Button>
+            <Button onClick={() => {
+              setState({ kind: 'checking' })
+              detect()
+            }}
+            >
+              Retry
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+  return (
+    <MigrationModal
+      api={api}
+      account={session?.userId ?? ''}
+      counts={state.data.counts}
+      onFinished={() => setState({ kind: 'clear' })}
+      onSignOut={() => void logout()}
+    />
+  )
 }

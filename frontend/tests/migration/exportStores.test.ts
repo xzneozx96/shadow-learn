@@ -2,7 +2,7 @@ import type { LegacySnapshot, RecordStore } from '@/features/migration/exportSto
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { canonical, toJson } from '@/features/migration/canonical'
 import { openLegacy } from '@/features/migration/detectLegacyData'
-import { deviceSource, KEY_PATHS, readSnapshot, uuidV5 } from '@/features/migration/exportStores'
+import { claimImport, KEY_PATHS, readSnapshot, uuidV5 } from '@/features/migration/exportStores'
 import specsSource from '../../../backend/app/userdata/specs.py?raw'
 import { LEGACY_LESSON, legacyFixture, LESSON_A, seedLegacyDatabase } from '../e2e/support/legacy-seed'
 import 'fake-indexeddb/auto'
@@ -89,10 +89,32 @@ describe('readSnapshot', () => {
     expect(records(snapshot, 'speak-sessions')).toHaveLength(1)
   })
 
-  it('keeps one device id for the life of the database', async () => {
+  it('keeps one device id and the first account for the life of the database', async () => {
     const { db } = await snapshotOf()
-    const first = await deviceSource(db)
-    expect(await deviceSource(db)).toBe(first)
+    const first = await claimImport(db, 'account-a')
+    expect(await claimImport(db, 'account-b')).toEqual({ source: first.source, account: 'account-a' })
+  })
+
+  it('moves an unfinished lesson only when it owns a file', async () => {
+    const fixture = legacyFixture()
+    const stub = fixture.stores.lessons.find(row => (row.value as { status?: string }).status === 'processing')!
+    const id = (stub.value as { id: string }).id
+    fixture.stores.videos.push({ key: id, value: { $blob: { size: 10, type: 'video/mp4', fill: 1 } } })
+    await seedLegacyDatabase(fixture)
+    const snapshot = await readSnapshot(await openLegacy())
+    expect(snapshot.lessons.map(lesson => lesson.id)).toContain(id)
+    expect(snapshot.skipped.unfinishedLessons).toBe(0)
+  })
+
+  it('normalizes lesson fields the server types, and drops what JSONB cannot hold from keys', async () => {
+    const fixture = legacyFixture()
+    const lesson = fixture.stores.lessons[0].value as Record<string, unknown>
+    Object.assign(lesson, { title: null, duration: 'long', createdAt: '+275760-09-13T00:00:00.000Z', translationLanguages: ['en', 3] })
+    fixture.stores.segments[0].value = [null, { id: 's1', start: 0, end: 1, translations: { 'e\0n': 'hi' } }]
+    await seedLegacyDatabase(fixture)
+    const imported = (await readSnapshot(await openLegacy())).lessons.find(l => l.id === LESSON_A)!
+    expect(imported.lesson).toEqual(expect.objectContaining({ title: '', duration: 1, createdAt: '1970-01-01T00:00:00.000Z', translationLanguages: ['en'] }))
+    expect(imported.segments).toEqual([{ id: 's1', start: 0, end: 1, translations: { en: 'hi' } }])
   })
 
   it('matches the export shape the backend checks in test_importer_legacy_shapes.py', async () => {

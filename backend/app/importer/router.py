@@ -3,15 +3,17 @@ import uuid
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
-from sqlalchemy import delete, func, select
+from pydantic import AwareDatetime, BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.accounts.deps import CurrentUser
 from app.db import get_session
 from app.importer.manifest import (
+    LESSONS,
     RECORD_STORES,
+    SEGMENTS,
     Camel,
     Digest,
     ImportKind,
@@ -22,6 +24,7 @@ from app.importer.manifest import (
     media_object,
     quarantine_digest,
     store_digest,
+    stored_records,
 )
 from app.importer.models import QuarantinedRecord
 from app.lessons.models import Lesson, LessonSegment
@@ -41,13 +44,6 @@ _EXTENSIONS = {content_type: ext for ext, content_type in CONTENT_TYPES.items()}
 _DEFAULT_CONTENT_TYPES = {ImportKind.video: "video/mp4", ImportKind.audio: "audio/mpeg", ImportKind.shadowing: "audio/webm"}
 
 
-class ImportedSegment(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    start: float
-    end: float
-
-
 class ImportedLesson(Camel):
     id: uuid.UUID
     title: str
@@ -59,7 +55,7 @@ class ImportedLesson(Camel):
     created_at: AwareDatetime
     last_opened_at: AwareDatetime | None
     meta: dict[str, Any]
-    segments: list[ImportedSegment]
+    segments: list[dict[str, Any]]
 
 
 class LessonsImport(BaseModel):
@@ -91,43 +87,69 @@ class ManifestResponse(BaseModel):
     media: list[MediaDigest | None]
 
 
+def _seconds(segment: dict[str, Any], field: str) -> float:
+    value = segment.get(field)
+    return float(value) if isinstance(value, int | float) and not isinstance(value, bool) else 0.0
+
+
+class ImportedLessonState(BaseModel):
+    lesson: dict[str, Any]
+    segments: list[Any]
+
+
+class LessonsImported(BaseModel):
+    count: int
+    after: list[ImportedLessonState]
+
+
 @router.post("/lessons")
-async def import_lessons(body: LessonsImport, user: CurrentUser, session: Session) -> dict[str, int]:
-    """Create or overwrite each lesson and its segments, so a rerun converges on what the device sent."""
+async def import_lessons(body: LessonsImport, user: CurrentUser, session: Session) -> LessonsImported:
+    """Create each lesson the account lacks, keep the ones it has, and return what the account now holds.
+
+    Segments are stored exactly as sent. A segment without numeric timing indexes at 0.
+    """
     incoming = {lesson.id: lesson for lesson in body.lessons}
     existing = {lesson.id: lesson for lesson in await session.scalars(select(Lesson).where(Lesson.id.in_(incoming)))}
     foreign = sorted(str(lesson_id) for lesson_id, lesson in existing.items() if lesson.user_id != user.id)
     if foreign:
         raise HTTPException(status_code=409, detail=f"Lesson {foreign[0]} was already imported into another account")
     for lesson_id, item in incoming.items():
-        lesson = existing.get(lesson_id)
-        if lesson is None:
-            lesson = Lesson(id=lesson_id, user_id=user.id)
-            session.add(lesson)
-        lesson.title = item.title
-        lesson.source = item.source
-        lesson.source_url = item.source_url
-        lesson.duration_s = item.duration
-        lesson.source_language = item.source_language
-        lesson.translation_languages = item.translation_languages
-        lesson.created_at = item.created_at
-        lesson.last_opened_at = item.last_opened_at
-        lesson.meta = item.meta
-    await session.flush()
-    await session.execute(delete(LessonSegment).where(LessonSegment.lesson_id.in_(incoming)))
-    session.add_all(
-        LessonSegment(
-            lesson_id=lesson_id,
-            position=position,
-            data=segment.model_dump(mode="json", exclude_unset=True),
-            start_s=segment.start,
-            end_s=segment.end,
+        if lesson_id in existing:
+            continue
+        session.add(
+            Lesson(
+                id=lesson_id,
+                user_id=user.id,
+                title=item.title,
+                source=item.source,
+                source_url=item.source_url,
+                duration_s=item.duration,
+                source_language=item.source_language,
+                translation_languages=item.translation_languages,
+                created_at=item.created_at,
+                last_opened_at=item.last_opened_at,
+                meta=item.meta,
+            )
         )
-        for lesson_id, item in incoming.items()
-        for position, segment in enumerate(item.segments)
-    )
+        await session.flush()
+        session.add_all(
+            LessonSegment(
+                lesson_id=lesson_id,
+                position=position,
+                data=segment,
+                start_s=_seconds(segment, "start"),
+                end_s=_seconds(segment, "end"),
+            )
+            for position, segment in enumerate(item.segments)
+        )
     await session.commit()
-    return {"count": len(incoming)}
+    ids = [str(lesson_id) for lesson_id in incoming]
+    lessons = dict(await stored_records(session, user.id, LESSONS, ids))
+    segments = dict(await stored_records(session, user.id, SEGMENTS, ids))
+    return LessonsImported(
+        count=len(incoming),
+        after=[ImportedLessonState(lesson=lessons[lesson_id], segments=segments[lesson_id]) for lesson_id in ids],
+    )
 
 
 @router.post("/quarantine")
@@ -210,11 +232,15 @@ async def import_media(
         )
     finally:
         path.unlink(missing_ok=True)
-    if previous is not None:
-        await session.delete(previous)
-        await session.flush()
-    session.add(media)
-    await session.commit()
+    try:
+        if previous is not None:
+            await session.delete(previous)
+            await session.flush()
+        session.add(media)
+        await session.commit()
+    except BaseException:
+        await delete_objects(s3, [media.object_key])
+        raise
     if previous is not None:
         await delete_objects(s3, [previous.object_key])
     return MediaDigest(**key.model_dump(), size=media.size, sha256=media.sha256)

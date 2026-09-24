@@ -88,12 +88,32 @@ async def test_lesson_manifest_matches_the_hash_of_what_the_device_sent(client, 
     assert digest["stores"]["segments"] == {"count": 1, "sha256": store_hash([(LESSON_ID, SEGMENTS)])}
 
 
-async def test_second_lesson_import_converges_without_duplicate_segments(client, owner, db_session):
-    for _ in range(2):
-        assert (await _import_lesson(client, owner)).status_code == 200
+async def test_lesson_import_returns_what_the_account_holds(client, owner):
+    response = await _import_lesson(client, owner)
+    assert response.json() == {"count": 1, "after": [{"lesson": LESSON, "segments": SEGMENTS}]}
+
+
+async def test_a_second_lesson_import_keeps_the_account_copy(client, owner):
+    await _import_lesson(client, owner)
+    await client.patch(f"/api/lessons/{LESSON_ID}", json={"title": "Renamed on the server"}, headers=_bearer(owner))
+    retry = await _import_lesson(client, owner)
+    assert retry.json()["after"][0]["lesson"]["title"] == "Renamed on the server"
     body = (await client.get(f"/api/lessons/{LESSON_ID}", headers=_bearer(owner))).json()
     assert body["segment_count"] == 2
     assert len((await client.get("/api/lessons", headers=_bearer(owner))).json()) == 1
+
+
+async def test_a_lesson_without_segments_verifies(client, owner):
+    response = await _import_lesson(client, owner, segments=[])
+    assert response.json()["after"][0]["segments"] == []
+    digest = await _manifest(client, owner, {"stores": {"segments": [LESSON_ID]}})
+    assert digest["stores"]["segments"] == {"count": 1, "sha256": store_hash([(LESSON_ID, [])])}
+
+
+async def test_a_segment_without_timing_is_stored_as_sent(client, owner):
+    untimed = [{"id": "s1", "text": "no timing", "start": None}]
+    response = await _import_lesson(client, owner, segments=untimed)
+    assert response.json()["after"][0]["segments"] == untimed
 
 
 async def test_a_lesson_another_account_imported_is_a_409(client, owner, stranger):
@@ -105,8 +125,8 @@ async def test_a_lesson_another_account_imported_is_a_409(client, owner, strange
     assert body["title"] == "Renamed greeting"
 
 
-async def test_a_lesson_with_a_bad_segment_is_422_at_its_position(client, owner):
-    response = await _import_lesson(client, owner, segments=[{"id": "s1", "text": "no timing"}])
+async def test_a_lesson_the_schema_rejects_is_422_at_its_position(client, owner):
+    response = await _import_lesson(client, owner, {**LESSON, "source": "podcast"})
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"][:3] == ["body", "lessons", 0]
 
@@ -198,6 +218,22 @@ async def test_a_second_device_with_an_identical_record_is_summed(client, owner)
     second = await _bulk(client, owner, "learner-profile", [PROFILE], "device-b")
     assert second["after"][0]["totalSessions"] == 6
     assert second["after"][0]["totalStudyMinutes"] == 24
+
+
+async def test_a_retry_merges_again_a_record_the_account_deleted_since(client, owner):
+    stat = {"vocabId": "w1", "exerciseType": "cloze", "correct": 1, "total": 2}
+    await _bulk(client, owner, "exercise-stats", [stat], "device-a")
+    await client.delete("/api/store/exercise-stats/w1:cloze", headers=_bearer(owner))
+    retry = await _bulk(client, owner, "exercise-stats", [stat], "device-a")
+    assert retry["after"] == [stat]
+
+
+async def test_manifest_takes_more_ids_than_asyncpg_can_bind(client, owner):
+    ids = [f"w{n}" for n in range(40_000)]
+    keys = [{"store": "vocabulary", "recordId": record_id} for record_id in ids[:20_000]]
+    digest = await _manifest(client, owner, {"stores": {"vocabulary": ids, "lessons": ids}, "quarantine": keys})
+    assert digest["stores"]["vocabulary"]["count"] == 0
+    assert digest["quarantine"]["count"] == 0
 
 
 async def test_non_union_manifest_matches_the_after_the_bulk_returned(client, owner):

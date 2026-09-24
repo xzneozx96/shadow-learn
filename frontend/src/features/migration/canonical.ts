@@ -5,13 +5,23 @@ export interface JsonObject { [key: string]: Json }
 
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
 
-// Postgres JSONB rejects NUL and lone surrogates, so they never leave the device.
-function storable(_key: string, value: unknown): unknown {
-  return typeof value === 'string' ? value.replaceAll('\0', '').replace(LONE_SURROGATE, '�') : value
+/** Postgres rejects NUL and lone surrogates in text and JSONB, so they never leave the device. */
+export function storableText(text: string): string {
+  return text.replaceAll('\0', '').replace(LONE_SURROGATE, '\uFFFD')
+}
+
+function storable(value: Json): Json {
+  if (typeof value === 'string')
+    return storableText(value)
+  if (Array.isArray(value))
+    return value.map(storable)
+  if (value !== null && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [storableText(key), storable(item)]))
+  return value
 }
 
 export function toJson(value: unknown): Json {
-  return JSON.parse(JSON.stringify(value, storable) ?? 'null')
+  return storable(JSON.parse(JSON.stringify(value) ?? 'null'))
 }
 
 /** RFC 8785 JSON, which JSON.stringify with recursively sorted keys produces for JSON values. */

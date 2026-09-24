@@ -3,7 +3,7 @@ import type { ShadowLearnDB } from '@/db/legacy'
 import type { EncryptedData } from '@/shared/lib/crypto'
 import type { LessonMeta } from '@/shared/types'
 import { unwrap } from 'idb'
-import { toJson } from './canonical'
+import { storableText, toJson } from './canonical'
 
 export const RECORD_STORES = [
   'settings',
@@ -138,10 +138,20 @@ function isUnfinished(meta: LessonMeta): boolean {
 }
 
 const EPOCH = '1970-01-01T00:00:00.000Z'
+const SOURCES = new Set<unknown>(['youtube', 'upload', 'blog'])
 
-function iso(value: string | undefined | null): string | null {
-  const time = value ? Date.parse(value) : Number.NaN
-  return Number.isNaN(time) ? null : new Date(time).toISOString()
+function iso(value: unknown): string | null {
+  const date = new Date(typeof value === 'string' ? value : Number.NaN)
+  const year = date.getUTCFullYear()
+  return year >= 1 && year <= 9999 ? date.toISOString() : null
+}
+
+function finite(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function strings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter(item => typeof item === 'string') : []
 }
 
 function lastEnd(segments: Json[]): number {
@@ -155,21 +165,29 @@ function lastEnd(segments: Json[]): number {
 function lessonRecord(meta: LessonMeta, id: string, segments: Json[]): JsonObject {
   return asObject({
     id,
-    title: meta.title,
-    source: meta.source,
-    sourceUrl: meta.sourceUrl ?? null,
-    duration: meta.duration ?? lastEnd(segments),
-    sourceLanguage: meta.sourceLanguage ?? 'zh-CN',
-    translationLanguages: meta.translationLanguages ?? [],
+    title: typeof meta.title === 'string' ? meta.title : '',
+    source: SOURCES.has(meta.source) ? meta.source : 'upload',
+    sourceUrl: typeof meta.sourceUrl === 'string' ? meta.sourceUrl : null,
+    duration: finite(meta.duration) ?? lastEnd(segments),
+    sourceLanguage: typeof meta.sourceLanguage === 'string' ? meta.sourceLanguage : 'zh-CN',
+    translationLanguages: strings(meta.translationLanguages),
     createdAt: iso(meta.createdAt) ?? EPOCH,
     lastOpenedAt: iso(meta.lastOpenedAt),
-    meta: { progressSegmentId: meta.progressSegmentId ?? null, tags: meta.tags ?? [], isDone: meta.isDone },
+    meta: {
+      progressSegmentId: typeof meta.progressSegmentId === 'string' ? meta.progressSegmentId : null,
+      tags: strings(meta.tags),
+      isDone: typeof meta.isDone === 'boolean' ? meta.isDone : undefined,
+    },
   })
+}
+
+function isObject(value: Json): value is JsonObject {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
 function asObject(value: unknown): JsonObject {
   const json = toJson(value)
-  return json !== null && typeof json === 'object' && !Array.isArray(json) ? json : {}
+  return isObject(json) ? json : {}
 }
 
 type Transform = (value: JsonObject) => JsonObject
@@ -187,7 +205,7 @@ function withLessonIds(lessonIds: LessonIds, ...fields: string[]): Transform {
 }
 
 function outgoing(store: RecordStore, values: JsonObject[], fallbackIds: string[]): OutgoingRecord[] {
-  return values.map((data, i) => ({ id: recordId(store, data) ?? `legacy:${fallbackIds[i]}`, data }))
+  return values.map((data, i) => ({ id: recordId(store, data) ?? `legacy:${storableText(fallbackIds[i])}`, data }))
 }
 
 function settled<T>(request: IDBRequest<T>): Promise<T> {
@@ -305,11 +323,13 @@ function mediaKind(blob: Blob): MediaKind {
 export async function readSnapshot(db: ShadowLearnDB): Promise<LegacySnapshot> {
   const metas = await db.getAll('lessons')
   const lessonIds = await lessonIdMap(metas)
-  const finished = metas.filter(meta => !isUnfinished(meta))
+  const videoKeys = await db.getAllKeys('videos')
+  const withFile = new Set(videoKeys)
+  const kept = metas.filter(meta => !isUnfinished(meta) || withFile.has(meta.id))
   const lessons: OutgoingLesson[] = []
-  for (const meta of finished) {
+  for (const meta of kept) {
     const segments = toJson((await db.get('segments', meta.id)) ?? [])
-    const list = Array.isArray(segments) ? segments : []
+    const list = Array.isArray(segments) ? segments.filter(isObject) : []
     const id = lessonIds(meta.id)
     lessons.push({ id, lesson: lessonRecord(meta, id, list), segments: list })
   }
@@ -325,7 +345,6 @@ export async function readSnapshot(db: ShadowLearnDB): Promise<LegacySnapshot> {
 
   const imported = new Set(lessons.map(lesson => lesson.id))
   const candidates: OutgoingMedia[] = []
-  const videoKeys = await db.getAllKeys('videos')
   for (const key of videoKeys) {
     const blob = await db.get('videos', key)
     if (blob)
@@ -341,23 +360,36 @@ export async function readSnapshot(db: ShadowLearnDB): Promise<LegacySnapshot> {
     media,
     keys: (await db.get('crypto', 'keys')) ?? null,
     skipped: {
-      unfinishedLessons: metas.length - finished.length,
+      unfinishedLessons: metas.length - kept.length,
       orphanMedia: candidates.length - media.length,
       storylessBreakdowns,
     },
   }
 }
 
-const SOURCE_KEY = 'import-source'
+export interface ImportClaim {
+  source: string
+  account: string
+}
 
-/** This device's import id. It lives in the legacy database, so it lasts exactly as long as the data it names. */
-export async function deviceSource(db: ShadowLearnDB): Promise<string> {
-  const tx = unwrap(db).transaction('crypto', 'readwrite')
-  const store = tx.objectStore('crypto')
-  const existing: unknown = await settled(store.get(SOURCE_KEY))
+async function claim(store: IDBObjectStore, key: string, value: string): Promise<string> {
+  const existing: unknown = await settled(store.get(key))
   if (typeof existing === 'string')
     return existing
-  const source = crypto.randomUUID()
-  await settled(store.add(source, SOURCE_KEY))
-  return source
+  await settled(store.add(value, key))
+  return value
+}
+
+/**
+ * This device's import id and the account its import belongs to. Both live in
+ * the legacy database, so they last exactly as long as the data they name. The
+ * first account to start an import keeps it, so another account on this
+ * browser never collides with lessons the first one already holds.
+ */
+export async function claimImport(db: ShadowLearnDB, account: string): Promise<ImportClaim> {
+  const store = unwrap(db).transaction('crypto', 'readwrite').objectStore('crypto')
+  return {
+    source: await claim(store, 'import-source', crypto.randomUUID()),
+    account: await claim(store, 'import-account', account),
+  }
 }

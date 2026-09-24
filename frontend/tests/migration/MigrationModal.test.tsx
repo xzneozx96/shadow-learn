@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AuthContext } from '@/app/providers/AuthContext'
 import { MigrationGate } from '@/features/migration/MigrationModal'
 import { reduce } from '@/features/migration/useMigration'
-import { legacyFixture, PIN, seedLegacyDatabase } from '../e2e/support/legacy-seed'
+import { legacyFixture, LESSON_A, PIN, seedLegacyDatabase } from '../e2e/support/legacy-seed'
 import { fakeImportServer } from './fake-import-server'
 import { stubApi } from './stub-api'
 import 'fake-indexeddb/auto'
@@ -12,12 +14,30 @@ async function databaseExists(): Promise<boolean> {
   return (await indexedDB.databases()).some(info => info.name === 'shadowlearn')
 }
 
-function renderGate(options: Parameters<typeof legacyFixture>[0] = {}) {
+const logout = vi.fn(async () => {})
+
+function signedIn(userId: string, children: ReactNode) {
+  const value = {
+    session: { userId, email: `${userId}@example.com` },
+    sessionCheckFailed: false,
+    db: null,
+    trialMode: false,
+    login: async () => {},
+    signup: async () => {},
+    logout,
+    requestPasswordReset: async () => {},
+    resetPassword: async () => {},
+  }
+  return <AuthContext value={value}>{children}</AuthContext>
+}
+
+function renderGate(options: Parameters<typeof legacyFixture>[0] = {}, userId = 'account-a') {
   const server = fakeImportServer()
   const { api } = stubApi(server.handle)
+  const view = () => signedIn(userId, <MigrationGate api={api}><p>the app</p></MigrationGate>)
   return {
     server,
-    seeded: seedLegacyDatabase(legacyFixture(options)).then(() => render(<MigrationGate api={api}><p>the app</p></MigrationGate>)),
+    seeded: seedLegacyDatabase(legacyFixture(options)).then(() => render(view())),
   }
 }
 
@@ -31,7 +51,7 @@ describe('migrationGate', { timeout: 30_000 }, () => {
 
   it('renders the app directly when this browser holds no legacy data', async () => {
     const server = fakeImportServer()
-    render(<MigrationGate api={stubApi(server.handle).api}><p>the app</p></MigrationGate>)
+    render(signedIn('account-a', <MigrationGate api={stubApi(server.handle).api}><p>the app</p></MigrationGate>))
     expect(await screen.findByText('the app')).toBeInTheDocument()
     expect(await databaseExists()).toBe(false)
   })
@@ -112,9 +132,65 @@ describe('migrationGate', { timeout: 30_000 }, () => {
   })
 })
 
+describe('migrationGate exits', { timeout: 30_000 }, () => {
+  beforeEach(() => { globalThis.indexedDB = new IDBFactory() })
+  afterEach(() => { globalThis.indexedDB = new IDBFactory() })
+
+  it('keeps the database when a lesson with media is set aside, and offers Sign out', async () => {
+    const { server, seeded } = renderGate()
+    server.state.rejectLesson = LESSON_A
+    await seeded
+    await start()
+    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    expect(failing).toHaveTextContent(`video for lesson ${LESSON_A}`)
+    expect(await databaseExists()).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    expect(logout).toHaveBeenCalled()
+  })
+
+  it('keeps a key the account already holds', async () => {
+    const { server, seeded } = renderGate({ withKeys: true })
+    server.keys.set('openrouter', { value: 'sk-or-account-key' })
+    await seeded
+    await start()
+    fireEvent.change(await screen.findByLabelText('Old PIN'), { target: { value: PIN } })
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock keys' }))
+    expect(await screen.findByText(/already had a OpenRouter key/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(server.keys.get('openrouter')).toEqual({ value: 'sk-or-account-key' })
+  })
+
+  it('imports a write another tab made during the run before it deletes anything', async () => {
+    const { server, seeded } = renderGate({ recordings: 0 })
+    server.state.onManifest = async () => {
+      const { openDB } = await import('idb')
+      const db = await openDB('shadowlearn')
+      await db.put('vocabulary', { id: 'late-word', word: '晚', sourceLessonId: LESSON_A, createdAt: '2026-06-02T00:00:00.000Z' })
+      db.close()
+    }
+    await seeded
+    await start()
+    expect(await screen.findByText(/Local copy deleted/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(server.stores.get('vocabulary')!.has('late-word')).toBe(true)
+  })
+
+  it('tells a second account that the import belongs to the first, and changes nothing', async () => {
+    const first = renderGate()
+    await first.seeded
+    const { claimImport } = await import('@/features/migration/exportStores')
+    const { openLegacy } = await import('@/features/migration/detectLegacyData')
+    const db = await openLegacy()
+    await claimImport(db, 'account-b')
+    db.close()
+    await start()
+    expect(await screen.findByText(/already being moved to a different account/)).toBeInTheDocument()
+    expect(first.server.stores.size).toBe(0)
+    expect(await databaseExists()).toBe(true)
+  })
+})
+
 describe('reduce', () => {
   it('counts progress only within the current step and never past the total', () => {
-    const records = reduce({ step: 'explain' }, { type: 'records', total: 3 })
+    const records = reduce({ step: 'explain', busy: false }, { type: 'records', total: 3 })
     expect(reduce(reduce(records, { type: 'sent', count: 2 }), { type: 'sent', count: 5 })).toEqual({ step: 'records', done: 3, total: 3 })
     expect(reduce({ step: 'verify' }, { type: 'sent', count: 1 })).toEqual({ step: 'verify' })
   })

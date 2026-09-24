@@ -75,14 +75,14 @@ describe('uploadLessons', () => {
     const { api, calls } = stubApi(({ path, body }) => {
       if (path === '/api/import/quarantine')
         return { body: { count: 1 } }
-      const sent = (body as { lessons: { id: string }[] }).lessons
+      const sent = (body as { lessons: { id: string, segments: unknown }[] }).lessons
       const bad = sent.findIndex(lesson => lesson.id === 'l2')
-      return bad === -1 ? { body: { count: sent.length } } : { status: 422, body: { detail: [{ loc: ['body', 'lessons', bad, 'segments', 0, 'start'], msg: 'Field required' }] } }
+      return bad === -1 ? { body: { count: sent.length, after: sent.map(({ segments, ...lesson }) => ({ lesson, segments })) } } : { status: 422, body: { detail: [{ loc: ['body', 'lessons', bad, 'segments', 0, 'start'], msg: 'Field required' }] } }
     })
     const ledger = emptyLedger('device-a', [])
     await uploadLessons(api, ledger, lessons, () => {})
     expect([...storeLedger(ledger, 'lessons').expected.keys()]).toEqual(['l1'])
-    expect([...storeLedger(ledger, 'segments').expected.keys()]).toEqual(['l1'])
+    expect(storeLedger(ledger, 'segments').expected.get('l1')).toEqual([{ start: 0, end: 1 }])
     expect(ledger.quarantine.get('lessons:l2')).toEqual({ store: 'lessons', recordId: 'l2', raw: { id: 'l2', title: 'bad', segments: [{ text: 'no timing' }] }, error: 'segments.0.start: Field required' })
     expect(calls).toHaveLength(3)
   })

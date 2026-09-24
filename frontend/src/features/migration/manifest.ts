@@ -27,6 +27,7 @@ export interface Ledger {
   stores: Map<ManifestStore, StoreLedger>
   quarantine: Map<string, QuarantinedRecord>
   media: SentMedia[]
+  unsentMedia: MediaKey[]
   hashMs: number
 }
 
@@ -41,6 +42,7 @@ export function emptyLedger(source: string, stores: readonly ManifestStore[]): L
     stores: new Map(stores.map(store => [store, { expected: new Map(), missing: [] }])),
     quarantine: new Map(),
     media: [],
+    unsentMedia: [],
     hashMs: 0,
   }
 }
@@ -123,6 +125,8 @@ export async function verify(api: ApiClient, ledger: Ledger): Promise<Verificati
     ok: missing === 0 && sameDigest(server.stores[store], digest),
   }))
   checks.push({ kind: 'quarantine', count: quarantined.length, ok: sameDigest(server.quarantine, quarantineDigest) })
+  for (const key of ledger.unsentMedia)
+    checks.push({ kind: 'media', key, ok: false })
   ledger.media.forEach((item, i) => {
     const stored = server.media[i]
     checks.push({ kind: 'media', key: item.key, ok: stored?.size === item.size && stored?.sha256 === item.sha256 })

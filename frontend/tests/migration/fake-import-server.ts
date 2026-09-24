@@ -20,7 +20,7 @@ export function fakeImportServer() {
   const quarantine = new Map<string, Json>()
   const media = new Map<string, { size: number, sha256: string }>()
   const keys = new Map<string, unknown>()
-  const state = { fault: null as string | null, down: false }
+  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, onManifest: null as (() => Promise<void>) | null }
   const store = (name: string) => stores.get(name) ?? stores.set(name, new Map()).get(name)!
 
   async function handle({ method, path, body }: Call) {
@@ -30,14 +30,22 @@ export function fakeImportServer() {
       keys.set(path.slice('/api/keys/'.length), body)
       return { body: {} }
     }
+    if (method === 'GET' && path === '/api/keys')
+      return { body: ['openrouter', 'azure_speech', 'google'].map(provider => ({ provider, source: keys.has(provider) ? 'user' : 'none' })) }
     if (method === 'GET' && path === '/api/store/user-materials')
       return { body: [...store('user-materials').values()] }
     if (path === '/api/import/lessons') {
-      for (const { segments, ...lesson } of (body as { lessons: (JsonObject & { segments: Json })[] }).lessons) {
-        store('lessons').set(String(lesson.id), lesson)
-        store('segments').set(String(lesson.id), segments)
+      const sent = (body as { lessons: (JsonObject & { segments: Json })[] }).lessons
+      const rejected = sent.findIndex(lesson => lesson.id === state.rejectLesson)
+      if (rejected !== -1)
+        return { status: 422, body: { detail: [{ loc: ['body', 'lessons', rejected, 'source'], msg: 'Input should be youtube, upload or blog' }] } }
+      for (const { segments, ...lesson } of sent) {
+        if (!store('lessons').has(String(lesson.id))) {
+          store('lessons').set(String(lesson.id), lesson)
+          store('segments').set(String(lesson.id), segments)
+        }
       }
-      return { body: { count: 1 } }
+      return { body: { count: sent.length, after: sent.map(({ id }) => ({ lesson: store('lessons').get(String(id)), segments: store('segments').get(String(id)) })) } }
     }
     const bulk = BULK.exec(path)
     if (bulk) {
@@ -62,6 +70,9 @@ export function fakeImportServer() {
     }
     if (path === '/api/import/manifest') {
       const request = body as ManifestBody
+      const hook = state.onManifest
+      state.onManifest = null
+      await hook?.()
       const digests: Record<string, unknown> = {}
       for (const [name, ids] of Object.entries(request.stores)) {
         const held = ids.filter(id => store(name).has(id)).map(id => [id, store(name).get(id)!] as [string, Json])
