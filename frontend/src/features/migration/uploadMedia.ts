@@ -23,7 +23,8 @@ export async function uploadMedia(
   media: OutgoingMedia[],
   onProgress: (sent: number) => void,
   accountKept: ReadonlySet<string> = new Set(),
-): Promise<void> {
+  accountWins: ReadonlySet<string> = new Set(),
+): Promise<{ keptAccountMedia: number }> {
   const started = performance.now()
   const sent: SentMedia[] = []
   for (const item of media)
@@ -33,12 +34,20 @@ export async function uploadMedia(
   const server = media.length > 0
     ? (await postManifest(api, { source: ledger.source, stores: {}, media: sent.map(item => item.key) })).media
     : []
+  let keptAccountMedia = 0
   for (const [i, item] of media.entries()) {
     const stored = server[i]
     const matches = stored?.size === sent[i].size && stored.sha256 === sent[i].sha256
+    // A lesson that changed on both sides keeps the account's media and only gains what the account lacks.
+    if (!matches && stored && accountWins.has(item.key.lessonId)) {
+      keptAccountMedia++
+      onProgress(1)
+      continue
+    }
     if (!matches && !accountKept.has(item.key.lessonId))
       await upload(api, item)
     ledger.media.push(sent[i])
     onProgress(1)
   }
+  return { keptAccountMedia }
 }

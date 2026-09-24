@@ -8,7 +8,7 @@ import { decryptKeys } from '@/shared/lib/crypto'
 import { canonical, toJson } from './canonical'
 import { deleteLegacyDatabase, openLegacy } from './detectLegacyData'
 import { claimImport, readSnapshot, RECORD_STORES } from './exportStores'
-import { emptyLedger, storeLedger, verify } from './manifest'
+import { emptyLedger, quarantineKey, storeLedger, verify } from './manifest'
 import { uploadMedia } from './uploadMedia'
 import { uploadLessons, uploadStore } from './uploadRecords'
 
@@ -20,6 +20,8 @@ export type KeysOutcome
 export interface Notes {
   keys: KeysOutcome
   keptAccountCopy: number
+  conflicts: number
+  keptAccountMedia: number
   quarantined: string[]
   skipped: Skipped
 }
@@ -171,16 +173,18 @@ async function importSnapshot(api: ApiClient, source: string, snapshot: LegacySn
   for (const { store, records } of snapshot.stores)
     keptAccountCopy += (await uploadStore(api, ledger, store, records, sent)).keptAccountCopy
 
-  const setAside = new Set([...ledger.quarantine.values()].filter(record => record.store === 'lessons').map(record => record.recordId))
+  const conflicts = new Set(Array.from(ledger.stores, ([store, entry]) => entry.conflicts.map(id => quarantineKey({ store, recordId: id }))).flat())
+  const rejected = [...ledger.quarantine.entries()].filter(([key]) => !conflicts.has(key)).map(([, record]) => record)
+  const setAside = new Set(rejected.filter(record => record.store === 'lessons').map(record => record.recordId))
   const media = snapshot.media.filter(item => !setAside.has(item.key.lessonId))
   ledger.unsentMedia = snapshot.media.filter(item => setAside.has(item.key.lessonId)).map(item => item.key)
   dispatch({ type: 'media', total: media.length })
   const lessons = storeLedger(ledger, 'lessons')
-  await uploadMedia(api, ledger, media, sent, new Set([...lessons.present, ...lessons.conflicts]))
+  const { keptAccountMedia } = await uploadMedia(api, ledger, media, sent, lessons.present, new Set(lessons.conflicts))
 
   dispatch({ type: 'verify', records: recordTotal(snapshot), media: media.length })
-  const quarantined = Array.from(ledger.quarantine.values(), record => record.store)
-  return { verification: await verify(api, ledger), keptAccountCopy, quarantined }
+  const quarantined = rejected.map(record => record.store)
+  return { verification: await verify(api, ledger), keptAccountCopy, keptAccountMedia, conflicts: conflicts.size, quarantined }
 }
 
 export function useMigration(api: ApiClient, account: string) {
@@ -197,7 +201,7 @@ export function useMigration(api: ApiClient, account: string) {
         keysRef.current.outcome = { kind: 'saved', ...(await saveKeys(api, keysRef.current.decrypted)) }
 
       for (let round = 0; round < MAX_ROUNDS; round++) {
-        const { verification, keptAccountCopy, quarantined } = await importSnapshot(api, loaded.source, loaded.snapshot, dispatch)
+        const { verification, keptAccountCopy, keptAccountMedia, conflicts, quarantined } = await importSnapshot(api, loaded.source, loaded.snapshot, dispatch)
         if (!verification.ok) {
           dispatch({ type: 'mismatch', verification })
           return
@@ -212,7 +216,7 @@ export function useMigration(api: ApiClient, account: string) {
         loaded.db.close()
         await deleteLegacyDatabase(() => dispatch({ type: 'blocked' }))
         loadedRef.current = null
-        dispatch({ type: 'done', verification, notes: { keys: keysRef.current.outcome, keptAccountCopy, quarantined, skipped: loaded.snapshot.skipped } })
+        dispatch({ type: 'done', verification, notes: { keys: keysRef.current.outcome, keptAccountCopy, conflicts, keptAccountMedia, quarantined, skipped: loaded.snapshot.skipped } })
         return
       }
       dispatch({ type: 'error', message: '', changing: true })

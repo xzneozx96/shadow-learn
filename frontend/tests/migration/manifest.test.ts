@@ -121,13 +121,20 @@ describe('anchoring to the local read', () => {
     expect(result.checks).toContainEqual(expect.objectContaining({ store: 'learner-profile', undominated: 1, ok: false }))
   })
 
-  it('fails a record that changed both here and in the account', async () => {
-    const { api } = stubApi(() => ({ body: { count: 1, after: [{ id: '__global' }], outcomes: { __global: 'conflict' } } }))
+  it('saves this device\'s copy of a record that changed both here and in the account, and verifies it saved', async () => {
+    const local = { id: '__global', messages: [] }
+    const { api, calls } = stubApi(({ path }) => path === '/api/import/quarantine'
+      ? { body: { count: 1 } }
+      : { body: { count: 1, after: [{ id: '__global', messages: [{ id: 'account' }] }], outcomes: { __global: 'conflict' } } })
     const ledger = emptyLedger('device-a', [])
-    await uploadStore(api, ledger, 'threads', [{ id: '__global', data: { id: '__global', messages: [] } }], () => {})
-    const result = await verify(stubApi(async () => ({ body: await manifestFor({ threads: {} }) })).api, ledger)
-    expect(result.checks).toContainEqual({ kind: 'conflict', store: 'threads', recordId: '__global', ok: false })
-    expect(result.ok).toBe(false)
+    await uploadStore(api, ledger, 'threads', [{ id: '__global', data: local }], () => {})
+    expect(calls[1]).toEqual(expect.objectContaining({ path: '/api/import/quarantine', body: { source: 'device-a', records: [{ store: 'threads', recordId: '__global', raw: local, error: [{ type: 'conflict' }] }] } }))
+    expect(storeLedger(ledger, 'threads').conflicts).toEqual(['__global'])
+    const quarantine = await storeDigest([['threads:__global', local]])
+    const kept = await verify(stubApi(async () => ({ body: { ...(await manifestFor({ threads: {} })), quarantine } })).api, ledger)
+    expect(kept.ok).toBe(true)
+    const lost = await verify(stubApi(async () => ({ body: await manifestFor({ threads: {} }) })).api, ledger)
+    expect(lost.checks).toContainEqual({ kind: 'quarantine', count: 1, ok: false })
   })
 })
 

@@ -1,8 +1,12 @@
+import hashlib
 import uuid
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
 
+from app.importer.canonical import canonical
+from app.importer.models import QuarantinedRecord
 from tests.conftest import register_and_login
 
 pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.real_auth]
@@ -126,3 +130,40 @@ async def test_the_manifest_reports_records_the_account_does_not_dominate(client
         headers=_bearer(owner),
     )
     assert response.json()["undominated"] == {"learner-profile": ["profile"], "shadowing-bests": []}
+
+
+def _sha256(value) -> str:
+    return hashlib.sha256(canonical(value)).hexdigest()
+
+
+async def _quarantine_conflict(client, user, store, record_id, raw, source="device-a"):
+    body = {"source": source, "records": [{"store": store, "recordId": record_id, "raw": raw, "error": [{"type": "conflict", "accountSha256": "forged"}]}]}
+    response = await client.post("/api/import/quarantine", json=body, headers=_bearer(user))
+    assert response.status_code == 200, response.text
+
+
+async def test_a_union_conflict_is_kept_for_repair_with_the_account_row_hash_once(client, owner, db_session):
+    await _bulk(client, owner, "threads", [THREAD], "device-a")
+    edited = {**THREAD, "messages": [{"id": "edited"}]}
+    await client.put("/api/store/threads/__global", json=edited, headers=_bearer(owner))
+    device = {**THREAD, "messages": [{"id": "a"}, {"id": "b"}]}
+    for _ in range(2):
+        assert (await _bulk(client, owner, "threads", [device], "device-a"))["outcomes"] == {"__global": "conflict"}
+        await _quarantine_conflict(client, owner, "threads", "__global", device)
+    account = await _get(client, owner, "threads", "__global")
+    assert account == edited
+    rows = (await db_session.execute(select(QuarantinedRecord.raw, QuarantinedRecord.error))).all()
+    assert rows == [(device, [{"type": "conflict", "accountSha256": _sha256(account)}])]
+
+
+async def test_a_lesson_conflict_is_kept_for_repair_with_the_account_lesson_hash(client, owner, db_session):
+    await _lessons(client, owner, LESSON)
+    await client.patch(f"/api/lessons/{LESSON_ID}", json={"title": "Renamed on the server"}, headers=_bearer(owner))
+    changed = {**LESSON, "title": "Renamed on the device"}
+    after = await _lessons(client, owner, changed)
+    assert after["outcomes"] == {LESSON_ID: "conflict"}
+    raw = {**changed, "segments": SEGMENTS}
+    await _quarantine_conflict(client, owner, "lessons", LESSON_ID, raw)
+    account = after["after"][0]
+    rows = (await db_session.execute(select(QuarantinedRecord.raw, QuarantinedRecord.error))).all()
+    assert rows == [(raw, [{"type": "conflict", "accountSha256": _sha256([account["lesson"], account["segments"]])}])]

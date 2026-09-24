@@ -169,6 +169,23 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     expect(await databaseExists()).toBe(false)
   })
 
+  it('keeps the account version of what changed on both sides, saves this device\'s for repair, and finishes', async () => {
+    const { server, seeded } = renderGate()
+    server.state.conflicts = new Set(['threads:__global', `lessons:${LESSON_A}`])
+    await seeded
+    await start()
+    expect(await screen.findByText('2 items changed both here and in your account; your account\'s version was kept and this device\'s version was saved for repair.', {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(screen.queryByText(/couldn't be converted/)).not.toBeInTheDocument()
+    expect(await databaseExists()).toBe(false)
+    expect(server.stores.get('threads')!.get('__global')).toEqual(expect.objectContaining({ editedInAccount: true }))
+    expect(server.stores.get('lessons')!.get(LESSON_A)).toEqual(expect.objectContaining({ title: 'Edited in the account' }))
+    expect([...server.quarantine.keys()].sort()).toEqual([`lessons:${LESSON_A}`, 'threads:__global'])
+    expect(server.quarantine.get('threads:__global')).not.toHaveProperty('editedInAccount')
+    expect(server.quarantine.get(`lessons:${LESSON_A}`)).toEqual(expect.objectContaining({ id: LESSON_A, segments: expect.any(Array) }))
+    for (const error of server.quarantineErrors.values())
+      expect(error).toEqual([{ type: 'conflict' }])
+  })
+
   it('speaks the language this browser used before, Vietnamese here', async () => {
     await renderGate({ variant: 'B' }).seeded
     expect(await screen.findByText('Chuyển dữ liệu vào tài khoản của bạn')).toBeInTheDocument()

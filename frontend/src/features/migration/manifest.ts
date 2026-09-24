@@ -31,7 +31,8 @@ export interface Ledger {
  * the server's merge for `merged`. `dominance` holds the local copy of each `merged`
  * record, which the server must show it already reflects, by the store's merge rule.
  * `present` lists `kept_server` ids, where a rule kept the account's copy on purpose,
- * so they only need to exist. `conflicts` changed both here and in the account.
+ * so they only need to exist. `conflicts` changed both here and in the account: the
+ * account's copy stands and this device's copy is verified among the quarantine.
  */
 export interface StoreLedger {
   expected: Map<string, Json>
@@ -79,7 +80,6 @@ export interface ManifestResponse {
 
 export type Check
   = | { kind: 'store', store: ManifestStore, count: number, ok: boolean, missing: number, undominated: number, absent: number }
-    | { kind: 'conflict', store: ManifestStore, recordId: string, ok: false }
     | { kind: 'quarantine', count: number, ok: boolean }
     | { kind: 'media', key: MediaKey, ok: boolean }
 
@@ -145,10 +145,6 @@ export async function verify(api: ApiClient, ledger: Ledger): Promise<Verificati
       ok: missing === 0 && undominated === 0 && absent === 0 && sameDigest(server.stores[store], digest),
     }
   })
-  for (const [store, { conflicts }] of ledger.stores) {
-    for (const recordId of conflicts)
-      checks.push({ kind: 'conflict', store, recordId, ok: false })
-  }
   checks.push({ kind: 'quarantine', count: quarantined.length, ok: sameDigest(server.quarantine, quarantineDigest) })
   for (const key of ledger.unsentMedia)
     checks.push({ kind: 'media', key, ok: false })

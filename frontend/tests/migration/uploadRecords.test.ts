@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyLedger, storeLedger } from '@/features/migration/manifest'
+import { uploadMedia } from '@/features/migration/uploadMedia'
 import { batches, MAX_BATCH_BYTES, MAX_BATCH_RECORDS, uploadLessons, uploadStore } from '@/features/migration/uploadRecords'
 import { stubApi } from './stub-api'
 
@@ -90,5 +91,20 @@ describe('uploadLessons', () => {
     expect(storeLedger(ledger, 'segments').expected.get('l1')).toEqual([{ start: 0, end: 1 }])
     expect(ledger.quarantine.get('lessons:l2')).toEqual({ store: 'lessons', recordId: 'l2', raw: { id: 'l2', title: 'bad', segments: [{ text: 'no timing' }] }, error: [{ loc: ['body', 'lessons', 1, 'segments', 0, 'start'], msg: 'Field required' }] })
     expect(calls).toHaveLength(3)
+  })
+})
+
+describe('uploadMedia', () => {
+  it('keeps the account file of a lesson that changed on both sides and fills in only what the account lacks', async () => {
+    const video = { key: { lessonId: 'l1', kind: 'video' as const }, blob: new Blob(['device video']) }
+    const audio = { key: { lessonId: 'l1', kind: 'audio' as const }, blob: new Blob(['device audio']) }
+    const { api, calls } = stubApi(({ path }) => path === '/api/import/manifest'
+      ? { body: { stores: {}, quarantine: { count: 0, sha256: '' }, media: [{ ...video.key, size: 1, sha256: 'account' }, null] } }
+      : { body: {} })
+    const ledger = emptyLedger('device-a', [])
+    const { keptAccountMedia } = await uploadMedia(api, ledger, [video, audio], () => {}, new Set(), new Set(['l1']))
+    expect(keptAccountMedia).toBe(1)
+    expect(calls.filter(call => call.path === '/api/import/media').map(call => (call.body as FormData).get('kind'))).toEqual(['audio'])
+    expect(ledger.media.map(item => item.key)).toEqual([audio.key])
   })
 })

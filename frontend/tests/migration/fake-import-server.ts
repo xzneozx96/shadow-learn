@@ -18,9 +18,10 @@ const mediaKey = (key: { lessonId: string, kind: string, segmentId?: string | nu
 export function fakeImportServer() {
   const stores = new Map<string, Map<string, Json>>()
   const quarantine = new Map<string, Json>()
+  const quarantineErrors = new Map<string, Json>()
   const media = new Map<string, { size: number, sha256: string }>()
   const keys = new Map<string, unknown>()
-  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, rejectRecord: null as string | null, dropField: null as string | null, onManifest: null as (() => Promise<void>) | null }
+  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, rejectRecord: null as string | null, dropField: null as string | null, onManifest: null as (() => Promise<void>) | null, conflicts: new Set<string>() }
   const writer = new Map<string, string>()
   const store = (name: string) => stores.get(name) ?? stores.set(name, new Map()).get(name)!
 
@@ -43,6 +44,12 @@ export function fakeImportServer() {
       const outcomes: Record<string, string> = {}
       for (const { segments, ...lesson } of sent) {
         const id = String(lesson.id)
+        if (state.conflicts.has(`lessons:${id}`)) {
+          store('lessons').set(id, { ...lesson, title: 'Edited in the account' })
+          store('segments').set(id, segments)
+          outcomes[id] = 'conflict'
+          continue
+        }
         if (!store('lessons').has(id)) {
           store('lessons').set(id, lesson)
           store('segments').set(id, segments)
@@ -62,6 +69,11 @@ export function fakeImportServer() {
       for (const record of records) {
         const id = recordId(bulk[1] as RecordStore, record)!
         const key = `${bulk[1]}:${id}`
+        if (state.conflicts.has(key)) {
+          target.set(id, { ...record, editedInAccount: true })
+          outcomes[id] = 'conflict'
+          continue
+        }
         if (!target.has(id)) {
           const { [state.dropField ?? '']: _dropped, ...kept } = record
           target.set(id, state.dropField ? kept : record)
@@ -72,8 +84,10 @@ export function fakeImportServer() {
       return { body: { count: records.length, outcomes, after: Object.keys(outcomes).map(id => target.get(id)) } }
     }
     if (path === '/api/import/quarantine') {
-      for (const record of (body as { records: { store: string, recordId: string, raw: Json }[] }).records)
+      for (const record of (body as { records: { store: string, recordId: string, raw: Json, error: Json }[] }).records) {
         quarantine.set(`${record.store}:${record.recordId}`, record.raw)
+        quarantineErrors.set(`${record.store}:${record.recordId}`, record.error)
+      }
       return { body: {} }
     }
     if (path === '/api/import/media') {
@@ -106,5 +120,5 @@ export function fakeImportServer() {
     return undefined
   }
 
-  return { handle, stores, keys, media, state }
+  return { handle, stores, keys, media, quarantine, quarantineErrors, state }
 }

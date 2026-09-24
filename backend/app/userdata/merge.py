@@ -29,6 +29,10 @@ def _earliest(a: str | None, b: str | None) -> str | None:
     return min(a, b) if a and b else a or b
 
 
+def _weighted(record: Data, value: str, weight: str) -> float:
+    return (record.get(value) or 0) * (record.get(weight) or 0)
+
+
 def _at_least(stored: Data, local: Data, key: str) -> bool:
     return local.get(key) is None or (stored.get(key) is not None and stored[key] >= local[key])
 
@@ -41,25 +45,41 @@ class Fold:
     maxes: tuple[str, ...] = ()
     latest: tuple[str, ...] = ()
     earliest: tuple[str, ...] = ()
+    weighted: tuple[tuple[str, str], ...] = ()
+    """Averages paired with the summed count that weights them, such as accuracy by sessions."""
 
     def merge(self, server: Data, incoming: Data) -> Data:
-        return {
+        merged = {
             **server,
             **{key: (server.get(key) or 0) + (incoming.get(key) or 0) for key in self.sums},
             **{key: max(server.get(key) or 0, incoming.get(key) or 0) for key in self.maxes},
             **{key: _latest(server.get(key), incoming.get(key)) for key in self.latest},
             **{key: _earliest(server.get(key), incoming.get(key)) for key in self.earliest},
         }
+        for value, weight in self.weighted:
+            total = merged[weight]
+            covered = _weighted(server, value, weight) + _weighted(incoming, value, weight)
+            merged[value] = covered / total if total else (server if value in server else incoming).get(value, 0)
+        return merged
 
     def dominates(self, stored: Data, local: Data) -> bool:
         return (
             all((stored.get(key) or 0) >= (local.get(key) or 0) for key in (*self.sums, *self.maxes))
             and all(not local.get(key) or _at_least(stored, local, key) for key in self.latest)
             and all(not local.get(key) or bool(stored.get(key)) and stored[key] <= local[key] for key in self.earliest)
+            and all(
+                _weighted(stored, value, weight) >= _weighted(local, value, weight) - 1e-9
+                for value, weight in self.weighted
+            )
         )
 
     def delta(self, incoming: Data, previous: Data) -> Data:
-        return {**incoming, **{key: (incoming.get(key) or 0) - (previous.get(key) or 0) for key in self.sums}}
+        """The change since ``previous``. A counter that dropped contributes nothing rather than decrement."""
+        delta = {**incoming, **{key: max((incoming.get(key) or 0) - (previous.get(key) or 0), 0) for key in self.sums}}
+        for value, weight in self.weighted:
+            grown = _weighted(incoming, value, weight) - _weighted(previous, value, weight)
+            delta[value] = grown / delta[weight] if delta[weight] else 0
+        return delta
 
 
 PROFILE = Fold(
@@ -68,8 +88,11 @@ PROFILE = Fold(
     latest=("lastStudyDate",),
     earliest=("profileCreated",),
 )
-PROGRESS = Fold(sums=("totalSessions", "totalExercises", "totalCorrect", "totalIncorrect", "totalStudyMinutes"))
-SKILL_STATS = Fold(sums=("sessions",), latest=("lastPracticed",))
+PROGRESS = Fold(
+    sums=("totalSessions", "totalExercises", "totalCorrect", "totalIncorrect", "totalStudyMinutes"),
+    weighted=(("accuracyRate", "totalExercises"),),
+)
+SKILL_STATS = Fold(sums=("sessions",), latest=("lastPracticed",), weighted=(("accuracy", "sessions"),))
 SKILL_MASTERY = Fold(sums=("totalPracticeTime",), maxes=("masteryLevel", "confidenceScore"), latest=("lastPracticed",))
 EXERCISE_STAT = Fold(sums=("correct", "total"), latest=("lastAttempt",))
 MISTAKE = Fold(sums=("frequency",), latest=("lastOccurred",))
@@ -80,10 +103,7 @@ def learner_profile(server: Data, incoming: Data) -> Data:
 
 
 def _skill_stats(server: Data, incoming: Data) -> Data:
-    merged = SKILL_STATS.merge(server, incoming)
-    weighted = sum((side.get("accuracy") or 0) * (side.get("sessions") or 0) for side in (server, incoming))
-    merged["accuracy"] = weighted / merged["sessions"] if merged["sessions"] else server.get("accuracy")
-    return merged
+    return SKILL_STATS.merge(server, incoming)
 
 
 def _per_skill(server: Data, incoming: Data, merge_skill: MergeRule) -> Data:
@@ -115,11 +135,10 @@ def _per_skill_delta(incoming: Data, previous: Data, fold: Fold) -> Data:
 
 def progress(server: Data, incoming: Data) -> Data:
     merged = PROGRESS.merge(server, incoming)
-    merged["accuracyRate"] = merged["totalCorrect"] / merged["totalExercises"] if merged["totalExercises"] else 0
 
     trend = {day["date"]: day for day in server.get("accuracyTrend") or []}
     for day in incoming.get("accuracyTrend") or []:
-        if day["date"] not in trend or (day.get("exercises") or 0) > (trend[day["date"]].get("exercises") or 0):
+        if day["date"] not in trend or _day_rank(day) > _day_rank(trend[day["date"]]):
             trend[day["date"]] = day
     merged["accuracyTrend"] = [trend[date] for date in sorted(trend)]
 
@@ -129,12 +148,17 @@ def progress(server: Data, incoming: Data) -> Data:
     return merged
 
 
+def _day_rank(day: Data) -> tuple:
+    """A trend day is one snapshot, so a merge keeps a whole day: the busier one, then the more accurate."""
+    return (day.get("exercises") or 0, day.get("accuracy") or 0)
+
+
 def _progress_dominates(stored: Data, local: Data) -> bool:
     trend = {day["date"]: day for day in stored.get("accuracyTrend") or []}
     return (
         PROGRESS.dominates(stored, local)
         and all(
-            day["date"] in trend and (trend[day["date"]].get("exercises") or 0) >= (day.get("exercises") or 0)
+            day["date"] in trend and _day_rank(trend[day["date"]]) >= _day_rank(day)
             for day in local.get("accuracyTrend") or []
         )
         and _per_skill_dominates(stored.get("skillProgress") or {}, local.get("skillProgress") or {}, SKILL_STATS)

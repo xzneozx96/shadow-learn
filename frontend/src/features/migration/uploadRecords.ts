@@ -62,6 +62,8 @@ async function postJson(api: ApiClient, path: string, body: unknown): Promise<Re
   return api.fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 }
 
+const CONFLICT: Json[] = [{ type: 'conflict' }]
+
 async function quarantine(api: ApiClient, ledger: Ledger, records: QuarantinedRecord[]): Promise<void> {
   if (records.length === 0)
     return
@@ -113,6 +115,7 @@ export async function uploadLessons(
       (item, error) => ({ store: 'lessons', recordId: item.id, raw: { ...item.lesson, segments: item.segments }, error }),
     )
     const outcomes = outcomesOf(body)
+    const conflicts: QuarantinedRecord[] = []
     for (const lesson of accepted) {
       const outcome = outcomes.get(lesson.id)
       if (outcome === 'stored') {
@@ -125,11 +128,13 @@ export async function uploadLessons(
       }
       else if (outcome === 'conflict') {
         lessonLedger.conflicts.push(lesson.id)
+        conflicts.push({ store: 'lessons', recordId: lesson.id, raw: { ...lesson.lesson, segments: lesson.segments }, error: CONFLICT })
       }
       else {
         lessonLedger.missing.push(lesson.id)
       }
     }
+    await quarantine(api, ledger, conflicts)
     onProgress(batch.length)
   }
 }
@@ -186,6 +191,7 @@ export async function uploadStore(
     )
     const after = new Map(afterRecords(body).map(record => [recordId(store, record), record]))
     const outcomes = outcomesOf(body)
+    const conflicts: QuarantinedRecord[] = []
     for (const { id, data } of accepted) {
       const outcome = outcomes.get(id)
       const merged = after.get(id)
@@ -201,11 +207,13 @@ export async function uploadStore(
       }
       else if (outcome === 'conflict') {
         entry.conflicts.push(id)
+        conflicts.push({ store, recordId: id, raw: data, error: CONFLICT })
       }
       else {
         entry.missing.push(id)
       }
     }
+    await quarantine(api, ledger, conflicts)
     onProgress(batch.length)
   }
   return { keptAccountCopy: kept }

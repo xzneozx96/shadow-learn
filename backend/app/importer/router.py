@@ -213,10 +213,22 @@ def _write_lesson(lesson: Lesson, item: ImportedLesson) -> None:
 
 @router.post("/quarantine")
 async def quarantine(body: QuarantineImport, user: CurrentUser, session: Session) -> dict[str, int]:
-    """Keep records the store schemas reject, verbatim, so the device can still delete its copy."""
+    """Keep records the store schemas reject, or that conflict with the account's copy, verbatim.
+
+    Either way the device can delete its copy. A conflict's error gets the hash of the
+    account's copy as the server holds it now, whatever the device sent for it.
+    """
     unknown = sorted({item.store for item in body.records} - RECORD_STORES)
     if unknown:
         raise HTTPException(status_code=422, detail=f"Unknown store {unknown[0]}")
+    for store in {item.store for item in body.records if _is_conflict(item)}:
+        conflicts = [item for item in body.records if item.store == store and _is_conflict(item)]
+        hashes = await _account_hashes(session, user.id, store, [item.record_id for item in conflicts])
+        for item in conflicts:
+            item.error = [
+                {**error, "accountSha256": hashes.get(item.record_id)} if error.get("type") == "conflict" else error
+                for error in item.error
+            ]
     rows = {
         (item.store, item.record_id): {
             "user_id": user.id,
@@ -239,6 +251,16 @@ async def quarantine(body: QuarantineImport, user: CurrentUser, session: Session
         )
         await session.commit()
     return {"count": len(rows)}
+
+
+def _is_conflict(item: QuarantinedItem) -> bool:
+    return any(error.get("type") == "conflict" for error in item.error)
+
+
+async def _account_hashes(session: AsyncSession, user_id: uuid.UUID, store: str, ids: list[str]) -> dict[str, str]:
+    if store == LESSONS:
+        return await _lesson_hashes(session, user_id, ids)
+    return {record_id: _hash(record) for record_id, record in await stored_records(session, user_id, store, ids)}
 
 
 def _content_type(upload: UploadFile, kind: ImportKind) -> str:

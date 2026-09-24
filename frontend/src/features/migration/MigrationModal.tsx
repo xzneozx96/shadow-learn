@@ -22,6 +22,8 @@ type PluralKey
     | 'migration.done.stores'
     | 'migration.done.media'
     | 'migration.done.materials'
+    | 'migration.done.conflicts'
+    | 'migration.done.conflictMedia'
     | 'migration.done.quarantine'
     | 'migration.done.unfinished'
     | 'migration.done.orphans'
@@ -84,8 +86,6 @@ function checkLabel(t: T, check: Check): string {
       return check.missing > 0 ? t('migration.check.missing', { store: check.store, n: check.missing }) : check.store
     case 'quarantine':
       return t('migration.check.quarantine')
-    case 'conflict':
-      return t('migration.check.conflict', { store: check.store, id: check.recordId })
     case 'media':
       if (check.key.kind === 'shadowing')
         return t('migration.check.recording', { segment: check.key.segmentId ?? '' })
@@ -130,6 +130,10 @@ function noteLines(t: T, notes: Notes): string[] {
     lines.push(t('migration.done.keysKept', { providers: notes.keys.kept.join(', ') }))
   if (notes.keptAccountCopy > 0)
     lines.push(plural(t, 'migration.done.materials', notes.keptAccountCopy))
+  if (notes.conflicts > 0)
+    lines.push(plural(t, 'migration.done.conflicts', notes.conflicts))
+  if (notes.keptAccountMedia > 0)
+    lines.push(plural(t, 'migration.done.conflictMedia', notes.keptAccountMedia))
   if (notes.quarantined.length > 0)
     lines.push(plural(t, 'migration.done.quarantine', notes.quarantined.length, { stores: [...new Set(notes.quarantined)].sort().join(', ') }))
   if (notes.skipped.unfinishedLessons > 0)
