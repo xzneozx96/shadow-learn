@@ -1,14 +1,3 @@
-/**
- * create-lesson-languages.spec.ts
- *
- * E2E tests for language selection on the Create Lesson page.
- *
- * Covered scenarios:
- *   US01.US06-E2E-009 — Translation language defaults to the saved settings value on page open
- *   US01.US06-E2E-010 — Source language defaults to zh-CN when no prior selection exists
- *   US01.US06-E2E-011 — Language selections are included in the generate request payload
- */
-
 import { expect, test } from '@playwright/test'
 import { readPendingLessons, seedSettings, signUpAndLogin } from '../support/api-helpers'
 import { mockConfig, mockGenerateSuccess, mockJobStatus } from './helpers'
@@ -114,7 +103,6 @@ test('US01.US06-E2E-022 @p1 @regression @create-lesson — ac-03.4: the pending 
 
   await expect(page.getByTestId('create-lesson-queued-confirmation')).toBeVisible()
 
-  // The server has no row until the job completes, so the Library keeps the lesson in this browser
   const lesson = (await readPendingLessons(page, user)).find(l => l.jobId === JOB_ID_PENDING)
 
   expect(lesson).toBeDefined()

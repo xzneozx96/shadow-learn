@@ -1,5 +1,3 @@
-"""Seed routes for end-to-end tests. Mounted only when ``settings.enable_test_routes`` is true."""
-
 import uuid
 from typing import Annotated, Any
 
@@ -73,7 +71,6 @@ async def seed_lesson_media(
     user: CurrentUser,
     content_type: Annotated[str, Header()],
 ) -> dict[str, str]:
-    """Attach a video or audio file, sent as the raw body, to a seeded lesson."""
     await owned_lesson(session, lesson_id, user)
     content_type = content_type.split(";")[0].strip().lower()
     ext = _EXTS.get(content_type)

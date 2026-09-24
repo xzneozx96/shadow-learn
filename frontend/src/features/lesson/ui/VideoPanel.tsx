@@ -146,17 +146,15 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
     if (!media || !element)
       return
 
-    // A ticket expires after a few minutes; the next range request then fails
-    // with 401. Mint one fresh ticket per successful load and resume in place.
-    let refreshed = false
+    let refreshedSinceCanPlay = false
     let disposed = false
     const handleCanPlay = () => {
-      refreshed = false
+      refreshedSinceCanPlay = false
     }
     const handleError = async () => {
-      if (refreshed || !db)
+      if (refreshedSinceCanPlay || !db)
         return
-      refreshed = true
+      refreshedSinceCanPlay = true
       const resumeAt = element.currentTime
       const wasPlaying = !element.paused
       const url = await refreshMediaTicket(db, media.id)

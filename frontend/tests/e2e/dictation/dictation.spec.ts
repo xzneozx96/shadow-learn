@@ -27,7 +27,6 @@ import {
 
 // ── Shared constants ──────────────────────────────────────────────────────────
 
-// Vocab entries point at this placeholder; goToStudyPage swaps in the seeded lesson's id.
 const LESSON_ID = 'lesson-dict-001'
 
 /** Standard vocab entry with a non-empty sourceSegmentText. */
@@ -77,7 +76,6 @@ const MP3_STUB = Buffer.from([0xFF, 0xFB, 0x90, 0x00])
 
 let user: TestUser
 
-/** Sign in as a fresh account for this test. */
 async function signIn(page: import('@playwright/test').Page) {
   user = await signUpAndLogin(page)
 }
@@ -96,21 +94,12 @@ async function interceptConfig(page: import('@playwright/test').Page) {
   })
 }
 
-/**
- * Seed infrastructure data and navigate to the study session page.
- * Must be called AFTER signIn() and AFTER any page.route() intercepts
- * are registered (network-first rule).
- *
- * vocabEntries are seeded AFTER the first page.goto('/') establishes the
- * app origin so IDB is accessible.
- */
 async function goToStudyPage(
   page: import('@playwright/test').Page,
   vocabEntries: IDBVocabEntry[] = [],
 ) {
   // Intercept config so TTS provider resolves immediately without a real backend.
   await interceptConfig(page)
-  // Seed settings to force English UI so aria-labels match English strings.
   await seedSettings(page.request, user, { translationLanguage: 'en', uiLanguage: 'en' })
   const lessonId = await seedLesson(page.request, user, {
     title: 'Dictation Test Lesson',

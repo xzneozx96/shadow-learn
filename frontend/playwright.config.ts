@@ -27,9 +27,9 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // The backend needs Postgres, MinIO, and SHADOWLEARN_ENABLE_TEST_ROUTES=true in its environment.
       command: `cd ../backend && uv run uvicorn app.main:app --port ${new URL(API_URL).port}`,
       url: `${API_URL}/api/health/deps`,
+      env: { SHADOWLEARN_ENABLE_TEST_ROUTES: 'true' },
       reuseExistingServer: true,
       timeout: 120_000,
     },

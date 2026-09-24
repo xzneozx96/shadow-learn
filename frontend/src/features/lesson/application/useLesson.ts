@@ -36,7 +36,6 @@ export function useLesson(db: DataClient | null, lessonId: string | undefined): 
         setMeta(opened)
         setSegments(lesson.segments)
         setMedia(lesson.media)
-        // Best effort: a missed last-opened timestamp only affects Library sort order.
         saveLessonMeta(client, opened).catch(() => {})
       }
       catch (e) {

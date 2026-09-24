@@ -141,7 +141,6 @@ test('US01.US06-E2E-006 @p1 @regression @create-lesson @youtube — Job pipeline
     error: 'Video exceeds maximum duration of 1200 seconds',
   })
 
-  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing lesson and wait for job poller to surface the error

@@ -1,14 +1,3 @@
-/**
- * helpers.ts
- *
- * Shared helpers for create-lesson E2E tests.
- *
- * Rules:
- * - All page.route() intercepts must be registered BEFORE page.goto() or any action
- *   that triggers the intercepted request.
- * - Sign in with `signUpAndLogin` from ../support/api-helpers before navigating.
- */
-
 import type { Page, Route } from '@playwright/test'
 import type { TestUser } from '../support/api-helpers'
 import { expect } from '@playwright/test'
@@ -147,7 +136,6 @@ export async function mockJobProgressing(page: Page, jobId: string): Promise<voi
 // ── Job error surfacing (Library LessonCard) ────────────────────────────────
 
 interface SeedAndExpectJobErrorOptions {
-  /** Unique id for the pending lesson. */
   lessonId: string
   /** Display title for the seeded lesson. */
   title: string
@@ -163,15 +151,6 @@ interface SeedAndExpectJobErrorOptions {
   timeout?: number
 }
 
-/**
- * Seeds a processing lesson the way the Library keeps it before the server has
- * a row, reloads the Library page, and waits for the job poller to surface the
- * error in a LessonCard.
- *
- * Expects:
- *   - `signUpAndLogin()`, `mockConfig()`, and `mockJobStatus()` already called.
- *   - Page is at the app origin (e.g. after `page.goto('/')`).
- */
 export async function seedAndExpectJobError(
   page: Page,
   user: TestUser,

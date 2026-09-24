@@ -87,7 +87,6 @@ test('US01.US06-E2E-014 @p1 @regression @create-lesson @upload — Upload with u
     error: 'Unsupported file format. Allowed formats: mp4, mkv, webm, mov, wav, mp3, m4a, aac, flac, ogg, opus',
   })
 
-  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing upload lesson and wait for job poller to surface the error
@@ -110,7 +109,6 @@ test('US01.US06-E2E-015 @p1 @regression @create-lesson @upload — Upload file e
     error: 'File size exceeds the maximum allowed size of 2 GB (2147483648 bytes)',
   })
 
-  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing upload lesson and wait for job poller to surface the error
@@ -133,7 +131,6 @@ test('US01.US06-E2E-016 @p1 @regression @create-lesson @upload — Upload valid 
     error: 'Video exceeds maximum duration of 1200 seconds',
   })
 
-  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing upload lesson and wait for job poller to surface the error

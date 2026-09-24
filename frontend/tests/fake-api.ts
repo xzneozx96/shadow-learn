@@ -13,7 +13,6 @@ const INDEX_FIELDS: Record<string, string> = {
   'by-lesson': 'lessonId',
 }
 
-// Server body for GET /api/lessons/{id}, the inverse of `toLessonMeta`.
 export function lessonBody(meta: LessonMeta, segments: Segment[] = []): LessonSummary & { segments: Segment[] } {
   return {
     id: meta.id,
@@ -38,8 +37,6 @@ function json(status: number, body?: unknown): Response {
   })
 }
 
-// In-memory ApiClient keyed by path. `records` holds the server state and
-// `calls` records every request in order.
 export class FakeApiClient implements ApiClient {
   records = new Map<string, unknown>()
   calls: ApiCall[] = []

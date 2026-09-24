@@ -1,7 +1,3 @@
-// Mechanical PR6a rename: `useAuth().db` is now `DataClient`, so IndexedDB
-// calls move under `db.legacy` and `ShadowLearnDB` parameters become `DataClient`.
-// With --tests, a raw `initDB()` handle is also wrapped in `fakeDataClient`.
-// Usage: node tests/codemods/legacy-rename.mjs [--tests] <file>...
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, relative } from 'node:path'
 import process from 'node:process'

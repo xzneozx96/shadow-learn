@@ -50,7 +50,7 @@ export function useUploadThumbnail(lessonId: string, enabled: boolean): string |
 
       video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true })
       video.addEventListener('seeked', handleSeeked, { once: true })
-    }).catch(() => {}) // the card falls back to its placeholder art
+    }).catch(() => {})
 
     return () => {
       cancelled = true

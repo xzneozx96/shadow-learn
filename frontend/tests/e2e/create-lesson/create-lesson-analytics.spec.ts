@@ -118,7 +118,6 @@ test('US01.US06-E2E-019 @p1 @regression @create-lesson @analytics — NFR: lesso
     error: 'Transcription failed: audio quality too low',
   })
 
-  // Navigate to / first so the pending lesson is written on the app origin
   await page.goto('/')
 
   // Seed a processing youtube lesson and wait for job poller to surface the error.

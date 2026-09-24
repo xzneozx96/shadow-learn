@@ -102,7 +102,6 @@ function storePath(store: string, id: string): string {
   return `/api/store/${store}/${encodeURIComponent(id)}`
 }
 
-// Lessons
 export async function getLesson(db: DataClient, id: string): Promise<LessonDetail | undefined> {
   const body = await db.api.get<LessonDetailResponse>(lessonPath(id))
   if (!body)
@@ -153,7 +152,6 @@ export async function getSegments(db: DataClient, lessonId: string): Promise<Seg
   return (await getLesson(db, lessonId))?.segments
 }
 
-// DELETE /api/lessons/{id} removes segments and media with the lesson.
 export async function deleteSegments(_db: DataClient, _lessonId: string): Promise<void> {}
 
 export async function getVideo(db: DataClient, lessonId: string): Promise<string | undefined> {
@@ -184,7 +182,6 @@ export async function deleteChatMessages(db: DataClient, lessonId: string): Prom
   await deleteThread(db, lessonId)
 }
 
-// Threads
 export async function getThread(db: DataClient, id: string): Promise<ThreadRecord | undefined> {
   return db.api.get<ThreadRecord>(storePath('threads', id))
 }

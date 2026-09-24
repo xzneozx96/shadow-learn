@@ -1,16 +1,3 @@
-/**
- * idb-helpers.ts
- *
- * Utility functions for seeding and querying the ShadowLearn IndexedDB (`shadowlearn`)
- * from within Playwright tests via `page.evaluate()`.
- *
- * All helpers accept a `Page` instance and run in the browser context so that
- * the IDB connection uses the same origin as the app under test.
- *
- * Opens the database at its current version. Lessons, segments, and settings
- * live on the server now; seed those with api-helpers.ts.
- */
-
 import type { Page } from '@playwright/test'
 
 // ── Shape mirrors src/types.ts ──────────────────────────────────────────────

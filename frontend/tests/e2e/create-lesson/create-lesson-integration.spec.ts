@@ -1,21 +1,3 @@
-/**
- * create-lesson-integration.spec.ts
- *
- * REAL INTEGRATION TESTS — no API mocking.
- *
- * These tests hit the running backend at http://localhost:8000.
- * They exercise the full lesson creation pipeline end-to-end:
- *   submit YouTube URL → backend downloads + transcribes → job completes →
- *   backend stores the lesson → Library lists it as complete.
- *
- * Requirements:
- *   - Backend running at E2E_API_URL (default http://localhost:8000) with valid API keys configured
- *   - Free Trial mode enabled (SHADOWLEARN_*_API_KEY env vars set in backend)
- *
- * Covered scenarios:
- *   INTEGRATION-001 — Full pipeline: YouTube URL → real backend → lesson stored on the server
- */
-
 import { expect, test } from '@playwright/test'
 import { API_URL, signUpAndLogin } from '../support/api-helpers'
 
@@ -89,7 +71,6 @@ test.describe('Real backend integration', () => {
 
     console.warn('[integration] lesson card transitioned to complete — pipeline finished')
 
-    // Verify the server stored the segments
     const lessonId = await completeCard.getAttribute('data-testid')
       .then(testId => testId?.replace('lesson-card-', '') ?? null)
 

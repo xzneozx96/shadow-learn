@@ -1,11 +1,3 @@
-/**
- * api-helpers.ts
- *
- * Seed E2E state through the backend instead of IndexedDB. Lesson seeding
- * uses `POST /api/testing/lessons`, which the backend mounts only with
- * `SHADOWLEARN_ENABLE_TEST_ROUTES=true`.
- */
-
 import type { APIRequestContext, Page } from '@playwright/test'
 import type { Buffer } from 'node:buffer'
 import { randomUUID } from 'node:crypto'
@@ -16,12 +8,10 @@ import { expect } from '@playwright/test'
 
 export const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8000'
 
-// Playwright runs from frontend/.
 const CHANGELOG_DIR = path.join(process.cwd(), 'src/data/changelog')
 const FRONTMATTER_ID = /^id: (\S+)$/m
 const FRONTMATTER_DATE = /^date: "?(\d{4}-\d{2}-\d{2})"?$/m
 
-// The id `getLatestAnnouncementId` returns, so a fresh account does not get the What's new dialog.
 function latestAnnouncementId(): string {
   const entries = readdirSync(CHANGELOG_DIR).map((file) => {
     const raw = readFileSync(path.join(CHANGELOG_DIR, file), 'utf8')
@@ -78,7 +68,6 @@ function bearer(user: TestUser) {
   return { Authorization: `Bearer ${user.accessToken}` }
 }
 
-/** Register a fresh account and start every page load in this test signed in as it. */
 export async function signUpAndLogin(page: Page): Promise<TestUser> {
   const email = `e2e-${randomUUID()}@example.com`
   const password = 'correct-horse-battery'
@@ -97,7 +86,6 @@ export async function signUpAndLogin(page: Page): Promise<TestUser> {
   return user
 }
 
-/** Insert a lesson, its segments, and optionally its media for `user`. Returns the server lesson id. */
 export async function seedLesson(request: APIRequestContext, user: TestUser, lesson: SeedLesson): Promise<string> {
   const { media, ...body } = lesson
   const res = await request.post(`${API_URL}/api/testing/lessons`, { headers: bearer(user), data: body })
@@ -122,10 +110,6 @@ export async function seedSettings(
   expect(res.status(), await res.text()).toBe(200)
 }
 
-/**
- * Store a processing or failed lesson the way the Library keeps it before
- * the server has a row. Call on the app origin, then reload.
- */
 export async function seedPendingLesson(page: Page, user: TestUser, lesson: PendingLesson): Promise<void> {
   await page.evaluate(({ key, value }) => {
     const pending = JSON.parse(localStorage.getItem(key) ?? '[]')

@@ -102,14 +102,10 @@ test('US01.US06-E2E-023 @p1 @regression @create-lesson — ac-04.1: Library show
     page.getByTestId('create-lesson-generate-button').click(),
   ])
 
-  // Queued confirmation confirms the pending lesson was stored with status=processing
   await expect(page.getByTestId('create-lesson-queued-confirmation')).toBeVisible()
 
-  // Navigate to Library — the pending lesson should show processing immediately
   await page.goto('/')
 
-  // Processing state must appear without waiting for a poll cycle
-  // New LessonCard shows Loader2 spinner with "processing" text in the thumbnail area
   await expect(page.locator('.animate-spin.text-muted-foreground').first()).toBeVisible({ timeout: 5_000 })
 })
 
@@ -118,7 +114,6 @@ test('US01.US06-E2E-024 @p1 @regression @create-lesson — ac-04.3: Pipeline com
   await mockConfig(page)
   await mockJobStatus(page, JOB_ID_SEGMENTS, { status: 'complete' })
 
-  // The pipeline writes the lesson row before it marks the job complete
   const lessonId = await seedLesson(page.request, user, {
     title: 'Segments Test Lesson',
     source: 'youtube',

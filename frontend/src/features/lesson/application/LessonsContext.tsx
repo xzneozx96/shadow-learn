@@ -21,9 +21,7 @@ interface LessonsContextValue {
 
 const LessonsContext = createContext<LessonsContextValue | null>(null)
 
-// The server creates a lesson row only when its pipeline completes, so
-// processing and failed lessons live in this browser until then.
-function isPlaceholder(meta: LessonMeta): boolean {
+function isLocalOnly(meta: LessonMeta): boolean {
   return meta.status === 'processing' || meta.status === 'error'
 }
 
@@ -89,7 +87,7 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
   const updateLesson = useCallback(async (meta: LessonMeta) => {
     if (!db)
       return
-    if (isPlaceholder(meta)) {
+    if (isLocalOnly(meta)) {
       setPending(prev => upsert(prev, meta))
       return
     }
@@ -101,7 +99,7 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
     if (!db)
       return
     const renamed = { ...meta, title }
-    if (isPlaceholder(meta)) {
+    if (isLocalOnly(meta)) {
       setPending(prev => upsert(prev, renamed))
       return
     }

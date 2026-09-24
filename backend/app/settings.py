@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     smtp_from: str = ""
     smtp_security: Literal["none", "starttls", "ssl"] = "starttls"
     public_app_url: str = "http://localhost:5173"
-    enable_test_routes: bool = False  # env: SHADOWLEARN_ENABLE_TEST_ROUTES; seeds lessons for E2E, never in production
+    enable_test_routes: bool = False
 
     @field_validator("jwt_secret", "jwt_refresh_secret")
     @classmethod

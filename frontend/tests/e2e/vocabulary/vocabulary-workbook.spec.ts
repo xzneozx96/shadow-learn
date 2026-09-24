@@ -31,7 +31,6 @@ import {
 
 const SEGMENT_ID = 'test-segment-e2e-001'
 
-// The seeded lesson's server id, set by goToLesson.
 let LESSON_ID: string
 let user: TestUser
 
@@ -53,7 +52,6 @@ const TEST_SEGMENTS: SeedSegment[] = [
   },
 ]
 
-/** Helper: sign in as a fresh account for this test. */
 async function signIn(page: import('@playwright/test').Page) {
   user = await signUpAndLogin(page)
 }
@@ -159,7 +157,6 @@ test('VOC.SAVED-E2E-002 @p1 @regression — already-saved-shows-filled-bookmark:
   // Save word via UI
   await saveWordViaUI(page)
 
-  // Reload — the refresh token from signIn survives in localStorage
   await page.reload()
   await expect(page.getByText('你好').first()).toBeVisible({ timeout: 10_000 })
 
@@ -378,9 +375,7 @@ test('VOC.RMREL-E2E-010 @p1 @regression — remove-durable-across-reload: remove
 test('VOC.PERF-E2E-011 @p2 @regression — workbook-renders-fast-500-entries: /vocabulary renders 500 entries in under 300 ms', async ({ page }) => {
   await signIn(page)
 
-  // Force English UI and seed BEFORE the final navigation so VocabularyContext reads data on mount.
   await seedSettings(page.request, user, { translationLanguage: 'en', uiLanguage: 'en' })
-  // Seed lesson meta for each lesson so Study buttons render correctly
   const lessonIds: string[] = []
   for (let i = 0; i < 10; i++)
     lessonIds.push(await seedLesson(page.request, user, { title: `Perf Lesson ${i}`, source: 'youtube', duration: 1 }))
@@ -390,7 +385,6 @@ test('VOC.PERF-E2E-011 @p2 @regression — workbook-renders-fast-500-entries: /v
   await page.goto('/')
   await expect(page.locator('main').first()).toBeVisible({ timeout: 10_000 })
 
-  // Build 500 vocab entries across 10 lessons
   const entries: IDBVocabEntry[] = []
 
   for (let i = 0; i < 500; i++) {
