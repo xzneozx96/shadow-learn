@@ -202,7 +202,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     server.state.conflicts = new Set(['threads:__global', `lessons:${LESSON_A}`])
     await seeded
     await start()
-    expect(await screen.findByText('2 items were changed both here and in your account. We kept your account\'s versions and saved this device\'s versions separately, so nothing is lost.', {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await screen.findByText('2 items were changed both here and in your account. We kept your account\'s versions and saved this device\'s versions separately to fix later.', {}, { timeout: 10_000 })).toBeInTheDocument()
     expect(screen.queryByText(/couldn't be copied as/)).not.toBeInTheDocument()
     expect(await databaseExists()).toBe(false)
     expect(server.stores.get('threads')!.get('__global')).toEqual(expect.objectContaining({ editedInAccount: true }))
