@@ -202,10 +202,10 @@ describe('reduce', () => {
   it('counts progress only within the current step and never past the total', () => {
     const records = reduce({ step: 'explain', busy: false }, { type: 'records', total: 3 })
     expect(reduce(reduce(records, { type: 'sent', count: 2 }), { type: 'sent', count: 5 })).toEqual({ step: 'records', done: 3, total: 3 })
-    expect(reduce({ step: 'verify' }, { type: 'sent', count: 1 })).toEqual({ step: 'verify' })
+    expect(reduce({ step: 'verify', records: 3, media: 1 }, { type: 'sent', count: 1 })).toEqual({ step: 'verify', records: 3, media: 1 })
   })
 
   it('ignores PIN events outside the Keys step', () => {
-    expect(reduce({ step: 'verify' }, { type: 'pin-wrong' })).toEqual({ step: 'verify' })
+    expect(reduce({ step: 'verify', records: 3, media: 1 }, { type: 'pin-wrong' })).toEqual({ step: 'verify', records: 3, media: 1 })
   })
 })

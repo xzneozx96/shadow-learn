@@ -227,7 +227,13 @@ export function MigrationModal({ api, account, counts, onFinished, onKeepLocal, 
 
           {phase.step === 'records' && <Progress label="Records" done={phase.done} total={phase.total} />}
           {phase.step === 'media' && <Progress label="Media" done={phase.done} total={phase.total} />}
-          {phase.step === 'verify' && <Waiting>Checking every store and file against the server…</Waiting>}
+          {phase.step === 'verify' && (
+            <>
+              <Progress label="Records" done={phase.records} total={phase.records} />
+              <Progress label="Media" done={phase.media} total={phase.media} />
+              <Waiting>Checking every store and file against the server…</Waiting>
+            </>
+          )}
 
           {phase.step === 'failed' && (
             <>

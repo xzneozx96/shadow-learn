@@ -29,7 +29,7 @@ export type Phase
     | { step: 'keys', busy: boolean, wrongPin: number, confirmSkip: boolean }
     | { step: 'records', done: number, total: number }
     | { step: 'media', done: number, total: number }
-    | { step: 'verify' }
+    | { step: 'verify', records: number, media: number }
     | { step: 'failed', verification: Verification }
     | { step: 'delete', blocked: boolean }
     | { step: 'done', verification: Verification, notes: Notes }
@@ -45,7 +45,7 @@ type Event
     | { type: 'records', total: number }
     | { type: 'media', total: number }
     | { type: 'sent', count: number }
-    | { type: 'verify' }
+    | { type: 'verify', records: number, media: number }
     | { type: 'mismatch', verification: Verification }
     | { type: 'delete' }
     | { type: 'blocked' }
@@ -74,7 +74,7 @@ export function reduce(phase: Phase, event: Event): Phase {
         ? { ...phase, done: Math.min(phase.total, phase.done + event.count) }
         : phase
     case 'verify':
-      return { step: 'verify' }
+      return { step: 'verify', records: event.records, media: event.media }
     case 'mismatch':
       return { step: 'failed', verification: event.verification }
     case 'delete':
@@ -177,7 +177,7 @@ async function importSnapshot(api: ApiClient, source: string, snapshot: LegacySn
   dispatch({ type: 'media', total: media.length })
   await uploadMedia(api, ledger, media, sent)
 
-  dispatch({ type: 'verify' })
+  dispatch({ type: 'verify', records: recordTotal(snapshot), media: media.length })
   return { verification: await verify(api, ledger), keptAccountCopy, quarantined: ledger.quarantine.size }
 }
 

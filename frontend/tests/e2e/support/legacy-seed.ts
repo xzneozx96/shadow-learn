@@ -77,6 +77,7 @@ export interface FixtureOptions {
   totalSessions?: number
   lessonId?: string
   legacyLessonId?: string
+  legacyLessonFile?: boolean
 }
 
 export function legacyFixture(options: FixtureOptions = {}): LegacyFixture {
@@ -90,6 +91,7 @@ export function legacyFixture(options: FixtureOptions = {}): LegacyFixture {
     extraLessons = 0,
     totalSessions = 3,
     legacyLessonId = LEGACY_LESSON,
+    legacyLessonFile = true,
   } = options
   const main = options.lessonId ?? (variant === 'A' ? LESSON_A : LESSON_B)
   const title = variant === 'A' ? 'Greetings, renamed' : 'Second device lesson'
@@ -131,7 +133,8 @@ export function legacyFixture(options: FixtureOptions = {}): LegacyFixture {
       { value: lesson(`${main.slice(0, 30)}999999`, 'Still processing', { status: 'processing', jobId: 'job-1' }) },
     )
     stores.segments.push({ key: legacyLessonId, value: segments('M') })
-    stores.videos.push({ key: legacyLessonId, value: blob(4_000, 'audio/mpeg', 3) })
+    if (legacyLessonFile)
+      stores.videos.push({ key: legacyLessonId, value: blob(4_000, 'audio/mpeg', 3) })
     stores.vocabulary.push({ value: vocab(99, legacyLessonId) })
     stores['agent-memory'].push({ value: { id: `memory-legacy-${variant}`, content: 'Uploaded a lesson', tags: ['lesson'], importance: 1, createdAt: 1710400000000, lastAccessedAt: 1710400000000, lessonId: legacyLessonId } })
     stores['agent-logs'].push({ value: { lessonId: main, timestamp: '2026-06-01T10:00:00.000Z', durationMs: 10, messageCount: 1, toolCallCount: 0, errorCount: 0, exercisesCompleted: 0 } })
