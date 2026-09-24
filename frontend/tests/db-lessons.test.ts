@@ -166,10 +166,10 @@ describe('settings helpers', () => {
 describe('thread helpers', () => {
   it('saveThreadMessages PUTs the thread and keeps createdAt and tip ids from the stored one', async () => {
     const msgs = [{ id: 'a', role: 'user', parts: [{ type: 'text', text: 'hello' }] }] as any
-    await saveThreadMessages(db, 'c:v', { messages: [], seen: new Set(), surface: 'tip', ownerId: 'c:v', courseId: 'c', videoId: 'v' })
+    await saveThreadMessages(db, 'c:v', { messages: [], knownMessageIds: new Set(), surface: 'tip', ownerId: 'c:v', courseId: 'c', videoId: 'v' })
     const createdAt = (await getThread(db, 'c:v'))!.createdAt
 
-    await saveThreadMessages(db, 'c:v', { messages: msgs, seen: new Set(), surface: 'tip', ownerId: 'c:v' })
+    await saveThreadMessages(db, 'c:v', { messages: msgs, knownMessageIds: new Set(), surface: 'tip', ownerId: 'c:v' })
 
     const thread = await getThread(db, 'c:v')
     expect(thread).toMatchObject({ id: 'c:v', surface: 'tip', ownerId: 'c:v', courseId: 'c', videoId: 'v', messages: msgs, createdAt })
@@ -180,8 +180,8 @@ describe('thread helpers', () => {
   })
 
   it('listThreadsBySurface queries the by-surface index', async () => {
-    await saveThreadMessages(db, 'l1', { messages: [], seen: new Set(), surface: 'lesson', ownerId: 'l1' })
-    await saveThreadMessages(db, '__global', { messages: [], seen: new Set(), surface: 'global', ownerId: null })
+    await saveThreadMessages(db, 'l1', { messages: [], knownMessageIds: new Set(), surface: 'lesson', ownerId: 'l1' })
+    await saveThreadMessages(db, '__global', { messages: [], knownMessageIds: new Set(), surface: 'global', ownerId: null })
     api.calls = []
 
     const threads = await listThreadsBySurface(db, 'lesson')
@@ -209,7 +209,7 @@ describe('thread helpers', () => {
   })
 
   it('deleteChatMessages deletes the lesson thread', async () => {
-    await saveThreadMessages(db, 'l1', { messages: [], seen: new Set(), surface: 'lesson', ownerId: 'l1' })
+    await saveThreadMessages(db, 'l1', { messages: [], knownMessageIds: new Set(), surface: 'lesson', ownerId: 'l1' })
 
     await deleteChatMessages(db, 'l1')
 

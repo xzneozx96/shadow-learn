@@ -145,7 +145,6 @@ export class FakeApiClient implements ApiClient {
     this.beforePut = write
   }
 
-  // Runs once, before the next lesson PATCH reaches the server, as another device would.
   interleaveBeforeNextPatch(write: () => Promise<void>): void {
     this.beforePatch = write
   }

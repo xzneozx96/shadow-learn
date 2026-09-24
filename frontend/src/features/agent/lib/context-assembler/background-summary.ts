@@ -130,7 +130,7 @@ export async function compact(
   if (thread) {
     await saveThreadMessages(db, threadId, {
       messages: buildHistoryToStore(thread.messages, newSummary),
-      seen: new Set(thread.messages.map(m => m.id)),
+      knownMessageIds: new Set(thread.messages.map(m => m.id)),
       surface: thread.surface,
       ownerId: thread.ownerId,
     })

@@ -67,7 +67,6 @@ export function useTipNotes(args: Args) {
       // Throwing here would crash the editor's unmount cleanup.
       return
     }
-    // A note deleted on another device comes back with this edit rather than losing it.
     const saved = await updateTipNote(db, existing.videoId, id, prev => ({ ...(prev ?? existing), ...patch, updatedAt: new Date().toISOString() }))
     setNotes((prev) => {
       const without = prev.filter(n => n.id !== id)

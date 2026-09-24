@@ -126,7 +126,7 @@ function LessonViewContent() {
       }
       pendingSegmentIdRef.current = null
     }, 500)
-  }, [updateMeta]) // stable — reads live values through refs
+  }, [updateMeta])
 
   // Flush pending progress write immediately on unmount.
   // Handles SPA navigation away from the lesson within the 500ms debounce window.
@@ -207,7 +207,6 @@ function LessonViewContent() {
     }
     const target = segments.find(s => s.id === meta.progressSegmentId)
     if (!target) {
-      // EC2: orphaned segment ID — clear it and start at beginning
       updateLessonMeta(db, meta, prev => ({ ...prev, progressSegmentId: null }))
         .then(saved => updateMeta({ version: saved.version }))
       hasRestoredRef.current = true

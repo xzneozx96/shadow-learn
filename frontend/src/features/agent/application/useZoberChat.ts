@@ -117,7 +117,7 @@ export function useZoberChat(args: ZoberChatArgs) {
   const [allMessages, setAllMessages] = useState<UIMessage[]>([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(true)
   const allStoredRef = useRef<UIMessage[]>([])
-  const seenIdsRef = useRef<Set<string>>(new Set())
+  const knownMessageIdsRef = useRef<Set<string>>(new Set())
   const loadedOffsetRef = useRef(0)
   const [hasMore, setHasMore] = useState(false)
 
@@ -429,7 +429,7 @@ export function useZoberChat(args: ZoberChatArgs) {
       if (cancelled)
         return
       allStoredRef.current = stored
-      seenIdsRef.current = new Set(stored.map(m => m.id))
+      knownMessageIdsRef.current = new Set(stored.map(m => m.id))
       const startOffset = Math.max(0, stored.length - PAGE_SIZE)
       loadedOffsetRef.current = startOffset
       const visible = stored.slice(startOffset)
@@ -485,9 +485,9 @@ export function useZoberChat(args: ZoberChatArgs) {
     void (async () => {
       const summary = await getLatestSummary(db, threadId)
       const toStore = buildHistoryToStore(fullHistory, summary)
-      await saveThreadMessages(db, threadId, { messages: toStore, seen: seenIdsRef.current, surface, ownerId, courseId, videoId })
+      await saveThreadMessages(db, threadId, { messages: toStore, knownMessageIds: knownMessageIdsRef.current, surface, ownerId, courseId, videoId })
       for (const m of toStore)
-        seenIdsRef.current.add(m.id)
+        knownMessageIdsRef.current.add(m.id)
       // Post-response, idle: compact when the turn reached the usable budget.
       // Prefers real usage from this turn; falls back to the CJK estimate.
       void maybeCompact(db, threadId, fullHistory, locale, lastUsageTokensRef.current)

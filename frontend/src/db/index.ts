@@ -122,9 +122,6 @@ function lessonPatch(meta: LessonMeta): object {
   return { title: meta.title, meta: clientMeta, last_opened_at: meta.lastOpenedAt }
 }
 
-// Read-modify-write of the lesson's title and client-owned fields at the version
-// `meta` was read at: on a version conflict, `mutate` runs again on the lesson
-// another device just saved.
 export async function updateLessonMeta(
   db: DataClient,
   meta: LessonMeta,
@@ -189,28 +186,27 @@ export async function getThread(db: DataClient, id: string): Promise<ThreadRecor
 
 export interface ThreadWrite {
   messages: UIMessage[]
-  // Message ids this device has read or written; stored messages outside it came from another device.
-  seen: ReadonlySet<string>
+  knownMessageIds: ReadonlySet<string>
   surface: ThreadSurface
   ownerId: string | null
   courseId?: string
   videoId?: string
 }
 
-// Keeps messages another device appended; drops the ones this device removed.
+function appendedElsewhere(stored: UIMessage[], write: ThreadWrite): UIMessage[] {
+  const local = new Set(write.messages.map(m => m.id))
+  return stored.filter(m => !local.has(m.id) && !write.knownMessageIds.has(m.id))
+}
+
 export async function saveThreadMessages(db: DataClient, id: string, write: ThreadWrite): Promise<ThreadRecord> {
   const now = Date.now()
-  const local = new Set(write.messages.map(m => m.id))
   return updateRecord<ThreadRecord>(db, 'threads', id, prev => ({
     id,
     surface: write.surface,
     ownerId: write.ownerId,
     courseId: write.courseId ?? prev?.courseId,
     videoId: write.videoId ?? prev?.videoId,
-    messages: [
-      ...write.messages,
-      ...(prev?.messages ?? []).filter(m => !local.has(m.id) && !write.seen.has(m.id)),
-    ],
+    messages: [...write.messages, ...appendedElsewhere(prev?.messages ?? [], write)],
     updatedAt: now,
     createdAt: prev?.createdAt ?? now,
   }))

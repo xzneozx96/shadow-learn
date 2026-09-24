@@ -23,8 +23,8 @@ beforeEach(() => {
   phone = fakeDataClient(server)
 })
 
-function save(device: DataClient, messages: UIMessage[], seen: UIMessage[]) {
-  return saveThreadMessages(device, 't1', { messages, seen: new Set(ids(seen)), surface: 'global', ownerId: null })
+function save(device: DataClient, messages: UIMessage[], known: UIMessage[]) {
+  return saveThreadMessages(device, 't1', { messages, knownMessageIds: new Set(ids(known)), surface: 'global', ownerId: null })
 }
 
 describe('saveThreadMessages on two devices', () => {
