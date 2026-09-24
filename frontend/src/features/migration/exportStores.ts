@@ -201,6 +201,8 @@ function withLessonIds(lessonIds: LessonIds, ...fields: string[]): Transform {
   }
 }
 
+// A record missing a key field gets a synthetic `legacy:<IndexedDB key>` id. The server
+// rejects it for that same missing field, so it lands in the quarantine under this id.
 function outgoing(store: RecordStore, values: JsonObject[], fallbackIds: string[]): OutgoingRecord[] {
   return values.map((data, i) => ({ id: recordId(store, data) ?? `legacy:${storableText(fallbackIds[i])}`, data }))
 }

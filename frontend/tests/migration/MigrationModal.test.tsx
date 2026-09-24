@@ -175,6 +175,16 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     expect(screen.getByRole('button', { name: 'Bắt đầu' })).toBeInTheDocument()
   })
 
+  it('keeps the local copy when the server writes a record without one of its fields', async () => {
+    const { server, seeded } = renderGate()
+    server.state.dropField = 'meaning'
+    await seeded
+    await start()
+    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    expect(failing).toHaveTextContent('vocabulary')
+    expect(await databaseExists()).toBe(true)
+  })
+
   it('keeps a key the account already holds', async () => {
     const { server, seeded } = renderGate({ withKeys: true })
     server.keys.set('openrouter', { value: 'sk-or-account-key' })

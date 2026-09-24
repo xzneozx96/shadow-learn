@@ -95,7 +95,7 @@ async def test_lesson_manifest_matches_the_hash_of_what_the_device_sent(client, 
 
 async def test_lesson_import_returns_what_the_account_holds(client, owner):
     response = await _import_lesson(client, owner)
-    assert response.json() == {"count": 1, "after": [{"lesson": LESSON, "segments": SEGMENTS}]}
+    assert response.json() == {"count": 1, "after": [{"lesson": LESSON, "segments": SEGMENTS}], "outcomes": {LESSON_ID: "stored"}}
 
 
 async def test_a_second_lesson_import_keeps_the_account_copy(client, owner):
@@ -338,3 +338,37 @@ async def test_a_retry_never_overwrites_a_newer_server_edit(client, owner, store
     retry = await _bulk(client, owner, store, [record["data"]], "device-a")
     assert retry["after"] == [edited]
     assert (await client.get(path, headers=_bearer(owner))).json() == edited
+
+
+async def test_a_lesson_retry_is_stored_until_the_account_edits_it(client, owner):
+    await _import_lesson(client, owner)
+    assert (await _import_lesson(client, owner)).json()["outcomes"] == {LESSON_ID: "stored"}
+    await client.patch(f"/api/lessons/{LESSON_ID}", json={"title": "Renamed on the server"}, headers=_bearer(owner))
+    assert (await _import_lesson(client, owner)).json()["outcomes"] == {LESSON_ID: "kept_server"}
+
+
+WORD = {"id": "w1", "word": "字", "sourceLessonId": LESSON_ID, "createdAt": "2026-09-23"}
+
+
+async def test_union_outcomes_follow_who_wrote_the_row(client, owner):
+    assert (await _bulk(client, owner, "vocabulary", [WORD], "device-a"))["outcomes"] == {"w1": "stored"}
+    assert (await _bulk(client, owner, "vocabulary", [WORD], "device-a"))["outcomes"] == {"w1": "stored"}
+    assert (await _bulk(client, owner, "vocabulary", [{**WORD, "word": "别"}], "device-b"))["outcomes"] == {"w1": "kept_server"}
+    await client.put("/api/store/vocabulary/w1", json={**WORD, "word": "改"}, headers=_bearer(owner))
+    assert (await _bulk(client, owner, "vocabulary", [WORD], "device-a"))["outcomes"] == {"w1": "kept_server"}
+
+
+async def test_merge_outcomes(client, owner):
+    assert (await _bulk(client, owner, "learner-profile", [PROFILE], "device-a"))["outcomes"] == {"profile": "stored"}
+    assert (await _bulk(client, owner, "learner-profile", [PROFILE], "device-a"))["outcomes"] == {"profile": "stored"}
+    assert (await _bulk(client, owner, "learner-profile", [PROFILE], "device-b"))["outcomes"] == {"profile": "merged"}
+    assert (await _bulk(client, owner, "learner-profile", [PROFILE], "device-a"))["outcomes"] == {"profile": "merged"}
+    settings_record = {"translationLanguage": "vi"}
+    assert (await _bulk(client, owner, "settings", [settings_record], "device-a"))["outcomes"] == {"settings": "stored"}
+    assert (await _bulk(client, owner, "settings", [settings_record], "device-b"))["outcomes"] == {"settings": "kept_server"}
+
+
+async def test_manifest_counts_the_ids_that_must_be_present(client, owner):
+    await _bulk(client, owner, "vocabulary", [WORD], "device-a")
+    digest = await _manifest(client, owner, {"stores": {}, "present": {"vocabulary": ["w1", "gone"]}})
+    assert digest["present"] == {"vocabulary": 1}

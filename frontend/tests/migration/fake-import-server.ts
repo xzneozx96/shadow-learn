@@ -6,6 +6,7 @@ import { recordId } from '@/features/migration/exportStores'
 
 interface ManifestBody {
   stores: Record<string, string[]>
+  present?: Record<string, string[]>
   quarantine?: { store: string, recordId: string }[]
   media?: { lessonId: string, kind: string, segmentId?: string }[]
 }
@@ -19,7 +20,8 @@ export function fakeImportServer() {
   const quarantine = new Map<string, Json>()
   const media = new Map<string, { size: number, sha256: string }>()
   const keys = new Map<string, unknown>()
-  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, rejectRecord: null as string | null, onManifest: null as (() => Promise<void>) | null }
+  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, rejectRecord: null as string | null, dropField: null as string | null, onManifest: null as (() => Promise<void>) | null }
+  const writer = new Map<string, string>()
   const store = (name: string) => stores.get(name) ?? stores.set(name, new Map()).get(name)!
 
   async function handle({ method, path, body }: Call) {
@@ -38,13 +40,16 @@ export function fakeImportServer() {
       const rejected = sent.findIndex(lesson => lesson.id === state.rejectLesson)
       if (rejected !== -1)
         return { status: 422, body: { detail: [{ loc: ['body', 'lessons', rejected, 'source'], msg: 'Input should be youtube, upload or blog' }] } }
+      const outcomes: Record<string, string> = {}
       for (const { segments, ...lesson } of sent) {
-        if (!store('lessons').has(String(lesson.id))) {
-          store('lessons').set(String(lesson.id), lesson)
-          store('segments').set(String(lesson.id), segments)
+        const id = String(lesson.id)
+        if (!store('lessons').has(id)) {
+          store('lessons').set(id, lesson)
+          store('segments').set(id, segments)
         }
+        outcomes[id] = JSON.stringify(store('lessons').get(id)) === JSON.stringify(lesson) ? 'stored' : 'kept_server'
       }
-      return { body: { count: sent.length, after: sent.map(({ id }) => ({ lesson: store('lessons').get(String(id)), segments: store('segments').get(String(id)) })) } }
+      return { body: { count: sent.length, outcomes, after: sent.map(({ id }) => ({ lesson: store('lessons').get(String(id)), segments: store('segments').get(String(id)) })) } }
     }
     const bulk = BULK.exec(path)
     if (bulk) {
@@ -52,13 +57,19 @@ export function fakeImportServer() {
       const bad = (body as { records: JsonObject[] }).records.findIndex(record => recordId(bulk[1] as RecordStore, record) === state.rejectRecord)
       if (bad !== -1)
         return { status: 422, body: { detail: [{ loc: ['body', 'records', bad, 'itemType'], msg: 'Input should be \'vocabulary\'' }] } }
-      const ids = (body as { records: JsonObject[] }).records.map((record) => {
+      const { records, source } = body as { records: JsonObject[], source: string }
+      const outcomes: Record<string, string> = {}
+      for (const record of records) {
         const id = recordId(bulk[1] as RecordStore, record)!
-        if (!target.has(id))
-          target.set(id, record)
-        return id
-      })
-      return { body: { count: ids.length, after: ids.map(id => target.get(id)) } }
+        const key = `${bulk[1]}:${id}`
+        if (!target.has(id)) {
+          const { [state.dropField ?? '']: _dropped, ...kept } = record
+          target.set(id, state.dropField ? kept : record)
+          writer.set(key, source)
+        }
+        outcomes[id] = writer.get(key) === source ? 'stored' : 'kept_server'
+      }
+      return { body: { count: records.length, outcomes, after: Object.keys(outcomes).map(id => target.get(id)) } }
     }
     if (path === '/api/import/quarantine') {
       for (const record of (body as { records: { store: string, recordId: string, raw: Json }[] }).records)
@@ -75,6 +86,7 @@ export function fakeImportServer() {
       const hook = state.onManifest
       state.onManifest = null
       await hook?.()
+      const present = Object.fromEntries(Object.entries(request.present ?? {}).map(([name, ids]) => [name, ids.filter(id => store(name).has(id)).length]))
       const digests: Record<string, unknown> = {}
       for (const [name, ids] of Object.entries(request.stores)) {
         const held = ids.filter(id => store(name).has(id)).map(id => [id, store(name).get(id)!] as [string, Json])
@@ -85,6 +97,7 @@ export function fakeImportServer() {
       return {
         body: {
           stores: digests,
+          present,
           quarantine: await storeDigest(kept.map(key => [key, quarantine.get(key)!])),
           media: (request.media ?? []).map(key => media.has(mediaKey(key)) ? { ...key, ...media.get(mediaKey(key)) } : null),
         },

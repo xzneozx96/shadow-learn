@@ -294,3 +294,4 @@ class BulkRequest(BaseModel):
 class BulkResponse(BaseModel):
     count: int
     after: list[dict[str, Any]] | None = None
+    outcomes: dict[str, Literal["stored", "merged", "kept_server"]] | None = None

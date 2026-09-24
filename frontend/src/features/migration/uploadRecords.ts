@@ -112,15 +112,20 @@ export async function uploadLessons(
       { path: '/api/import/lessons', listField: 'lessons', body: items => ({ lessons: items.map(item => ({ ...item.lesson, segments: item.segments })) }) },
       (item, error) => ({ store: 'lessons', recordId: item.id, raw: { ...item.lesson, segments: item.segments }, error }),
     )
-    const after = new Map(lessonStates(body).map(state => [String(state.lesson.id), state]))
-    for (const { id } of accepted) {
-      const stored = after.get(id)
-      if (stored === undefined) {
-        lessonLedger.missing.push(id)
-        continue
+    const outcomes = outcomesOf(body)
+    for (const lesson of accepted) {
+      const outcome = outcomes.get(lesson.id)
+      if (outcome === 'stored') {
+        lessonLedger.expected.set(lesson.id, lesson.lesson)
+        segmentLedger.expected.set(lesson.id, lesson.segments)
       }
-      lessonLedger.expected.set(id, stored.lesson)
-      segmentLedger.expected.set(id, stored.segments)
+      else if (outcome === 'kept_server') {
+        lessonLedger.present.add(lesson.id)
+        segmentLedger.present.add(lesson.id)
+      }
+      else {
+        lessonLedger.missing.push(lesson.id)
+      }
     }
     onProgress(batch.length)
   }
@@ -135,8 +140,33 @@ function afterRecords(body: unknown): JsonObject[] {
   return Array.isArray(after) ? after.filter(isObject) : []
 }
 
-function lessonStates(body: unknown): { lesson: JsonObject, segments: Json }[] {
-  return afterRecords(body).flatMap(item => isObject(item.lesson) ? [{ lesson: item.lesson, segments: item.segments ?? [] }] : [])
+type Outcome = 'stored' | 'merged' | 'kept_server'
+const OUTCOMES = new Set<Json>(['stored', 'merged', 'kept_server'])
+
+function outcomesOf(body: unknown): Map<string, Outcome> {
+  const outcomes = isObject(body) && isObject(body.outcomes) ? body.outcomes : {}
+  return new Map(Object.entries(outcomes).filter((entry): entry is [string, Outcome] => OUTCOMES.has(entry[1])))
+}
+
+type Counters = (record: JsonObject) => number[]
+
+const numbers = (record: JsonObject, fields: string[]) => fields.map(field => typeof record[field] === 'number' ? record[field] : 0)
+
+// The counters each sum merge adds up, so a merged record can be checked against this device's share.
+const SUMMED: Partial<Record<RecordStore, Counters>> = {
+  'learner-profile': record => numbers(record, ['totalSessions', 'totalStudyMinutes']),
+  'progress-db': record => numbers(record, ['totalSessions', 'totalExercises', 'totalCorrect', 'totalIncorrect', 'totalStudyMinutes']),
+  'mastery-db': record => ['writing', 'speaking', 'vocabulary', 'reading', 'listening'].flatMap(skill => isObject(record[skill]) ? numbers(record[skill], ['totalPracticeTime']) : [0]),
+  'exercise-stats': record => numbers(record, ['correct', 'total']),
+  'mistakes-db': record => numbers(record, ['frequency']),
+}
+
+function holdsLocalShare(store: RecordStore, local: JsonObject, merged: JsonObject): boolean {
+  const counters = SUMMED[store]
+  if (!counters)
+    return true
+  const theirs = counters(merged)
+  return counters(local).every((value, i) => theirs[i] >= value)
 }
 
 async function withoutAccountDuplicates(api: ApiClient, records: OutgoingRecord[]): Promise<{ records: OutgoingRecord[], kept: number }> {
@@ -169,12 +199,24 @@ export async function uploadStore(
       (item, error) => ({ store, recordId: item.id, raw: item.data, error }),
     )
     const after = new Map(afterRecords(body).map(record => [recordId(store, record), record]))
-    for (const { id } of accepted) {
-      const stored = after.get(id)
-      if (stored === undefined)
+    const outcomes = outcomesOf(body)
+    for (const { id, data } of accepted) {
+      const outcome = outcomes.get(id)
+      const merged = after.get(id)
+      if (outcome === 'stored') {
+        entry.expected.set(id, data)
+      }
+      else if (outcome === 'kept_server') {
+        entry.present.add(id)
+      }
+      else if (outcome === 'merged' && merged !== undefined) {
+        entry.expected.set(id, merged)
+        if (!holdsLocalShare(store, data, merged))
+          entry.belowLocal.push(id)
+      }
+      else {
         entry.missing.push(id)
-      else
-        entry.expected.set(id, stored)
+      }
     }
     onProgress(batch.length)
   }

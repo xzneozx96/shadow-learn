@@ -38,6 +38,7 @@ describe('verify', () => {
     expect(calls[0].body).toEqual({
       source: 'device-a',
       stores: { 'lessons': ['l1'], 'vocabulary': ['w1'], 'learner-profile': ['profile'] },
+      present: {},
       quarantine: [],
       media: [],
     })
@@ -48,7 +49,7 @@ describe('verify', () => {
     const { api } = stubApi(() => ({ body: manifest }))
     const result = await verify(api, ledgerWith(STORES))
     expect(result.ok).toBe(false)
-    expect(result.checks.filter(check => !check.ok)).toEqual([{ kind: 'store', store: 'vocabulary', count: 1, missing: 0, ok: false }])
+    expect(result.checks.filter(check => !check.ok)).toEqual([{ kind: 'store', store: 'vocabulary', count: 1, missing: 0, belowLocal: 0, absent: 0, ok: false }])
   })
 
   it('fails a blob whose server copy differs', async () => {
@@ -80,10 +81,48 @@ describe('the quarantine', () => {
   })
 })
 
+describe('anchoring to the local read', () => {
+  it('fails a stored record the server wrote without one of its fields, and passes the echo-only check it replaced', async () => {
+    const local = { id: 'w1', word: '你好', meaning: 'hello', sourceLessonId: 'l1', createdAt: '2026-06-01' }
+    const { meaning: _dropped, ...lossy } = local
+    const { api } = stubApi(() => ({ body: { count: 1, after: [lossy], outcomes: { w1: 'stored' } } }))
+    const ledger = emptyLedger('device-a', [])
+    await uploadStore(api, ledger, 'vocabulary', [{ id: 'w1', data: local }], () => {})
+    const server = await manifestFor({ vocabulary: { w1: lossy } })
+    const result = await verify(stubApi(() => ({ body: server })).api, ledger)
+    expect(result.ok).toBe(false)
+    expect(storeLedger(ledger, 'vocabulary').expected.get('w1')).toEqual(local)
+  })
+
+  it('accepts the account copy a union rule kept, by presence', async () => {
+    const mine = { id: '__global', surface: 'global', ownerId: null, messages: [{ id: 'b' }], updatedAt: 2 }
+    const account = { ...mine, messages: [{ id: 'a' }], updatedAt: 1 }
+    const { api } = stubApi(() => ({ body: { count: 1, after: [account], outcomes: { __global: 'kept_server' } } }))
+    const ledger = emptyLedger('device-b', [])
+    await uploadStore(api, ledger, 'threads', [{ id: '__global', data: mine }], () => {})
+    expect([...storeLedger(ledger, 'threads').present]).toEqual(['__global'])
+    const server = { ...(await manifestFor({ threads: {} })), present: { threads: 1 } }
+    expect((await verify(stubApi(() => ({ body: server })).api, ledger)).ok).toBe(true)
+    const gone = { ...(await manifestFor({ threads: {} })), present: { threads: 0 } }
+    expect((await verify(stubApi(() => ({ body: gone })).api, ledger)).ok).toBe(false)
+  })
+
+  it('fails a merged sum that holds less than this device contributed', async () => {
+    const local = { name: 'Ada', totalSessions: 4 }
+    const merged = { name: 'Ada', totalSessions: 3 }
+    const { api } = stubApi(() => ({ body: { count: 1, after: [merged], outcomes: { profile: 'merged' } } }))
+    const ledger = emptyLedger('device-b', [])
+    await uploadStore(api, ledger, 'learner-profile', [{ id: 'profile', data: local }], () => {})
+    const server = await manifestFor({ 'learner-profile': { profile: merged } })
+    const result = await verify(stubApi(() => ({ body: server })).api, ledger)
+    expect(result.checks).toContainEqual(expect.objectContaining({ store: 'learner-profile', belowLocal: 1, ok: false }))
+  })
+})
+
 describe('the after path', () => {
   it('expects the merged singleton the bulk import returned, not the local copy', async () => {
     const merged = { name: 'Ada', totalSessions: 7 }
-    const { api } = stubApi(({ path }) => path === '/api/store/learner-profile/bulk' ? { body: { count: 1, after: [merged] } } : undefined)
+    const { api } = stubApi(({ path }) => path === '/api/store/learner-profile/bulk' ? { body: { count: 1, after: [merged], outcomes: { profile: 'merged' } } } : undefined)
     const ledger = emptyLedger('device-a', [])
     await uploadStore(api, ledger, 'learner-profile', [{ id: 'profile', data: { name: 'Ada', totalSessions: 4 } }], () => {})
     expect(storeLedger(ledger, 'learner-profile').expected.get('profile')).toEqual(merged)
@@ -93,11 +132,11 @@ describe('the after path', () => {
   })
 
   it('fails a store when a sent id is missing from after', async () => {
-    const { api } = stubApi(({ path }) => path === '/api/store/vocabulary/bulk' ? { body: { count: 1, after: [] } } : undefined)
+    const { api } = stubApi(({ path }) => path === '/api/store/vocabulary/bulk' ? { body: { count: 1, after: [], outcomes: {} } } : undefined)
     const ledger = emptyLedger('device-a', [])
     await uploadStore(api, ledger, 'vocabulary', [{ id: 'w1', data: { id: 'w1' } }], () => {})
     const manifest = await manifestFor({ vocabulary: {} })
     const result = await verify(stubApi(() => ({ body: manifest })).api, ledger)
-    expect(result.checks).toContainEqual({ kind: 'store', store: 'vocabulary', count: 1, missing: 1, ok: false })
+    expect(result.checks).toContainEqual({ kind: 'store', store: 'vocabulary', count: 1, missing: 1, belowLocal: 0, absent: 0, ok: false })
   })
 })

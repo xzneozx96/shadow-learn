@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.accounts.deps import CurrentUser
 from app.db import get_session
+from app.importer.canonical import canonical
 from app.importer.manifest import (
     LESSONS,
     RECORD_STORES,
@@ -20,6 +21,7 @@ from app.importer.manifest import (
     MediaDigest,
     MediaKey,
     QuarantineKey,
+    iso_ms,
     media_digest,
     media_object,
     quarantine_digest,
@@ -77,12 +79,14 @@ class QuarantineImport(Camel):
 class ManifestRequest(Camel):
     source: Source
     stores: dict[str, list[str]]
+    present: dict[str, list[str]] = Field(default_factory=dict)
     quarantine: list[QuarantineKey] = Field(default_factory=list)
     media: list[MediaKey] = Field(default_factory=list)
 
 
 class ManifestResponse(BaseModel):
     stores: dict[str, Digest]
+    present: dict[str, int] = Field(default_factory=dict)
     quarantine: Digest
     media: list[MediaDigest | None]
 
@@ -100,6 +104,22 @@ class ImportedLessonState(BaseModel):
 class LessonsImported(BaseModel):
     count: int
     after: list[ImportedLessonState]
+    outcomes: dict[str, Literal["stored", "kept_server"]]
+
+
+def _sent_record(item: ImportedLesson) -> dict[str, Any]:
+    return {
+        "id": str(item.id),
+        "title": item.title,
+        "source": item.source,
+        "sourceUrl": item.source_url,
+        "duration": item.duration,
+        "sourceLanguage": item.source_language,
+        "translationLanguages": item.translation_languages,
+        "createdAt": iso_ms(item.created_at),
+        "lastOpenedAt": iso_ms(item.last_opened_at) if item.last_opened_at else None,
+        "meta": item.meta,
+    }
 
 
 @router.post("/lessons")
@@ -146,9 +166,15 @@ async def import_lessons(body: LessonsImport, user: CurrentUser, session: Sessio
     ids = [str(lesson_id) for lesson_id in incoming]
     lessons = dict(await stored_records(session, user.id, LESSONS, ids))
     segments = dict(await stored_records(session, user.id, SEGMENTS, ids))
+    outcomes: dict[str, Literal["stored", "kept_server"]] = {}
+    for lesson_id, item in incoming.items():
+        key = str(lesson_id)
+        unchanged = canonical([lessons[key], segments[key]]) == canonical([_sent_record(item), item.segments])
+        outcomes[key] = "stored" if lesson_id not in existing or unchanged else "kept_server"
     return LessonsImported(
         count=len(incoming),
         after=[ImportedLessonState(lesson=lessons[lesson_id], segments=segments[lesson_id]) for lesson_id in ids],
+        outcomes=outcomes,
     )
 
 
@@ -249,11 +275,12 @@ async def import_media(
 @router.post("/manifest")
 async def manifest(body: ManifestRequest, user: CurrentUser, session: Session) -> ManifestResponse:
     """Digest the caller's stored copy of exactly the records and blobs this device sent."""
-    unknown = sorted(body.stores.keys() - RECORD_STORES)
+    unknown = sorted((body.stores.keys() | body.present.keys()) - RECORD_STORES)
     if unknown:
         raise HTTPException(status_code=422, detail=f"Unknown store {unknown[0]}")
     return ManifestResponse(
         stores={store: await store_digest(session, user.id, store, ids) for store, ids in body.stores.items()},
+        present={store: len(await stored_records(session, user.id, store, ids)) for store, ids in body.present.items()},
         quarantine=await quarantine_digest(session, user.id, body.source, body.quarantine),
         media=[await media_digest(session, user.id, key) for key in body.media],
     )

@@ -26,15 +26,26 @@ export interface Ledger {
   hashMs: number
 }
 
+/**
+ * `expected` holds what each hashed record must equal: the local record for `stored`,
+ * the server's merge for `merged`. `present` lists `kept_server` ids, where a rule kept
+ * the account's copy on purpose, so they only need to exist.
+ */
 export interface StoreLedger {
   expected: Map<string, Json>
+  present: Set<string>
   missing: string[]
+  belowLocal: string[]
+}
+
+function freshStoreLedger(): StoreLedger {
+  return { expected: new Map(), present: new Set(), missing: [], belowLocal: [] }
 }
 
 export function emptyLedger(source: string, stores: readonly ManifestStore[]): Ledger {
   return {
     source,
-    stores: new Map(stores.map(store => [store, { expected: new Map(), missing: [] }])),
+    stores: new Map(stores.map(store => [store, freshStoreLedger()])),
     quarantine: new Map(),
     media: [],
     unsentMedia: [],
@@ -45,7 +56,7 @@ export function emptyLedger(source: string, stores: readonly ManifestStore[]): L
 export function storeLedger(ledger: Ledger, store: ManifestStore): StoreLedger {
   let entry = ledger.stores.get(store)
   if (!entry) {
-    entry = { expected: new Map(), missing: [] }
+    entry = freshStoreLedger()
     ledger.stores.set(store, entry)
   }
   return entry
@@ -57,12 +68,13 @@ export function quarantineKey(record: Pick<QuarantinedRecord, 'store' | 'recordI
 
 export interface ManifestResponse {
   stores: Record<string, Digest>
+  present?: Record<string, number>
   quarantine: Digest
   media: (SentMedia['key'] & { size: number, sha256: string } | null)[]
 }
 
 export type Check
-  = | { kind: 'store', store: ManifestStore, count: number, ok: boolean, missing: number }
+  = | { kind: 'store', store: ManifestStore, count: number, ok: boolean, missing: number, belowLocal: number, absent: number }
     | { kind: 'quarantine', count: number, ok: boolean }
     | { kind: 'media', key: MediaKey, ok: boolean }
 
@@ -77,7 +89,7 @@ function sameDigest(a: Digest | undefined, b: Digest): boolean {
 
 export async function postManifest(
   api: ApiClient,
-  body: { source: string, stores: Record<string, string[]>, quarantine?: { store: string, recordId: string }[], media?: MediaKey[] },
+  body: { source: string, stores: Record<string, string[]>, present?: Record<string, string[]>, quarantine?: { store: string, recordId: string }[], media?: MediaKey[] },
 ): Promise<ManifestResponse> {
   const started = performance.now()
   const res = await api.fetch('/api/import/manifest', {
@@ -94,10 +106,12 @@ export async function postManifest(
 
 export async function verify(api: ApiClient, ledger: Ledger): Promise<Verification> {
   const started = performance.now()
-  const local = await Promise.all(Array.from(ledger.stores, async ([store, { expected: records, missing }]) => ({
+  const local = await Promise.all(Array.from(ledger.stores, async ([store, { expected: records, present, missing, belowLocal }]) => ({
     store,
     ids: [...records.keys()],
+    present: [...present],
     missing: missing.length,
+    belowLocal: belowLocal.length,
     digest: await storeDigest(records),
   })))
   const quarantined = [...ledger.quarantine.values()]
@@ -107,17 +121,23 @@ export async function verify(api: ApiClient, ledger: Ledger): Promise<Verificati
   const server = await postManifest(api, {
     source: ledger.source,
     stores: Object.fromEntries(local.map(({ store, ids }) => [store, ids])),
+    present: Object.fromEntries(local.filter(({ present }) => present.length > 0).map(({ store, present }) => [store, present])),
     quarantine: quarantined.map(({ store, recordId }) => ({ store, recordId })),
     media: ledger.media.map(item => item.key),
   })
 
-  const checks: Check[] = local.map(({ store, missing, digest }) => ({
-    kind: 'store',
-    store,
-    count: digest.count + missing,
-    missing,
-    ok: missing === 0 && sameDigest(server.stores[store], digest),
-  }))
+  const checks: Check[] = local.map(({ store, present, missing, belowLocal, digest }) => {
+    const absent = present.length - (server.present?.[store] ?? 0)
+    return {
+      kind: 'store',
+      store,
+      count: digest.count + present.length + missing,
+      missing,
+      belowLocal,
+      absent,
+      ok: missing === 0 && belowLocal === 0 && absent === 0 && sameDigest(server.stores[store], digest),
+    }
+  })
   checks.push({ kind: 'quarantine', count: quarantined.length, ok: sameDigest(server.quarantine, quarantineDigest) })
   for (const key of ledger.unsentMedia)
     checks.push({ kind: 'media', key, ok: false })

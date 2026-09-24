@@ -7,11 +7,12 @@ from sqlalchemy import ColumnElement, delete, func, select, update
 from sqlalchemy.dialects.postgresql import JSONB, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.userdata.merge import Data, union
+from app.userdata.merge import Data, keep_server, union
 from app.userdata.models import TABLES, import_digests
 from app.userdata.specs import IndexedField, StoreSpec
 
 Op = Literal["eq", "lte"]
+Outcome = Literal["stored", "merged", "kept_server"]
 
 
 def index_filter(spec: StoreSpec, field: IndexedField, value: str, op: Op) -> ColumnElement[bool]:
@@ -139,25 +140,67 @@ async def _stored(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, id
     return dict(rows.tuples().all())
 
 
+async def _versions(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, ids: list[str]) -> dict[str, int]:
+    table = TABLES[spec.name]
+    rows = await session.execute(select(table.c.id, table.c.version).where(table.c.user_id == user_id, table.c.id.in_(ids)))
+    return dict(rows.tuples().all())
+
+
+def _outcome(spec: StoreSpec, version_before: int | None, merged_now: bool, written_by_source: bool) -> Outcome:
+    """How the stored record relates to the incoming one, so the importer knows what to verify it against.
+
+    ``stored`` means the row holds the incoming payload as written, now or by an
+    earlier request from the same source, untouched since (version 1).
+    """
+    if version_before is None or (written_by_source and version_before == 1 and not merged_now):
+        return "stored"
+    if spec.merge is union or spec.merge is keep_server:
+        return "kept_server"
+    return "merged"
+
+
 async def import_records(
     session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data], source: str | None = None
-) -> list[Data]:
+) -> tuple[list[Data], dict[str, Outcome]]:
+    """Merge ``records`` into the caller's store; return the stored record and the outcome for every present id.
+
+    With a ``source``, each (source, record id) pair merges at most once, so a
+    retry from the same device never counts twice and a second device always does.
+    A record whose row is gone since its first merge merges again rather than vanish.
+    """
     table = TABLES[spec.name]
     ids = list(dict.fromkeys(spec.record_id(data) for data in records))
+    if spec.merge is not union:
+        await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"{user_id}:{spec.name}"))))
+    before = await _versions(session, user_id, spec, ids)
+    fresh = await _unmerged(session, user_id, spec, records, source)
+    fresh_ids = {spec.record_id(data) for data in fresh}
+
     if spec.merge is union:
         await session.execute(insert(table).on_conflict_do_nothing(), [_row(spec, user_id, data) for data in records])
         stored = await _stored(session, user_id, spec, ids)
-        return [stored[record_id] for record_id in ids if record_id in stored]
+        outcomes = {
+            record_id: _outcome(spec, before.get(record_id), False, source is not None and record_id not in fresh_ids)
+            for record_id in ids
+            if record_id in stored
+        }
+        return [stored[record_id] for record_id in outcomes], outcomes
 
-    await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"{user_id}:{spec.name}"))))
     stored = await _stored(session, user_id, spec, ids)
-    fresh = await _unmerged(session, user_id, spec, records, source)
-    known = stored.keys() | {spec.record_id(data) for data in fresh}
-    vanished = [data for data in records if spec.record_id(data) not in known]
-    touched = set()
+    vanished = [data for data in records if spec.record_id(data) not in stored.keys() | fresh_ids]
+    touched: dict[str, int] = {}
     for data in [*fresh, *vanished]:
         record_id = spec.record_id(data)
         stored[record_id] = spec.merge(stored[record_id], data) if record_id in stored else data
-        touched.add(record_id)
+        touched[record_id] = touched.get(record_id, 0) + 1
     await replace_records(session, user_id, spec, [stored[record_id] for record_id in touched])
-    return [stored[record_id] for record_id in ids]
+    outcomes = {
+        record_id: _outcome(
+            spec,
+            before.get(record_id),
+            record_id in before and record_id in touched or touched.get(record_id, 0) > 1,
+            record_id not in fresh_ids,
+        )
+        for record_id in ids
+    }
+    return [stored[record_id] for record_id in ids], outcomes

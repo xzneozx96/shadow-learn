@@ -3,6 +3,8 @@ import { emptyLedger, storeLedger } from '@/features/migration/manifest'
 import { batches, MAX_BATCH_BYTES, MAX_BATCH_RECORDS, uploadLessons, uploadStore } from '@/features/migration/uploadRecords'
 import { stubApi } from './stub-api'
 
+const storedAll = (records: { id: string }[]) => ({ after: records, outcomes: Object.fromEntries(records.map(record => [record.id, 'stored'])) })
+
 const word = (id: string, extra = {}) => ({ id, data: { id, word: '字', sourceLessonId: 'l1', createdAt: '2026-06-01', ...extra } })
 
 describe('batches', () => {
@@ -15,7 +17,7 @@ describe('batches', () => {
 
 describe('uploadStore', () => {
   it('sends the device source with import mode', async () => {
-    const { api, calls } = stubApi(({ body }) => ({ body: { after: (body as { records: unknown[] }).records } }))
+    const { api, calls } = stubApi(({ body }) => ({ body: storedAll((body as { records: { id: string }[] }).records) }))
     await uploadStore(api, emptyLedger('device-a', []), 'vocabulary', [word('w1')], () => {})
     expect(calls[0]).toEqual({ method: 'POST', path: '/api/store/vocabulary/bulk', body: { mode: 'import', source: 'device-a', records: [word('w1').data] } })
   })
@@ -28,7 +30,7 @@ describe('uploadStore', () => {
       const bad = records.findIndex(record => record.id === 'bad')
       if (bad !== -1)
         return { status: 422, body: { detail: [{ loc: ['body', 'records', bad, 'createdAt'], msg: 'Field required' }] } }
-      return { body: { after: records } }
+      return { body: storedAll(records) }
     })
     const ledger = emptyLedger('device-a', [])
     await uploadStore(api, ledger, 'vocabulary', [word('w1'), word('bad', { createdAt: undefined }), word('w2')], () => {})
@@ -60,7 +62,7 @@ describe('uploadStore', () => {
     const { api, calls } = stubApi(({ method, body }) => {
       if (method === 'GET')
         return { body: [{ id: 'm-a', externalId: 'PL-shared', skill: 'Speaking' }] }
-      return { body: { after: (body as { records: unknown[] }).records } }
+      return { body: storedAll((body as { records: { id: string }[] }).records) }
     })
     const ledger = emptyLedger('device-b', [])
     const { keptAccountCopy } = await uploadStore(api, ledger, 'user-materials', [mine, { id: 'm-c', data: { id: 'm-c', externalId: 'PL-other', skill: 'Speaking' } }], () => {})
@@ -80,7 +82,7 @@ describe('uploadLessons', () => {
         return { body: { count: 1 } }
       const sent = (body as { lessons: { id: string, segments: unknown }[] }).lessons
       const bad = sent.findIndex(lesson => lesson.id === 'l2')
-      return bad === -1 ? { body: { count: sent.length, after: sent.map(({ segments, ...lesson }) => ({ lesson, segments })) } } : { status: 422, body: { detail: [{ loc: ['body', 'lessons', bad, 'segments', 0, 'start'], msg: 'Field required' }] } }
+      return bad === -1 ? { body: { count: sent.length, outcomes: Object.fromEntries(sent.map(lesson => [lesson.id, 'stored'])), after: sent.map(({ segments, ...lesson }) => ({ lesson, segments })) } } : { status: 422, body: { detail: [{ loc: ['body', 'lessons', bad, 'segments', 0, 'start'], msg: 'Field required' }] } }
     })
     const ledger = emptyLedger('device-a', [])
     await uploadLessons(api, ledger, lessons, () => {})
