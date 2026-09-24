@@ -17,6 +17,8 @@ export const TRANSLATIONS = {
     // Accounts — Login, Signup, password reset
     'account.email': 'Email',
     'account.password': 'Password',
+    'account.showPassword': 'Show password',
+    'account.hidePassword': 'Hide password',
     'account.confirmPassword': 'Confirm password',
     'account.newPassword': 'New password',
     'account.login.title': 'Log in',
@@ -1001,6 +1003,8 @@ export const TRANSLATIONS = {
     // Accounts — Login, Signup, password reset
     'account.email': 'Email',
     'account.password': 'Mật khẩu',
+    'account.showPassword': 'Hiện mật khẩu',
+    'account.hidePassword': 'Ẩn mật khẩu',
     'account.confirmPassword': 'Xác nhận mật khẩu',
     'account.newPassword': 'Mật khẩu mới',
     'account.login.title': 'Đăng nhập',
