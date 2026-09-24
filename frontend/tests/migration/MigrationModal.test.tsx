@@ -145,6 +145,8 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     await seeded
     await start()
     expect(await screen.findByText(/Your data is still in this browser/)).toBeInTheDocument()
+    expect(screen.getByText('Check your internet connection, then try again. If it keeps happening, try again later.')).toBeInTheDocument()
+    expect(screen.getByTestId('migration-modal')).not.toHaveTextContent(/\b50\d\b|failed:/)
     expect(await databaseExists()).toBe(true)
 
     server.state.down = false

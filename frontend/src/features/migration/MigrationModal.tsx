@@ -311,7 +311,7 @@ export function MigrationModal({ api, account, counts, locale, onFinished, onKee
           {phase.step === 'error' && (
             <>
               <Warning>{t('migration.error.title')}</Warning>
-              <p className="text-sm text-muted-foreground">{phase.changing ? t('migration.error.changing') : phase.message}</p>
+              <p className="text-sm text-muted-foreground">{t(phase.changing ? 'migration.error.changing' : 'migration.error.retry')}</p>
               <Exits t={t} onSignOut={onSignOut} onKeepLocal={onKeepLocal} onRetry={() => void retry()} />
             </>
           )}

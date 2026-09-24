@@ -35,7 +35,7 @@ export type Phase
     | { step: 'delete', blocked: boolean }
     | { step: 'done', verification: Verification, notes: Notes }
     | { step: 'other-account' }
-    | { step: 'error', message: string, changing: boolean }
+    | { step: 'error', changing: boolean }
 
 type Event
   = | { type: 'loading' }
@@ -52,7 +52,7 @@ type Event
     | { type: 'blocked' }
     | { type: 'done', verification: Verification, notes: Notes }
     | { type: 'other-account' }
-    | { type: 'error', message: string, changing?: boolean }
+    | { type: 'error', changing?: boolean }
 
 export function reduce(phase: Phase, event: Event): Phase {
   switch (event.type) {
@@ -87,7 +87,7 @@ export function reduce(phase: Phase, event: Event): Phase {
     case 'other-account':
       return { step: 'other-account' }
     case 'error':
-      return { step: 'error', message: event.message, changing: event.changing ?? false }
+      return { step: 'error', changing: event.changing ?? false }
     default: {
       const _exhaustive: never = event
       return _exhaustive
@@ -223,10 +223,11 @@ export function useMigration(api: ApiClient, account: string) {
         dispatch({ type: 'done', verification, notes: { keys: keysRef.current.outcome, keptAccountCopy, conflicts, quarantined, skipped: loaded.snapshot.skipped } })
         return
       }
-      dispatch({ type: 'error', message: '', changing: true })
+      dispatch({ type: 'error', changing: true })
     }
     catch (err) {
-      dispatch({ type: 'error', message: err instanceof Error ? err.message : String(err) })
+      console.warn('[migration] the move stopped', err)
+      dispatch({ type: 'error' })
     }
   }), [account, api])
 
@@ -245,7 +246,8 @@ export function useMigration(api: ApiClient, account: string) {
       }
     }
     catch (err) {
-      dispatch({ type: 'error', message: err instanceof Error ? err.message : String(err) })
+      console.warn('[migration] the move stopped', err)
+      dispatch({ type: 'error' })
       return
     }
     if (loadedRef.current.snapshot.keys && keysRef.current.outcome.kind === 'none' && !keysRef.current.decrypted)
