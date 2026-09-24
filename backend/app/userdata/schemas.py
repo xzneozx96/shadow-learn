@@ -214,6 +214,24 @@ class TipNote(Record):
     source_ref: dict[str, Any] | None = None
 
 
+class TipCardState(Record):
+    state: Literal["new", "known", "learning"] | None = None
+    updated_at: str | None = None
+
+
+class TipCardStates(Record):
+    video_id: str
+    locale: Literal["en", "vi"]
+    states: dict[str, TipCardState] | None = None
+
+
+class WordStory(Record):
+    word: str
+    lang: str
+    story: str | None = None
+    updated_at: str | None = None
+
+
 class UserMaterial(Record):
     id: str
     source: Literal["playlist", "video"] | None = None

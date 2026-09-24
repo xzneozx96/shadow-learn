@@ -4,7 +4,9 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 import respx
+from sqlalchemy import select
 
+from app.keys.models import ProviderUsage
 from app.main import app
 from app.settings import settings
 from app.tts.services.tts_azure import AzureTTSProvider
@@ -73,6 +75,43 @@ async def test_second_identical_breakdown_is_a_catalog_hit(client, providers):
 
     assert first.status_code == second.status_code == 200
     assert first.json() == second.json() == {"story": "Học là đứa trẻ ngồi dưới mái nhà."}
+    assert openrouter.call_count == 1
+
+
+async def test_forced_breakdown_skips_the_catalog_and_leaves_it_unchanged(client, providers):
+    openrouter = providers.post(settings.openrouter_chat_url)
+    openrouter.side_effect = [
+        httpx.Response(200, json={"choices": [{"message": {"content": "shared"}}]}),
+        httpx.Response(200, json={"choices": [{"message": {"content": "fresh"}}]}),
+    ]
+
+    shared = await client.post("/api/vocab/breakdown-story", json=_BREAKDOWN)
+    forced = await client.post("/api/vocab/breakdown-story", json={**_BREAKDOWN, "force": True})
+    again = await client.post("/api/vocab/breakdown-story", json=_BREAKDOWN)
+
+    assert (shared.json(), forced.json(), again.json()) == ({"story": "shared"}, {"story": "fresh"}, {"story": "shared"})
+    assert openrouter.call_count == 2
+
+
+async def test_forced_breakdown_resolves_a_provider_key_and_logs_usage(client, providers, db_session):
+    providers.post(settings.openrouter_chat_url).respond(200, json={"choices": [{"message": {"content": "story"}}]})
+
+    await client.post("/api/vocab/breakdown-story", json=_BREAKDOWN)
+    await client.post("/api/vocab/breakdown-story", json=_BREAKDOWN)
+    await client.post("/api/vocab/breakdown-story", json={**_BREAKDOWN, "force": True})
+
+    endpoints = (await db_session.scalars(select(ProviderUsage.endpoint))).all()
+    assert endpoints == ["/api/vocab/breakdown-story", "/api/vocab/breakdown-story"]
+
+
+async def test_forced_breakdown_counts_toward_the_rate_limit(client, providers, monkeypatch):
+    openrouter = providers.post(settings.openrouter_chat_url).respond(200, json={"choices": [{"message": {"content": "story"}}]})
+    monkeypatch.setattr("app.keys.usage.settings.rate_limit_per_minute", 1)
+
+    first = await client.post("/api/vocab/breakdown-story", json={**_BREAKDOWN, "force": True})
+    second = await client.post("/api/vocab/breakdown-story", json={**_BREAKDOWN, "force": True})
+
+    assert (first.status_code, second.status_code) == (200, 429)
     assert openrouter.call_count == 1
 
 

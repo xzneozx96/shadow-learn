@@ -93,7 +93,8 @@ app.add_middleware(
     allow_origin_regex=settings.frontend_origin_regex or None,
     allow_credentials=False,
     allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "If-Match", "If-None-Match"],
+    expose_headers=["ETag"],
 )
 
 app.include_router(auth_router)

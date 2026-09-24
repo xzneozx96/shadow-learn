@@ -1,10 +1,8 @@
 import type { DataClient } from '@/db'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getTipProgress, initDB } from '@/db'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getTipProgress } from '@/db'
 import { fakeDataClient } from '../../../../tests/fake-api'
-import 'fake-indexeddb/auto'
 
 let testDb: DataClient
 
@@ -16,13 +14,8 @@ vi.mock('@/app/providers/AuthContext', () => ({
 // Imported after the mock so the hook picks up the mocked AuthContext.
 const { useTipProgress } = await import('@/features/learning-materials/application/useTipProgress')
 
-beforeEach(async () => {
-  testDb = fakeDataClient(await initDB())
-})
-
-afterEach(() => {
-  testDb.legacy.close()
-  globalThis.indexedDB = new IDBFactory()
+beforeEach(() => {
+  testDb = fakeDataClient()
 })
 
 describe('useTipProgress persistence', () => {

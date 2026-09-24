@@ -182,7 +182,7 @@ export function TranscriptPanel({
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, lesson.sourceLanguage ?? 'zh-CN', voiceId)
+  const { playTTS, loadingText } = useTTS(lesson.sourceLanguage ?? 'zh-CN', voiceId)
   const { entriesByLesson, save, remove, isSaved } = useVocabulary()
   const [search, setSearch] = useState('')
   // useDeferredValue keeps the text input responsive — the heavy list

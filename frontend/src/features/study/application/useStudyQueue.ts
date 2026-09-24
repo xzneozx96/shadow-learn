@@ -6,11 +6,11 @@ import {
   deleteDailyTask,
   getAllSessionLogs,
   getAllTipProgress,
+  getAllVocabEntries,
   getDailyTasks,
   getDueItems,
   getUserMaterialByExternalId,
-  getVocabEntryById,
-  saveDailyTask,
+  updateDailyTask,
 } from '@/db'
 import { localDateISO, todayISO } from '@/shared/lib/date'
 import {
@@ -38,6 +38,8 @@ export interface ContinueItem {
 
 export interface StudyQueueState {
   loading: boolean
+  status: 'loading' | 'ready' | 'error'
+  error: string | null
   hasWordDrills: boolean
   hasDailyReview: boolean
   wordDrillsEntries: VocabEntry[]
@@ -68,7 +70,8 @@ export function useStudyQueue(
   db: DataClient | null,
   hasLesson: boolean = false,
 ): StudyQueueState {
-  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = useState<StudyQueueState['status']>('loading')
+  const [error, setError] = useState<string | null>(null)
   const [wordDrillsEntries, setWordDrillsEntries] = useState<VocabEntry[]>([])
   const [shadowingDone, setShadowingDone] = useState(false)
   const [continueItem, setContinueItem] = useState<ContinueItem | null>(null)
@@ -82,8 +85,7 @@ export function useStudyQueue(
     writing: false,
   })
 
-  const load = useCallback(async (db: DataClient) => {
-    setLoading(true)
+  const loadQueue = useCallback(async (db: DataClient) => {
     const today = todayISO()
 
     // Flush previous-day SM-2 pending buffer BEFORE sweeping expired keys
@@ -114,12 +116,8 @@ export function useStudyQueue(
       }
     }
 
-    const entries: VocabEntry[] = []
-    for (const id of vocabIds) {
-      const entry = await getVocabEntryById(db, id)
-      if (entry)
-        entries.push(entry)
-    }
+    const byId = new Map((await getAllVocabEntries(db)).map(e => [e.id, e]))
+    const entries = vocabIds.flatMap(id => byId.get(id) ?? [])
     setWordDrillsEntries(entries)
 
     // Only entries that resolved to a real word can ever be marked complete
@@ -176,9 +174,20 @@ export function useStudyQueue(
       setContinueItem(null)
       setContinueDone(false)
     }
-
-    setLoading(false)
   }, [])
+
+  const load = useCallback(async (db: DataClient) => {
+    setStatus('loading')
+    try {
+      await loadQueue(db)
+      setError(null)
+      setStatus('ready')
+    }
+    catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setStatus('error')
+    }
+  }, [loadQueue])
 
   useEffect(() => {
     if (!db)
@@ -195,7 +204,7 @@ export function useStudyQueue(
       createdDate: todayISO(),
       completedDate: null,
     }
-    await saveDailyTask(db, task)
+    await updateDailyTask(db, task.id, () => task)
     setCustomTasks(prev => [...prev, task])
   }
 
@@ -206,8 +215,8 @@ export function useStudyQueue(
     const task = customTasks.find(t => t.id === id)
     if (!task)
       return
-    const updated = { ...task, completedDate: task.completedDate === today ? null : today }
-    await saveDailyTask(db, updated)
+    const completedDate = task.completedDate === today ? null : today
+    const updated = await updateDailyTask(db, id, prev => ({ ...(prev ?? task), completedDate }))
     setCustomTasks(prev => prev.map(t => t.id === id ? updated : t))
   }
 
@@ -217,8 +226,7 @@ export function useStudyQueue(
     const task = customTasks.find(t => t.id === id)
     if (!task)
       return
-    const updated = { ...task, title }
-    await saveDailyTask(db, updated)
+    const updated = await updateDailyTask(db, id, prev => ({ ...(prev ?? task), title }))
     setCustomTasks(prev => prev.map(t => t.id === id ? updated : t))
   }
 
@@ -251,6 +259,7 @@ export function useStudyQueue(
       + (continueItem && !continueDone ? 1 : 0)
       + customTasks.filter(t => t.completedDate !== today).length
 
+  const loading = status === 'loading'
   const allDoneToday
     = !loading
       && incompleteCount === 0
@@ -258,6 +267,8 @@ export function useStudyQueue(
 
   return {
     loading,
+    status,
+    error,
     hasWordDrills,
     hasDailyReview,
     wordDrillsEntries,

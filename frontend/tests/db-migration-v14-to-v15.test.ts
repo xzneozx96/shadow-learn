@@ -1,6 +1,6 @@
 import { openDB } from 'idb'
 import { afterEach, describe, expect, it } from 'vitest'
-import { initDB } from '../src/db'
+import { initDB } from '../src/db/legacy'
 import 'fake-indexeddb/auto'
 
 // Helper: open the DB at an arbitrary older version, populate sample data

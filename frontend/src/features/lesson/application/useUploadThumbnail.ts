@@ -6,6 +6,10 @@ import { refreshMediaTicket } from '@/db'
 // Module-level cache — survives re-renders and card remounts for the session
 const cache = new Map<string, string>()
 
+export function clearUploadThumbnails(): void {
+  cache.clear()
+}
+
 interface UploadThumbnail {
   ref: (element: Element | null) => void
   dataUrl: string | null

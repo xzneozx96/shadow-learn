@@ -89,3 +89,17 @@ async def test_put_rejects_an_empty_body(client, lesson, db_session):
     response = await client.put(_path(lesson.id), content=b"", headers={"Content-Type": "audio/wav"})
     assert response.status_code == 400
     assert await _shadowing_rows(db_session) == []
+
+
+async def test_deleting_the_lesson_removes_its_recordings_and_their_objects(client, lesson, db_session, app_s3):
+    await client.put(_path(lesson.id, "s1"), content=b"one", headers={"Content-Type": "audio/webm"})
+    await client.put(_path(lesson.id, "s2"), content=b"two", headers={"Content-Type": "audio/webm"})
+    assert len(await _shadowing_rows(db_session)) == 2
+
+    deleted = await client.delete(f"/api/lessons/{lesson.id}")
+
+    assert deleted.status_code == 204
+    assert await _shadowing_rows(db_session) == []
+    listing = await app_s3.list_objects_v2(Bucket=settings.s3_bucket, Prefix=f"users/{lesson.user_id}/lessons/{lesson.id}/")
+    assert listing.get("KeyCount", 0) == 0
+    assert (await client.get(_path(lesson.id, "s1"))).status_code == 404

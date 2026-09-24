@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    BigInteger,
     Column,
     DateTime,
     ForeignKey,
@@ -28,6 +29,7 @@ def build_table(spec: StoreSpec) -> Table:
         Column("id", Text, nullable=False),
         Column("data", JSONB, nullable=False),
         Column("updated_at", DateTime(timezone=True), server_default=func.now(), nullable=False),
+        Column("version", BigInteger, server_default="1", nullable=False),
         *(Column(field.column, field.type, nullable=True) for field in spec.indexed),
         PrimaryKeyConstraint("user_id", "id"),
     )

@@ -1,17 +1,6 @@
-import type { DataClient } from '@/db'
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { initDB, putTipTranscript } from '@/db'
 import { useTipTranscript } from '@/features/learning-materials/application/useTipTranscript'
-import { fakeDataClient } from '../../../../tests/fake-api'
-import 'fake-indexeddb/auto'
-
-// vi.hoisted so the factory closure captures a mutable reference that tests can update
-const mocks = vi.hoisted(() => ({ db: null as DataClient | null }))
-
-vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: mocks.db }),
-}))
 
 vi.mock('@/shared/lib/config', () => ({
   API_BASE: 'http://test-api',
@@ -19,20 +8,9 @@ vi.mock('@/shared/lib/config', () => ({
 
 const ORIGINAL_FETCH = globalThis.fetch
 
-afterEach(async () => {
+afterEach(() => {
   globalThis.fetch = ORIGINAL_FETCH
   vi.restoreAllMocks()
-  // Close and delete the IDB to keep tests isolated
-  if (mocks.db) {
-    mocks.db.legacy.close()
-    mocks.db = null
-  }
-  await new Promise<void>((resolve) => {
-    const req = indexedDB.deleteDatabase('shadowlearn')
-    req.onsuccess = () => resolve()
-    req.onerror = () => resolve()
-    req.onblocked = () => resolve()
-  })
 })
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -76,27 +54,33 @@ describe('useTipTranscript', () => {
     })
   })
 
-  describe('behavior 2: IDB cache hit', () => {
-    it('returns cached transcript without fetching', async () => {
-      mocks.db = fakeDataClient(await initDB())
-      await putTipTranscript(mocks.db, {
-        videoId: 'vid-cached',
-        status: 'ready',
-        source: 'subtitle',
-        lang: 'zh',
-        segments: [{ start: 1, end: 3, text: '你好' }],
-        fetchedAt: '2026-05-17T00:00:00Z',
-      })
-
-      const fetchSpy = vi.fn()
+  describe('behavior 2: no local cache', () => {
+    it('asks the server again on every mount', async () => {
+      const fetchSpy = vi.fn(async () => ({ status: 200, json: async () => READY_BODY }))
       globalThis.fetch = fetchSpy as unknown as typeof fetch
 
-      const { result } = renderHook(() => useTipTranscript('vid-cached'))
+      const first = renderHook(() => useTipTranscript('vid-cached'))
+      await waitFor(() => expect(first.result.current.status).toBe('ready'))
+      first.unmount()
 
-      await waitFor(() => expect(result.current.status).toBe('ready'))
-      expect(result.current.lang).toBe('zh')
-      expect(result.current.segments).toEqual([{ start: 1, end: 3, text: '你好' }])
-      expect(fetchSpy).not.toHaveBeenCalled()
+      const second = renderHook(() => useTipTranscript('vid-cached'))
+      await waitFor(() => expect(second.result.current.status).toBe('ready'))
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      expect(fetchSpy.mock.calls.map(call => String((call as unknown[])[0]))).toEqual([
+        'http://test-api/api/tips/transcript/vid-cached',
+        'http://test-api/api/tips/transcript/vid-cached',
+      ])
+    })
+
+    it('surfaces a too_long response with its limits', async () => {
+      mockFetch({ status: 200, json: async () => ({ status: 'too_long', durationSec: 5400, limitSec: 3600 }) })
+
+      const { result } = renderHook(() => useTipTranscript('vid-long'))
+
+      await waitFor(() => expect(result.current.status).toBe('too_long'))
+      expect(result.current.durationSec).toBe(5400)
+      expect(result.current.limitSec).toBe(3600)
     })
   })
 

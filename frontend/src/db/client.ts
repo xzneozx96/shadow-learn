@@ -1,8 +1,17 @@
-import type { ShadowLearnDB } from './legacy'
 import { apiFetch, responseError } from '@/shared/lib/api'
+
+// `version` is the row's ETag; null means the record does not exist yet.
+export interface Versioned<T> {
+  value: T | undefined
+  version: string | null
+}
+
+export type VersionedPut<T> = { ok: true } | { ok: false, current: Versioned<T> }
 
 export interface ApiClient {
   get: <T>(path: string) => Promise<T | undefined>
+  getVersioned: <T>(path: string) => Promise<Versioned<T>>
+  putVersioned: <T>(path: string, body: T, version: string | null) => Promise<VersionedPut<T>>
   list: <T>(path: string, query?: Record<string, string>) => Promise<T[]>
   put: (path: string, body: unknown) => Promise<void>
   del: (path: string) => Promise<void>
@@ -12,7 +21,6 @@ export interface ApiClient {
 
 export interface DataClient {
   api: ApiClient
-  legacy: ShadowLearnDB
 }
 
 function jsonInit(method: string, body: unknown): RequestInit {
@@ -35,6 +43,30 @@ export function createApiClient(send: ApiClient['fetch'] = apiFetch): ApiClient 
       if (!res.ok)
         throw await responseError(res, `GET ${path} failed: ${res.status}`)
       return res.json()
+    },
+    async getVersioned(path) {
+      const res = await send(path)
+      if (res.status === 404)
+        return { value: undefined, version: null }
+      if (!res.ok)
+        throw await responseError(res, `GET ${path} failed: ${res.status}`)
+      return { value: await res.json(), version: res.headers.get('ETag') }
+    },
+    async putVersioned(path, body, version) {
+      const precondition: Record<string, string> = version === null ? { 'If-None-Match': '*' } : { 'If-Match': version }
+      const res = await send(path, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...precondition },
+        body: JSON.stringify(body),
+      })
+      if (res.status === 409) {
+        const conflict = await res.clone().json().catch(() => null)
+        if (conflict?.detail === 'version conflict')
+          return { ok: false, current: { value: conflict.record ?? undefined, version: res.headers.get('ETag') } }
+      }
+      if (!res.ok)
+        throw await responseError(res, `PUT ${path} failed: ${res.status}`)
+      return { ok: true }
     },
     async list(path, query) {
       const search = query ? `?${new URLSearchParams(query)}` : ''

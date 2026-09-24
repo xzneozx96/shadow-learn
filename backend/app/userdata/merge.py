@@ -120,3 +120,15 @@ def higher_score(server: Data, incoming: Data) -> Data:
 
 def later_seen(server: Data, incoming: Data) -> Data:
     return incoming if (incoming.get("lastSeenAt") or "") > (server.get("lastSeenAt") or "") else server
+
+
+def later_updated(server: Data, incoming: Data) -> Data:
+    return incoming if (incoming.get("updatedAt") or "") > (server.get("updatedAt") or "") else server
+
+
+def card_states(server: Data, incoming: Data) -> Data:
+    states = dict(server.get("states") or {})
+    for front, card in (incoming.get("states") or {}).items():
+        if front not in states or later_updated(states[front], card) is card:
+            states[front] = card
+    return {**server, "states": states}

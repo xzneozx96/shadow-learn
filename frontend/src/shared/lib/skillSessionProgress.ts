@@ -1,5 +1,5 @@
 import type { DataClient, SpacedRepetitionItem } from '@/db'
-import { getDueItems, getSpacedRepetitionItem, getVocabEntryById, saveSpacedRepetitionItem } from '@/db'
+import { getDueItems, getVocabEntryById, updateSpacedRepetitionItem } from '@/db'
 import { todayISO } from '@/shared/lib/date'
 import { createSpacedRepetitionItem, updateSpacedRepetition } from '@/shared/lib/spacedRepetition'
 
@@ -121,10 +121,8 @@ export async function flushSM2Pending(db: DataClient, date: string): Promise<voi
       continue
 
     const score = pending[vocabId]
-    const existing = await getSpacedRepetitionItem(db, vocabId)
-    const item = existing ?? createSpacedRepetitionItem(vocabId)
-    const updated = updateSpacedRepetition(item, score, date)
-    await saveSpacedRepetitionItem(db, updated)
+    await updateSpacedRepetitionItem(db, vocabId, prev =>
+      updateSpacedRepetition(prev ?? createSpacedRepetitionItem(vocabId), score, date))
   }
 
   clearSM2Pending(date)

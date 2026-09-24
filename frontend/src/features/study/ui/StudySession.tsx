@@ -66,7 +66,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
+  const { playTTS, loadingText } = useTTS(entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
 
   const [phase, setPhase] = useState<Phase>('picker')
   const [mode, setMode] = useState<ExerciseMode>('mixed')

@@ -1,111 +1,38 @@
-import type { DataClient } from '@/db'
 /**
  * Tests for IDB schema v7 migration — exercise-stats and agent-logs stores.
  * Uses fake-indexeddb.
  */
 
+import type { ShadowLearnDB } from '@/db/legacy'
 import { afterEach, describe, expect, it } from 'vitest'
-import {
-  appendAgentLog,
-  getExerciseAccuracy,
-  initDB,
-  upsertExerciseStat,
-} from '@/db'
-import { fakeDataClient } from './fake-api'
+import { initDB } from '@/db/legacy'
 import 'fake-indexeddb/auto'
 
-let db: DataClient
+let db: ShadowLearnDB
 
 afterEach(() => {
   if (db)
-    db.legacy.close()
+    db.close()
   globalThis.indexedDB = new IDBFactory()
 })
 
-describe('schema v7 — exercise-stats store', () => {
-  it('creates exercise-stats store during init', async () => {
-    db = fakeDataClient(await initDB())
-    expect([...db.legacy.objectStoreNames]).toContain('exercise-stats')
+describe('schema v7', () => {
+  it('creates the exercise-stats and agent-logs stores during init', async () => {
+    db = await initDB()
+    expect([...db.objectStoreNames]).toEqual(expect.arrayContaining(['exercise-stats', 'agent-logs']))
   })
 
-  it('upsertExerciseStat creates entry on first call', async () => {
-    db = fakeDataClient(await initDB())
-    await upsertExerciseStat(db, 'vocab-1:dictation', true)
-    const stat = await db.legacy.get('exercise-stats', 'vocab-1:dictation')
-    expect(stat).toBeDefined()
-    expect(stat!.correct).toBe(1)
-    expect(stat!.total).toBe(1)
+  it('keys exercise-stats out of line by `<vocabId>:<exerciseType>`', async () => {
+    db = await initDB()
+    await db.put('exercise-stats', { correct: 1, total: 2, lastAttempt: '2026-03-27' }, 'vocab-1:dictation')
+    expect(await db.getAllKeys('exercise-stats')).toEqual(['vocab-1:dictation'])
   })
 
-  it('upsertExerciseStat increments existing entry', async () => {
-    db = fakeDataClient(await initDB())
-    await upsertExerciseStat(db, 'vocab-1:dictation', true)
-    await upsertExerciseStat(db, 'vocab-1:dictation', false)
-    await upsertExerciseStat(db, 'vocab-1:dictation', true)
-    const stat = await db.legacy.get('exercise-stats', 'vocab-1:dictation')
-    expect(stat!.correct).toBe(2)
-    expect(stat!.total).toBe(3)
-  })
-
-  it('getExerciseAccuracy aggregates by exercise type', async () => {
-    db = fakeDataClient(await initDB())
-    await upsertExerciseStat(db, 'vocab-1:dictation', true)
-    await upsertExerciseStat(db, 'vocab-2:dictation', false)
-    await upsertExerciseStat(db, 'vocab-1:translation', true)
-    const accuracy = await getExerciseAccuracy(db)
-    expect(accuracy.dictation).toBeDefined()
-    expect(accuracy.dictation.attempts).toBe(2)
-    expect(accuracy.dictation.accuracy).toBeCloseTo(0.5)
-    expect(accuracy.translation.attempts).toBe(1)
-    expect(accuracy.translation.accuracy).toBe(1)
-  })
-
-  it('getExerciseAccuracy returns empty object when no stats', async () => {
-    db = fakeDataClient(await initDB())
-    const accuracy = await getExerciseAccuracy(db)
-    expect(Object.keys(accuracy)).toHaveLength(0)
-  })
-})
-
-describe('schema v7 — agent-logs store', () => {
-  it('creates agent-logs store during init', async () => {
-    db = fakeDataClient(await initDB())
-    expect([...db.legacy.objectStoreNames]).toContain('agent-logs')
-  })
-
-  it('appendAgentLog writes a log entry', async () => {
-    db = fakeDataClient(await initDB())
-    await appendAgentLog(db, {
-      lessonId: 'lesson-1',
-      timestamp: '2026-03-27T10:00:00.000Z',
-      durationMs: 120000,
-      messageCount: 5,
-      toolCallCount: 3,
-      errorCount: 0,
-      exercisesCompleted: 2,
-    })
-    const all = await db.legacy.getAll('agent-logs')
-    expect(all).toHaveLength(1)
-    expect(all[0].lessonId).toBe('lesson-1')
-    expect(all[0].toolCallCount).toBe(3)
-  })
-
-  it('appendAgentLog assigns autoincrement id', async () => {
-    db = fakeDataClient(await initDB())
-    const log = {
-      lessonId: 'lesson-1',
-      timestamp: '2026-03-27T10:00:00.000Z',
-      durationMs: 60000,
-      messageCount: 2,
-      toolCallCount: 1,
-      errorCount: 0,
-      exercisesCompleted: 1,
-    }
-    await appendAgentLog(db, log)
-    await appendAgentLog(db, log)
-    const all = await db.legacy.getAll('agent-logs')
-    expect(all).toHaveLength(2)
-    expect(all[0].id).toBe(1)
-    expect(all[1].id).toBe(2)
+  it('assigns agent-logs an autoincrement id', async () => {
+    db = await initDB()
+    const log = { lessonId: 'l1', timestamp: 't', durationMs: 1, messageCount: 1, toolCallCount: 0, errorCount: 0, exercisesCompleted: 0 }
+    await db.add('agent-logs', log as any)
+    await db.add('agent-logs', log as any)
+    expect((await db.getAll('agent-logs')).map(l => l.id)).toEqual([1, 2])
   })
 })

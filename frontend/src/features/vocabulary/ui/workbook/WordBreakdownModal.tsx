@@ -25,14 +25,14 @@ interface WordBreakdownModalProps {
 
 export function WordBreakdownModal(props: WordBreakdownModalProps) {
   const { open, onClose, word, pinyin, meaning, sourceLanguage, db } = props
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
   useEffect(() => {
     if (!db)
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, sourceLanguage, voiceId)
+  const { playTTS, loadingText } = useTTS(sourceLanguage, voiceId)
   const ttsLoading = loadingText === word
   const {
     characters,
@@ -47,9 +47,9 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
   } = useWordBreakdown({
     db,
     word,
+    lang: locale,
     pinyin,
     meaning,
-    sourceLanguage,
     enabled: open,
   })
 

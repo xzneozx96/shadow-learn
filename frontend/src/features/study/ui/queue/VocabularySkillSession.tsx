@@ -2,7 +2,6 @@ import type { VocabEntry } from '@/shared/types'
 import { ArrowLeft } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { FlashcardExercise } from '@/features/study/ui/exercises/FlashcardExercise'
 import { RomanizationRecallExercise } from '@/features/study/ui/exercises/RomanizationRecallExercise'
@@ -31,11 +30,10 @@ interface Props {
 }
 
 export function VocabularySkillSession({ entries, date, onComplete, onProgress, onBack, embedded }: Props) {
-  const { db } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
   const sourceLanguage = entries[0]?.sourceLanguage ?? 'zh-CN'
-  const { playTTS } = useTTS(db, sourceLanguage)
+  const { playTTS } = useTTS(sourceLanguage)
   const caps = getLanguageCaps(sourceLanguage)
 
   const entryIds = new Set(entries.map(e => e.id))

@@ -1,13 +1,14 @@
 import type { DataClient } from '@/db'
 import type { ExerciseMode } from '@/shared/types'
 import { renderHook } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth } from '@/app/providers/AuthContext'
-import { initDB } from '@/db'
 import { EXERCISE_TO_SKILL, useTracking } from '@/shared/hooks/useTracking'
 import { fakeDataClient } from './fake-api'
-import 'fake-indexeddb/auto'
+
+function stored(db: DataClient, store: string, key: string): Promise<any> {
+  return db.api.get(`/api/store/${store}/${encodeURIComponent(key)}`)
+}
 
 // Mock useAuth to return our test db
 vi.mock('@/app/providers/AuthContext', () => ({
@@ -34,8 +35,7 @@ describe('useTracking', () => {
 
   beforeEach(async () => {
     localStorage.clear()
-    globalThis.indexedDB = new IDBFactory()
-    db = fakeDataClient(await initDB())
+    db = fakeDataClient()
     vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
@@ -87,8 +87,7 @@ describe('useTracking', () => {
     vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
     const { result } = renderHook(() => useTracking())
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 80 })
-    // SM-2 should NOT be written to IDB yet
-    const srItem = await db.legacy.get('spaced-repetition', 'entry-1')
+    const srItem = await stored(db, 'spaced-repetition', 'entry-1')
     expect(srItem).toBeUndefined()
     // But pending buffer should have the score
     const pending = JSON.parse(localStorage.getItem('sm2-pending-2026-05-14') ?? '{}')
@@ -123,7 +122,7 @@ describe('useTracking', () => {
   it('creates progress-db entry with correct stats', async () => {
     const { result } = renderHook(() => useTracking())
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 100 })
-    const stats = await db.legacy.get('progress-db', 'global')
+    const stats = await stored(db, 'progress-db', 'global')
     expect(stats?.totalExercises).toBe(1)
     expect(stats?.totalCorrect).toBe(1)
     expect(stats?.totalIncorrect).toBe(0)
@@ -137,7 +136,7 @@ describe('useTracking', () => {
       score: 0,
       mistakes: [{ userAnswer: '你', correctAnswer: '你好', date: '2026-03-19' }],
     })
-    const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+    const pattern = await stored(db, 'mistakes-db', 'entry-1')
     expect(pattern?.frequency).toBe(1)
     expect(pattern?.examples).toHaveLength(1)
   })
@@ -161,7 +160,7 @@ describe('useTracking', () => {
       score: 100,
     })
     // Read back from exercise-stats store
-    const stat = await db.legacy.get('exercise-stats', 'entry-1:dictation')
+    const stat = await stored(db, 'exercise-stats', 'entry-1:dictation')
     expect(stat).toBeDefined()
     expect(stat!.correct).toBe(1)
     expect(stat!.total).toBe(1)
@@ -174,7 +173,7 @@ describe('useTracking', () => {
       exerciseType: 'dictation',
       score: 40, // below 60 threshold = incorrect
     })
-    const stat = await db.legacy.get('exercise-stats', 'entry-1:dictation')
+    const stat = await stored(db, 'exercise-stats', 'entry-1:dictation')
     expect(stat!.correct).toBe(0)
     expect(stat!.total).toBe(1)
   })
@@ -183,15 +182,14 @@ describe('useTracking', () => {
     let db: DataClient
 
     beforeEach(async () => {
-      globalThis.indexedDB = new IDBFactory()
-      db = fakeDataClient(await initDB())
+      db = fakeDataClient()
       vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
     })
 
     it('increments totalSessions from 0 to 1', async () => {
       const { result } = renderHook(() => useTracking())
       await result.current.logSessionComplete()
-      const stats = await db.legacy.get('progress-db', 'global')
+      const stats = await stored(db, 'progress-db', 'global')
       expect(stats?.totalSessions).toBe(1)
     })
 
@@ -199,7 +197,7 @@ describe('useTracking', () => {
       const { result } = renderHook(() => useTracking())
       await result.current.logSessionComplete()
       await result.current.logSessionComplete()
-      const stats = await db.legacy.get('progress-db', 'global')
+      const stats = await stored(db, 'progress-db', 'global')
       expect(stats?.totalSessions).toBe(2)
     })
 
@@ -207,7 +205,7 @@ describe('useTracking', () => {
       const { result } = renderHook(() => useTracking())
       await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 100 })
       await result.current.logSessionComplete()
-      const stats = await db.legacy.get('progress-db', 'global')
+      const stats = await stored(db, 'progress-db', 'global')
       expect(stats?.totalSessions).toBe(1)
       expect(stats?.totalExercises).toBe(1)
     })
@@ -248,8 +246,7 @@ describe('exercise-type → skill routing', () => {
   let db: DataClient
 
   beforeEach(async () => {
-    globalThis.indexedDB = new IDBFactory()
-    db = fakeDataClient(await initDB())
+    db = fakeDataClient()
     vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
@@ -264,7 +261,7 @@ describe('exercise-type → skill routing', () => {
       })
 
       // Correct skill bucket incremented; all others remain 0
-      const stats = await db.legacy.get('progress-db', 'global')
+      const stats = await stored(db, 'progress-db', 'global')
       expect(stats?.skillProgress[skill].sessions).toBe(1)
       expect(stats?.totalCorrect).toBe(1)
       expect(stats?.totalIncorrect).toBe(0)
@@ -274,7 +271,7 @@ describe('exercise-type → skill routing', () => {
         expect(stats?.skillProgress[other].sessions).toBe(0)
 
       // mastery-db updated for the correct skill
-      const mastery = await db.legacy.get('mastery-db', 'global')
+      const mastery = await stored(db, 'mastery-db', 'global')
       expect(mastery?.[skill].lastPracticed).not.toBeNull()
     })
 
@@ -290,14 +287,14 @@ describe('exercise-type → skill routing', () => {
       })
 
       // progress-db: counted as incorrect
-      const stats = await db.legacy.get('progress-db', 'global')
+      const stats = await stored(db, 'progress-db', 'global')
       expect(stats?.totalCorrect).toBe(0)
       expect(stats?.totalIncorrect).toBe(1)
       expect(stats?.skillProgress[skill].sessions).toBe(1)
       expect(stats?.skillProgress[skill].accuracy).toBe(0)
 
       // mistakes-db: entry recorded
-      const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+      const pattern = await stored(db, 'mistakes-db', 'entry-1')
       expect(pattern?.frequency).toBe(1)
       expect(pattern?.examples[0].userAnswer).toBe('x')
     })
@@ -308,15 +305,14 @@ describe('score thresholds', () => {
   let db: DataClient
 
   beforeEach(async () => {
-    globalThis.indexedDB = new IDBFactory()
-    db = fakeDataClient(await initDB())
+    db = fakeDataClient()
     vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
   it('score >= 60 counts as correct', async () => {
     const { result } = renderHook(() => useTracking())
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'cloze', score: 60 })
-    const stats = await db.legacy.get('progress-db', 'global')
+    const stats = await stored(db, 'progress-db', 'global')
     expect(stats?.totalCorrect).toBe(1)
     expect(stats?.totalIncorrect).toBe(0)
   })
@@ -324,7 +320,7 @@ describe('score thresholds', () => {
   it('score 59 counts as incorrect', async () => {
     const { result } = renderHook(() => useTracking())
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'cloze', score: 59 })
-    const stats = await db.legacy.get('progress-db', 'global')
+    const stats = await stored(db, 'progress-db', 'global')
     expect(stats?.totalCorrect).toBe(0)
     expect(stats?.totalIncorrect).toBe(1)
   })
@@ -332,7 +328,7 @@ describe('score thresholds', () => {
   it('score 0 counts as incorrect and skill accuracy = 0', async () => {
     const { result } = renderHook(() => useTracking())
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 0 })
-    const stats = await db.legacy.get('progress-db', 'global')
+    const stats = await stored(db, 'progress-db', 'global')
     expect(stats?.skillProgress.listening.accuracy).toBe(0)
   })
 
@@ -340,7 +336,7 @@ describe('score thresholds', () => {
     const { result } = renderHook(() => useTracking())
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 100 })
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 0 })
-    const stats = await db.legacy.get('progress-db', 'global')
+    const stats = await stored(db, 'progress-db', 'global')
     expect(stats?.totalExercises).toBe(2)
     expect(stats?.accuracyRate).toBeCloseTo(0.5)
   })
@@ -350,8 +346,7 @@ describe('mistakes-db per exercise type', () => {
   let db: DataClient
 
   beforeEach(async () => {
-    globalThis.indexedDB = new IDBFactory()
-    db = fakeDataClient(await initDB())
+    db = fakeDataClient()
     vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
@@ -360,7 +355,7 @@ describe('mistakes-db per exercise type', () => {
     const mistake = { userAnswer: 'x', correctAnswer: '你好', date: '2026-03-19' }
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 0, mistakes: [mistake] })
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 0, mistakes: [mistake, mistake] })
-    const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+    const pattern = await stored(db, 'mistakes-db', 'entry-1')
     expect(pattern?.frequency).toBe(3)
   })
 
@@ -375,14 +370,14 @@ describe('mistakes-db per exercise type', () => {
         mistakes: [mistake],
       })
     }
-    const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+    const pattern = await stored(db, 'mistakes-db', 'entry-1')
     expect(pattern?.examples).toHaveLength(10)
   })
 
   it('does not create mistakes-db entry when no mistakes passed', async () => {
     const { result } = renderHook(() => useTracking())
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 0 })
-    const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+    const pattern = await stored(db, 'mistakes-db', 'entry-1')
     expect(pattern).toBeUndefined()
   })
 
@@ -394,8 +389,8 @@ describe('mistakes-db per exercise type', () => {
     await result.current.logExerciseResult({ vocabEntry: entryA, exerciseType: 'romanization-recall', score: 0, mistakes: [mistake] })
     await result.current.logExerciseResult({ vocabEntry: entryB, exerciseType: 'reconstruction', score: 0, mistakes: [mistake, mistake] })
 
-    const pA = await db.legacy.get('mistakes-db', 'entry-a')
-    const pB = await db.legacy.get('mistakes-db', 'entry-b')
+    const pA = await stored(db, 'mistakes-db', 'entry-a')
+    const pB = await stored(db, 'mistakes-db', 'entry-b')
     expect(pA?.frequency).toBe(1)
     expect(pB?.frequency).toBe(2)
   })
@@ -405,8 +400,7 @@ describe('mistake wiring — end-to-end contract', () => {
   let db: DataClient
 
   beforeEach(async () => {
-    globalThis.indexedDB = new IDBFactory()
-    db = fakeDataClient(await initDB())
+    db = fakeDataClient()
     vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
@@ -419,7 +413,7 @@ describe('mistake wiring — end-to-end contract', () => {
       score: 40,
       mistakes: [{ userAnswer: '你坏', correctAnswer: '你好', date: today }],
     })
-    const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+    const pattern = await stored(db, 'mistakes-db', 'entry-1')
     expect(pattern?.frequency).toBe(1)
     expect(pattern?.examples[0].userAnswer).toBe('你坏')
     expect(pattern?.examples[0].correctAnswer).toBe('你好')
@@ -434,7 +428,7 @@ describe('mistake wiring — end-to-end contract', () => {
       score: 50,
       mistakes: [{ userAnswer: 'ni hao', correctAnswer: 'nǐ hǎo', date: today }],
     })
-    const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+    const pattern = await stored(db, 'mistakes-db', 'entry-1')
     expect(pattern?.examples[0].userAnswer).toBe('ni hao')
     expect(pattern?.examples[0].correctAnswer).toBe('nǐ hǎo')
   })
@@ -451,7 +445,7 @@ describe('mistake wiring — end-to-end contract', () => {
         { userAnswer: '今日', correctAnswer: '今天', date: today },
       ],
     })
-    const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+    const pattern = await stored(db, 'mistakes-db', 'entry-1')
     expect(pattern?.frequency).toBe(2)
     expect(pattern?.examples).toHaveLength(2)
   })
@@ -465,7 +459,7 @@ describe('mistake wiring — end-to-end contract', () => {
       score: 0,
       mistakes: [{ userAnswer: '世界你好', correctAnswer: '你好世界', date: today }],
     })
-    const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+    const pattern = await stored(db, 'mistakes-db', 'entry-1')
     expect(pattern?.examples[0].userAnswer).toBe('世界你好')
     expect(pattern?.examples[0].correctAnswer).toBe('你好世界')
   })
@@ -477,7 +471,7 @@ describe('mistake wiring — end-to-end contract', () => {
       exerciseType: 'dictation',
       score: 100,
     })
-    const pattern = await db.legacy.get('mistakes-db', 'entry-1')
+    const pattern = await stored(db, 'mistakes-db', 'entry-1')
     expect(pattern).toBeUndefined()
   })
 })

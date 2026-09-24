@@ -3,34 +3,21 @@
  *
  * E2E tests for the Dictation exercise within the vocabulary study session.
  *
- * Auth strategy: `page.addInitScript()` sets `sessionStorage.shadowlearn_trial = 'trial'`
- * before every page load, bypassing the PIN gate and entering trial mode.
- *
- * Setup strategy: Seed a minimal lesson + vocab entry into IDB, navigate to
- * /vocabulary/:lessonId/study, select Dictation mode, and start the session.
- * TTS calls to /api/tts are intercepted via page.route() — registered BEFORE
- * any navigation or click that triggers TTS.
- *
  * Selectors: ARIA roles only — getByRole, getByLabel, getByText. No data-testid,
  * no CSS class selectors.
  */
 
-import type { TestUser } from '../support/api-helpers'
-import type { IDBVocabEntry } from '../support/idb-helpers'
+import type { SeedVocabEntry, TestUser } from '../support/api-helpers'
 import { Buffer } from 'node:buffer'
 import { expect, test } from '@playwright/test'
-import { API_URL, seedLesson, seedSettings, signUpAndLogin } from '../support/api-helpers'
-import {
-  clearVocabStore,
-  seedVocabEntries,
-} from '../support/idb-helpers'
+import { API_URL, seedLesson, seedSettings, seedVocabEntries, signUpAndLogin } from '../support/api-helpers'
 
 // ── Shared constants ──────────────────────────────────────────────────────────
 
 const LESSON_ID = 'lesson-dict-001'
 
 /** Standard vocab entry with a non-empty sourceSegmentText. */
-const TEST_VOCAB_ENTRY: IDBVocabEntry = {
+const TEST_VOCAB_ENTRY: SeedVocabEntry = {
   id: 'entry-dict-001',
   word: '你好',
   romanization: 'nǐ hǎo',
@@ -46,7 +33,7 @@ const TEST_VOCAB_ENTRY: IDBVocabEntry = {
 }
 
 /** Vocab entry with an empty sourceSegmentText (edge case). */
-const EMPTY_TEXT_VOCAB_ENTRY: IDBVocabEntry = {
+const EMPTY_TEXT_VOCAB_ENTRY: SeedVocabEntry = {
   id: 'entry-dict-002',
   word: '你好',
   romanization: 'nǐ hǎo',
@@ -96,7 +83,7 @@ async function interceptConfig(page: import('@playwright/test').Page) {
 
 async function goToStudyPage(
   page: import('@playwright/test').Page,
-  vocabEntries: IDBVocabEntry[] = [],
+  vocabEntries: SeedVocabEntry[] = [],
 ) {
   // Intercept config so TTS provider resolves immediately without a real backend.
   await interceptConfig(page)
@@ -107,12 +94,8 @@ async function goToStudyPage(
     source_url: 'https://www.youtube.com/watch?v=dict-test',
     duration: 10,
   })
-  // Navigate to app root first to establish origin for IDB access.
-  await page.goto('/')
-  await expect(page.locator('main').first()).toBeVisible({ timeout: 10_000 })
-  // Seed vocab entries now that we have a valid origin.
   if (vocabEntries.length > 0) {
-    await seedVocabEntries(page, vocabEntries.map(e => ({ ...e, sourceLessonId: lessonId })))
+    await seedVocabEntries(page.request, user, vocabEntries.map(e => ({ ...e, sourceLessonId: lessonId })))
   }
   // Navigate to the study page — ModePicker renders first.
   await page.goto(`/vocabulary/${lessonId}/study`)
@@ -154,21 +137,6 @@ async function interceptTTSError(page: import('@playwright/test').Page) {
     await route.fulfill({ status: 500, body: 'Internal Server Error' })
   })
 }
-
-// ── afterEach cleanup ─────────────────────────────────────────────────────────
-
-test.afterEach(async ({ page }) => {
-  try {
-    if (!page.url().startsWith('http://localhost')) {
-      await page.goto('/')
-      await expect(page.locator('main').first()).toBeVisible({ timeout: 5_000 })
-    }
-    await clearVocabStore(page)
-  }
-  catch {
-    // Swallow cleanup errors — must not mask actual test failure.
-  }
-})
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -381,7 +349,6 @@ test('DICT.MULTI-E2E-008 @p1 @regression — Rapid play clicks → no duplicate 
 })
 
 test('DICT.SKIP-E2E-009 @p1 @smoke — Skip advances session, no mistake recorded', async ({ page }) => {
-  test.fixme(true, 'PR6b: skipping the only card ends the session and returns to the Library, where the heatmap text "0 / 30" matches the progress regex')
   await signIn(page)
   await interceptTTSSuccess(page)
   await goToStudyPage(page, [TEST_VOCAB_ENTRY])
@@ -397,14 +364,7 @@ test('DICT.SKIP-E2E-009 @p1 @smoke — Skip advances session, no mistake recorde
   // OR the session ends if it was the last question. Either way no error toast appears.
   await expect(page.locator('[data-sonner-toast]')).toHaveCount(0)
 
-  // The progress counter should have advanced (or session ended).
-  // We verify the session is still active or ended cleanly — no stuck state.
-  const progressAfter = await page.getByText(/\d+ \/ \d+/).textContent().catch(() => null)
-  if (progressBefore && progressAfter) {
-    // Still in session — progress advanced.
-    expect(progressAfter).not.toEqual(progressBefore)
-  }
-  // If progressAfter is null, the session ended (summary rendered) — also valid.
+  await expect(page.getByText(progressBefore!, { exact: true })).toHaveCount(0)
 })
 
 test('DICT.ERR-E2E-010 @p1 @regression — TTS 500 error → toast shown, button re-enabled', async ({ page }) => {

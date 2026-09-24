@@ -4,7 +4,6 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { initDB } from '@/db'
 import { LessonsProvider, useLessons } from '@/features/lesson/application/LessonsContext'
 import { FakeApiClient, fakeDataClient } from '../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
@@ -37,7 +36,7 @@ beforeEach(async () => {
   globalThis.indexedDB = new IDBFactory()
   localStorage.clear()
   api = new FakeApiClient()
-  db = fakeDataClient(await initDB(), api)
+  db = fakeDataClient(api)
 })
 
 function wrapper({ children }: { children: React.ReactNode }) {

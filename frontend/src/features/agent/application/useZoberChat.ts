@@ -18,7 +18,6 @@ import { toast } from 'sonner'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import {
-  appendAgentLog,
   getExerciseAccuracy,
   getLatestSummary,
   getLearnerProfile,
@@ -123,8 +122,6 @@ export function useZoberChat(args: ZoberChatArgs) {
 
   // Lesson-only refs (parity with legacy useAgentChat)
   const sessionStartRef = useRef(Date.now())
-  const toolCallCountRef = useRef(0)
-  const errorCountRef = useRef(0)
   const exercisesThisSessionRef = useRef(0)
   // Real token usage from the last completed turn (when the backend reports it),
   // used as the primary overflow signal for compaction; undefined → fall back to estimate.
@@ -382,7 +379,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       return roundsSinceUser < maxRoundsForSurface
     },
     async onToolCall({ toolCall }) {
-      toolCallCountRef.current += 1
       if (!db || !toolContext)
         return
       const { output, isError } = await executor.execute(
@@ -392,7 +388,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       if (isError) {
         const errMsg = String((output as Record<string, unknown>).error ?? 'Unknown error')
         toast.error(`Tool [${toolCall.toolName}] failed: ${errMsg}`)
-        errorCountRef.current += 1
         addToolResult({
           tool: toolCall.toolName,
           toolCallId: toolCall.toolCallId,
@@ -409,7 +404,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       }
     },
     onError(err) {
-      errorCountRef.current += 1
       console.error('Agent chat error:', err)
       toast.error(err.message || 'Unknown error')
     },
@@ -490,17 +484,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       const summary = await getLatestSummary(db, threadId)
       const toStore = buildHistoryToStore(fullHistory, summary)
       await saveThreadMessages(db, threadId, toStore, surface, ownerId, courseId, videoId)
-      if (narrowed.lesson) {
-        void appendAgentLog(db, {
-          lessonId: narrowed.lesson.lessonId,
-          timestamp: new Date().toISOString(),
-          durationMs: Date.now() - sessionStartRef.current,
-          messageCount: messages.length,
-          toolCallCount: toolCallCountRef.current,
-          errorCount: errorCountRef.current,
-          exercisesCompleted: exercisesThisSessionRef.current,
-        })
-      }
       // Post-response, idle: compact when the turn reached the usable budget.
       // Prefers real usage from this turn; falls back to the CJK estimate.
       void maybeCompact(db, threadId, fullHistory, locale, lastUsageTokensRef.current)

@@ -110,7 +110,17 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
             )}
       </div>
 
-      {!hasAnyContent && !queue.loading
+      {queue.status === 'error' && (
+        <div role="alert" className="px-5 py-6 text-center text-sm text-muted-foreground">
+          <div className="font-medium text-foreground">{t('common.error')}</div>
+          {queue.error && <div className="mt-1 text-xs">{queue.error}</div>}
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => { void queue.refresh() }}>
+            {t('common.retry')}
+          </Button>
+        </div>
+      )}
+
+      {!hasAnyContent && queue.status === 'ready'
         && (
           <div className="px-5 py-6 text-center text-sm text-muted-foreground">
             {t('queue.empty')}

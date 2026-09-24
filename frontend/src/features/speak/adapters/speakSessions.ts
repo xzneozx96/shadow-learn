@@ -1,19 +1,23 @@
 import type { DataClient, SpeakSession } from '@/db'
 
+function sessionPath(sessionId: string): string {
+  return `/api/store/speak-sessions/${encodeURIComponent(sessionId)}`
+}
+
 export async function saveSpeakSession(db: DataClient, session: SpeakSession): Promise<void> {
-  await db.legacy.put('speak-sessions', session)
+  await db.api.put(sessionPath(session.sessionId), session)
 }
 
 export async function getSpeakSession(db: DataClient, sessionId: string): Promise<SpeakSession | undefined> {
-  return db.legacy.get('speak-sessions', sessionId)
+  return db.api.get<SpeakSession>(sessionPath(sessionId))
 }
 
 export async function getAllSpeakSessions(db: DataClient): Promise<SpeakSession[]> {
-  return db.legacy.getAll('speak-sessions')
+  return db.api.list<SpeakSession>('/api/store/speak-sessions')
 }
 
 export async function getRecentSpeakSessions(db: DataClient, limit = 20): Promise<SpeakSession[]> {
-  const all = await db.legacy.getAll('speak-sessions')
+  const all = await getAllSpeakSessions(db)
   return all.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, limit)
 }
 

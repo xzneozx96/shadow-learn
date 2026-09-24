@@ -1,7 +1,5 @@
-import type { DataClient } from '@/db'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { getTTSCache, saveTTSCache } from '@/db'
 import { apiFetch, responseError } from '@/shared/lib/api'
 
 interface UseTTSReturn {
@@ -10,21 +8,16 @@ interface UseTTSReturn {
 }
 
 export function useTTS(
-  db: DataClient | null,
   language: string = 'zh-CN',
   voiceId?: string,
 ): UseTTSReturn {
   const [loadingText, setLoadingText] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const urlRef = useRef<string | null>(null)
-  const dbRef = useRef(db)
   const languageRef = useRef(language)
   const voiceIdRef = useRef(voiceId)
 
   // Keep refs in sync with props
-  useEffect(() => {
-    dbRef.current = db
-  }, [db])
   useEffect(() => {
     languageRef.current = language
   }, [language])
@@ -48,39 +41,23 @@ export function useTTS(
 
     setLoadingText(text)
 
-    const currentDb = dbRef.current
-    const currentLanguage = languageRef.current
-
     try {
-      let blob: Blob | undefined
-
-      if (currentDb) {
-        blob = await getTTSCache(currentDb, text, currentLanguage)
+      const body: Record<string, string> = { text, source_language: languageRef.current }
+      if (voiceIdRef.current) {
+        body.minimax_voice_id = voiceIdRef.current
       }
 
-      if (!blob) {
-        const body: Record<string, string> = { text, source_language: currentLanguage }
-        if (voiceIdRef.current) {
-          body.minimax_voice_id = voiceIdRef.current
-        }
+      const response = await apiFetch(`/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
 
-        const response = await apiFetch(`/api/tts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-
-        if (!response.ok) {
-          throw await responseError(response, `TTS failed: ${response.statusText}`)
-        }
-
-        blob = await response.blob()
-
-        if (currentDb) {
-          await saveTTSCache(currentDb, text, blob, currentLanguage)
-        }
+      if (!response.ok) {
+        throw await responseError(response, `TTS failed: ${response.statusText}`)
       }
 
+      const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       urlRef.current = url
       const audio = new Audio(url)

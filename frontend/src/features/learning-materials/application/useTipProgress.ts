@@ -1,7 +1,7 @@
 import type { TipProgress } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
-import { getTipProgress, putTipProgress } from '@/db'
+import { getTipProgress, updateTipProgress } from '@/db'
 
 const WATCHED_THRESHOLD = 0.8
 
@@ -52,61 +52,63 @@ export function useTipProgress(courseId: string, videoId: string): UseTipProgres
     return () => { cancelled = true }
   }, [db, key])
 
-  const writeState = useCallback(async (next: TipProgress) => {
-    setState({ loaded: true, p: next })
-    if (db)
-      await putTipProgress(db, next)
-  }, [db])
+  const apply = useCallback(async (mutate: (prev: TipProgress | undefined) => TipProgress) => {
+    setState(s => ({ loaded: true, p: mutate(s.p ?? undefined) }))
+    if (!db)
+      return
+    const saved = await updateTipProgress(db, key, mutate)
+    if (currentKeyRef.current === key)
+      setState({ loaded: true, p: saved })
+  }, [db, key])
 
   const recordPosition = useCallback(async (watchedSec: number, totalSec: number, meta?: { title?: string, route?: string }) => {
-    const wasComplete = state.p?.completed ?? false
-    const shouldComplete = wasComplete || (totalSec > 0 && watchedSec / totalSec >= WATCHED_THRESHOLD)
-    const next: TipProgress = {
-      key,
-      courseId,
-      videoId,
-      watchedSec,
-      totalSec,
-      completed: shouldComplete,
-      completedAt: shouldComplete ? (state.p?.completedAt ?? new Date().toISOString()) : null,
-      lastSeenAt: new Date().toISOString(),
-      title: meta?.title ?? state.p?.title,
-      resumeRoute: meta?.route ?? state.p?.resumeRoute,
-    }
-    await writeState(next)
-  }, [state.p, key, courseId, videoId, writeState])
+    await apply((prev) => {
+      const wasComplete = prev?.completed ?? false
+      const shouldComplete = wasComplete || (totalSec > 0 && watchedSec / totalSec >= WATCHED_THRESHOLD)
+      return {
+        key,
+        courseId,
+        videoId,
+        watchedSec,
+        totalSec,
+        completed: shouldComplete,
+        completedAt: shouldComplete ? (prev?.completedAt ?? new Date().toISOString()) : null,
+        lastSeenAt: new Date().toISOString(),
+        title: meta?.title ?? prev?.title,
+        resumeRoute: meta?.route ?? prev?.resumeRoute,
+      }
+    })
+  }, [key, courseId, videoId, apply])
 
   const markComplete = useCallback(async () => {
-    const next: TipProgress = {
+    await apply(prev => ({
       key,
       courseId,
       videoId,
-      watchedSec: state.p?.watchedSec ?? 0,
-      totalSec: state.p?.totalSec ?? 0,
+      watchedSec: prev?.watchedSec ?? 0,
+      totalSec: prev?.totalSec ?? 0,
       completed: true,
-      completedAt: state.p?.completedAt ?? new Date().toISOString(),
+      completedAt: prev?.completedAt ?? new Date().toISOString(),
       lastSeenAt: new Date().toISOString(),
-      title: state.p?.title,
-      resumeRoute: state.p?.resumeRoute,
-    }
-    await writeState(next)
-  }, [state.p, key, courseId, videoId, writeState])
+      title: prev?.title,
+      resumeRoute: prev?.resumeRoute,
+    }))
+  }, [key, courseId, videoId, apply])
 
   const markIncomplete = useCallback(async () => {
-    const next: TipProgress = {
+    await apply(prev => ({
       key,
       courseId,
       videoId,
-      watchedSec: state.p?.watchedSec ?? 0,
-      totalSec: state.p?.totalSec ?? 0,
+      watchedSec: prev?.watchedSec ?? 0,
+      totalSec: prev?.totalSec ?? 0,
       completed: false,
       completedAt: null,
       lastSeenAt: new Date().toISOString(),
-      title: state.p?.title,
-      resumeRoute: state.p?.resumeRoute,
-    }
-    await writeState(next)
-  }, [state.p, key, courseId, videoId, writeState])
+      title: prev?.title,
+      resumeRoute: prev?.resumeRoute,
+    }))
+  }, [key, courseId, videoId, apply])
 
   return {
     loaded: state.loaded,

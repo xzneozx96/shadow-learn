@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { DataClient, ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import {
   createContext,
   use,
@@ -9,7 +9,9 @@ import {
   useState,
 
 } from 'react'
-import { createApiClient, initDB } from '@/db'
+import { createApiClient } from '@/db'
+import { pendingLessonsKey } from '@/features/lesson/application/pendingLessons'
+import { clearUploadThumbnails } from '@/features/lesson/application/useUploadThumbnail'
 import { apiFetch, clearTokens, hasRefreshToken, onSessionLost, setTokens } from '@/shared/lib/api'
 
 interface Session {
@@ -52,7 +54,6 @@ async function fetchSession(): Promise<Session | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [legacy, setLegacy] = useState<ShadowLearnDB | null>(null)
   const [trialMode, setTrialMode] = useState<boolean>(
     () => sessionStorage.getItem(TRIAL_SESSION_KEY) === 'trial',
   )
@@ -62,37 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionCheckFailed, setSessionCheckFailed] = useState(false)
 
   useEffect(() => {
-    onSessionLost(() => setSession(null))
     if (hasRefreshToken())
       fetchSession().then(setSession, () => setSessionCheckFailed(true))
   }, [])
 
-  useEffect(() => {
-    let disposed = false
-    let current: ShadowLearnDB | null = null
-    const connect = async () => {
-      const database = await initDB(() => {
-        if (!disposed)
-          connect()
-      })
-      if (disposed) {
-        database.close()
-        return
-      }
-      current = database
-      setLegacy(database)
-    }
-    connect()
-    return () => {
-      disposed = true
-      current?.close()
-    }
-  }, [])
-
   const userId = session?.userId
   const db = useMemo<DataClient | null>(
-    () => userId && legacy ? { api: createApiClient(), legacy } : null,
-    [userId, legacy],
+    () => userId ? { api: createApiClient() } : null,
+    [userId],
   )
 
   const login = useCallback(async (email: string, password: string) => {
@@ -123,11 +101,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [login])
 
   const endLocalSession = useCallback(() => {
+    if (userId)
+      localStorage.removeItem(pendingLessonsKey(userId))
+    clearUploadThumbnails()
     clearTokens()
     sessionStorage.removeItem(TRIAL_SESSION_KEY)
     setTrialMode(false)
     setSession(null)
-  }, [])
+  }, [userId])
+
+  useEffect(() => {
+    onSessionLost(endLocalSession)
+  }, [endLocalSession])
 
   const logout = useCallback(async () => {
     await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
