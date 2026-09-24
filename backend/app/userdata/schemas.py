@@ -227,6 +227,7 @@ class TipCardStates(Record):
 
 class WordStory(Record):
     word: str
+    lang: str
     story: str | None = None
     updated_at: str | None = None
 

@@ -27,7 +27,7 @@ SAMPLES = {
     "tip-progress": {"key": "c1:v1", "courseId": "c1", "videoId": "v1", "lastSeenAt": "2026-09-23"},
     "tip-notes": {"videoId": "v1", "id": "n1", "title": "Tones", "source": "freeform"},
     "tip-card-states": {"videoId": "v1", "locale": "en", "states": {"What is a tone?": {"state": "known"}}},
-    "word-stories": {"word": "你好", "story": "A person greets a child.", "updatedAt": "2026-09-24T00:00:00Z"},
+    "word-stories": {"word": "你好", "lang": "vi", "story": "A person greets a child.", "updatedAt": "2026-09-24T00:00:00Z"},
     "user-materials": {"id": "um1", "externalId": "PL1", "skill": "Speaking", "source": "playlist"},
     "threads": {"id": "__global", "surface": "global", "ownerId": None, "messages": [], "updatedAt": 1727000000000},
     "thread-summaries": {"threadId": "__global", "summary": "talked about tea", "tokenBudget": 1000},
@@ -194,6 +194,18 @@ async def test_path_id_must_match_the_record(client, auth_headers):
     assert response.status_code == 422
     singleton = await client.put("/api/store/settings/nope", json=SAMPLES["settings"], headers=auth_headers)
     assert singleton.status_code == 422
+
+
+async def test_word_stories_in_two_languages_do_not_overwrite_each_other(client, auth_headers):
+    vi = {**SAMPLES["word-stories"], "lang": "vi", "story": "Chuyện về 你好"}
+    en = {**SAMPLES["word-stories"], "lang": "en", "story": "A story about 你好"}
+    for story in (vi, en):
+        response = await client.put(f"/api/store/word-stories/你好:{story['lang']}", json=story, headers=auth_headers)
+        assert response.status_code == 200, response.text
+
+    listed = (await client.get("/api/store/word-stories", headers=auth_headers)).json()
+
+    assert sorted((s["lang"], s["story"]) for s in listed) == [("en", "A story about 你好"), ("vi", "Chuyện về 你好")]
 
 
 async def test_another_user_cannot_see_or_delete_the_record(client, auth_headers, other_headers):

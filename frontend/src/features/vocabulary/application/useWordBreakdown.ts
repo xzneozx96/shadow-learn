@@ -1,6 +1,6 @@
 import type { DataClient } from '@/db'
 import type { CharData } from '@/shared/lib/hanzi/types'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { deleteWordStory, getWordStory, saveWordStory } from '@/db'
 import { fetchBreakdownStory } from '@/features/vocabulary/lib/api/breakdownStory'
 import { buildCharData } from '@/shared/lib/hanzi/lookup'
@@ -8,6 +8,7 @@ import { buildCharData } from '@/shared/lib/hanzi/lookup'
 interface UseWordBreakdownInput {
   db: DataClient | null
   word: string
+  lang: string
   pinyin: string
   meaning: string
   /**
@@ -31,15 +32,14 @@ interface UseWordBreakdownReturn {
 }
 
 export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdownReturn {
-  const { db, word, pinyin, meaning, enabled = true } = input
+  const { db, word, lang, pinyin, meaning, enabled = true } = input
 
   const [characters, setCharacters] = useState<CharData[] | null>(null)
   const charactersLoading = enabled && characters === null
   const [story, setStory] = useState<string | null>(null)
   const [storyLoading, setStoryLoading] = useState(false)
   const [storyError, setStoryError] = useState<Error | null>(null)
-  const [retryTick, setRetryTick] = useState(0)
-  const forceRef = useRef(false)
+  const [storyRequest, setStoryRequest] = useState({ tick: 0, force: false })
 
   // Build per-character data from local lookup (only when enabled)
   useEffect(() => {
@@ -89,9 +89,8 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
       try {
         setStoryError(null)
 
-        const force = forceRef.current
-        forceRef.current = false
-        const own = force ? undefined : await getWordStory(db, word)
+        const { force } = storyRequest
+        const own = force ? undefined : await getWordStory(db, word, lang)
         if (own) {
           if (!cancel)
             setStory(own.story)
@@ -117,7 +116,7 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
 
         if (force) {
           try {
-            await saveWordStory(db, word, fresh)
+            await saveWordStory(db, word, lang, fresh)
           }
           catch (err) {
             // Persistence failure shouldn't block the user — story is in memory.
@@ -138,28 +137,27 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
 
     return () => { cancel = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, word, characters, retryTick, enabled])
+  }, [db, word, lang, characters, storyRequest, enabled])
 
   const retryStory = useCallback(() => {
     setStory(null)
     setStoryError(null)
-    setRetryTick(t => t + 1)
+    setStoryRequest(r => ({ tick: r.tick + 1, force: false }))
   }, [])
 
   const regenerateStory = useCallback(async () => {
     if (db) {
       try {
-        await deleteWordStory(db, word)
+        await deleteWordStory(db, word, lang)
       }
       catch (err) {
         console.warn('[useWordBreakdown] deleteWordStory failed:', err)
       }
     }
-    forceRef.current = true
     setStory(null)
     setStoryError(null)
-    setRetryTick(t => t + 1)
-  }, [db, word])
+    setStoryRequest(r => ({ tick: r.tick + 1, force: true }))
+  }, [db, word, lang])
 
   const saveCustomStory = useCallback(async (text: string) => {
     setStory(text)
@@ -167,12 +165,12 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     if (!db)
       return
     try {
-      await saveWordStory(db, word, text)
+      await saveWordStory(db, word, lang, text)
     }
     catch (err) {
       console.warn('[useWordBreakdown] saveCustomStory persist failed:', err)
     }
-  }, [db, word])
+  }, [db, word, lang])
 
   return {
     characters: resolvedChars,

@@ -70,7 +70,7 @@ describe('wordBreakdownModal', () => {
   })
 
   it('shows the user\'s own story instead of the shared one', async () => {
-    const api = new FakeApiClient().seedStore('word-stories', [{ word: '学习', story: 'Câu chuyện của tôi', updatedAt: '2026-09-01' }])
+    const api = new FakeApiClient().seedStore('word-stories', [{ word: '学习', lang: 'en', story: 'Câu chuyện của tôi', updatedAt: '2026-09-01' }])
     renderModal({ db: fakeDataClient(api) })
     await waitFor(() => expect(screen.getByText('Câu chuyện của tôi')).toBeInTheDocument(), { timeout: 5000 })
     expect(fetchBreakdownStory).not.toHaveBeenCalled()
@@ -88,7 +88,7 @@ describe('wordBreakdownModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(screen.getByText('Chuyện mới')).toBeInTheDocument())
-    expect(api.storeRows<WordStory>('word-stories')).toEqual([expect.objectContaining({ word: '学习', story: 'Chuyện mới' })])
+    expect(api.storeRows<WordStory>('word-stories')).toEqual([expect.objectContaining({ word: '学习', lang: 'en', story: 'Chuyện mới' })])
   })
 
   it('regenerate forces a fresh story', async () => {

@@ -25,7 +25,7 @@ interface WordBreakdownModalProps {
 
 export function WordBreakdownModal(props: WordBreakdownModalProps) {
   const { open, onClose, word, pinyin, meaning, sourceLanguage, db } = props
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [voiceId, setVoiceId] = useState<string | undefined>(undefined)
   useEffect(() => {
     if (!db)
@@ -47,6 +47,7 @@ export function WordBreakdownModal(props: WordBreakdownModalProps) {
   } = useWordBreakdown({
     db,
     word,
+    lang: locale,
     pinyin,
     meaning,
     enabled: open,

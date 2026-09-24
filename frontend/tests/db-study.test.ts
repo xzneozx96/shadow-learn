@@ -242,9 +242,9 @@ describe('agent memory', () => {
 
 describe('exercise stats', () => {
   it('upsertExerciseStat writes vocabId and exerciseType into the body and counts attempts', async () => {
-    await upsertExerciseStat(db, 'vocab-1:dictation', true)
-    await upsertExerciseStat(db, 'vocab-1:dictation', false)
-    await upsertExerciseStat(db, 'vocab-1:dictation', true)
+    await upsertExerciseStat(db, { vocabId: 'vocab-1', exerciseType: 'dictation' }, true)
+    await upsertExerciseStat(db, { vocabId: 'vocab-1', exerciseType: 'dictation' }, false)
+    await upsertExerciseStat(db, { vocabId: 'vocab-1', exerciseType: 'dictation' }, true)
 
     const [stat] = await getAllExerciseStats(db)
     expect(stat).toMatchObject({ vocabId: 'vocab-1', exerciseType: 'dictation', correct: 2, total: 3 })
@@ -252,9 +252,9 @@ describe('exercise stats', () => {
   })
 
   it('getExerciseAccuracy aggregates by exercise type', async () => {
-    await upsertExerciseStat(db, 'vocab-1:dictation', true)
-    await upsertExerciseStat(db, 'vocab-2:dictation', false)
-    await upsertExerciseStat(db, 'vocab-1:translation', true)
+    await upsertExerciseStat(db, { vocabId: 'vocab-1', exerciseType: 'dictation' }, true)
+    await upsertExerciseStat(db, { vocabId: 'vocab-2', exerciseType: 'dictation' }, false)
+    await upsertExerciseStat(db, { vocabId: 'vocab-1', exerciseType: 'translation' }, true)
 
     expect(await getExerciseAccuracy(db)).toEqual({
       dictation: { accuracy: 0.5, attempts: 2 },
@@ -268,15 +268,24 @@ describe('exercise stats', () => {
 })
 
 describe('word stories', () => {
-  it('saves, reads, and deletes a user story keyed by word', async () => {
-    expect(await getWordStory(db, '练习')).toBeUndefined()
+  it('saves, reads, and deletes a user story keyed by word and language', async () => {
+    expect(await getWordStory(db, '练习', 'vi')).toBeUndefined()
 
-    await saveWordStory(db, '练习', 'Người thợ kéo sợi tơ')
+    await saveWordStory(db, '练习', 'vi', 'Người thợ kéo sợi tơ')
 
-    expect(await getWordStory(db, '练习')).toMatchObject({ word: '练习', story: 'Người thợ kéo sợi tơ' })
-    await deleteWordStory(db, '练习')
-    expect(await getWordStory(db, '练习')).toBeUndefined()
-    expect(api.calls.find(c => c.method === 'PUT')?.path).toBe(`/api/store/word-stories/${encodeURIComponent('练习')}`)
+    expect(await getWordStory(db, '练习', 'vi')).toMatchObject({ word: '练习', lang: 'vi', story: 'Người thợ kéo sợi tơ' })
+    expect(await getWordStory(db, '练习', 'en')).toBeUndefined()
+    await deleteWordStory(db, '练习', 'vi')
+    expect(await getWordStory(db, '练习', 'vi')).toBeUndefined()
+    expect(api.calls.find(c => c.method === 'PUT')?.path).toBe(`/api/store/word-stories/${encodeURIComponent('练习:vi')}`)
+  })
+
+  it('keeps one story per language for the same word', async () => {
+    await saveWordStory(db, '练习', 'vi', 'Chuyện')
+    await saveWordStory(db, '练习', 'en', 'Story')
+
+    expect((await getWordStory(db, '练习', 'vi'))?.story).toBe('Chuyện')
+    expect((await getWordStory(db, '练习', 'en'))?.story).toBe('Story')
   })
 })
 

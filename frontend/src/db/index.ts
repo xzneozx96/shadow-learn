@@ -369,19 +369,19 @@ export async function getAllExerciseStats(db: DataClient): Promise<ExerciseStatR
 
 export async function upsertExerciseStat(
   db: DataClient,
-  key: string,
+  { vocabId, exerciseType }: Pick<ExerciseStatRecord, 'vocabId' | 'exerciseType'>,
   correct: boolean,
 ): Promise<void> {
-  const colonIdx = key.lastIndexOf(':')
-  const existing = await db.api.get<ExerciseStatRecord>(storePath('exercise-stats', key))
+  const path = storePath('exercise-stats', `${vocabId}:${exerciseType}`)
+  const existing = await db.api.get<ExerciseStatRecord>(path)
   const stat: ExerciseStatRecord = {
-    vocabId: key.slice(0, colonIdx),
-    exerciseType: key.slice(colonIdx + 1),
+    vocabId,
+    exerciseType,
     correct: (existing?.correct ?? 0) + (correct ? 1 : 0),
     total: (existing?.total ?? 0) + 1,
     lastAttempt: new Date().toISOString().split('T')[0],
   }
-  await db.api.put(storePath('exercise-stats', key), stat)
+  await db.api.put(path, stat)
 }
 
 export async function getExerciseAccuracy(
@@ -406,21 +406,26 @@ export async function getExerciseAccuracy(
 
 export interface WordStory {
   word: string
+  lang: string
   story: string
   updatedAt: string
 }
 
-export async function getWordStory(db: DataClient, word: string): Promise<WordStory | undefined> {
-  return db.api.get<WordStory>(storePath('word-stories', word))
+function wordStoryPath(word: string, lang: string): string {
+  return storePath('word-stories', `${word}:${lang}`)
 }
 
-export async function saveWordStory(db: DataClient, word: string, story: string): Promise<void> {
-  const record: WordStory = { word, story, updatedAt: new Date().toISOString() }
-  await db.api.put(storePath('word-stories', word), record)
+export async function getWordStory(db: DataClient, word: string, lang: string): Promise<WordStory | undefined> {
+  return db.api.get<WordStory>(wordStoryPath(word, lang))
 }
 
-export async function deleteWordStory(db: DataClient, word: string): Promise<void> {
-  await db.api.del(storePath('word-stories', word))
+export async function saveWordStory(db: DataClient, word: string, lang: string, story: string): Promise<void> {
+  const record: WordStory = { word, lang, story, updatedAt: new Date().toISOString() }
+  await db.api.put(wordStoryPath(word, lang), record)
+}
+
+export async function deleteWordStory(db: DataClient, word: string, lang: string): Promise<void> {
+  await db.api.del(wordStoryPath(word, lang))
 }
 
 // Shadowing personal bests

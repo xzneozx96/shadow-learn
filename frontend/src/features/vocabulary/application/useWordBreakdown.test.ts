@@ -21,7 +21,7 @@ afterEach(() => {
 
 function renderBreakdown() {
   const db = fakeDataClient(api)
-  return renderHook(() => useWordBreakdown({ db, word: '学', pinyin: 'xué', meaning: 'to learn' }))
+  return renderHook(() => useWordBreakdown({ db, word: '学', lang: 'vi', pinyin: 'xué', meaning: 'to learn' }))
 }
 
 describe('useWordBreakdown', () => {
@@ -36,7 +36,7 @@ describe('useWordBreakdown', () => {
   })
 
   it('shows the user\'s own story without calling the story endpoint', async () => {
-    api.seedStore('word-stories', [{ word: '学', story: 'my story', updatedAt: '2026-05-04T00:00:00Z' }])
+    api.seedStore('word-stories', [{ word: '学', lang: 'vi', story: 'my story', updatedAt: '2026-05-04T00:00:00Z' }])
 
     const { result } = renderBreakdown()
 
@@ -66,12 +66,12 @@ describe('useWordBreakdown', () => {
 
     expect(result.current.story).toBe('edited story')
     expect(api.storeRows<WordStory>('word-stories')).toEqual([
-      expect.objectContaining({ word: '学', story: 'edited story' }),
+      expect.objectContaining({ word: '学', lang: 'vi', story: 'edited story' }),
     ])
   })
 
   it('regenerateStory drops the own story, forces a fresh one, and saves it', async () => {
-    api.seedStore('word-stories', [{ word: '学', story: 'my story', updatedAt: '2026-05-04T00:00:00Z' }])
+    api.seedStore('word-stories', [{ word: '学', lang: 'vi', story: 'my story', updatedAt: '2026-05-04T00:00:00Z' }])
     vi.mocked(fetchBreakdownStory).mockResolvedValue('fresh story')
     const { result } = renderBreakdown()
     await waitFor(() => expect(result.current.story).toBe('my story'))
@@ -86,7 +86,7 @@ describe('useWordBreakdown', () => {
     await waitFor(() => expect(api.storeRows<WordStory>('word-stories')).toEqual([
       expect.objectContaining({ word: '学', story: 'fresh story' }),
     ]))
-    expect(api.calls).toContainEqual({ method: 'DELETE', path: '/api/store/word-stories/%E5%AD%A6' })
+    expect(api.calls).toContainEqual({ method: 'DELETE', path: `/api/store/word-stories/${encodeURIComponent('学:vi')}` })
   })
 
   it('exposes storyLoading=true while LLM call is in flight', async () => {

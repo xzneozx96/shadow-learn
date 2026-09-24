@@ -21,7 +21,7 @@ interface StoreSpec {
   indexes?: Record<string, StoreIndex>
 }
 
-const STORES: Record<string, StoreSpec> = {
+export const STORES: Record<string, StoreSpec> = {
   'settings': { singleton: 'settings' },
   'vocabulary': {
     keyPath: ['id'],
@@ -56,7 +56,7 @@ const STORES: Record<string, StoreSpec> = {
   },
   'tip-notes': { keyPath: ['videoId', 'id'], indexes: { 'by-video': { field: 'videoId' } } },
   'tip-card-states': { keyPath: ['videoId', 'locale'] },
-  'word-stories': { keyPath: ['word'] },
+  'word-stories': { keyPath: ['word', 'lang'] },
   'user-materials': {
     keyPath: ['id'],
     required: ['externalId', 'skill'],
@@ -65,7 +65,7 @@ const STORES: Record<string, StoreSpec> = {
   'threads': {
     keyPath: ['id'],
     required: ['surface', 'updatedAt'],
-    indexes: { 'by-surface': { field: 'surface' }, 'by-owner': { field: 'ownerId' } },
+    indexes: { 'by-surface': { field: 'surface' }, 'by-owner': { field: 'ownerId' }, 'by-updated': { field: 'updatedAt' } },
   },
   'thread-summaries': { keyPath: ['threadId'] },
 }

@@ -120,7 +120,7 @@ _SPECS = (
         indexed=(IndexedField("by-video", "video_id", "videoId"),),
     ),
     StoreSpec("tip-card-states", schemas.TipCardStates, key_path=("videoId", "locale"), merge=merge.card_states),
-    StoreSpec("word-stories", schemas.WordStory, key_path=("word",), merge=merge.later_updated),
+    StoreSpec("word-stories", schemas.WordStory, key_path=("word", "lang"), merge=merge.later_updated),
     StoreSpec(
         "user-materials",
         schemas.UserMaterial,

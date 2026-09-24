@@ -155,8 +155,8 @@ def test_tip_progress_keeps_the_later_visit(server, incoming, kept):
 
 
 def test_word_story_keeps_the_later_edit():
-    older = {"word": "你", "story": "a", "updatedAt": "2026-09-01"}
-    newer = {"word": "你", "story": "b", "updatedAt": "2026-09-02"}
+    older = {"word": "你", "lang": "vi", "story": "a", "updatedAt": "2026-09-01"}
+    newer = {"word": "你", "lang": "vi", "story": "b", "updatedAt": "2026-09-02"}
     assert merge.later_updated(older, newer) == newer
     assert merge.later_updated(newer, older) == newer
 
@@ -228,8 +228,8 @@ IMPORTS = {
         {"videoId": "v", "locale": "en", "states": {"b": {"state": "learning", "updatedAt": "2026-09-02"}}},
     ],
     "word-stories": [
-        {"word": "你", "story": "a", "updatedAt": "2026-09-01"},
-        {"word": "你", "story": "b", "updatedAt": "2026-09-02"},
+        {"word": "你", "lang": "vi", "story": "a", "updatedAt": "2026-09-01"},
+        {"word": "你", "lang": "vi", "story": "b", "updatedAt": "2026-09-02"},
     ],
 }
 
