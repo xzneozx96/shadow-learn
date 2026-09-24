@@ -15,6 +15,7 @@ async function databaseExists(): Promise<boolean> {
 }
 
 const logout = vi.fn(async () => {})
+const openApp = vi.fn()
 
 function signedIn(userId: string, children: ReactNode) {
   const value = {
@@ -34,7 +35,7 @@ function signedIn(userId: string, children: ReactNode) {
 function renderGate(options: Parameters<typeof legacyFixture>[0] = {}, userId = 'account-a') {
   const server = fakeImportServer()
   const { api } = stubApi(server.handle)
-  const view = () => signedIn(userId, <MigrationGate api={api}><p>the app</p></MigrationGate>)
+  const view = () => signedIn(userId, <MigrationGate api={api} openApp={openApp}><p>the app</p></MigrationGate>)
   return {
     server,
     seeded: seedLegacyDatabase(legacyFixture(options)).then(() => render(view())),
@@ -79,7 +80,7 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     expect(server.media.size).toBe(3)
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
-    expect(await screen.findByText('the app')).toBeInTheDocument()
+    expect(openApp).toHaveBeenLastCalledWith('/')
   })
 
   it('keeps the local copy on a mismatch, names the store, and finishes on Retry', async () => {
@@ -127,7 +128,8 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     expect(screen.getByText(/deleted with the local copy/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Skip keys' }))
     expect(await screen.findByText(/Your API keys were not moved/, {}, { timeout: 10_000 })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Open Settings' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }))
+    expect(openApp).toHaveBeenLastCalledWith('/settings')
     expect(server.keys.size).toBe(0)
   })
 })

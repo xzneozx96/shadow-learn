@@ -92,10 +92,14 @@ function Results({ verification }: { verification: Verification }) {
   )
 }
 
+function count(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`
+}
+
 function summary(verification: Verification): string {
   const stores = verification.checks.filter(check => check.kind === 'store').length
   const media = verification.checks.filter(check => check.kind === 'media').length
-  return `Verified ${stores} stores and ${media} media files. Local copy deleted.`
+  return `Verified ${count(stores, 'store', 'stores')} and ${count(media, 'media file', 'media files')}. Local copy deleted.`
 }
 
 function noteLines(notes: Notes): string[] {
@@ -107,15 +111,15 @@ function noteLines(notes: Notes): string[] {
   if (notes.keys.kind === 'saved' && notes.keys.kept.length > 0)
     lines.push(`Your account already had a ${notes.keys.kept.join(', ')} key, so it was kept.`)
   if (notes.keptAccountCopy > 0)
-    lines.push(`${notes.keptAccountCopy} saved materials were already in your account, so the account's copy was kept.`)
+    lines.push(`${count(notes.keptAccountCopy, 'saved material was', 'saved materials were')} already in your account, so the account's copy was kept.`)
   if (notes.quarantined > 0)
-    lines.push(`${notes.quarantined} records did not fit the current format. They are kept aside on the server.`)
+    lines.push(`${count(notes.quarantined, 'record', 'records')} did not fit the current format and ${notes.quarantined === 1 ? 'is' : 'are'} kept aside on the server.`)
   if (notes.skipped.unfinishedLessons > 0)
-    lines.push(`${notes.skipped.unfinishedLessons} lessons that never finished processing were not moved.`)
+    lines.push(`${count(notes.skipped.unfinishedLessons, 'lesson that never finished processing was', 'lessons that never finished processing were')} not moved.`)
   if (notes.skipped.orphanMedia > 0)
-    lines.push(`${notes.skipped.orphanMedia} media files belonged to no lesson and were not moved.`)
+    lines.push(`${count(notes.skipped.orphanMedia, 'media file belonged', 'media files belonged')} to no lesson and ${notes.skipped.orphanMedia === 1 ? 'was' : 'were'} not moved.`)
   if (notes.skipped.storylessBreakdowns > 0)
-    lines.push(`${notes.skipped.storylessBreakdowns} word breakdowns had no story, so they were not moved. Breakdowns are rebuilt when you open a word.`)
+    lines.push(`${count(notes.skipped.storylessBreakdowns, 'word breakdown', 'word breakdowns')} had no story and ${notes.skipped.storylessBreakdowns === 1 ? 'was' : 'were'} not moved. Breakdowns are rebuilt when you open a word.`)
   return lines
 }
 
@@ -166,11 +170,11 @@ function KeysStep({ phase, onPin, onSkip, onConfirmSkip }: {
 
 function countLine(counts: Record<string, number>): string {
   const parts = [
-    [counts.lessons, 'lessons'],
-    [counts.vocabulary, 'saved words'],
-    [(counts.videos ?? 0) + (counts['shadowing-audio'] ?? 0), 'media files'],
+    [counts.lessons ?? 0, 'lesson', 'lessons'],
+    [counts.vocabulary ?? 0, 'saved word', 'saved words'],
+    [(counts.videos ?? 0) + (counts['shadowing-audio'] ?? 0), 'media file', 'media files'],
   ] as const
-  return parts.filter(([n]) => n).map(([n, label]) => `${n} ${label}`).join(', ')
+  return parts.filter(([n]) => n).map(([n, one, many]) => count(n, one, many)).join(', ')
 }
 
 function Waiting({ children }: { children: ReactNode }) {
@@ -186,7 +190,7 @@ interface ModalProps {
   api: ApiClient
   account: string
   counts: Record<string, number>
-  onFinished: () => void
+  onFinished: (path: string) => void
   onKeepLocal: () => void
   onSignOut: () => void
 }
@@ -194,11 +198,6 @@ interface ModalProps {
 export function MigrationModal({ api, account, counts, onFinished, onKeepLocal, onSignOut }: ModalProps) {
   const { phase, start, submitPin, skipKeys, confirmSkip, retry } = useMigration(api, account)
   const found = countLine(counts)
-
-  function openSettings() {
-    window.history.replaceState(null, '', '/settings')
-    onFinished()
-  }
 
   return (
     <Dialog open onOpenChange={() => {}}>
@@ -291,9 +290,9 @@ export function MigrationModal({ api, account, counts, onFinished, onKeepLocal, 
               {noteLines(phase.notes).map(line => <p key={line} className="text-sm text-muted-foreground">{line}</p>)}
               <div className="flex flex-wrap justify-end gap-2">
                 {needsSettings(phase.notes) && (
-                  <Button variant="outline" onClick={openSettings}>Open Settings</Button>
+                  <Button variant="outline" onClick={() => onFinished('/settings')}>Open Settings</Button>
                 )}
-                <Button onClick={onFinished}>Continue</Button>
+                <Button onClick={() => onFinished('/')}>Continue</Button>
               </div>
             </>
           )}
@@ -309,7 +308,14 @@ type GateState
     | { kind: 'failed', message: string }
     | { kind: 'clear' }
 
-export function MigrationGate({ api, children }: { api: ApiClient, children: ReactNode }) {
+interface GateProps {
+  api: ApiClient
+  children: ReactNode
+  /** Load the app fresh, so providers outside the gate, such as I18nProvider, read the imported settings. */
+  openApp?: (path: string) => void
+}
+
+export function MigrationGate({ api, children, openApp = path => window.location.assign(path) }: GateProps) {
   const { session, logout } = useAuth()
   const [state, setState] = useState<GateState>({ kind: 'checking' })
 
@@ -367,7 +373,7 @@ export function MigrationGate({ api, children }: { api: ApiClient, children: Rea
       api={api}
       account={session?.userId ?? ''}
       counts={state.data.counts}
-      onFinished={() => setState({ kind: 'clear' })}
+      onFinished={openApp}
       onKeepLocal={() => setState({ kind: 'clear' })}
       onSignOut={() => void logout()}
     />
