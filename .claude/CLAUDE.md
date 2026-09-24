@@ -4,57 +4,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ShadowLearn is a Chinese language learning platform. Users create lessons from YouTube videos or file uploads, which are processed through a pipeline (download → transcription → pinyin → translation → vocabulary extraction). Lessons are studied through multiple exercise types, shadowing mode, and an AI companion chat.
+ShadowLearn is a Chinese language learning platform. Users sign in with an email and password, then create lessons from YouTube videos, file uploads, or blog articles. The backend processes each lesson through a pipeline (download → transcription → pinyin → translation → vocabulary extraction) and stores it on the server. Lessons are studied through multiple exercise types, shadowing mode, and an AI companion chat.
+
+The server is the only source of truth. The browser keeps only the session tokens, placeholders for lessons that are still processing, and UI preferences in `localStorage`.
 
 ## Architecture
 
 ### Backend (`backend/app/`)
 
-**FastAPI** with an async service layer pattern. Entry point is `main.py`.
+**FastAPI** with one package per feature. Each package holds its `router.py`, and most also hold `models.py` (SQLAlchemy), `schemas.py`, and a `service.py` or `services/`. Entry point is `main.py`, which mounts every router behind `current_active_user` except auth, config, media, and internal.
 
-- `routers/` — HTTP route handlers (thin layer, delegates to services)
-  - `lessons.py` — lesson generation pipeline with background jobs
-  - `chat.py` — SSE-streamed AI chat via OpenRouter
-  - `pronunciation.py` — Azure speech assessment
-  - `quiz.py` — quiz generation via LLM
-  - `tts.py` — TTS provider routing
-  - `jobs.py` — in-memory background job status
-- `services/` — business logic
-  - `audio.py` — yt-dlp download, ffmpeg processing
-  - `transcription.py` — Deepgram STT
-  - `translation.py` — OpenRouter with Pydantic structured outputs
-  - `vocabulary.py` — vocab extraction
-  - `tts_factory.py` + `tts_provider.py` — factory + Protocol for Azure/Minimax TTS
-- `models.py` — shared Pydantic models (`Word`, `Segment`, `LessonRequest`, etc.)
-- `config.py` — `pydantic-settings` with `SHADOWLEARN_` env prefix; see `.env.example`
+- **Storage.** Postgres holds records (async SQLAlchemy in `db.py`, migrations in `backend/alembic/versions/`, `uv run alembic upgrade head`). MinIO (S3) holds media (`storage.py`). `GET /api/health/deps` reports both.
+- `accounts/` — email and password accounts (fastapi-users). Short-lived JWT access tokens and rotating refresh tokens; logout bumps `token_version`, which revokes every token. Password reset mails through SMTP.
+- `keys/` — provider keys (OpenRouter, Deepgram, Azure, Minimax, Google) held server-side, encrypted with Fernet under `SHADOWLEARN_ENCRYPTION_KEY`. `KeyResolver` uses the account's own key, then falls back to the operator's env key, with per-account rate limiting and usage rows. A client can write a key but never reads one back; Settings shows only its source and last four characters.
+- `userdata/` — `/api/store/{store}` serves every client-written store (vocabulary, study progress, threads, settings, tips, and more). `specs.py` defines the stores. Rows carry a version: GET returns it as the `ETag`, and a PUT or DELETE with `If-Match` gets 409 with the current record when another device wrote first. `POST /bulk` with `mode: "import"` applies the per-store merge rules in `merge.py`.
+- `lessons/` — the generation pipeline as background jobs (`jobs/`, `job_store.py`), and `/api/lessons` to list, read, rename, update, and delete lessons. The lesson PATCH follows the same version, `If-Match`, and 409 contract as `/api/store`.
+- `media/` — lesson video and audio plus shadowing recordings in MinIO. Streams support Range, and the browser reads them with short-lived `?token=` tickets from `POST /api/media/{id}/ticket`.
+- `importer/` — the one-time import of a device's legacy IndexedDB data. It imports lessons and media, quarantines records that fail validation, and serves the manifest the browser verifies before it deletes its local copy.
+- `speak/`, `agent/`, `tts/`, `transcription/`, `translation/`, `pronunciation/`, `quiz/`, `vocab/`, `tips/`, `collection/`, `catalog/`, `daily_review/` — feature routers. `internal/` serves the LiveKit agent in `backend/livekit_agent/`.
+- `settings.py` — `pydantic-settings` with the `SHADOWLEARN_` env prefix; see `backend/.env.example`. Startup refuses a bad Fernet key, short JWT secrets, missing SMTP outside local dev, and test routes outside local dev.
 
-TTS provider is injected at startup via FastAPI lifespan and stored in `app.state.tts`.
+Run one uvicorn worker. The job sweep at startup and the rate limiter live in process.
 
 ### Frontend (`frontend/src/`)
 
-**React 19** + **TypeScript** + **Vite**, offline-first via IndexedDB.
+**React 19** + **TypeScript** + **Vite**, online only. Every read and write goes to the backend.
 
-**State management** is Context API + custom hooks — no Redux or Zustand:
-- `AuthContext` — PIN-based encryption; gates the entire app. Holds `DecryptedKeys` (API keys for OpenRouter, Deepgram, Azure, Minimax) and the `idb` database handle.
-- `PlayerContext` — video playback state (time, rate, volume); subscribers hook in via `useTimeEffect`
-- `LessonsContext` — cached lesson metadata
-- `VocabularyContext` — vocabulary workbook state
+- `app/` — `App.tsx` (routes, `react-router-dom` v7), `Layout.tsx`, pages, and the app-wide providers in `app/providers/`: `AuthContext` (login session and the `DataClient`), `I18nContext`, and `PlayerContext` (video playback state; subscribe with `useTimeEffect`).
+- `features/<feature>/` — `agent`, `learning-materials`, `lesson`, `migration`, `settings`, `shadowing`, `speak`, `study`, `vocabulary`. Each splits into `application/` (hooks and contexts), `domain/` (types and pure logic), `ui/` (components), and sometimes `lib/` or `api/`.
+- `shared/` — `ui/` (shadcn/ui primitives, do not hand-edit), `lib/` (pure utilities, `api.ts` with `apiFetch` and token refresh, `i18n.ts`), `hooks/`, and `types.ts`.
+- `db/` — `client.ts` defines `ApiClient` (`get`, `getVersioned`, `putVersioned`, `list`, `put`, `del`, `bulk`, `fetch`). `index.ts` holds the typed accessors for `/api/store`, `/api/lessons`, and media. Read-modify-write goes through `updateRecord(db, store, id, mutate)` or `updateLessonMeta(db, meta, mutate)`, which retry `mutate` on the other device's record after a 409. `legacy.ts` is the read-only v21 IndexedDB schema and upgrade path that the importer reads; nothing else opens IndexedDB.
 
-**Persistence**: all user data lives in IndexedDB (`db/index.ts`, schema v3). Stores: `lessons`, `segments`, `videos`, `chats`, `tts-cache`, `vocabulary`, `settings`, `crypto`.
+**State management** is Context API + custom hooks — no Redux or Zustand. `useAuth().db` is the `DataClient` for the signed-in account, or `null` before sign-in.
 
-**Component layout**:
-- `pages/` — top-level route pages
-- `components/lesson/` — video player, transcript, companion chat, workbook panel
-- `components/study/` — study session orchestrator + 7 exercise types (`exercises/`)
-- `components/shadowing/` — listen → speak → reveal flow
-- `components/ui/` — shadcn/ui primitives (do not hand-edit these)
-- `lib/` — pure utilities (pinyin, shadowing, study logic, segment text)
-- `hooks/` — data-fetching and feature hooks
-- `contexts/` — React context providers
-
-**Routing** is `react-router-dom` v7, configured in `App.tsx`.
+**Import.** `features/migration/` runs once per device that still holds a legacy `shadowlearn` IndexedDB database. It decrypts old PIN-protected keys with `legacyCrypto.ts`, uploads records and media, verifies them against the server manifest, and deletes the local database only on a full match.
 
 **Styling**: Tailwind CSS v4 (no separate config file — uses `@tailwindcss/vite` plugin). Use `clsx` + `tailwind-merge` for conditional classes. ESLint uses `@antfu/eslint-config` — no Prettier.
+
+### Deploy
+
+`docs/deploy-server-migration.md` lists what a deploy of this architecture needs: the Fernet key and its backup, the Google key move, `SHADOWLEARN_BACKEND_URL` for the offshore agent, nginx rules for media tickets and large uploads, one worker, `stop_grace_period`, and the speak test after deploy.
 
 ## Security Guidelines
 
