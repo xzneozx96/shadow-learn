@@ -61,13 +61,6 @@ export interface AppSettings {
   minimaxVoiceId?: string
 }
 
-export interface DecryptedKeys {
-  openrouterApiKey?: string
-  azureSpeechKey?: string
-  azureSpeechRegion?: string
-  googleRealtimeKey?: string
-}
-
 // Azure Pronunciation Assessment types
 
 export type PronunciationErrorType = 'Mispronunciation' | 'Omission' | 'Insertion'
