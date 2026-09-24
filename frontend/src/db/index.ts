@@ -150,8 +150,6 @@ export async function getSegments(db: DataClient, lessonId: string): Promise<Seg
   return (await getLesson(db, lessonId))?.segments
 }
 
-export async function deleteSegments(_db: DataClient, _lessonId: string): Promise<void> {}
-
 export async function refreshMediaTicket(db: DataClient, mediaId: string): Promise<string> {
   const res = await db.api.fetch(`/api/media/${encodeURIComponent(mediaId)}/ticket`, { method: 'POST' })
   if (!res.ok)
@@ -159,8 +157,6 @@ export async function refreshMediaTicket(db: DataClient, mediaId: string): Promi
   const ticket: { url: string } = await res.json()
   return `${API_BASE}${ticket.url}`
 }
-
-export async function deleteVideo(_db: DataClient, _lessonId: string): Promise<void> {}
 
 // Chat history
 export async function saveChatMessages(db: DataClient, lessonId: string, messages: UIMessage[]): Promise<void> {
@@ -235,8 +231,6 @@ export async function getSettings(db: DataClient): Promise<AppSettings | undefin
 export async function deleteFullLesson(db: DataClient, lessonId: string): Promise<void> {
   await Promise.all([
     deleteLessonMeta(db, lessonId),
-    deleteSegments(db, lessonId),
-    deleteVideo(db, lessonId),
     deleteChatMessages(db, lessonId),
     deleteSpeakingBestsByLesson(db, lessonId),
   ])
