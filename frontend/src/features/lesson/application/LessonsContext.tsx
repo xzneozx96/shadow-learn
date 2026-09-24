@@ -3,7 +3,7 @@ import type { LessonMeta } from '@/shared/types'
 import * as React from 'react'
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
-import { deleteFullLesson, getAllLessonMetas, renameLesson as renameServerLesson, saveLessonMeta } from '@/db'
+import { deleteFullLesson, getAllLessonMetas, updateLessonMeta } from '@/db'
 import { pendingLessonsKey } from '@/features/lesson/application/pendingLessons'
 import { useJobPoller } from '@/features/lesson/application/useJobPoller'
 
@@ -15,7 +15,8 @@ interface LessonsContextValue {
   error: string | null
   reload: () => Promise<void>
   db: DataClient | null
-  updateLesson: (meta: LessonMeta) => Promise<void>
+  savePendingLesson: (meta: LessonMeta) => void
+  editLesson: (meta: LessonMeta, mutate: (prev: LessonMeta) => LessonMeta) => Promise<void>
   renameLesson: (meta: LessonMeta, title: string) => Promise<void>
   deleteLesson: (id: string) => Promise<void>
 }
@@ -81,28 +82,25 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [db])
 
-  const updateLesson = useCallback(async (meta: LessonMeta) => {
+  const savePendingLesson = useCallback((meta: LessonMeta) => {
+    setPending(prev => upsert(prev, meta))
+  }, [])
+
+  const editLesson = useCallback(async (meta: LessonMeta, mutate: (prev: LessonMeta) => LessonMeta) => {
     if (!db)
       return
     if (isLocalOnly(meta)) {
-      setPending(prev => upsert(prev, meta))
+      setPending(prev => upsert(prev, mutate(meta)))
       return
     }
-    await saveLessonMeta(db, meta)
-    setServerLessons(prev => upsert(prev, meta))
+    const saved = await updateLessonMeta(db, meta, mutate)
+    setServerLessons(prev => upsert(prev, saved))
   }, [db])
 
-  const renameLesson = useCallback(async (meta: LessonMeta, title: string) => {
-    if (!db)
-      return
-    const renamed = { ...meta, title }
-    if (isLocalOnly(meta)) {
-      setPending(prev => upsert(prev, renamed))
-      return
-    }
-    await renameServerLesson(db, meta.id, title)
-    setServerLessons(prev => upsert(prev, renamed))
-  }, [db])
+  const renameLesson = useCallback(
+    (meta: LessonMeta, title: string) => editLesson(meta, prev => ({ ...prev, title })),
+    [editLesson],
+  )
 
   const deleteLesson = useCallback(async (id: string) => {
     if (!db)
@@ -126,10 +124,10 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
 
   const lessons = useMemo(() => [...pending, ...serverLessons], [pending, serverLessons])
 
-  useJobPoller({ lessons, updateLesson, completeLesson })
+  useJobPoller({ lessons, savePendingLesson, completeLesson })
 
   return (
-    <LessonsContext value={{ lessons, status, error, reload, db, updateLesson, renameLesson, deleteLesson }}>
+    <LessonsContext value={{ lessons, status, error, reload, db, savePendingLesson, editLesson, renameLesson, deleteLesson }}>
       {children}
     </LessonsContext>
   )

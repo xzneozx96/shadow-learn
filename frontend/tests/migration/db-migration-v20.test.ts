@@ -1,6 +1,6 @@
 import { openDB } from 'idb'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { initDB } from '../src/db/legacy'
+import { initDB } from '@/db/legacy'
 import 'fake-indexeddb/auto'
 
 const DB_NAME = 'shadowlearn'

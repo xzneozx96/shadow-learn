@@ -23,7 +23,6 @@ interface AuthState {
   session: Session | null | undefined // undefined = loading
   sessionCheckFailed: boolean
   db: DataClient | null
-  trialMode: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -33,8 +32,6 @@ interface AuthState {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthState | null>(null)
-
-const TRIAL_SESSION_KEY = 'shadowlearn_trial'
 
 async function authError(res: Response): Promise<Error> {
   const body = await res.json().catch(() => null)
@@ -54,9 +51,6 @@ async function fetchSession(): Promise<Session | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [trialMode, setTrialMode] = useState<boolean>(
-    () => sessionStorage.getItem(TRIAL_SESSION_KEY) === 'trial',
-  )
   const [session, setSession] = useState<Session | null | undefined>(
     () => hasRefreshToken() ? undefined : null,
   )
@@ -105,8 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(pendingLessonsKey(userId))
     clearUploadThumbnails()
     clearTokens()
-    sessionStorage.removeItem(TRIAL_SESSION_KEY)
-    setTrialMode(false)
     setSession(null)
   }, [userId])
 
@@ -146,7 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         sessionCheckFailed,
         db,
-        trialMode,
         login,
         signup,
         logout,

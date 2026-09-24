@@ -1,12 +1,11 @@
 import type { DataClient } from '@/db'
 import type { LessonMeta } from '@/shared/types'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getAllLessonMetas, getLessonMeta, updateLessonMeta } from '@/db'
 import { LessonsProvider, useLessons } from '@/features/lesson/application/LessonsContext'
 import { FakeApiClient, fakeDataClient } from '../../../../tests/fake-api'
-import 'fake-indexeddb/auto'
 
 function makeMeta(overrides: Partial<LessonMeta> = {}): LessonMeta {
   return {
@@ -33,7 +32,6 @@ vi.mock('@/app/providers/AuthContext', () => ({
 }))
 
 beforeEach(async () => {
-  globalThis.indexedDB = new IDBFactory()
   localStorage.clear()
   api = new FakeApiClient()
   db = fakeDataClient(api)
@@ -75,25 +73,41 @@ describe('lessonsProvider', () => {
     expect(result.current.lessons).toHaveLength(1)
   })
 
-  it('updateLesson PATCHes a server lesson with its client-owned fields', async () => {
+  it('editLesson PATCHes a server lesson and keeps the saved version in state', async () => {
     api.seedLesson(makeMeta())
 
     const { result } = renderHook(() => useLessons(), { wrapper })
     await waitFor(() => expect(result.current.lessons).toHaveLength(1))
 
     await act(async () => {
-      await result.current.updateLesson({ ...result.current.lessons[0], isDone: true })
+      await result.current.editLesson(result.current.lessons[0], prev => ({ ...prev, isDone: true }))
     })
 
-    expect(result.current.lessons[0].isDone).toBe(true)
+    expect(result.current.lessons[0]).toMatchObject({ isDone: true, version: 2 })
     expect(api.calls.at(-1)).toEqual({
       method: 'PATCH',
       path: '/api/lessons/lesson_1',
       body: {
+        title: 'Test Lesson',
         meta: { progressSegmentId: null, tags: [], isDone: true },
         last_opened_at: '2026-09-01T00:00:00.000Z',
       },
     })
+  })
+
+  it('editLesson from a stale tab keeps the other device\'s rename', async () => {
+    api.seedLesson(makeMeta({ title: 'Original' }))
+    const { result } = renderHook(() => useLessons(), { wrapper })
+    await waitFor(() => expect(result.current.lessons).toHaveLength(1))
+    const [onPhone] = await getAllLessonMetas(fakeDataClient(api))
+    await updateLessonMeta(fakeDataClient(api), onPhone, prev => ({ ...prev, title: 'Renamed on phone' }))
+
+    await act(async () => {
+      await result.current.editLesson(result.current.lessons[0], prev => ({ ...prev, isDone: true }))
+    })
+
+    expect(result.current.lessons[0]).toMatchObject({ title: 'Renamed on phone', isDone: true, version: 3 })
+    expect(await getLessonMeta(db, 'lesson_1')).toMatchObject({ title: 'Renamed on phone', isDone: true })
   })
 
   it('renameLesson PATCHes the title of a server lesson and keeps it after a reload', async () => {
@@ -107,7 +121,7 @@ describe('lessonsProvider', () => {
     })
 
     expect(result.current.lessons[0].title).toBe('Updated')
-    expect(api.calls.at(-1)).toEqual({ method: 'PATCH', path: '/api/lessons/lesson_1', body: { title: 'Updated' } })
+    expect(api.calls.at(-1)).toMatchObject({ method: 'PATCH', path: '/api/lessons/lesson_1', body: { title: 'Updated' } })
 
     await act(async () => {
       await result.current.reload()
@@ -119,9 +133,7 @@ describe('lessonsProvider', () => {
     const placeholder = makeMeta({ id: 'pending_1', status: 'processing', jobId: 'job_1' })
     const { result } = renderHook(() => useLessons(), { wrapper })
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    await act(async () => {
-      await result.current.updateLesson(placeholder)
-    })
+    act(() => result.current.savePendingLesson(placeholder))
     const callsBefore = api.calls.length
 
     await act(async () => {
@@ -139,9 +151,7 @@ describe('lessonsProvider', () => {
     await waitFor(() => expect(first.result.current.status).toBe('ready'))
     const callsBefore = api.calls.length
 
-    await act(async () => {
-      await first.result.current.updateLesson(placeholder)
-    })
+    act(() => first.result.current.savePendingLesson(placeholder))
 
     expect(first.result.current.lessons.map(l => l.id)).toEqual(['pending_1'])
     expect(api.calls).toHaveLength(callsBefore)

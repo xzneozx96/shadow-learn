@@ -1,6 +1,6 @@
 import type { Json, JsonObject } from './canonical'
+import type { EncryptedData } from './legacyCrypto'
 import type { ShadowLearnDB } from '@/db/legacy'
-import type { EncryptedData } from '@/shared/lib/crypto'
 import type { LessonMeta } from '@/shared/types'
 import { unwrap } from 'idb'
 import { storableText, toJson } from './canonical'

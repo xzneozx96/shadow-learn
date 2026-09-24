@@ -127,8 +127,14 @@ export async function compact(
 
   // Rewrite stored history compacted (re-fetch in case messages arrived since).
   const thread = await getThread(db, threadId)
-  if (thread)
-    await saveThreadMessages(db, threadId, buildHistoryToStore(thread.messages, newSummary), thread.surface, thread.ownerId)
+  if (thread) {
+    await saveThreadMessages(db, threadId, {
+      messages: buildHistoryToStore(thread.messages, newSummary),
+      knownMessageIds: new Set(thread.messages.map(m => m.id)),
+      surface: thread.surface,
+      ownerId: thread.ownerId,
+    })
+  }
 
   return true
 }

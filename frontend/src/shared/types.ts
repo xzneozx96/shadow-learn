@@ -47,6 +47,7 @@ export interface LessonMeta {
   currentStep?: string
   isDone?: boolean
   media?: LessonMedia
+  version?: number
 }
 
 export interface ChatMessage {
@@ -59,13 +60,6 @@ export interface AppSettings {
   translationLanguage: string
   uiLanguage?: 'en' | 'vi'
   minimaxVoiceId?: string
-}
-
-export interface DecryptedKeys {
-  openrouterApiKey?: string
-  azureSpeechKey?: string
-  azureSpeechRegion?: string
-  googleRealtimeKey?: string
 }
 
 // Azure Pronunciation Assessment types

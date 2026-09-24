@@ -5,11 +5,11 @@ import { captureLessonJobFailed } from '@/shared/lib/posthog-events'
 
 interface UseJobPollerProps {
   lessons: LessonMeta[]
-  updateLesson: (meta: LessonMeta) => Promise<void>
+  savePendingLesson: (meta: LessonMeta) => void
   completeLesson: (id: string) => Promise<void>
 }
 
-export function useJobPoller({ lessons, updateLesson, completeLesson }: UseJobPollerProps): void {
+export function useJobPoller({ lessons, savePendingLesson, completeLesson }: UseJobPollerProps): void {
   // Stable ref so pollJobs can read latest lessons without being in its dep array
   const lessonsRef = useRef(lessons)
   useEffect(() => {
@@ -36,7 +36,7 @@ export function useJobPoller({ lessons, updateLesson, completeLesson }: UseJobPo
       }
 
       if (res.status === 404) {
-        await updateLesson({
+        savePendingLesson({
           ...lesson,
           status: 'error',
           errorMessage: 'Server restarted',
@@ -52,7 +52,7 @@ export function useJobPoller({ lessons, updateLesson, completeLesson }: UseJobPo
       const job = await res.json()
 
       if (job.status === 'processing') {
-        await updateLesson({ ...lesson, currentStep: job.step })
+        savePendingLesson({ ...lesson, currentStep: job.step })
       }
       else if (job.status === 'complete') {
         const jobId = lesson.jobId
@@ -62,7 +62,7 @@ export function useJobPoller({ lessons, updateLesson, completeLesson }: UseJobPo
       else if (job.status === 'error') {
         const jobId = lesson.jobId
         captureLessonJobFailed({ step: job.step ?? 'unknown', error_message: job.error ?? 'Unknown error' })
-        await updateLesson({
+        savePendingLesson({
           ...lesson,
           status: 'error',
           errorMessage: job.error,
@@ -72,7 +72,7 @@ export function useJobPoller({ lessons, updateLesson, completeLesson }: UseJobPo
         await apiFetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
       }
     }
-  }, [updateLesson, completeLesson])
+  }, [savePendingLesson, completeLesson])
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 

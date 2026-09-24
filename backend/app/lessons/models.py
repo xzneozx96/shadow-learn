@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, Text, func
+from sqlalchemy import BigInteger, DateTime, Float, ForeignKey, Integer, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,6 +26,7 @@ class Lesson(Base):
     import_source: Mapped[str | None] = mapped_column(Text)
     import_sent_hash: Mapped[str | None] = mapped_column(Text)
     import_row_hash: Mapped[str | None] = mapped_column(Text)
+    version: Mapped[int] = mapped_column(BigInteger, server_default="1")
 
 
 class LessonSegment(Base):

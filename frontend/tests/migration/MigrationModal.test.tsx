@@ -22,7 +22,6 @@ function signedIn(userId: string, children: ReactNode) {
     session: { userId, email: `${userId}@example.com` },
     sessionCheckFailed: false,
     db: null,
-    trialMode: false,
     login: async () => {},
     signup: async () => {},
     logout,

@@ -167,6 +167,8 @@ async def import_lessons(body: LessonsImport, user: CurrentUser, session: Sessio
             outcomes[key] = "kept_server" if lesson.import_sent_hash == sent else "conflict"
             continue
         _write_lesson(lesson, item)
+        if lesson_id in existing:
+            lesson.version = Lesson.version + 1
         await session.flush()
         await session.execute(delete(LessonSegment).where(LessonSegment.lesson_id == lesson_id))
         session.add_all(

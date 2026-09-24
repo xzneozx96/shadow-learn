@@ -44,6 +44,7 @@ export interface LessonSummary {
   last_opened_at: string | null
   segment_count: number
   meta: ClientLessonMeta
+  version: number
   video_url?: string
   audio_url?: string
 }
@@ -59,6 +60,7 @@ export interface LessonDetail {
 }
 
 const MEDIA_ID = /\/api\/media\/([^/?]+)/
+const MAX_CONFLICT_RETRIES = 3
 
 export function toLessonMeta(summary: LessonSummary): LessonMeta {
   return {
@@ -76,6 +78,7 @@ export function toLessonMeta(summary: LessonSummary): LessonMeta {
     tags: summary.meta.tags ?? [],
     isDone: summary.meta.isDone,
     media: summaryMedia(summary),
+    version: summary.version,
   }
 }
 
@@ -110,27 +113,41 @@ export async function getLesson(db: DataClient, id: string): Promise<LessonDetai
   return { meta, segments: body.segments, media: meta.media ?? null }
 }
 
-async function patchLesson(db: DataClient, id: string, body: object): Promise<void> {
-  const res = await db.api.fetch(lessonPath(id), {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok)
-    throw await responseError(res, `Saving lesson failed: ${res.status}`)
-}
-
-export async function saveLessonMeta(db: DataClient, meta: LessonMeta): Promise<void> {
+function lessonPatch(meta: LessonMeta): { title: string, meta: ClientLessonMeta, last_opened_at: string } {
   const clientMeta: ClientLessonMeta = {
     progressSegmentId: meta.progressSegmentId,
     tags: meta.tags,
     isDone: meta.isDone,
   }
-  await patchLesson(db, meta.id, { meta: clientMeta, last_opened_at: meta.lastOpenedAt })
+  return { title: meta.title, meta: clientMeta, last_opened_at: meta.lastOpenedAt }
 }
 
-export async function renameLesson(db: DataClient, id: string, title: string): Promise<void> {
-  await patchLesson(db, id, { title })
+export async function updateLessonMeta(
+  db: DataClient,
+  meta: LessonMeta,
+  mutate: (prev: LessonMeta) => LessonMeta,
+): Promise<LessonMeta> {
+  let current = meta
+  for (let attempt = 0; attempt <= MAX_CONFLICT_RETRIES; attempt++) {
+    const next = mutate(current)
+    const res = await db.api.fetch(lessonPath(meta.id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(current.version === undefined ? {} : { 'If-Match': `"${current.version}"` }) },
+      body: JSON.stringify(lessonPatch(next)),
+    })
+    if (res.status === 409) {
+      const conflict: { detail?: string, record?: LessonSummary } = await res.clone().json().catch(() => ({}))
+      if (conflict.detail === 'version conflict' && conflict.record) {
+        current = { ...toLessonMeta(conflict.record), media: meta.media }
+        continue
+      }
+    }
+    if (!res.ok)
+      throw await responseError(res, `Saving lesson failed: ${res.status}`)
+    const saved: LessonSummary = await res.json()
+    return { ...next, version: saved.version }
+  }
+  throw new Error(`Saving lesson ${meta.id} failed: it kept changing on another device`)
 }
 
 export async function getLessonMeta(db: DataClient, id: string): Promise<LessonMeta | undefined> {
@@ -150,8 +167,6 @@ export async function getSegments(db: DataClient, lessonId: string): Promise<Seg
   return (await getLesson(db, lessonId))?.segments
 }
 
-export async function deleteSegments(_db: DataClient, _lessonId: string): Promise<void> {}
-
 export async function refreshMediaTicket(db: DataClient, mediaId: string): Promise<string> {
   const res = await db.api.fetch(`/api/media/${encodeURIComponent(mediaId)}/ticket`, { method: 'POST' })
   if (!res.ok)
@@ -160,18 +175,7 @@ export async function refreshMediaTicket(db: DataClient, mediaId: string): Promi
   return `${API_BASE}${ticket.url}`
 }
 
-export async function deleteVideo(_db: DataClient, _lessonId: string): Promise<void> {}
-
 // Chat history
-export async function saveChatMessages(db: DataClient, lessonId: string, messages: UIMessage[]): Promise<void> {
-  const surface: ThreadSurface = lessonId === '__global' ? 'global' : 'lesson'
-  await saveThreadMessages(db, lessonId, messages, surface, surface === 'lesson' ? lessonId : null)
-}
-
-export async function getChatMessages(db: DataClient, lessonId: string): Promise<UIMessage[] | undefined> {
-  return (await getThread(db, lessonId))?.messages
-}
-
 export async function deleteChatMessages(db: DataClient, lessonId: string): Promise<void> {
   await deleteThread(db, lessonId)
 }
@@ -180,28 +184,32 @@ export async function getThread(db: DataClient, id: string): Promise<ThreadRecor
   return db.api.get<ThreadRecord>(storePath('threads', id))
 }
 
-export async function saveThreadMessages(
-  db: DataClient,
-  id: string,
-  messages: UIMessage[],
-  surface: ThreadSurface,
-  ownerId: string | null,
-  courseId?: string,
-  videoId?: string,
-): Promise<void> {
-  const existing = await getThread(db, id)
+export interface ThreadWrite {
+  messages: UIMessage[]
+  knownMessageIds: ReadonlySet<string>
+  surface: ThreadSurface
+  ownerId: string | null
+  courseId?: string
+  videoId?: string
+}
+
+function appendedElsewhere(stored: UIMessage[], write: ThreadWrite): UIMessage[] {
+  const local = new Set(write.messages.map(m => m.id))
+  return stored.filter(m => !local.has(m.id) && !write.knownMessageIds.has(m.id))
+}
+
+export async function saveThreadMessages(db: DataClient, id: string, write: ThreadWrite): Promise<ThreadRecord> {
   const now = Date.now()
-  const thread: ThreadRecord = {
+  return updateRecord<ThreadRecord>(db, 'threads', id, prev => ({
     id,
-    surface,
-    ownerId,
-    courseId: courseId ?? existing?.courseId,
-    videoId: videoId ?? existing?.videoId,
-    messages,
+    surface: write.surface,
+    ownerId: write.ownerId,
+    courseId: write.courseId ?? prev?.courseId,
+    videoId: write.videoId ?? prev?.videoId,
+    messages: [...write.messages, ...appendedElsewhere(prev?.messages ?? [], write)],
     updatedAt: now,
-    createdAt: existing?.createdAt ?? now,
-  }
-  await db.api.put(storePath('threads', id), thread)
+    createdAt: prev?.createdAt ?? now,
+  }))
 }
 
 export async function deleteThread(db: DataClient, id: string): Promise<void> {
@@ -235,14 +243,10 @@ export async function getSettings(db: DataClient): Promise<AppSettings | undefin
 export async function deleteFullLesson(db: DataClient, lessonId: string): Promise<void> {
   await Promise.all([
     deleteLessonMeta(db, lessonId),
-    deleteSegments(db, lessonId),
-    deleteVideo(db, lessonId),
     deleteChatMessages(db, lessonId),
     deleteSpeakingBestsByLesson(db, lessonId),
   ])
 }
-
-const MAX_CONFLICT_RETRIES = 3
 
 // Read-modify-write under optimistic concurrency: on a version conflict,
 // `mutate` runs again on the record another device just wrote.
@@ -564,6 +568,15 @@ export function chatKey(courseId: string, videoId: string): string {
 
 export async function putTipNote(db: DataClient, note: TipNote): Promise<void> {
   await db.api.put(storePath('tip-notes', `${note.videoId}:${note.id}`), note)
+}
+
+export async function updateTipNote(
+  db: DataClient,
+  videoId: string,
+  id: string,
+  mutate: (prev: TipNote | undefined) => TipNote,
+): Promise<TipNote> {
+  return updateRecord(db, 'tip-notes', `${videoId}:${id}`, mutate)
 }
 
 export async function getTipNotesForVideo(db: DataClient, videoId: string): Promise<TipNote[]> {

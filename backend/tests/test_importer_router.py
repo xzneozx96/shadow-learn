@@ -407,6 +407,20 @@ async def test_a_lesson_retry_is_stored_until_the_account_edits_it(client, owner
     assert (await _import_lesson(client, owner)).json()["outcomes"] == {LESSON_ID: "kept_server"}
 
 
+async def test_a_changed_lesson_retry_bumps_the_version_a_stale_device_patches_at(client, owner):
+    await _import_lesson(client, owner)
+    etag = (await client.get(f"/api/lessons/{LESSON_ID}", headers=_bearer(owner))).headers["ETag"]
+
+    changed = await _import_lesson(client, owner, lesson={**LESSON, "title": "Edited on the device"})
+    stale = await client.patch(
+        f"/api/lessons/{LESSON_ID}", json={"title": "Stale tab"}, headers={**_bearer(owner), "If-Match": etag}
+    )
+
+    assert changed.json()["outcomes"] == {LESSON_ID: "stored"}
+    assert stale.status_code == 409
+    assert stale.json()["record"]["title"] == "Edited on the device"
+
+
 WORD = {"id": "w1", "word": "字", "sourceLessonId": LESSON_ID, "createdAt": "2026-09-23"}
 
 

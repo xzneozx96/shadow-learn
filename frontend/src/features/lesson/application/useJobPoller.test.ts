@@ -37,10 +37,10 @@ afterEach(() => {
 describe('useJobPoller', () => {
   it('marks lesson as error on 404 (server restart)', async () => {
     const lesson = makeProcessingLesson()
-    const updateLesson = vi.fn(async () => {})
+    const savePendingLesson = vi.fn()
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 404 }))
-    renderHook(() => useJobPoller({ lessons: [lesson], updateLesson, completeLesson: vi.fn(async () => {}) }))
+    renderHook(() => useJobPoller({ lessons: [lesson], savePendingLesson, completeLesson: vi.fn(async () => {}) }))
 
     await act(async () => {
       vi.advanceTimersByTime(10000)
@@ -48,20 +48,20 @@ describe('useJobPoller', () => {
       await Promise.resolve()
     })
 
-    expect(updateLesson).toHaveBeenCalledWith(
+    expect(savePendingLesson).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'error', errorMessage: 'Server restarted', jobId: undefined }),
     )
   })
 
   it('updates currentStep when job is still processing', async () => {
     const lesson = makeProcessingLesson()
-    const updateLesson = vi.fn(async () => {})
+    const savePendingLesson = vi.fn()
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       status: 200,
       json: async () => ({ status: 'processing', step: 'translation', result: null, error: null }),
     }))
-    renderHook(() => useJobPoller({ lessons: [lesson], updateLesson, completeLesson: vi.fn(async () => {}) }))
+    renderHook(() => useJobPoller({ lessons: [lesson], savePendingLesson, completeLesson: vi.fn(async () => {}) }))
 
     await act(async () => {
       vi.advanceTimersByTime(10000)
@@ -69,14 +69,14 @@ describe('useJobPoller', () => {
       await Promise.resolve()
     })
 
-    expect(updateLesson).toHaveBeenCalledWith(
+    expect(savePendingLesson).toHaveBeenCalledWith(
       expect.objectContaining({ currentStep: 'translation' }),
     )
   })
 
   it('hands a completed job to completeLesson without downloading its media', async () => {
     const lesson = makeProcessingLesson()
-    const updateLesson = vi.fn(async () => {})
+    const savePendingLesson = vi.fn()
     const completeLesson = vi.fn(async () => {})
 
     const mockFetch = vi.fn()
@@ -95,7 +95,7 @@ describe('useJobPoller', () => {
       .mockResolvedValue({ status: 204 })
 
     vi.stubGlobal('fetch', mockFetch)
-    renderHook(() => useJobPoller({ lessons: [lesson], updateLesson, completeLesson }))
+    renderHook(() => useJobPoller({ lessons: [lesson], savePendingLesson, completeLesson }))
 
     act(() => {
       vi.advanceTimersByTime(10000)
@@ -106,14 +106,14 @@ describe('useJobPoller', () => {
     }, { timeout: 3000 })
 
     expect(completeLesson).toHaveBeenCalledWith('lesson_1')
-    expect(updateLesson).not.toHaveBeenCalled()
+    expect(savePendingLesson).not.toHaveBeenCalled()
     const urls = mockFetch.mock.calls.map(([url]) => url)
     expect(urls).toEqual(['/api/jobs/job_abc', '/api/jobs/job_abc'])
   })
 
   it('marks error and calls DELETE when job errors', async () => {
     const lesson = makeProcessingLesson()
-    const updateLesson = vi.fn(async () => {})
+    const savePendingLesson = vi.fn()
 
     const mockFetch = vi.fn()
       .mockResolvedValueOnce({
@@ -123,7 +123,7 @@ describe('useJobPoller', () => {
       .mockResolvedValue({ status: 204 })
 
     vi.stubGlobal('fetch', mockFetch)
-    renderHook(() => useJobPoller({ lessons: [lesson], updateLesson, completeLesson: vi.fn(async () => {}) }))
+    renderHook(() => useJobPoller({ lessons: [lesson], savePendingLesson, completeLesson: vi.fn(async () => {}) }))
 
     await act(async () => {
       vi.advanceTimersByTime(10000)
@@ -132,7 +132,7 @@ describe('useJobPoller', () => {
       await Promise.resolve()
     })
 
-    expect(updateLesson).toHaveBeenCalledWith(
+    expect(savePendingLesson).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'error', errorMessage: 'API timeout', jobId: undefined }),
     )
     expect(mockFetch).toHaveBeenCalledWith('/api/jobs/job_abc', { method: 'DELETE' })
@@ -148,7 +148,7 @@ describe('useJobPoller', () => {
       })
       .mockResolvedValue({ status: 204 }))
 
-    renderHook(() => useJobPoller({ lessons: [lesson], updateLesson: vi.fn(async () => {}), completeLesson: vi.fn(async () => {}) }))
+    renderHook(() => useJobPoller({ lessons: [lesson], savePendingLesson: vi.fn(), completeLesson: vi.fn(async () => {}) }))
 
     await act(async () => {
       vi.advanceTimersByTime(10000)
@@ -168,7 +168,7 @@ describe('useJobPoller', () => {
     const mockFetch = vi.fn()
 
     vi.stubGlobal('fetch', mockFetch)
-    renderHook(() => useJobPoller({ lessons: [lesson], updateLesson: vi.fn(), completeLesson: vi.fn() }))
+    renderHook(() => useJobPoller({ lessons: [lesson], savePendingLesson: vi.fn(), completeLesson: vi.fn() }))
 
     await act(async () => {
       vi.advanceTimersByTime(10000)

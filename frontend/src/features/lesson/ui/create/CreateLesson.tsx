@@ -27,7 +27,7 @@ export function CreateLesson() {
   const { db } = useAuth()
   const { t } = useI18n()
   const navigate = useNavigate()
-  const { updateLesson } = useLessons()
+  const { savePendingLesson } = useLessons()
 
   const [tab, setTab] = useState('youtube')
   const [youtubeUrl, setYoutubeUrl] = useState('')
@@ -168,7 +168,7 @@ export function CreateLesson() {
       const lessonId = crypto.randomUUID()
       const now = new Date().toISOString()
 
-      await updateLesson({
+      savePendingLesson({
         id: lessonId,
         title: lessonTitle,
         source: lessonSource,
@@ -199,7 +199,7 @@ export function CreateLesson() {
     finally {
       setSubmitting(false)
     }
-  }, [db, tab, youtubeUrl, file, blogUrl, blogText, blogTitle, blogVoiceId, language, sourceLanguage, updateLesson])
+  }, [db, tab, youtubeUrl, file, blogUrl, blogText, blogTitle, blogVoiceId, language, sourceLanguage, savePendingLesson])
 
   const canGenerate = tab === 'youtube'
     ? !!youtubeUrl.trim()
