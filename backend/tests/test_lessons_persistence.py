@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import io
 import re
@@ -324,6 +325,69 @@ async def test_patch_rejects_an_empty_or_oversized_title(client, stored_user, ti
 
     assert response.status_code == 422
     assert (await client.get(f"/api/lessons/{lesson_id}")).json()["title"] == "YouTube Video (aaaaaaaaaaa)"
+
+
+@pytest.mark.usefixtures("mocked_youtube")
+async def test_get_and_patch_report_the_version_and_every_patch_bumps_it(client, stored_user):
+    lesson_id = (await _youtube_lesson(client))["lesson"]["id"]
+
+    read = await client.get(f"/api/lessons/{lesson_id}")
+    blind = await client.patch(f"/api/lessons/{lesson_id}", json={"meta": {"tags": ["a"]}})
+    matched = await client.patch(
+        f"/api/lessons/{lesson_id}", json={"meta": {"tags": ["b"]}}, headers={"If-Match": blind.headers["ETag"]}
+    )
+
+    assert (read.headers["ETag"], read.json()["version"]) == ('"1"', 1)
+    assert (blind.headers["ETag"], blind.json()["version"]) == ('"2"', 2)
+    assert (matched.status_code, matched.headers["ETag"], matched.json()["meta"]) == (200, '"3"', {"tags": ["b"]})
+    assert [item["version"] for item in (await client.get("/api/lessons")).json()] == [3]
+
+
+@pytest.mark.usefixtures("mocked_youtube")
+async def test_a_stale_device_gets_409_with_the_other_devices_lesson(client, stored_user):
+    lesson_id = (await _youtube_lesson(client))["lesson"]["id"]
+    laptop_etag = (await client.get(f"/api/lessons/{lesson_id}")).headers["ETag"]
+    phone_etag = (await client.get(f"/api/lessons/{lesson_id}")).headers["ETag"]
+
+    phone = await client.patch(
+        f"/api/lessons/{lesson_id}", json={"meta": {"tags": ["phone"]}}, headers={"If-Match": phone_etag}
+    )
+    laptop = await client.patch(
+        f"/api/lessons/{lesson_id}", json={"meta": {"isDone": True}}, headers={"If-Match": laptop_etag}
+    )
+
+    assert phone.status_code == 200
+    assert laptop.status_code == 409
+    assert laptop.headers["ETag"] == phone.headers["ETag"] == '"2"'
+    assert laptop.json()["detail"] == "version conflict"
+    assert laptop.json()["record"] == phone.json()
+    assert (await client.get(f"/api/lessons/{lesson_id}")).json()["meta"] == {"tags": ["phone"]}
+
+
+@pytest.mark.usefixtures("mocked_youtube")
+async def test_concurrent_patches_at_one_version_let_exactly_one_win(client, stored_user):
+    lesson_id = (await _youtube_lesson(client))["lesson"]["id"]
+    etag = (await client.get(f"/api/lessons/{lesson_id}")).headers["ETag"]
+
+    responses = await asyncio.gather(
+        *(
+            client.patch(f"/api/lessons/{lesson_id}", json={"title": f"device {n}"}, headers={"If-Match": etag})
+            for n in range(5)
+        )
+    )
+
+    assert sorted(r.status_code for r in responses) == [200, 409, 409, 409, 409]
+    winner = next(r for r in responses if r.status_code == 200)
+    assert (await client.get(f"/api/lessons/{lesson_id}")).json()["title"] == winner.json()["title"]
+
+
+@pytest.mark.usefixtures("mocked_youtube")
+async def test_patch_rejects_a_malformed_if_match(client, stored_user):
+    lesson_id = (await _youtube_lesson(client))["lesson"]["id"]
+
+    response = await client.patch(f"/api/lessons/{lesson_id}", json={"title": "x"}, headers={"If-Match": '"one"'})
+
+    assert response.status_code == 422
 
 
 async def test_patch_and_delete_of_another_users_lesson_are_404(client, stored_user, stranger_lesson):

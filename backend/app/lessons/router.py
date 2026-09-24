@@ -13,13 +13,14 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     Form,
+    Header,
     HTTPException,
     Request,
     UploadFile,
 )
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.accounts.deps import CurrentUser
@@ -659,6 +660,7 @@ def _summary(lesson: Lesson, segment_count: int) -> dict[str, Any]:
         "last_opened_at": lesson.last_opened_at.isoformat() if lesson.last_opened_at else None,
         "segment_count": segment_count,
         "meta": lesson.meta,
+        "version": lesson.version,
     }
 
 
@@ -688,10 +690,15 @@ async def list_lessons(session: Session, user: CurrentUser) -> list[dict[str, An
     return [{**_summary(lesson, n), **urls.get(lesson.id, {})} for lesson, n in rows]
 
 
+def _etag(version: int) -> str:
+    return f'"{version}"'
+
+
 @router.get("/{lesson_id}")
-async def get_lesson(lesson_id: uuid.UUID, session: Session, user: CurrentUser) -> dict[str, Any]:
+async def get_lesson(lesson_id: uuid.UUID, session: Session, user: CurrentUser, response: Response) -> dict[str, Any]:
     """Return the lesson, its segments in order, and media URLs with fresh tickets."""
     lesson = await owned_lesson(session, lesson_id, user)
+    response.headers["ETag"] = _etag(lesson.version)
     segments = (
         await session.scalars(
             select(LessonSegment.data).where(LessonSegment.lesson_id == lesson_id).order_by(LessonSegment.position)
@@ -716,14 +723,50 @@ class LessonPatch(BaseModel):
     last_opened_at: datetime | None = None
 
 
-@router.patch("/{lesson_id}")
-async def patch_lesson(lesson_id: uuid.UUID, body: LessonPatch, session: Session, user: CurrentUser) -> dict[str, Any]:
-    """Rename the lesson, replace the client-owned ``meta`` exactly as sent, and set ``last_opened_at``."""
+@router.patch("/{lesson_id}", response_model=None)
+async def patch_lesson(
+    lesson_id: uuid.UUID,
+    body: LessonPatch,
+    session: Session,
+    user: CurrentUser,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
+) -> dict[str, Any] | JSONResponse:
+    """Rename the lesson, replace the client-owned ``meta`` exactly as sent, and set ``last_opened_at``.
+
+    With ``If-Match``, the write applies only at that version; otherwise it answers 409 with the current lesson.
+    Every write bumps the version.
+    """
     lesson = await owned_lesson(session, lesson_id, user)
-    for field in body.model_fields_set:
-        setattr(lesson, field, getattr(body, field))
+    where = [Lesson.id == lesson_id]
+    if if_match is not None:
+        where.append(Lesson.version == _expected_version(if_match))
+    version = await session.scalar(
+        update(Lesson)
+        .where(*where)
+        .values(**{field: getattr(body, field) for field in body.model_fields_set}, version=Lesson.version + 1)
+        .returning(Lesson.version)
+        .execution_options(synchronize_session=False)
+    )
+    if version is None:
+        await session.rollback()
+        await session.refresh(lesson)
+        return JSONResponse(
+            status_code=409,
+            content={"detail": "version conflict", "record": _summary(lesson, await _segment_count(session, lesson_id))},
+            headers={"ETag": _etag(lesson.version)},
+        )
     await session.commit()
+    await session.refresh(lesson)
+    response.headers["ETag"] = _etag(version)
     return _summary(lesson, await _segment_count(session, lesson_id))
+
+
+def _expected_version(if_match: str) -> int:
+    try:
+        return int(if_match.removeprefix("W/").strip('"'))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail="bad If-Match version") from e
 
 
 @router.delete("/{lesson_id}", status_code=204)
