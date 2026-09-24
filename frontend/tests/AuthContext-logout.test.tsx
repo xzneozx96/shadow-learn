@@ -1,6 +1,7 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from '@/app/providers/AuthContext'
+import { apiFetch } from '@/shared/lib/api'
 
 vi.mock('@/shared/lib/config', () => ({ API_BASE: 'http://api.test' }))
 
@@ -10,6 +11,7 @@ function Probe() {
     <div>
       <span data-testid="session">{session === undefined ? 'loading' : session?.email ?? 'signed-out'}</span>
       <button type="button" onClick={() => void logout()}>logout</button>
+      <button type="button" onClick={() => void apiFetch('/api/store/vocabulary')}>load</button>
     </div>
   )
 }
@@ -47,6 +49,23 @@ describe('authContext logout', () => {
     await waitFor(() => expect(screen.getByTestId('session')).toHaveTextContent('signed-out'))
     expect(localStorage.getItem('shadowlearn.pending-lessons.u1')).toBeNull()
     expect(localStorage.getItem('shadowlearn.pending-lessons.u2')).toBe('[{"id":"p2"}]')
+  })
+
+  it('runs the logout hygiene when the session is lost to a failed refresh', async () => {
+    localStorage.setItem('shadowlearn.pending-lessons.u1', '[{"id":"p1"}]')
+    fetchMock.mockImplementation(async (input) => {
+      if (input === 'http://api.test/api/users/me')
+        return new Response(JSON.stringify({ id: 'u1', email: 'me@example.com' }), { status: 200 })
+      return new Response(null, { status: 401 })
+    })
+    render(<AuthProvider><Probe /></AuthProvider>)
+    await waitFor(() => expect(screen.getByTestId('session')).toHaveTextContent('me@example.com'))
+
+    await act(async () => screen.getByRole('button', { name: 'load' }).click())
+
+    await waitFor(() => expect(screen.getByTestId('session')).toHaveTextContent('signed-out'))
+    expect(localStorage.getItem('shadowlearn.pending-lessons.u1')).toBeNull()
+    expect(localStorage.getItem('shadowlearn.refresh')).toBeNull()
   })
 
   it('clears the local session even when the logout call fails', async () => {

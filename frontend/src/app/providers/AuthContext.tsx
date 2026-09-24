@@ -63,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionCheckFailed, setSessionCheckFailed] = useState(false)
 
   useEffect(() => {
-    onSessionLost(() => setSession(null))
     if (hasRefreshToken())
       fetchSession().then(setSession, () => setSessionCheckFailed(true))
   }, [])
@@ -110,6 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTrialMode(false)
     setSession(null)
   }, [userId])
+
+  useEffect(() => {
+    onSessionLost(endLocalSession)
+  }, [endLocalSession])
 
   const logout = useCallback(async () => {
     await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
