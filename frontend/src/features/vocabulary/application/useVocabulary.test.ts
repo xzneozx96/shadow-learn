@@ -15,9 +15,10 @@ const mockDb = {
   getAllFromIndex: vi.fn().mockResolvedValue([]),
   transaction: vi.fn().mockReturnValue(mockTx),
 }
+const mockClient = { legacy: mockDb }
 
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: mockDb }),
+  useAuth: () => ({ db: mockClient }),
 }))
 
 const word: Word = { word: '今天', romanization: 'jīntiān', meaning: 'today', usage: '今天很好。' }

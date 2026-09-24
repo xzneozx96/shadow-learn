@@ -7,6 +7,7 @@ import {
   listUserMaterials,
   putUserMaterial,
 } from '@/db'
+import { fakeDataClient } from './fake-api'
 import 'fake-indexeddb/auto'
 
 const DB_NAME = 'shadowlearn'
@@ -32,30 +33,30 @@ function fixture(overrides: Partial<Parameters<typeof putUserMaterial>[1]> = {})
 
 describe('user-materials store', () => {
   it('round-trips a record', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await putUserMaterial(db, fixture())
     const all = await listUserMaterials(db)
     expect(all).toHaveLength(1)
     expect(all[0].externalId).toBe('PLabc123')
-    db.close()
+    db.legacy.close()
   })
 
   it('lookup by externalId returns the record', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await putUserMaterial(db, fixture())
     const hit = await getUserMaterialByExternalId(db, 'PLabc123')
     expect(hit?.id).toBe('uuid-1')
     const miss = await getUserMaterialByExternalId(db, 'PLmissing')
     expect(miss).toBeUndefined()
-    db.close()
+    db.legacy.close()
   })
 
   it('delete removes the record', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await putUserMaterial(db, fixture())
     await deleteUserMaterial(db, 'uuid-1')
     const all = await listUserMaterials(db)
     expect(all).toHaveLength(0)
-    db.close()
+    db.legacy.close()
   })
 })

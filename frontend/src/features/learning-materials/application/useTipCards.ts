@@ -1,11 +1,11 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { ConceptCard, StudioLocale } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cardsKey, getTipCards, putTipCards } from '@/db'
 import { apiFetch } from '@/shared/lib/api'
 
 interface Args {
-  db: ShadowLearnDB | null
+  db: DataClient | null
   videoId: string
   transcript: string
   locale: StudioLocale

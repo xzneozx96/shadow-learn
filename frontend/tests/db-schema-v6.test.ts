@@ -1,30 +1,31 @@
+import type { AgentMemory, DataClient } from '@/db'
 /**
  * Tests for IDB schema v6 migration — agent-memory store and indexes
  * Uses fake-indexeddb.
  */
 
-import type { AgentMemory, ShadowLearnDB } from '@/db'
 import { afterEach, describe, expect, it } from 'vitest'
 import { getAgentMemoriesByTag, getAllAgentMemories, getLearnerProfile, initDB, saveAgentMemory, saveLearnerProfile } from '@/db'
+import { fakeDataClient } from './fake-api'
 import 'fake-indexeddb/auto'
 
-let db: ShadowLearnDB
+let db: DataClient
 
 afterEach(() => {
   if (db)
-    db.close()
+    db.legacy.close()
   globalThis.indexedDB = new IDBFactory()
 })
 
 describe('schema v6 — agent-memory store', () => {
   it('creates agent-memory store during init', async () => {
-    db = await initDB()
-    const storeNames = [...db.objectStoreNames]
+    db = fakeDataClient(await initDB())
+    const storeNames = [...db.legacy.objectStoreNames]
     expect(storeNames).toContain('agent-memory')
   })
 
   it('saveAgentMemory + getAllAgentMemories round-trip', async () => {
-    db = await initDB()
+    db = fakeDataClient(await initDB())
     const memory: AgentMemory = {
       id: 'test-1',
       content: 'Test memory content',
@@ -42,7 +43,7 @@ describe('schema v6 — agent-memory store', () => {
   })
 
   it('getAgentMemoriesByTag uses multiEntry index', async () => {
-    db = await initDB()
+    db = fakeDataClient(await initDB())
     await saveAgentMemory(db, {
       id: 'a',
       content: 'tagged grammar',
@@ -79,13 +80,13 @@ describe('schema v6 — agent-memory store', () => {
 
 describe('learner-profile helpers', () => {
   it('getLearnerProfile returns undefined when no profile', async () => {
-    db = await initDB()
+    db = fakeDataClient(await initDB())
     const profile = await getLearnerProfile(db)
     expect(profile).toBeUndefined()
   })
 
   it('saveLearnerProfile + getLearnerProfile round-trip', async () => {
-    db = await initDB()
+    db = fakeDataClient(await initDB())
     await saveLearnerProfile(db, {
       name: 'Ross',
       nativeLanguage: 'English',
@@ -106,7 +107,7 @@ describe('learner-profile helpers', () => {
   })
 
   it('saveLearnerProfile overwrites existing profile', async () => {
-    db = await initDB()
+    db = fakeDataClient(await initDB())
     await saveLearnerProfile(db, {
       name: 'Ross',
       nativeLanguage: 'English',

@@ -677,7 +677,15 @@ async def list_lessons(session: Session, user: CurrentUser) -> list[dict[str, An
         .where(Lesson.user_id == user.id)
         .order_by(Lesson.created_at.desc())
     )
-    return [_summary(lesson, n) for lesson, n in rows]
+    media = await session.execute(
+        select(MediaObject.lesson_id, MediaObject.kind, MediaObject.id)
+        .join(Lesson, Lesson.id == MediaObject.lesson_id)
+        .where(Lesson.user_id == user.id, MediaObject.kind.in_([MediaKind.video, MediaKind.audio]))
+    )
+    urls: dict[uuid.UUID, dict[str, str]] = {}
+    for lesson_id, kind, media_id in media:
+        urls.setdefault(lesson_id, {})[f"{kind}_url"] = media_url(media_id)
+    return [{**_summary(lesson, n), **urls.get(lesson.id, {})} for lesson, n in rows]
 
 
 @router.get("/{lesson_id}")

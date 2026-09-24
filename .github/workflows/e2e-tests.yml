@@ -14,6 +14,29 @@ jobs:
       run:
         working-directory: frontend
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: shadowlearn
+          POSTGRES_PASSWORD: shadowlearn
+          POSTGRES_DB: shadowlearn
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U shadowlearn"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MINIO_ROOT_USER: shadowlearn
+      MINIO_ROOT_PASSWORD: shadowlearn
+      E2E_API_URL: http://127.0.0.1:8000
+      SHADOWLEARN_ENABLE_TEST_ROUTES: 'true'
+      SHADOWLEARN_FRONTEND_ORIGIN_ALLOWLIST: '["http://localhost:5173"]'
+      SHADOWLEARN_SMTP_HOST: ''
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,7 +75,42 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: .
+        working-directory: frontend
+
+      - name: Start MinIO
+        run: |
+          docker run -d -p 9005:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
+            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          for i in $(seq 30); do
+            curl -sf http://127.0.0.1:9005/minio/health/live && exit 0
+            sleep 1
+          done
+          exit 1
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Generate throwaway backend secrets
+        working-directory: backend
+        run: |
+          uv sync
+          {
+            echo "SHADOWLEARN_JWT_SECRET=$(openssl rand -hex 32)"
+            echo "SHADOWLEARN_JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
+            echo "SHADOWLEARN_ENCRYPTION_KEY=$(uv run python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+          } >> "$GITHUB_ENV"
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          uv run alembic upgrade head
+          nohup uv run uvicorn app.main:app --port 8000 > "$RUNNER_TEMP/backend.log" 2>&1 &
+          for i in $(seq 60); do
+            curl -sf http://127.0.0.1:8000/api/health/deps && exit 0
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/backend.log"
+          exit 1
 
       - name: Install Playwright browsers (chromium only)
         run: pnpm exec playwright install --with-deps chromium
@@ -67,7 +125,9 @@ jobs:
         if: failure()
         with:
           name: playwright-report
-          path: frontend/playwright-report/
+          path: |
+            frontend/playwright-report/
+            ${{ runner.temp }}/backend.log
           retention-days: 14
 
   create-lesson-smoke:
@@ -76,6 +136,29 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: shadowlearn
+          POSTGRES_PASSWORD: shadowlearn
+          POSTGRES_DB: shadowlearn
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U shadowlearn"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MINIO_ROOT_USER: shadowlearn
+      MINIO_ROOT_PASSWORD: shadowlearn
+      E2E_API_URL: http://127.0.0.1:8000
+      SHADOWLEARN_ENABLE_TEST_ROUTES: 'true'
+      SHADOWLEARN_FRONTEND_ORIGIN_ALLOWLIST: '["http://localhost:5173"]'
+      SHADOWLEARN_SMTP_HOST: ''
 
     steps:
       - name: Checkout
@@ -115,7 +198,42 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: .
+        working-directory: frontend
+
+      - name: Start MinIO
+        run: |
+          docker run -d -p 9005:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
+            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          for i in $(seq 30); do
+            curl -sf http://127.0.0.1:9005/minio/health/live && exit 0
+            sleep 1
+          done
+          exit 1
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Generate throwaway backend secrets
+        working-directory: backend
+        run: |
+          uv sync
+          {
+            echo "SHADOWLEARN_JWT_SECRET=$(openssl rand -hex 32)"
+            echo "SHADOWLEARN_JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
+            echo "SHADOWLEARN_ENCRYPTION_KEY=$(uv run python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+          } >> "$GITHUB_ENV"
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          uv run alembic upgrade head
+          nohup uv run uvicorn app.main:app --port 8000 > "$RUNNER_TEMP/backend.log" 2>&1 &
+          for i in $(seq 60); do
+            curl -sf http://127.0.0.1:8000/api/health/deps && exit 0
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/backend.log"
+          exit 1
 
       - name: Install Playwright browsers (chromium only)
         run: pnpm exec playwright install --with-deps chromium
@@ -134,6 +252,7 @@ jobs:
           path: |
             frontend/playwright-report/
             frontend/test-results/
+            ${{ runner.temp }}/backend.log
           retention-days: 7
 
   create-lesson-regression:
@@ -143,6 +262,29 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: shadowlearn
+          POSTGRES_PASSWORD: shadowlearn
+          POSTGRES_DB: shadowlearn
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U shadowlearn"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MINIO_ROOT_USER: shadowlearn
+      MINIO_ROOT_PASSWORD: shadowlearn
+      E2E_API_URL: http://127.0.0.1:8000
+      SHADOWLEARN_ENABLE_TEST_ROUTES: 'true'
+      SHADOWLEARN_FRONTEND_ORIGIN_ALLOWLIST: '["http://localhost:5173"]'
+      SHADOWLEARN_SMTP_HOST: ''
 
     steps:
       - name: Checkout
@@ -182,7 +324,42 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: .
+        working-directory: frontend
+
+      - name: Start MinIO
+        run: |
+          docker run -d -p 9005:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
+            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          for i in $(seq 30); do
+            curl -sf http://127.0.0.1:9005/minio/health/live && exit 0
+            sleep 1
+          done
+          exit 1
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Generate throwaway backend secrets
+        working-directory: backend
+        run: |
+          uv sync
+          {
+            echo "SHADOWLEARN_JWT_SECRET=$(openssl rand -hex 32)"
+            echo "SHADOWLEARN_JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
+            echo "SHADOWLEARN_ENCRYPTION_KEY=$(uv run python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+          } >> "$GITHUB_ENV"
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          uv run alembic upgrade head
+          nohup uv run uvicorn app.main:app --port 8000 > "$RUNNER_TEMP/backend.log" 2>&1 &
+          for i in $(seq 60); do
+            curl -sf http://127.0.0.1:8000/api/health/deps && exit 0
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/backend.log"
+          exit 1
 
       - name: Install Playwright browsers (chromium only)
         run: pnpm exec playwright install --with-deps chromium
@@ -201,4 +378,5 @@ jobs:
           path: |
             frontend/playwright-report/
             frontend/test-results/
+            ${{ runner.temp }}/backend.log
           retention-days: 14

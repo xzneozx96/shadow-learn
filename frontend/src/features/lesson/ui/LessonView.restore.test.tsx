@@ -36,7 +36,7 @@ vi.mock('@/app/providers/AuthContext', () => ({
 }))
 
 vi.mock('@/features/lesson/application/LessonsContext', () => ({
-  useLessons: () => ({ updateLesson: vi.fn() }),
+  useLessons: () => ({ renameLesson: vi.fn() }),
 }))
 
 vi.mock('@/app/providers/I18nContext', () => ({
@@ -61,6 +61,7 @@ vi.mock('@/features/vocabulary/application/VocabularyContext', () => ({
 vi.mock('@/features/study/application/StudyQueueContext', () => ({
   StudyQueueProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useStudyQueueContext: () => ({
+    media: null,
     loading: false,
     hasWordDrills: false,
     hasDailyReview: false,
@@ -100,7 +101,6 @@ vi.mock('@/features/lesson/application/useLesson', () => ({
 }))
 
 vi.mock('@/db', () => ({
-  getVideo: vi.fn().mockResolvedValue(null),
   saveLessonMeta: vi.fn().mockResolvedValue(undefined),
   getAllSpeakingBestsByLesson: vi.fn().mockResolvedValue([]),
   saveSpeakingBest: vi.fn().mockResolvedValue(undefined),
@@ -164,6 +164,7 @@ describe('resume Lesson Progress', () => {
     vi.mocked(useLesson).mockReturnValue({
       meta: { ...BASE_META, progressSegmentId: null },
       segments: SEGMENTS,
+      media: null,
       loading: false,
       error: null,
       updateMeta: vi.fn(),
@@ -180,6 +181,7 @@ describe('resume Lesson Progress', () => {
     vi.mocked(useLesson).mockReturnValue({
       meta: { ...BASE_META, progressSegmentId: 'seg-12' },
       segments: SEGMENTS,
+      media: null,
       loading: false,
       error: null,
       updateMeta: vi.fn(),
@@ -196,6 +198,7 @@ describe('resume Lesson Progress', () => {
     vi.mocked(useLesson).mockReturnValue({
       meta: { ...BASE_META, progressSegmentId: 'seg-orphan' },
       segments: SEGMENTS,
+      media: null,
       loading: false,
       error: null,
       updateMeta: vi.fn(),
@@ -214,6 +217,7 @@ describe('resume Lesson Progress', () => {
     vi.mocked(useLesson).mockReturnValue({
       meta: { ...BASE_META, progressSegmentId: 'seg-orphan' },
       segments: SEGMENTS,
+      media: null,
       loading: false,
       error: null,
       updateMeta: vi.fn(),
@@ -233,6 +237,7 @@ describe('resume Lesson Progress', () => {
     vi.mocked(useLesson).mockReturnValue({
       meta: { ...BASE_META, progressSegmentId: 'seg-2' },
       segments: SEGMENTS,
+      media: null,
       loading: false,
       error: null,
       updateMeta: vi.fn(),
@@ -255,6 +260,7 @@ describe('resume Lesson Progress', () => {
     vi.mocked(useLesson).mockReturnValue({
       meta: { ...BASE_META, progressSegmentId: null },
       segments: SEGMENTS,
+      media: null,
       loading: false,
       error: null,
       updateMeta: vi.fn(),
@@ -273,6 +279,7 @@ describe('resume Lesson Progress', () => {
     vi.mocked(useLesson).mockReturnValue({
       meta: { ...BASE_META, progressSegmentId: null },
       segments: SEGMENTS,
+      media: null,
       loading: false,
       error: null,
       updateMeta: vi.fn(),
@@ -292,6 +299,7 @@ describe('resume Lesson Progress', () => {
     vi.mocked(useLesson).mockReturnValue({
       meta: { ...BASE_META, progressSegmentId: null },
       segments: SEGMENTS,
+      media: null,
       loading: false,
       error: null,
       updateMeta: vi.fn(),
@@ -312,6 +320,7 @@ describe('resume Lesson Progress', () => {
       vi.mocked(useLesson).mockReturnValue({
         meta: { ...BASE_META, progressSegmentId: null },
         segments: SEGMENTS,
+        media: null,
         loading: false,
         error: null,
         updateMeta: vi.fn(),

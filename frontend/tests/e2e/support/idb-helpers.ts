@@ -1,50 +1,6 @@
-/**
- * idb-helpers.ts
- *
- * Utility functions for seeding and querying the ShadowLearn IndexedDB (`shadowlearn`)
- * from within Playwright tests via `page.evaluate()`.
- *
- * All helpers accept a `Page` instance and run in the browser context so that
- * the IDB connection uses the same origin as the app under test.
- *
- * IDB schema version: 10 (matches DB_VERSION in src/db/index.ts)
- */
-
 import type { Page } from '@playwright/test'
 
 // ── Shape mirrors src/types.ts ──────────────────────────────────────────────
-
-export interface IDBLessonMeta {
-  id: string
-  title: string
-  source: 'youtube' | 'upload'
-  sourceUrl: string | null
-  translationLanguages: string[]
-  sourceLanguage: string
-  createdAt: string
-  lastOpenedAt: string
-  progressSegmentId: string | null
-  tags: string[]
-}
-
-export interface IDBWord {
-  word: string
-  romanization: string
-  meaning: string
-  usage: string
-}
-
-export interface IDBSegment {
-  id: string
-  lessonId: string
-  start: number
-  end: number
-  text: string
-  romanization: string
-  translations: Record<string, string>
-  words: IDBWord[]
-  language: string
-}
 
 export interface IDBVocabEntry {
   id: string
@@ -71,78 +27,12 @@ export interface IDBVocabEntry {
 
 // ── Seed helpers ──────────────────────────────────────────────────────────────
 
-/** Seed AppSettings into the `settings` object store. */
-export async function seedSettings(page: Page, settings: { translationLanguage: string, uiLanguage?: 'en' | 'vi' }): Promise<void> {
-  await page.evaluate(async (data) => {
-    const openDB = (): Promise<IDBDatabase> =>
-      new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => resolve(req.result as IDBDatabase)
-      })
-
-    const db = await openDB()
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction('settings', 'readwrite')
-      const req = tx.objectStore('settings').put(data, 'settings')
-      req.onerror = () => reject(req.error)
-      tx.oncomplete = () => resolve()
-    })
-    db.close()
-  }, settings)
-}
-
-/** Seed a LessonMeta record into the `lessons` object store. */
-export async function seedLesson(page: Page, lesson: IDBLessonMeta): Promise<void> {
-  await page.evaluate(async (data) => {
-    const openDB = (): Promise<IDBDatabase> =>
-      new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => resolve(req.result as IDBDatabase)
-      })
-
-    const db = await openDB()
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction('lessons', 'readwrite')
-      const req = tx.objectStore('lessons').put(data)
-      req.onerror = () => reject(req.error)
-      tx.oncomplete = () => resolve()
-    })
-    db.close()
-  }, lesson)
-}
-
-/**
- * Seed Segment records into the `segments` object store.
- * Segments are stored as an array under the lessonId key (not per-segment id).
- */
-export async function seedSegments(page: Page, lessonId: string, segments: IDBSegment[]): Promise<void> {
-  await page.evaluate(async ({ lessonId, segments }) => {
-    const openDB = (): Promise<IDBDatabase> =>
-      new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => resolve(req.result as IDBDatabase)
-      })
-
-    const db = await openDB()
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction('segments', 'readwrite')
-      const req = tx.objectStore('segments').put(segments, lessonId)
-      req.onerror = () => reject(req.error)
-      tx.oncomplete = () => resolve()
-    })
-    db.close()
-  }, { lessonId, segments })
-}
-
 /** Seed a single VocabEntry into the `vocabulary` object store. */
 export async function seedVocabEntry(page: Page, entry: IDBVocabEntry): Promise<void> {
   await page.evaluate(async (data) => {
     const openDB = (): Promise<IDBDatabase> =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
+        const req = indexedDB.open('shadowlearn')
         req.onerror = () => reject(req.error)
         req.onsuccess = () => resolve(req.result as IDBDatabase)
       })
@@ -163,7 +53,7 @@ export async function seedVocabEntries(page: Page, entries: IDBVocabEntry[]): Pr
   await page.evaluate(async (data) => {
     const openDB = (): Promise<IDBDatabase> =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
+        const req = indexedDB.open('shadowlearn')
         req.onerror = () => reject(req.error)
         req.onsuccess = () => resolve(req.result as IDBDatabase)
       })
@@ -193,7 +83,7 @@ export async function getAllVocabEntries(page: Page): Promise<IDBVocabEntry[]> {
   return page.evaluate(() => {
     const openDB = (): Promise<IDBDatabase> =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
+        const req = indexedDB.open('shadowlearn')
         req.onerror = () => reject(req.error)
         req.onsuccess = () => resolve(req.result as IDBDatabase)
       })
@@ -217,7 +107,7 @@ export async function getVocabEntriesByLesson(page: Page, lessonId: string): Pro
   return page.evaluate(async (lid) => {
     const openDB = (): Promise<IDBDatabase> =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
+        const req = indexedDB.open('shadowlearn')
         req.onerror = () => reject(req.error)
         req.onsuccess = () => resolve(req.result as IDBDatabase)
       })
@@ -241,7 +131,7 @@ export async function countVocabEntries(page: Page): Promise<number> {
   return page.evaluate(() => {
     const openDB = (): Promise<IDBDatabase> =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
+        const req = indexedDB.open('shadowlearn')
         req.onerror = () => reject(req.error)
         req.onsuccess = () => resolve(req.result as IDBDatabase)
       })
@@ -260,36 +150,12 @@ export async function countVocabEntries(page: Page): Promise<number> {
   })
 }
 
-/** Clears all records from the `lessons` store. */
-export async function clearLessonsStore(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const openDB = (): Promise<IDBDatabase> =>
-      new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => resolve(req.result as IDBDatabase)
-      })
-
-    return openDB().then(db =>
-      new Promise<void>((resolve, reject) => {
-        const tx = db.transaction('lessons', 'readwrite')
-        const req = tx.objectStore('lessons').clear()
-        req.onerror = () => reject(req.error)
-        tx.oncomplete = () => {
-          db.close()
-          resolve()
-        }
-      }),
-    )
-  })
-}
-
 /** Clears all records from the `vocabulary` store. */
 export async function clearVocabStore(page: Page): Promise<void> {
   await page.evaluate(() => {
     const openDB = (): Promise<IDBDatabase> =>
       new Promise((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
+        const req = indexedDB.open('shadowlearn')
         req.onerror = () => reject(req.error)
         req.onsuccess = () => resolve(req.result as IDBDatabase)
       })

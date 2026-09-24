@@ -77,7 +77,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry, onToggleDone }
     : 0
 
   const thumbnailUrl = isYoutube ? getYoutubeThumbnail(lesson.sourceUrl) : null
-  const uploadThumbnail = useUploadThumbnail(lesson.id, !isYoutube && !isBlog)
+  const { ref: thumbnailRef, dataUrl: uploadThumbnail } = useUploadThumbnail(lesson.id, lesson.media, !isYoutube && !isBlog)
 
   const [imgFailed, setImgFailed] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -131,7 +131,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry, onToggleDone }
   const navDisabled = isEditing || isProcessing
 
   return (
-    <div className="w-[340px] shrink-0 flex flex-col h-full" data-testid={`lesson-card-${lesson.id}`} data-status={status}>
+    <div ref={thumbnailRef} className="w-[340px] shrink-0 flex flex-col h-full" data-testid={`lesson-card-${lesson.id}`} data-status={status}>
       <Link
         to={`/lesson/${lesson.id}`}
         aria-label={lesson.title}

@@ -6,7 +6,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { usePlayer } from '@/app/providers/PlayerContext'
-import { getVideo, saveLessonMeta } from '@/db'
+import { saveLessonMeta } from '@/db'
 import { AgentActionsProvider, useAgentActions } from '@/features/agent/application/AgentActionsContext'
 import { CompanionPanel } from '@/features/agent/ui/CompanionPanel'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
@@ -28,13 +28,12 @@ function LessonViewContent() {
   const { t } = useI18n()
   const { db } = useAuth()
   const { player } = usePlayer()
-  const { updateLesson } = useLessons()
-  const { meta, segments, loading, error, updateMeta } = useLesson(db, id)
+  const { renameLesson } = useLessons()
+  const { meta, segments, media, loading, error, updateMeta } = useLesson(db, id)
   const activeSegment = useActiveSegment(segments)
   const { bests, getBest, saveBest, getAudio } = useSpeakingBests(id ?? '')
   const { refresh: refreshQueue } = useStudyQueueContext()
 
-  const [videoBlob, setVideoBlob] = useState<Blob | undefined>()
   type ShadowingActiveMode = null | { mode: 'dictation' | 'speaking', segments: Segment[] }
   const [shadowingMode, setShadowingMode] = useState<ShadowingActiveMode>(null)
   const [pickerSegment, setPickerSegment] = useState<Segment | null>(null)
@@ -107,17 +106,6 @@ function LessonViewContent() {
     clearAction()
   }, [pendingAction, clearAction, segments, player])
 
-  // Load media blob (video for uploads, audio for YouTube lessons)
-  useEffect(() => {
-    if (!db || !id || !meta)
-      return
-    getVideo(db, id).then((blob) => {
-      if (blob)
-        setVideoBlob(blob)
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, id, meta?.id])
-
   const handleSegmentClick = useCallback((segment: { start: number }) => {
     if (!player)
       return
@@ -155,9 +143,9 @@ function LessonViewContent() {
   const handleRename = useCallback(async (newTitle: string) => {
     if (!meta)
       return
-    await updateLesson({ ...meta, title: newTitle })
+    await renameLesson(meta, newTitle)
     updateMeta({ title: newTitle })
-  }, [meta, updateLesson, updateMeta])
+  }, [meta, renameLesson, updateMeta])
 
   const handleShadowingStart = useCallback(
     (mode: 'dictation' | 'speaking', count: number | 'all') => {
@@ -267,7 +255,7 @@ function LessonViewContent() {
             lesson={meta}
             segments={segments}
             activeSegment={activeSegment}
-            videoBlob={videoBlob}
+            media={media}
             onRename={handleRename}
           />
         </div>

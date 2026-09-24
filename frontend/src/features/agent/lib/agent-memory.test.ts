@@ -1,22 +1,23 @@
+import type { DataClient } from '@/db'
 /**
  * Tests for agent-memory.ts — saveMemory, recallMemory, getMemorySummary
  * Uses fake-indexeddb for IDB testing.
  */
 
-import type { ShadowLearnDB } from '@/db'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { initDB } from '@/db'
 import { getMemorySummary, recallMemory, removeMemory, saveMemory } from '@/features/agent/lib/agent-memory'
+import { fakeDataClient } from '../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
-let db: ShadowLearnDB
+let db: DataClient
 
 beforeEach(async () => {
-  db = await initDB()
+  db = fakeDataClient(await initDB())
 })
 
 afterEach(() => {
-  db.close()
+  db.legacy.close()
   // Reset IDB between tests
   globalThis.indexedDB = new IDBFactory()
 })
@@ -39,7 +40,7 @@ describe('saveMemory', () => {
       importance: 1,
       lessonId: 'lesson-1',
     })
-    const stored = await db.get('agent-memory', id)
+    const stored = await db.legacy.get('agent-memory', id)
     expect(stored).toBeDefined()
     expect(stored!.content).toBe('Loves cooking vocabulary')
     expect(stored!.tags).toEqual(['vocab', 'cooking'])
@@ -113,8 +114,8 @@ describe('getMemorySummary', () => {
 describe('removeMemory', () => {
   it('deletes a memory by id', async () => {
     const { id } = await saveMemory(db, { content: 'temp', tags: [], importance: 1 })
-    expect(await db.get('agent-memory', id)).toBeDefined()
+    expect(await db.legacy.get('agent-memory', id)).toBeDefined()
     await removeMemory(db, id)
-    expect(await db.get('agent-memory', id)).toBeUndefined()
+    expect(await db.legacy.get('agent-memory', id)).toBeUndefined()
   })
 })

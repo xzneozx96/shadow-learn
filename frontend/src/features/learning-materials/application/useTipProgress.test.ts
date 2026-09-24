@@ -1,11 +1,12 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getTipProgress, initDB } from '@/db'
+import { fakeDataClient } from '../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
-let testDb: ShadowLearnDB
+let testDb: DataClient
 
 // useTipProgress reads `db` from AuthContext; mock it to our test DB.
 vi.mock('@/app/providers/AuthContext', () => ({
@@ -16,11 +17,11 @@ vi.mock('@/app/providers/AuthContext', () => ({
 const { useTipProgress } = await import('@/features/learning-materials/application/useTipProgress')
 
 beforeEach(async () => {
-  testDb = await initDB()
+  testDb = fakeDataClient(await initDB())
 })
 
 afterEach(() => {
-  testDb.close()
+  testDb.legacy.close()
   globalThis.indexedDB = new IDBFactory()
 })
 

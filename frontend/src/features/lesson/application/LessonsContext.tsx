@@ -1,61 +1,138 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { LessonMeta } from '@/shared/types'
 import * as React from 'react'
-import { createContext, use, useCallback, useEffect, useState } from 'react'
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
-import { deleteFullLesson, getAllLessonMetas, saveLessonMeta } from '@/db'
+import { deleteFullLesson, getAllLessonMetas, renameLesson as renameServerLesson, saveLessonMeta } from '@/db'
 import { useJobPoller } from '@/features/lesson/application/useJobPoller'
+
+type LessonsStatus = 'loading' | 'ready' | 'error'
 
 interface LessonsContextValue {
   lessons: LessonMeta[]
-  db: ShadowLearnDB | null
+  status: LessonsStatus
+  error: string | null
+  reload: () => Promise<void>
+  db: DataClient | null
   updateLesson: (meta: LessonMeta) => Promise<void>
+  renameLesson: (meta: LessonMeta, title: string) => Promise<void>
   deleteLesson: (id: string) => Promise<void>
-  refreshLessons: () => Promise<void>
 }
 
 const LessonsContext = createContext<LessonsContextValue | null>(null)
 
-export function LessonsProvider({ children }: { children: React.ReactNode }) {
-  const { db } = useAuth()
-  const [lessons, setLessons] = useState<LessonMeta[]>([])
+function isLocalOnly(meta: LessonMeta): boolean {
+  return meta.status === 'processing' || meta.status === 'error'
+}
 
-  const refreshLessons = useCallback(async () => {
+function pendingKey(userId: string): string {
+  return `shadowlearn.pending-lessons.${userId}`
+}
+
+function readPending(userId: string | undefined): LessonMeta[] {
+  if (!userId)
+    return []
+  try {
+    return JSON.parse(localStorage.getItem(pendingKey(userId)) ?? '[]')
+  }
+  catch {
+    return []
+  }
+}
+
+function upsert(list: LessonMeta[], meta: LessonMeta): LessonMeta[] {
+  const idx = list.findIndex(l => l.id === meta.id)
+  if (idx === -1)
+    return [meta, ...list]
+  const next = [...list]
+  next[idx] = meta
+  return next
+}
+
+export function LessonsProvider({ children }: { children: React.ReactNode }) {
+  const { db, session } = useAuth()
+  const userId = session?.userId
+  const [serverLessons, setServerLessons] = useState<LessonMeta[]>([])
+  const [pending, setPending] = useState<LessonMeta[]>(() => readPending(userId))
+  const [status, setStatus] = useState<LessonsStatus>('loading')
+  const [error, setError] = useState<string | null>(null)
+  const requestRef = useRef(0)
+
+  useEffect(() => {
+    if (userId)
+      localStorage.setItem(pendingKey(userId), JSON.stringify(pending))
+  }, [userId, pending])
+
+  const reload = useCallback(async () => {
     if (!db)
       return
-    const metas = await getAllLessonMetas(db)
-    setLessons(metas)
+    const request = ++requestRef.current
+    setStatus(s => s === 'ready' ? 'ready' : 'loading')
+    try {
+      const metas = await getAllLessonMetas(db)
+      if (request !== requestRef.current)
+        return
+      setServerLessons(metas)
+      setError(null)
+      setStatus('ready')
+    }
+    catch (e) {
+      if (request !== requestRef.current)
+        return
+      setError(e instanceof Error ? e.message : 'Failed to load lessons')
+      setStatus('error')
+    }
   }, [db])
 
   const updateLesson = useCallback(async (meta: LessonMeta) => {
     if (!db)
       return
+    if (isLocalOnly(meta)) {
+      setPending(prev => upsert(prev, meta))
+      return
+    }
     await saveLessonMeta(db, meta)
-    setLessons((prev) => {
-      const idx = prev.findIndex(l => l.id === meta.id)
-      if (idx === -1)
-        return [...prev, meta]
-      const next = [...prev]
-      next[idx] = meta
-      return next
-    })
+    setServerLessons(prev => upsert(prev, meta))
+  }, [db])
+
+  const renameLesson = useCallback(async (meta: LessonMeta, title: string) => {
+    if (!db)
+      return
+    const renamed = { ...meta, title }
+    if (isLocalOnly(meta)) {
+      setPending(prev => upsert(prev, renamed))
+      return
+    }
+    await renameServerLesson(db, meta.id, title)
+    setServerLessons(prev => upsert(prev, renamed))
   }, [db])
 
   const deleteLesson = useCallback(async (id: string) => {
     if (!db)
       return
+    if (pending.some(l => l.id === id)) {
+      setPending(prev => prev.filter(l => l.id !== id))
+      return
+    }
     await deleteFullLesson(db, id)
-    setLessons(prev => prev.filter(l => l.id !== id))
-  }, [db])
+    setServerLessons(prev => prev.filter(l => l.id !== id))
+  }, [db, pending])
+
+  const completeLesson = useCallback(async (id: string) => {
+    await reload()
+    setPending(prev => prev.filter(l => l.id !== id))
+  }, [reload])
 
   useEffect(() => {
-    refreshLessons()
-  }, [refreshLessons])
+    reload()
+  }, [reload])
 
-  useJobPoller({ lessons, db, updateLesson })
+  const lessons = useMemo(() => [...pending, ...serverLessons], [pending, serverLessons])
+
+  useJobPoller({ lessons, updateLesson, completeLesson })
 
   return (
-    <LessonsContext value={{ lessons, db, updateLesson, deleteLesson, refreshLessons }}>
+    <LessonsContext value={{ lessons, status, error, reload, db, updateLesson, renameLesson, deleteLesson }}>
       {children}
     </LessonsContext>
   )

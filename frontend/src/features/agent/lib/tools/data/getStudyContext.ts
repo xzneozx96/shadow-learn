@@ -1,4 +1,4 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
 import {
   getMasteryData,
@@ -10,7 +10,7 @@ import { buildTool } from '@/features/agent/lib/tools/types'
 import { getEffectiveDueItems } from '@/shared/lib/skillSessionProgress'
 
 export async function executeGetStudyContext(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: { lessonId?: string },
 ) {
   const [dueItems, recentMistakes, masteryScores, progressStats] = await Promise.all([
@@ -22,8 +22,8 @@ export async function executeGetStudyContext(
 
   const lessonVocab = args.lessonId ? await getVocabEntriesByLesson(db, args.lessonId) : []
 
-  const allStatKeys = await db.getAllKeys('exercise-stats') as string[]
-  const allStats = await Promise.all(allStatKeys.map(k => db.get('exercise-stats', k)))
+  const allStatKeys = await db.legacy.getAllKeys('exercise-stats') as string[]
+  const allStats = await Promise.all(allStatKeys.map(k => db.legacy.get('exercise-stats', k)))
 
   const weakItems = allStatKeys
     .map((key, i) => ({ key, stat: allStats[i]! }))

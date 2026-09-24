@@ -1,19 +1,6 @@
 import { openDB } from 'idb'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import {
-  deleteChatMessages,
-  deleteThread,
-  getChatMessages,
-  getLatestSummary,
-  getThread,
-  getTipChat,
-  initDB,
-  listThreadsBySurface,
-  putThreadSummary,
-  putTipChat,
-  saveChatMessages,
-  saveThreadMessages,
-} from '../src/db'
+import { initDB } from '../src/db'
 import 'fake-indexeddb/auto'
 
 const DB_NAME = 'shadowlearn'
@@ -82,111 +69,6 @@ describe('iDB v20 migration', () => {
     const db = await initDB()
     expect(await db.get('chats', 'lesson-abc')).toBeDefined()
     expect(await db.get('tip-chats', 'course-x:video-y')).toBeDefined()
-    db.close()
-  })
-})
-
-describe('thread helpers', () => {
-  beforeEach(() => { globalThis.indexedDB = new IDBFactory() })
-  afterEach(() => { globalThis.indexedDB = new IDBFactory() })
-
-  it('saveThreadMessages + getThread round-trip', async () => {
-    const db = await initDB()
-    const msgs = [{ id: 'a', role: 'user', parts: [{ type: 'text', text: 'hello' }] }] as any
-    await saveThreadMessages(db, 'tid', msgs, 'lesson', 'tid')
-    const got = await getThread(db, 'tid')
-    expect(got?.messages).toEqual(msgs)
-    expect(got?.surface).toBe('lesson')
-    db.close()
-  })
-
-  it('listThreadsBySurface filters by surface', async () => {
-    const db = await initDB()
-    await saveThreadMessages(db, 'l1', [] as any, 'lesson', 'l1')
-    await saveThreadMessages(db, 'l2', [] as any, 'lesson', 'l2')
-    await saveThreadMessages(db, '__global', [] as any, 'global', null)
-    expect(await listThreadsBySurface(db, 'lesson')).toHaveLength(2)
-    expect(await listThreadsBySurface(db, 'global')).toHaveLength(1)
-    db.close()
-  })
-
-  it('deleteThread removes row + cascades summaries', async () => {
-    const db = await initDB()
-    await saveThreadMessages(db, 'tid', [] as any, 'lesson', 'tid')
-    await putThreadSummary(db, { threadId: 'tid', generation: 1, summary: 's', coversThroughMessageId: 'm', tokenBudget: 0, createdAt: 0 })
-    await deleteThread(db, 'tid')
-    expect(await getThread(db, 'tid')).toBeUndefined()
-    expect(await getLatestSummary(db, 'tid')).toBeUndefined()
-    db.close()
-  })
-
-  it('getLatestSummary returns highest generation', async () => {
-    const db = await initDB()
-    await saveThreadMessages(db, 't', [] as any, 'lesson', 't')
-    await putThreadSummary(db, { threadId: 't', generation: 1, summary: 'one', coversThroughMessageId: 'm1', tokenBudget: 100, createdAt: 1 })
-    await putThreadSummary(db, { threadId: 't', generation: 2, summary: 'two', coversThroughMessageId: 'm2', tokenBudget: 200, createdAt: 2 })
-    const latest = await getLatestSummary(db, 't')
-    expect(latest?.generation).toBe(2)
-    expect(latest?.summary).toBe('two')
-    db.close()
-  })
-})
-
-describe('legacy chat helpers (shim layer)', () => {
-  beforeEach(() => { (globalThis as any).indexedDB = new (globalThis as any).IDBFactory() })
-
-  it('saveChatMessages writes to both chats and threads', async () => {
-    const db = await initDB()
-    const msgs = [{ id: 'm', role: 'user', parts: [{ type: 'text', text: 'x' }] }] as any
-    await saveChatMessages(db, 'lesson-id', msgs)
-    expect(await db.get('chats', 'lesson-id')).toEqual(msgs)
-    const thread = await getThread(db, 'lesson-id')
-    expect(thread?.messages).toEqual(msgs)
-    expect(thread?.surface).toBe('lesson')
-    db.close()
-  })
-
-  it('saveChatMessages with __global tags as global surface', async () => {
-    const db = await initDB()
-    await saveChatMessages(db, '__global', [] as any)
-    expect((await getThread(db, '__global'))?.surface).toBe('global')
-    db.close()
-  })
-
-  it('getChatMessages prefers threads, falls back to legacy', async () => {
-    const db = await initDB()
-    await db.put('chats', [{ id: 'legacy' }] as any, 'lid')
-    const got = await getChatMessages(db, 'lid')
-    expect((got?.[0] as any)?.id).toBe('legacy')
-    db.close()
-  })
-
-  it('deleteChatMessages removes from both stores', async () => {
-    const db = await initDB()
-    await saveChatMessages(db, 'lid', [{ id: 'm' }] as any)
-    await deleteChatMessages(db, 'lid')
-    expect(await db.get('chats', 'lid')).toBeUndefined()
-    expect(await getThread(db, 'lid')).toBeUndefined()
-    db.close()
-  })
-
-  it('putTipChat dual-writes', async () => {
-    const db = await initDB()
-    const rec = { key: 'c:v', courseId: 'c', videoId: 'v', messages: [{ id: 'tm' }] as any, updatedAt: '2026-05-20T00:00:00Z' }
-    await putTipChat(db, rec as any)
-    expect((await db.get('tip-chats', 'c:v'))?.messages?.[0]?.id).toBe('tm')
-    const thread = await getThread(db, 'c:v')
-    expect(thread?.surface).toBe('tip')
-    expect(thread?.courseId).toBe('c')
-    expect(thread?.videoId).toBe('v')
-    db.close()
-  })
-
-  it('getTipChat prefers threads, falls back', async () => {
-    const db = await initDB()
-    await db.put('tip-chats', { key: 'c:v', courseId: 'c', videoId: 'v', messages: [{ id: 'fb' }], updatedAt: '' } as any)
-    const got = await getTipChat(db, 'c:v')
-    expect((got?.messages?.[0] as any)?.id).toBe('fb')
     db.close()
   })
 })

@@ -1,4 +1,4 @@
-import type { DailyTask, ShadowLearnDB } from '@/db'
+import type { DailyTask, DataClient } from '@/db'
 import type { TipProgress } from '@/features/learning-materials/domain/tips'
 import type { VocabEntry } from '@/shared/types'
 import { useCallback, useEffect, useState } from 'react'
@@ -65,7 +65,7 @@ export interface StudyQueueState {
 }
 
 export function useStudyQueue(
-  db: ShadowLearnDB | null,
+  db: DataClient | null,
   hasLesson: boolean = false,
 ): StudyQueueState {
   const [loading, setLoading] = useState(true)
@@ -82,7 +82,7 @@ export function useStudyQueue(
     writing: false,
   })
 
-  const load = useCallback(async (db: ShadowLearnDB) => {
+  const load = useCallback(async (db: DataClient) => {
     setLoading(true)
     const today = todayISO()
 

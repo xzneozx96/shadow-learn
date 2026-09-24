@@ -22,6 +22,7 @@ describe('agent-tools executors', () => {
   const mockDb = {
     get: vi.fn(),
   } as any
+  const client = { legacy: mockDb } as any
 
   beforeEach(() => {
     mockDb.get.mockReset()
@@ -44,7 +45,7 @@ describe('agent-tools executors', () => {
         .mockResolvedValueOnce(writingEntry1 as any)
         .mockResolvedValueOnce(writingEntry2 as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-w1', 'vocab-w2'],
         exerciseTypes: ['writing'],
       }) as any
@@ -67,7 +68,7 @@ describe('agent-tools executors', () => {
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [sentence1] }) } as any)
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [sentence2] }) } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-t1', 'vocab-t2'],
         exerciseTypes: ['translation'],
       }) as any
@@ -91,7 +92,7 @@ describe('agent-tools executors', () => {
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: [ex1] }) } as any)
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: [ex2] }) } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-p1', 'vocab-p2'],
         exerciseTypes: ['pronunciation'],
       }) as any
@@ -112,7 +113,7 @@ describe('agent-tools executors', () => {
       globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [s1, s2] }) } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-t1'],
         exerciseTypes: ['translation'],
         sentencesPerWord: 2,
@@ -133,7 +134,7 @@ describe('agent-tools executors', () => {
       globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: [ex1, ex2] }) } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-p1'],
         exerciseTypes: ['pronunciation'],
         sentencesPerWord: 2,
@@ -149,7 +150,7 @@ describe('agent-tools executors', () => {
     it('returns error when no items found', async () => {
       mockDb.get.mockResolvedValue(undefined)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['missing-1'],
         exerciseTypes: ['writing'],
       })
@@ -214,7 +215,7 @@ describe('agent-tools executors', () => {
         json: () => Promise.resolve({ exercises: [story] }),
       } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-c1', 'vocab-c2'],
         exerciseTypes: ['cloze'],
       }) as any
@@ -235,7 +236,7 @@ describe('agent-tools executors', () => {
         json: () => Promise.resolve({ exercises: [story1, story2] }),
       } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-c1', 'vocab-c2'],
         exerciseTypes: ['cloze'],
         storyCount: 2,
@@ -432,6 +433,7 @@ describe('executeGetStudyContext', () => {
     getAllKeys: vi.fn(),
     get: vi.fn(),
   } as any
+  const client = { legacy: mockDb } as any
 
   beforeEach(() => {
     mockDb.getAllKeys.mockResolvedValue([])
@@ -443,7 +445,7 @@ describe('executeGetStudyContext', () => {
 
   it('works without lessonId and skips getVocabEntriesByLesson', async () => {
     const { getVocabEntriesByLesson } = await import('@/db')
-    const result = await executeGetStudyContext(mockDb, {}) as any
+    const result = await executeGetStudyContext(client, {}) as any
 
     expect(result).toHaveProperty('dueItems')
     expect(result).toHaveProperty('recentMistakes')
@@ -453,9 +455,9 @@ describe('executeGetStudyContext', () => {
 
   it('calls getVocabEntriesByLesson when lessonId is provided', async () => {
     const { getVocabEntriesByLesson } = await import('@/db')
-    await executeGetStudyContext(mockDb, { lessonId: 'lesson-123' })
+    await executeGetStudyContext(client, { lessonId: 'lesson-123' })
 
-    expect(getVocabEntriesByLesson).toHaveBeenCalledWith(mockDb, 'lesson-123')
+    expect(getVocabEntriesByLesson).toHaveBeenCalledWith(client, 'lesson-123')
   })
 
   it('get_study_context tool definition does not require lessonId', () => {

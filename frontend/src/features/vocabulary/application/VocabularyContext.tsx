@@ -23,7 +23,7 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!db)
       return
-    db.getAll('vocabulary').then(setEntries)
+    db.legacy.getAll('vocabulary').then(setEntries)
   }, [db])
 
   const entriesByLesson = useMemo(() => {
@@ -55,7 +55,7 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
         createdAt: new Date().toISOString(),
       }
       try {
-        await db.put('vocabulary', entry)
+        await db.legacy.put('vocabulary', entry)
         setEntries(prev => [...prev, entry])
         captureVocabularyWordSaved({ source_language: entry.sourceLanguage })
       }
@@ -74,7 +74,7 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
       try {
         await deleteSpacedRepetitionItem(db, id)
         await deleteErrorPattern(db, id)
-        await db.delete('vocabulary', id)
+        await db.legacy.delete('vocabulary', id)
         setEntries(prev => prev.filter(e => e.id !== id))
       }
       catch {
@@ -94,7 +94,7 @@ export function VocabularyProvider({ children }: { children: React.ReactNode }) 
         deleteSpacedRepetitionItem(db, id),
         deleteErrorPattern(db, id),
       ]))
-      const tx = db.transaction('vocabulary', 'readwrite')
+      const tx = db.legacy.transaction('vocabulary', 'readwrite')
       await Promise.all(idsToDelete.map(id => tx.store.delete(id)))
       await tx.done
       setEntries(prev => prev.filter(e => e.sourceLessonId !== lessonId))

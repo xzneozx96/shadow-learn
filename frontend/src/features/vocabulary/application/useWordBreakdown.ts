@@ -1,4 +1,4 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { CharData } from '@/shared/lib/hanzi/types'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { deleteBreakdown, getBreakdown, saveBreakdown } from '@/db'
@@ -6,7 +6,7 @@ import { fetchBreakdownStory } from '@/features/vocabulary/lib/api/breakdownStor
 import { buildCharData } from '@/shared/lib/hanzi/lookup'
 
 interface UseWordBreakdownInput {
-  db: ShadowLearnDB | null
+  db: DataClient | null
   word: string
   pinyin: string
   meaning: string

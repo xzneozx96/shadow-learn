@@ -1,8 +1,9 @@
 import type { TipNote } from '@/features/learning-materials/domain/tips'
-
 import { deleteDB, openDB } from 'idb'
+
 import { afterEach, describe, expect, it } from 'vitest'
 import { deleteTipNote, getTipNotesForVideo, initDB, putTipNote } from '@/db'
+import { fakeDataClient } from './fake-api'
 import 'fake-indexeddb/auto'
 
 const DB_NAME = 'shadowlearn'
@@ -26,42 +27,42 @@ function makeNote(overrides: Partial<TipNote> = {}): TipNote {
 
 describe('tip-notes IDB store', () => {
   it('put + get round-trips a note keyed by [videoId, id]', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     const note = makeNote({ id: 'n1' })
     await putTipNote(db, note)
     const out = await getTipNotesForVideo(db, 'vid-1')
     expect(out).toHaveLength(1)
     expect(out[0]).toEqual(note)
-    db.close()
+    db.legacy.close()
   })
 
   it('lists only notes for the requested videoId', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await putTipNote(db, makeNote({ id: 'a', videoId: 'vid-1' }))
     await putTipNote(db, makeNote({ id: 'b', videoId: 'vid-2' }))
     await putTipNote(db, makeNote({ id: 'c', videoId: 'vid-1' }))
     const out = await getTipNotesForVideo(db, 'vid-1')
     expect(out.map(n => n.id).sort()).toEqual(['a', 'c'])
-    db.close()
+    db.legacy.close()
   })
 
   it('returns notes sorted by updatedAt desc', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await putTipNote(db, makeNote({ id: 'old', updatedAt: '2026-05-01T00:00:00.000Z' }))
     await putTipNote(db, makeNote({ id: 'new', updatedAt: '2026-05-19T00:00:00.000Z' }))
     await putTipNote(db, makeNote({ id: 'mid', updatedAt: '2026-05-10T00:00:00.000Z' }))
     const out = await getTipNotesForVideo(db, 'vid-1')
     expect(out.map(n => n.id)).toEqual(['new', 'mid', 'old'])
-    db.close()
+    db.legacy.close()
   })
 
   it('deleteTipNote removes the row', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await putTipNote(db, makeNote({ id: 'gone' }))
     await deleteTipNote(db, 'vid-1', 'gone')
     const out = await getTipNotesForVideo(db, 'vid-1')
     expect(out).toEqual([])
-    db.close()
+    db.legacy.close()
   })
 })
 
@@ -81,13 +82,13 @@ describe('tip-notes migration from v16', () => {
     earlier.close()
 
     // Now open at the latest version — initDB runs the v17 branch.
-    const db = await initDB()
-    expect(db.objectStoreNames.contains('tip-notes')).toBe(true)
-    expect(await db.get('tip-courses', 'c1')).toMatchObject({ id: 'c1' })
-    expect(await db.get('tip-cards', 'k1')).toMatchObject({ key: 'k1' })
+    const db = fakeDataClient(await initDB())
+    expect(db.legacy.objectStoreNames.contains('tip-notes')).toBe(true)
+    expect(await db.legacy.get('tip-courses', 'c1')).toMatchObject({ id: 'c1' })
+    expect(await db.legacy.get('tip-cards', 'k1')).toMatchObject({ key: 'k1' })
     await putTipNote(db, makeNote({ id: 'migrated' }))
     const out = await getTipNotesForVideo(db, 'vid-1')
     expect(out.map(n => n.id)).toEqual(['migrated'])
-    db.close()
+    db.legacy.close()
   })
 })

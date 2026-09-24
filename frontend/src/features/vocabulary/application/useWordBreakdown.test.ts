@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { initDB, saveBreakdown } from '@/db'
 import { useWordBreakdown } from '@/features/vocabulary/application/useWordBreakdown'
 import { fetchBreakdownStory } from '@/features/vocabulary/lib/api/breakdownStory'
+import { fakeDataClient } from '../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
 vi.mock('@/features/vocabulary/lib/api/breakdownStory', () => ({
@@ -17,7 +18,7 @@ afterEach(() => {
 
 describe('useWordBreakdown', () => {
   it('builds characters from local lookup synchronously after first effect', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     vi.mocked(fetchBreakdownStory).mockResolvedValue('mock story')
 
     const { result } = renderHook(() =>
@@ -36,7 +37,7 @@ describe('useWordBreakdown', () => {
   })
 
   it('returns cached story from IDB without calling LLM', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     await saveBreakdown(db, {
       word: '学',
       sourceLanguage: 'zh-CN',
@@ -61,7 +62,7 @@ describe('useWordBreakdown', () => {
   })
 
   it('calls LLM on first open and caches the result', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     vi.mocked(fetchBreakdownStory).mockResolvedValue('fresh story')
 
     const { result } = renderHook(() =>
@@ -83,7 +84,7 @@ describe('useWordBreakdown', () => {
   })
 
   it('exposes storyLoading=true while LLM call is in flight', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     let resolve!: (s: string) => void
     vi.mocked(fetchBreakdownStory).mockReturnValue(new Promise((r) => { resolve = r }))
 
@@ -103,7 +104,7 @@ describe('useWordBreakdown', () => {
   })
 
   it('exposes storyError on failure and lets user retry', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     vi.mocked(fetchBreakdownStory)
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValueOnce('recovered')

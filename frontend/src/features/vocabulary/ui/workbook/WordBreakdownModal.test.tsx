@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { initDB } from '@/db'
 import { WordBreakdownModal } from '@/features/vocabulary/ui/workbook/WordBreakdownModal'
+import { fakeDataClient } from '../../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
 vi.mock('@/features/vocabulary/lib/api/breakdownStory', () => ({
@@ -34,7 +35,7 @@ function renderModal(overrides = {}) {
 
 describe('wordBreakdownModal', () => {
   it('renders the word, pinyin, and meaning in the header', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     renderModal({ db })
     await waitFor(() => {
       expect(screen.getByText('学习')).toBeInTheDocument()
@@ -45,7 +46,7 @@ describe('wordBreakdownModal', () => {
   })
 
   it('renders Sino-Vietnamese reading from local lookup', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     renderModal({ db })
     await waitFor(() => {
       // "học" and "tập" expected from Unihan lookup for 学 and 习.
@@ -56,7 +57,7 @@ describe('wordBreakdownModal', () => {
   })
 
   it('renders the LLM story once it loads', async () => {
-    const db = await initDB()
+    const db = fakeDataClient(await initDB())
     renderModal({ db })
     await waitFor(() => {
       expect(screen.getByText(/Người thợ kéo sợi/)).toBeInTheDocument()

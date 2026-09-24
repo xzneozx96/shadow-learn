@@ -1,4 +1,4 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type {
   StudioCardsData,
   StudioKind,
@@ -21,7 +21,7 @@ type DataFor<K extends StudioKind>
 export type StudioStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 interface Args<K extends StudioKind> {
-  db: ShadowLearnDB | null
+  db: DataClient | null
   kind: K
   videoId: string
   transcript: string

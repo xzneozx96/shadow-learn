@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cardsKey } from '@/db'
 import { CardsTab } from '@/features/learning-materials/ui/tips/tabs/CardsTab'
+import { fakeDataClient } from '../../../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
 vi.mock('@/app/providers/I18nContext', async () => {
@@ -18,11 +19,11 @@ vi.mock('@/app/providers/AuthContext', () => ({
 
 beforeEach(async () => {
   const { deleteDB } = await import('idb')
-  mockDb.value?.close?.()
+  mockDb.value?.legacy.close()
   mockDb.value = null
   await deleteDB('shadowlearn')
   const { initDB, putTipCards } = await import('@/db')
-  mockDb.value = await initDB()
+  mockDb.value = fakeDataClient(await initDB())
   await putTipCards(mockDb.value, {
     key: cardsKey('v1', 'en'),
     videoId: 'v1',
@@ -69,7 +70,7 @@ describe('cardsTab', () => {
 
   it('shows generate CTA empty state when deck is empty', async () => {
     // Wipe cards
-    await mockDb.value.delete('tip-cards', cardsKey('v1', 'en'))
+    await mockDb.value.legacy.delete('tip-cards', cardsKey('v1', 'en'))
     render(<CardsTab videoId="v1" transcript="x" transcriptStatus="ready" />)
     await waitFor(() => expect(screen.getByRole('button', { name: /generate cards/i })).toBeInTheDocument())
   })

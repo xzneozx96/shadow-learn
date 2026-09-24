@@ -1,12 +1,13 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { StudioMindMapData } from '@/features/learning-materials/domain/tips'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initDB, putTipStudio, studioKey } from '@/db'
 import { useTipStudio } from '@/features/learning-materials/application/useTipStudio'
+import { fakeDataClient } from '../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
-let db: ShadowLearnDB
+let db: DataClient
 
 function makeResponse(status: number, body: unknown): Response {
   return {
@@ -19,12 +20,12 @@ function makeResponse(status: number, body: unknown): Response {
 beforeEach(async () => {
   const { deleteDB } = await import('idb')
   await deleteDB('shadowlearn')
-  db = await initDB()
+  db = fakeDataClient(await initDB())
   globalThis.fetch = vi.fn() as any
 })
 
 afterEach(() => {
-  db?.close()
+  db?.legacy.close()
   vi.restoreAllMocks()
 })
 
@@ -72,7 +73,7 @@ describe('useTipStudio', () => {
 
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.data).toEqual(fake)
-    const cached = await db.get('tip-studio', studioKey('v2', 'summary', 'en'))
+    const cached = await db.legacy.get('tip-studio', studioKey('v2', 'summary', 'en'))
     expect(cached?.data).toEqual(fake)
   })
 

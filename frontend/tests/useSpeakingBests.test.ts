@@ -1,12 +1,14 @@
+import type { DataClient } from '@/db'
 import type { ShadowingBest } from '@/shared/types'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { initDB, saveSpeakingAudio, saveSpeakingBest } from '@/db'
 import { useSpeakingBests } from '@/shared/hooks/useSpeakingBests'
+import { fakeDataClient } from './fake-api'
 import 'fake-indexeddb/auto'
 
-let mockDb: Awaited<ReturnType<typeof initDB>>
+let mockDb: DataClient
 
 // Mock AuthContext — hook reads db from useAuth()
 vi.mock('@/app/providers/AuthContext', () => ({
@@ -29,7 +31,7 @@ function makeBest(lessonId: string, segmentId: string, score = 80): ShadowingBes
 describe('useSpeakingBests', () => {
   beforeEach(async () => {
     globalThis.indexedDB = new IDBFactory()
-    mockDb = await initDB()
+    mockDb = fakeDataClient(await initDB())
   })
 
   it('loads existing bests on mount', async () => {

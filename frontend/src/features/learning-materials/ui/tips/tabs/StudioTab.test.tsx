@@ -1,9 +1,10 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { initDB } from '@/db'
 import { StudioTab } from '@/features/learning-materials/ui/tips/tabs/StudioTab'
+import { fakeDataClient } from '../../../../../../tests/fake-api'
 import 'fake-indexeddb/auto'
 
 vi.mock('@/app/providers/I18nContext', async () => {
@@ -11,17 +12,17 @@ vi.mock('@/app/providers/I18nContext', async () => {
   return { useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }) }
 })
 
-let testDb: ShadowLearnDB | null = null
+let testDb: DataClient | null = null
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: testDb }),
 }))
 
 beforeEach(async () => {
   const { deleteDB } = await import('idb')
-  testDb?.close()
+  testDb?.legacy.close()
   testDb = null
   await deleteDB('shadowlearn')
-  testDb = await initDB()
+  testDb = fakeDataClient(await initDB())
   globalThis.fetch = vi.fn() as any
 })
 

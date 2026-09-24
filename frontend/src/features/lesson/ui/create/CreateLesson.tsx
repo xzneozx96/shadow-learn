@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Layout } from '@/app/Layout'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
-import { getSettings, saveVideo } from '@/db'
+import { getSettings } from '@/db'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
 import { apiFetch } from '@/shared/lib/api'
 import { LANGUAGES } from '@/shared/lib/constants'
@@ -73,7 +73,6 @@ export function CreateLesson() {
       let lessonSource: 'youtube' | 'upload' | 'blog'
       let lessonSourceUrl: string | null = null
       let lessonTitle: string
-      let capturedFile: File | null = null
 
       if (isYoutube) {
         const res = await apiFetch(`/api/lessons/generate`, {
@@ -101,7 +100,6 @@ export function CreateLesson() {
         lessonSourceUrl = youtubeUrl
       }
       else if (tab === 'upload') {
-        capturedFile = file!
         const formData = new FormData()
         formData.append('file', file!)
         formData.append('translation_languages', language)
@@ -169,11 +167,6 @@ export function CreateLesson() {
 
       const lessonId = crypto.randomUUID()
       const now = new Date().toISOString()
-
-      // For uploads: persist audio to IndexedDB before navigating (component will unmount)
-      if (lessonSource === 'upload' && capturedFile) {
-        await saveVideo(db, lessonId, capturedFile)
-      }
 
       await updateLesson({
         id: lessonId,

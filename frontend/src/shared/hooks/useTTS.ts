@@ -1,4 +1,4 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { getTTSCache, saveTTSCache } from '@/db'
@@ -10,7 +10,7 @@ interface UseTTSReturn {
 }
 
 export function useTTS(
-  db: ShadowLearnDB | null,
+  db: DataClient | null,
   language: string = 'zh-CN',
   voiceId?: string,
 ): UseTTSReturn {

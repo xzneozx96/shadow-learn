@@ -31,6 +31,10 @@ vi.mock('@/app/providers/PlayerContext', () => ({
   }),
 }))
 
+vi.mock('@/app/providers/AuthContext', () => ({
+  useAuth: () => ({ db: null }),
+}))
+
 vi.mock('react-router-dom', () => ({
   Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
 }))
@@ -49,12 +53,12 @@ const lesson: LessonMeta = {
   tags: [],
 }
 
-const videoBlob = new Blob([''], { type: 'video/mp4' })
+const media = { id: 'm1', kind: 'video' as const, url: 'http://api.test/api/media/m1?token=t' }
 
 describe('videoPanel click-to-play', () => {
   it('pauses when clicking the video while playing', () => {
     const { container } = render(
-      <VideoPanel lesson={lesson} segments={[]} activeSegment={null} videoBlob={videoBlob} />,
+      <VideoPanel lesson={lesson} segments={[]} activeSegment={null} media={media} />,
     )
     const video = container.querySelector('video')!
     expect(video).not.toBeNull()
@@ -68,7 +72,7 @@ describe('videoPanel click-to-play', () => {
     mockPlay.mockClear()
 
     const { container } = render(
-      <VideoPanel lesson={lesson} segments={[]} activeSegment={null} videoBlob={videoBlob} />,
+      <VideoPanel lesson={lesson} segments={[]} activeSegment={null} media={media} />,
     )
     const video = container.querySelector('video')!
     fireEvent.click(video)

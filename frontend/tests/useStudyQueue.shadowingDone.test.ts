@@ -1,9 +1,10 @@
-import type { SessionLog } from '@/db'
+import type { DataClient, SessionLog } from '@/db'
 import { renderHook, waitFor } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initDB, saveSessionLog } from '@/db'
 import { useStudyQueue } from '@/features/study/application/useStudyQueue'
+import { fakeDataClient } from './fake-api'
 import 'fake-indexeddb/auto'
 
 const TODAY = '2026-05-27'
@@ -26,11 +27,11 @@ function makeLog(skillPracticed: SessionLog['skillPracticed'], date = TODAY): Se
 }
 
 describe('useStudyQueue — shadowingDone', () => {
-  let db: Awaited<ReturnType<typeof initDB>>
+  let db: DataClient
 
   beforeEach(async () => {
     globalThis.indexedDB = new IDBFactory()
-    db = await initDB()
+    db = fakeDataClient(await initDB())
     localStorage.clear()
   })
 

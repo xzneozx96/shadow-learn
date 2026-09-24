@@ -1,14 +1,15 @@
 import type { ReactNode } from 'react'
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient, ShadowLearnDB } from '@/db'
 import {
   createContext,
   use,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 
 } from 'react'
-import { initDB } from '@/db'
+import { createApiClient, initDB } from '@/db'
 import { apiFetch, clearTokens, hasRefreshToken, onSessionLost, setTokens } from '@/shared/lib/api'
 
 interface Session {
@@ -19,7 +20,7 @@ interface Session {
 interface AuthState {
   session: Session | null | undefined // undefined = loading
   sessionCheckFailed: boolean
-  db: ShadowLearnDB | null
+  db: DataClient | null
   trialMode: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
@@ -51,7 +52,7 @@ async function fetchSession(): Promise<Session | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [db, setDb] = useState<ShadowLearnDB | null>(null)
+  const [legacy, setLegacy] = useState<ShadowLearnDB | null>(null)
   const [trialMode, setTrialMode] = useState<boolean>(
     () => sessionStorage.getItem(TRIAL_SESSION_KEY) === 'trial',
   )
@@ -79,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       current = database
-      setDb(database)
+      setLegacy(database)
     }
     connect()
     return () => {
@@ -87,6 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       current?.close()
     }
   }, [])
+
+  const userId = session?.userId
+  const db = useMemo<DataClient | null>(
+    () => userId && legacy ? { api: createApiClient(), legacy } : null,
+    [userId, legacy],
+  )
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await apiFetch('/api/auth/login', {

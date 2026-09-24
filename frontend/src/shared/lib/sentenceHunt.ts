@@ -1,4 +1,4 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { Segment } from '@/shared/types'
 import { getAllLessonMetas, getSegments } from '@/db'
 
@@ -9,7 +9,7 @@ export interface SegmentMatch {
 }
 
 export async function findSegmentsForWords(
-  db: ShadowLearnDB,
+  db: DataClient,
   dueWords: string[],
   maxLessons = 20,
   maxSegments = 10,
