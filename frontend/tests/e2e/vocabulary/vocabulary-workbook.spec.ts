@@ -366,6 +366,7 @@ test('VOC.PERF-E2E-011 @p2 @regression — workbook-renders-fast-500-entries: /v
   await page.goto('/vocabulary')
   await expect(page.getByText(/500\s+words?/i).first()).toBeVisible({ timeout: 10_000 })
   const elapsed = Date.now() - t0
+  console.warn(`VOC.PERF-E2E-011 elapsed ${elapsed} ms`)
 
   expect(elapsed).toBeLessThan(2_000)
 })
