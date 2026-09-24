@@ -165,8 +165,7 @@ export function useTipCards(args: Args) {
       cancelledRef.current = true
       clearPoll()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, key, probeNonce])
+  }, [db, videoId, locale, probeNonce, applyStates, pollJob, clearPoll])
 
   const refresh = useCallback(() => setProbeNonce(n => n + 1), [])
 

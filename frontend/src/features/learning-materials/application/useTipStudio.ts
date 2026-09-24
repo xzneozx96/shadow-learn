@@ -210,8 +210,7 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       cancelledRef.current = true
       clearPoll()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, cacheKey, probeNonce])
+  }, [db, kind, videoId, locale, probeNonce, pollJob, clearPoll])
 
   const refresh = useCallback(() => setProbeNonce(n => n + 1), [])
 

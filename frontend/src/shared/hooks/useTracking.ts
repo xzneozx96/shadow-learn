@@ -86,8 +86,7 @@ export async function logExerciseCompletion(
   bufferSM2Score(vocabEntry.id, score, today)
 
   // Update exercise-stats (difficulty tracking per vocabId:exerciseType)
-  const statKey = `${vocabEntry.id}:${exerciseType}`
-  await upsertExerciseStat(db, statKey, isCorrect)
+  await upsertExerciseStat(db, { vocabId: vocabEntry.id, exerciseType }, isCorrect)
 
   // 2. Update progress-db
   const skill = EXERCISE_TO_SKILL[exerciseType]

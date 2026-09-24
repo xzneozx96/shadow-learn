@@ -128,7 +128,7 @@ export function ShadowingPanel({ segments, mode, onExit, lesson, getBest, saveBe
 
   function handleNext(score: number | null) {
     if (db && mode === 'speaking' && segment && score !== null) {
-      void upsertExerciseStat(db, `${segment.id}:pronunciation`, score >= 70)
+      void upsertExerciseStat(db, { vocabId: segment.id, exerciseType: 'pronunciation' }, score >= 70)
     }
     setResults(prev => [...prev, {
       segmentIndex,

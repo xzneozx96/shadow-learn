@@ -1,5 +1,5 @@
 import type { TipSegment, TipTranscriptStatus } from '@/features/learning-materials/domain/tips'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '@/shared/lib/api'
 
 const POLL_INTERVAL_MS = 1500
@@ -63,7 +63,7 @@ function makeInitial(retry: () => void): UseTipTranscriptResult {
 
 export function useTipTranscript(videoId: string): UseTipTranscriptResult {
   const [tick, setTick] = useState(0)
-  const retry = () => setTick(t => t + 1)
+  const retry = useCallback(() => setTick(t => t + 1), [])
   const key = `${videoId}:${tick}`
 
   // Single piece of state holding both the active key AND the result. This
@@ -86,7 +86,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
   const visible = isStale ? makeInitial(retry) : entry.result
 
   type Updater = UseTipTranscriptResult | ((r: UseTipTranscriptResult) => UseTipTranscriptResult)
-  function setResult(updater: Updater): void {
+  const setResult = useCallback((updater: Updater): void => {
     setEntry((prev) => {
       // Defend against late writes from the previous video's async tasks.
       if (prev.key !== key) {
@@ -97,7 +97,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
         : updater
       return { key: prev.key, result: nextResult }
     })
-  }
+  }, [key])
 
   useEffect(() => {
     if (!videoId)
@@ -230,8 +230,7 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
         pollTimerRef.current = null
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- setResult is rebuilt each render and discards writes for a stale key
-  }, [videoId, tick])
+  }, [videoId, retry, setResult])
 
   return visible
 }
