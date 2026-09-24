@@ -25,10 +25,7 @@ type StatusBody = StatusReady | StatusPending | StatusNone
 
 /**
  * Cards deck state. Mirrors :func:`useTipStudio` — the cards artifact rides
- * on the same studio job pipeline (``kind=cards``). The hook layers a small
- * SRS-style state machine on top: ``state`` (new / known / learning) lives
- * per user in the ``tip-card-states`` store, keyed by the card's front text,
- * so it survives regenerations that keep the same front-question.
+ * on the same studio job pipeline (``kind=cards``).
  */
 export function useTipCards(args: Args) {
   const { db, videoId, transcript, locale } = args
@@ -36,9 +33,6 @@ export function useTipCards(args: Args) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
-  // False until the first backend probe settles. Same intent as useTipStudio:
-  // lets callers render a skeleton during hydration so the tile doesn't
-  // flash an empty state before the deck arrives.
   const [hydrated, setHydrated] = useState(false)
   // probeNonce is bumped by refresh() so other hook instances observing the
   // same artifact key can force a re-probe after a sibling kicks off a job.

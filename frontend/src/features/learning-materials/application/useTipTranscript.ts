@@ -21,7 +21,6 @@ export interface UseTipTranscriptResult {
   error: Error | null
   durationSec: number | null
   limitSec: number | null
-  /** False until the load for the active video starts. */
   hydrated: boolean
   retry: () => void
 }
@@ -108,8 +107,6 @@ export function useTipTranscript(videoId: string): UseTipTranscriptResult {
     const state = { cancelled: false }
 
     async function load() {
-      // Render the warming UI at once instead of waiting for the backend's
-      // first response, which can take 5-6s while a new job is enqueued.
       setResult(r => ({ ...r, hydrated: true }))
 
       try {

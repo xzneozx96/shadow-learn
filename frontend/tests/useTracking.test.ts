@@ -6,7 +6,6 @@ import { useAuth } from '@/app/providers/AuthContext'
 import { EXERCISE_TO_SKILL, useTracking } from '@/shared/hooks/useTracking'
 import { fakeDataClient } from './fake-api'
 
-// Reads the record the server would hold for `store`/`key`.
 function stored(db: DataClient, store: string, key: string): Promise<any> {
   return db.api.get(`/api/store/${store}/${encodeURIComponent(key)}`)
 }
@@ -88,7 +87,6 @@ describe('useTracking', () => {
     vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
     const { result } = renderHook(() => useTracking())
     await result.current.logExerciseResult({ vocabEntry: mockVocabEntry, exerciseType: 'dictation', score: 80 })
-    // SM-2 should NOT be written to the server yet
     const srItem = await stored(db, 'spaced-repetition', 'entry-1')
     expect(srItem).toBeUndefined()
     // But pending buffer should have the score

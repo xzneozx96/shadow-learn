@@ -23,7 +23,6 @@ function serveDeck(...fronts: string[]) {
 beforeEach(() => {
   api = new FakeApiClient()
   db = fakeDataClient(api)
-  // Default probe response: backend has no deck and no live job.
   globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse(404, { status: 'none' })) as any
 })
 

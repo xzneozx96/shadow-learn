@@ -132,7 +132,6 @@ export interface TipCardState {
   updatedAt: string
 }
 
-// Per-user known/learning marks for one deck, keyed by card front.
 export interface TipCardStatesRecord {
   videoId: string
   locale: StudioLocale

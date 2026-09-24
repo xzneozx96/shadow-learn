@@ -31,11 +31,6 @@ interface Returns<K extends StudioKind> {
   status: StudioStatus
   data: DataFor<K> | null
   disabled: boolean
-  /**
-   * False until the first backend probe settles. Lets callers render a
-   *  neutral skeleton during the probe, instead of flashing the wrong
-   *  default branch (empty tile → filled tile) before the data lands.
-   */
   hydrated: boolean
   /**
    * Deprecated. Always false now that each artifact runs its own job. Kept
@@ -79,12 +74,6 @@ type StatusBody<K extends StudioKind> = StatusReady<K> | StatusPending | StatusN
 
 /**
  * Studio artifact state machine.
- *
- * Backend is the source of truth. On mount we probe
- * ``GET /api/tips/studio/{kind}/{videoId}?locale=`` — a content-keyed lookup
- * that returns the catalog result, an in-flight ``jobId``, or ``none``. The
- * probe is what makes reload-resume work without the client persisting any
- * jobId.
  *
  * ``generate`` POSTs the trigger; the backend dedupes by the same content
  * key, so a second click during an in-flight run rejoins the existing job
@@ -173,7 +162,6 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
     setHydrated(false)
   }
 
-  // Mount / key-change effect. Probes backend → drives state.
   useEffect(() => {
     cancelledRef.current = false
     clearPoll()
@@ -222,8 +210,6 @@ export function useTipStudio<K extends StudioKind>(args: Args<K>): Returns<K> {
       cancelledRef.current = true
       clearPoll()
     }
-  // pollJob / clearPoll are stable per key set; explicit deps
-  // mirror the key inputs to keep behavior predictable across remounts.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db, cacheKey, probeNonce])
 

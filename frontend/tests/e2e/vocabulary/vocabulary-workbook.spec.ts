@@ -2,15 +2,6 @@
  * vocabulary-workbook.spec.ts
  *
  * E2E tests for the vocabulary / workbook feature.
- *
- * Auth strategy: each test signs up a fresh account through api-helpers.ts, so
- * no cleanup is needed between tests.
- *
- * Lesson setup: tests that navigate to a lesson page seed a minimal lesson and its
- * segments over the API before the first navigation. This is infrastructure data
- * required to render the page — it is NOT vocabulary data, so it does not violate the
- * "no programmatic seeding for setup" rule. Assertions read the vocabulary store
- * back through `GET /api/store/vocabulary`.
  */
 
 import type { SeedSegment, SeedVocabEntry, TestUser } from '../support/api-helpers'
@@ -68,8 +59,7 @@ async function switchToWorkbookTab(page: import('@playwright/test').Page) {
 
 /**
  * Helper: after a page reload, switch to the Workbook tab and wait for the
- * expected word count to appear. This ensures VocabularyContext has finished
- * loading entries from the server before the caller interacts with the popup.
+ * expected word count to appear.
  */
 async function waitForVocabLoaded(page: import('@playwright/test').Page, expectedCount: number) {
   await switchToWorkbookTab(page)
@@ -116,7 +106,6 @@ test('VOC.SAVE-E2E-001 @p0 @smoke — save-word-happy-path: clicking Save to Wor
   // After saving: count increments to 1 (workbook tab is still active)
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // Assert the server has exactly 1 entry
   const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(1)
   expect(entries[0].word).toBe('你好')
@@ -133,8 +122,6 @@ test('VOC.SAVED-E2E-002 @p1 @regression — already-saved-shows-filled-bookmark:
   await page.reload()
   await expect(page.getByText('你好').first()).toBeVisible({ timeout: 10_000 })
 
-  // Switch to workbook tab and wait for "1 word saved" — this confirms VocabularyContext
-  // has finished loading entries from the server before we open the popup.
   await waitForVocabLoaded(page, 1)
 
   // Open popup for the same word — VocabularyContext has loaded, isSaved returns true
@@ -189,7 +176,6 @@ test('VOC.REMOVE-E2E-004 @p0 @smoke — remove-word-with-confirmation: X button 
   // Word card disappears; panel shows 0 words
   await expect(page.getByText(/0\s+words?\s+saved/i)).toBeVisible()
 
-  // The server store is now empty
   const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
@@ -218,7 +204,6 @@ test('VOC.CANCEL-E2E-005 @p1 @regression — cancel-remove-leaves-word-intact: c
   // Dialog dismissed; word still shows
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // The server still has 1 entry
   const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(1)
 })
@@ -246,7 +231,6 @@ test('VOC.TOGGLE-E2E-006 @p1 @regression — toggle-bookmark-removes-word: click
   // Wait for removal to complete — popup changes back to "Save to Workbook"
   await expect(page.getByRole('button', { name: /save to workbook/i })).toBeVisible({ timeout: 5_000 })
 
-  // The server store should now be empty
   const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
@@ -292,7 +276,6 @@ test('VOC.DELGRP-E2E-008 @p1 @regression — delete-lesson-group-from-workbook: 
   // Lesson group disappears
   await expect(page.getByRole('button', { name: /^study$/i })).not.toBeVisible()
 
-  // The server store is empty
   const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
@@ -332,7 +315,6 @@ test('VOC.RMREL-E2E-010 @p1 @regression — remove-durable-across-reload: remove
   // Wait for removal to complete — popup changes back to "Save to Workbook"
   await expect(page.getByRole('button', { name: /save to workbook/i })).toBeVisible({ timeout: 5_000 })
 
-  // Verify the server store is empty before reload
   const entriesBefore = await listVocabEntries(page.request, user)
   expect(entriesBefore).toHaveLength(0)
 
@@ -392,7 +374,6 @@ test('VOC.ERRTOAST-E2E-012 @p2 @regression — AC-005: error toast when the voca
   await signIn(page)
   await goToLesson(page)
 
-  // Fail vocabulary writes on the server; other stores are unaffected.
   await page.route(`${API_URL}/api/store/vocabulary/*`, route =>
     route.request().method() === 'PUT' ? route.fulfill({ status: 500, json: { detail: 'Simulated write failure' } }) : route.fallback())
 
@@ -403,7 +384,6 @@ test('VOC.ERRTOAST-E2E-012 @p2 @regression — AC-005: error toast when the voca
   // Exactly one toast (the error toast) should be visible
   await expect(page.locator('[data-sonner-toast]')).toHaveCount(1, { timeout: 5_000 })
 
-  // Nothing should have been written to the server
   const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
@@ -412,7 +392,6 @@ test('VOC.RMTOAST-E2E-013 @p2 @regression — AC-006: error toast when the vocab
   await signIn(page)
   await goToLesson(page)
 
-  // Save the word first (the server is healthy at this point)
   await saveWordViaUI(page)
 
   const entriesBefore = await listVocabEntries(page.request, user)
@@ -422,7 +401,6 @@ test('VOC.RMTOAST-E2E-013 @p2 @regression — AC-006: error toast when the vocab
   await switchToWorkbookTab(page)
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // Now fail vocabulary deletes on the server.
   await page.route(`${API_URL}/api/store/vocabulary/*`, route =>
     route.request().method() === 'DELETE' ? route.fulfill({ status: 500, json: { detail: 'Simulated delete failure' } }) : route.fallback())
 
@@ -444,7 +422,6 @@ test('VOC.RMTOAST-E2E-013 @p2 @regression — AC-006: error toast when the vocab
   // Word should still be visible in the panel (no optimistic removal on failure)
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // The server entry should still be present
   const entriesAfter = await listVocabEntries(page.request, user)
   expect(entriesAfter).toHaveLength(1)
 })

@@ -1,7 +1,3 @@
-// Mechanical PR6b move: `DataClient` no longer carries an IndexedDB handle, so
-// test clients built as `fakeDataClient(await initDB(), api)` become
-// `fakeDataClient(api)` and the unused `initDB` import is dropped.
-// Usage: node tests/codemods/api-client.mjs <file>...
 import { readFileSync, writeFileSync } from 'node:fs'
 import process from 'node:process'
 

@@ -116,7 +116,6 @@ export function useStudyQueue(
       }
     }
 
-    // One list request: per-id GETs queue behind the browser's six connections per host.
     const byId = new Map((await getAllVocabEntries(db)).map(e => [e.id, e]))
     const entries = vocabIds.flatMap(id => byId.get(id) ?? [])
     setWordDrillsEntries(entries)

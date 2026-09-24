@@ -17,7 +17,6 @@ vi.mock('@/app/providers/AuthContext', () => ({
 
 beforeEach(() => {
   testDb = fakeDataClient()
-  // Probes find no artifact and no live job.
   globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ status: 'none' }) }) as any
 })
 

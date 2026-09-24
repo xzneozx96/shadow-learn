@@ -3,13 +3,6 @@
  *
  * E2E tests for the Dictation exercise within the vocabulary study session.
  *
- * Auth strategy: each test signs up a fresh account through api-helpers.ts.
- *
- * Setup strategy: Seed a minimal lesson + vocab entry over the API, navigate to
- * /vocabulary/:lessonId/study, select Dictation mode, and start the session.
- * TTS calls to /api/tts are intercepted via page.route() — registered BEFORE
- * any navigation or click that triggers TTS.
- *
  * Selectors: ARIA roles only — getByRole, getByLabel, getByText. No data-testid,
  * no CSS class selectors.
  */
@@ -371,7 +364,6 @@ test('DICT.SKIP-E2E-009 @p1 @smoke — Skip advances session, no mistake recorde
   // OR the session ends if it was the last question. Either way no error toast appears.
   await expect(page.locator('[data-sonner-toast]')).toHaveCount(0)
 
-  // The old counter text goes away whether the session advanced or ended — no stuck state.
   await expect(page.getByText(progressBefore!, { exact: true })).toHaveCount(0)
 })
 

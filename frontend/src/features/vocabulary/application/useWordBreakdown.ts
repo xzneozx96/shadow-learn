@@ -26,9 +26,7 @@ interface UseWordBreakdownReturn {
   storyLoading: boolean
   storyError: Error | null
   retryStory: () => void
-  /** Discard the user's story and force a fresh LLM generation. */
   regenerateStory: () => Promise<void>
-  /** Save user-edited story text to the account; survives re-opens until regenerated. */
   saveCustomStory: (text: string) => Promise<void>
 }
 
@@ -82,7 +80,6 @@ export function useWordBreakdown(input: UseWordBreakdownInput): UseWordBreakdown
     .map(c => c.sinoVietnamese ?? '?')
     .join(' ')
 
-  // Resolve story: the user's own story first, then the shared catalog or LLM
   useEffect(() => {
     if (!enabled || !db || characters === null || characters.length === 0)
       return

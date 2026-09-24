@@ -232,7 +232,6 @@ export async function getSettings(db: DataClient): Promise<AppSettings | undefin
   return db.api.get<AppSettings>(storePath('settings', 'settings'))
 }
 
-// Full lesson delete. DELETE /api/lessons/{id} also removes the shadowing recordings.
 export async function deleteFullLesson(db: DataClient, lessonId: string): Promise<void> {
   await Promise.all([
     deleteLessonMeta(db, lessonId),
@@ -359,8 +358,6 @@ export async function deleteAgentMemory(db: DataClient, id: string): Promise<voi
   await db.api.del(storePath('agent-memory', id))
 }
 
-// Exercise Stats, keyed `<vocabId>:<exerciseType>`
-
 export interface ExerciseStatRecord extends ExerciseStat {
   vocabId: string
   exerciseType: string
@@ -406,8 +403,6 @@ export async function getExerciseAccuracy(
   }
   return result
 }
-
-// User-owned word-breakdown stories, which take precedence over the shared catalog story.
 
 export interface WordStory {
   word: string

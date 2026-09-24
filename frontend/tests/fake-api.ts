@@ -21,8 +21,6 @@ interface StoreSpec {
   indexes?: Record<string, StoreIndex>
 }
 
-// Mirrors backend/app/userdata/specs.py: record ids derive from the key path,
-// and a PUT whose path id differs from the derived id is a 422.
 const STORES: Record<string, StoreSpec> = {
   'settings': { singleton: 'settings' },
   'vocabulary': {
