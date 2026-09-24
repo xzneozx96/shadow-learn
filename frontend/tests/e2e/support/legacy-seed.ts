@@ -75,6 +75,8 @@ export interface FixtureOptions {
   vocabulary?: number
   extraLessons?: number
   totalSessions?: number
+  lessonId?: string
+  legacyLessonId?: string
 }
 
 /** Legacy rows for every in-scope store, plus rows the importer must drop. */
@@ -88,8 +90,9 @@ export function legacyFixture(options: FixtureOptions = {}): LegacyFixture {
     vocabulary = 3,
     extraLessons = 0,
     totalSessions = 3,
+    legacyLessonId = LEGACY_LESSON,
   } = options
-  const main = variant === 'A' ? LESSON_A : LESSON_B
+  const main = options.lessonId ?? (variant === 'A' ? LESSON_A : LESSON_B)
   const title = variant === 'A' ? 'Greetings, renamed' : 'Second device lesson'
   const extras = Array.from({ length: extraLessons }, (_, i) => `${main.slice(0, 24)}${String(i).padStart(12, '0')}`)
 
@@ -125,20 +128,20 @@ export function legacyFixture(options: FixtureOptions = {}): LegacyFixture {
 
   if (version === 21) {
     stores.lessons.push(
-      { value: lesson(LEGACY_LESSON, 'March lesson', { source: 'upload', sourceUrl: null }) },
+      { value: lesson(legacyLessonId, 'March lesson', { source: 'upload', sourceUrl: null }) },
       { value: lesson(`${main.slice(0, 30)}999999`, 'Still processing', { status: 'processing', jobId: 'job-1' }) },
     )
-    stores.segments.push({ key: LEGACY_LESSON, value: segments('M') })
-    stores.videos.push({ key: LEGACY_LESSON, value: blob(4_000, 'audio/mpeg', 3) })
-    stores.vocabulary.push({ value: vocab(99, LEGACY_LESSON) })
-    stores['agent-memory'].push({ value: { id: `memory-legacy-${variant}`, content: 'Uploaded a lesson', tags: ['lesson'], importance: 1, createdAt: 1710400000000, lastAccessedAt: 1710400000000, lessonId: LEGACY_LESSON } })
+    stores.segments.push({ key: legacyLessonId, value: segments('M') })
+    stores.videos.push({ key: legacyLessonId, value: blob(4_000, 'audio/mpeg', 3) })
+    stores.vocabulary.push({ value: vocab(99, legacyLessonId) })
+    stores['agent-memory'].push({ value: { id: `memory-legacy-${variant}`, content: 'Uploaded a lesson', tags: ['lesson'], importance: 1, createdAt: 1710400000000, lastAccessedAt: 1710400000000, lessonId: legacyLessonId } })
     stores['agent-logs'].push({ value: { lessonId: main, timestamp: '2026-06-01T10:00:00.000Z', durationMs: 10, messageCount: 1, toolCallCount: 0, errorCount: 0, exercisesCompleted: 0 } })
     stores['daily-tasks'] = [{ value: { id: `task-${variant}`, title: 'Review tones', createdDate: '2026-06-01', completedDate: null } }]
     stores['word-breakdowns'] = [
       { value: { word: '你好', sourceLanguage: 'zh-CN', characters: [], story: 'A person greets a friend at the door.', storyLanguage: 'vi', generatedAt: '2026-06-01T10:00:00.000Z' } },
       { value: { word: '谢谢', sourceLanguage: 'zh-CN', characters: [], story: null, storyLanguage: 'vi', generatedAt: null } },
     ]
-    stores['shadowing-bests'] = [{ value: { lessonId: LEGACY_LESSON, segmentId: 's1', score: 88, breakdown: { overall: { accuracy: 88, fluency: 80, completeness: 100, prosody: 70 }, words: [] }, recordedAt: '2026-06-01T10:00:00.000Z' } }]
+    stores['shadowing-bests'] = [{ value: { lessonId: legacyLessonId, segmentId: 's1', score: 88, breakdown: { overall: { accuracy: 88, fluency: 80, completeness: 100, prosody: 70 }, words: [] }, recordedAt: '2026-06-01T10:00:00.000Z' } }]
     stores['shadowing-audio'] = [
       ...Array.from({ length: recordings }, (_, n) => ({ value: { lessonId: main, segmentId: `s${n + 1}`, blob: blob(20_000 + n, 'audio/webm', 11 + n) } })),
       { value: { lessonId: 'deleted-lesson', segmentId: 's1', blob: blob(100, 'audio/webm', 5) } },
@@ -156,9 +159,9 @@ export function legacyFixture(options: FixtureOptions = {}): LegacyFixture {
     stores['user-materials'] = [{ value: { id: `material-${variant}`, source: 'playlist', externalId: 'PL-shared', name: 'Tones playlist', skill: 'Pronunciation', instructionLanguage: 'English', contentType: 'tip', cachedMeta: { thumbnailUrl: null, channel: null, videoCount: 3, publishedAt: null, duration: null, viewCount: null }, createdAt: '2026-06-01T10:00:00.000Z' } }]
     stores.threads = [
       { value: { id: '__global', surface: 'global', ownerId: null, messages: [{ id: `g-${variant}`, role: 'user', parts: [{ type: 'text', text: 'hi' }] }], updatedAt: 1717200000000, createdAt: 1717200000000 } },
-      { value: { id: LEGACY_LESSON, surface: 'lesson', ownerId: LEGACY_LESSON, messages: [], updatedAt: 1710400000000, createdAt: 1710400000000 } },
+      { value: { id: legacyLessonId, surface: 'lesson', ownerId: legacyLessonId, messages: [], updatedAt: 1710400000000, createdAt: 1710400000000 } },
     ]
-    stores['thread-summaries'] = [{ value: { threadId: LEGACY_LESSON, summary: 'talked about the March lesson', coversThroughMessageId: 'm1', coversThroughIndex: 0, tokenBudget: 1000, createdAt: 1710400000000 } }]
+    stores['thread-summaries'] = [{ value: { threadId: legacyLessonId, summary: 'talked about the March lesson', coversThroughMessageId: 'm1', coversThroughIndex: 0, tokenBudget: 1000, createdAt: 1710400000000 } }]
   }
   else {
     stores.chats = [

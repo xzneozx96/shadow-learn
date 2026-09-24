@@ -206,7 +206,7 @@ export function useMigration(api: ApiClient, account: string) {
           dispatch({ type: 'mismatch', verification })
           return
         }
-        const fresh = await readSnapshot(loaded.db)
+        const fresh = await readSnapshot(loaded.db, account)
         if (fingerprint(fresh) !== fingerprint(loaded.snapshot)) {
           loaded.snapshot = fresh
           continue
@@ -224,7 +224,7 @@ export function useMigration(api: ApiClient, account: string) {
     catch (err) {
       dispatch({ type: 'error', message: err instanceof Error ? err.message : String(err) })
     }
-  }), [api])
+  }), [account, api])
 
   const start = useCallback(async () => {
     dispatch({ type: 'loading' })
@@ -237,7 +237,7 @@ export function useMigration(api: ApiClient, account: string) {
           dispatch({ type: 'other-account' })
           return
         }
-        loadedRef.current = { db, snapshot: await readSnapshot(db), source: claim.source }
+        loadedRef.current = { db, snapshot: await readSnapshot(db, account), source: claim.source }
       }
     }
     catch (err) {

@@ -54,9 +54,9 @@
       ]
     },
     {
-      "id": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa",
+      "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
       "lesson": {
-        "id": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa",
+        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
         "title": "March lesson",
         "source": "upload",
         "sourceUrl": null,
@@ -177,7 +177,7 @@
           "romanization": "cí",
           "meaning": "word 99",
           "usage": "",
-          "sourceLessonId": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa",
+          "sourceLessonId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
           "sourceLessonTitle": "Greetings",
           "sourceSegmentId": "s1",
           "sourceSegmentText": "你好",
@@ -371,7 +371,7 @@
           "importance": 1,
           "createdAt": 1710400000000,
           "lastAccessedAt": 1710400000000,
-          "lessonId": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa"
+          "lessonId": "639f01e8-7e0e-5de4-98c8-1536996a2507"
         }
       }
     ],
@@ -439,9 +439,9 @@
     ],
     "shadowing-bests": [
       {
-        "id": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa:s1",
+        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507:s1",
         "data": {
-          "lessonId": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa",
+          "lessonId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
           "segmentId": "s1",
           "score": 88,
           "breakdown": {
@@ -563,11 +563,11 @@
         }
       },
       {
-        "id": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa",
+        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
         "data": {
-          "id": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa",
+          "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
           "surface": "lesson",
-          "ownerId": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa",
+          "ownerId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
           "messages": [],
           "updatedAt": 1710400000000,
           "createdAt": 1710400000000
@@ -576,9 +576,9 @@
     ],
     "thread-summaries": [
       {
-        "id": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa",
+        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
         "data": {
-          "threadId": "cd9e4ca4-0793-5e91-a12a-ce92c0fdc9fa",
+          "threadId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
           "summary": "talked about the March lesson",
           "coversThroughMessageId": "m1",
           "coversThroughIndex": 0,

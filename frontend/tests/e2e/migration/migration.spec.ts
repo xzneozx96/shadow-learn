@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { API_URL, signUpAndLogin } from '../support/api-helpers'
 import { legacyDatabaseExists, legacyFixture, PIN, seedLegacy } from '../support/legacy-seed'
@@ -5,7 +6,7 @@ import { legacyDatabaseExists, legacyFixture, PIN, seedLegacy } from '../support
 test.describe('legacy IndexedDB import @migration', () => {
   test('moves a seeded v21 database to the account and deletes it', async ({ page }) => {
     await page.goto('/')
-    await seedLegacy(page, legacyFixture({ withKeys: true }))
+    await seedLegacy(page, legacyFixture({ withKeys: true, lessonId: randomUUID(), legacyLessonId: `lesson_${Date.now()}` }))
     const user = await signUpAndLogin(page)
     await page.reload()
 

@@ -126,10 +126,10 @@ export async function uuidV5(name: string, namespace = LEGACY_LESSON_NAMESPACE):
 
 type LessonIds = (id: string) => string
 
-async function lessonIdMap(metas: LessonMeta[]): Promise<LessonIds> {
+async function lessonIdMap(metas: LessonMeta[], account: string): Promise<LessonIds> {
   const remapped = new Map<string, string>()
   for (const { id } of metas)
-    remapped.set(id, UUID.test(id) ? id.toLowerCase() : await uuidV5(id))
+    remapped.set(id, UUID.test(id) ? id.toLowerCase() : await uuidV5(`${account}:${id}`))
   return id => remapped.get(id) ?? id
 }
 
@@ -319,10 +319,14 @@ function mediaKind(blob: Blob): MediaKind {
   return blob.type.startsWith('audio/') ? 'audio' : 'video'
 }
 
-/** Read every in-scope store once. Retries upload this same snapshot, so digests stay stable. */
-export async function readSnapshot(db: ShadowLearnDB): Promise<LegacySnapshot> {
+/**
+ * Read every in-scope store once. Retries upload this same snapshot, so digests
+ * stay stable. `lesson_<ms>` ids map to a UUIDv5 of the account and the old id,
+ * so two accounts' old ids never collide.
+ */
+export async function readSnapshot(db: ShadowLearnDB, account: string): Promise<LegacySnapshot> {
   const metas = await db.getAll('lessons')
-  const lessonIds = await lessonIdMap(metas)
+  const lessonIds = await lessonIdMap(metas, account)
   const videoKeys = await db.getAllKeys('videos')
   const withFile = new Set(videoKeys)
   const kept = metas.filter(meta => !isUnfinished(meta) || withFile.has(meta.id))

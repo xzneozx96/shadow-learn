@@ -8,6 +8,8 @@ import { LEGACY_LESSON, legacyFixture, LESSON_A, seedLegacyDatabase } from '../e
 import 'fake-indexeddb/auto'
 import './nested-blobs'
 
+const ACCOUNT = '11111111-2222-4333-8444-555555555555'
+
 function records(snapshot: LegacySnapshot, store: RecordStore) {
   return snapshot.stores.find(entry => entry.store === store)!.records
 }
@@ -15,7 +17,7 @@ function records(snapshot: LegacySnapshot, store: RecordStore) {
 async function snapshotOf(options: Parameters<typeof legacyFixture>[0] = {}) {
   await seedLegacyDatabase(legacyFixture(options))
   const db = await openLegacy()
-  const snapshot = await readSnapshot(db)
+  const snapshot = await readSnapshot(db, ACCOUNT)
   return { db, snapshot }
 }
 
@@ -25,7 +27,7 @@ describe('readSnapshot', () => {
 
   it('remaps lesson_<ms> ids to a UUIDv5 in every field that names a lesson', async () => {
     const { snapshot } = await snapshotOf()
-    const remapped = await uuidV5(LEGACY_LESSON)
+    const remapped = await uuidV5(`${ACCOUNT}:${LEGACY_LESSON}`)
     expect(snapshot.lessons.map(lesson => lesson.id).sort()).toEqual([LESSON_A, remapped].sort())
     expect(records(snapshot, 'vocabulary').find(r => r.data.word === '词99')!.data.sourceLessonId).toBe(remapped)
     expect(records(snapshot, 'agent-memory').find(r => r.data.lessonId !== undefined)!.data.lessonId).toBe(remapped)
@@ -78,7 +80,7 @@ describe('readSnapshot', () => {
 
   it('reads the same snapshot twice, so a retry resends identical payloads', async () => {
     const { db, snapshot } = await snapshotOf()
-    const again = await readSnapshot(db)
+    const again = await readSnapshot(db, ACCOUNT)
     const shape = (s: LegacySnapshot) => canonical(toJson({ lessons: s.lessons, stores: s.stores, media: s.media.map(m => m.key) }))
     expect(shape(again)).toBe(shape(snapshot))
   })
@@ -101,7 +103,7 @@ describe('readSnapshot', () => {
     const id = (stub.value as { id: string }).id
     fixture.stores.videos.push({ key: id, value: { $blob: { size: 10, type: 'video/mp4', fill: 1 } } })
     await seedLegacyDatabase(fixture)
-    const snapshot = await readSnapshot(await openLegacy())
+    const snapshot = await readSnapshot(await openLegacy(), ACCOUNT)
     expect(snapshot.lessons.map(lesson => lesson.id)).toContain(id)
     expect(snapshot.skipped.unfinishedLessons).toBe(0)
   })
@@ -112,7 +114,7 @@ describe('readSnapshot', () => {
     Object.assign(lesson, { title: null, duration: 'long', createdAt: '+275760-09-13T00:00:00.000Z', translationLanguages: ['en', 3] })
     fixture.stores.segments[0].value = [null, { id: 's1', start: 0, end: 1, translations: { 'e\0n': 'hi' } }]
     await seedLegacyDatabase(fixture)
-    const imported = (await readSnapshot(await openLegacy())).lessons.find(l => l.id === LESSON_A)!
+    const imported = (await readSnapshot(await openLegacy(), ACCOUNT)).lessons.find(l => l.id === LESSON_A)!
     expect(imported.lesson).toEqual(expect.objectContaining({ title: '', duration: 1, createdAt: '1970-01-01T00:00:00.000Z', translationLanguages: ['en'] }))
     expect(imported.segments).toEqual([{ id: 's1', start: 0, end: 1, translations: { en: 'hi' } }])
   })
