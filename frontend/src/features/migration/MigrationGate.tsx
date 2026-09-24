@@ -6,7 +6,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog'
-import { detectLegacyData } from './detectLegacyData'
+import { prefetchedAbsent, takeLegacyData } from './prefetchLegacyData'
 
 const MigrationModal = lazy(() => import('./MigrationModal').then(module => ({ default: module.MigrationModal })))
 
@@ -33,11 +33,11 @@ interface GateProps {
 
 export function MigrationGate({ api, children, openApp = path => window.location.assign(path) }: GateProps) {
   const { session, logout } = useAuth()
-  const [state, setState] = useState<GateState>({ kind: 'checking' })
+  const [state, setState] = useState<GateState>(() => prefetchedAbsent() ? { kind: 'clear' } : { kind: 'checking' })
 
-  const detect = useCallback(() => {
+  const check = useCallback(() => {
     let live = true
-    detectLegacyData().then(
+    takeLegacyData().then(
       (data) => {
         if (live)
           setState(data.present ? { kind: 'import', data } : { kind: 'clear' })
@@ -52,7 +52,7 @@ export function MigrationGate({ api, children, openApp = path => window.location
     }
   }, [])
 
-  useEffect(detect, [detect])
+  useEffect(check, [check])
 
   if (state.kind === 'clear')
     return children
@@ -69,7 +69,7 @@ export function MigrationGate({ api, children, openApp = path => window.location
             <Button variant="outline" onClick={() => setState({ kind: 'clear' })}>Use the app now, keep my local copy</Button>
             <Button onClick={() => {
               setState({ kind: 'checking' })
-              detect()
+              check()
             }}
             >
               Retry
