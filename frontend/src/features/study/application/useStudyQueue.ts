@@ -6,10 +6,10 @@ import {
   deleteDailyTask,
   getAllSessionLogs,
   getAllTipProgress,
+  getAllVocabEntries,
   getDailyTasks,
   getDueItems,
   getUserMaterialByExternalId,
-  getVocabEntryById,
   saveDailyTask,
 } from '@/db'
 import { localDateISO, todayISO } from '@/shared/lib/date'
@@ -116,8 +116,9 @@ export function useStudyQueue(
       }
     }
 
-    const fetched = await Promise.all(vocabIds.map(id => getVocabEntryById(db, id)))
-    const entries = fetched.filter((e): e is VocabEntry => e !== undefined)
+    // One list request: per-id GETs queue behind the browser's six connections per host.
+    const byId = new Map((await getAllVocabEntries(db)).map(e => [e.id, e]))
+    const entries = vocabIds.flatMap(id => byId.get(id) ?? [])
     setWordDrillsEntries(entries)
 
     // Only entries that resolved to a real word can ever be marked complete
