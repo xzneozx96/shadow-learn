@@ -20,7 +20,7 @@ export type KeysOutcome
 export interface Notes {
   keys: KeysOutcome
   keptAccountCopy: number
-  quarantined: number
+  quarantined: string[]
   skipped: Skipped
 }
 
@@ -178,7 +178,8 @@ async function importSnapshot(api: ApiClient, source: string, snapshot: LegacySn
   await uploadMedia(api, ledger, media, sent)
 
   dispatch({ type: 'verify', records: recordTotal(snapshot), media: media.length })
-  return { verification: await verify(api, ledger), keptAccountCopy, quarantined: ledger.quarantine.size }
+  const quarantined = Array.from(ledger.quarantine.values(), record => record.store)
+  return { verification: await verify(api, ledger), keptAccountCopy, quarantined }
 }
 
 export function useMigration(api: ApiClient, account: string) {

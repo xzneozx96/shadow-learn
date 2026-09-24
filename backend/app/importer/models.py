@@ -17,5 +17,5 @@ class QuarantinedRecord(Base):
     store: Mapped[str] = mapped_column(Text, primary_key=True)
     record_id: Mapped[str] = mapped_column(Text, primary_key=True)
     raw: Mapped[Any] = mapped_column(JSONB)
-    error: Mapped[str] = mapped_column(Text)
+    error: Mapped[Any] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

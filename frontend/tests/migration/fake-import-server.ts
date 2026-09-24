@@ -19,7 +19,7 @@ export function fakeImportServer() {
   const quarantine = new Map<string, Json>()
   const media = new Map<string, { size: number, sha256: string }>()
   const keys = new Map<string, unknown>()
-  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, onManifest: null as (() => Promise<void>) | null }
+  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, rejectRecord: null as string | null, onManifest: null as (() => Promise<void>) | null }
   const store = (name: string) => stores.get(name) ?? stores.set(name, new Map()).get(name)!
 
   async function handle({ method, path, body }: Call) {
@@ -49,6 +49,9 @@ export function fakeImportServer() {
     const bulk = BULK.exec(path)
     if (bulk) {
       const target = store(bulk[1])
+      const bad = (body as { records: JsonObject[] }).records.findIndex(record => recordId(bulk[1] as RecordStore, record) === state.rejectRecord)
+      if (bad !== -1)
+        return { status: 422, body: { detail: [{ loc: ['body', 'records', bad, 'itemType'], msg: 'Input should be \'vocabulary\'' }] } }
       const ids = (body as { records: JsonObject[] }).records.map((record) => {
         const id = recordId(bulk[1] as RecordStore, record)!
         if (!target.has(id))

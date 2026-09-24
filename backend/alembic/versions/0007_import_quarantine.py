@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column("store", sa.Text(), nullable=False),
         sa.Column("record_id", sa.Text(), nullable=False),
         sa.Column("raw", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("error", sa.Text(), nullable=False),
+        sa.Column("error", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("user_id", "source", "store", "record_id"),

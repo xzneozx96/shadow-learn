@@ -3,6 +3,7 @@ import type { OutgoingLesson, OutgoingRecord, RecordStore } from './exportStores
 import type { Ledger, QuarantinedRecord } from './manifest'
 import type { ApiClient } from '@/db'
 import { responseError } from '@/shared/lib/api'
+import { toJson } from './canonical'
 import { recordId } from './exportStores'
 import { quarantineKey, storeLedger } from './manifest'
 
@@ -42,18 +43,17 @@ function isValidationDetail(value: unknown): value is ValidationDetail {
     && typeof (value as { msg?: unknown }).msg === 'string'
 }
 
-async function rejectedItems(res: Response, listField: string): Promise<Map<number, string> | null> {
+async function rejectedItems(res: Response, listField: string): Promise<Map<number, Json[]> | null> {
   const body: unknown = await res.clone().json().catch(() => null)
   const detail = typeof body === 'object' && body !== null ? (body as { detail?: unknown }).detail : null
   if (!Array.isArray(detail))
     return null
-  const rejected = new Map<number, string>()
+  const rejected = new Map<number, Json[]>()
   for (const item of detail.filter(isValidationDetail)) {
     const [where, field, position, ...path] = item.loc
     if (where !== 'body' || field !== listField || typeof position !== 'number')
       return null
-    const reason = `${path.join('.') || 'record'}: ${item.msg}`
-    rejected.set(position, rejected.has(position) ? `${rejected.get(position)}; ${reason}` : reason)
+    rejected.set(position, [...(rejected.get(position) ?? []), toJson({ ...item, loc: [where, field, position, ...path] })])
   }
   return rejected.size > 0 ? rejected : null
 }
@@ -77,7 +77,7 @@ async function sendBatch<T>(
   ledger: Ledger,
   items: T[],
   request: { path: string, listField: string, body: (items: T[]) => unknown },
-  toQuarantine: (item: T, error: string) => QuarantinedRecord,
+  toQuarantine: (item: T, error: Json[]) => QuarantinedRecord,
 ): Promise<{ accepted: T[], body: unknown }> {
   let pending = items
   while (pending.length > 0) {
@@ -88,8 +88,8 @@ async function sendBatch<T>(
     if (!rejected)
       throw await responseError(res, `${request.path} failed: ${res.status}`)
     await quarantine(api, ledger, pending.flatMap((item, i) => {
-      const reason = rejected.get(i)
-      return reason === undefined ? [] : [toQuarantine(item, reason)]
+      const detail = rejected.get(i)
+      return detail === undefined ? [] : [toQuarantine(item, detail)]
     }))
     pending = pending.filter((_, i) => !rejected.has(i))
   }

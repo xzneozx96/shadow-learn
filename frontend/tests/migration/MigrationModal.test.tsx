@@ -160,6 +160,15 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     expect(await databaseExists()).toBe(true)
   })
 
+  it('saves a record the schema rejects for repair and still finishes', async () => {
+    const { server, seeded } = renderGate()
+    server.state.rejectRecord = `vocab-${LESSON_A.slice(0, 6)}-0`
+    await seeded
+    await start()
+    expect(await screen.findByText(/2 records couldn't be converted and were saved for repair \(spaced-repetition, vocabulary\)/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await databaseExists()).toBe(false)
+  })
+
   it('keeps a key the account already holds', async () => {
     const { server, seeded } = renderGate({ withKeys: true })
     server.keys.set('openrouter', { value: 'sk-or-account-key' })

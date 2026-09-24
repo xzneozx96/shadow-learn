@@ -10,6 +10,7 @@ import pytest_asyncio
 from sqlalchemy import select
 
 from app.importer.canonical import store_hash
+from app.importer.models import QuarantinedRecord
 from app.media.models import MediaObject
 from app.settings import settings
 from tests.conftest import register_and_login
@@ -33,6 +34,7 @@ LESSON = {
     "lastOpenedAt": "2026-06-01T09:00:00.000Z",
     "meta": {"progressSegmentId": "s2", "tags": ["greetings"], "isDone": False},
 }
+ERROR = [{"loc": ["body", "records", 0, "itemType"], "msg": "Input should be 'vocabulary'", "type": "literal_error"}]
 PROFILE = {"name": "Ada", "totalSessions": 3, "totalStudyMinutes": 12, "profileCreated": "2026-01-01"}
 
 
@@ -284,15 +286,17 @@ async def test_manifest_rejects_an_unknown_store(client, owner):
     assert response.status_code == 422
 
 
-async def test_quarantine_keeps_the_raw_record_per_device_and_digests_it(client, owner, stranger):
+async def test_quarantine_keeps_the_raw_record_per_device_and_digests_it(client, owner, stranger, db_session):
     raw = {"itemId": "w1", "itemType": "sentence", "dueDate": "2026-09-23"}
     body = {
         "source": "device-a",
-        "records": [{"store": "spaced-repetition", "recordId": "w1", "raw": raw, "error": "itemType: bad literal"}],
+        "records": [{"store": "spaced-repetition", "recordId": "w1", "raw": raw, "error": ERROR}],
     }
     for _ in range(2):
         response = await client.post("/api/import/quarantine", json=body, headers=_bearer(owner))
         assert response.status_code == 200, response.text
+    rows = (await db_session.execute(select(QuarantinedRecord.raw, QuarantinedRecord.error))).all()
+    assert rows == [(raw, ERROR)]
     keys = [{"store": "spaced-repetition", "recordId": "w1"}]
     digest = await _manifest(client, owner, {"stores": {}, "quarantine": keys})
     assert digest["quarantine"] == {"count": 1, "sha256": store_hash([("spaced-repetition:w1", raw)])}
@@ -300,7 +304,7 @@ async def test_quarantine_keeps_the_raw_record_per_device_and_digests_it(client,
 
 
 async def test_quarantine_rejects_an_unknown_store(client, owner):
-    body = {"source": "device-a", "records": [{"store": "crypto", "recordId": "keys", "raw": {}, "error": "x"}]}
+    body = {"source": "device-a", "records": [{"store": "crypto", "recordId": "keys", "raw": {}, "error": ERROR}]}
     assert (await client.post("/api/import/quarantine", json=body, headers=_bearer(owner))).status_code == 422
 
 

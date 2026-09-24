@@ -109,8 +109,10 @@ function noteLines(notes: Notes): string[] {
     lines.push(`Your account already had a ${notes.keys.kept.join(', ')} key, so it was kept.`)
   if (notes.keptAccountCopy > 0)
     lines.push(`${count(notes.keptAccountCopy, 'saved material was', 'saved materials were')} already in your account, so the account's copy was kept.`)
-  if (notes.quarantined > 0)
-    lines.push(`${count(notes.quarantined, 'record', 'records')} did not fit the current format and ${notes.quarantined === 1 ? 'is' : 'are'} kept aside on the server.`)
+  if (notes.quarantined.length > 0) {
+    const stores = [...new Set(notes.quarantined)].sort().join(', ')
+    lines.push(`${count(notes.quarantined.length, 'record', 'records')} couldn't be converted and ${notes.quarantined.length === 1 ? 'was' : 'were'} saved for repair (${stores}).`)
+  }
   if (notes.skipped.unfinishedLessons > 0)
     lines.push(`${count(notes.skipped.unfinishedLessons, 'lesson that never finished processing was', 'lessons that never finished processing were')} not moved.`)
   if (notes.skipped.orphanMedia > 0)

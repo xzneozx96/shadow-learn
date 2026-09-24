@@ -66,7 +66,7 @@ class QuarantinedItem(Camel):
     store: str
     record_id: str
     raw: Any
-    error: str
+    error: list[dict[str, Any]]
 
 
 class QuarantineImport(Camel):

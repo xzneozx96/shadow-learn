@@ -36,7 +36,7 @@ describe('uploadStore', () => {
     expect(calls.map(call => call.path)).toEqual(['/api/store/vocabulary/bulk', '/api/import/quarantine', '/api/store/vocabulary/bulk'])
     expect(calls[1].body).toEqual({
       source: 'device-a',
-      records: [{ store: 'vocabulary', recordId: 'bad', raw: word('bad', { createdAt: undefined }).data, error: 'createdAt: Field required' }],
+      records: [{ store: 'vocabulary', recordId: 'bad', raw: word('bad', { createdAt: undefined }).data, error: [{ loc: ['body', 'records', 1, 'createdAt'], msg: 'Field required' }] }],
     })
     expect([...storeLedger(ledger, 'vocabulary').expected.keys()]).toEqual(['w1', 'w2'])
     expect([...ledger.quarantine.keys()]).toEqual(['vocabulary:bad'])
@@ -47,9 +47,12 @@ describe('uploadStore', () => {
     await expect(uploadStore(api, emptyLedger('device-a', []), 'vocabulary', [word('w1')], () => {})).rejects.toThrow('index and value go together')
   })
 
-  it('stops the run on a server error', async () => {
-    const { api } = stubApi(() => ({ status: 503, body: { detail: 'Service Unavailable' } }))
-    await expect(uploadStore(api, emptyLedger('device-a', []), 'vocabulary', [word('w1')], () => {})).rejects.toThrow()
+  it('never quarantines on a server error, and stops the run so Retry stays available', async () => {
+    const { api, calls } = stubApi(() => ({ status: 500, body: { detail: 'Internal Server Error' } }))
+    const ledger = emptyLedger('device-a', [])
+    await expect(uploadStore(api, ledger, 'vocabulary', [word('w1')], () => {})).rejects.toThrow()
+    expect(calls.map(call => call.path)).not.toContain('/api/import/quarantine')
+    expect(ledger.quarantine.size).toBe(0)
   })
 
   it('keeps the account copy of a material another device already saved', async () => {
@@ -83,7 +86,7 @@ describe('uploadLessons', () => {
     await uploadLessons(api, ledger, lessons, () => {})
     expect([...storeLedger(ledger, 'lessons').expected.keys()]).toEqual(['l1'])
     expect(storeLedger(ledger, 'segments').expected.get('l1')).toEqual([{ start: 0, end: 1 }])
-    expect(ledger.quarantine.get('lessons:l2')).toEqual({ store: 'lessons', recordId: 'l2', raw: { id: 'l2', title: 'bad', segments: [{ text: 'no timing' }] }, error: 'segments.0.start: Field required' })
+    expect(ledger.quarantine.get('lessons:l2')).toEqual({ store: 'lessons', recordId: 'l2', raw: { id: 'l2', title: 'bad', segments: [{ text: 'no timing' }] }, error: [{ loc: ['body', 'lessons', 1, 'segments', 0, 'start'], msg: 'Field required' }] })
     expect(calls).toHaveLength(3)
   })
 })

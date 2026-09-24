@@ -8,7 +8,7 @@ export interface QuarantinedRecord {
   store: ManifestStore
   recordId: string
   raw: Json
-  error: string
+  error: Json
 }
 
 export interface SentMedia {

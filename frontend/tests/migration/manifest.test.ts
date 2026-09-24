@@ -60,6 +60,26 @@ describe('verify', () => {
   })
 })
 
+describe('the quarantine', () => {
+  it('blocks deletion when the kept raw record differs from what the device sent', async () => {
+    const ledger = ledgerWith({})
+    ledger.quarantine.set('spaced-repetition:w1', { store: 'spaced-repetition', recordId: 'w1', raw: { itemId: 'w1', itemType: 'sentence' }, error: [] })
+    const kept = await storeDigest([['spaced-repetition:w1', { itemId: 'w1', itemType: 'changed' }]])
+    const manifest = { ...(await manifestFor({})), quarantine: kept }
+    const result = await verify(stubApi(() => ({ body: manifest })).api, ledger)
+    expect(result.ok).toBe(false)
+    expect(result.checks).toContainEqual({ kind: 'quarantine', count: 1, ok: false })
+  })
+
+  it('passes when the kept raw record is byte-identical', async () => {
+    const ledger = ledgerWith({})
+    const raw = { itemId: 'w1', itemType: 'sentence' }
+    ledger.quarantine.set('spaced-repetition:w1', { store: 'spaced-repetition', recordId: 'w1', raw, error: [] })
+    const manifest = { ...(await manifestFor({})), quarantine: await storeDigest([['spaced-repetition:w1', raw]]) }
+    expect((await verify(stubApi(() => ({ body: manifest })).api, ledger)).ok).toBe(true)
+  })
+})
+
 describe('the after path', () => {
   it('expects the merged singleton the bulk import returned, not the local copy', async () => {
     const merged = { name: 'Ada', totalSessions: 7 }
