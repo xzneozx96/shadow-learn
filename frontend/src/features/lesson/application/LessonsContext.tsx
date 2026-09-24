@@ -4,6 +4,7 @@ import * as React from 'react'
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
 import { deleteFullLesson, getAllLessonMetas, renameLesson as renameServerLesson, saveLessonMeta } from '@/db'
+import { pendingLessonsKey } from '@/features/lesson/application/pendingLessons'
 import { useJobPoller } from '@/features/lesson/application/useJobPoller'
 
 type LessonsStatus = 'loading' | 'ready' | 'error'
@@ -25,15 +26,11 @@ function isLocalOnly(meta: LessonMeta): boolean {
   return meta.status === 'processing' || meta.status === 'error'
 }
 
-function pendingKey(userId: string): string {
-  return `shadowlearn.pending-lessons.${userId}`
-}
-
 function readPending(userId: string | undefined): LessonMeta[] {
   if (!userId)
     return []
   try {
-    return JSON.parse(localStorage.getItem(pendingKey(userId)) ?? '[]')
+    return JSON.parse(localStorage.getItem(pendingLessonsKey(userId)) ?? '[]')
   }
   catch {
     return []
@@ -60,7 +57,7 @@ export function LessonsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (userId)
-      localStorage.setItem(pendingKey(userId), JSON.stringify(pending))
+      localStorage.setItem(pendingLessonsKey(userId), JSON.stringify(pending))
   }, [userId, pending])
 
   const reload = useCallback(async () => {

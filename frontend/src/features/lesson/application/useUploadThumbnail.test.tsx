@@ -1,7 +1,7 @@
 import type { LessonMedia } from '@/shared/types'
-import { act, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useUploadThumbnail } from '@/features/lesson/application/useUploadThumbnail'
+import { clearUploadThumbnails, useUploadThumbnail } from '@/features/lesson/application/useUploadThumbnail'
 
 const refreshMediaTicket = vi.fn(async () => 'http://api.test/api/media/m1?token=fresh')
 const api = { get: vi.fn(), list: vi.fn(), put: vi.fn(), del: vi.fn(), bulk: vi.fn(), fetch: vi.fn() }
@@ -11,7 +11,7 @@ vi.mock('@/db', () => ({
 }))
 
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: { api, legacy: {} } }),
+  useAuth: () => ({ db: { api } }),
 }))
 
 let observed: { callback: IntersectionObserverCallback, element: Element }[] = []
@@ -39,7 +39,7 @@ function scrollIntoView() {
 
 function Card({ lessonId, media }: { lessonId: string, media?: LessonMedia }) {
   const { ref, dataUrl } = useUploadThumbnail(lessonId, media, true)
-  return <div ref={ref}>{dataUrl}</div>
+  return <div ref={ref} data-testid={`card-${lessonId}`}>{dataUrl}</div>
 }
 
 const media = (id: string): LessonMedia => ({ id, kind: 'video', url: `http://api.test/api/media/${id}?token=stale` })
@@ -85,6 +85,24 @@ describe('useUploadThumbnail', () => {
     await waitFor(() => expect(videos[0].src).toBe('http://api.test/api/media/m1?token=fresh'))
     expect(refreshMediaTicket).toHaveBeenCalledTimes(1)
     expect(refreshMediaTicket).toHaveBeenCalledWith(expect.anything(), 'm1')
+  })
+
+  it('keeps a drawn thumbnail for the session until clearUploadThumbnails runs', () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/jpeg;thumb')
+    const first = render(<Card lessonId="l-cache" media={media('m-cache')} />)
+    scrollIntoView()
+    fireEvent(videos[0], new Event('seeked'))
+    expect(screen.getByTestId('card-l-cache')).toHaveTextContent('data:image/jpeg;thumb')
+    first.unmount()
+
+    const remounted = render(<Card lessonId="l-cache" media={media('m-cache')} />)
+    expect(screen.getByTestId('card-l-cache')).toHaveTextContent('data:image/jpeg;thumb')
+    remounted.unmount()
+
+    clearUploadThumbnails()
+    render(<Card lessonId="l-cache" media={media('m-cache')} />)
+    expect(screen.getByTestId('card-l-cache')).toBeEmptyDOMElement()
   })
 
   it('does not load a lesson without video media', () => {

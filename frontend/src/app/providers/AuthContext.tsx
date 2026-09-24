@@ -10,6 +10,8 @@ import {
 
 } from 'react'
 import { createApiClient } from '@/db'
+import { pendingLessonsKey } from '@/features/lesson/application/pendingLessons'
+import { clearUploadThumbnails } from '@/features/lesson/application/useUploadThumbnail'
 import { apiFetch, clearTokens, hasRefreshToken, onSessionLost, setTokens } from '@/shared/lib/api'
 
 interface Session {
@@ -100,11 +102,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [login])
 
   const endLocalSession = useCallback(() => {
+    if (userId)
+      localStorage.removeItem(pendingLessonsKey(userId))
+    clearUploadThumbnails()
     clearTokens()
     sessionStorage.removeItem(TRIAL_SESSION_KEY)
     setTrialMode(false)
     setSession(null)
-  }, [])
+  }, [userId])
 
   const logout = useCallback(async () => {
     await apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
