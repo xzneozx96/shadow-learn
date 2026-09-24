@@ -27,6 +27,12 @@ Land the whole migration stack in one sitting. A partial stack on `main` ships a
 - Run a single uvicorn worker. The startup sweep marks in-flight jobs as failed, and the rate limiter keeps its counts in process.
 - Set `stop_grace_period: 30s` on the backend service. A graceful shutdown during a job took about 20 seconds in testing.
 
+## Import quarantine
+
+- The importer keeps what it could not merge. Each problem record becomes a row in the `import_quarantine` table, with the device's raw copy and an `error` list. Each entry in `error` has a `type`. That type is `conflict` when the account kept its own copy of a record, `conflict-media` when a conflicted lesson's device media differed, or a validation error type when a record was invalid.
+- These rows are the repair queue. For now, the only way to read them is SQL. No screen shows them.
+- Device media for a `conflict-media` row is stored in MinIO under `import-quarantine/<user>/<source>/<lesson>/<kind>`. These objects have no lifecycle rule, cleanup job, or restore screen yet, so plan bucket storage for them.
+
 ## After the deploy
 
 1. `curl -sf https://<backend>/api/health/deps` returns `{"db":"ok","s3":"ok"}`.
