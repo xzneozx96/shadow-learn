@@ -69,6 +69,24 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     expect(await databaseExists()).toBe(false)
   })
 
+  it('says in plain words when the old data cannot be read, and logs the raw error', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await new Promise<void>((resolve) => {
+      const request = indexedDB.open('shadowlearn', 99_999)
+      request.onsuccess = () => {
+        request.result.close()
+        resolve()
+      }
+    })
+    const server = fakeImportServer()
+    render(signedIn('account-a', <MigrationGate api={stubApi(server.handle).api}><p>the app</p></MigrationGate>))
+    const modal = await screen.findByTestId('migration-modal')
+    expect(modal).toHaveTextContent('Trình duyệt này có dữ liệu ShadowLearn cũ nhưng không đọc được. Hãy thử lại sau.')
+    expect(modal).not.toHaveTextContent(/version|error|\{message\}/i)
+    expect(warn).toHaveBeenCalledWith('[migration] could not read the legacy data', expect.anything())
+    warn.mockRestore()
+  })
+
   it('renders no close control and ignores Escape', async () => {
     await renderGate().seeded
     const dialog = await screen.findByTestId('migration-modal')

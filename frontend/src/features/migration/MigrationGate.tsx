@@ -22,7 +22,7 @@ function Checking() {
 type GateState
   = | { kind: 'checking' }
     | { kind: 'import', data: LegacyData }
-    | { kind: 'failed', message: string }
+    | { kind: 'failed' }
     | { kind: 'clear' }
 
 interface GateProps {
@@ -45,8 +45,9 @@ export function MigrationGate({ api, children, openApp = path => window.location
           setState(data.present ? { kind: 'import', data } : { kind: 'clear' })
       },
       (err: unknown) => {
+        console.warn('[migration] could not read the legacy data', err)
         if (live)
-          setState({ kind: 'failed', message: err instanceof Error ? err.message : String(err) })
+          setState({ kind: 'failed' })
       },
     )
     return () => {
@@ -65,7 +66,7 @@ export function MigrationGate({ api, children, openApp = path => window.location
       <Dialog open onOpenChange={() => {}}>
         <DialogContent showCloseButton={false} className="sm:max-w-lg" data-testid="migration-modal">
           <DialogTitle>{t('migration.title')}</DialogTitle>
-          <DialogDescription>{t('migration.error.unreadable', { message: state.message })}</DialogDescription>
+          <DialogDescription>{t('migration.error.unreadable')}</DialogDescription>
           <div className="flex flex-wrap justify-end gap-2">
             <Button variant="ghost" onClick={() => void logout()}>{t('migration.exit.signOut')}</Button>
             <Button variant="outline" onClick={() => setState({ kind: 'clear' })}>{t('migration.exit.keepLocal')}</Button>
