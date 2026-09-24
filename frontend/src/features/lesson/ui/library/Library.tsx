@@ -61,7 +61,7 @@ function LibrarySkeleton() {
 export function Library() {
   const { db } = useAuth()
   const { t } = useI18n()
-  const { lessons, status, error, reload, updateLesson, renameLesson, deleteLesson } = useLessons()
+  const { lessons, status, error, reload, savePendingLesson, editLesson, renameLesson, deleteLesson } = useLessons()
   const { entriesByLesson } = useVocabulary()
   const [search, setSearch] = useState('')
   const [sort] = useState<SortMode>('recent')
@@ -148,8 +148,8 @@ export function Library() {
   }, [renameLesson])
 
   const handleToggleDone = useCallback(async (lesson: LessonMeta) => {
-    await updateLesson({ ...lesson, isDone: !lesson.isDone })
-  }, [updateLesson])
+    await editLesson(lesson, prev => ({ ...prev, isDone: !lesson.isDone }))
+  }, [editLesson])
 
   const handleRetry = useCallback(async (lesson: LessonMeta) => {
     if (lesson.source !== 'youtube' || !lesson.sourceUrl)
@@ -170,12 +170,12 @@ export function Library() {
         return
       }
       const { job_id } = await res.json()
-      await updateLesson({ ...lesson, status: 'processing', jobId: job_id, errorMessage: undefined, currentStep: undefined })
+      savePendingLesson({ ...lesson, status: 'processing', jobId: job_id, errorMessage: undefined, currentStep: undefined })
     }
     catch {
       toast.error(t('library.retryFailed'))
     }
-  }, [updateLesson, t])
+  }, [savePendingLesson, t])
 
   const hasLessons = lessons.length > 0
 

@@ -1,3 +1,4 @@
+import type { LessonMeta } from '@/shared/types'
 import { act, render, waitFor } from '@testing-library/react'
 // frontend/tests/LessonView.restore.test.tsx
 import * as React from 'react'
@@ -101,7 +102,7 @@ vi.mock('@/features/lesson/application/useLesson', () => ({
 }))
 
 vi.mock('@/db', () => ({
-  saveLessonMeta: vi.fn().mockResolvedValue(undefined),
+  updateLessonMeta: vi.fn(async (_db: unknown, meta: LessonMeta, mutate: (prev: LessonMeta) => LessonMeta) => ({ ...mutate(meta), version: 2 })),
   getAllSpeakingBestsByLesson: vi.fn().mockResolvedValue([]),
   saveSpeakingBest: vi.fn().mockResolvedValue(undefined),
   saveSpeakingAudio: vi.fn().mockResolvedValue(undefined),
@@ -211,8 +212,8 @@ describe('resume Lesson Progress', () => {
     })
   })
 
-  it('eC2 – clears invalid progressSegmentId from IDB when orphaned', async () => {
-    const { saveLessonMeta } = await import('@/db')
+  it('eC2 – clears an orphaned progressSegmentId on the server', async () => {
+    const { updateLessonMeta } = await import('@/db')
 
     vi.mocked(useLesson).mockReturnValue({
       meta: { ...BASE_META, progressSegmentId: 'seg-orphan' },
@@ -225,12 +226,9 @@ describe('resume Lesson Progress', () => {
 
     render(<LessonView />)
 
-    await waitFor(() => {
-      expect(saveLessonMeta).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ progressSegmentId: null }),
-      )
-    })
+    await waitFor(() => expect(updateLessonMeta).toHaveBeenCalled())
+    const [, read, mutate] = vi.mocked(updateLessonMeta).mock.calls[0]
+    expect(mutate(read).progressSegmentId).toBeNull()
   })
 
   it('does NOT seek again if player changes reference (seek is one-shot)', async () => {

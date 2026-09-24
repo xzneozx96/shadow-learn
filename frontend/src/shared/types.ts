@@ -47,6 +47,7 @@ export interface LessonMeta {
   currentStep?: string
   isDone?: boolean
   media?: LessonMedia
+  version?: number // server row version; absent on lessons still processing in this browser
 }
 
 export interface ChatMessage {

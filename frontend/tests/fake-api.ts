@@ -85,6 +85,7 @@ export function lessonBody(meta: LessonMeta, segments: Segment[] = []): LessonSu
     last_opened_at: meta.lastOpenedAt,
     segment_count: segments.length,
     meta: { progressSegmentId: meta.progressSegmentId, tags: meta.tags },
+    version: meta.version ?? 1,
     segments,
   }
 }
@@ -131,6 +132,7 @@ export class FakeApiClient implements ApiClient {
   private versions = new Map<string, number>()
   private failures = new Map<string, number>()
   private beforePut: (() => Promise<void>) | null = null
+  private beforePatch: (() => Promise<void>) | null = null
 
   seed(path: string, body: unknown): this {
     this.records.set(path, structuredClone(body))
@@ -141,6 +143,11 @@ export class FakeApiClient implements ApiClient {
   // Runs once, between the next conditional PUT's read and its write, as another device would.
   interleaveBeforeNextPut(write: () => Promise<void>): void {
     this.beforePut = write
+  }
+
+  // Runs once, before the next lesson PATCH reaches the server, as another device would.
+  interleaveBeforeNextPatch(write: () => Promise<void>): void {
+    this.beforePatch = write
   }
 
   private etag(path: string): Record<string, string> {
@@ -219,12 +226,15 @@ export class FakeApiClient implements ApiClient {
         return json(200, body, this.etag(bare))
       }
       case 'PATCH': {
-        const existing = this.records.get(bare)
+        const existing = this.records.get(bare) as Row | undefined
         if (!existing)
           return json(404, { detail: 'not found' })
-        const merged = { ...existing as object, ...body as object }
+        const version = Number(existing.version ?? 1)
+        if (precondition?.version && precondition.version !== `"${version}"`)
+          return json(409, { detail: 'version conflict', record: existing }, { ETag: `"${version}"` })
+        const merged = { ...existing, ...body as object, version: version + 1 }
         this.records.set(bare, merged)
-        return json(200, merged)
+        return json(200, merged, { ETag: `"${version + 1}"` })
       }
       case 'DELETE': {
         if (spec && storeId === undefined) {
@@ -309,6 +319,12 @@ export class FakeApiClient implements ApiClient {
     const raw = init?.body
     const body = typeof raw === 'string' ? JSON.parse(raw) : raw ?? undefined
     const method = init?.method ?? 'GET'
+    if (method === 'PATCH') {
+      const interleaved = this.beforePatch
+      this.beforePatch = null
+      await interleaved?.()
+      return this.respond(method, path, body, { version: new Headers(init?.headers).get('If-Match') })
+    }
     const stored = this.records.get(path.split('?')[0])
     if (method === 'GET' && stored instanceof Blob) {
       this.calls.push({ method, path })

@@ -17,9 +17,8 @@ import {
   listThreadsBySurface,
   putThreadSummary,
   refreshMediaTicket,
-  renameLesson,
-  saveLessonMeta,
   saveThreadMessages,
+  updateLessonMeta,
   updateSettings,
 } from '@/db'
 import { FakeApiClient, fakeDataClient, lessonBody } from './fake-api'
@@ -58,7 +57,7 @@ describe('lesson helpers', () => {
     const lessons = await getAllLessonMetas(db)
 
     expect(api.calls).toEqual([{ method: 'GET', path: '/api/lessons' }])
-    expect(lessons).toEqual([{ ...meta, segmentCount: 2, isDone: undefined }])
+    expect(lessons).toEqual([{ ...meta, segmentCount: 2, isDone: undefined, version: 1 }])
   })
 
   it('reads the title column over a stale meta.title and falls back to created_at for a never-opened lesson', async () => {
@@ -102,31 +101,27 @@ describe('lesson helpers', () => {
     expect(await getLesson(db, 'missing')).toBeUndefined()
   })
 
-  it('saveLessonMeta PATCHes only the client-owned fields and last_opened_at', async () => {
+  it('updateLessonMeta PATCHes the title and client-owned fields at the version it read', async () => {
     api.seedLesson(meta)
+    const [read] = await getAllLessonMetas(db)
+    api.calls = []
 
-    await saveLessonMeta(db, { ...meta, title: 'Renamed', isDone: true, status: 'complete', jobId: 'j', currentStep: 'x' })
+    const saved = await updateLessonMeta(db, read, prev => ({ ...prev, title: 'Renamed', isDone: true, status: 'complete', jobId: 'j' }))
 
     expect(api.calls).toEqual([{
       method: 'PATCH',
       path: '/api/lessons/l1',
       body: {
+        title: 'Renamed',
         meta: { progressSegmentId: 's2', tags: ['hsk3'], isDone: true },
         last_opened_at: meta.lastOpenedAt,
       },
     }])
+    expect(saved).toMatchObject({ title: 'Renamed', isDone: true, version: 2 })
   })
 
-  it('renameLesson PATCHes only the title', async () => {
-    api.seedLesson(meta)
-
-    await renameLesson(db, 'l1', 'Renamed')
-
-    expect(api.calls).toEqual([{ method: 'PATCH', path: '/api/lessons/l1', body: { title: 'Renamed' } }])
-  })
-
-  it('saveLessonMeta throws when the server rejects the PATCH', async () => {
-    await expect(saveLessonMeta(db, meta)).rejects.toThrow()
+  it('updateLessonMeta throws when the server rejects the PATCH', async () => {
+    await expect(updateLessonMeta(db, meta, prev => prev)).rejects.toThrow()
   })
 
   it('deleteLessonMeta and deleteFullLesson DELETE the lesson and its thread', async () => {
@@ -247,5 +242,46 @@ describe('createApiClient', () => {
       ['/api/lessons/l1', { method: 'DELETE' }],
       ['/api/store/vocabulary/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"mode":"replace","records":[{"id":"v1"}]}' }],
     ])
+  })
+})
+
+describe('updateLessonMeta on two devices', () => {
+  const phone = () => fakeDataClient(api)
+
+  it('reapplies a stale device\'s edit on top of the other device\'s save', async () => {
+    api.seedLesson(meta)
+    const [onLaptop] = await getAllLessonMetas(db)
+    const [onPhone] = await getAllLessonMetas(phone())
+    await updateLessonMeta(phone(), onPhone, prev => ({ ...prev, tags: ['phone-tag'] }))
+
+    const saved = await updateLessonMeta(db, onLaptop, prev => ({ ...prev, isDone: true }))
+
+    expect((await getLessonMeta(db, 'l1'))).toMatchObject({ tags: ['phone-tag'], isDone: true, version: 3 })
+    expect(saved.version).toBe(3)
+    expect(api.calls.filter(c => c.method === 'PATCH')).toHaveLength(3)
+  })
+
+  it('reapplies an edit when the other device saves between its read and its write', async () => {
+    api.seedLesson(meta)
+    const [onLaptop] = await getAllLessonMetas(db)
+    api.interleaveBeforeNextPatch(async () => {
+      const [onPhone] = await getAllLessonMetas(phone())
+      await updateLessonMeta(phone(), onPhone, prev => ({ ...prev, title: 'Phone title' }))
+    })
+
+    await updateLessonMeta(db, onLaptop, prev => ({ ...prev, progressSegmentId: 's1' }))
+
+    expect(await getLessonMeta(db, 'l1')).toMatchObject({ title: 'Phone title', progressSegmentId: 's1' })
+  })
+
+  it('keeps the media the caller already had after a conflict', async () => {
+    api.seed('/api/lessons/l1', { ...lessonBody(meta), video_url: '/api/media/m-9?token=abc' })
+    const [onLaptop] = await getAllLessonMetas(db)
+    const [onPhone] = await getAllLessonMetas(phone())
+    await updateLessonMeta(phone(), onPhone, prev => ({ ...prev, tags: [] }))
+
+    const saved = await updateLessonMeta(db, onLaptop, prev => ({ ...prev, isDone: true }))
+
+    expect(saved.media).toEqual(onLaptop.media)
   })
 })

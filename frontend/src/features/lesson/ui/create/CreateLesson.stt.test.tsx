@@ -33,7 +33,7 @@ vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: {} }),
 }))
 vi.mock('@/features/lesson/application/LessonsContext', () => ({
-  useLessons: () => ({ updateLesson: vi.fn() }),
+  useLessons: () => ({ savePendingLesson: vi.fn() }),
 }))
 vi.mock('@/db', () => ({
   getSettings: vi.fn().mockResolvedValue(null),

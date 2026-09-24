@@ -77,7 +77,7 @@ function formatCount(n: number | null): string {
 function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = true, wrapperClassName }: VideoCardProps) {
   const { db } = useAuth()
   const { t } = useI18n()
-  const { updateLesson } = useLessons()
+  const { savePendingLesson } = useLessons()
   const stagger = useCutoutContentStaggerVariants()
   const [submitting, setSubmitting] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -113,7 +113,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
 
       const lessonId = crypto.randomUUID()
       const now = new Date().toISOString()
-      await updateLesson({
+      savePendingLesson({
         id: lessonId,
         title: video.title,
         source: 'youtube',

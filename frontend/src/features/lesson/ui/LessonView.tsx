@@ -6,7 +6,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { usePlayer } from '@/app/providers/PlayerContext'
-import { saveLessonMeta } from '@/db'
+import { updateLessonMeta } from '@/db'
 import { AgentActionsProvider, useAgentActions } from '@/features/agent/application/AgentActionsContext'
 import { CompanionPanel } from '@/features/agent/ui/CompanionPanel'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
@@ -121,11 +121,12 @@ function LessonViewContent() {
       clearTimeout(progressDebounceRef.current)
     progressDebounceRef.current = setTimeout(() => {
       if (dbRef.current && metaRef.current) {
-        saveLessonMeta(dbRef.current, { ...metaRef.current, progressSegmentId: segmentId })
+        updateLessonMeta(dbRef.current, metaRef.current, prev => ({ ...prev, progressSegmentId: segmentId }))
+          .then(saved => updateMeta({ version: saved.version }))
       }
       pendingSegmentIdRef.current = null
     }, 500)
-  }, []) // stable — reads live values through refs
+  }, [updateMeta]) // stable — reads live values through refs
 
   // Flush pending progress write immediately on unmount.
   // Handles SPA navigation away from the lesson within the 500ms debounce window.
@@ -135,7 +136,8 @@ function LessonViewContent() {
     return () => {
       if (progressDebounceRef.current && pendingSegmentIdRef.current && dbRef.current && metaRef.current) {
         clearTimeout(progressDebounceRef.current)
-        void saveLessonMeta(dbRef.current, { ...metaRef.current, progressSegmentId: pendingSegmentIdRef.current })
+        const segmentId = pendingSegmentIdRef.current
+        void updateLessonMeta(dbRef.current, metaRef.current, prev => ({ ...prev, progressSegmentId: segmentId }))
       }
     }
   }, [])
@@ -205,14 +207,15 @@ function LessonViewContent() {
     }
     const target = segments.find(s => s.id === meta.progressSegmentId)
     if (!target) {
-      // EC2: orphaned segment ID — clear it from IDB and start at beginning
-      saveLessonMeta(db, { ...meta, progressSegmentId: null })
+      // EC2: orphaned segment ID — clear it and start at beginning
+      updateLessonMeta(db, meta, prev => ({ ...prev, progressSegmentId: null }))
+        .then(saved => updateMeta({ version: saved.version }))
       hasRestoredRef.current = true
       return
     }
     player.seekTo(target.start)
     hasRestoredRef.current = true
-  }, [player, meta, segments, db, deepLinkSegmentId])
+  }, [player, meta, segments, db, deepLinkSegmentId, updateMeta])
 
   // Loading state
   if (loading) {

@@ -1,7 +1,7 @@
 import type { DataClient } from '@/db'
 import type { LessonMedia, LessonMeta, Segment } from '@/shared/types'
 import { useCallback, useEffect, useState } from 'react'
-import { getLesson, saveLessonMeta } from '@/db'
+import { getLesson, updateLessonMeta } from '@/db'
 
 interface UseLessonResult {
   meta: LessonMeta | null
@@ -32,11 +32,12 @@ export function useLesson(db: DataClient | null, lessonId: string | undefined): 
           return
         if (!lesson)
           return
-        const opened = { ...lesson.meta, lastOpenedAt: new Date().toISOString() }
-        setMeta(opened)
+        const openedAt = new Date().toISOString()
+        setMeta({ ...lesson.meta, lastOpenedAt: openedAt })
         setSegments(lesson.segments)
         setMedia(lesson.media)
-        saveLessonMeta(client, opened).catch(() => {})
+        updateLessonMeta(client, lesson.meta, prev => ({ ...prev, lastOpenedAt: openedAt }))
+          .then(saved => setMeta(prev => prev && { ...prev, version: saved.version }), () => {})
       }
       catch (e) {
         if (!cancelled)

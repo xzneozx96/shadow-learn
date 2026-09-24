@@ -44,6 +44,7 @@ export interface LessonSummary {
   last_opened_at: string | null
   segment_count: number
   meta: ClientLessonMeta
+  version: number
   video_url?: string
   audio_url?: string
 }
@@ -59,6 +60,7 @@ export interface LessonDetail {
 }
 
 const MEDIA_ID = /\/api\/media\/([^/?]+)/
+const MAX_CONFLICT_RETRIES = 3
 
 export function toLessonMeta(summary: LessonSummary): LessonMeta {
   return {
@@ -76,6 +78,7 @@ export function toLessonMeta(summary: LessonSummary): LessonMeta {
     tags: summary.meta.tags ?? [],
     isDone: summary.meta.isDone,
     media: summaryMedia(summary),
+    version: summary.version,
   }
 }
 
@@ -110,27 +113,44 @@ export async function getLesson(db: DataClient, id: string): Promise<LessonDetai
   return { meta, segments: body.segments, media: meta.media ?? null }
 }
 
-async function patchLesson(db: DataClient, id: string, body: object): Promise<void> {
-  const res = await db.api.fetch(lessonPath(id), {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok)
-    throw await responseError(res, `Saving lesson failed: ${res.status}`)
-}
-
-export async function saveLessonMeta(db: DataClient, meta: LessonMeta): Promise<void> {
+function lessonPatch(meta: LessonMeta): object {
   const clientMeta: ClientLessonMeta = {
     progressSegmentId: meta.progressSegmentId,
     tags: meta.tags,
     isDone: meta.isDone,
   }
-  await patchLesson(db, meta.id, { meta: clientMeta, last_opened_at: meta.lastOpenedAt })
+  return { title: meta.title, meta: clientMeta, last_opened_at: meta.lastOpenedAt }
 }
 
-export async function renameLesson(db: DataClient, id: string, title: string): Promise<void> {
-  await patchLesson(db, id, { title })
+// Read-modify-write of the lesson's title and client-owned fields at the version
+// `meta` was read at: on a version conflict, `mutate` runs again on the lesson
+// another device just saved.
+export async function updateLessonMeta(
+  db: DataClient,
+  meta: LessonMeta,
+  mutate: (prev: LessonMeta) => LessonMeta,
+): Promise<LessonMeta> {
+  let current = meta
+  for (let attempt = 0; attempt <= MAX_CONFLICT_RETRIES; attempt++) {
+    const next = mutate(current)
+    const res = await db.api.fetch(lessonPath(meta.id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(current.version === undefined ? {} : { 'If-Match': `"${current.version}"` }) },
+      body: JSON.stringify(lessonPatch(next)),
+    })
+    if (res.status === 409) {
+      const conflict: { detail?: string, record?: LessonSummary } = await res.clone().json().catch(() => ({}))
+      if (conflict.detail === 'version conflict' && conflict.record) {
+        current = { ...toLessonMeta(conflict.record), media: meta.media }
+        continue
+      }
+    }
+    if (!res.ok)
+      throw await responseError(res, `Saving lesson failed: ${res.status}`)
+    const saved: LessonSummary = await res.json()
+    return { ...next, version: saved.version }
+  }
+  throw new Error(`Saving lesson ${meta.id} failed: it kept changing on another device`)
 }
 
 export async function getLessonMeta(db: DataClient, id: string): Promise<LessonMeta | undefined> {
@@ -231,8 +251,6 @@ export async function deleteFullLesson(db: DataClient, lessonId: string): Promis
     deleteSpeakingBestsByLesson(db, lessonId),
   ])
 }
-
-const MAX_CONFLICT_RETRIES = 3
 
 // Read-modify-write under optimistic concurrency: on a version conflict,
 // `mutate` runs again on the record another device just wrote.
