@@ -1,7 +1,9 @@
 import hashlib
 import uuid
 from typing import Annotated, Any, Literal
+from urllib.parse import quote
 
+from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from pydantic import AwareDatetime, BaseModel, Field
 from sqlalchemy import delete, func, select
@@ -33,7 +35,7 @@ from app.lessons.models import Lesson, LessonSegment
 from app.lessons.router import owned_lesson
 from app.lessons.services.audio import ensure_temp_dir
 from app.media.models import MediaKind
-from app.media.service import CONTENT_TYPES, delete_objects, store_file
+from app.media.service import CONTENT_TYPES, delete_objects, put_file, store_file
 from app.settings import settings
 from app.userdata.merge import DOMINANCE
 from app.userdata.specs import STORES
@@ -42,6 +44,7 @@ router = APIRouter(prefix="/api/import", tags=["import"])
 
 Session = Annotated[AsyncSession, Depends(get_session)]
 Source = Annotated[str, Field(min_length=1, max_length=100)]
+MEDIA_STORE = "media"
 
 _CHUNK_SIZE = 1024 * 1024
 _EXTENSIONS = {content_type: ext for ext, content_type in CONTENT_TYPES.items()} | {"audio/webm": "webm"}
@@ -86,14 +89,16 @@ class ManifestRequest(Camel):
     dominance: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     quarantine: list[QuarantineKey] = Field(default_factory=list)
     media: list[MediaKey] = Field(default_factory=list)
+    quarantined_media: list[MediaKey] = Field(default_factory=list)
 
 
-class ManifestResponse(BaseModel):
+class ManifestResponse(Camel):
     stores: dict[str, Digest]
     present: dict[str, int] = Field(default_factory=dict)
     undominated: dict[str, list[str]] = Field(default_factory=dict)
     quarantine: Digest
     media: list[MediaDigest | None]
+    quarantined_media: list[MediaDigest | None] = Field(default_factory=list)
 
 
 def _seconds(segment: dict[str, Any], field: str) -> float:
@@ -294,12 +299,23 @@ async def import_media(
     kind: Annotated[ImportKind, Form()],
     file: UploadFile,
     segment_id: Annotated[str | None, Form()] = None,
+    quarantine: Annotated[bool, Form()] = False,
+    source: Annotated[str | None, Form(pattern=r"^[A-Za-z0-9-]{1,100}$")] = None,
 ) -> MediaDigest:
-    """Store one legacy blob for an imported lesson, replacing a different earlier copy and keeping an equal one."""
+    """Store one legacy blob for an imported lesson, replacing a different earlier copy and keeping an equal one.
+
+    With ``quarantine``, the blob belongs to a lesson that changed on both sides and
+    differs from the account's file. It is kept for repair under its own key, and the
+    account's media is never touched.
+    """
     if (kind is ImportKind.shadowing) != (segment_id is not None):
         raise HTTPException(status_code=422, detail="segment_id goes with kind=shadowing and only with it")
+    if quarantine and source is None:
+        raise HTTPException(status_code=422, detail="quarantine needs the device source")
     await owned_lesson(session, lesson_id, user)
     key = MediaKey(lesson_id=lesson_id, kind=kind, segment_id=segment_id)
+    if quarantine:
+        return await _quarantine_media(request.app.state.s3, session, user.id, source, key, file)
     path, size, sha256 = await _receive(file, kind)
     try:
         lock = f"import-media:{user.id}:{lesson_id}:{kind}:{segment_id or ''}"
@@ -327,6 +343,63 @@ async def import_media(
     return MediaDigest(**key.model_dump(), size=media.size, sha256=media.sha256)
 
 
+def _media_record_id(key: MediaKey) -> str:
+    return f"{key.lesson_id}:{key.kind}:{key.segment_id or ''}"
+
+
+async def _quarantine_media(s3, session: AsyncSession, user_id: uuid.UUID, source: str, key: MediaKey, file: UploadFile) -> MediaDigest:
+    object_key = f"import-quarantine/{user_id}/{source}/{key.lesson_id}/{key.kind}"
+    if key.segment_id is not None:
+        object_key += f"/{quote(key.segment_id, safe='')}"
+    path, _, _ = await _receive(file, key.kind)
+    try:
+        size, sha256 = await put_file(s3, object_key, path, _content_type(file, key.kind))
+    finally:
+        path.unlink(missing_ok=True)
+    account = await media_object(session, user_id, key)
+    row = {
+        "user_id": user_id,
+        "source": source,
+        "store": MEDIA_STORE,
+        "record_id": _media_record_id(key),
+        "raw": {"objectKey": object_key, "sha256": sha256, "size": size, "kind": str(key.kind), "lessonId": str(key.lesson_id), "segmentId": key.segment_id},
+        "error": [{"type": "conflict-media", "accountSha256": account.sha256 if account else None}],
+    }
+    stmt = insert(QuarantinedRecord)
+    await session.execute(
+        stmt.on_conflict_do_update(
+            index_elements=["user_id", "source", "store", "record_id"],
+            set_={"raw": stmt.excluded.raw, "error": stmt.excluded.error},
+        ),
+        [row],
+    )
+    await session.commit()
+    return MediaDigest(**key.model_dump(), size=size, sha256=sha256)
+
+
+async def _quarantined_media(s3, session: AsyncSession, user_id: uuid.UUID, source: str, key: MediaKey) -> MediaDigest | None:
+    """The blob kept for repair, only while its object still exists at the size recorded."""
+    raw = await session.scalar(
+        select(QuarantinedRecord.raw).where(
+            QuarantinedRecord.user_id == user_id,
+            QuarantinedRecord.source == source,
+            QuarantinedRecord.store == MEDIA_STORE,
+            QuarantinedRecord.record_id == _media_record_id(key),
+        )
+    )
+    if raw is None:
+        return None
+    try:
+        head = await s3.head_object(Bucket=settings.s3_bucket, Key=raw["objectKey"])
+    except ClientError as err:
+        if err.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
+            return None
+        raise
+    if head["ContentLength"] != raw["size"]:
+        return None
+    return MediaDigest(**key.model_dump(), size=raw["size"], sha256=raw["sha256"])
+
+
 async def _undominated(session: AsyncSession, user_id: uuid.UUID, store: str, local: list[dict[str, Any]]) -> list[str]:
     """The ids whose stored record does not yet reflect everything in the device's copy, by the store's merge rule."""
     spec = STORES[store]
@@ -337,7 +410,7 @@ async def _undominated(session: AsyncSession, user_id: uuid.UUID, store: str, lo
 
 
 @router.post("/manifest")
-async def manifest(body: ManifestRequest, user: CurrentUser, session: Session) -> ManifestResponse:
+async def manifest(body: ManifestRequest, request: Request, user: CurrentUser, session: Session) -> ManifestResponse:
     """Digest the caller's stored copy of exactly the records and blobs this device sent."""
     unknown = sorted((body.stores.keys() | body.present.keys()) - RECORD_STORES) or sorted(body.dominance.keys() - STORES.keys())
     if unknown:
@@ -348,4 +421,7 @@ async def manifest(body: ManifestRequest, user: CurrentUser, session: Session) -
         undominated={store: await _undominated(session, user.id, store, local) for store, local in body.dominance.items()},
         quarantine=await quarantine_digest(session, user.id, body.source, body.quarantine),
         media=[await media_digest(session, user.id, key) for key in body.media],
+        quarantined_media=[
+            await _quarantined_media(request.app.state.s3, session, user.id, body.source, key) for key in body.quarantined_media
+        ],
     )

@@ -23,7 +23,6 @@ type PluralKey
     | 'migration.done.media'
     | 'migration.done.materials'
     | 'migration.done.conflicts'
-    | 'migration.done.conflictMedia'
     | 'migration.done.quarantine'
     | 'migration.done.unfinished'
     | 'migration.done.orphans'
@@ -132,8 +131,6 @@ function noteLines(t: T, notes: Notes): string[] {
     lines.push(plural(t, 'migration.done.materials', notes.keptAccountCopy))
   if (notes.conflicts > 0)
     lines.push(plural(t, 'migration.done.conflicts', notes.conflicts))
-  if (notes.keptAccountMedia > 0)
-    lines.push(plural(t, 'migration.done.conflictMedia', notes.keptAccountMedia))
   if (notes.quarantined.length > 0)
     lines.push(plural(t, 'migration.done.quarantine', notes.quarantined.length, { stores: [...new Set(notes.quarantined)].sort().join(', ') }))
   if (notes.skipped.unfinishedLessons > 0)

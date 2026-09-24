@@ -5,12 +5,16 @@ import { responseError } from '@/shared/lib/api'
 import { blobDigest } from './canonical'
 import { postManifest } from './manifest'
 
-async function upload(api: ApiClient, { key, blob }: OutgoingMedia): Promise<void> {
+async function upload(api: ApiClient, { key, blob }: OutgoingMedia, quarantineFor?: string): Promise<void> {
   const form = new FormData()
   form.set('lesson_id', key.lessonId)
   form.set('kind', key.kind)
   if (key.segmentId !== undefined)
     form.set('segment_id', key.segmentId)
+  if (quarantineFor !== undefined) {
+    form.set('quarantine', 'true')
+    form.set('source', quarantineFor)
+  }
   form.set('file', blob, key.kind === 'shadowing' ? `${key.segmentId}.webm` : `${key.lessonId}`)
   const res = await api.fetch('/api/import/media', { method: 'POST', body: form })
   if (!res.ok)
@@ -24,7 +28,7 @@ export async function uploadMedia(
   onProgress: (sent: number) => void,
   accountKept: ReadonlySet<string> = new Set(),
   accountWins: ReadonlySet<string> = new Set(),
-): Promise<{ keptAccountMedia: number }> {
+): Promise<void> {
   const started = performance.now()
   const sent: SentMedia[] = []
   for (const item of media)
@@ -34,13 +38,13 @@ export async function uploadMedia(
   const server = media.length > 0
     ? (await postManifest(api, { source: ledger.source, stores: {}, media: sent.map(item => item.key) })).media
     : []
-  let keptAccountMedia = 0
   for (const [i, item] of media.entries()) {
     const stored = server[i]
     const matches = stored?.size === sent[i].size && stored.sha256 === sent[i].sha256
-    // A lesson that changed on both sides keeps the account's media and only gains what the account lacks.
+    // A lesson that changed on both sides keeps the account's file; a differing device file is saved for repair.
     if (!matches && stored && accountWins.has(item.key.lessonId)) {
-      keptAccountMedia++
+      ledger.quarantinedMedia.push(sent[i])
+      await upload(api, item, ledger.source)
       onProgress(1)
       continue
     }
@@ -49,5 +53,4 @@ export async function uploadMedia(
     ledger.media.push(sent[i])
     onProgress(1)
   }
-  return { keptAccountMedia }
 }

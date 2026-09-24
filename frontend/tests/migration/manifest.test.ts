@@ -42,6 +42,7 @@ describe('verify', () => {
       dominance: {},
       quarantine: [],
       media: [],
+      quarantinedMedia: [],
     })
   })
 

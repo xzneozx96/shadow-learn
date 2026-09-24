@@ -186,6 +186,31 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
       expect(error).toEqual([{ type: 'conflict' }])
   })
 
+  it('saves a device video that differs from the account\'s for repair, leaves the account file, and finishes', async () => {
+    const { server, seeded } = renderGate()
+    server.state.conflicts = new Set([`lessons:${LESSON_A}`])
+    const account = { size: 1, sha256: 'account-video' }
+    server.media.set(`${LESSON_A}:video:`, account)
+    await seeded
+    await start()
+    expect(await screen.findByText(/^2 items changed both here and in your account/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await databaseExists()).toBe(false)
+    expect(server.media.get(`${LESSON_A}:video:`)).toEqual(account)
+    expect(server.quarantinedMedia.get(`${LESSON_A}:video:`)).toEqual(expect.objectContaining({ size: 300_000 }))
+  })
+
+  it('keeps the local copy when the device video never reached repair storage', async () => {
+    const { server, seeded } = renderGate()
+    server.state.conflicts = new Set([`lessons:${LESSON_A}`])
+    server.state.dropQuarantinedMedia = true
+    server.media.set(`${LESSON_A}:video:`, { size: 1, sha256: 'account-video' })
+    await seeded
+    await start()
+    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    expect(failing).toHaveTextContent(`video for lesson ${LESSON_A}`)
+    expect(await databaseExists()).toBe(true)
+  })
+
   it('speaks the language this browser used before, Vietnamese here', async () => {
     await renderGate({ variant: 'B' }).seeded
     expect(await screen.findByText('Chuyển dữ liệu vào tài khoản của bạn')).toBeInTheDocument()

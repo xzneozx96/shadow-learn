@@ -9,6 +9,7 @@ interface ManifestBody {
   present?: Record<string, string[]>
   quarantine?: { store: string, recordId: string }[]
   media?: { lessonId: string, kind: string, segmentId?: string }[]
+  quarantinedMedia?: { lessonId: string, kind: string, segmentId?: string }[]
 }
 
 const BULK = /^\/api\/store\/([^/]+)\/bulk$/
@@ -20,8 +21,9 @@ export function fakeImportServer() {
   const quarantine = new Map<string, Json>()
   const quarantineErrors = new Map<string, Json>()
   const media = new Map<string, { size: number, sha256: string }>()
+  const quarantinedMedia = new Map<string, { size: number, sha256: string }>()
   const keys = new Map<string, unknown>()
-  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, rejectRecord: null as string | null, dropField: null as string | null, onManifest: null as (() => Promise<void>) | null, conflicts: new Set<string>() }
+  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, rejectRecord: null as string | null, dropField: null as string | null, onManifest: null as (() => Promise<void>) | null, conflicts: new Set<string>(), dropQuarantinedMedia: false }
   const writer = new Map<string, string>()
   const store = (name: string) => stores.get(name) ?? stores.set(name, new Map()).get(name)!
 
@@ -92,7 +94,12 @@ export function fakeImportServer() {
     }
     if (path === '/api/import/media') {
       const form = body as FormData
-      media.set(mediaKey({ lessonId: String(form.get('lesson_id')), kind: String(form.get('kind')), segmentId: form.get('segment_id')?.toString() }), await blobDigest(form.get('file') as Blob))
+      const key = mediaKey({ lessonId: String(form.get('lesson_id')), kind: String(form.get('kind')), segmentId: form.get('segment_id')?.toString() })
+      const digest = await blobDigest(form.get('file') as Blob)
+      if (form.get('quarantine') !== 'true')
+        media.set(key, digest)
+      else if (!state.dropQuarantinedMedia)
+        quarantinedMedia.set(key, digest)
       return { body: {} }
     }
     if (path === '/api/import/manifest') {
@@ -114,11 +121,12 @@ export function fakeImportServer() {
           present,
           quarantine: await storeDigest(kept.map(key => [key, quarantine.get(key)!])),
           media: (request.media ?? []).map(key => media.has(mediaKey(key)) ? { ...key, ...media.get(mediaKey(key)) } : null),
+          quarantinedMedia: (request.quarantinedMedia ?? []).map(key => quarantinedMedia.has(mediaKey(key)) ? { ...key, ...quarantinedMedia.get(mediaKey(key)) } : null),
         },
       }
     }
     return undefined
   }
 
-  return { handle, stores, keys, media, quarantine, quarantineErrors, state }
+  return { handle, stores, keys, media, quarantinedMedia, quarantine, quarantineErrors, state }
 }

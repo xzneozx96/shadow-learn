@@ -95,16 +95,17 @@ describe('uploadLessons', () => {
 })
 
 describe('uploadMedia', () => {
-  it('keeps the account file of a lesson that changed on both sides and fills in only what the account lacks', async () => {
+  it('keeps the account file of a lesson that changed on both sides, saves the device file for repair, and fills in what the account lacks', async () => {
     const video = { key: { lessonId: 'l1', kind: 'video' as const }, blob: new Blob(['device video']) }
     const audio = { key: { lessonId: 'l1', kind: 'audio' as const }, blob: new Blob(['device audio']) }
     const { api, calls } = stubApi(({ path }) => path === '/api/import/manifest'
       ? { body: { stores: {}, quarantine: { count: 0, sha256: '' }, media: [{ ...video.key, size: 1, sha256: 'account' }, null] } }
       : { body: {} })
     const ledger = emptyLedger('device-a', [])
-    const { keptAccountMedia } = await uploadMedia(api, ledger, [video, audio], () => {}, new Set(), new Set(['l1']))
-    expect(keptAccountMedia).toBe(1)
-    expect(calls.filter(call => call.path === '/api/import/media').map(call => (call.body as FormData).get('kind'))).toEqual(['audio'])
+    await uploadMedia(api, ledger, [video, audio], () => {}, new Set(), new Set(['l1']))
+    const uploads = calls.filter(call => call.path === '/api/import/media').map(call => call.body as FormData)
+    expect(uploads.map(form => [form.get('kind'), form.get('quarantine'), form.get('source')])).toEqual([['video', 'true', 'device-a'], ['audio', null, null]])
     expect(ledger.media.map(item => item.key)).toEqual([audio.key])
+    expect(ledger.quarantinedMedia.map(item => item.key)).toEqual([video.key])
   })
 })

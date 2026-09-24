@@ -22,6 +22,8 @@ export interface Ledger {
   stores: Map<ManifestStore, StoreLedger>
   quarantine: Map<string, QuarantinedRecord>
   media: SentMedia[]
+  /** Device files of a lesson that changed on both sides, saved for repair beside the account's own. */
+  quarantinedMedia: SentMedia[]
   unsentMedia: MediaKey[]
   hashMs: number
 }
@@ -52,6 +54,7 @@ export function emptyLedger(source: string, stores: readonly ManifestStore[]): L
     stores: new Map(stores.map(store => [store, freshStoreLedger()])),
     quarantine: new Map(),
     media: [],
+    quarantinedMedia: [],
     unsentMedia: [],
     hashMs: 0,
   }
@@ -76,6 +79,7 @@ export interface ManifestResponse {
   undominated?: Record<string, string[]>
   quarantine: Digest
   media: (SentMedia['key'] & { size: number, sha256: string } | null)[]
+  quarantinedMedia?: (SentMedia['key'] & { size: number, sha256: string } | null)[]
 }
 
 export type Check
@@ -94,7 +98,7 @@ function sameDigest(a: Digest | undefined, b: Digest): boolean {
 
 export async function postManifest(
   api: ApiClient,
-  body: { source: string, stores: Record<string, string[]>, present?: Record<string, string[]>, dominance?: Record<string, Json[]>, quarantine?: { store: string, recordId: string }[], media?: MediaKey[] },
+  body: { source: string, stores: Record<string, string[]>, present?: Record<string, string[]>, dominance?: Record<string, Json[]>, quarantine?: { store: string, recordId: string }[], media?: MediaKey[], quarantinedMedia?: MediaKey[] },
 ): Promise<ManifestResponse> {
   const started = performance.now()
   const res = await api.fetch('/api/import/manifest', {
@@ -130,6 +134,7 @@ export async function verify(api: ApiClient, ledger: Ledger): Promise<Verificati
     dominance: Object.fromEntries(local.filter(({ dominance }) => dominance.length > 0).map(({ store, dominance }) => [store, dominance])),
     quarantine: quarantined.map(({ store, recordId }) => ({ store, recordId })),
     media: ledger.media.map(item => item.key),
+    quarantinedMedia: ledger.quarantinedMedia.map(item => item.key),
   })
 
   const checks: Check[] = local.map(({ store, present, missing, dominance, digest }) => {
@@ -148,9 +153,8 @@ export async function verify(api: ApiClient, ledger: Ledger): Promise<Verificati
   checks.push({ kind: 'quarantine', count: quarantined.length, ok: sameDigest(server.quarantine, quarantineDigest) })
   for (const key of ledger.unsentMedia)
     checks.push({ kind: 'media', key, ok: false })
-  ledger.media.forEach((item, i) => {
-    const stored = server.media[i]
-    checks.push({ kind: 'media', key: item.key, ok: stored?.size === item.size && stored?.sha256 === item.sha256 })
-  })
+  const sameBlob = (item: SentMedia, stored: ManifestResponse['media'][number] | undefined) => stored?.size === item.size && stored?.sha256 === item.sha256
+  ledger.media.forEach((item, i) => checks.push({ kind: 'media', key: item.key, ok: sameBlob(item, server.media[i]) }))
+  ledger.quarantinedMedia.forEach((item, i) => checks.push({ kind: 'media', key: item.key, ok: sameBlob(item, server.quarantinedMedia?.[i]) }))
   return { ok: checks.every(check => check.ok), checks }
 }

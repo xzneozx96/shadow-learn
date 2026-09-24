@@ -201,6 +201,58 @@ async def test_media_manifest_reports_each_blob_and_null_for_a_missing_one(clien
     assert digest["media"][1] is None
 
 
+async def _quarantine_upload(client, user, payload, source="device-a"):
+    return await client.post(
+        "/api/import/media",
+        data={"lesson_id": LESSON_ID, "kind": "video", "quarantine": "true", "source": source},
+        files={"file": ("blob", payload, "video/mp4")},
+        headers=_bearer(user),
+    )
+
+
+async def _object_bytes(s3, key):
+    body = (await s3.get_object(Bucket=settings.s3_bucket, Key=key))["Body"]
+    async with body as stream:
+        return await stream.read()
+
+
+async def test_a_differing_device_blob_is_quarantined_and_the_account_object_is_untouched(client, owner, app_s3, db_session):
+    await _import_lesson(client, owner)
+    account, device = b"account video bytes", b"device video bytes, different"
+    await _upload(client, owner, account)
+    row = (await _media_rows(db_session))[0]
+    live = (row.id, row.object_key, row.sha256)
+    for _ in range(2):
+        response = await _quarantine_upload(client, owner, device)
+        assert response.status_code == 200, response.text
+        assert response.json()["sha256"] == hashlib.sha256(device).hexdigest()
+    db_session.expire_all()
+    rows = await _media_rows(db_session)
+    assert [(row.id, row.object_key, row.sha256) for row in rows] == [live]
+    assert await _object_bytes(app_s3, live[1]) == account
+
+    quarantined = (await db_session.execute(select(QuarantinedRecord))).scalars().all()
+    assert len(quarantined) == 1
+    row = quarantined[0]
+    key = f"import-quarantine/{row.user_id}/device-a/{LESSON_ID}/video"
+    assert (row.store, row.record_id) == ("media", f"{LESSON_ID}:video:")
+    assert row.raw == {"objectKey": key, "sha256": hashlib.sha256(device).hexdigest(), "size": len(device), "kind": "video", "lessonId": LESSON_ID, "segmentId": None}
+    assert row.error == [{"type": "conflict-media", "accountSha256": hashlib.sha256(account).hexdigest()}]
+    assert await _object_bytes(app_s3, key) == device
+
+    media_key = {"lessonId": LESSON_ID, "kind": "video"}
+    digest = await _manifest(client, owner, {"stores": {}, "quarantinedMedia": [media_key]})
+    assert digest["quarantinedMedia"] == [{**media_key, "segmentId": None, "size": len(device), "sha256": hashlib.sha256(device).hexdigest()}]
+    await app_s3.delete_object(Bucket=settings.s3_bucket, Key=key)
+    digest = await _manifest(client, owner, {"stores": {}, "quarantinedMedia": [media_key]})
+    assert digest["quarantinedMedia"] == [None]
+
+
+async def test_a_quarantine_upload_needs_a_safe_source(client, owner, app_s3):
+    await _import_lesson(client, owner)
+    assert (await _quarantine_upload(client, owner, b"x", source="../other")).status_code == 422
+
+
 async def test_media_for_another_accounts_lesson_is_404(client, owner, stranger, app_s3):
     await _import_lesson(client, owner)
     assert (await _upload(client, stranger, b"x")).status_code == 404

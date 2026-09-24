@@ -21,7 +21,6 @@ export interface Notes {
   keys: KeysOutcome
   keptAccountCopy: number
   conflicts: number
-  keptAccountMedia: number
   quarantined: string[]
   skipped: Skipped
 }
@@ -180,11 +179,11 @@ async function importSnapshot(api: ApiClient, source: string, snapshot: LegacySn
   ledger.unsentMedia = snapshot.media.filter(item => setAside.has(item.key.lessonId)).map(item => item.key)
   dispatch({ type: 'media', total: media.length })
   const lessons = storeLedger(ledger, 'lessons')
-  const { keptAccountMedia } = await uploadMedia(api, ledger, media, sent, lessons.present, new Set(lessons.conflicts))
+  await uploadMedia(api, ledger, media, sent, lessons.present, new Set(lessons.conflicts))
 
   dispatch({ type: 'verify', records: recordTotal(snapshot), media: media.length })
   const quarantined = rejected.map(record => record.store)
-  return { verification: await verify(api, ledger), keptAccountCopy, keptAccountMedia, conflicts: conflicts.size, quarantined }
+  return { verification: await verify(api, ledger), keptAccountCopy, conflicts: conflicts.size + ledger.quarantinedMedia.length, quarantined }
 }
 
 export function useMigration(api: ApiClient, account: string) {
@@ -201,7 +200,7 @@ export function useMigration(api: ApiClient, account: string) {
         keysRef.current.outcome = { kind: 'saved', ...(await saveKeys(api, keysRef.current.decrypted)) }
 
       for (let round = 0; round < MAX_ROUNDS; round++) {
-        const { verification, keptAccountCopy, keptAccountMedia, conflicts, quarantined } = await importSnapshot(api, loaded.source, loaded.snapshot, dispatch)
+        const { verification, keptAccountCopy, conflicts, quarantined } = await importSnapshot(api, loaded.source, loaded.snapshot, dispatch)
         if (!verification.ok) {
           dispatch({ type: 'mismatch', verification })
           return
@@ -216,7 +215,7 @@ export function useMigration(api: ApiClient, account: string) {
         loaded.db.close()
         await deleteLegacyDatabase(() => dispatch({ type: 'blocked' }))
         loadedRef.current = null
-        dispatch({ type: 'done', verification, notes: { keys: keysRef.current.outcome, keptAccountCopy, conflicts, keptAccountMedia, quarantined, skipped: loaded.snapshot.skipped } })
+        dispatch({ type: 'done', verification, notes: { keys: keysRef.current.outcome, keptAccountCopy, conflicts, quarantined, skipped: loaded.snapshot.skipped } })
         return
       }
       dispatch({ type: 'error', message: '', changing: true })
