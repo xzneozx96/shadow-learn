@@ -114,13 +114,17 @@ async def replace_records(session: AsyncSession, user_id: uuid.UUID, spec: Store
     await session.execute(stmt, rows)
 
 
-def _digest(data: Data) -> str:
+def _digest(spec: StoreSpec, data: Data, source: str | None) -> str:
+    if source is not None:
+        return hashlib.sha256(f"{source}\0{spec.record_id(data)}".encode()).hexdigest()
     canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
-async def _unmerged(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data]) -> list[Data]:
-    by_digest = {_digest(data): data for data in records}
+async def _unmerged(
+    session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data], source: str | None
+) -> list[Data]:
+    by_digest = {_digest(spec, data, source): data for data in records}
     inserted = await session.scalars(
         insert(import_digests).on_conflict_do_nothing().returning(import_digests.c.digest),
         [{"user_id": user_id, "store": spec.name, "digest": digest} for digest in by_digest],
@@ -129,23 +133,31 @@ async def _unmerged(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, 
     return [data for digest, data in by_digest.items() if digest in fresh]
 
 
-async def import_records(
-    session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data]
-) -> list[Data] | None:
+async def _stored(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, ids: list[str]) -> dict[str, Data]:
     table = TABLES[spec.name]
+    rows = await session.execute(select(table.c.id, table.c.data).where(table.c.user_id == user_id, table.c.id.in_(ids)))
+    return dict(rows.tuples().all())
+
+
+async def import_records(
+    session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data], source: str | None = None
+) -> list[Data]:
+    """Merge ``records`` into the caller's store and return the stored record for every id that is present.
+
+    With a ``source``, each (source, record id) pair merges at most once, so a
+    retry from the same device never counts twice and a second device always does.
+    """
+    table = TABLES[spec.name]
+    ids = list(dict.fromkeys(spec.record_id(data) for data in records))
     if spec.merge is union:
         await session.execute(insert(table).on_conflict_do_nothing(), [_row(spec, user_id, data) for data in records])
-        return None
+        stored = await _stored(session, user_id, spec, ids)
+        return [stored[record_id] for record_id in ids if record_id in stored]
 
     await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"{user_id}:{spec.name}"))))
-    ids = list(dict.fromkeys(spec.record_id(data) for data in records))
-    stored = dict(
-        (await session.execute(select(table.c.id, table.c.data).where(table.c.user_id == user_id, table.c.id.in_(ids))))
-        .tuples()
-        .all()
-    )
+    stored = await _stored(session, user_id, spec, ids)
     touched = set()
-    for data in await _unmerged(session, user_id, spec, records):
+    for data in await _unmerged(session, user_id, spec, records, source):
         record_id = spec.record_id(data)
         stored[record_id] = spec.merge(stored[record_id], data) if record_id in stored else data
         touched.add(record_id)

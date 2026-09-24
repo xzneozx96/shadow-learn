@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 Number = int | float
@@ -288,6 +288,7 @@ class SpeakCustomSituation(BaseModel):
 class BulkRequest(BaseModel):
     mode: Literal["import", "replace"]
     records: list[dict[str, Any]]
+    source: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 class BulkResponse(BaseModel):

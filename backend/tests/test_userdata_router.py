@@ -270,18 +270,19 @@ async def test_bulk_import_of_a_union_store_is_idempotent(client, auth_headers):
         response = await client.post(
             "/api/store/vocabulary/bulk", json={"mode": "import", "records": records}, headers=auth_headers
         )
-        assert response.json() == {"count": 50, "after": None}
+        assert response.json() == {"count": 50, "after": records}
     assert len((await client.get("/api/store/vocabulary", headers=auth_headers)).json()) == 50
 
 
 async def test_bulk_import_does_not_overwrite_existing_union_records(client, auth_headers):
     server = SAMPLES["vocabulary"]
     await client.put("/api/store/vocabulary/w1", json=server, headers=auth_headers)
-    await client.post(
+    response = await client.post(
         "/api/store/vocabulary/bulk",
         json={"mode": "import", "records": [{**server, "word": "changed"}]},
         headers=auth_headers,
     )
+    assert response.json()["after"] == [server]
     assert (await client.get("/api/store/vocabulary/w1", headers=auth_headers)).json() == server
 
 

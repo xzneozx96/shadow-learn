@@ -193,7 +193,7 @@ async def bulk(spec: WritableSpec, body: BulkRequest, user: CurrentUser, session
     after = None
     async with _unique_conflict_as_409():
         if records and body.mode == "import":
-            after = await repository.import_records(session, user.id, spec, records)
+            after = await repository.import_records(session, user.id, spec, records, body.source)
         elif records:
             await repository.replace_records(session, user.id, spec, records)
         await session.commit()
