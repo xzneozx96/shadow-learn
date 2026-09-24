@@ -19,12 +19,15 @@ describe('passwordInput', () => {
     expect(input).toHaveAttribute('type', 'password')
     expect(input).toHaveAttribute('autocomplete', 'current-password')
 
+    expect(screen.getByRole('button', { name: 'Show password' })).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }))
     expect(input).toHaveAttribute('type', 'text')
+    expect(screen.getByRole('button', { name: 'Hide password' })).toHaveAttribute('aria-pressed', 'true')
     expect(input).toHaveValue('hunter22')
 
     fireEvent.click(screen.getByRole('button', { name: 'Hide password' }))
     expect(input).toHaveAttribute('type', 'password')
+    expect(screen.getByRole('button', { name: 'Show password' })).toHaveAttribute('aria-pressed', 'false')
     expect(onSubmit).not.toHaveBeenCalled()
   })
 

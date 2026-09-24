@@ -21,6 +21,7 @@ export function PasswordInput({ showLabel, hideLabel, className, ...props }: Pas
         size="icon-sm"
         className="absolute top-1/2 right-1.5 -translate-y-1/2 text-muted-foreground"
         aria-label={visible ? hideLabel : showLabel}
+        aria-pressed={visible}
         onClick={() => setVisible(!visible)}
       >
         {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

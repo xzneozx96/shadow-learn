@@ -218,8 +218,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     db.close()
     await start()
     const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
-    expect(failing).toHaveTextContent('Videos and recordings')
-    expect(failing).not.toHaveTextContent('Video: ')
+    expect(Array.from(failing.querySelectorAll('li'), li => li.textContent)).toEqual(['Videos and recordings'])
     expect(failing.textContent).not.toContain(LESSON_A)
   })
 
