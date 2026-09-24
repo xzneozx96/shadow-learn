@@ -188,6 +188,21 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     expect(logout).toHaveBeenCalled()
   })
 
+  it('falls back to a plain label for media of a lesson with no title', async () => {
+    const { server, seeded } = renderGate()
+    server.state.rejectLesson = LESSON_A
+    await seeded
+    const { openDB } = await import('idb')
+    const db = await openDB('shadowlearn')
+    await db.put('lessons', { ...(await db.get('lessons', LESSON_A)), title: '' })
+    db.close()
+    await start()
+    const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
+    expect(failing).toHaveTextContent('Videos and recordings')
+    expect(failing).not.toHaveTextContent('Video: ')
+    expect(failing.textContent).not.toContain(LESSON_A)
+  })
+
   it('lets the user into the app after a failure and keeps the local copy', async () => {
     const { server, seeded } = renderGate()
     server.state.down = true
