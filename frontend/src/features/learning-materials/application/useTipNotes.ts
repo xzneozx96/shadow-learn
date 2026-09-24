@@ -1,7 +1,7 @@
 import type { DataClient } from '@/db'
 import type { NewTipNote, TipNote } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { deleteTipNote, getTipNotesForVideo, putTipNote } from '@/db'
+import { deleteTipNote, getTipNotesForVideo, putTipNote, updateTipNote } from '@/db'
 import { registerSaveTipNote } from '@/features/learning-materials/lib/tipNoteBus'
 
 interface Args {
@@ -67,11 +67,11 @@ export function useTipNotes(args: Args) {
       // Throwing here would crash the editor's unmount cleanup.
       return
     }
-    const next: TipNote = { ...existing, ...patch, updatedAt: new Date().toISOString() }
-    await putTipNote(db, next)
+    // A note deleted on another device comes back with this edit rather than losing it.
+    const saved = await updateTipNote(db, existing.videoId, id, prev => ({ ...(prev ?? existing), ...patch, updatedAt: new Date().toISOString() }))
     setNotes((prev) => {
       const without = prev.filter(n => n.id !== id)
-      return [next, ...without]
+      return [saved, ...without]
     })
   }, [db])
 

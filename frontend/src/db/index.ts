@@ -556,6 +556,15 @@ export async function putTipNote(db: DataClient, note: TipNote): Promise<void> {
   await db.api.put(storePath('tip-notes', `${note.videoId}:${note.id}`), note)
 }
 
+export async function updateTipNote(
+  db: DataClient,
+  videoId: string,
+  id: string,
+  mutate: (prev: TipNote | undefined) => TipNote,
+): Promise<TipNote> {
+  return updateRecord(db, 'tip-notes', `${videoId}:${id}`, mutate)
+}
+
 export async function getTipNotesForVideo(db: DataClient, videoId: string): Promise<TipNote[]> {
   const rows = await storeList<TipNote>(db, 'tip-notes', 'by-video', videoId)
   return rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))

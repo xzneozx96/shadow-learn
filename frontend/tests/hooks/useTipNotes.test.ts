@@ -1,6 +1,8 @@
 import type { DataClient } from '@/db'
+import type { TipNote } from '@/features/learning-materials/domain/tips'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { deleteTipNote, updateTipNote } from '@/db'
 import { useTipNotes } from '@/features/learning-materials/application/useTipNotes'
 import { _resetTipNoteBusForTest, saveTipNote } from '@/features/learning-materials/lib/tipNoteBus'
 import { FakeApiClient, fakeDataClient } from '../fake-api'
@@ -62,6 +64,41 @@ describe('useTipNotes', () => {
     expect(after.html).toBe('<p>y</p>')
     expect(after.createdAt).toBe(before.createdAt)
     expect(after.updatedAt > before.updatedAt).toBe(true)
+  })
+
+  it('update merges its patch into the note another device just changed', async () => {
+    const { result } = renderHook(() => useTipNotes({ db, videoId: 'vid-1' }))
+    await waitFor(() => expect(result.current.hydrated).toBe(true))
+    let id = ''
+    await act(async () => {
+      id = await result.current.create({ videoId: 'vid-1', title: 'A', html: '<p>x</p>', source: 'freeform' })
+    })
+    const phone = fakeDataClient(api)
+    await updateTipNote(phone, 'vid-1', id, prev => ({ ...prev!, title: 'Renamed on phone' }))
+
+    await act(async () => {
+      await result.current.update(id, { html: '<p>laptop</p>' })
+    })
+
+    const [stored] = api.storeRows<TipNote>('tip-notes')
+    expect(stored).toMatchObject({ title: 'Renamed on phone', html: '<p>laptop</p>' })
+    expect(result.current.notes[0]).toEqual(stored)
+  })
+
+  it('update recreates a note that another device deleted mid-edit', async () => {
+    const { result } = renderHook(() => useTipNotes({ db, videoId: 'vid-1' }))
+    await waitFor(() => expect(result.current.hydrated).toBe(true))
+    let id = ''
+    await act(async () => {
+      id = await result.current.create({ videoId: 'vid-1', title: 'A', html: '<p>x</p>', source: 'freeform' })
+    })
+    await deleteTipNote(fakeDataClient(api), 'vid-1', id)
+
+    await act(async () => {
+      await result.current.update(id, { html: '<p>kept</p>' })
+    })
+
+    expect(api.storeRows<TipNote>('tip-notes')).toMatchObject([{ id, title: 'A', html: '<p>kept</p>' }])
   })
 
   it('remove deletes the row', async () => {
