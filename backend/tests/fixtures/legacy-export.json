@@ -15,7 +15,7 @@
         "createdAt": "2026-05-01T08:30:00.123Z",
         "lastOpenedAt": "2026-06-01T09:00:00.000Z",
         "meta": {
-          "progressSegmentId": "s2",
+          "progressSegmentId": "1",
           "tags": [
             "greetings"
           ]
@@ -23,7 +23,7 @@
       },
       "segments": [
         {
-          "id": "s1",
+          "id": "0",
           "start": 0,
           "end": 2.5,
           "text": "A你好",
@@ -41,7 +41,7 @@
           ]
         },
         {
-          "id": "s2",
+          "id": "1",
           "start": 2.5,
           "end": 5.25,
           "text": "A谢谢",
@@ -68,7 +68,7 @@
         "createdAt": "2026-05-01T08:30:00.123Z",
         "lastOpenedAt": "2026-06-01T09:00:00.000Z",
         "meta": {
-          "progressSegmentId": "s2",
+          "progressSegmentId": "1",
           "tags": [
             "greetings"
           ]
@@ -76,7 +76,7 @@
       },
       "segments": [
         {
-          "id": "s1",
+          "id": "0",
           "start": 0,
           "end": 2.5,
           "text": "M你好",
@@ -94,7 +94,7 @@
           ]
         },
         {
-          "id": "s2",
+          "id": "1",
           "start": 2.5,
           "end": 5.25,
           "text": "M谢谢",
@@ -128,7 +128,7 @@
           "usage": "",
           "sourceLessonId": "6f1c2b1e-8d4f-4c1a-9a51-3f3d2c1b0a99",
           "sourceLessonTitle": "Greetings",
-          "sourceSegmentId": "s1",
+          "sourceSegmentId": "0",
           "sourceSegmentText": "你好",
           "sourceSegmentTranslation": "hello",
           "sourceLanguage": "zh-CN",
@@ -145,7 +145,7 @@
           "usage": "",
           "sourceLessonId": "6f1c2b1e-8d4f-4c1a-9a51-3f3d2c1b0a99",
           "sourceLessonTitle": "Greetings",
-          "sourceSegmentId": "s1",
+          "sourceSegmentId": "0",
           "sourceSegmentText": "你好",
           "sourceSegmentTranslation": "hello",
           "sourceLanguage": "zh-CN",
@@ -162,7 +162,7 @@
           "usage": "",
           "sourceLessonId": "6f1c2b1e-8d4f-4c1a-9a51-3f3d2c1b0a99",
           "sourceLessonTitle": "Greetings",
-          "sourceSegmentId": "s1",
+          "sourceSegmentId": "0",
           "sourceSegmentText": "你好",
           "sourceSegmentTranslation": "hello",
           "sourceLanguage": "zh-CN",
@@ -179,7 +179,7 @@
           "usage": "",
           "sourceLessonId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
           "sourceLessonTitle": "Greetings",
-          "sourceSegmentId": "s1",
+          "sourceSegmentId": "0",
           "sourceSegmentText": "你好",
           "sourceSegmentTranslation": "hello",
           "sourceLanguage": "zh-CN",
@@ -439,10 +439,10 @@
     ],
     "shadowing-bests": [
       {
-        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507:s1",
+        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507:0",
         "data": {
           "lessonId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
-          "segmentId": "s1",
+          "segmentId": "0",
           "score": 88,
           "breakdown": {
             "overall": {

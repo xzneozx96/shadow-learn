@@ -31,7 +31,7 @@ describe('readSnapshot', () => {
     expect(snapshot.lessons.map(lesson => lesson.id).sort()).toEqual([LESSON_A, remapped].sort())
     expect(records(snapshot, 'vocabulary').find(r => r.data.word === '词99')!.data.sourceLessonId).toBe(remapped)
     expect(records(snapshot, 'agent-memory').find(r => r.data.lessonId !== undefined)!.data.lessonId).toBe(remapped)
-    expect(records(snapshot, 'shadowing-bests')[0]).toEqual(expect.objectContaining({ id: `${remapped}:s1` }))
+    expect(records(snapshot, 'shadowing-bests')[0]).toEqual(expect.objectContaining({ id: `${remapped}:0` }))
     const thread = records(snapshot, 'threads').find(r => r.data.surface === 'lesson')!
     expect([thread.id, thread.data.ownerId]).toEqual([remapped, remapped])
     expect(records(snapshot, 'thread-summaries')[0].data.threadId).toBe(remapped)
@@ -42,8 +42,18 @@ describe('readSnapshot', () => {
     const { snapshot } = await snapshotOf()
     const lesson = snapshot.lessons.find(l => l.id === LESSON_A)!
     expect(lesson.lesson.title).toBe('Greetings, renamed')
-    expect(lesson.lesson.meta).toEqual({ progressSegmentId: 's2', tags: ['greetings'] })
+    expect(lesson.lesson.meta).toEqual({ progressSegmentId: '1', tags: ['greetings'] })
     expect(lesson.segments).toHaveLength(2)
+  })
+
+  it('keeps progress pointing at a segment id the lesson holds, as the pipeline wrote them', async () => {
+    const { snapshot } = await snapshotOf()
+    for (const lesson of snapshot.lessons) {
+      const ids = lesson.segments.map(segment => (segment as { id: string }).id)
+      expect(ids).toEqual(ids.map((_, i) => String(i)))
+      const progress = (lesson.lesson.meta as { progressSegmentId: string | null }).progressSegmentId
+      expect(progress === null || ids.includes(progress)).toBe(true)
+    }
   })
 
   it('skips unfinished lessons and blobs that belong to no imported lesson', async () => {

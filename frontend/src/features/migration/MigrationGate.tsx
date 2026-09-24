@@ -4,6 +4,7 @@ import type { ApiClient } from '@/db'
 import { Loader2 } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
+import { useI18n } from '@/app/providers/I18nContext'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog'
 import { prefetchedAbsent, takeLegacyData } from './prefetchLegacyData'
@@ -33,6 +34,7 @@ interface GateProps {
 
 export function MigrationGate({ api, children, openApp = path => window.location.assign(path) }: GateProps) {
   const { session, logout } = useAuth()
+  const { t } = useI18n()
   const [state, setState] = useState<GateState>(() => prefetchedAbsent() ? { kind: 'clear' } : { kind: 'checking' })
 
   const check = useCallback(() => {
@@ -62,17 +64,17 @@ export function MigrationGate({ api, children, openApp = path => window.location
     return (
       <Dialog open onOpenChange={() => {}}>
         <DialogContent showCloseButton={false} className="sm:max-w-lg" data-testid="migration-modal">
-          <DialogTitle>Move your data to your account</DialogTitle>
-          <DialogDescription>{`This browser holds earlier ShadowLearn data, but it could not be read: ${state.message}`}</DialogDescription>
+          <DialogTitle>{t('migration.title')}</DialogTitle>
+          <DialogDescription>{t('migration.error.unreadable', { message: state.message })}</DialogDescription>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="ghost" onClick={() => void logout()}>Sign out</Button>
-            <Button variant="outline" onClick={() => setState({ kind: 'clear' })}>Use the app now, keep my local copy</Button>
+            <Button variant="ghost" onClick={() => void logout()}>{t('migration.exit.signOut')}</Button>
+            <Button variant="outline" onClick={() => setState({ kind: 'clear' })}>{t('migration.exit.keepLocal')}</Button>
             <Button onClick={() => {
               setState({ kind: 'checking' })
               check()
             }}
             >
-              Retry
+              {t('migration.exit.retry')}
             </Button>
           </div>
         </DialogContent>
@@ -85,6 +87,7 @@ export function MigrationGate({ api, children, openApp = path => window.location
         api={api}
         account={session?.userId ?? ''}
         counts={state.data.counts}
+        locale={state.data.locale}
         onFinished={openApp}
         onKeepLocal={() => setState({ kind: 'clear' })}
         onSignOut={() => void logout()}

@@ -34,7 +34,7 @@ export type Phase
     | { step: 'delete', blocked: boolean }
     | { step: 'done', verification: Verification, notes: Notes }
     | { step: 'other-account' }
-    | { step: 'error', message: string }
+    | { step: 'error', message: string, changing: boolean }
 
 type Event
   = | { type: 'loading' }
@@ -51,7 +51,7 @@ type Event
     | { type: 'blocked' }
     | { type: 'done', verification: Verification, notes: Notes }
     | { type: 'other-account' }
-    | { type: 'error', message: string }
+    | { type: 'error', message: string, changing?: boolean }
 
 export function reduce(phase: Phase, event: Event): Phase {
   switch (event.type) {
@@ -86,7 +86,7 @@ export function reduce(phase: Phase, event: Event): Phase {
     case 'other-account':
       return { step: 'other-account' }
     case 'error':
-      return { step: 'error', message: event.message }
+      return { step: 'error', message: event.message, changing: event.changing ?? false }
     default: {
       const _exhaustive: never = event
       return _exhaustive
@@ -214,7 +214,7 @@ export function useMigration(api: ApiClient, account: string) {
         dispatch({ type: 'done', verification, notes: { keys: keysRef.current.outcome, keptAccountCopy, quarantined, skipped: loaded.snapshot.skipped } })
         return
       }
-      dispatch({ type: 'error', message: 'The data in this browser kept changing during the move. Close other ShadowLearn tabs and retry.' })
+      dispatch({ type: 'error', message: '', changing: true })
     }
     catch (err) {
       dispatch({ type: 'error', message: err instanceof Error ? err.message : String(err) })

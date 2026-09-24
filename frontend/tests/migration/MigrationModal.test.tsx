@@ -169,6 +169,12 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     expect(await databaseExists()).toBe(false)
   })
 
+  it('speaks the language this browser used before, Vietnamese here', async () => {
+    await renderGate({ variant: 'B' }).seeded
+    expect(await screen.findByText('Chuyển dữ liệu vào tài khoản của bạn')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Bắt đầu' })).toBeInTheDocument()
+  })
+
   it('keeps a key the account already holds', async () => {
     const { server, seeded } = renderGate({ withKeys: true })
     server.keys.set('openrouter', { value: 'sk-or-account-key' })

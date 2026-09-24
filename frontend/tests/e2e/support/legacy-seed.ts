@@ -36,7 +36,7 @@ function lesson(id: string, title: string, extra: Record<string, unknown> = {}) 
     sourceLanguage: 'zh-CN',
     createdAt: '2026-05-01T08:30:00.123Z',
     lastOpenedAt: '2026-06-01T09:00:00.000Z',
-    progressSegmentId: 's2',
+    progressSegmentId: '1',
     tags: ['greetings'],
     ...extra,
   }
@@ -44,8 +44,8 @@ function lesson(id: string, title: string, extra: Record<string, unknown> = {}) 
 
 function segments(prefix: string) {
   return [
-    { id: 's1', start: 0, end: 2.5, text: `${prefix}你好`, romanization: 'nǐ hǎo', translations: { en: 'hello' }, words: [{ word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: '' }] },
-    { id: 's2', start: 2.5, end: 5.25, text: `${prefix}谢谢`, romanization: 'xiè xie', translations: { en: 'thanks' }, words: [] },
+    { id: '0', start: 0, end: 2.5, text: `${prefix}你好`, romanization: 'nǐ hǎo', translations: { en: 'hello' }, words: [{ word: '你好', romanization: 'nǐ hǎo', meaning: 'hello', usage: '' }] },
+    { id: '1', start: 2.5, end: 5.25, text: `${prefix}谢谢`, romanization: 'xiè xie', translations: { en: 'thanks' }, words: [] },
   ]
 }
 
@@ -58,7 +58,7 @@ function vocab(n: number, lessonId: string) {
     usage: '',
     sourceLessonId: lessonId,
     sourceLessonTitle: 'Greetings',
-    sourceSegmentId: 's1',
+    sourceSegmentId: '0',
     sourceSegmentText: '你好',
     sourceSegmentTranslation: 'hello',
     sourceLanguage: 'zh-CN',
@@ -143,10 +143,10 @@ export function legacyFixture(options: FixtureOptions = {}): LegacyFixture {
       { value: { word: '你好', sourceLanguage: 'zh-CN', characters: [], story: 'A person greets a friend at the door.', storyLanguage: 'vi', generatedAt: '2026-06-01T10:00:00.000Z' } },
       { value: { word: '谢谢', sourceLanguage: 'zh-CN', characters: [], story: null, storyLanguage: 'vi', generatedAt: null } },
     ]
-    stores['shadowing-bests'] = [{ value: { lessonId: legacyLessonId, segmentId: 's1', score: 88, breakdown: { overall: { accuracy: 88, fluency: 80, completeness: 100, prosody: 70 }, words: [] }, recordedAt: '2026-06-01T10:00:00.000Z' } }]
+    stores['shadowing-bests'] = [{ value: { lessonId: legacyLessonId, segmentId: '0', score: 88, breakdown: { overall: { accuracy: 88, fluency: 80, completeness: 100, prosody: 70 }, words: [] }, recordedAt: '2026-06-01T10:00:00.000Z' } }]
     stores['shadowing-audio'] = [
-      ...Array.from({ length: recordings }, (_, n) => ({ value: { lessonId: main, segmentId: `s${n + 1}`, blob: blob(20_000 + n, 'audio/webm', 11 + n) } })),
-      { value: { lessonId: 'deleted-lesson', segmentId: 's1', blob: blob(100, 'audio/webm', 5) } },
+      ...Array.from({ length: recordings }, (_, n) => ({ value: { lessonId: main, segmentId: String(n), blob: blob(20_000 + n, 'audio/webm', 11 + n) } })),
+      { value: { lessonId: 'deleted-lesson', segmentId: '0', blob: blob(100, 'audio/webm', 5) } },
     ]
     stores['tip-courses'] = [{ value: { id: 'course-1', title: 'Tones' } }]
     stores['tip-progress'] = [{ value: { key: 'course-1:video-1', courseId: 'course-1', videoId: 'video-1', watchedSec: 30, totalSec: 120, completed: false, lastSeenAt: '2026-06-01T10:00:00.000Z', title: 'Tone basics' } }]

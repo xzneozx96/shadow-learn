@@ -1,4 +1,5 @@
 import type { ShadowLearnDB } from '@/db/legacy'
+import type { Locale } from '@/shared/lib/i18n'
 import { unwrap } from 'idb'
 import { initDB } from '@/db/legacy'
 
@@ -34,6 +35,7 @@ export const IN_SCOPE_STORES = [
 export interface LegacyData {
   present: boolean
   counts: Record<string, number>
+  locale?: Locale
 }
 
 /** Open the legacy database with a handler that lets a delete from another tab proceed. */
@@ -80,9 +82,10 @@ export async function detectLegacyData(): Promise<LegacyData> {
     return { present: false, counts: {} }
   const db = await openLegacy()
   const counts = await countStores(db)
+  const uiLanguage = (await db.get('settings', 'settings'))?.uiLanguage
   db.close()
   if (Object.values(counts).some(count => count > 0))
-    return { present: true, counts }
+    return { present: true, counts, locale: uiLanguage }
   await deleteLegacyDatabase()
   return { present: false, counts }
 }
