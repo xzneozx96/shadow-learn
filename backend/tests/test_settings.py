@@ -50,3 +50,12 @@ def test_test_routes_fail_startup_outside_local_dev():
 @pytest.mark.parametrize("url", ["http://localhost:5173", "http://127.0.0.1:5601"])
 def test_local_dev_may_enable_test_routes(url):
     assert _settings(public_app_url=url, enable_test_routes=True).enable_test_routes
+
+
+def test_import_fault_fails_startup_outside_local_dev():
+    with pytest.raises(ValidationError, match="SHADOWLEARN_IMPORT_FAULT is refused outside local dev"):
+        _settings(smtp_host="smtp.example.com", public_app_url="https://learning.example.com", import_fault="vocabulary")
+
+
+def test_local_dev_may_set_an_import_fault():
+    assert _settings(public_app_url="http://localhost:5173", import_fault="vocabulary").import_fault == "vocabulary"

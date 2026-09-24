@@ -1,0 +1,197 @@
+{
+  "cases": [
+    {
+      "name": "one point zero",
+      "value": 1,
+      "canonical": "1",
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "name": "1e21",
+      "value": 1e+21,
+      "canonical": "1e+21",
+      "sha256": "241c4643fa70b1dcde1205b71be4e3bebb17e9f880c8e1a33d0ead6c27271d3c"
+    },
+    {
+      "name": "point one plus point two",
+      "value": 0.30000000000000004,
+      "canonical": "0.30000000000000004",
+      "sha256": "06bad31060c1212ae832de4c031f7b31e3b48aed57858294478cb19450cf34ca"
+    },
+    {
+      "name": "negative zero",
+      "value": 0,
+      "canonical": "0",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    },
+    {
+      "name": "smallest double",
+      "value": 5e-324,
+      "canonical": "5e-324",
+      "sha256": "c46e7ca1be4c8734f373a56530787288fa2058d73d07855e9247e949f811a42a"
+    },
+    {
+      "name": "small exponent",
+      "value": 1e-7,
+      "canonical": "1e-7",
+      "sha256": "5b33e02f2c5103a05d32f6ba9cb058294452bfbf393967f68bb30c1bdcbbab22"
+    },
+    {
+      "name": "past the safe integers",
+      "value": 9007199254740994,
+      "canonical": "9007199254740994",
+      "sha256": "25aa68783313802627958889943e895749ac4c0c7469b2a305cd450a12120768"
+    },
+    {
+      "name": "large double",
+      "value": 1.7976931348623157e+308,
+      "canonical": "1.7976931348623157e+308",
+      "sha256": "c2784e1abd6317452708f3fbf9641c16b959561bc621a1d408c23a20aa2cb585"
+    },
+    {
+      "name": "epoch millis",
+      "value": 1727000000123,
+      "canonical": "1727000000123",
+      "sha256": "8991008e8666abad9b22fd108b26ee3d09549d2d14d9ebcf7ce8f24ee5a7c767"
+    },
+    {
+      "name": "outside the BMP",
+      "value": "𠀀 😀 𝄞",
+      "canonical": "\"𠀀 😀 𝄞\"",
+      "sha256": "332c41df130ee991485625e95a59a94fe127416ace515e13b9606b47bca07f16"
+    },
+    {
+      "name": "escapes",
+      "value": "quote \" backslash \\ newline \n tab \t unit \u001f line   del ",
+      "canonical": "\"quote \\\" backslash \\\\ newline \\n tab \\t unit \\u001f line   del \"",
+      "sha256": "79c366d781b96ccc5aca722f40b836734451cfb176b7af153c1c62eadfab1564"
+    },
+    {
+      "name": "NUL and a lone surrogate",
+      "value": "ab�c",
+      "canonical": "\"ab�c\"",
+      "sha256": "7f79e150a0fd83a323ccbe02c85c6d97b3cc39377a7127497848d7039eddb4e9"
+    },
+    {
+      "name": "integer-like keys",
+      "value": {
+        "9": "nine",
+        "10": "ten",
+        "a": "a",
+        "B": "B"
+      },
+      "canonical": "{\"10\":\"ten\",\"9\":\"nine\",\"B\":\"B\",\"a\":\"a\"}",
+      "sha256": "f8fbdccaa39d09c657f9b1db7e39be08bad82484ff5fafd1e20841a5b24cbffe"
+    },
+    {
+      "name": "keys outside the BMP",
+      "value": {
+        "😀": 1,
+        "é": 2,
+        "z": 3,
+        "￿": 4
+      },
+      "canonical": "{\"z\":3,\"é\":2,\"😀\":1,\"￿\":4}",
+      "sha256": "70010da7682c173aca8f825241db804fd010e249e32bc830e74003db9a5ce6f4"
+    },
+    {
+      "name": "nested arrays",
+      "value": [
+        [
+          1,
+          [
+            2,
+            [
+              3,
+              []
+            ]
+          ]
+        ],
+        [],
+        [
+          null,
+          true,
+          false
+        ]
+      ],
+      "canonical": "[[1,[2,[3,[]]]],[],[null,true,false]]",
+      "sha256": "f6b7d6ea4a56d8e0defe7c64af986a3118cbbbe3b1dcc4e3443ef6c3c118578e"
+    },
+    {
+      "name": "null",
+      "value": null,
+      "canonical": "null",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    },
+    {
+      "name": "empty object",
+      "value": {},
+      "canonical": "{}",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "name": "undefined fields",
+      "value": {
+        "kept": 1
+      },
+      "canonical": "{\"kept\":1}",
+      "sha256": "a1dc39abc83572e468fc473955717e2669073f5244bf98673ea0f046637306b4"
+    },
+    {
+      "name": "date",
+      "value": "2026-05-01T08:30:00.123Z",
+      "canonical": "\"2026-05-01T08:30:00.123Z\"",
+      "sha256": "6d23eb2c918d05c64c961aa0a8a9e7ef113e5c8961819fdbfd8e7a1a3cc2324f"
+    },
+    {
+      "name": "segment",
+      "value": {
+        "id": "s1",
+        "start": 0,
+        "end": 2.5,
+        "text": "你好",
+        "romanization": "nǐ hǎo",
+        "translations": {
+          "en": "hello",
+          "vi": "xin chào"
+        },
+        "words": [
+          {
+            "word": "你好",
+            "romanization": "nǐ hǎo",
+            "meaning": "hello",
+            "usage": ""
+          }
+        ]
+      },
+      "canonical": "{\"end\":2.5,\"id\":\"s1\",\"romanization\":\"nǐ hǎo\",\"start\":0,\"text\":\"你好\",\"translations\":{\"en\":\"hello\",\"vi\":\"xin chào\"},\"words\":[{\"meaning\":\"hello\",\"romanization\":\"nǐ hǎo\",\"usage\":\"\",\"word\":\"你好\"}]}",
+      "sha256": "5a67ab7fd0d3409fbcffff038411c019b51c02045f871cd83bca68156870190a"
+    }
+  ],
+  "store": {
+    "ids": [
+      "one point zero",
+      "1e21",
+      "point one plus point two",
+      "negative zero",
+      "smallest double",
+      "small exponent",
+      "past the safe integers",
+      "large double",
+      "epoch millis",
+      "outside the BMP",
+      "escapes",
+      "NUL and a lone surrogate",
+      "integer-like keys",
+      "keys outside the BMP",
+      "nested arrays",
+      "null",
+      "empty object",
+      "undefined fields",
+      "date",
+      "segment"
+    ],
+    "count": 20,
+    "sha256": "09b07d38ea72f1a788d7e04040384db8acc796079cad948f1610ba4080ea62ca"
+  }
+}

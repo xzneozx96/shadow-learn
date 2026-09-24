@@ -4,6 +4,7 @@ from alembic.migration import MigrationContext
 
 import app.accounts.models
 import app.catalog.models
+import app.importer.models
 import app.jobs.models
 import app.keys.models
 import app.lessons.models

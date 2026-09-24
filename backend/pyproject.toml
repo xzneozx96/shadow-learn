@@ -28,6 +28,7 @@ dependencies = [
     "aiobotocore>=2.15",
     "fastapi-users[sqlalchemy]>=14",
     "cryptography>=43",
+    "rfc8785>=0.1.4",
 ]
 
 [project.optional-dependencies]

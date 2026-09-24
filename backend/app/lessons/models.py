@@ -23,6 +23,9 @@ class Lesson(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     meta: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    import_source: Mapped[str | None] = mapped_column(Text)
+    import_sent_hash: Mapped[str | None] = mapped_column(Text)
+    import_row_hash: Mapped[str | None] = mapped_column(Text)
 
 
 class LessonSegment(Base):

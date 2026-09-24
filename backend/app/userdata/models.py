@@ -44,6 +44,18 @@ def build_table(spec: StoreSpec) -> Table:
 
 TABLES: dict[str, Table] = {name: build_table(spec) for name, spec in STORES.items()}
 
+import_snapshots = Table(
+    "userdata_import_snapshots",
+    Base.metadata,
+    _user_id(),
+    Column("source", Text, nullable=False),
+    Column("store", Text, nullable=False),
+    Column("record_id", Text, nullable=False),
+    Column("data", JSONB, nullable=False),
+    Column("version", BigInteger, nullable=False),
+    PrimaryKeyConstraint("user_id", "source", "store", "record_id"),
+)
+
 import_digests = Table(
     "userdata_import_digests",
     Base.metadata,

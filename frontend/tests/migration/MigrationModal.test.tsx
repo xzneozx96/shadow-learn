@@ -1,0 +1,280 @@
+import type { ReactNode } from 'react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AuthContext } from '@/app/providers/AuthContext'
+import { MigrationGate } from '@/features/migration/MigrationGate'
+import { reduce } from '@/features/migration/useMigration'
+import { legacyFixture, LESSON_A, PIN, seedLegacyDatabase } from '../e2e/support/legacy-seed'
+import { fakeImportServer } from './fake-import-server'
+import { stubApi } from './stub-api'
+import 'fake-indexeddb/auto'
+import './nested-blobs'
+
+async function databaseExists(): Promise<boolean> {
+  return (await indexedDB.databases()).some(info => info.name === 'shadowlearn')
+}
+
+const logout = vi.fn(async () => {})
+const openApp = vi.fn()
+
+function signedIn(userId: string, children: ReactNode) {
+  const value = {
+    session: { userId, email: `${userId}@example.com` },
+    sessionCheckFailed: false,
+    db: null,
+    trialMode: false,
+    login: async () => {},
+    signup: async () => {},
+    logout,
+    requestPasswordReset: async () => {},
+    resetPassword: async () => {},
+  }
+  return <AuthContext value={value}>{children}</AuthContext>
+}
+
+function renderGate(options: Parameters<typeof legacyFixture>[0] = {}, userId = 'account-a') {
+  const server = fakeImportServer()
+  const { api } = stubApi(server.handle)
+  const view = () => signedIn(userId, <MigrationGate api={api} openApp={openApp}><p>the app</p></MigrationGate>)
+  return {
+    server,
+    seeded: seedLegacyDatabase(legacyFixture(options)).then(() => render(view())),
+  }
+}
+
+async function start() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Start' }))
+}
+
+describe('migrationGate', { timeout: 30_000 }, () => {
+  beforeEach(() => { globalThis.indexedDB = new IDBFactory() })
+  afterEach(() => { globalThis.indexedDB = new IDBFactory() })
+
+  it('renders the app directly when this browser holds no legacy data', async () => {
+    const server = fakeImportServer()
+    render(signedIn('account-a', <MigrationGate api={stubApi(server.handle).api}><p>the app</p></MigrationGate>))
+    expect(await screen.findByText('the app')).toBeInTheDocument()
+    expect(await databaseExists()).toBe(false)
+  })
+
+  it('renders no close control and ignores Escape', async () => {
+    await renderGate().seeded
+    const dialog = await screen.findByTestId('migration-modal')
+    expect(screen.queryByRole('button', { name: /close/i })).toBeNull()
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    expect(screen.getByTestId('migration-modal')).toBeInTheDocument()
+    expect(screen.queryByText('the app')).toBeNull()
+  })
+
+  it('moves everything, verifies it, deletes the local copy, and then shows the app', async () => {
+    const { server, seeded } = renderGate({ withKeys: true })
+    await seeded
+    await start()
+    fireEvent.change(await screen.findByLabelText('Old PIN'), { target: { value: PIN } })
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock keys' }))
+
+    expect(await screen.findByText('Verified 22 stores and 3 media files. Local copy deleted.', {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await databaseExists()).toBe(false)
+    expect([...server.keys.keys()].sort()).toEqual(['azure_speech', 'google', 'openrouter'])
+    expect(server.keys.get('azure_speech')).toEqual({ value: 'dummy-azure-key-0002', region: 'eastus' })
+    expect(server.media.size).toBe(3)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(openApp).toHaveBeenLastCalledWith('/')
+  })
+
+  it('keeps the local copy on a mismatch, names the store, and finishes on Retry', async () => {
+    const { server, seeded } = renderGate()
+    server.state.fault = 'vocabulary'
+    await seeded
+    await start()
+
+    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    expect(failing).toHaveTextContent('vocabulary')
+    expect(failing.querySelectorAll('li')).toHaveLength(1)
+    expect(await databaseExists()).toBe(true)
+
+    server.state.fault = null
+    const counts = new Map(Array.from(server.stores, ([name, records]) => [name, records.size]))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByText(/Local copy deleted/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(new Map(Array.from(server.stores, ([name, records]) => [name, records.size]))).toEqual(counts)
+    expect(await databaseExists()).toBe(false)
+  })
+
+  it('shows an error with Retry when the server is down, and never deletes', async () => {
+    const { server, seeded } = renderGate()
+    server.state.down = true
+    await seeded
+    await start()
+    expect(await screen.findByText(/Your data is still in this browser/)).toBeInTheDocument()
+    expect(await databaseExists()).toBe(true)
+
+    server.state.down = false
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByText(/Local copy deleted/, {}, { timeout: 10_000 })).toBeInTheDocument()
+  })
+
+  it('says so on a wrong PIN and lets the user skip keys after a confirmation', async () => {
+    const { server, seeded } = renderGate({ withKeys: true })
+    await seeded
+    await start()
+    for (const attempt of [1, 2]) {
+      fireEvent.change(await screen.findByLabelText('Old PIN'), { target: { value: '0000' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Unlock keys' }))
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(`(${attempt})`))
+    }
+    fireEvent.click(screen.getByRole('button', { name: /Skip, re-enter keys in Settings/ }))
+    expect(screen.getByText(/deleted with the local copy/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Skip keys' }))
+    expect(await screen.findByText(/Your API keys were not moved/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }))
+    expect(openApp).toHaveBeenLastCalledWith('/settings')
+    expect(server.keys.size).toBe(0)
+  })
+})
+
+describe('migrationGate exits', { timeout: 30_000 }, () => {
+  beforeEach(() => { globalThis.indexedDB = new IDBFactory() })
+  afterEach(() => { globalThis.indexedDB = new IDBFactory() })
+
+  it('keeps the database when a lesson with media is set aside, and offers Sign out', async () => {
+    const { server, seeded } = renderGate()
+    server.state.rejectLesson = LESSON_A
+    await seeded
+    await start()
+    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    expect(failing).toHaveTextContent(`video for lesson ${LESSON_A}`)
+    expect(await databaseExists()).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    expect(logout).toHaveBeenCalled()
+  })
+
+  it('lets the user into the app after a failure and keeps the local copy', async () => {
+    const { server, seeded } = renderGate()
+    server.state.down = true
+    await seeded
+    await start()
+    fireEvent.click(await screen.findByRole('button', { name: 'Use the app now, keep my local copy' }))
+    expect(await screen.findByText('the app')).toBeInTheDocument()
+    expect(await databaseExists()).toBe(true)
+  })
+
+  it('saves a record the schema rejects for repair and still finishes', async () => {
+    const { server, seeded } = renderGate()
+    server.state.rejectRecord = `vocab-${LESSON_A.slice(0, 6)}-0`
+    await seeded
+    await start()
+    expect(await screen.findByText(/2 records couldn't be converted and were saved for repair \(spaced-repetition, vocabulary\)/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await databaseExists()).toBe(false)
+  })
+
+  it('keeps the account version of what changed on both sides, saves this device\'s for repair, and finishes', async () => {
+    const { server, seeded } = renderGate()
+    server.state.conflicts = new Set(['threads:__global', `lessons:${LESSON_A}`])
+    await seeded
+    await start()
+    expect(await screen.findByText('2 items changed both here and in your account; your account\'s version was kept and this device\'s version was saved for repair.', {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(screen.queryByText(/couldn't be converted/)).not.toBeInTheDocument()
+    expect(await databaseExists()).toBe(false)
+    expect(server.stores.get('threads')!.get('__global')).toEqual(expect.objectContaining({ editedInAccount: true }))
+    expect(server.stores.get('lessons')!.get(LESSON_A)).toEqual(expect.objectContaining({ title: 'Edited in the account' }))
+    expect([...server.quarantine.keys()].sort()).toEqual([`lessons:${LESSON_A}`, 'threads:__global'])
+    expect(server.quarantine.get('threads:__global')).not.toHaveProperty('editedInAccount')
+    expect(server.quarantine.get(`lessons:${LESSON_A}`)).toEqual(expect.objectContaining({ id: LESSON_A, segments: expect.any(Array) }))
+    for (const error of server.quarantineErrors.values())
+      expect(error).toEqual([{ type: 'conflict' }])
+  })
+
+  it('saves a device video that differs from the account\'s for repair, leaves the account file, and finishes', async () => {
+    const { server, seeded } = renderGate()
+    server.state.conflicts = new Set([`lessons:${LESSON_A}`])
+    const account = { size: 1, sha256: 'account-video' }
+    server.media.set(`${LESSON_A}:video:`, account)
+    await seeded
+    await start()
+    expect(await screen.findByText(/^2 items changed both here and in your account/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await databaseExists()).toBe(false)
+    expect(server.media.get(`${LESSON_A}:video:`)).toEqual(account)
+    expect(server.quarantinedMedia.get(`${LESSON_A}:video:`)).toEqual(expect.objectContaining({ size: 300_000 }))
+  })
+
+  it('keeps the local copy when the device video never reached repair storage', async () => {
+    const { server, seeded } = renderGate()
+    server.state.conflicts = new Set([`lessons:${LESSON_A}`])
+    server.state.dropQuarantinedMedia = true
+    server.media.set(`${LESSON_A}:video:`, { size: 1, sha256: 'account-video' })
+    await seeded
+    await start()
+    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    expect(failing).toHaveTextContent(`video for lesson ${LESSON_A}`)
+    expect(await databaseExists()).toBe(true)
+  })
+
+  it('speaks the language this browser used before, Vietnamese here', async () => {
+    await renderGate({ variant: 'B' }).seeded
+    expect(await screen.findByText('Chuyển dữ liệu vào tài khoản của bạn')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Bắt đầu' })).toBeInTheDocument()
+  })
+
+  it('keeps the local copy when the server writes a record without one of its fields', async () => {
+    const { server, seeded } = renderGate()
+    server.state.dropField = 'meaning'
+    await seeded
+    await start()
+    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    expect(failing).toHaveTextContent('vocabulary')
+    expect(await databaseExists()).toBe(true)
+  })
+
+  it('keeps a key the account already holds', async () => {
+    const { server, seeded } = renderGate({ withKeys: true })
+    server.keys.set('openrouter', { value: 'sk-or-account-key' })
+    await seeded
+    await start()
+    fireEvent.change(await screen.findByLabelText('Old PIN'), { target: { value: PIN } })
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock keys' }))
+    expect(await screen.findByText(/already had a OpenRouter key/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(server.keys.get('openrouter')).toEqual({ value: 'sk-or-account-key' })
+  })
+
+  it('imports a write another tab made during the run before it deletes anything', async () => {
+    const { server, seeded } = renderGate({ recordings: 0 })
+    server.state.onManifest = async () => {
+      const { openDB } = await import('idb')
+      const db = await openDB('shadowlearn')
+      await db.put('vocabulary', { id: 'late-word', word: '晚', sourceLessonId: LESSON_A, createdAt: '2026-06-02T00:00:00.000Z' })
+      db.close()
+    }
+    await seeded
+    await start()
+    expect(await screen.findByText(/Local copy deleted/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(server.stores.get('vocabulary')!.has('late-word')).toBe(true)
+  })
+
+  it('tells a second account that the import belongs to the first, and changes nothing', async () => {
+    const first = renderGate()
+    await first.seeded
+    const { claimImport } = await import('@/features/migration/exportStores')
+    const { openLegacy } = await import('@/features/migration/detectLegacyData')
+    const db = await openLegacy()
+    await claimImport(db, 'account-b')
+    db.close()
+    await start()
+    expect(await screen.findByText(/already being moved to a different account/)).toBeInTheDocument()
+    expect(first.server.stores.size).toBe(0)
+    expect(await databaseExists()).toBe(true)
+  })
+})
+
+describe('reduce', () => {
+  it('counts progress only within the current step and never past the total', () => {
+    const records = reduce({ step: 'explain', busy: false }, { type: 'records', total: 3 })
+    expect(reduce(reduce(records, { type: 'sent', count: 2 }), { type: 'sent', count: 5 })).toEqual({ step: 'records', done: 3, total: 3 })
+    expect(reduce({ step: 'verify', records: 3, media: 1 }, { type: 'sent', count: 1 })).toEqual({ step: 'verify', records: 3, media: 1 })
+  })
+
+  it('ignores PIN events outside the Keys step', () => {
+    expect(reduce({ step: 'verify', records: 3, media: 1 }, { type: 'pin-wrong' })).toEqual({ step: 'verify', records: 3, media: 1 })
+  })
+})

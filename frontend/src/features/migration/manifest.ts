@@ -1,0 +1,160 @@
+import type { Digest, Json } from './canonical'
+import type { ManifestStore, MediaKey } from './exportStores'
+import type { ApiClient } from '@/db'
+import { responseError } from '@/shared/lib/api'
+import { storeDigest } from './canonical'
+
+export interface QuarantinedRecord {
+  store: ManifestStore
+  recordId: string
+  raw: Json
+  error: Json
+}
+
+export interface SentMedia {
+  key: MediaKey
+  size: number
+  sha256: string
+}
+
+export interface Ledger {
+  source: string
+  stores: Map<ManifestStore, StoreLedger>
+  quarantine: Map<string, QuarantinedRecord>
+  media: SentMedia[]
+  /** Device files of a lesson that changed on both sides, saved for repair beside the account's own. */
+  quarantinedMedia: SentMedia[]
+  unsentMedia: MediaKey[]
+  hashMs: number
+}
+
+/**
+ * `expected` holds what each hashed record must equal: the local record for `stored`,
+ * the server's merge for `merged`. `dominance` holds the local copy of each `merged`
+ * record, which the server must show it already reflects, by the store's merge rule.
+ * `present` lists `kept_server` ids, where a rule kept the account's copy on purpose,
+ * so they only need to exist. `conflicts` changed both here and in the account: the
+ * account's copy stands and this device's copy is verified among the quarantine.
+ */
+export interface StoreLedger {
+  expected: Map<string, Json>
+  dominance: Map<string, Json>
+  present: Set<string>
+  missing: string[]
+  conflicts: string[]
+}
+
+function freshStoreLedger(): StoreLedger {
+  return { expected: new Map(), dominance: new Map(), present: new Set(), missing: [], conflicts: [] }
+}
+
+export function emptyLedger(source: string, stores: readonly ManifestStore[]): Ledger {
+  return {
+    source,
+    stores: new Map(stores.map(store => [store, freshStoreLedger()])),
+    quarantine: new Map(),
+    media: [],
+    quarantinedMedia: [],
+    unsentMedia: [],
+    hashMs: 0,
+  }
+}
+
+export function storeLedger(ledger: Ledger, store: ManifestStore): StoreLedger {
+  let entry = ledger.stores.get(store)
+  if (!entry) {
+    entry = freshStoreLedger()
+    ledger.stores.set(store, entry)
+  }
+  return entry
+}
+
+export function quarantineKey(record: Pick<QuarantinedRecord, 'store' | 'recordId'>): string {
+  return `${record.store}:${record.recordId}`
+}
+
+export interface ManifestResponse {
+  stores: Record<string, Digest>
+  present?: Record<string, number>
+  undominated?: Record<string, string[]>
+  quarantine: Digest
+  media: (SentMedia['key'] & { size: number, sha256: string } | null)[]
+  quarantinedMedia?: (SentMedia['key'] & { size: number, sha256: string } | null)[]
+}
+
+export type Check
+  = | { kind: 'store', store: ManifestStore, count: number, ok: boolean, missing: number, undominated: number, absent: number }
+    | { kind: 'quarantine', count: number, ok: boolean }
+    | { kind: 'media', key: MediaKey, ok: boolean }
+
+export interface Verification {
+  ok: boolean
+  checks: Check[]
+}
+
+function sameDigest(a: Digest | undefined, b: Digest): boolean {
+  return a !== undefined && a.count === b.count && a.sha256 === b.sha256
+}
+
+export async function postManifest(
+  api: ApiClient,
+  body: { source: string, stores: Record<string, string[]>, present?: Record<string, string[]>, dominance?: Record<string, Json[]>, quarantine?: { store: string, recordId: string }[], media?: MediaKey[], quarantinedMedia?: MediaKey[] },
+): Promise<ManifestResponse> {
+  const started = performance.now()
+  const res = await api.fetch('/api/import/manifest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok)
+    throw await responseError(res, `Verification request failed: ${res.status}`)
+  const manifest: ManifestResponse = await res.json()
+  performance.measure('manifest server', { start: started })
+  return manifest
+}
+
+export async function verify(api: ApiClient, ledger: Ledger): Promise<Verification> {
+  const started = performance.now()
+  const local = await Promise.all(Array.from(ledger.stores, async ([store, { expected: records, dominance, present, missing }]) => ({
+    store,
+    ids: [...records.keys()],
+    present: [...present],
+    dominance: [...dominance.values()],
+    missing: missing.length,
+    digest: await storeDigest(records),
+  })))
+  const quarantined = [...ledger.quarantine.values()]
+  const quarantineDigest = await storeDigest(quarantined.map(record => [quarantineKey(record), record.raw]))
+  performance.measure('manifest client', { start: started - ledger.hashMs, end: performance.now() })
+
+  const server = await postManifest(api, {
+    source: ledger.source,
+    stores: Object.fromEntries(local.map(({ store, ids }) => [store, ids])),
+    present: Object.fromEntries(local.filter(({ present }) => present.length > 0).map(({ store, present }) => [store, present])),
+    dominance: Object.fromEntries(local.filter(({ dominance }) => dominance.length > 0).map(({ store, dominance }) => [store, dominance])),
+    quarantine: quarantined.map(({ store, recordId }) => ({ store, recordId })),
+    media: ledger.media.map(item => item.key),
+    quarantinedMedia: ledger.quarantinedMedia.map(item => item.key),
+  })
+
+  const checks: Check[] = local.map(({ store, present, missing, dominance, digest }) => {
+    const absent = present.length - (server.present?.[store] ?? 0)
+    const undominated = dominance.length === 0 ? 0 : server.undominated?.[store]?.length ?? dominance.length
+    return {
+      kind: 'store',
+      store,
+      count: digest.count + present.length + missing,
+      missing,
+      undominated,
+      absent,
+      ok: missing === 0 && undominated === 0 && absent === 0 && sameDigest(server.stores[store], digest),
+    }
+  })
+  checks.push({ kind: 'quarantine', count: quarantined.length, ok: sameDigest(server.quarantine, quarantineDigest) })
+  for (const key of ledger.unsentMedia)
+    checks.push({ kind: 'media', key, ok: false })
+  const sameBlob = (item: SentMedia, stored: ManifestResponse['media'][number] | undefined) => stored?.size === item.size && stored?.sha256 === item.sha256
+  ledger.media.forEach((item, i) => checks.push({ kind: 'media', key: item.key, ok: sameBlob(item, server.media[i]) }))
+  ledger.quarantinedMedia.forEach((item, i) => checks.push({ kind: 'media', key: item.key, ok: sameBlob(item, server.quarantinedMedia?.[i]) }))
+  return { ok: checks.every(check => check.ok), checks }
+}

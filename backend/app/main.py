@@ -19,6 +19,7 @@ from app.collection.router import router as collection_router
 from app.config.router import router as config_router
 from app.daily_review.router import router as daily_review_router
 from app.db import engine
+from app.importer.router import router as importer_router
 from app.internal.router import router as internal_router
 from app.job_store import mark_interrupted_jobs
 from app.keys.router import router as keys_router
@@ -120,6 +121,7 @@ for router in (
     tips_router,
     pageindex_tool_router,
     userdata_router,
+    importer_router,
 ):
     app.include_router(router, dependencies=[Depends(current_active_user)])
 

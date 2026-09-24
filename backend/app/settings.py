@@ -93,6 +93,7 @@ class Settings(BaseSettings):
     smtp_security: Literal["none", "starttls", "ssl"] = "starttls"
     public_app_url: str = "http://localhost:5173"
     enable_test_routes: bool = False
+    import_fault: str = ""
 
     @field_validator("jwt_secret", "jwt_refresh_secret")
     @classmethod
@@ -131,6 +132,15 @@ class Settings(BaseSettings):
             raise ValueError(
                 "SHADOWLEARN_ENABLE_TEST_ROUTES is refused outside local dev: the seed routes write "
                 f"lessons without the pipeline for {self.public_app_url}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _refuse_import_fault_outside_local_dev(self) -> "Settings":
+        if self.import_fault and not self._is_local_dev():
+            raise ValueError(
+                "SHADOWLEARN_IMPORT_FAULT is refused outside local dev: it makes every import manifest "
+                f"mismatch for {self.public_app_url}"
             )
         return self
 

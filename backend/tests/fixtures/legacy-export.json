@@ -1,0 +1,591 @@
+{
+  "lessons": [
+    {
+      "id": "6f1c2b1e-8d4f-4c1a-9a51-3f3d2c1b0a99",
+      "lesson": {
+        "id": "6f1c2b1e-8d4f-4c1a-9a51-3f3d2c1b0a99",
+        "title": "Greetings, renamed",
+        "source": "youtube",
+        "sourceUrl": "https://youtu.be/6f1c2b1e",
+        "duration": 5.25,
+        "sourceLanguage": "zh-CN",
+        "translationLanguages": [
+          "en"
+        ],
+        "createdAt": "2026-05-01T08:30:00.123Z",
+        "lastOpenedAt": "2026-06-01T09:00:00.000Z",
+        "meta": {
+          "progressSegmentId": "1",
+          "tags": [
+            "greetings"
+          ]
+        }
+      },
+      "segments": [
+        {
+          "id": "0",
+          "start": 0,
+          "end": 2.5,
+          "text": "A你好",
+          "romanization": "nǐ hǎo",
+          "translations": {
+            "en": "hello"
+          },
+          "words": [
+            {
+              "word": "你好",
+              "romanization": "nǐ hǎo",
+              "meaning": "hello",
+              "usage": ""
+            }
+          ]
+        },
+        {
+          "id": "1",
+          "start": 2.5,
+          "end": 5.25,
+          "text": "A谢谢",
+          "romanization": "xiè xie",
+          "translations": {
+            "en": "thanks"
+          },
+          "words": []
+        }
+      ]
+    },
+    {
+      "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
+      "lesson": {
+        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
+        "title": "March lesson",
+        "source": "upload",
+        "sourceUrl": null,
+        "duration": 5.25,
+        "sourceLanguage": "zh-CN",
+        "translationLanguages": [
+          "en"
+        ],
+        "createdAt": "2026-05-01T08:30:00.123Z",
+        "lastOpenedAt": "2026-06-01T09:00:00.000Z",
+        "meta": {
+          "progressSegmentId": "1",
+          "tags": [
+            "greetings"
+          ]
+        }
+      },
+      "segments": [
+        {
+          "id": "0",
+          "start": 0,
+          "end": 2.5,
+          "text": "M你好",
+          "romanization": "nǐ hǎo",
+          "translations": {
+            "en": "hello"
+          },
+          "words": [
+            {
+              "word": "你好",
+              "romanization": "nǐ hǎo",
+              "meaning": "hello",
+              "usage": ""
+            }
+          ]
+        },
+        {
+          "id": "1",
+          "start": 2.5,
+          "end": 5.25,
+          "text": "M谢谢",
+          "romanization": "xiè xie",
+          "translations": {
+            "en": "thanks"
+          },
+          "words": []
+        }
+      ]
+    }
+  ],
+  "stores": {
+    "settings": [
+      {
+        "id": "settings",
+        "data": {
+          "translationLanguage": "vi",
+          "uiLanguage": "en"
+        }
+      }
+    ],
+    "vocabulary": [
+      {
+        "id": "vocab-6f1c2b-0",
+        "data": {
+          "id": "vocab-6f1c2b-0",
+          "word": "词0",
+          "romanization": "cí",
+          "meaning": "word 0",
+          "usage": "",
+          "sourceLessonId": "6f1c2b1e-8d4f-4c1a-9a51-3f3d2c1b0a99",
+          "sourceLessonTitle": "Greetings",
+          "sourceSegmentId": "0",
+          "sourceSegmentText": "你好",
+          "sourceSegmentTranslation": "hello",
+          "sourceLanguage": "zh-CN",
+          "createdAt": "2026-05-01T10:00:00.000Z"
+        }
+      },
+      {
+        "id": "vocab-6f1c2b-1",
+        "data": {
+          "id": "vocab-6f1c2b-1",
+          "word": "词1",
+          "romanization": "cí",
+          "meaning": "word 1",
+          "usage": "",
+          "sourceLessonId": "6f1c2b1e-8d4f-4c1a-9a51-3f3d2c1b0a99",
+          "sourceLessonTitle": "Greetings",
+          "sourceSegmentId": "0",
+          "sourceSegmentText": "你好",
+          "sourceSegmentTranslation": "hello",
+          "sourceLanguage": "zh-CN",
+          "createdAt": "2026-05-02T10:00:00.000Z"
+        }
+      },
+      {
+        "id": "vocab-6f1c2b-2",
+        "data": {
+          "id": "vocab-6f1c2b-2",
+          "word": "词2",
+          "romanization": "cí",
+          "meaning": "word 2",
+          "usage": "",
+          "sourceLessonId": "6f1c2b1e-8d4f-4c1a-9a51-3f3d2c1b0a99",
+          "sourceLessonTitle": "Greetings",
+          "sourceSegmentId": "0",
+          "sourceSegmentText": "你好",
+          "sourceSegmentTranslation": "hello",
+          "sourceLanguage": "zh-CN",
+          "createdAt": "2026-05-03T10:00:00.000Z"
+        }
+      },
+      {
+        "id": "vocab-lesson-99",
+        "data": {
+          "id": "vocab-lesson-99",
+          "word": "词99",
+          "romanization": "cí",
+          "meaning": "word 99",
+          "usage": "",
+          "sourceLessonId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
+          "sourceLessonTitle": "Greetings",
+          "sourceSegmentId": "0",
+          "sourceSegmentText": "你好",
+          "sourceSegmentTranslation": "hello",
+          "sourceLanguage": "zh-CN",
+          "createdAt": "2026-05-01T10:00:00.000Z"
+        }
+      }
+    ],
+    "learner-profile": [
+      {
+        "id": "profile",
+        "data": {
+          "name": "Ada",
+          "nativeLanguage": "vi",
+          "targetLanguage": "zh-CN",
+          "currentLevel": "HSK 2",
+          "dailyGoalMinutes": 15,
+          "currentStreakDays": 2,
+          "totalSessions": 3,
+          "totalStudyMinutes": 42.5,
+          "lastStudyDate": "2026-06-01",
+          "profileCreated": "2026-03-20T00:00:00.000Z"
+        }
+      }
+    ],
+    "progress-db": [
+      {
+        "id": "global",
+        "data": {
+          "totalSessions": 3,
+          "totalExercises": 20,
+          "totalCorrect": 15,
+          "totalIncorrect": 5,
+          "accuracyRate": 0.75,
+          "totalStudyMinutes": 42.5,
+          "accuracyTrend": [
+            {
+              "date": "2026-06-01",
+              "accuracy": 0.75,
+              "exercises": 20
+            }
+          ],
+          "skillProgress": {
+            "writing": {
+              "sessions": 1,
+              "accuracy": 0.5,
+              "lastPracticed": null
+            },
+            "speaking": {
+              "sessions": 2,
+              "accuracy": 1,
+              "lastPracticed": "2026-06-01"
+            },
+            "vocabulary": {
+              "sessions": 0,
+              "accuracy": 0,
+              "lastPracticed": null
+            },
+            "reading": {
+              "sessions": 0,
+              "accuracy": 0,
+              "lastPracticed": null
+            },
+            "listening": {
+              "sessions": 0,
+              "accuracy": 0,
+              "lastPracticed": null
+            }
+          }
+        }
+      }
+    ],
+    "mastery-db": [
+      {
+        "id": "global",
+        "data": {
+          "writing": {
+            "masteryLevel": 1,
+            "confidenceScore": 0.5,
+            "totalPracticeTime": 10,
+            "lastPracticed": null
+          },
+          "speaking": {
+            "masteryLevel": 2,
+            "confidenceScore": 0.25,
+            "totalPracticeTime": 3.5,
+            "lastPracticed": "2026-06-01"
+          },
+          "vocabulary": {
+            "masteryLevel": 0,
+            "confidenceScore": 0,
+            "totalPracticeTime": 0,
+            "lastPracticed": null
+          },
+          "reading": {
+            "masteryLevel": 0,
+            "confidenceScore": 0,
+            "totalPracticeTime": 0,
+            "lastPracticed": null
+          },
+          "listening": {
+            "masteryLevel": 0,
+            "confidenceScore": 0,
+            "totalPracticeTime": 0,
+            "lastPracticed": null
+          }
+        }
+      }
+    ],
+    "spaced-repetition": [
+      {
+        "id": "vocab-6f1c2b-0",
+        "data": {
+          "itemId": "vocab-6f1c2b-0",
+          "itemType": "vocabulary",
+          "easinessFactor": 2.5,
+          "intervalDays": 1,
+          "repetitions": 1,
+          "consecutiveCorrect": 1,
+          "consecutiveIncorrect": 0,
+          "masteryLevel": 1,
+          "dueDate": "2026-06-02",
+          "lastReviewed": "2026-06-01",
+          "reviewHistory": [
+            {
+              "date": "2026-06-01",
+              "quality": 4,
+              "intervalDays": 1
+            }
+          ]
+        }
+      }
+    ],
+    "session-logs": [
+      {
+        "id": "session-A",
+        "data": {
+          "sessionId": "session-A",
+          "date": "2026-06-01",
+          "durationMinutes": 12,
+          "skillPracticed": "mixed",
+          "exercisesCompleted": 10,
+          "exercisesCorrect": 8,
+          "accuracy": 0.8,
+          "itemsMastered": []
+        }
+      }
+    ],
+    "mistakes-db": [
+      {
+        "id": "tone:ma",
+        "data": {
+          "patternId": "tone:ma",
+          "frequency": 2,
+          "lastOccurred": "2026-06-01T10:00:00.000Z",
+          "examples": [
+            {
+              "userAnswer": "mà",
+              "correctAnswer": "mǎ",
+              "context": "马",
+              "date": "2026-06-01"
+            }
+          ]
+        }
+      }
+    ],
+    "agent-memory": [
+      {
+        "id": "memory-A",
+        "data": {
+          "id": "memory-A",
+          "content": "Likes tea",
+          "tags": [
+            "food",
+            "preference"
+          ],
+          "importance": 2,
+          "createdAt": 1717200000000,
+          "lastAccessedAt": 1717200000123
+        }
+      },
+      {
+        "id": "memory-legacy-A",
+        "data": {
+          "id": "memory-legacy-A",
+          "content": "Uploaded a lesson",
+          "tags": [
+            "lesson"
+          ],
+          "importance": 1,
+          "createdAt": 1710400000000,
+          "lastAccessedAt": 1710400000000,
+          "lessonId": "639f01e8-7e0e-5de4-98c8-1536996a2507"
+        }
+      }
+    ],
+    "exercise-stats": [
+      {
+        "id": "vocab-6f1c2b-0:cloze",
+        "data": {
+          "correct": 3,
+          "total": 4,
+          "lastAttempt": "2026-06-01",
+          "vocabId": "vocab-6f1c2b-0",
+          "exerciseType": "cloze"
+        }
+      },
+      {
+        "id": "vocab:with:colons:dictation",
+        "data": {
+          "correct": 1,
+          "total": 1,
+          "lastAttempt": "2026-06-01",
+          "vocabId": "vocab:with:colons",
+          "exerciseType": "dictation"
+        }
+      }
+    ],
+    "daily-tasks": [
+      {
+        "id": "task-A",
+        "data": {
+          "id": "task-A",
+          "title": "Review tones",
+          "createdDate": "2026-06-01",
+          "completedDate": null
+        }
+      }
+    ],
+    "speak-sessions": [
+      {
+        "id": "speak-A",
+        "data": {
+          "sessionId": "speak-A",
+          "lessonId": "6f1c2b1e-8d4f-4c1a-9a51-3f3d2c1b0a99",
+          "startedAt": "2026-06-01T10:00:00.000Z",
+          "endedAt": "2026-06-01T10:05:00.000Z",
+          "durationSeconds": 300,
+          "status": "completed",
+          "transcript": [
+            {
+              "role": "user",
+              "content": "你好",
+              "timestamp": "2026-06-01T10:00:01.000Z"
+            }
+          ],
+          "transcriptText": "你好",
+          "evaluation": null,
+          "promptVersion": "v3",
+          "modelId": "gemini",
+          "targetLanguage": "zh-CN",
+          "proficiencyLevel": "intermediate",
+          "levelLabel": "HSK 3-4",
+          "situationTitle": "Casual Chat",
+          "userGoal": ""
+        }
+      }
+    ],
+    "shadowing-bests": [
+      {
+        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507:0",
+        "data": {
+          "lessonId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
+          "segmentId": "0",
+          "score": 88,
+          "breakdown": {
+            "overall": {
+              "accuracy": 88,
+              "fluency": 80,
+              "completeness": 100,
+              "prosody": 70
+            },
+            "words": []
+          },
+          "recordedAt": "2026-06-01T10:00:00.000Z"
+        }
+      }
+    ],
+    "tip-progress": [
+      {
+        "id": "course-1:video-1",
+        "data": {
+          "key": "course-1:video-1",
+          "courseId": "course-1",
+          "videoId": "video-1",
+          "watchedSec": 30,
+          "totalSec": 120,
+          "completed": false,
+          "lastSeenAt": "2026-06-01T10:00:00.000Z",
+          "title": "Tone basics"
+        }
+      }
+    ],
+    "tip-notes": [
+      {
+        "id": "video-1:note-A",
+        "data": {
+          "id": "note-A",
+          "videoId": "video-1",
+          "title": "Tone notes",
+          "html": "<p>dip</p>",
+          "createdAt": "2026-06-01T10:00:00.000Z",
+          "updatedAt": "2026-06-01T10:00:00.000Z",
+          "source": "freeform"
+        }
+      }
+    ],
+    "tip-card-states": [
+      {
+        "id": "video-1:en",
+        "data": {
+          "videoId": "video-1",
+          "locale": "en",
+          "states": {
+            "What is tone 3?": {
+              "state": "known",
+              "updatedAt": "2026-06-01T10:00:00.000Z"
+            },
+            "What is tone 4?": {
+              "state": "learning",
+              "updatedAt": "2026-06-01T11:00:00.000Z"
+            }
+          }
+        }
+      }
+    ],
+    "word-stories": [
+      {
+        "id": "你好:vi",
+        "data": {
+          "word": "你好",
+          "lang": "vi",
+          "story": "A person greets a friend at the door.",
+          "updatedAt": "2026-06-01T10:00:00.000Z"
+        }
+      }
+    ],
+    "user-materials": [
+      {
+        "id": "material-A",
+        "data": {
+          "id": "material-A",
+          "source": "playlist",
+          "externalId": "PL-shared",
+          "name": "Tones playlist",
+          "skill": "Pronunciation",
+          "instructionLanguage": "English",
+          "contentType": "tip",
+          "cachedMeta": {
+            "thumbnailUrl": null,
+            "channel": null,
+            "videoCount": 3,
+            "publishedAt": null,
+            "duration": null,
+            "viewCount": null
+          },
+          "createdAt": "2026-06-01T10:00:00.000Z"
+        }
+      }
+    ],
+    "threads": [
+      {
+        "id": "__global",
+        "data": {
+          "id": "__global",
+          "surface": "global",
+          "ownerId": null,
+          "messages": [
+            {
+              "id": "g-A",
+              "role": "user",
+              "parts": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "updatedAt": 1717200000000,
+          "createdAt": 1717200000000
+        }
+      },
+      {
+        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
+        "data": {
+          "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
+          "surface": "lesson",
+          "ownerId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
+          "messages": [],
+          "updatedAt": 1710400000000,
+          "createdAt": 1710400000000
+        }
+      }
+    ],
+    "thread-summaries": [
+      {
+        "id": "639f01e8-7e0e-5de4-98c8-1536996a2507",
+        "data": {
+          "threadId": "639f01e8-7e0e-5de4-98c8-1536996a2507",
+          "summary": "talked about the March lesson",
+          "coversThroughMessageId": "m1",
+          "coversThroughIndex": 0,
+          "tokenBudget": 1000,
+          "createdAt": 1710400000000
+        }
+      }
+    ]
+  }
+}

@@ -26,6 +26,8 @@ import { LessonsProvider } from '@/features/lesson/application/LessonsContext'
 import { CreateLesson } from '@/features/lesson/ui/create/CreateLesson'
 import { LessonView } from '@/features/lesson/ui/LessonView'
 import { Library } from '@/features/lesson/ui/library/Library'
+import { MigrationGate } from '@/features/migration/MigrationGate'
+import { prefetchLegacyData } from '@/features/migration/prefetchLegacyData'
 import { Settings } from '@/features/settings/ui/Settings'
 import { SpeakModalProvider, useSpeakModal } from '@/features/speak/application/SpeakModalContext'
 import { PracticeSpeakingModal } from '@/features/speak/ui/PracticeSpeakingModal'
@@ -37,6 +39,8 @@ import { QueueFloatingBadge } from '@/features/study/ui/queue/QueueFloatingBadge
 import { VocabularyProvider } from '@/features/vocabulary/application/VocabularyContext'
 import { todayISO } from '@/shared/lib/date'
 import { Toaster } from '@/shared/ui/sonner'
+
+prefetchLegacyData()
 
 // Lazy-loaded: pulls in `hanzi` (~7.7 MB dictionary) only when user enters study flow.
 const StudySessionPage = lazy(() =>
@@ -273,15 +277,17 @@ function AuthGate() {
 
   return (
     <ErrorBoundary>
-      <VocabularyProvider>
-        <LessonsProvider>
-          <StudyQueueProvider>
-            <DailyReviewProvider>
-              <AppRouter />
-            </DailyReviewProvider>
-          </StudyQueueProvider>
-        </LessonsProvider>
-      </VocabularyProvider>
+      <MigrationGate api={db.api}>
+        <VocabularyProvider>
+          <LessonsProvider>
+            <StudyQueueProvider>
+              <DailyReviewProvider>
+                <AppRouter />
+              </DailyReviewProvider>
+            </StudyQueueProvider>
+          </LessonsProvider>
+        </VocabularyProvider>
+      </MigrationGate>
     </ErrorBoundary>
   )
 }

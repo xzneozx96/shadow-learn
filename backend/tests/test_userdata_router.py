@@ -3,7 +3,7 @@ import uuid
 import pytest
 import pytest_asyncio
 
-from app.userdata.specs import STORES
+from app.userdata.specs import STORES, StoreSpec
 from tests.conftest import register_and_login
 
 pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.real_auth]
@@ -260,28 +260,29 @@ async def test_bulk_replace_writes_every_record(client, auth_headers):
     response = await client.post(
         "/api/store/vocabulary/bulk", json={"mode": "replace", "records": records}, headers=auth_headers
     )
-    assert response.json() == {"count": 50, "after": None}
+    assert response.json() == {"count": 50, "after": None, "outcomes": None}
     assert len((await client.get("/api/store/vocabulary", headers=auth_headers)).json()) == 50
 
 
 async def test_bulk_import_of_a_union_store_is_idempotent(client, auth_headers):
     records = [{**SAMPLES["vocabulary"], "id": f"w{n}"} for n in range(50)]
-    for _ in range(2):
+    for outcome in ("stored", "kept_server"):
         response = await client.post(
             "/api/store/vocabulary/bulk", json={"mode": "import", "records": records}, headers=auth_headers
         )
-        assert response.json() == {"count": 50, "after": None}
+        assert response.json() == {"count": 50, "after": records, "outcomes": {r["id"]: outcome for r in records}}
     assert len((await client.get("/api/store/vocabulary", headers=auth_headers)).json()) == 50
 
 
 async def test_bulk_import_does_not_overwrite_existing_union_records(client, auth_headers):
     server = SAMPLES["vocabulary"]
     await client.put("/api/store/vocabulary/w1", json=server, headers=auth_headers)
-    await client.post(
+    response = await client.post(
         "/api/store/vocabulary/bulk",
         json={"mode": "import", "records": [{**server, "word": "changed"}]},
         headers=auth_headers,
     )
+    assert response.json()["after"] == [server]
     assert (await client.get("/api/store/vocabulary/w1", headers=auth_headers)).json() == server
 
 
@@ -299,7 +300,7 @@ async def test_bulk_with_no_records_is_a_no_op(client, auth_headers):
     response = await client.post(
         "/api/store/progress-db/bulk", json={"mode": "import", "records": []}, headers=auth_headers
     )
-    assert response.json() == {"count": 0, "after": None}
+    assert response.json() == {"count": 0, "after": None, "outcomes": None}
 
 
 @pytest.mark.parametrize(
@@ -362,3 +363,21 @@ async def test_delete_with_a_stale_if_match_keeps_the_record(client, auth_header
 
     assert (stale.status_code, fresh.status_code) == (409, 204)
     assert (await client.get(url, headers=auth_headers)).status_code == 404
+
+
+class _NotAValidationError(Exception):
+    def errors(self, **_):
+        return [{"loc": ("word",), "msg": "boom", "type": "boom"}]
+
+
+async def test_a_bulk_failure_that_is_not_validation_is_a_server_error(client, auth_headers, monkeypatch):
+    def explode(self, raw):
+        raise _NotAValidationError()
+
+    monkeypatch.setattr(StoreSpec, "validate", explode)
+    with pytest.raises(_NotAValidationError):
+        await client.post(
+            "/api/store/vocabulary/bulk",
+            json={"mode": "import", "records": [SAMPLES["vocabulary"]], "source": "device-a"},
+            headers=auth_headers,
+        )
