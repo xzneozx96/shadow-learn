@@ -1,5 +1,7 @@
 import type { FormEvent, ReactNode } from 'react'
+import type { MediaKey } from './exportStores'
 import type { Check, Verification } from './manifest'
+import type { StoreGroup } from './storeGroups'
 import type { Notes, Phase } from './useMigration'
 import type { ApiClient } from '@/db'
 import type { Locale, TranslationKey } from '@/shared/lib/i18n'
@@ -11,6 +13,7 @@ import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog'
 import { PasswordInput } from '@/shared/ui/PasswordInput'
+import { STORE_GROUPS } from './storeGroups'
 import { useMigration } from './useMigration'
 
 type T = (key: TranslationKey, params?: Record<string, string | number>) => string
@@ -92,20 +95,31 @@ function Progress({ t, label, done, total }: { t: T, label: string, done: number
   )
 }
 
-function checkLabel(t: T, check: Check): string {
-  switch (check.kind) {
-    case 'store':
-      return check.missing > 0 ? t('migration.check.missing', { store: check.store, n: check.missing }) : check.store
-    case 'quarantine':
-      return t('migration.check.quarantine')
-    case 'media':
-      if (check.key.kind === 'shadowing')
-        return t('migration.check.recording', { segment: check.key.segmentId ?? '' })
-      return t(check.key.kind === 'video' ? 'migration.check.video' : 'migration.check.audio', { lesson: check.key.lessonId })
-  }
+function mediaLabel(t: T, key: MediaKey, titles: Record<string, string>): string {
+  const lesson = titles[key.lessonId]
+  if (!lesson)
+    return t('migration.group.media')
+  const kind = key.kind === 'shadowing' ? 'recording' : key.kind
+  return t(`migration.check.${kind}`, { lesson })
 }
 
-function Results({ t, verification }: { t: T, verification: Verification }) {
+function failedLabels(t: T, checks: Check[], titles: Record<string, string>): string[] {
+  const missing = new Map<StoreGroup, number>()
+  const others: string[] = []
+  for (const check of checks) {
+    if (check.kind === 'store') {
+      const group = STORE_GROUPS[check.store]
+      missing.set(group, (missing.get(group) ?? 0) + check.missing)
+    }
+    else {
+      others.push(check.kind === 'quarantine' ? t('migration.check.quarantine') : mediaLabel(t, check.key, titles))
+    }
+  }
+  const groups = Array.from(missing, ([group, n]) => n > 0 ? t('migration.check.missing', { group: t(`migration.group.${group}`), n }) : t(`migration.group.${group}`))
+  return [...new Set([...groups, ...others])]
+}
+
+function Results({ t, verification, titles }: { t: T, verification: Verification, titles: Record<string, string> }) {
   const failing = verification.checks.filter(check => !check.ok)
   const passing = verification.checks.length - failing.length
   return (
@@ -113,11 +127,10 @@ function Results({ t, verification }: { t: T, verification: Verification }) {
       <p>{t('migration.failed.matched', { passing, total: verification.checks.length })}</p>
       {failing.length > 0 && (
         <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto" aria-label={t('migration.failed.list')}>
-          {failing.map((check, i) => (
-
-            <li key={i} className="flex items-center gap-2 text-red-400">
+          {failedLabels(t, failing, titles).map(label => (
+            <li key={label} className="flex items-center gap-2 text-red-400">
               <XCircle className="size-4 shrink-0" />
-              {checkLabel(t, check)}
+              {label}
             </li>
           ))}
         </ul>
@@ -143,7 +156,7 @@ function noteLines(t: T, notes: Notes): string[] {
   if (notes.conflicts > 0)
     lines.push(plural(t, 'migration.done.conflicts', notes.conflicts))
   if (notes.quarantined.length > 0)
-    lines.push(plural(t, 'migration.done.quarantine', notes.quarantined.length, { stores: [...new Set(notes.quarantined)].sort().join(', ') }))
+    lines.push(plural(t, 'migration.done.quarantine', notes.quarantined.length, { groups: [...new Set(notes.quarantined.map(store => t(`migration.group.${STORE_GROUPS[store]}`)))].sort().join(', ') }))
   if (notes.skipped.unfinishedLessons > 0)
     lines.push(plural(t, 'migration.done.unfinished', notes.skipped.unfinishedLessons))
   if (notes.skipped.orphanMedia > 0)
@@ -286,7 +299,7 @@ export function MigrationModal({ api, account, counts, locale, onFinished, onKee
           {phase.step === 'failed' && (
             <>
               <Warning>{t('migration.failed.title')}</Warning>
-              <Results t={t} verification={phase.verification} />
+              <Results t={t} verification={phase.verification} titles={phase.titles} />
               <Exits t={t} onSignOut={onSignOut} onKeepLocal={onKeepLocal} onRetry={() => void retry()} />
             </>
           )}

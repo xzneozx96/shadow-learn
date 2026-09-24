@@ -116,8 +116,7 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     await start()
 
     const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
-    expect(failing).toHaveTextContent('vocabulary')
-    expect(failing.querySelectorAll('li')).toHaveLength(1)
+    expect([...failing.querySelectorAll('li')].map(li => li.textContent)).toEqual(['Saved words'])
     expect(screen.getByText('25 of 26 checks matched.')).toBeInTheDocument()
     expect(steps()).toMatchObject({ current: 'Check', checked: ['Copy'] })
     expect(await databaseExists()).toBe(true)
@@ -128,6 +127,16 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     expect(await screen.findByText(/was removed from this browser/, {}, { timeout: 10_000 })).toBeInTheDocument()
     expect(new Map(Array.from(server.stores, ([name, records]) => [name, records.size]))).toEqual(counts)
     expect(await databaseExists()).toBe(false)
+  })
+
+  it('names a group once when several of its stores fail', async () => {
+    const { server, seeded } = renderGate()
+    server.state.fault = ['spaced-repetition', 'session-logs', 'vocabulary']
+    await seeded
+    await start()
+    const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
+    expect([...failing.querySelectorAll('li')].map(li => li.textContent)).toEqual(['Saved words', 'Study progress'])
+    expect(screen.getByText('23 of 26 checks matched.')).toBeInTheDocument()
   })
 
   it('shows an error with Retry when the server is down, and never deletes', async () => {
@@ -172,7 +181,8 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     await seeded
     await start()
     const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
-    expect(failing).toHaveTextContent(`video for lesson ${LESSON_A}`)
+    expect(failing).toHaveTextContent('Video: "Greetings, renamed"')
+    expect(failing.textContent).not.toContain(LESSON_A)
     expect(await databaseExists()).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(logout).toHaveBeenCalled()
@@ -193,7 +203,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     server.state.rejectRecord = `vocab-${LESSON_A.slice(0, 6)}-0`
     await seeded
     await start()
-    expect(await screen.findByText(/2 items couldn't be copied as they were, so we saved them separately to fix later \(spaced-repetition, vocabulary\)/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await screen.findByText(/2 items couldn't be copied as they were, so we saved them separately to fix later \(Saved words, Study progress\)/, {}, { timeout: 10_000 })).toBeInTheDocument()
     expect(await databaseExists()).toBe(false)
   })
 
@@ -235,7 +245,8 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     await seeded
     await start()
     const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
-    expect(failing).toHaveTextContent(`video for lesson ${LESSON_A}`)
+    expect(failing).toHaveTextContent('Video: "Greetings, renamed"')
+    expect(failing.textContent).not.toContain(LESSON_A)
     expect(await databaseExists()).toBe(true)
   })
 
@@ -251,7 +262,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     await seeded
     await start()
     const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
-    expect(failing).toHaveTextContent('vocabulary')
+    expect([...failing.querySelectorAll('li')].map(li => li.textContent)).toEqual(['Saved words'])
     expect(await databaseExists()).toBe(true)
   })
 
