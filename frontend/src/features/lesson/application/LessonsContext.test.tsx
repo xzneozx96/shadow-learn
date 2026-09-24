@@ -1,12 +1,10 @@
 import type { DataClient } from '@/db'
 import type { LessonMeta } from '@/shared/types'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LessonsProvider, useLessons } from '@/features/lesson/application/LessonsContext'
 import { FakeApiClient, fakeDataClient } from '../../../../tests/fake-api'
-import 'fake-indexeddb/auto'
 
 function makeMeta(overrides: Partial<LessonMeta> = {}): LessonMeta {
   return {
@@ -33,7 +31,6 @@ vi.mock('@/app/providers/AuthContext', () => ({
 }))
 
 beforeEach(async () => {
-  globalThis.indexedDB = new IDBFactory()
   localStorage.clear()
   api = new FakeApiClient()
   db = fakeDataClient(api)

@@ -1,5 +1,5 @@
-// tests/setup.ts passes top-level Blobs through structuredClone for fake-indexeddb.
-// Legacy shadowing-audio rows nest the Blob inside an object, as browsers allow.
+// jsdom's structuredClone loses Blob content, and fake-indexeddb clones every stored value.
+// Legacy video and shadowing-audio rows hold Blobs, top-level or nested, as browsers allow.
 const clone = globalThis.structuredClone
 
 function keepBlobs(value: unknown): unknown {
