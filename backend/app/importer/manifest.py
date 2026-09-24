@@ -56,7 +56,6 @@ class MediaDigest(MediaKey):
 
 
 def iso_ms(value: datetime) -> str:
-    """The ``Date.prototype.toISOString`` form the client hashes."""
     return value.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 

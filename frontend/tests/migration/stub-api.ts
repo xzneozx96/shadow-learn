@@ -11,7 +11,6 @@ type Answer = { status?: number, body?: unknown } | undefined
 
 export type Handler = (call: Call) => Answer | Promise<Answer>
 
-/** An ApiClient whose fetch answers from `handler` and records every call. */
 export function stubApi(handler: Handler): { api: ApiClient, calls: Call[] } {
   const calls: Call[] = []
   const api = createApiClient(async (path, init) => {

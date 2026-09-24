@@ -6,8 +6,6 @@ import { responseError } from '@/shared/lib/api'
 import { recordId } from './exportStores'
 import { quarantineKey, storeLedger } from './manifest'
 
-// A batch closes at 500 records or about 1 MB of JSON, whichever comes first,
-// so no request carries more than a megabyte or so even for long chat threads.
 export const MAX_BATCH_RECORDS = 500
 export const MAX_BATCH_BYTES = 1_000_000
 
@@ -44,7 +42,6 @@ function isValidationDetail(value: unknown): value is ValidationDetail {
     && typeof (value as { msg?: unknown }).msg === 'string'
 }
 
-/** Map a 422 body to `position -> reason` for the items the schema rejected, or null when no item is named. */
 async function rejectedItems(res: Response, listField: string): Promise<Map<number, string> | null> {
   const body: unknown = await res.clone().json().catch(() => null)
   const detail = typeof body === 'object' && body !== null ? (body as { detail?: unknown }).detail : null
@@ -75,10 +72,6 @@ async function quarantine(api: ApiClient, ledger: Ledger, records: QuarantinedRe
     ledger.quarantine.set(quarantineKey(record), record)
 }
 
-/**
- * Send one batch. Items the server schema rejects go to the quarantine and the
- * rest go again. Validation is deterministic, so a rerun makes the same split.
- */
 async function sendBatch<T>(
   api: ApiClient,
   ledger: Ledger,
@@ -146,10 +139,6 @@ function lessonStates(body: unknown): { lesson: JsonObject, segments: Json }[] {
   return afterRecords(body).flatMap(item => isObject(item.lesson) ? [{ lesson: item.lesson, segments: item.segments ?? [] }] : [])
 }
 
-/**
- * The account may already hold a material with the same unique externalId under
- * another id. The server keeps that copy, so the device's duplicate is not sent.
- */
 async function withoutAccountDuplicates(api: ApiClient, records: OutgoingRecord[]): Promise<{ records: OutgoingRecord[], kept: number }> {
   if (records.length === 0)
     return { records, kept: 0 }

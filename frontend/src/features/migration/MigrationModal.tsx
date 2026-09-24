@@ -300,7 +300,6 @@ type GateState
     | { kind: 'failed', message: string }
     | { kind: 'clear' }
 
-/** Hold the app back until this device's legacy data is on the server, so nothing writes defaults over it first. */
 export function MigrationGate({ api, children }: { api: ApiClient, children: ReactNode }) {
   const { session, logout } = useAuth()
   const [state, setState] = useState<GateState>({ kind: 'checking' })

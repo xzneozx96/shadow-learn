@@ -79,7 +79,6 @@ export interface FixtureOptions {
   legacyLessonId?: string
 }
 
-/** Legacy rows for every in-scope store, plus rows the importer must drop. */
 export function legacyFixture(options: FixtureOptions = {}): LegacyFixture {
   const {
     variant = 'A',
@@ -173,11 +172,7 @@ export function legacyFixture(options: FixtureOptions = {}): LegacyFixture {
   return { version, stores, keys: withKeys ? { pin: PIN, plaintext: { openrouterApiKey: 'sk-or-dummy-key-0001', azureSpeechKey: 'dummy-azure-key-0002', azureSpeechRegion: 'eastus', googleRealtimeKey: 'dummy-google-key-0003' } } : undefined }
 }
 
-/**
- * Create `shadowlearn` at the fixture's version with the store layout legacy.ts
- * gives that version, then put every row. Self-contained, and it takes JSON, so
- * it runs inside page.evaluate as well as in vitest.
- */
+/** Self-contained, and it takes JSON, so it runs inside page.evaluate as well as in vitest. */
 export async function seedLegacyDatabase(input: LegacyFixture | string): Promise<void> {
   const fixture: LegacyFixture = typeof input === 'string' ? JSON.parse(input) : input
   const LAYOUT: [name: string, since: number, keyPath: string | string[] | null, autoIncrement: boolean, indexes: [string, string | string[], boolean][]][] = [

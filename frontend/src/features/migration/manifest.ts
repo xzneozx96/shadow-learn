@@ -17,11 +17,6 @@ export interface SentMedia {
   sha256: string
 }
 
-/**
- * What this device expects the server to hold for everything it sent.
- * Lessons and segments expect exactly what was sent. Record stores expect the
- * `after` the bulk import returned, because merge rules may keep the account's copy.
- */
 export interface Ledger {
   source: string
   stores: Map<ManifestStore, StoreLedger>
@@ -97,7 +92,6 @@ export async function postManifest(
   return manifest
 }
 
-/** Compare every store, the quarantine, and every blob. Deletion may follow only when `ok`. */
 export async function verify(api: ApiClient, ledger: Ledger): Promise<Verification> {
   const started = performance.now()
   const local = await Promise.all(Array.from(ledger.stores, async ([store, { expected: records, missing }]) => ({

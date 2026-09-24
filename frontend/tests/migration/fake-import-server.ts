@@ -14,7 +14,6 @@ const BULK = /^\/api\/store\/([^/]+)\/bulk$/
 
 const mediaKey = (key: { lessonId: string, kind: string, segmentId?: string | null }) => `${key.lessonId}:${key.kind}:${key.segmentId ?? ''}`
 
-/** An in-memory stand-in for the import routes with union semantics; `fault` drops one record from a store's hash. */
 export function fakeImportServer() {
   const stores = new Map<string, Map<string, Json>>()
   const quarantine = new Map<string, Json>()

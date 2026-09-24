@@ -1,6 +1,8 @@
 import hashlib
+import json
 import os
 import uuid
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -305,3 +307,13 @@ async def test_every_import_route_needs_a_session(client):
     for path in ("/api/import/lessons", "/api/import/media", "/api/import/manifest", "/api/import/quarantine"):
         assert (await client.post(path, json={})).status_code == 401
 
+
+
+async def test_exported_lessons_digest_on_the_server_as_the_browser_sent_them(client, owner):
+    exported = json.loads((Path(__file__).parent / "fixtures" / "legacy-export.json").read_text())["lessons"]
+    body = {"lessons": [{**item["lesson"], "segments": item["segments"]} for item in exported]}
+    assert (await client.post("/api/import/lessons", json=body, headers=_bearer(owner))).status_code == 200
+    ids = [item["id"] for item in exported]
+    digest = await _manifest(client, owner, {"stores": {"lessons": ids, "segments": ids}})
+    assert digest["stores"]["lessons"]["sha256"] == store_hash([(item["id"], item["lesson"]) for item in exported])
+    assert digest["stores"]["segments"]["sha256"] == store_hash([(item["id"], item["segments"]) for item in exported])

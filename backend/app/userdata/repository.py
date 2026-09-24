@@ -142,12 +142,6 @@ async def _stored(session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, id
 async def import_records(
     session: AsyncSession, user_id: uuid.UUID, spec: StoreSpec, records: list[Data], source: str | None = None
 ) -> list[Data]:
-    """Merge ``records`` into the caller's store and return the stored record for every id that is present.
-
-    With a ``source``, each (source, record id) pair merges at most once, so a
-    retry from the same device never counts twice and a second device always does.
-    A record whose row is gone since its first merge merges again rather than vanish.
-    """
     table = TABLES[spec.name]
     ids = list(dict.fromkeys(spec.record_id(data) for data in records))
     if spec.merge is union:

@@ -113,10 +113,6 @@ function keyUpdates(keys: DecryptedKeys): [Provider, { value: string, region?: s
   return updates
 }
 
-/**
- * Save each key the account does not already hold. A key the server rejects is
- * reported; any other failure stops the run so Retry stays available.
- */
 async function saveKeys(api: ApiClient, keys: DecryptedKeys): Promise<{ failed: string[], kept: string[] }> {
   const account = await api.list<{ provider: Provider, source: string }>('/api/keys')
   const own = new Set(account.filter(state => state.source === 'user').map(state => state.provider))
@@ -155,8 +151,6 @@ function fingerprint(snapshot: LegacySnapshot): string {
   return canonical(toJson({ lessons: snapshot.lessons, stores: snapshot.stores, media }))
 }
 
-// An old-version tab may still write to the database while this one imports.
-// Each time a fresh read differs from what was sent, the run starts over.
 const MAX_ROUNDS = 3
 
 interface Loaded {

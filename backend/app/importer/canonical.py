@@ -18,16 +18,13 @@ def _as_js_number(value: Any) -> Any:
 
 
 def canonical(value: Any) -> bytes:
-    """RFC 8785 JSON of ``value`` as the browser's JSON.stringify with sorted keys writes it.
-
-    JSONB reads ``1e21`` back as an integer, and JS holds every number as a
+    """JSONB reads ``1e21`` back as an integer, and JS holds every number as a
     double, so integers past 2**53 are compared as the double JS would hold.
     """
     return rfc8785.dumps(_as_js_number(value))
 
 
 def store_hash(records: Iterable[tuple[str, Any]]) -> str:
-    """SHA-256 over each record's canonical form plus a newline, in UTF-8 id order."""
     digest = hashlib.sha256()
     for _, value in sorted(records, key=lambda record: record[0].encode()):
         digest.update(canonical(value) + b"\n")

@@ -36,17 +36,13 @@ export interface LegacyData {
   counts: Record<string, number>
 }
 
-/**
- * Open the legacy database with a handler that lets a delete from another tab proceed.
- * Opening upgrades any older schema to v21.
- */
+/** Open the legacy database with a handler that lets a delete from another tab proceed. */
 export async function openLegacy(): Promise<ShadowLearnDB> {
   const db = await initDB()
   unwrap(db).addEventListener('versionchange', () => db.close())
   return db
 }
 
-/** False when the browser cannot list databases at all, since then it cannot hold a legacy one either. */
 async function legacyDatabaseExists(): Promise<boolean> {
   if (typeof indexedDB.databases !== 'function')
     return true
@@ -79,7 +75,6 @@ async function countStores(db: ShadowLearnDB): Promise<Record<string, number>> {
   return counts
 }
 
-/** Report whether this device holds data to import. A database that holds only dropped stores is deleted. */
 export async function detectLegacyData(): Promise<LegacyData> {
   if (!(await legacyDatabaseExists()))
     return { present: false, counts: {} }

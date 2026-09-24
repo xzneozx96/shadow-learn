@@ -10,8 +10,6 @@ from app.db import Base
 
 
 class QuarantinedRecord(Base):
-    """A legacy record the server's schema rejects, kept verbatim so the device may delete its copy."""
-
     __tablename__ = "import_quarantine"
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), primary_key=True)

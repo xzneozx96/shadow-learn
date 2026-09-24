@@ -56,7 +56,6 @@ export const KEY_PATHS: Record<RecordStore, KeyPath> = {
   'thread-summaries': { keyPath: ['threadId'] },
 }
 
-/** The server's record id, as `StoreSpec.record_id` computes it, or null when a key field is missing. */
 export function recordId(store: RecordStore, data: JsonObject): string | null {
   const spec = KEY_PATHS[store]
   if ('singleton' in spec)
@@ -113,7 +112,6 @@ function hex(bytes: Uint8Array): string {
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
-/** RFC 9562 UUIDv5, for the `lesson_<ms>` ids lessons got before they used crypto.randomUUID(). */
 export async function uuidV5(name: string, namespace = LEGACY_LESSON_NAMESPACE): Promise<string> {
   const ns = Uint8Array.from(namespace.replaceAll('-', '').match(HEX_PAIR) ?? [], pair => Number.parseInt(pair, 16))
   const input = new Uint8Array([...ns, ...new TextEncoder().encode(name)])
@@ -161,7 +159,6 @@ function lastEnd(segments: Json[]): number {
   }, 0)
 }
 
-/** The lesson as the server rebuilds it from its columns, which is what both sides hash. */
 function lessonRecord(meta: LessonMeta, id: string, segments: Json[]): JsonObject {
   return asObject({
     id,
@@ -319,11 +316,6 @@ function mediaKind(blob: Blob): MediaKind {
   return blob.type.startsWith('audio/') ? 'audio' : 'video'
 }
 
-/**
- * Read every in-scope store once. Retries upload this same snapshot, so digests
- * stay stable. `lesson_<ms>` ids map to a UUIDv5 of the account and the old id,
- * so two accounts' old ids never collide.
- */
 export async function readSnapshot(db: ShadowLearnDB, account: string): Promise<LegacySnapshot> {
   const metas = await db.getAll('lessons')
   const lessonIds = await lessonIdMap(metas, account)
@@ -384,12 +376,6 @@ async function claim(store: IDBObjectStore, key: string, value: string): Promise
   return value
 }
 
-/**
- * This device's import id and the account its import belongs to. Both live in
- * the legacy database, so they last exactly as long as the data they name. The
- * first account to start an import keeps it, so another account on this
- * browser never collides with lessons the first one already holds.
- */
 export async function claimImport(db: ShadowLearnDB, account: string): Promise<ImportClaim> {
   const store = unwrap(db).transaction('crypto', 'readwrite').objectStore('crypto')
   return {

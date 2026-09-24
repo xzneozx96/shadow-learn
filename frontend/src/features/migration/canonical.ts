@@ -24,7 +24,6 @@ export function toJson(value: unknown): Json {
   return storable(JSON.parse(JSON.stringify(value) ?? 'null'))
 }
 
-/** RFC 8785 JSON, which JSON.stringify with recursively sorted keys produces for JSON values. */
 export function canonical(value: Json): string {
   if (value === null || typeof value !== 'object')
     return JSON.stringify(value)
@@ -50,7 +49,6 @@ export interface Digest {
   sha256: string
 }
 
-/** SHA-256 over each record's canonical form plus a newline, in UTF-8 id order. */
 export async function storeDigest(records: Iterable<[id: string, value: Json]>): Promise<Digest> {
   const sorted = [...records].sort(([a], [b]) => compareUtf8(a, b))
   const sha = await createSHA256()
@@ -61,7 +59,6 @@ export async function storeDigest(records: Iterable<[id: string, value: Json]>):
 
 const BLOB_SLICE_BYTES = 8 * 1024 * 1024
 
-/** SHA-256 of a blob, read one slice at a time so a long video never sits in memory whole. */
 export async function blobDigest(blob: Blob): Promise<{ size: number, sha256: string }> {
   const sha = await createSHA256()
   for (let offset = 0; offset < blob.size; offset += BLOB_SLICE_BYTES)

@@ -17,10 +17,6 @@ async function upload(api: ApiClient, { key, blob }: OutgoingMedia): Promise<voi
     throw await responseError(res, `Uploading media failed: ${res.status}`)
 }
 
-/**
- * Hash every blob, ask the server which copies it already holds, and upload the
- * rest. A rerun after a reload skips what already arrived.
- */
 export async function uploadMedia(
   api: ApiClient,
   ledger: Ledger,
