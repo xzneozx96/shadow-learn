@@ -76,6 +76,21 @@ async def test_second_identical_breakdown_is_a_catalog_hit(client, providers):
     assert openrouter.call_count == 1
 
 
+async def test_forced_breakdown_skips_the_catalog_and_leaves_it_unchanged(client, providers):
+    openrouter = providers.post(settings.openrouter_chat_url)
+    openrouter.side_effect = [
+        httpx.Response(200, json={"choices": [{"message": {"content": "shared"}}]}),
+        httpx.Response(200, json={"choices": [{"message": {"content": "fresh"}}]}),
+    ]
+
+    shared = await client.post("/api/vocab/breakdown-story", json=_BREAKDOWN)
+    forced = await client.post("/api/vocab/breakdown-story", json={**_BREAKDOWN, "force": True})
+    again = await client.post("/api/vocab/breakdown-story", json=_BREAKDOWN)
+
+    assert (shared.json(), forced.json(), again.json()) == ({"story": "shared"}, {"story": "fresh"}, {"story": "shared"})
+    assert openrouter.call_count == 2
+
+
 async def test_breakdown_provider_error_is_not_cached(client, providers):
     openrouter = providers.post(settings.openrouter_chat_url)
     openrouter.side_effect = [

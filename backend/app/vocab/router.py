@@ -34,6 +34,7 @@ class BreakdownStoryRequest(BaseModel):
     meaning: str = Field("", max_length=500)
     sino_vietnamese: str = Field("", max_length=80)
     characters: list[CharPromptInput] = Field(..., min_length=1, max_length=16)
+    force: bool = False
 
 
 class BreakdownStoryResponse(BaseModel):
@@ -42,9 +43,10 @@ class BreakdownStoryResponse(BaseModel):
 
 @router.post("/breakdown-story", response_model=BreakdownStoryResponse)
 async def generate_breakdown_story(req: BreakdownStoryRequest, keys: ProviderKeys) -> BreakdownStoryResponse:
-    cached = await catalog.get_word_breakdown(req.word)
-    if cached is not None:
-        return BreakdownStoryResponse(**cached)
+    if not req.force:
+        cached = await catalog.get_word_breakdown(req.word)
+        if cached is not None:
+            return BreakdownStoryResponse(**cached)
 
     api_key = (await keys(Provider.openrouter)).value
 
@@ -95,5 +97,6 @@ async def generate_breakdown_story(req: BreakdownStoryRequest, keys: ProviderKey
         raise HTTPException(502, f"OpenRouter error: {exc}") from exc
 
     response = BreakdownStoryResponse(story=story)
-    await catalog.put_word_breakdown(req.word, response.model_dump())
+    if not req.force:
+        await catalog.put_word_breakdown(req.word, response.model_dump())
     return response

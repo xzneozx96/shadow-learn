@@ -32,9 +32,12 @@ def _json_keys(schema) -> set[str]:
     return {field.alias or name for name, field in schema.model_fields.items()}
 
 
-def test_registry_holds_the_indexeddb_stores_plus_custom_situations():
-    assert len(STORES) == 19
-    assert set(STORES) == INDEXEDDB_STORES | {"speak-custom-situations"}
+SERVER_ONLY_STORES = {"speak-custom-situations", "tip-card-states", "word-stories"}
+
+
+def test_registry_holds_the_indexeddb_stores_plus_server_only_stores():
+    assert len(STORES) == 21
+    assert set(STORES) == INDEXEDDB_STORES | SERVER_ONLY_STORES
 
 
 @pytest.mark.parametrize("spec", STORES.values(), ids=STORES.keys())

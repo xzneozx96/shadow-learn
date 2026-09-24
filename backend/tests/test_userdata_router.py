@@ -26,6 +26,8 @@ SAMPLES = {
     "shadowing-bests": {"lessonId": "L1", "segmentId": "s1", "score": 80},
     "tip-progress": {"key": "c1:v1", "courseId": "c1", "videoId": "v1", "lastSeenAt": "2026-09-23"},
     "tip-notes": {"videoId": "v1", "id": "n1", "title": "Tones", "source": "freeform"},
+    "tip-card-states": {"videoId": "v1", "locale": "en", "states": {"What is a tone?": {"state": "known"}}},
+    "word-stories": {"word": "你好", "story": "A person greets a child.", "updatedAt": "2026-09-24T00:00:00Z"},
     "user-materials": {"id": "um1", "externalId": "PL1", "skill": "Speaking", "source": "playlist"},
     "threads": {"id": "__global", "surface": "global", "ownerId": None, "messages": [], "updatedAt": 1727000000000},
     "thread-summaries": {"threadId": "__global", "summary": "talked about tea", "tokenBudget": 1000},

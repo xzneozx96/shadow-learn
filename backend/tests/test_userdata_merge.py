@@ -154,6 +154,38 @@ def test_tip_progress_keeps_the_later_visit(server, incoming, kept):
     assert merge.later_seen(records["server"], records["incoming"]) == records[kept]
 
 
+def test_word_story_keeps_the_later_edit():
+    older = {"word": "你", "story": "a", "updatedAt": "2026-09-01"}
+    newer = {"word": "你", "story": "b", "updatedAt": "2026-09-02"}
+    assert merge.later_updated(older, newer) == newer
+    assert merge.later_updated(newer, older) == newer
+
+
+def test_card_states_keep_the_newest_mark_per_card():
+    server = {
+        "videoId": "v",
+        "locale": "en",
+        "states": {
+            "a": {"state": "known", "updatedAt": "2026-09-02"},
+            "b": {"state": "learning", "updatedAt": "2026-09-01"},
+        },
+    }
+    incoming = {
+        "videoId": "v",
+        "locale": "en",
+        "states": {
+            "a": {"state": "learning", "updatedAt": "2026-09-01"},
+            "b": {"state": "known", "updatedAt": "2026-09-03"},
+            "c": {"state": "new", "updatedAt": "2026-09-01"},
+        },
+    }
+    assert merge.card_states(server, incoming)["states"] == {
+        "a": {"state": "known", "updatedAt": "2026-09-02"},
+        "b": {"state": "known", "updatedAt": "2026-09-03"},
+        "c": {"state": "new", "updatedAt": "2026-09-01"},
+    }
+
+
 def test_rules_are_assigned_per_store():
     rules = {name: spec.merge for name, spec in STORES.items() if spec.merge is not merge.union}
     assert rules == {
@@ -165,6 +197,8 @@ def test_rules_are_assigned_per_store():
         "mistakes-db": merge.mistake,
         "shadowing-bests": merge.higher_score,
         "tip-progress": merge.later_seen,
+        "tip-card-states": merge.card_states,
+        "word-stories": merge.later_updated,
     }
 
 
@@ -188,6 +222,14 @@ IMPORTS = {
     "tip-progress": [
         {"key": "c:v", "courseId": "c", "videoId": "v", "lastSeenAt": "2026-09-01"},
         {"key": "c:v", "courseId": "c", "videoId": "v", "lastSeenAt": "2026-09-02"},
+    ],
+    "tip-card-states": [
+        {"videoId": "v", "locale": "en", "states": {"a": {"state": "known", "updatedAt": "2026-09-01"}}},
+        {"videoId": "v", "locale": "en", "states": {"b": {"state": "learning", "updatedAt": "2026-09-02"}}},
+    ],
+    "word-stories": [
+        {"word": "你", "story": "a", "updatedAt": "2026-09-01"},
+        {"word": "你", "story": "b", "updatedAt": "2026-09-02"},
     ],
 }
 
