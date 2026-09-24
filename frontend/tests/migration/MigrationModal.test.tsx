@@ -41,8 +41,21 @@ function renderGate(options: Parameters<typeof legacyFixture>[0] = {}, userId = 
   }
 }
 
+function steps() {
+  const list = screen.queryByRole('list', { name: 'Steps' })
+  if (!list)
+    return null
+  const items = [...list.querySelectorAll('li')]
+  const label = (item: Element) => item.lastElementChild?.textContent
+  return {
+    labels: items.map(label),
+    current: label(items.find(item => item.getAttribute('aria-current') === 'step')!),
+    checked: items.filter(item => item.querySelector('svg')).map(label),
+  }
+}
+
 async function start() {
-  fireEvent.click(await screen.findByRole('button', { name: 'Start' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Move my data' }))
 }
 
 describe('migrationGate', { timeout: 30_000 }, () => {
@@ -65,6 +78,20 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     expect(screen.queryByText('the app')).toBeNull()
   })
 
+  it('shows no steps on the intro, then three steps with the current one marked', async () => {
+    const { seeded } = renderGate({ withKeys: true })
+    await seeded
+    await screen.findByRole('button', { name: 'Move my data' })
+    expect(screen.queryAllByRole('list')).toHaveLength(0)
+    await start()
+    await screen.findByLabelText('Old PIN')
+    expect(steps()).toEqual({ labels: ['Copy', 'Check', 'Finish'], current: 'Copy', checked: [] })
+    fireEvent.change(screen.getByLabelText('Old PIN'), { target: { value: PIN } })
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock keys' }))
+    await screen.findByText(/was removed from this browser/, {}, { timeout: 10_000 })
+    expect(steps()).toEqual({ labels: ['Copy', 'Check', 'Finish'], current: 'Finish', checked: ['Copy', 'Check', 'Finish'] })
+  })
+
   it('moves everything, verifies it, deletes the local copy, and then shows the app', async () => {
     const { server, seeded } = renderGate({ withKeys: true })
     await seeded
@@ -72,7 +99,7 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     fireEvent.change(await screen.findByLabelText('Old PIN'), { target: { value: PIN } })
     fireEvent.click(screen.getByRole('button', { name: 'Unlock keys' }))
 
-    expect(await screen.findByText('Verified 22 stores and 3 media files. Local copy deleted.', {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await screen.findByText('All 26 checks matched. Your data is in your account and was removed from this browser.', {}, { timeout: 10_000 })).toBeInTheDocument()
     expect(await databaseExists()).toBe(false)
     expect([...server.keys.keys()].sort()).toEqual(['azure_speech', 'google', 'openrouter'])
     expect(server.keys.get('azure_speech')).toEqual({ value: 'dummy-azure-key-0002', region: 'eastus' })
@@ -88,15 +115,17 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     await seeded
     await start()
 
-    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
     expect(failing).toHaveTextContent('vocabulary')
     expect(failing.querySelectorAll('li')).toHaveLength(1)
+    expect(screen.getByText('25 of 26 checks matched.')).toBeInTheDocument()
+    expect(steps()).toMatchObject({ current: 'Check', checked: ['Copy'] })
     expect(await databaseExists()).toBe(true)
 
     server.state.fault = null
     const counts = new Map(Array.from(server.stores, ([name, records]) => [name, records.size]))
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(await screen.findByText(/Local copy deleted/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText(/was removed from this browser/, {}, { timeout: 10_000 })).toBeInTheDocument()
     expect(new Map(Array.from(server.stores, ([name, records]) => [name, records.size]))).toEqual(counts)
     expect(await databaseExists()).toBe(false)
   })
@@ -110,8 +139,8 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     expect(await databaseExists()).toBe(true)
 
     server.state.down = false
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(await screen.findByText(/Local copy deleted/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText(/was removed from this browser/, {}, { timeout: 10_000 })).toBeInTheDocument()
   })
 
   it('says so on a wrong PIN and lets the user skip keys after a confirmation', async () => {
@@ -121,12 +150,12 @@ describe('migrationGate', { timeout: 30_000 }, () => {
     for (const attempt of [1, 2]) {
       fireEvent.change(await screen.findByLabelText('Old PIN'), { target: { value: '0000' } })
       fireEvent.click(screen.getByRole('button', { name: 'Unlock keys' }))
-      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(`(${attempt})`))
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(`(${attempt} wrong so far)`))
     }
-    fireEvent.click(screen.getByRole('button', { name: /Skip, re-enter keys in Settings/ }))
-    expect(screen.getByText(/deleted with the local copy/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Skip, I'll add keys in Settings/ }))
+    expect(screen.getByText(/removed from this browser with the rest of your earlier data/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Skip keys' }))
-    expect(await screen.findByText(/Your API keys were not moved/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await screen.findByText(/Your API keys weren't moved/, {}, { timeout: 10_000 })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }))
     expect(openApp).toHaveBeenLastCalledWith('/settings')
     expect(server.keys.size).toBe(0)
@@ -142,7 +171,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     server.state.rejectLesson = LESSON_A
     await seeded
     await start()
-    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
     expect(failing).toHaveTextContent(`video for lesson ${LESSON_A}`)
     expect(await databaseExists()).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
@@ -154,7 +183,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     server.state.down = true
     await seeded
     await start()
-    fireEvent.click(await screen.findByRole('button', { name: 'Use the app now, keep my local copy' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Not now, keep my data in this browser' }))
     expect(await screen.findByText('the app')).toBeInTheDocument()
     expect(await databaseExists()).toBe(true)
   })
@@ -164,7 +193,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     server.state.rejectRecord = `vocab-${LESSON_A.slice(0, 6)}-0`
     await seeded
     await start()
-    expect(await screen.findByText(/2 records couldn't be converted and were saved for repair \(spaced-repetition, vocabulary\)/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await screen.findByText(/2 items couldn't be copied as they were, so we saved them separately to fix later \(spaced-repetition, vocabulary\)/, {}, { timeout: 10_000 })).toBeInTheDocument()
     expect(await databaseExists()).toBe(false)
   })
 
@@ -173,8 +202,8 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     server.state.conflicts = new Set(['threads:__global', `lessons:${LESSON_A}`])
     await seeded
     await start()
-    expect(await screen.findByText('2 items changed both here and in your account; your account\'s version was kept and this device\'s version was saved for repair.', {}, { timeout: 10_000 })).toBeInTheDocument()
-    expect(screen.queryByText(/couldn't be converted/)).not.toBeInTheDocument()
+    expect(await screen.findByText('2 items were changed both here and in your account. We kept your account\'s versions and saved this device\'s versions separately, so nothing is lost.', {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(screen.queryByText(/couldn't be copied as/)).not.toBeInTheDocument()
     expect(await databaseExists()).toBe(false)
     expect(server.stores.get('threads')!.get('__global')).toEqual(expect.objectContaining({ editedInAccount: true }))
     expect(server.stores.get('lessons')!.get(LESSON_A)).toEqual(expect.objectContaining({ title: 'Edited in the account' }))
@@ -192,7 +221,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     server.media.set(`${LESSON_A}:video:`, account)
     await seeded
     await start()
-    expect(await screen.findByText(/^2 items changed both here and in your account/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await screen.findByText(/^2 items were changed both here and in your account/, {}, { timeout: 10_000 })).toBeInTheDocument()
     expect(await databaseExists()).toBe(false)
     expect(server.media.get(`${LESSON_A}:video:`)).toEqual(account)
     expect(server.quarantinedMedia.get(`${LESSON_A}:video:`)).toEqual(expect.objectContaining({ size: 300_000 }))
@@ -205,15 +234,15 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     server.media.set(`${LESSON_A}:video:`, { size: 1, sha256: 'account-video' })
     await seeded
     await start()
-    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
     expect(failing).toHaveTextContent(`video for lesson ${LESSON_A}`)
     expect(await databaseExists()).toBe(true)
   })
 
   it('speaks the language this browser used before, Vietnamese here', async () => {
     await renderGate({ variant: 'B' }).seeded
-    expect(await screen.findByText('Chuyển dữ liệu vào tài khoản của bạn')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Bắt đầu' })).toBeInTheDocument()
+    expect(await screen.findByText('Chuyển dữ liệu vào tài khoản')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Chuyển dữ liệu' })).toBeInTheDocument()
   })
 
   it('keeps the local copy when the server writes a record without one of its fields', async () => {
@@ -221,7 +250,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     server.state.dropField = 'meaning'
     await seeded
     await start()
-    const failing = await screen.findByRole('list', { name: 'Failing stores' }, { timeout: 10_000 })
+    const failing = await screen.findByRole('list', { name: 'What didn\'t match' }, { timeout: 10_000 })
     expect(failing).toHaveTextContent('vocabulary')
     expect(await databaseExists()).toBe(true)
   })
@@ -247,7 +276,7 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     }
     await seeded
     await start()
-    expect(await screen.findByText(/Local copy deleted/, {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await screen.findByText(/was removed from this browser/, {}, { timeout: 10_000 })).toBeInTheDocument()
     expect(server.stores.get('vocabulary')!.has('late-word')).toBe(true)
   })
 
@@ -260,7 +289,8 @@ describe('migrationGate exits', { timeout: 30_000 }, () => {
     await claimImport(db, 'account-b')
     db.close()
     await start()
-    expect(await screen.findByText(/already being moved to a different account/)).toBeInTheDocument()
+    expect(await screen.findByText(/already being moved to another account/)).toBeInTheDocument()
+    expect(steps()).toBeNull()
     expect(first.server.stores.size).toBe(0)
     expect(await databaseExists()).toBe(true)
   })
