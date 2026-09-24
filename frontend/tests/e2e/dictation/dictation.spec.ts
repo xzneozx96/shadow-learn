@@ -356,7 +356,6 @@ test('DICT.MULTI-E2E-008 @p1 @regression — Rapid play clicks → no duplicate 
 })
 
 test('DICT.SKIP-E2E-009 @p1 @smoke — Skip advances session, no mistake recorded', async ({ page }) => {
-  test.fixme(true, 'PR6b: skipping the only card ends the session and returns to the Library, where the heatmap text "0 / 30" matches the progress regex')
   await signIn(page)
   await interceptTTSSuccess(page)
   await goToStudyPage(page, [TEST_VOCAB_ENTRY])
@@ -372,14 +371,8 @@ test('DICT.SKIP-E2E-009 @p1 @smoke — Skip advances session, no mistake recorde
   // OR the session ends if it was the last question. Either way no error toast appears.
   await expect(page.locator('[data-sonner-toast]')).toHaveCount(0)
 
-  // The progress counter should have advanced (or session ended).
-  // We verify the session is still active or ended cleanly — no stuck state.
-  const progressAfter = await page.getByText(/\d+ \/ \d+/).textContent().catch(() => null)
-  if (progressBefore && progressAfter) {
-    // Still in session — progress advanced.
-    expect(progressAfter).not.toEqual(progressBefore)
-  }
-  // If progressAfter is null, the session ended (summary rendered) — also valid.
+  // The old counter text goes away whether the session advanced or ended — no stuck state.
+  await expect(page.getByText(progressBefore!, { exact: true })).toHaveCount(0)
 })
 
 test('DICT.ERR-E2E-010 @p1 @regression — TTS 500 error → toast shown, button re-enabled', async ({ page }) => {
