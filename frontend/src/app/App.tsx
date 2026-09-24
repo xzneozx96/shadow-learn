@@ -26,6 +26,7 @@ import { LessonsProvider } from '@/features/lesson/application/LessonsContext'
 import { CreateLesson } from '@/features/lesson/ui/create/CreateLesson'
 import { LessonView } from '@/features/lesson/ui/LessonView'
 import { Library } from '@/features/lesson/ui/library/Library'
+import { MigrationGate } from '@/features/migration/MigrationModal'
 import { Settings } from '@/features/settings/ui/Settings'
 import { SpeakModalProvider, useSpeakModal } from '@/features/speak/application/SpeakModalContext'
 import { PracticeSpeakingModal } from '@/features/speak/ui/PracticeSpeakingModal'
@@ -273,15 +274,17 @@ function AuthGate() {
 
   return (
     <ErrorBoundary>
-      <VocabularyProvider>
-        <LessonsProvider>
-          <StudyQueueProvider>
-            <DailyReviewProvider>
-              <AppRouter />
-            </DailyReviewProvider>
-          </StudyQueueProvider>
-        </LessonsProvider>
-      </VocabularyProvider>
+      <MigrationGate api={db.api}>
+        <VocabularyProvider>
+          <LessonsProvider>
+            <StudyQueueProvider>
+              <DailyReviewProvider>
+                <AppRouter />
+              </DailyReviewProvider>
+            </StudyQueueProvider>
+          </LessonsProvider>
+        </VocabularyProvider>
+      </MigrationGate>
     </ErrorBoundary>
   )
 }
