@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 import app.accounts.models
 import app.catalog.models
+import app.importer.models
 import app.jobs.models
 import app.keys.models
 import app.lessons.models
