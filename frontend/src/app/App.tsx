@@ -140,7 +140,7 @@ function FloatingDock() {
     return null
 
   return (
-    <div ref={containerRef} className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-4">
+    <div ref={containerRef} className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 z-50 flex flex-col items-center gap-4 md:bottom-6 md:right-6">
       {/* Companion — the panel is portaled to <body> at a high z-index so it
           layers ABOVE modal dialogs (Radix dialogs portal to body at z-50 and,
           being modal, would otherwise cover/inert an in-tree panel). The
@@ -155,7 +155,7 @@ function FloatingDock() {
         <AnimatePresence>
           {isGlobalPanelOpen && (
             <motion.div
-              className="fixed bottom-24 right-6 z-100"
+              className="fixed bottom-[calc(9rem+env(safe-area-inset-bottom))] right-4 z-100 md:bottom-24 md:right-6"
               style={{ transformOrigin: 'bottom right' }}
               initial={{ opacity: 0, scale: 0.88, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

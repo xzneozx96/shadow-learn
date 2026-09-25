@@ -63,7 +63,7 @@ export function ListeningSkillSession({ entries, date, onComplete, onProgress, o
     <AnimatePresence mode="wait">
       <motion.div
         key={current.id}
-        className="flex-1 overflow-y-auto p-10"
+        className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}

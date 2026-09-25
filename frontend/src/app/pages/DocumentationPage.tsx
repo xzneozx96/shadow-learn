@@ -132,11 +132,11 @@ export function DocumentationPage() {
 
   return (
     <Layout>
-      <div className="relative z-5 flex h-full w-full text-foreground font-sans overflow-hidden">
+      <div className="relative z-5 flex h-full w-full flex-col overflow-hidden font-sans text-foreground lg:flex-row">
         {/* Left Sidebar - Navigation & TOC */}
-        <aside className="w-80 shrink-0 border-r border-border flex flex-col h-full">
+        <aside className="flex max-h-44 w-full shrink-0 flex-col border-b border-border lg:h-full lg:max-h-none lg:w-80 lg:border-b-0 lg:border-r">
           {/* Search */}
-          <div className="p-4 pt-6 space-y-4">
+          <div className="space-y-4 p-3 lg:p-4 lg:pt-6">
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-foreground transition-colors" />
               <input
@@ -148,7 +148,7 @@ export function DocumentationPage() {
           </div>
 
           {/* Hierarchical TOC */}
-          <nav className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
+          <nav className="flex-1 space-y-6 overflow-y-auto p-3 scrollbar-hide lg:p-4">
             {categories.map(cat => (
               <div key={cat.title} className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
@@ -222,8 +222,8 @@ export function DocumentationPage() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 h-full overflow-y-auto relative scroll-smooth">
-          <div className="max-w-5xl mx-auto px-12 py-16 pb-32">
+        <main className="relative min-h-0 min-w-0 flex-1 overflow-y-auto scroll-smooth">
+          <div className="mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-8 lg:px-12 lg:py-16 lg:pb-32">
 
             <div className="prose prose-invert prose-base max-w-none
                 prose-p:text-muted-foreground prose-p:leading-relaxed

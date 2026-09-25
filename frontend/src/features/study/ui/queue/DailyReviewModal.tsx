@@ -125,12 +125,12 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()} disablePointerDismissal>
-      <DialogContent className="p-0 gap-0 overflow-hidden flex w-full max-w-5xl! rounded-xl h-[80vh]">
+      <DialogContent className="flex h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-5xl! flex-col gap-0 overflow-hidden rounded-xl p-0 sm:h-[85dvh] md:flex-row">
         <DialogTitle className="sr-only">Daily Review</DialogTitle>
 
         {/* Sidebar */}
-        <div className="w-60 shrink-0 border-r flex flex-col">
-          <div className="px-4 py-6 border-b space-y-4">
+        <div className="flex max-h-44 min-h-0 w-full shrink-0 flex-col border-b md:h-full md:max-h-none md:w-60 md:border-b-0 md:border-r">
+          <div className="hidden space-y-4 border-b px-4 py-6 md:block">
             <div className="text-xl font-bold tracking-tight leading-none">{t('queue.review.title')}</div>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between text-sm font-semibold text-muted-foreground/80">
@@ -149,7 +149,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto py-2">
+          <div className="flex min-h-0 flex-1 overflow-x-auto py-2 md:block md:overflow-y-auto md:overflow-x-hidden">
             {skills.map(({ key, label, Icon }) => {
               const status = getSkillStatus(key)
               const isActive = activeSkill === key
@@ -201,7 +201,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
                   key={key}
                   type="button"
                   className={cn(
-                    'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors',
+                    'flex min-w-36 shrink-0 items-center gap-3 px-3 py-2.5 text-left transition-colors md:w-full md:min-w-0 md:px-4',
                     isActive
                       ? 'bg-primary/10 border-r-2 border-primary'
                       : 'hover:bg-muted/30',
@@ -237,7 +237,7 @@ export function DailyReviewModal({ open, onClose, queue, initialSkill }: Props) 
         </div>
 
         {/* Main panel */}
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {unavailable && queue.status === 'loading' && (
             <div className="flex-1 flex items-center justify-center text-muted-foreground" aria-busy="true">
               <Loader2 className="size-6 animate-spin" />

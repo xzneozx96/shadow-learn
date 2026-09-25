@@ -20,6 +20,7 @@ interface TranscriptPanelProps {
   onProgressUpdate: (segmentId: string) => void
   onShadowClick?: (segment: Segment) => void
   speakingBests?: Map<string, ShadowingBest>
+  activeMobilePanel?: 'transcript' | 'companion'
 }
 
 const SEGMENT_BATCH_SIZE = 20
@@ -72,13 +73,13 @@ const SegmentRow = memo(({
     <div
       ref={isActive ? activeRef : undefined}
       className={cn(
-        'p-3 transition-[background-color,border-color] duration-200 ease-out',
+        'px-3 py-3 transition-[background-color,border-color] duration-200 ease-out sm:p-3',
         isActive && 'border-l-2 border-l-primary bg-muted/60',
       )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         {/* Text content */}
-        <div className="min-w-0 flex-1 text-justify">
+        <div className="min-w-0 flex-1 text-left sm:text-justify">
           <div className="text-foreground">
             {/* key={segment.id} ensures fresh charSpanRefs when segment changes */}
             <SegmentText
@@ -105,12 +106,12 @@ const SegmentRow = memo(({
         </div>
 
         {/* Action buttons */}
-        <div className="flex shrink-0 flex-col items-end justify-between gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
               variant="ghost"
               size="icon-xs"
-              className="size-8 text-muted-foreground hover:text-foreground"
+              className="size-10 text-muted-foreground hover:text-foreground sm:size-8"
               aria-label="Play from here"
               onClick={(e) => {
                 e.stopPropagation()
@@ -122,7 +123,7 @@ const SegmentRow = memo(({
             <Button
               variant="ghost"
               size="icon-xs"
-              className="size-8 text-muted-foreground hover:text-foreground"
+              className="size-10 text-muted-foreground hover:text-foreground sm:size-8"
               aria-label="Copy transcription"
               onClick={e => onCopy(e, segment)}
             >
@@ -134,7 +135,7 @@ const SegmentRow = memo(({
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="size-8 text-muted-foreground hover:text-foreground"
+                className="size-10 text-muted-foreground hover:text-foreground sm:size-8"
                 aria-label="Shadow from this segment"
                 onClick={(e) => {
                   e.stopPropagation()
@@ -173,6 +174,7 @@ export function TranscriptPanel({
   onProgressUpdate,
   onShadowClick,
   speakingBests,
+  activeMobilePanel,
 }: TranscriptPanelProps) {
   const { t } = useI18n()
   const { db } = useAuth()
@@ -256,9 +258,11 @@ export function TranscriptPanel({
     const isRendered = visibleSegments.some(s => s.id === activeSegment.id)
     if (!isRendered)
       return
+    if (!activeRef.current?.getClientRects().length)
+      return
     activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     prevScrolledActiveIdRef.current = activeSegment.id
-  }, [activeSegment, visibleSegments])
+  }, [activeSegment, visibleSegments, activeMobilePanel])
 
   const handleListScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget

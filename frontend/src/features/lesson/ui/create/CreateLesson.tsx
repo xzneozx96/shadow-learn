@@ -229,8 +229,8 @@ export function CreateLesson() {
 
   return (
     <Layout>
-      <div className="relative z-5 mx-auto max-w-2xl p-4 pt-60">
-        <Card>
+      <div className="relative z-5 h-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-10">
+        <Card className="mx-auto max-w-2xl">
           <CardHeader>
             <CardTitle>{t('create.title')}</CardTitle>
           </CardHeader>

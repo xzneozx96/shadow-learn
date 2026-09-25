@@ -283,7 +283,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
   }
 
   return (
-    <div className="relative z-5 mx-auto w-full min-h-full">
+    <div className="relative z-5 mx-auto h-full w-full overflow-y-auto">
       {/* Close button — always visible */}
       <button
         type="button"
@@ -331,7 +331,7 @@ export function StudySession({ lessonId, onClose, preloadedEntries, prebuiltQues
         </div>
       )}
 
-      <div className="mx-auto px-6 py-9">
+      <div className="mx-auto px-4 py-12 sm:px-6 sm:py-9">
         {/* Picker */}
         {phase === 'picker' && (
           <ModePicker

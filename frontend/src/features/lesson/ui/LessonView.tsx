@@ -18,6 +18,7 @@ import { useStudyQueueContext } from '@/features/study/application/StudyQueueCon
 import { useSpeakingBests } from '@/shared/hooks/useSpeakingBests'
 import { useTimeEffect } from '@/shared/hooks/useTimeEffect'
 import { getLanguageCaps } from '@/shared/lib/language-caps'
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent } from '@/shared/ui/dialog'
 import { TranscriptPanel } from './TranscriptPanel'
@@ -38,6 +39,16 @@ function LessonViewContent() {
   const [shadowingMode, setShadowingMode] = useState<ShadowingActiveMode>(null)
   const [pickerSegment, setPickerSegment] = useState<Segment | null>(null)
   const [companionTab, setCompanionTab] = useState('ai')
+  const [mobilePanel, setMobilePanel] = useState<'transcript' | 'companion'>('transcript')
+
+  const handleMobileTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
+      return
+    event.preventDefault()
+    const next = event.key === 'ArrowLeft' || event.key === 'Home' ? 'transcript' : 'companion'
+    setMobilePanel(next)
+    document.getElementById(`lesson-${next}-tab`)?.focus()
+  }
 
   const hasRestoredRef = useRef(false)
   const progressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -74,6 +85,8 @@ function LessonViewContent() {
         setCompanionTab('workbook')
       else if (tab === 'companion' || tab === 'ai')
         setCompanionTab('ai')
+      if (tab === 'workbook' || tab === 'companion' || tab === 'ai')
+        setMobilePanel('companion')
     }
     else if (pendingAction?.type === 'start_shadowing') {
       const idx = pendingAction.payload?.segmentIndex as number | undefined
@@ -248,11 +261,14 @@ function LessonViewContent() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden bg-background animate-fade-in">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background animate-fade-in lg:flex-row">
       {/* Left section: video and transcript/shadowing */}
-      <div className="flex flex-col 2xl:flex-row h-full w-[60%] 2xl:w-3/4 overflow-hidden border-r border-border">
-        {/* Video Panel — 50% height on small, 50% width on 2xl */}
-        <div className="h-1/2 2xl:h-full w-full 2xl:w-1/2 shrink-0 overflow-hidden border-b 2xl:border-b-0 2xl:border-r border-border">
+      <div className={cn(
+        'flex min-w-0 flex-col overflow-hidden lg:h-full lg:w-[60%] lg:border-r lg:border-border 2xl:w-3/4 2xl:flex-row',
+        mobilePanel === 'transcript' ? 'min-h-0 flex-1' : 'shrink-0',
+      )}
+      >
+        <div className="w-full shrink-0 overflow-hidden border-b border-border lg:h-1/2 2xl:h-full 2xl:w-1/2 2xl:border-r 2xl:border-b-0">
           <VideoPanel
             lesson={meta}
             segments={segments}
@@ -262,8 +278,48 @@ function LessonViewContent() {
           />
         </div>
 
+        <div className="flex shrink-0 border-b border-border lg:hidden" role="tablist" aria-label={`${t('lesson.transcript')} / ${t('lesson.companion')}`}>
+          <button
+            id="lesson-transcript-tab"
+            type="button"
+            role="tab"
+            aria-selected={mobilePanel === 'transcript'}
+            aria-controls="lesson-transcript-panel"
+            tabIndex={mobilePanel === 'transcript' ? 0 : -1}
+            className={cn(
+              'min-h-11 flex-1 border-b-2 px-3 text-sm font-medium transition-colors',
+              mobilePanel === 'transcript' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground',
+            )}
+            onClick={() => setMobilePanel('transcript')}
+            onKeyDown={handleMobileTabKeyDown}
+          >
+            {t('lesson.transcript')}
+          </button>
+          <button
+            id="lesson-companion-tab"
+            type="button"
+            role="tab"
+            aria-selected={mobilePanel === 'companion'}
+            aria-controls="lesson-companion-panel"
+            tabIndex={mobilePanel === 'companion' ? 0 : -1}
+            className={cn(
+              'min-h-11 flex-1 border-b-2 px-3 text-sm font-medium transition-colors',
+              mobilePanel === 'companion' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground',
+            )}
+            onClick={() => setMobilePanel('companion')}
+            onKeyDown={handleMobileTabKeyDown}
+          >
+            {t('lesson.companion')}
+          </button>
+        </div>
+
         {/* Transcript / Shadowing Panel — flex-1 fills remaining space */}
-        <div className="flex-1 overflow-hidden">
+        <div
+          id="lesson-transcript-panel"
+          role="tabpanel"
+          aria-labelledby="lesson-transcript-tab"
+          className={cn('min-h-0 min-w-0 flex-1 overflow-hidden', mobilePanel === 'companion' && 'hidden lg:block')}
+        >
           {shadowingMode
             ? (
                 <ShadowingPanel
@@ -285,13 +341,19 @@ function LessonViewContent() {
                   onProgressUpdate={handleProgressUpdate}
                   onShadowClick={handleShadowClick}
                   speakingBests={bests}
+                  activeMobilePanel={mobilePanel}
                 />
               )}
         </div>
       </div>
 
       {/* Companion Panel — flex-1 fills remaining width */}
-      <div className="h-full flex-1 overflow-hidden">
+      <div
+        id="lesson-companion-panel"
+        role="tabpanel"
+        aria-labelledby="lesson-companion-tab"
+        className={cn('min-h-0 min-w-0 flex-1 overflow-hidden lg:h-full', mobilePanel === 'transcript' && 'hidden lg:block')}
+      >
         <CompanionPanel
           activeSegment={activeSegment}
           lessonId={id ?? ''}

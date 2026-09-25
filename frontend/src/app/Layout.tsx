@@ -1,5 +1,5 @@
-import { AudioLines, BookOpenText, FileText, Library, LogOut, Newspaper, PanelLeft, PanelRight, Settings, TvMinimalPlay } from 'lucide-react'
-import { useState } from 'react'
+import { AudioLines, BookOpenText, FileText, Library, LogOut, Menu, Newspaper, PanelLeft, PanelRight, Plus, Settings, TvMinimalPlay, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
@@ -21,10 +21,23 @@ export function Layout({ children }: LayoutProps) {
   const { logout } = useAuth()
   const { openSpeakModal } = useSpeakModal()
   const hasUnseen = useHasUnseenAnnouncement()
+  const focusedStudy = location.pathname.startsWith('/lesson/') || location.pathname.endsWith('/study')
 
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar-collapsed') === 'true',
   )
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    if (!mobileOpen)
+      return
+    function onEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape')
+        setMobileOpen(false)
+    }
+    window.addEventListener('keydown', onEscape)
+    return () => window.removeEventListener('keydown', onEscape)
+  }, [mobileOpen])
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -43,28 +56,57 @@ export function Layout({ children }: LayoutProps) {
   ]
 
   return (
-    <div className="flex h-screen overflow-hidden text-foreground">
+    <div className="flex h-dvh flex-col overflow-hidden text-foreground md:flex-row">
+      <header className={cn('z-40 h-14 shrink-0 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-xl md:hidden', focusedStudy ? 'hidden' : 'flex')}>
+        <Link to="/" aria-label={t('nav.library')}>
+          <BrandLogo size="sm" />
+        </Link>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="flex size-10 items-center justify-center rounded-lg text-foreground hover:bg-white/6"
+          aria-label={t('nav.openNavigation')}
+          aria-expanded={mobileOpen}
+          aria-controls="app-navigation"
+        >
+          <Menu className="size-5" />
+        </button>
+      </header>
+      {mobileOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-label={t('nav.closeNavigation')}
+        />
+      )}
       {/* Sidebar */}
       <aside
+        id="app-navigation"
         className={cn(
-          'shrink-0 flex flex-col border-r backdrop-blur-xl z-50 overflow-hidden',
-          'transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
-          collapsed ? 'w-16' : 'w-48 xl:w-56',
+          'fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col overflow-hidden border-r border-border bg-background/95 backdrop-blur-xl md:relative md:inset-auto md:bg-transparent',
+          'transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] md:transition-[width]',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+          collapsed ? 'md:w-16' : 'md:w-48 xl:w-56',
         )}
       >
         {/* Logo + collapse toggle */}
-        <div className={cn('flex items-center py-4', collapsed ? 'justify-center px-2' : 'justify-between px-4')}>
+        <div className={cn('flex items-center py-4', collapsed ? 'justify-between px-4 md:justify-center md:px-2' : 'justify-between px-4')}>
           <Link
             to="/"
+            onClick={() => setMobileOpen(false)}
             className="group flex items-center gap-3 font-semibold tracking-tight text-foreground hover:opacity-80 transition-opacity min-w-0"
           >
-            <BrandLogo compact={collapsed} size="sm" className="transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-105" />
+            <BrandLogo compact={collapsed && !mobileOpen} size="sm" className="transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-105" />
           </Link>
+          <button type="button" onClick={() => setMobileOpen(false)} className="flex size-8 items-center justify-center rounded-md md:hidden" aria-label={t('nav.closeNavigation')}>
+            <X className="size-5" />
+          </button>
           {!collapsed && (
             <button
               type="button"
               onClick={toggleCollapsed}
-              className="shrink-0 flex items-center justify-center size-7 rounded-md text-foreground/40 hover:text-foreground/70 hover:bg-white/6 transition-all duration-200"
+              className="hidden shrink-0 items-center justify-center size-7 rounded-md text-foreground/40 hover:text-foreground/70 hover:bg-white/6 transition-all duration-200 md:flex"
               aria-label="Collapse sidebar"
             >
               <PanelLeft className="size-4" />
@@ -74,7 +116,7 @@ export function Layout({ children }: LayoutProps) {
 
         {/* Expand button when collapsed */}
         {collapsed && (
-          <div className="flex justify-center px-2 pb-1">
+          <div className="hidden justify-center px-2 pb-1 md:flex">
             <button
               type="button"
               onClick={toggleCollapsed}
@@ -97,12 +139,12 @@ export function Layout({ children }: LayoutProps) {
                 className={cn(
                   'w-full h-10 rounded-lg text-sm font-medium',
                   'transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
-                  collapsed ? 'justify-center px-0 gap-0' : 'justify-start gap-3 px-3',
+                  collapsed ? 'justify-start gap-3 px-3 md:justify-center md:px-0 md:gap-0' : 'justify-start gap-3 px-3',
                   active
                     ? 'bg-primary! text-primary-foreground shadow-sm'
                     : 'text-foreground/60 hover:text-foreground hover:bg-white/6',
                 )}
-                render={<Link to={to} />}
+                render={<Link to={to} onClick={() => setMobileOpen(false)} />}
               >
                 <Icon
                   className={cn(
@@ -110,7 +152,7 @@ export function Layout({ children }: LayoutProps) {
                     !active && 'group-hover:scale-110',
                   )}
                 />
-                {!collapsed && label}
+                <span className={collapsed ? 'md:hidden' : undefined}>{label}</span>
               </Button>
               {badge && (
                 <span className={cn(
@@ -154,13 +196,13 @@ export function Layout({ children }: LayoutProps) {
             className="group w-full h-11"
             innerClassName={cn(
               'h-full',
-              collapsed ? 'justify-center px-0' : 'justify-start gap-2.5 px-3',
+              collapsed ? 'justify-start gap-2.5 px-3 md:justify-center md:px-0 md:gap-0' : 'justify-start gap-2.5 px-3',
             )}
           >
             <span className="flex size-7 items-center justify-center rounded-md bg-primary/20 ring-1 ring-primary/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] shrink-0">
               <AudioLines className="size-4 text-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110" />
             </span>
-            {!collapsed && <span className="text-sm font-semibold text-foreground">{t('speak.title')}</span>}
+            <span className={cn('text-sm font-semibold text-foreground', collapsed && 'md:hidden')}>{t('speak.title')}</span>
           </RadiantButton>
 
           {/* Settings */}
@@ -170,12 +212,12 @@ export function Layout({ children }: LayoutProps) {
             title={collapsed ? t('nav.settings') : undefined}
             className={cn(
               'group w-full h-9 text-sm font-medium text-foreground/60 hover:text-foreground/70 hover:bg-white/4 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
-              collapsed ? 'justify-center px-0 gap-0' : 'justify-start gap-3 px-3',
+              collapsed ? 'justify-start gap-3 px-3 md:justify-center md:px-0 md:gap-0' : 'justify-start gap-3 px-3',
             )}
-            render={<Link to="/settings" />}
+            render={<Link to="/settings" onClick={() => setMobileOpen(false)} />}
           >
             <Settings className="size-4 shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-45" />
-            {!collapsed && t('nav.settings')}
+            <span className={collapsed ? 'md:hidden' : undefined}>{t('nav.settings')}</span>
           </Button>
 
           <Button
@@ -184,22 +226,37 @@ export function Layout({ children }: LayoutProps) {
             title={collapsed ? t('account.logout') : undefined}
             className={cn(
               'w-full h-9 text-sm font-medium text-destructive hover:text-destructive hover:bg-destructive/10! transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
-              collapsed ? 'justify-center px-0 gap-0' : 'justify-start gap-3 px-3',
+              collapsed ? 'justify-start gap-3 px-3 md:justify-center md:px-0 md:gap-0' : 'justify-start gap-3 px-3',
             )}
           >
             <LogOut className="size-4 shrink-0" />
-            {!collapsed && t('account.logout')}
+            <span className={collapsed ? 'md:hidden' : undefined}>{t('account.logout')}</span>
           </Button>
         </div>
       </aside>
 
       {/* Content area */}
-      <div className="flex-1 min-w-0 flex overflow-hidden">
-        <main className="flex-1 min-w-0 h-full overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+        <main className="h-full min-w-0 flex-1 overflow-hidden">
           <AmbientBackdrop tone="violet" />
           {children}
         </main>
       </div>
+      {!focusedStudy && (
+        <nav className="z-30 grid h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 grid-cols-4 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden" aria-label={t('nav.mobileNavigation')}>
+          {[
+            { to: '/', label: t('nav.library'), icon: Library, active: location.pathname === '/' },
+            { to: '/create', label: t('nav.create'), icon: Plus, active: location.pathname === '/create' },
+            { to: '/vocabulary', label: t('nav.workbook'), icon: BookOpenText, active: location.pathname.startsWith('/vocabulary') },
+            { to: '/collection', label: t('nav.collection'), icon: TvMinimalPlay, active: location.pathname === '/collection' },
+          ].map(({ to, label, icon: Icon, active }) => (
+            <Link key={to} to={to} aria-current={active ? 'page' : undefined} className={cn('flex min-w-0 flex-col items-center justify-center gap-1 text-[11px] font-medium', active ? 'text-primary' : 'text-muted-foreground')}>
+              <Icon className="size-5" />
+              <span className="max-w-full truncate px-1">{label}</span>
+            </Link>
+          ))}
+        </nav>
+      )}
     </div>
   )
 }

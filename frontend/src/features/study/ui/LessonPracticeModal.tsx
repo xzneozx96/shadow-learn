@@ -130,12 +130,12 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()} disablePointerDismissal>
-      <DialogContent className="flex h-[80vh] w-full max-w-5xl! gap-0 overflow-hidden rounded-xl p-0">
+      <DialogContent className="flex h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-5xl! flex-col gap-0 overflow-hidden rounded-xl p-0 sm:h-[85dvh] md:flex-row">
         <DialogTitle className="sr-only">{t('lesson.workbook.practiceTitle')}</DialogTitle>
 
         {/* Sidebar */}
-        <div className="flex w-60 shrink-0 flex-col border-r">
-          <div className="space-y-4 border-b px-4 py-5">
+        <div className="flex max-h-44 min-h-0 w-full shrink-0 flex-col border-b md:max-h-none md:h-full md:w-60 md:border-b-0 md:border-r">
+          <div className="hidden space-y-4 border-b px-4 py-5 md:block">
             <div>
               <div className="text-xl font-bold leading-none tracking-tight">
                 {t('lesson.workbook.practiceTitle')}
@@ -159,7 +159,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto py-2">
+          <div className="flex min-h-0 flex-1 overflow-x-auto py-2 md:block md:overflow-y-auto md:overflow-x-hidden">
             {skills.map(({ key, label, Icon }) => {
               const status = getSkillStatus(key)
               const isActive = activeSkill === key
@@ -192,7 +192,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
                   data-testid={`skill-button-${key}`}
                   onClick={() => setActiveSkill(key)}
                   className={cn(
-                    'flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors',
+                    'flex min-w-36 shrink-0 items-center gap-3 px-3 py-2.5 text-left transition-colors md:w-full md:min-w-0 md:px-4',
                     isActive ? 'border-r-2 border-primary bg-primary/10' : 'hover:bg-muted/30',
                     (isDone || isAlert) && !isActive ? 'opacity-60' : '',
                   )}
@@ -223,7 +223,7 @@ export function LessonPracticeModal({ open, onClose, entries, lessonTitle }: Les
         </div>
 
         {/* Main panel */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {allDone && activeSkill === null && (
             <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8">
               <div className="flex size-16 items-center justify-center rounded-full bg-emerald-500/10">

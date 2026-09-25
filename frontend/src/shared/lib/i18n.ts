@@ -10,6 +10,9 @@ export const TRANSLATIONS = {
     'nav.documentation': 'Documentation',
     'nav.collection': 'Explore',
     'nav.search': 'Search lessons...',
+    'nav.openNavigation': 'Open navigation',
+    'nav.closeNavigation': 'Close navigation',
+    'nav.mobileNavigation': 'Main navigation',
 
     // Auth
     'auth.error.googleRequired': 'Google Gemini API key is required for voice practice.',
@@ -1006,6 +1009,9 @@ export const TRANSLATIONS = {
     'nav.documentation': 'Hướng dẫn',
     'nav.collection': 'Khám phá',
     'nav.search': 'Tìm kiếm bài học...',
+    'nav.openNavigation': 'Mở menu điều hướng',
+    'nav.closeNavigation': 'Đóng menu điều hướng',
+    'nav.mobileNavigation': 'Điều hướng chính',
     'auth.error.googleRequired': 'Cần khóa API Google Gemini để luyện nói.',
 
     // Accounts — Login, Signup, password reset
