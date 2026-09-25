@@ -112,7 +112,7 @@ export function WhatsNewDialog() {
           </div>
         </div>
 
-        <DialogFooter className="flex items-center sm:justify-center border-t border-border/50 bg-muted/10 mt-2">
+        <DialogFooter className="flex items-center sm:justify-center border-t border-border/50 bg-muted/10 mt-2 py-4">
           <Button size="lg" variant="outline" onClick={handleDismiss}>
             {t('whatsNew.dismiss')}
           </Button>
