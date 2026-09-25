@@ -80,7 +80,7 @@ jobs:
       - name: Start MinIO
         run: |
           docker run -d -p 9005:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+            ghcr.io/xzneozx96/minio:RELEASE.2025-09-07T16-13-09Z server /data
           for i in $(seq 30); do
             curl -sf http://127.0.0.1:9005/minio/health/live && exit 0
             sleep 1
@@ -203,7 +203,7 @@ jobs:
       - name: Start MinIO
         run: |
           docker run -d -p 9005:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+            ghcr.io/xzneozx96/minio:RELEASE.2025-09-07T16-13-09Z server /data
           for i in $(seq 30); do
             curl -sf http://127.0.0.1:9005/minio/health/live && exit 0
             sleep 1
@@ -329,7 +329,7 @@ jobs:
       - name: Start MinIO
         run: |
           docker run -d -p 9005:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+            ghcr.io/xzneozx96/minio:RELEASE.2025-09-07T16-13-09Z server /data
           for i in $(seq 30); do
             curl -sf http://127.0.0.1:9005/minio/health/live && exit 0
             sleep 1

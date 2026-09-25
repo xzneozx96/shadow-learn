@@ -1,16 +1,19 @@
 import type { FormEvent, ReactNode } from 'react'
+import type { MediaKey } from './exportStores'
 import type { Check, Verification } from './manifest'
+import type { StoreGroup } from './storeGroups'
 import type { Notes, Phase } from './useMigration'
 import type { ApiClient } from '@/db'
 import type { Locale, TranslationKey } from '@/shared/lib/i18n'
-import { AlertTriangle, CheckCircle2, Loader2, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, CheckIcon, Loader2, XCircle } from 'lucide-react'
 import { useState } from 'react'
 import { useI18n } from '@/app/providers/I18nContext'
 import { getTranslation } from '@/shared/lib/i18n'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog'
-import { Input } from '@/shared/ui/input'
+import { PasswordInput } from '@/shared/ui/PasswordInput'
+import { STORE_GROUPS } from './storeGroups'
 import { useMigration } from './useMigration'
 
 type T = (key: TranslationKey, params?: Record<string, string | number>) => string
@@ -19,8 +22,6 @@ type PluralKey
   = | 'migration.explain.lessons'
     | 'migration.explain.words'
     | 'migration.explain.media'
-    | 'migration.done.stores'
-    | 'migration.done.media'
     | 'migration.done.materials'
     | 'migration.done.conflicts'
     | 'migration.done.quarantine'
@@ -32,34 +33,49 @@ function plural(t: T, key: PluralKey, n: number, params: Record<string, string> 
   return t(n === 1 ? `${key}.one` : `${key}.other`, { n, ...params })
 }
 
-const STEPS = ['explain', 'keys', 'records', 'media', 'verify', 'delete', 'done'] as const
+const STEPS = ['copy', 'check', 'finish'] as const
 
-const STEP_OF: Record<Phase['step'], typeof STEPS[number]> = {
-  'explain': 'explain',
-  'keys': 'keys',
-  'records': 'records',
-  'media': 'media',
-  'verify': 'verify',
-  'failed': 'verify',
-  'delete': 'delete',
-  'done': 'done',
-  'other-account': 'explain',
-  'error': 'verify',
+const STEP_OF: Partial<Record<Phase['step'], typeof STEPS[number]>> = {
+  keys: 'copy',
+  records: 'copy',
+  media: 'copy',
+  verify: 'check',
+  failed: 'check',
+  error: 'check',
+  delete: 'finish',
+  done: 'finish',
 }
 
 function Stepper({ t, phase }: { t: T, phase: Phase }) {
-  const current = STEPS.indexOf(STEP_OF[phase.step])
+  const step = STEP_OF[phase.step]
+  if (!step)
+    return null
+  const current = STEPS.indexOf(step)
+  const complete = phase.step === 'done'
   return (
-    <ol className="flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label={t('migration.steps')}>
-      {STEPS.map((step, i) => (
-        <li
-          key={step}
-          aria-current={i === current ? 'step' : undefined}
-          className={cn(i === current ? 'font-semibold text-foreground' : i < current ? 'text-muted-foreground' : 'text-muted-foreground/50')}
-        >
-          {t(`migration.step.${step}`)}
-        </li>
-      ))}
+    <ol className="flex items-start" aria-label={t('migration.steps')}>
+      {STEPS.map((name, i) => {
+        const done = i < current || complete
+        return (
+          <li key={name} aria-current={i === current ? 'step' : undefined} className="relative flex flex-1 flex-col items-center gap-1.5">
+            {i > 0 && (
+              <span aria-hidden className={cn('absolute top-3.5 right-1/2 -left-1/2 h-px -translate-y-1/2', i <= current ? 'bg-primary' : 'bg-border')} />
+            )}
+            <span
+              aria-hidden
+              className={cn(
+                'relative flex size-7 items-center justify-center rounded-full border text-xs font-semibold tabular-nums',
+                done ? 'border-primary bg-primary text-primary-foreground' : i === current ? 'border-primary bg-background text-primary ring-3 ring-primary/20' : 'border-border bg-background text-muted-foreground',
+              )}
+            >
+              {done ? <CheckIcon className="size-4" /> : i + 1}
+            </span>
+            <span className={cn('text-xs', i === current ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
+              {t(`migration.step.${name}`)}
+            </span>
+          </li>
+        )
+      })}
     </ol>
   )
 }
@@ -79,20 +95,31 @@ function Progress({ t, label, done, total }: { t: T, label: string, done: number
   )
 }
 
-function checkLabel(t: T, check: Check): string {
-  switch (check.kind) {
-    case 'store':
-      return check.missing > 0 ? t('migration.check.missing', { store: check.store, n: check.missing }) : check.store
-    case 'quarantine':
-      return t('migration.check.quarantine')
-    case 'media':
-      if (check.key.kind === 'shadowing')
-        return t('migration.check.recording', { segment: check.key.segmentId ?? '' })
-      return t(check.key.kind === 'video' ? 'migration.check.video' : 'migration.check.audio', { lesson: check.key.lessonId })
-  }
+function mediaLabel(t: T, key: MediaKey, titles: Record<string, string>): string {
+  const lesson = titles[key.lessonId]
+  if (!lesson)
+    return t('migration.group.media')
+  const kind = key.kind === 'shadowing' ? 'recording' : key.kind
+  return t(`migration.check.${kind}`, { lesson })
 }
 
-function Results({ t, verification }: { t: T, verification: Verification }) {
+function failedLabels(t: T, checks: Check[], titles: Record<string, string>): string[] {
+  const missing = new Map<StoreGroup, number>()
+  const others: string[] = []
+  for (const check of checks) {
+    if (check.kind === 'store') {
+      const group = STORE_GROUPS[check.store]
+      missing.set(group, (missing.get(group) ?? 0) + check.missing)
+    }
+    else {
+      others.push(check.kind === 'quarantine' ? t('migration.check.quarantine') : mediaLabel(t, check.key, titles))
+    }
+  }
+  const groups = Array.from(missing, ([group, n]) => n > 0 ? t('migration.check.missing', { group: t(`migration.group.${group}`), n }) : t(`migration.group.${group}`))
+  return [...new Set([...groups, ...others])]
+}
+
+function Results({ t, verification, titles }: { t: T, verification: Verification, titles: Record<string, string> }) {
   const failing = verification.checks.filter(check => !check.ok)
   const passing = verification.checks.length - failing.length
   return (
@@ -100,11 +127,10 @@ function Results({ t, verification }: { t: T, verification: Verification }) {
       <p>{t('migration.failed.matched', { passing, total: verification.checks.length })}</p>
       {failing.length > 0 && (
         <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto" aria-label={t('migration.failed.list')}>
-          {failing.map((check, i) => (
-
-            <li key={i} className="flex items-center gap-2 text-red-400">
+          {failedLabels(t, failing, titles).map(label => (
+            <li key={label} className="flex items-center gap-2 text-red-400">
               <XCircle className="size-4 shrink-0" />
-              {checkLabel(t, check)}
+              {label}
             </li>
           ))}
         </ul>
@@ -114,9 +140,7 @@ function Results({ t, verification }: { t: T, verification: Verification }) {
 }
 
 function summary(t: T, verification: Verification): string {
-  const stores = verification.checks.filter(check => check.kind === 'store').length
-  const media = verification.checks.filter(check => check.kind === 'media').length
-  return t('migration.done.summary', { stores: plural(t, 'migration.done.stores', stores), media: plural(t, 'migration.done.media', media) })
+  return t('migration.done.summary', { total: verification.checks.length })
 }
 
 function noteLines(t: T, notes: Notes): string[] {
@@ -132,7 +156,7 @@ function noteLines(t: T, notes: Notes): string[] {
   if (notes.conflicts > 0)
     lines.push(plural(t, 'migration.done.conflicts', notes.conflicts))
   if (notes.quarantined.length > 0)
-    lines.push(plural(t, 'migration.done.quarantine', notes.quarantined.length, { stores: [...new Set(notes.quarantined)].sort().join(', ') }))
+    lines.push(plural(t, 'migration.done.quarantine', notes.quarantined.length, { groups: [...new Set(notes.quarantined.map(store => t(`migration.group.${STORE_GROUPS[store]}`)))].sort().join(', ') }))
   if (notes.skipped.unfinishedLessons > 0)
     lines.push(plural(t, 'migration.done.unfinished', notes.skipped.unfinishedLessons))
   if (notes.skipped.orphanMedia > 0)
@@ -176,7 +200,7 @@ function KeysStep({ t, phase, onPin, onSkip, onConfirmSkip }: {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <p className="text-sm">{t('migration.keys.body')}</p>
-      <Input type="password" inputMode="numeric" autoComplete="off" aria-label={t('migration.keys.pin')} placeholder={t('migration.keys.pin')} value={pin} onChange={e => setPin(e.target.value)} autoFocus />
+      <PasswordInput showLabel={t('migration.keys.showPin')} hideLabel={t('migration.keys.hidePin')} inputMode="numeric" autoComplete="off" aria-label={t('migration.keys.pin')} placeholder={t('migration.keys.pin')} value={pin} onChange={e => setPin(e.target.value)} autoFocus />
       {phase.wrongPin > 0 && (
         <p role="alert" className="text-sm text-red-400">{t('migration.keys.wrong', { n: phase.wrongPin })}</p>
       )}
@@ -245,10 +269,8 @@ export function MigrationModal({ api, account, counts, locale, onFinished, onKee
     <Dialog open onOpenChange={() => {}}>
       <DialogContent showCloseButton={false} className="sm:max-w-lg" data-testid="migration-modal">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <DialogTitle>{t('migration.title')}</DialogTitle>
-            <Stepper t={t} phase={phase} />
-          </div>
+          <DialogTitle>{t('migration.title')}</DialogTitle>
+          <Stepper t={t} phase={phase} />
 
           {phase.step === 'explain' && (
             <>
@@ -264,12 +286,12 @@ export function MigrationModal({ api, account, counts, locale, onFinished, onKee
             <KeysStep t={t} phase={phase} onPin={pin => void submitPin(pin)} onSkip={() => void skipKeys()} onConfirmSkip={confirmSkip} />
           )}
 
-          {phase.step === 'records' && <Progress t={t} label={t('migration.step.records')} done={phase.done} total={phase.total} />}
-          {phase.step === 'media' && <Progress t={t} label={t('migration.step.media')} done={phase.done} total={phase.total} />}
+          {phase.step === 'records' && <Progress t={t} label={t('migration.progress.records')} done={phase.done} total={phase.total} />}
+          {phase.step === 'media' && <Progress t={t} label={t('migration.progress.media')} done={phase.done} total={phase.total} />}
           {phase.step === 'verify' && (
             <>
-              <Progress t={t} label={t('migration.step.records')} done={phase.records} total={phase.records} />
-              <Progress t={t} label={t('migration.step.media')} done={phase.media} total={phase.media} />
+              <Progress t={t} label={t('migration.progress.records')} done={phase.records} total={phase.records} />
+              <Progress t={t} label={t('migration.progress.media')} done={phase.media} total={phase.media} />
               <Waiting>{t('migration.verifying')}</Waiting>
             </>
           )}
@@ -277,7 +299,7 @@ export function MigrationModal({ api, account, counts, locale, onFinished, onKee
           {phase.step === 'failed' && (
             <>
               <Warning>{t('migration.failed.title')}</Warning>
-              <Results t={t} verification={phase.verification} />
+              <Results t={t} verification={phase.verification} titles={phase.titles} />
               <Exits t={t} onSignOut={onSignOut} onKeepLocal={onKeepLocal} onRetry={() => void retry()} />
             </>
           )}
@@ -289,7 +311,7 @@ export function MigrationModal({ api, account, counts, locale, onFinished, onKee
           {phase.step === 'error' && (
             <>
               <Warning>{t('migration.error.title')}</Warning>
-              <p className="text-sm text-muted-foreground">{phase.changing ? t('migration.error.changing') : phase.message}</p>
+              <p className="text-sm text-muted-foreground">{t(phase.changing ? 'migration.error.changing' : 'migration.error.retry')}</p>
               <Exits t={t} onSignOut={onSignOut} onKeepLocal={onKeepLocal} onRetry={() => void retry()} />
             </>
           )}

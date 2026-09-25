@@ -7,6 +7,7 @@ import { useSpeakModal } from '@/features/speak/application/SpeakModalContext'
 import { cn } from '@/shared/lib/utils'
 import { useHasUnseenAnnouncement } from '@/shared/lib/whats-new'
 import { AmbientBackdrop } from '@/shared/ui/AmbientBackdrop'
+import { BrandLogo } from '@/shared/ui/BrandLogo'
 import { Button } from '@/shared/ui/button'
 import { RadiantButton } from '@/shared/ui/RadiantButton'
 
@@ -57,12 +58,7 @@ export function Layout({ children }: LayoutProps) {
             to="/"
             className="group flex items-center gap-3 font-semibold tracking-tight text-foreground hover:opacity-80 transition-opacity min-w-0"
           >
-            <img
-              src="/favicon.svg"
-              className="size-7 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110 group-hover:rotate-3"
-              alt="ShadowLearn Logo"
-            />
-            {!collapsed && <span className="text-base truncate">ShadowLearn</span>}
+            <BrandLogo compact={collapsed} size="sm" className="transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-105" />
           </Link>
           {!collapsed && (
             <button
@@ -187,7 +183,7 @@ export function Layout({ children }: LayoutProps) {
             onClick={() => void logout()}
             title={collapsed ? t('account.logout') : undefined}
             className={cn(
-              'w-full h-9 text-sm font-medium text-foreground/60 hover:text-foreground/70 hover:bg-white/4 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+              'w-full h-9 text-sm font-medium text-destructive hover:text-destructive hover:bg-destructive/10! transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
               collapsed ? 'justify-center px-0 gap-0' : 'justify-start gap-3 px-3',
             )}
           >

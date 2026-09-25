@@ -26,6 +26,7 @@ Land the whole migration stack in one sitting. A partial stack on `main` ships a
 
 - Run a single uvicorn worker. The startup sweep marks in-flight jobs as failed, and the rate limiter keeps its counts in process.
 - Set `stop_grace_period: 30s` on the backend service. A graceful shutdown during a job took about 20 seconds in testing.
+- MinIO runs from a mirror at ghcr.io/xzneozx96/minio because upstream stopped publishing images; it gets no upstream security updates.
 
 ## Import quarantine
 

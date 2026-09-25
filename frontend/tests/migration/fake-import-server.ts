@@ -23,7 +23,7 @@ export function fakeImportServer() {
   const media = new Map<string, { size: number, sha256: string }>()
   const quarantinedMedia = new Map<string, { size: number, sha256: string }>()
   const keys = new Map<string, unknown>()
-  const state = { fault: null as string | null, down: false, rejectLesson: null as string | null, rejectRecord: null as string | null, dropField: null as string | null, onManifest: null as (() => Promise<void>) | null, conflicts: new Set<string>(), dropQuarantinedMedia: false }
+  const state = { fault: null as string | string[] | null, down: false, rejectLesson: null as string | null, rejectRecord: null as string | null, dropField: null as string | null, onManifest: null as (() => Promise<void>) | null, conflicts: new Set<string>(), dropQuarantinedMedia: false }
   const writer = new Map<string, string>()
   const store = (name: string) => stores.get(name) ?? stores.set(name, new Map()).get(name)!
 
@@ -111,7 +111,7 @@ export function fakeImportServer() {
       const digests: Record<string, unknown> = {}
       for (const [name, ids] of Object.entries(request.stores)) {
         const held = ids.filter(id => store(name).has(id)).map(id => [id, store(name).get(id)!] as [string, Json])
-        const hashed = state.fault === name ? held.slice(1) : held
+        const hashed = [state.fault].flat().includes(name) ? held.slice(1) : held
         digests[name] = { count: held.length, sha256: (await storeDigest(hashed)).sha256 }
       }
       const kept = (request.quarantine ?? []).map(key => `${key.store}:${key.recordId}`).filter(key => quarantine.has(key))

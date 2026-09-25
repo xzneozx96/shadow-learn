@@ -1,4 +1,4 @@
-import type { LegacySnapshot, Skipped } from './exportStores'
+import type { LegacySnapshot, ManifestStore, Skipped } from './exportStores'
 import type { DecryptedKeys } from './legacyCrypto'
 import type { Verification } from './manifest'
 import type { ApiClient } from '@/db'
@@ -21,7 +21,7 @@ export interface Notes {
   keys: KeysOutcome
   keptAccountCopy: number
   conflicts: number
-  quarantined: string[]
+  quarantined: ManifestStore[]
   skipped: Skipped
 }
 
@@ -31,11 +31,11 @@ export type Phase
     | { step: 'records', done: number, total: number }
     | { step: 'media', done: number, total: number }
     | { step: 'verify', records: number, media: number }
-    | { step: 'failed', verification: Verification }
+    | { step: 'failed', verification: Verification, titles: Record<string, string> }
     | { step: 'delete', blocked: boolean }
     | { step: 'done', verification: Verification, notes: Notes }
     | { step: 'other-account' }
-    | { step: 'error', message: string, changing: boolean }
+    | { step: 'error', changing: boolean }
 
 type Event
   = | { type: 'loading' }
@@ -47,12 +47,12 @@ type Event
     | { type: 'media', total: number }
     | { type: 'sent', count: number }
     | { type: 'verify', records: number, media: number }
-    | { type: 'mismatch', verification: Verification }
+    | { type: 'mismatch', verification: Verification, titles: Record<string, string> }
     | { type: 'delete' }
     | { type: 'blocked' }
     | { type: 'done', verification: Verification, notes: Notes }
     | { type: 'other-account' }
-    | { type: 'error', message: string, changing?: boolean }
+    | { type: 'error', changing?: boolean }
 
 export function reduce(phase: Phase, event: Event): Phase {
   switch (event.type) {
@@ -77,7 +77,7 @@ export function reduce(phase: Phase, event: Event): Phase {
     case 'verify':
       return { step: 'verify', records: event.records, media: event.media }
     case 'mismatch':
-      return { step: 'failed', verification: event.verification }
+      return { step: 'failed', verification: event.verification, titles: event.titles }
     case 'delete':
       return { step: 'delete', blocked: false }
     case 'blocked':
@@ -87,7 +87,7 @@ export function reduce(phase: Phase, event: Event): Phase {
     case 'other-account':
       return { step: 'other-account' }
     case 'error':
-      return { step: 'error', message: event.message, changing: event.changing ?? false }
+      return { step: 'error', changing: event.changing ?? false }
     default: {
       const _exhaustive: never = event
       return _exhaustive
@@ -147,6 +147,10 @@ export function recordTotal(snapshot: LegacySnapshot): number {
   return snapshot.lessons.length + snapshot.stores.reduce((sum, { records }) => sum + records.length, 0)
 }
 
+function lessonTitles(snapshot: LegacySnapshot): Record<string, string> {
+  return Object.fromEntries(snapshot.lessons.map(({ id, lesson }) => [id, typeof lesson.title === 'string' ? lesson.title : '']))
+}
+
 function fingerprint(snapshot: LegacySnapshot): string {
   const media = snapshot.media.map(({ key, blob }) => ({ key, size: blob.size }))
   return canonical(toJson({ lessons: snapshot.lessons, stores: snapshot.stores, media }))
@@ -202,7 +206,8 @@ export function useMigration(api: ApiClient, account: string) {
       for (let round = 0; round < MAX_ROUNDS; round++) {
         const { verification, keptAccountCopy, conflicts, quarantined } = await importSnapshot(api, loaded.source, loaded.snapshot, dispatch)
         if (!verification.ok) {
-          dispatch({ type: 'mismatch', verification })
+          console.warn('[migration] checks that did not match', verification.checks.filter(check => !check.ok))
+          dispatch({ type: 'mismatch', verification, titles: lessonTitles(loaded.snapshot) })
           return
         }
         const fresh = await readSnapshot(loaded.db, account)
@@ -218,10 +223,11 @@ export function useMigration(api: ApiClient, account: string) {
         dispatch({ type: 'done', verification, notes: { keys: keysRef.current.outcome, keptAccountCopy, conflicts, quarantined, skipped: loaded.snapshot.skipped } })
         return
       }
-      dispatch({ type: 'error', message: '', changing: true })
+      dispatch({ type: 'error', changing: true })
     }
     catch (err) {
-      dispatch({ type: 'error', message: err instanceof Error ? err.message : String(err) })
+      console.warn('[migration] the move stopped', err)
+      dispatch({ type: 'error' })
     }
   }), [account, api])
 
@@ -240,7 +246,8 @@ export function useMigration(api: ApiClient, account: string) {
       }
     }
     catch (err) {
-      dispatch({ type: 'error', message: err instanceof Error ? err.message : String(err) })
+      console.warn('[migration] the move stopped', err)
+      dispatch({ type: 'error' })
       return
     }
     if (loadedRef.current.snapshot.keys && keysRef.current.outcome.kind === 'none' && !keysRef.current.decrypted)
