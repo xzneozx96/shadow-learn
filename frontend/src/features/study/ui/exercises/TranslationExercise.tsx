@@ -4,12 +4,11 @@ import type { LanguageCapabilities } from '@/shared/lib/language-caps'
 import { Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { useHint } from '@/features/study/application/useHint'
 import { ExerciseCard } from '@/features/study/ui/exercises/ExerciseCard'
 import { HintButton } from '@/features/study/ui/exercises/HintButton'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { getLanguageCaps } from '@/shared/lib/language-caps'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -109,7 +108,6 @@ function ScoreRow({ label, feedback, delay = 0 }: { label: string, feedback: Cat
 }
 
 export function TranslationExercise({ sentence, direction, progress = '', onNext, caps }: Props) {
-  const { keys } = useAuth()
   const { t, locale } = useI18n()
   const nativeCaps = getLanguageCaps(locale)
   const scoreLabel = useScoreLabel()
@@ -140,11 +138,10 @@ export function TranslationExercise({ sentence, direction, progress = '', onNext
       return
     setLoading(true)
     try {
-      const resp = await fetch(`${API_BASE}/api/translation/evaluate`, {
+      const resp = await apiFetch(`/api/translation/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          openrouter_api_key: keys?.openrouterApiKey ?? '',
           source,
           source_language: sourceLang,
           target_language: targetLang,

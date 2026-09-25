@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import logging
-import time
-from collections import defaultdict, deque
 from typing import Annotated
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
 
+from app.keys.usage import RateLimiter, too_many_requests
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -18,46 +17,20 @@ router = APIRouter(prefix="/api/transcription", tags=["transcription"])
 
 _GLADIA_INIT_URL = "https://api.gladia.io/v2/live"
 
-# In-memory IP rate limiter: 20 sessions / 60s / IP.
-_RATE_LIMIT_WINDOW_SECONDS = 60.0
 _RATE_LIMIT_MAX = 20
-_ip_buckets: dict[str, deque[float]] = defaultdict(deque)
+ip_limiter = RateLimiter()
 
 
 def _check_origin(origin: str | None) -> None:
-    """Reject if Origin header is not in the configured allowlist.
-
-    Empty allowlist disables the check (dev mode).
-    """
-    allowlist = settings.frontend_origin_allowlist
-    if not allowlist:
-        return
-    if origin is None or origin not in allowlist:
+    """Reject any Origin that CORS would reject."""
+    if not settings.origin_allowed(origin):
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
 
 def _check_rate_limit(client_ip: str) -> None:
-    """20 requests / 60s / IP. Raises 429 if exceeded.
-
-    Periodic pruning keeps _ip_buckets bounded over time.
-    """
-    now = time.monotonic()
-    cutoff = now - _RATE_LIMIT_WINDOW_SECONDS
-
-    # Prune stale entries for this IP first.
-    bucket = _ip_buckets[client_ip]
-    while bucket and bucket[0] < cutoff:
-        bucket.popleft()
-
-    if len(bucket) >= _RATE_LIMIT_MAX:
-        raise HTTPException(status_code=429, detail="Too many session requests; try again shortly")
-    bucket.append(now)
-
-    # Opportunistically prune buckets that have gone fully idle (1 in 100 calls).
-    if len(_ip_buckets) > 100 and (int(now * 1000) % 100) == 0:
-        stale_ips = [ip for ip, b in _ip_buckets.items() if not b or b[-1] < cutoff]
-        for ip in stale_ips:
-            del _ip_buckets[ip]
+    wait = ip_limiter.hit(client_ip, _RATE_LIMIT_MAX)
+    if wait is not None:
+        raise too_many_requests(wait, "Too many session requests; try again shortly")
 
 
 @router.post("/session")

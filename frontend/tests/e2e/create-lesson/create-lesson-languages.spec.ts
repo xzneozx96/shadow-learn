@@ -1,31 +1,16 @@
-/**
- * create-lesson-languages.spec.ts
- *
- * E2E tests for language selection on the Create Lesson page.
- *
- * Covered scenarios:
- *   US01.US06-E2E-009 — Translation language defaults to saved IDB value on page open
- *   US01.US06-E2E-010 — Source language defaults to zh-CN when no prior selection exists
- *   US01.US06-E2E-011 — Language selections are included in the generate request payload
- */
-
 import { expect, test } from '@playwright/test'
-import { seedSettings } from '../support/idb-helpers'
-import { authBypass, mockConfig, mockGenerateSuccess, mockJobStatus } from './helpers'
+import { readPendingLessons, seedSettings, signUpAndLogin } from '../support/api-helpers'
+import { mockConfig, mockGenerateSuccess, mockJobStatus } from './helpers'
 
-const JOB_ID_IDB = 'test-job-idb-lang-001'
+const JOB_ID_PENDING = 'test-job-pending-lang-001'
 
 const JOB_ID = 'test-job-lang-001'
 const VALID_YOUTUBE_URL = 'https://www.youtube.com/watch?v=DG1wRgEpdO4'
 
-test('US01.US06-E2E-009 @p1 @regression @create-lesson — Translation language defaults to saved IDB value on page open', async ({ page }) => {
-  await authBypass(page)
+test('US01.US06-E2E-009 @p1 @regression @create-lesson — Translation language defaults to the saved settings value on page open', async ({ page }) => {
+  const user = await signUpAndLogin(page)
   await mockConfig(page)
-
-  // Seed settings with a non-default translation language before navigating
-  // Must navigate to app origin first so IDB is accessible
-  await page.goto('/')
-  await seedSettings(page, { translationLanguage: 'vi' })
+  await seedSettings(page.request, user, { translationLanguage: 'vi' })
 
   await page.goto('/create')
 
@@ -37,7 +22,7 @@ test('US01.US06-E2E-009 @p1 @regression @create-lesson — Translation language 
 })
 
 test('US01.US06-E2E-010 @p1 @regression @create-lesson — Source language defaults to zh-CN when no prior selection exists', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
 
   // Navigate without seeding any settings — app should use default zh-CN
@@ -50,7 +35,7 @@ test('US01.US06-E2E-010 @p1 @regression @create-lesson — Source language defau
 })
 
 test('US01.US06-E2E-011 @p1 @regression @create-lesson — Language selections are included in the generate request payload', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
   await mockGenerateSuccess(page, JOB_ID)
   await mockJobStatus(page, JOB_ID, { status: 'complete' })
@@ -88,11 +73,11 @@ test('US01.US06-E2E-011 @p1 @regression @create-lesson — Language selections a
   await expect(page.getByTestId('create-lesson-queued-confirmation')).toBeVisible()
 })
 
-test('US01.US06-E2E-022 @p1 @regression @create-lesson — ac-03.4: IDB LessonMeta stores selected sourceLanguage and translationLanguages', async ({ page }) => {
-  await authBypass(page)
+test('US01.US06-E2E-022 @p1 @regression @create-lesson — ac-03.4: the pending lesson stores selected sourceLanguage and translationLanguages', async ({ page }) => {
+  const user = await signUpAndLogin(page)
   await mockConfig(page)
-  await mockGenerateSuccess(page, JOB_ID_IDB)
-  await mockJobStatus(page, JOB_ID_IDB, { status: 'processing' })
+  await mockGenerateSuccess(page, JOB_ID_PENDING)
+  await mockJobStatus(page, JOB_ID_PENDING, { status: 'processing' })
 
   await page.goto('/create')
 
@@ -100,6 +85,8 @@ test('US01.US06-E2E-022 @p1 @regression @create-lesson — ac-03.4: IDB LessonMe
   const sourceSelectTrigger = page.getByTestId('create-lesson-source-language-select')
   await sourceSelectTrigger.click()
   await page.getByRole('option', { name: /Japanese|日本語/i }).click()
+  // Let the source list finish closing so its options cannot match the next lookup
+  await expect(page.getByRole('listbox')).toHaveCount(0)
 
   // Change translation language to Vietnamese (vi)
   const translationSelectTrigger = page.getByTestId('create-lesson-translation-language-select')
@@ -116,24 +103,9 @@ test('US01.US06-E2E-022 @p1 @regression @create-lesson — ac-03.4: IDB LessonMe
 
   await expect(page.getByTestId('create-lesson-queued-confirmation')).toBeVisible()
 
-  // Read the lesson record written to IndexedDB and verify language fields
-  const lesson = await page.evaluate(async (jobId) => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const req = indexedDB.open('shadowlearn', 10)
-      req.onerror = () => reject(req.error)
-      req.onsuccess = () => resolve(req.result as IDBDatabase)
-    })
-    const all = await new Promise<any[]>((resolve, reject) => {
-      const tx = db.transaction('lessons', 'readonly')
-      const req = tx.objectStore('lessons').getAll()
-      req.onerror = () => reject(req.error)
-      req.onsuccess = () => resolve(req.result as any[])
-    })
-    db.close()
-    return all.find(l => l.jobId === jobId) ?? null
-  }, JOB_ID_IDB)
+  const lesson = (await readPendingLessons(page, user)).find(l => l.jobId === JOB_ID_PENDING)
 
-  expect(lesson).not.toBeNull()
-  expect(lesson.sourceLanguage).toBe('ja')
-  expect(lesson.translationLanguages).toEqual(['vi'])
+  expect(lesson).toBeDefined()
+  expect(lesson!.sourceLanguage).toBe('ja')
+  expect(lesson!.translationLanguages).toEqual(['vi'])
 })

@@ -1,9 +1,9 @@
 import type { UIMessage } from '@ai-sdk/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getLatestSummary, initDB } from '@/db'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { getLatestSummary } from '@/db'
 import { USABLE } from '@/features/agent/lib/agent-utils'
 import { buildHistoryToStore, compact, maybeCompact, selectTailStart } from '@/features/agent/lib/context-assembler/background-summary'
-import 'fake-indexeddb/auto'
+import { fakeDataClient } from './fake-api'
 
 function bigMsgs(n: number): UIMessage[] {
   return Array.from({ length: n }, (_, i) => ({
@@ -30,48 +30,42 @@ describe('selectTailStart', () => {
 })
 
 describe('maybeCompact', () => {
-  beforeEach(() => { (globalThis as any).indexedDB = new (globalThis as any).IDBFactory() })
   afterEach(() => vi.restoreAllMocks())
 
   it('skips when not over budget (real usage below USABLE)', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response())
-    await maybeCompact(db, 'tid', bigMsgs(40), 'k', 'http://x', 'en', 100)
+    await maybeCompact(db, 'tid', bigMsgs(40), 'en', 100)
     expect(spy).not.toHaveBeenCalled()
-    db.close()
   })
 
   it('compacts + persists when over budget, recording the cut index', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ summary: 'hi' }), { headers: { 'content-type': 'application/json' } }),
     )
-    await maybeCompact(db, 'tid', bigMsgs(40), 'k', 'http://x', 'en', USABLE)
+    await maybeCompact(db, 'tid', bigMsgs(40), 'en', USABLE)
     const s = await getLatestSummary(db, 'tid')
     expect(s?.summary).toBe('hi')
     expect(typeof s?.coversThroughIndex).toBe('number')
-    db.close()
   })
 })
 
 describe('compact', () => {
-  beforeEach(() => { (globalThis as any).indexedDB = new (globalThis as any).IDBFactory() })
   afterEach(() => vi.restoreAllMocks())
 
   it('throws on summarize failure so the send-path can fall back to prune', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 500 }))
-    await expect(compact(db, 'tid', bigMsgs(40), 'k', 'http://x', 'en')).rejects.toThrow()
-    db.close()
+    await expect(compact(db, 'tid', bigMsgs(40), 'en')).rejects.toThrow()
   })
 
   it('returns false when nothing older than the tail', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response())
-    const did = await compact(db, 'tid', [textMsg('1')], 'k', 'http://x', 'en')
+    const did = await compact(db, 'tid', [textMsg('1')], 'en')
     expect(did).toBe(false)
     expect(spy).not.toHaveBeenCalled()
-    db.close()
   })
 })
 

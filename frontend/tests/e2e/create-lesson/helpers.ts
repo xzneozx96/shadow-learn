@@ -1,30 +1,7 @@
-/**
- * helpers.ts
- *
- * Shared helpers for create-lesson E2E tests.
- *
- * Rules:
- * - All page.route() intercepts must be registered BEFORE page.goto() or any action
- *   that triggers the intercepted request.
- * - Auth bypass uses addInitScript so it re-runs on every navigation.
- */
-
 import type { Page, Route } from '@playwright/test'
+import type { TestUser } from '../support/api-helpers'
 import { expect } from '@playwright/test'
-import { seedLesson } from '../support/idb-helpers'
-
-// ── Auth ──────────────────────────────────────────────────────────────────────
-
-/**
- * Bypass the PIN / auth gate by setting trial mode in sessionStorage.
- * Call this once per test; addInitScript persists for the lifetime of the Page.
- */
-export async function authBypass(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    sessionStorage.setItem('shadowlearn_trial', 'trial')
-    localStorage.setItem('shadowlearn:whats-new:last-seen', Date.now().toString())
-  })
-}
+import { seedPendingLesson } from '../support/api-helpers'
 
 // ── API mocks ─────────────────────────────────────────────────────────────────
 
@@ -159,7 +136,6 @@ export async function mockJobProgressing(page: Page, jobId: string): Promise<voi
 // ── Job error surfacing (Library LessonCard) ────────────────────────────────
 
 interface SeedAndExpectJobErrorOptions {
-  /** Unique lesson id for IDB seed. */
   lessonId: string
   /** Display title for the seeded lesson. */
   title: string
@@ -175,19 +151,12 @@ interface SeedAndExpectJobErrorOptions {
   timeout?: number
 }
 
-/**
- * Seeds a processing lesson into IDB, reloads the Library page, and waits for
- * the job poller to surface the error in a LessonCard.
- *
- * Expects:
- *   - `authBypass()`, `mockConfig()`, and `mockJobStatus()` already called.
- *   - Page is at the app origin (e.g. after `page.goto('/')`).
- */
 export async function seedAndExpectJobError(
   page: Page,
+  user: TestUser,
   opts: SeedAndExpectJobErrorOptions,
 ): Promise<void> {
-  await seedLesson(page, {
+  await seedPendingLesson(page, user, {
     id: opts.lessonId,
     title: opts.title,
     source: opts.source,
@@ -200,7 +169,7 @@ export async function seedAndExpectJobError(
     tags: [],
     status: 'processing',
     jobId: opts.jobId,
-  } as Parameters<typeof seedLesson>[1] & { status: string, jobId: string })
+  })
 
   await page.reload()
 

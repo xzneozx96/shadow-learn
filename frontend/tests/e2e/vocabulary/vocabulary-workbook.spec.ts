@@ -2,60 +2,26 @@
  * vocabulary-workbook.spec.ts
  *
  * E2E tests for the vocabulary / workbook feature.
- *
- * Auth strategy: `page.addInitScript()` sets `sessionStorage.shadowlearn_trial = 'trial'`
- * before every page load, bypassing the PIN gate and entering trial mode.
- * After every `page.reload()` the script re-runs automatically (addInitScript persists
- * for the lifetime of the page object).
- *
- * Lesson setup: tests that navigate to a lesson page seed a minimal LessonMeta +
- * Segment record into IDB before the first navigation. This is infrastructure data
- * required to render the page — it is NOT vocabulary data, so it does not violate the
- * "no programmatic seeding for setup" rule.
- *
- * IDB helpers: imported from ../support/idb-helpers.ts. All helpers call page.evaluate()
- * and therefore run inside the browser context.
  */
 
-import type { IDBLessonMeta, IDBSegment, IDBVocabEntry } from '../support/idb-helpers'
+import type { SeedSegment, SeedVocabEntry, TestUser } from '../support/api-helpers'
 import { expect, test } from '@playwright/test'
-import {
-  clearLessonsStore,
-  clearVocabStore,
-  getAllVocabEntries,
-  seedLesson,
-  seedSegments,
-  seedSettings,
-  seedVocabEntries,
-} from '../support/idb-helpers'
+import { API_URL, listVocabEntries, seedLesson, seedSettings, seedVocabEntries, signUpAndLogin } from '../support/api-helpers'
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
-const LESSON_ID = 'test-lesson-e2e-001'
 const SEGMENT_ID = 'test-segment-e2e-001'
 
-/** Minimal LessonMeta that satisfies the app's IDB schema. */
-const TEST_LESSON: IDBLessonMeta = {
-  id: LESSON_ID,
-  title: 'E2E Test Lesson — Chinese Basics',
-  source: 'youtube',
-  sourceUrl: 'https://www.youtube.com/watch?v=test',
-  translationLanguages: ['en'],
-  sourceLanguage: 'zh-CN',
-  createdAt: new Date().toISOString(),
-  lastOpenedAt: new Date().toISOString(),
-  progressSegmentId: null,
-  tags: [],
-}
+let LESSON_ID: string
+let user: TestUser
 
 /**
  * Minimal Segment with one known word (你好) so the transcript renders a clickable
  * word popup. The word list must match `text` so that `buildWordSpans` maps it.
  */
-const TEST_SEGMENTS: IDBSegment[] = [
+const TEST_SEGMENTS: SeedSegment[] = [
   {
     id: SEGMENT_ID,
-    lessonId: LESSON_ID,
     start: 0,
     end: 3,
     text: '你好',
@@ -64,30 +30,24 @@ const TEST_SEGMENTS: IDBSegment[] = [
     words: [
       { word: '你好', romanization: 'nǐ hǎo', meaning: 'Hello / How are you', usage: 'Common greeting' },
     ],
-    language: 'zh-CN',
   },
 ]
 
-/** Helper: inject trial-mode flag so AuthGate skips the PIN screen. */
-async function setTrialMode(page: import('@playwright/test').Page) {
-  await page.addInitScript(() => {
-    sessionStorage.setItem('shadowlearn_trial', 'trial')
-  })
+async function signIn(page: import('@playwright/test').Page) {
+  user = await signUpAndLogin(page)
 }
 
 /** Helper: seed lesson + segments then navigate to the lesson page. */
 async function goToLesson(page: import('@playwright/test').Page) {
-  // Must navigate first to establish the app's origin before IDB is accessible.
-  // addInitScript re-runs on every page.goto(), so trial mode is always active.
-  await page.goto('/')
-  // Wait for app shell to finish loading (spinner → content)
-  await expect(page.locator('main').first()).toBeVisible({ timeout: 10_000 })
-  // Seed infrastructure data now that IDB is accessible.
   // Force English UI so all aria-label / title selectors match English strings.
-  await seedSettings(page, { translationLanguage: 'en', uiLanguage: 'en' })
-  await seedLesson(page, TEST_LESSON)
-  await seedSegments(page, LESSON_ID, TEST_SEGMENTS)
-  // Navigate to the lesson — app fully reloads and reads seeded data from IDB
+  await seedSettings(page.request, user, { translationLanguage: 'en', uiLanguage: 'en' })
+  LESSON_ID = await seedLesson(page.request, user, {
+    title: 'E2E Test Lesson — Chinese Basics',
+    source: 'youtube',
+    source_url: 'https://www.youtube.com/watch?v=test',
+    duration: 3,
+    segments: TEST_SEGMENTS,
+  })
   await page.goto(`/lesson/${LESSON_ID}`)
   await expect(page.getByText('你好').first()).toBeVisible({ timeout: 10_000 })
 }
@@ -99,8 +59,7 @@ async function switchToWorkbookTab(page: import('@playwright/test').Page) {
 
 /**
  * Helper: after a page reload, switch to the Workbook tab and wait for the
- * expected word count to appear. This ensures VocabularyContext has finished
- * loading entries from IDB before the caller interacts with the popup.
+ * expected word count to appear.
  */
 async function waitForVocabLoaded(page: import('@playwright/test').Page, expectedCount: number) {
   await switchToWorkbookTab(page)
@@ -130,27 +89,10 @@ async function saveWordViaUI(page: import('@playwright/test').Page) {
   await expect(page.getByTitle('Remove from Workbook')).toBeVisible({ timeout: 5_000 })
 }
 
-// ── afterEach cleanup ─────────────────────────────────────────────────────────
-
-test.afterEach(async ({ page }) => {
-  // Ensure we're on the app's origin before accessing IDB.
-  // If a test failed before its first navigation the page is still on about:blank.
-  try {
-    if (!page.url().startsWith('http://localhost')) {
-      await page.goto('/')
-      await expect(page.locator('main').first()).toBeVisible({ timeout: 5_000 })
-    }
-    await clearVocabStore(page)
-  }
-  catch {
-    // Swallow cleanup errors — they must not mask the actual test failure.
-  }
-})
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-test('VOC.SAVE-E2E-001 @p0 @smoke — save-word-happy-path: clicking Save to Workbook persists entry in IDB and increments panel count', async ({ page }) => {
-  await setTrialMode(page)
+test('VOC.SAVE-E2E-001 @p0 @smoke — save-word-happy-path: clicking Save to Workbook persists entry on the server and increments panel count', async ({ page }) => {
+  await signIn(page)
   await goToLesson(page)
 
   // Switch to workbook tab to see the word count panel
@@ -164,26 +106,22 @@ test('VOC.SAVE-E2E-001 @p0 @smoke — save-word-happy-path: clicking Save to Wor
   // After saving: count increments to 1 (workbook tab is still active)
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // Assert IDB has exactly 1 entry
-  const entries = await getAllVocabEntries(page)
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(1)
   expect(entries[0].word).toBe('你好')
   expect(entries[0].sourceLessonId).toBe(LESSON_ID)
 })
 
 test('VOC.SAVED-E2E-002 @p1 @regression — already-saved-shows-filled-bookmark: after reload the popup shows "Remove from Workbook" button for saved word', async ({ page }) => {
-  await setTrialMode(page)
+  await signIn(page)
   await goToLesson(page)
 
   // Save word via UI
   await saveWordViaUI(page)
 
-  // Reload — setTrialMode persists via addInitScript so session key is re-set
   await page.reload()
   await expect(page.getByText('你好').first()).toBeVisible({ timeout: 10_000 })
 
-  // Switch to workbook tab and wait for "1 word saved" — this confirms VocabularyContext
-  // has finished loading entries from IDB before we open the popup.
   await waitForVocabLoaded(page, 1)
 
   // Open popup for the same word — VocabularyContext has loaded, isSaved returns true
@@ -195,7 +133,7 @@ test('VOC.SAVED-E2E-002 @p1 @regression — already-saved-shows-filled-bookmark:
 })
 
 test('VOC.STUDY-E2E-003 @p1 @regression — study-button-navigates-to-session: Study button in workbook page navigates to /vocabulary/:lessonId/study', async ({ page }) => {
-  await setTrialMode(page)
+  await signIn(page)
   await goToLesson(page)
 
   // Save a word so the lesson group appears on the workbook page
@@ -210,8 +148,8 @@ test('VOC.STUDY-E2E-003 @p1 @regression — study-button-navigates-to-session: S
   await expect(page).toHaveURL(new RegExp(`/vocabulary/${LESSON_ID}/study`))
 })
 
-test('VOC.REMOVE-E2E-004 @p0 @smoke — remove-word-with-confirmation: X button opens dialog; confirming removes word from UI and IDB', async ({ page }) => {
-  await setTrialMode(page)
+test('VOC.REMOVE-E2E-004 @p0 @smoke — remove-word-with-confirmation: X button opens dialog; confirming removes word from UI and the server', async ({ page }) => {
+  await signIn(page)
   await goToLesson(page)
 
   await saveWordViaUI(page)
@@ -238,13 +176,12 @@ test('VOC.REMOVE-E2E-004 @p0 @smoke — remove-word-with-confirmation: X button 
   // Word card disappears; panel shows 0 words
   await expect(page.getByText(/0\s+words?\s+saved/i)).toBeVisible()
 
-  // IDB is now empty
-  const entries = await getAllVocabEntries(page)
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
 
-test('VOC.CANCEL-E2E-005 @p1 @regression — cancel-remove-leaves-word-intact: cancelling the remove dialog keeps entry in panel and IDB', async ({ page }) => {
-  await setTrialMode(page)
+test('VOC.CANCEL-E2E-005 @p1 @regression — cancel-remove-leaves-word-intact: cancelling the remove dialog keeps entry in panel and on the server', async ({ page }) => {
+  await signIn(page)
   await goToLesson(page)
 
   await saveWordViaUI(page)
@@ -267,13 +204,12 @@ test('VOC.CANCEL-E2E-005 @p1 @regression — cancel-remove-leaves-word-intact: c
   // Dialog dismissed; word still shows
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // IDB still has 1 entry
-  const entries = await getAllVocabEntries(page)
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(1)
 })
 
-test('VOC.TOGGLE-E2E-006 @p1 @regression — toggle-bookmark-removes-word: clicking the filled bookmark in the popup calls remove directly and empties IDB', async ({ page }) => {
-  await setTrialMode(page)
+test('VOC.TOGGLE-E2E-006 @p1 @regression — toggle-bookmark-removes-word: clicking the filled bookmark in the popup calls remove directly and empties the store', async ({ page }) => {
+  await signIn(page)
   await goToLesson(page)
 
   await saveWordViaUI(page)
@@ -295,13 +231,12 @@ test('VOC.TOGGLE-E2E-006 @p1 @regression — toggle-bookmark-removes-word: click
   // Wait for removal to complete — popup changes back to "Save to Workbook"
   await expect(page.getByRole('button', { name: /save to workbook/i })).toBeVisible({ timeout: 5_000 })
 
-  // IDB should now be empty
-  const entries = await getAllVocabEntries(page)
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
 
 test('VOC.DISABLED-E2E-007 @p1 @regression — study-button-disabled-zero-words: Study This Lesson button is disabled when no words are saved', async ({ page }) => {
-  await setTrialMode(page)
+  await signIn(page)
   await goToLesson(page)
 
   // Switch to workbook tab to see the Study This Lesson button
@@ -313,8 +248,8 @@ test('VOC.DISABLED-E2E-007 @p1 @regression — study-button-disabled-zero-words:
   await expect(studyBtn).toBeDisabled()
 })
 
-test('VOC.DELGRP-E2E-008 @p1 @regression — delete-lesson-group-from-workbook: trash button on workbook page removes entire lesson group and clears IDB', async ({ page }) => {
-  await setTrialMode(page)
+test('VOC.DELGRP-E2E-008 @p1 @regression — delete-lesson-group-from-workbook: trash button on workbook page removes entire lesson group and clears the store', async ({ page }) => {
+  await signIn(page)
   await goToLesson(page)
 
   // Save the word twice is not possible for same word in same lesson; seed a second entry directly
@@ -341,13 +276,12 @@ test('VOC.DELGRP-E2E-008 @p1 @regression — delete-lesson-group-from-workbook: 
   // Lesson group disappears
   await expect(page.getByRole('button', { name: /^study$/i })).not.toBeVisible()
 
-  // IDB is empty
-  const entries = await getAllVocabEntries(page)
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
 
 test('VOC.RELOAD-E2E-009 @p1 @regression — save-durable-across-reload: saved word persists after page reload', async ({ page }) => {
-  await setTrialMode(page)
+  await signIn(page)
   await goToLesson(page)
 
   await saveWordViaUI(page)
@@ -367,7 +301,7 @@ test('VOC.RELOAD-E2E-009 @p1 @regression — save-durable-across-reload: saved w
 })
 
 test('VOC.RMREL-E2E-010 @p1 @regression — remove-durable-across-reload: removed word is gone after page reload', async ({ page }) => {
-  await setTrialMode(page)
+  await signIn(page)
   await goToLesson(page)
 
   await saveWordViaUI(page)
@@ -381,8 +315,7 @@ test('VOC.RMREL-E2E-010 @p1 @regression — remove-durable-across-reload: remove
   // Wait for removal to complete — popup changes back to "Save to Workbook"
   await expect(page.getByRole('button', { name: /save to workbook/i })).toBeVisible({ timeout: 5_000 })
 
-  // Verify IDB is empty before reload
-  const entriesBefore = await getAllVocabEntries(page)
+  const entriesBefore = await listVocabEntries(page.request, user)
   expect(entriesBefore).toHaveLength(0)
 
   // Reload
@@ -395,18 +328,14 @@ test('VOC.RMREL-E2E-010 @p1 @regression — remove-durable-across-reload: remove
 })
 
 test('VOC.PERF-E2E-011 @p2 @regression — workbook-renders-fast-500-entries: /vocabulary renders 500 entries in under 300 ms', async ({ page }) => {
-  await setTrialMode(page)
+  await signIn(page)
 
-  // Navigate first so the app opens IDB and creates the schema, then seed data.
-  // This also ensures IDB is accessible (requires an origin page, not about:blank).
-  await page.goto('/')
-  await expect(page.locator('main').first()).toBeVisible({ timeout: 10_000 })
-  // Force English UI and seed BEFORE the final navigation so VocabularyContext reads data on mount.
-  await seedSettings(page, { translationLanguage: 'en', uiLanguage: 'en' })
+  await seedSettings(page.request, user, { translationLanguage: 'en', uiLanguage: 'en' })
+  const lessonIds: string[] = []
+  for (let i = 0; i < 10; i++)
+    lessonIds.push(await seedLesson(page.request, user, { title: `Perf Lesson ${i}`, source: 'youtube', duration: 1 }))
 
-  // Build 500 vocab entries across 10 fake lessons
-  const entries: IDBVocabEntry[] = []
-  const lessonIds: string[] = Array.from({ length: 10 }, (_, i) => `perf-lesson-${i}`)
+  const entries: SeedVocabEntry[] = []
 
   for (let i = 0; i < 500; i++) {
     const lessonId = lessonIds[i % 10]
@@ -426,23 +355,7 @@ test('VOC.PERF-E2E-011 @p2 @regression — workbook-renders-fast-500-entries: /v
     })
   }
 
-  // Also seed lesson meta for each fake lesson (so Study buttons render correctly)
-  for (const lid of lessonIds) {
-    await seedLesson(page, {
-      id: lid,
-      title: `Perf Lesson ${lid}`,
-      source: 'youtube',
-      sourceUrl: null,
-      translationLanguages: ['en'],
-      sourceLanguage: 'zh-CN',
-      createdAt: new Date().toISOString(),
-      lastOpenedAt: new Date().toISOString(),
-      progressSegmentId: null,
-      tags: [],
-    })
-  }
-
-  await seedVocabEntries(page, entries)
+  await seedVocabEntries(page.request, user, entries)
 
   // Measure time from navigation to workbook content visible.
   // We wait for the word-count stat line ("500 words") rather than a button
@@ -453,31 +366,17 @@ test('VOC.PERF-E2E-011 @p2 @regression — workbook-renders-fast-500-entries: /v
   await page.goto('/vocabulary')
   await expect(page.getByText(/500\s+words?/i).first()).toBeVisible({ timeout: 10_000 })
   const elapsed = Date.now() - t0
+  console.warn(`VOC.PERF-E2E-011 elapsed ${elapsed} ms`)
 
   expect(elapsed).toBeLessThan(2_000)
-
-  // Clean up seeded lesson meta — afterEach only clears vocabulary.
-  // Perf-lesson records must not leak into subsequent tests.
-  await clearLessonsStore(page)
-  await clearVocabStore(page)
 })
 
-test('VOC.ERRTOAST-E2E-012 @p2 @regression — AC-005: error toast when IDB write fails during save', async ({ page }) => {
-  await setTrialMode(page)
+test('VOC.ERRTOAST-E2E-012 @p2 @regression — AC-005: error toast when the vocabulary write fails during save', async ({ page }) => {
+  await signIn(page)
   await goToLesson(page)
 
-  // Monkey-patch IDBObjectStore.prototype.put so vocabulary writes throw synchronously.
-  // This simulates a database write failure (IDB unavailable / quota exceeded / etc.).
-  // The patch is scoped to the vocabulary store only so infrastructure stores are unaffected.
-  await page.evaluate(() => {
-    const origPut = IDBObjectStore.prototype.put
-    IDBObjectStore.prototype.put = function (value, key) {
-      if (this.name === 'vocabulary') {
-        throw new DOMException('Simulated IDB write failure', 'UnknownError')
-      }
-      return origPut.call(this, value, key)
-    }
-  })
+  await page.route(`${API_URL}/api/store/vocabulary/*`, route =>
+    route.request().method() === 'PUT' ? route.fulfill({ status: 500, json: { detail: 'Simulated write failure' } }) : route.fallback())
 
   // Attempt to save a word — the error toast should appear; success toast must NOT appear
   await openWordPopup(page)
@@ -486,36 +385,25 @@ test('VOC.ERRTOAST-E2E-012 @p2 @regression — AC-005: error toast when IDB writ
   // Exactly one toast (the error toast) should be visible
   await expect(page.locator('[data-sonner-toast]')).toHaveCount(1, { timeout: 5_000 })
 
-  // Nothing should have been written to IDB
-  const entries = await getAllVocabEntries(page)
+  const entries = await listVocabEntries(page.request, user)
   expect(entries).toHaveLength(0)
 })
 
-test('VOC.RMTOAST-E2E-013 @p2 @regression — AC-006: error toast when IDB delete fails during remove, word stays in panel', async ({ page }) => {
-  await setTrialMode(page)
+test('VOC.RMTOAST-E2E-013 @p2 @regression — AC-006: error toast when the vocabulary delete fails during remove, word stays in panel', async ({ page }) => {
+  await signIn(page)
   await goToLesson(page)
 
-  // Save the word first (IDB is healthy at this point)
   await saveWordViaUI(page)
 
-  const entriesBefore = await getAllVocabEntries(page)
+  const entriesBefore = await listVocabEntries(page.request, user)
   expect(entriesBefore).toHaveLength(1)
 
   // Switch to workbook tab to access the word card X button
   await switchToWorkbookTab(page)
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // Now patch IDBObjectStore.prototype.delete so vocabulary deletes throw.
-  // Scoped to vocabulary store only.
-  await page.evaluate(() => {
-    const origDelete = IDBObjectStore.prototype.delete
-    IDBObjectStore.prototype.delete = function (key) {
-      if (this.name === 'vocabulary') {
-        throw new DOMException('Simulated IDB delete failure', 'UnknownError')
-      }
-      return origDelete.call(this, key)
-    }
-  })
+  await page.route(`${API_URL}/api/store/vocabulary/*`, route =>
+    route.request().method() === 'DELETE' ? route.fulfill({ status: 500, json: { detail: 'Simulated delete failure' } }) : route.fallback())
 
   // Click the X remove button on the word card — scope to tabpanel to avoid matching
   // the word card div[role="button"] whose accessible name also contains "Remove from Workbook".
@@ -535,7 +423,6 @@ test('VOC.RMTOAST-E2E-013 @p2 @regression — AC-006: error toast when IDB delet
   // Word should still be visible in the panel (no optimistic removal on failure)
   await expect(page.getByText(/1\s+word\s+saved/i)).toBeVisible()
 
-  // IDB entry should still be present
-  const entriesAfter = await getAllVocabEntries(page)
+  const entriesAfter = await listVocabEntries(page.request, user)
   expect(entriesAfter).toHaveLength(1)
 })

@@ -4,10 +4,11 @@ import time
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
+from app.keys.models import Provider
+from app.keys.service import ProviderKeys
 from app.settings import settings
-from app.shared.utils import _resolve_key
 from app.shared._retry import RetryableError, http_retry
 from app.shared.language_config import get_language_config
 
@@ -16,7 +17,8 @@ router = APIRouter(prefix="/api/translation", tags=["translation"])
 
 
 class GenerateRequest(BaseModel):
-    openrouter_api_key: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
     word: str
     romanization: str
     meaning: str
@@ -141,10 +143,10 @@ def _build_generate_prompt(req: GenerateRequest) -> str:
 
 
 @router.post("/generate", response_model=GenerateResponse)
-async def generate_sentences(req: GenerateRequest):
+async def generate_sentences(req: GenerateRequest, keys: ProviderKeys):
     prompt = _build_generate_prompt(req)
     lang_cfg = get_language_config(req.source_language)
-    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
+    api_key = (await keys(Provider.openrouter)).value
     payload = {
         "model": settings.openrouter_structured_model,
         "messages": [
@@ -184,7 +186,8 @@ async def generate_sentences(req: GenerateRequest):
 
 
 class EvaluateRequest(BaseModel):
-    openrouter_api_key: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
     source: str
     source_language: str    # e.g. 'chinese', 'english', 'japanese'
     target_language: str
@@ -224,9 +227,9 @@ def _build_evaluate_prompt(req: EvaluateRequest) -> str:
 
 
 @router.post("/evaluate", response_model=EvaluateResponse)
-async def evaluate_translation(req: EvaluateRequest):
+async def evaluate_translation(req: EvaluateRequest, keys: ProviderKeys):
     prompt = _build_evaluate_prompt(req)
-    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
+    api_key = (await keys(Provider.openrouter)).value
     payload = {
         "model": settings.openrouter_structured_model,
         "messages": [

@@ -1,31 +1,35 @@
-import pytest
+import uuid
 from dataclasses import is_dataclass
 
+import pytest
+
+from app.accounts.models import User
+from app.db import SessionLocal
 from app.speak.situations import (
     BUILT_IN_SITUATIONS,
     SituationConfig,
     VocabItem,
-    cache_custom_situation,
     get_custom_situation,
     get_situation_seed,
     list_built_in_situations,
+    save_custom_situation,
 )
 
 
 def _make_config(**overrides) -> SituationConfig:
-    base = dict(
-        id="custom_test123",
-        title="Test",
-        ai_role="r",
-        scene_context="s",
-        opening_line="你好",
-        opening_line_translation="Xin chào",
-        user_goal="g",
-        target_vocab=[VocabItem(term="你好", meaning="Xin chào")],
-        language="zh-CN",
-        level_label="HSK 1-2",
-        interface_language="vi",
-    )
+    base = {
+        "id": "custom_test123",
+        "title": "Test",
+        "ai_role": "r",
+        "scene_context": "s",
+        "opening_line": "你好",
+        "opening_line_translation": "Xin chào",
+        "user_goal": "g",
+        "target_vocab": [VocabItem(term="你好", meaning="Xin chào")],
+        "language": "zh-CN",
+        "level_label": "HSK 1-2",
+        "interface_language": "vi",
+    }
     base.update(overrides)
     return SituationConfig(**base)
 
@@ -54,19 +58,43 @@ def test_get_situation_seed_unknown_raises():
         get_situation_seed("nonexistent_situation")
 
 
-def test_cache_custom_situation_and_retrieve():
-    cfg = _make_config(id="custom_roundtrip")
-    cache_custom_situation(cfg)
-    retrieved = get_custom_situation("custom_roundtrip")
-    assert retrieved.id == "custom_roundtrip"
-    assert retrieved.interface_language == "vi"
-    assert retrieved.target_vocab[0].term == "你好"
-    assert retrieved.target_vocab[0].meaning == "Xin chào"
+async def _users(db_session, count):
+    users = [
+        User(id=uuid.uuid4(), email=f"speaker-{n}@example.com", hashed_password="", is_active=True)
+        for n in range(count)
+    ]
+    db_session.add_all(users)
+    await db_session.commit()
+    return users
 
 
-def test_get_custom_situation_unknown_raises():
+@pytest.mark.asyncio(loop_scope="session")
+async def test_custom_situation_persists_across_a_fresh_session(db_session):
+    [user] = await _users(db_session, 1)
+    async with SessionLocal() as session:
+        await save_custom_situation(session, user, _make_config(id="custom_roundtrip"))
+        await session.commit()
+
+    async with SessionLocal() as session:
+        retrieved = await get_custom_situation(session, user, "custom_roundtrip")
+    assert retrieved == _make_config(id="custom_roundtrip")
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_custom_situation_is_invisible_to_another_user(db_session):
+    owner, other = await _users(db_session, 2)
+    await save_custom_situation(db_session, owner, _make_config(id="custom_private"))
+    await db_session.commit()
+
     with pytest.raises(KeyError):
-        get_custom_situation("custom_nonexistent")
+        await get_custom_situation(db_session, other, "custom_private")
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_custom_situation_unknown_raises(db_session):
+    [user] = await _users(db_session, 1)
+    with pytest.raises(KeyError):
+        await get_custom_situation(db_session, user, "custom_nonexistent")
 
 
 def test_vocab_item_legacy_string_roundtrip():

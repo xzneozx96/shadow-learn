@@ -1,19 +1,23 @@
-import type { ShadowLearnDB, SpeakSession } from '@/db'
+import type { DataClient, SpeakSession } from '@/db'
 
-export async function saveSpeakSession(db: ShadowLearnDB, session: SpeakSession): Promise<void> {
-  await db.put('speak-sessions', session)
+function sessionPath(sessionId: string): string {
+  return `/api/store/speak-sessions/${encodeURIComponent(sessionId)}`
 }
 
-export async function getSpeakSession(db: ShadowLearnDB, sessionId: string): Promise<SpeakSession | undefined> {
-  return db.get('speak-sessions', sessionId)
+export async function saveSpeakSession(db: DataClient, session: SpeakSession): Promise<void> {
+  await db.api.put(sessionPath(session.sessionId), session)
 }
 
-export async function getAllSpeakSessions(db: ShadowLearnDB): Promise<SpeakSession[]> {
-  return db.getAll('speak-sessions')
+export async function getSpeakSession(db: DataClient, sessionId: string): Promise<SpeakSession | undefined> {
+  return db.api.get<SpeakSession>(sessionPath(sessionId))
 }
 
-export async function getRecentSpeakSessions(db: ShadowLearnDB, limit = 20): Promise<SpeakSession[]> {
-  const all = await db.getAll('speak-sessions')
+export async function getAllSpeakSessions(db: DataClient): Promise<SpeakSession[]> {
+  return db.api.list<SpeakSession>('/api/store/speak-sessions')
+}
+
+export async function getRecentSpeakSessions(db: DataClient, limit = 20): Promise<SpeakSession[]> {
+  const all = await getAllSpeakSessions(db)
   return all.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, limit)
 }
 
@@ -25,7 +29,7 @@ export interface SpeakProgress {
   lastSessionDate: string | null
 }
 
-export async function getSpeakProgress(db: ShadowLearnDB): Promise<SpeakProgress> {
+export async function getSpeakProgress(db: DataClient): Promise<SpeakProgress> {
   const sessions = await getAllSpeakSessions(db)
 
   if (!sessions.length) {

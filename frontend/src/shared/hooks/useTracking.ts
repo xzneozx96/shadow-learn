@@ -1,14 +1,11 @@
-import type { MistakeExample, SessionLog, ShadowLearnDB, SpacedRepetitionItem } from '@/db'
+import type { DataClient, MasteryData, MistakeExample, ProgressStats, SessionLog, SpacedRepetitionItem } from '@/db'
 import type { ExerciseMode, VocabEntry } from '@/shared/types'
 import { useAuth } from '@/app/providers/AuthContext'
 import {
-  getErrorPattern,
-  getMasteryData,
-  getProgressStats,
-  saveErrorPattern,
-  saveMasteryData,
-  saveProgressStats,
   saveSessionLog,
+  updateErrorPattern,
+  updateMasteryData,
+  updateProgressStats,
   upsertExerciseStat,
 } from '@/db'
 import { todayISO } from '@/shared/lib/date'
@@ -28,7 +25,7 @@ export const EXERCISE_TO_SKILL: Record<ExerciseType, Skill> = {
   'flashcard': 'vocabulary',
 }
 
-function defaultProgressStats() {
+function defaultProgressStats(): ProgressStats {
   const defaultSkill = { sessions: 0, accuracy: 0, lastPracticed: null }
   return {
     totalSessions: 0,
@@ -48,7 +45,7 @@ function defaultProgressStats() {
   }
 }
 
-function defaultMasteryData() {
+function defaultMasteryData(): MasteryData {
   const s = { masteryLevel: 0, confidenceScore: 0, totalPracticeTime: 0, lastPracticed: null }
   return { writing: { ...s }, speaking: { ...s }, vocabulary: { ...s }, reading: { ...s }, listening: { ...s } }
 }
@@ -58,7 +55,7 @@ function defaultMasteryData() {
 // -------------------------------------------------------------------------- //
 
 export async function logExerciseCompletion(
-  db: ShadowLearnDB,
+  db: DataClient,
   {
     vocabEntry,
     exerciseType,
@@ -86,57 +83,57 @@ export async function logExerciseCompletion(
   bufferSM2Score(vocabEntry.id, score, today)
 
   // Update exercise-stats (difficulty tracking per vocabId:exerciseType)
-  const statKey = `${vocabEntry.id}:${exerciseType}`
-  await upsertExerciseStat(db, statKey, isCorrect)
+  await upsertExerciseStat(db, { vocabId: vocabEntry.id, exerciseType }, isCorrect)
 
   // 2. Update progress-db
   const skill = EXERCISE_TO_SKILL[exerciseType]
-  const progress = (await getProgressStats(db)) ?? defaultProgressStats()
-  progress.totalExercises += 1
-  if (isCorrect)
-    progress.totalCorrect += 1
-  else progress.totalIncorrect += 1
-  progress.accuracyRate = progress.totalCorrect / progress.totalExercises
+  await updateProgressStats(db, (prev) => {
+    const progress = prev ?? defaultProgressStats()
+    progress.totalExercises += 1
+    if (isCorrect)
+      progress.totalCorrect += 1
+    else progress.totalIncorrect += 1
+    progress.accuracyRate = progress.totalCorrect / progress.totalExercises
 
-  // Update accuracy trend (one entry per day, cap at 90)
-  const last = progress.accuracyTrend.at(-1)
-  if (last?.date === today) {
-    const total = last.exercises + 1
-    const prevCorrect = Math.round(last.accuracy * last.exercises)
-    last.accuracy = (prevCorrect + (isCorrect ? 1 : 0)) / total
-    last.exercises = total
-  }
-  else {
-    progress.accuracyTrend.push({ date: today, accuracy: isCorrect ? 1 : 0, exercises: 1 })
-    if (progress.accuracyTrend.length > 90)
-      progress.accuracyTrend.shift()
-  }
+    // Update accuracy trend (one entry per day, cap at 90)
+    const last = progress.accuracyTrend.at(-1)
+    if (last?.date === today) {
+      const total = last.exercises + 1
+      const prevCorrect = Math.round(last.accuracy * last.exercises)
+      last.accuracy = (prevCorrect + (isCorrect ? 1 : 0)) / total
+      last.exercises = total
+    }
+    else {
+      progress.accuracyTrend.push({ date: today, accuracy: isCorrect ? 1 : 0, exercises: 1 })
+      if (progress.accuracyTrend.length > 90)
+        progress.accuracyTrend.shift()
+    }
 
-  // Update skill progress
-  const sk = progress.skillProgress[skill]
-  const prevAcc = sk.accuracy * sk.sessions
-  sk.sessions += 1
-  sk.accuracy = (prevAcc + (isCorrect ? 1 : 0)) / sk.sessions
-  sk.lastPracticed = today
-  await saveProgressStats(db, progress)
+    // Update skill progress
+    const sk = progress.skillProgress[skill]
+    const prevAcc = sk.accuracy * sk.sessions
+    sk.sessions += 1
+    sk.accuracy = (prevAcc + (isCorrect ? 1 : 0)) / sk.sessions
+    sk.lastPracticed = today
+    return progress
+  })
 
   // 3. Update mastery-db
-  const mastery = (await getMasteryData(db)) ?? defaultMasteryData()
-  mastery[skill].lastPracticed = today
-  await saveMasteryData(db, mastery)
+  await updateMasteryData(db, (prev) => {
+    const mastery = prev ?? defaultMasteryData()
+    mastery[skill].lastPracticed = today
+    return mastery
+  })
 
   // 4. Log mistakes
   if (mistakes && mistakes.length > 0) {
-    const pattern = (await getErrorPattern(db, vocabEntry.id)) ?? {
-      patternId: vocabEntry.id,
-      frequency: 0,
-      lastOccurred: today,
-      examples: [],
-    }
-    pattern.frequency += mistakes.length
-    pattern.lastOccurred = today
-    pattern.examples = [...pattern.examples, ...mistakes].slice(-10)
-    await saveErrorPattern(db, pattern)
+    await updateErrorPattern(db, vocabEntry.id, (prev) => {
+      const pattern = prev ?? { patternId: vocabEntry.id, frequency: 0, lastOccurred: today, examples: [] }
+      pattern.frequency += mistakes.length
+      pattern.lastOccurred = today
+      pattern.examples = [...pattern.examples, ...mistakes].slice(-10)
+      return pattern
+    })
   }
 }
 
@@ -173,9 +170,11 @@ export function useTracking() {
   async function logSessionComplete() {
     if (!db)
       return
-    const progress = (await getProgressStats(db)) ?? defaultProgressStats()
-    progress.totalSessions += 1
-    await saveProgressStats(db, progress)
+    await updateProgressStats(db, (prev) => {
+      const progress = prev ?? defaultProgressStats()
+      progress.totalSessions += 1
+      return progress
+    })
   }
 
   async function logActivityDay(args: {

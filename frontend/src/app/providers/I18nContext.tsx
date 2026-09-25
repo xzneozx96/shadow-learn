@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { Locale, TranslationKey } from '@/shared/lib/i18n'
 import { createContext, use, useEffect, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
-import { getSettings, saveSettings } from '@/db'
+import { getSettings, updateSettings } from '@/db'
 import { getTranslation } from '@/shared/lib/i18n'
 
 export interface I18nContextValue {
@@ -32,11 +32,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   async function setLocale(newLocale: Locale) {
     if (!db)
       return
-    const current = await getSettings(db)
-    await saveSettings(db, {
+    await updateSettings(db, current => ({
       ...(current ?? { translationLanguage: '' }),
       uiLanguage: newLocale,
-    })
+    }))
     setLocaleState(newLocale)
   }
 

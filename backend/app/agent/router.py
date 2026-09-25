@@ -14,11 +14,13 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from openai import AsyncOpenAI, RateLimitError, APIStatusError
-from app.settings import settings
-from app.shared.utils import _resolve_key
-from app.shared._retry import RetryableError, http_retry
+from openai import APIStatusError, AsyncOpenAI, RateLimitError
 from pydantic import BaseModel, ConfigDict
+
+from app.keys.models import Provider
+from app.keys.service import ProviderKeys
+from app.settings import settings
+from app.shared._retry import RetryableError, http_retry
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +50,10 @@ class ClientMessage(BaseModel):
 
 
 class AgentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     messages: list[ClientMessage]
     system_prompt: str
-    openrouter_api_key: str | None = None
     tools: list[dict] | None = None
     model: str | None = None
     trigger: str | None = None
@@ -365,16 +368,16 @@ async def _stream_agent(stream, stitch_message_id: str | None = None):
                         usage_data.model_dump() if hasattr(usage_data, "model_dump") else usage_data,
                     )
         except Exception as e:
-            logger.error(f"[_stream_agent] OpenAI Stream Error: {e}", exc_info=True)
+            logger.exception("[_stream_agent] OpenAI Stream Error")
             # Inspect standard openai.APIError attributes for more details
-            if hasattr(e, 'code') and getattr(e, 'code'):
-                logger.error(f"[_stream_agent] Error Code: {getattr(e, 'code')}")
-            if hasattr(e, 'body') and getattr(e, 'body'):
-                logger.error(f"[_stream_agent] Error Body: {getattr(e, 'body')}")
-            if hasattr(e, 'response') and getattr(e, 'response'):
-                logger.error(f"[_stream_agent] Error Response: {getattr(e, 'response')}")
-            if hasattr(e, 'param') and getattr(e, 'param'):
-                logger.error(f"[_stream_agent] Error Param: {getattr(e, 'param')}")
+            if hasattr(e, 'code') and e.code:
+                logger.error(f"[_stream_agent] Error Code: {e.code}")
+            if hasattr(e, 'body') and e.body:
+                logger.error(f"[_stream_agent] Error Body: {e.body}")
+            if hasattr(e, 'response') and e.response:
+                logger.error(f"[_stream_agent] Error Response: {e.response}")
+            if hasattr(e, 'param') and e.param:
+                logger.error(f"[_stream_agent] Error Param: {e.param}")
 
             if not text_started:
                 yield fmt({"type": "text-start", "id": text_stream_id})
@@ -427,7 +430,7 @@ async def _stream_agent(stream, stitch_message_id: str | None = None):
                 try:
                     parsed = json.loads(sanitized) if sanitized else {}
                     logger.info(f"[_stream_agent] Tool Call Parsed: {name} ID={tcid} Args={parsed}")
-                except Exception as e:
+                except json.JSONDecodeError as e:
                     logger.error(f"[_stream_agent] Invalid JSON in tool arguments for {name}: {sanitized!r} - Error: {e}")
                     yield fmt(
                         {
@@ -518,13 +521,13 @@ def _messages_contain_image(messages: list[ClientMessage]) -> bool:
 
 
 @router.post("/agent")
-async def agent_chat(request: AgentRequest) -> StreamingResponse:
+async def agent_chat(request: AgentRequest, keys: ProviderKeys) -> StreamingResponse:
     """Stream agent response in AI SDK v5 UIMessage format."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="messages must not be empty")
 
     client = AsyncOpenAI(
-        api_key=request.openrouter_api_key or settings.openrouter_api_key,
+        api_key=(await keys(Provider.openrouter)).value,
         base_url=settings.openrouter_base_url,
     )
 
@@ -668,8 +671,9 @@ def _build_summarizer_system(locale: str | None) -> str:
 
 
 class SummarizeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     messages: list[ClientMessage]
-    openrouter_api_key: str | None = None
     locale: str | None = None
 
 
@@ -700,8 +704,8 @@ def _build_summary_messages(messages: list[ClientMessage], system_prompt: str) -
 
 
 @router.post("/summarize", response_model=SummarizeResponse)
-async def summarize_thread(req: SummarizeRequest) -> SummarizeResponse:
-    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
+async def summarize_thread(req: SummarizeRequest, keys: ProviderKeys) -> SummarizeResponse:
+    api_key = (await keys(Provider.openrouter)).value
     openai_messages = _build_summary_messages(req.messages, _build_summarizer_system(req.locale))
     payload = {
         "model": settings.openrouter_structured_model,

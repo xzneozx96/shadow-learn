@@ -3,9 +3,8 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { AuthContext } from '@/app/providers/AuthContext'
 import { I18nProvider } from '@/app/providers/I18nContext'
-import { initDB } from '@/db'
 import { useZoberChat } from '@/features/agent/application/useZoberChat'
-import 'fake-indexeddb/auto'
+import { fakeDataClient } from '../../../../tests/fake-api'
 
 function makeWrapper(db: any) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -13,16 +12,7 @@ function makeWrapper(db: any) {
       <AuthContext
         value={
           {
-            keys: { openrouterApiKey: 'k' },
             db,
-            isFirstSetup: false,
-            isUnlocked: true,
-            trialMode: false,
-            unlock: async () => {},
-            setup: async () => {},
-            resetKeys: async () => {},
-            lock: () => {},
-            startTrial: () => {},
           } as any
         }
       >
@@ -34,7 +24,7 @@ function makeWrapper(db: any) {
 
 describe('useZoberChat smoke', () => {
   it('lesson surface returns expected shape', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     const { result } = renderHook(
       () =>
         useZoberChat({
@@ -49,20 +39,18 @@ describe('useZoberChat smoke', () => {
     await waitFor(() => expect(typeof result.current.sendMessage).toBe('function'))
     expect(result.current.messages).toEqual([])
     expect(typeof result.current.loadMore).toBe('function')
-    db.close()
   })
 
   it('global surface returns expected shape', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     const { result } = renderHook(() => useZoberChat({ surface: 'global' }), {
       wrapper: makeWrapper(db),
     })
     await waitFor(() => expect(typeof result.current.sendMessage).toBe('function'))
-    db.close()
   })
 
   it('tip surface exposes disabled when no transcript', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     const { result } = renderHook(
       () =>
         useZoberChat({
@@ -79,6 +67,5 @@ describe('useZoberChat smoke', () => {
     await waitFor(() => expect(typeof result.current.sendMessage).toBe('function'))
     expect(result.current.disabled).toBe(true)
     expect(result.current.disabledReason).toBe('no-transcript')
-    db.close()
   })
 })

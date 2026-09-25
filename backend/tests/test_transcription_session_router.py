@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import respx
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 from httpx import Response
 
@@ -14,17 +15,18 @@ from app.transcription import router as transcription_router_module
 
 @pytest.fixture(autouse=True)
 def _reset_state(monkeypatch: pytest.MonkeyPatch):
-    """Reset rate-limit buckets and disable origin check by default."""
-    transcription_router_module._ip_buckets.clear()
-    monkeypatch.setattr(settings, "frontend_origin_allowlist", [])
+    """Reset rate-limit buckets and allow the test client's origin by default."""
+    transcription_router_module.ip_limiter.clear()
+    monkeypatch.setattr(settings, "frontend_origin_allowlist", ["http://testserver"])
+    monkeypatch.setattr(settings, "frontend_origin_regex", "")
     monkeypatch.setattr(settings, "gladia_api_keys", ["test-key"])
     yield
-    transcription_router_module._ip_buckets.clear()
+    transcription_router_module.ip_limiter.clear()
 
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(app)
+    return TestClient(app, headers={"Origin": "http://testserver"})
 
 
 @respx.mock
@@ -110,3 +112,34 @@ def test_rate_limit_blocks_after_20_requests(client: TestClient) -> None:
         assert ok.status_code == 200
     blocked = client.post("/api/transcription/session")
     assert blocked.status_code == 429
+
+
+@respx.mock
+def test_origin_check_allows_regex_match(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    monkeypatch.setattr(settings, "frontend_origin_allowlist", ["https://shadowlearn.app"])
+    monkeypatch.setattr(settings, "frontend_origin_regex", r"https://.*\.vercel\.app")
+    respx.post("https://api.gladia.io/v2/live").mock(
+        return_value=Response(201, json={"id": "a", "url": "wss://x"})
+    )
+    allowed = client.post("/api/transcription/session", headers={"Origin": "https://pr-12.vercel.app"})
+    rejected = client.post("/api/transcription/session", headers={"Origin": "https://evil.example"})
+    assert allowed.status_code == 200
+    assert rejected.status_code == 403
+
+
+def test_origin_check_rejects_everything_when_allowlist_empty(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    monkeypatch.setattr(settings, "frontend_origin_allowlist", [])
+    response = client.post("/api/transcription/session")
+    assert response.status_code == 403
+
+
+def test_origin_rule_matches_the_cors_middleware(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "frontend_origin_allowlist", ["https://shadowlearn.app"])
+    monkeypatch.setattr(settings, "frontend_origin_regex", r"https://.*\.vercel\.app")
+    cors = CORSMiddleware(
+        app=None,
+        allow_origins=settings.frontend_origin_allowlist,
+        allow_origin_regex=settings.frontend_origin_regex or None,
+    )
+    for origin in ["https://shadowlearn.app", "https://pr-12.vercel.app", "https://evil.example", "https://x.vercel.app.evil"]:
+        assert settings.origin_allowed(origin) == cors.is_allowed_origin(origin), origin

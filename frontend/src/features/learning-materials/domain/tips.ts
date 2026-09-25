@@ -127,6 +127,17 @@ export interface TipCardsRecord {
   generatedAt: string
 }
 
+export interface TipCardState {
+  state: ConceptCard['state']
+  updatedAt: string
+}
+
+export interface TipCardStatesRecord {
+  videoId: string
+  locale: StudioLocale
+  states: Record<string, TipCardState>
+}
+
 export type TipNoteSource = 'chat' | 'studio' | 'freeform'
 
 export type TipNoteSourceRefKind = 'chat' | 'summary' | 'study_guide' | 'mind_map' | 'cards'

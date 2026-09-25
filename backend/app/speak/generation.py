@@ -9,11 +9,11 @@ from typing import Any
 
 import httpx
 
+from app.shared._retry import RetryableError
 from app.speak._errors import GenerationError
 from app.speak.personas import get_persona_prompt
 from app.speak.proficiency import get_proficiency_label
-from app.speak.situations import SituationConfig, VocabItem, cache_custom_situation
-from app.shared._retry import RetryableError
+from app.speak.situations import SituationConfig, VocabItem
 
 logger = logging.getLogger(__name__)
 
@@ -201,8 +201,8 @@ async def _call_llm(prompt: str, google_key: str) -> dict[str, Any]:
     Hard-fails immediately on: injection detected, auth errors (GenerationError).
     """
     # Local import: offshore_client imports GenerationError from this module.
-    from app.speak.offshore_client import call_offshore_gemini
     from app.shared._retry import http_retry
+    from app.speak.offshore_client import call_offshore_gemini
 
     @http_retry(logger)
     async def _attempt() -> dict[str, Any]:
@@ -233,8 +233,8 @@ async def generate_situation(
 
     - If situation_id is given (built-in path): checks _builtin_cache first (unless
       force_regenerate=True); caches result for 24h.
-    - If situation_id is None (custom path): generates, assigns id=custom_<uuid>,
-      stores in custom cache.
+    - If situation_id is None (custom path): generates and assigns id=custom_<uuid>.
+      The caller stores it.
 
     ``interface_language`` selects the language used for human-readable fields
     (scene_context, user_goal, vocab meanings) so learners can read them.
@@ -302,7 +302,5 @@ async def generate_situation(
     if situation_id is not None:
         _builtin_cache[cache_key] = (cfg, time.time() + _BUILTIN_CACHE_TTL)
         logger.info(f"[GENERATION] Built-in cached: {cache_key}")
-    else:
-        cache_custom_situation(cfg)
 
     return cfg

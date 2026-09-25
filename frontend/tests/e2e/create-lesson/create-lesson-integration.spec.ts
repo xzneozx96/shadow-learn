@@ -1,23 +1,5 @@
-/**
- * create-lesson-integration.spec.ts
- *
- * REAL INTEGRATION TESTS — no API mocking.
- *
- * These tests hit the running backend at http://localhost:8000.
- * They exercise the full lesson creation pipeline end-to-end:
- *   submit YouTube URL → backend downloads + transcribes → job completes →
- *   poller writes result to IDB → Library card transitions to complete.
- *
- * Requirements:
- *   - Backend running at http://localhost:8000 with valid API keys configured
- *   - Free Trial mode enabled (SHADOWLEARN_*_API_KEY env vars set in backend)
- *
- * Covered scenarios:
- *   INTEGRATION-001 — Full pipeline: YouTube URL → real backend → lesson complete in IDB
- */
-
 import { expect, test } from '@playwright/test'
-import { authBypass } from './helpers'
+import { API_URL, signUpAndLogin } from '../support/api-helpers'
 
 const VALID_YOUTUBE_URL = 'https://www.youtube.com/watch?v=tfzSPPU9bw4&list=PL7WO21N4FE1DeT_W7eA7CZiCVWLekKHMg'
 
@@ -28,12 +10,12 @@ test.describe('Real backend integration', () => {
   test.setTimeout(PIPELINE_TIMEOUT_MS + 30_000)
 
   test('INTEGRATION-001 @integration — Full pipeline: submit YouTube URL to real backend, lesson transitions to complete', async ({ page }) => {
-    await authBypass(page)
+    const user = await signUpAndLogin(page)
 
     // Navigate to verify the backend is reachable before starting
-    const configResp = await page.request.get('http://localhost:8000/api/config')
+    const configResp = await page.request.get(`${API_URL}/api/config`)
     if (!configResp.ok()) {
-      test.skip(true, `Backend not reachable at http://localhost:8000 (status ${configResp.status()}) — start the backend and retry`)
+      test.skip(true, `Backend not reachable at ${API_URL} (status ${configResp.status()}) — start the backend and retry`)
     }
 
     const config = await configResp.json()
@@ -89,30 +71,19 @@ test.describe('Real backend integration', () => {
 
     console.warn('[integration] lesson card transitioned to complete — pipeline finished')
 
-    // Verify segments were persisted in IDB
     const lessonId = await completeCard.getAttribute('data-testid')
       .then(testId => testId?.replace('lesson-card-', '') ?? null)
 
     expect(lessonId).toBeTruthy()
 
-    const segments = await page.evaluate(async (lid) => {
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open('shadowlearn', 10)
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => resolve(req.result as IDBDatabase)
-      })
-      const result = await new Promise<any>((resolve, reject) => {
-        const tx = db.transaction('segments', 'readonly')
-        const req = tx.objectStore('segments').get(lid!)
-        req.onerror = () => reject(req.error)
-        req.onsuccess = () => resolve(req.result)
-      })
-      db.close()
-      return result
-    }, lessonId)
+    const lessonResp = await page.request.get(`${API_URL}/api/lessons/${lessonId}`, {
+      headers: { Authorization: `Bearer ${user.accessToken}` },
+    })
+    expect(lessonResp.ok()).toBe(true)
+    const { segments } = await lessonResp.json()
 
     expect(Array.isArray(segments)).toBe(true)
     expect(segments.length).toBeGreaterThan(0)
-    console.warn(`[integration] ${segments.length} segments persisted in IDB`)
+    console.warn(`[integration] ${segments.length} segments stored on the server`)
   })
 })

@@ -1,0 +1,57 @@
+name: Backend Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: shadowlearn
+          POSTGRES_PASSWORD: shadowlearn
+          POSTGRES_DB: shadowlearn
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U shadowlearn"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MINIO_ROOT_USER: shadowlearn
+      MINIO_ROOT_PASSWORD: shadowlearn
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start MinIO
+        run: |
+          docker run -d -p 9005:9000 -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
+            ghcr.io/xzneozx96/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          for i in $(seq 30); do
+            curl -sf http://127.0.0.1:9005/minio/health/live && exit 0
+            sleep 1
+          done
+          exit 1
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run pytest
+        run: uv run pytest

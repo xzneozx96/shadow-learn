@@ -1,11 +1,11 @@
+import type { DataClient } from '@/db'
 import type { LessonMeta } from '@/shared/types'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getAllLessonMetas, initDB, saveLessonMeta } from '@/db'
+import { getAllLessonMetas, getLessonMeta, updateLessonMeta } from '@/db'
 import { LessonsProvider, useLessons } from '@/features/lesson/application/LessonsContext'
-import 'fake-indexeddb/auto'
+import { FakeApiClient, fakeDataClient } from '../../../../tests/fake-api'
 
 function makeMeta(overrides: Partial<LessonMeta> = {}): LessonMeta {
   return {
@@ -14,22 +14,27 @@ function makeMeta(overrides: Partial<LessonMeta> = {}): LessonMeta {
     source: 'youtube',
     sourceUrl: 'https://youtube.com/watch?v=abc',
     translationLanguages: ['en'],
-    createdAt: new Date().toISOString(),
-    lastOpenedAt: new Date().toISOString(),
+    sourceLanguage: 'zh-CN',
+    duration: 60,
+    createdAt: '2026-09-01T00:00:00.000Z',
+    lastOpenedAt: '2026-09-01T00:00:00.000Z',
     progressSegmentId: null,
     tags: [],
-    status: 'complete',
     ...overrides,
   }
 }
 
+let api: FakeApiClient
+let db: DataClient
+
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: (globalThis as any).__testDb }),
+  useAuth: () => ({ db, session: { userId: 'u1', email: 'u1@test' } }),
 }))
 
 beforeEach(async () => {
-  globalThis.indexedDB = new IDBFactory()
-  ;(globalThis as any).__testDb = await initDB()
+  localStorage.clear()
+  api = new FakeApiClient()
+  db = fakeDataClient(api)
 })
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -37,59 +42,138 @@ function wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe('lessonsProvider', () => {
-  it('loads lessons from IndexedDB on mount', async () => {
-    const db = (globalThis as any).__testDb
-    await saveLessonMeta(db, makeMeta())
+  it('goes from loading to ready with the lessons from GET /api/lessons', async () => {
+    api.seedLesson(makeMeta())
 
     const { result } = renderHook(() => useLessons(), { wrapper })
 
-    await waitFor(() => expect(result.current.lessons).toHaveLength(1))
-    expect(result.current.lessons[0].id).toBe('lesson_1')
+    expect(result.current.status).toBe('loading')
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.lessons.map(l => l.id)).toEqual(['lesson_1'])
+    expect(api.calls).toContainEqual({ method: 'GET', path: '/api/lessons' })
   })
 
-  it('updateLesson adds new lesson to state and IndexedDB', async () => {
-    const db = (globalThis as any).__testDb
-    const meta = makeMeta({ id: 'lesson_2', title: 'New' })
+  it('goes from loading to error, and reload recovers', async () => {
+    api.seedLesson(makeMeta())
+    api.failWith('/api/lessons', 503)
 
     const { result } = renderHook(() => useLessons(), { wrapper })
 
-    await waitFor(() => expect(result.current.updateLesson).toBeDefined())
+    await waitFor(() => expect(result.current.status).toBe('error'))
+    expect(result.current.error).toBe('GET /api/lessons failed: 503')
+    expect(result.current.lessons).toEqual([])
+
+    api.heal('/api/lessons')
     await act(async () => {
-      await result.current.updateLesson(meta)
+      await result.current.reload()
     })
 
-    expect(result.current.lessons.find(l => l.id === 'lesson_2')).toBeDefined()
-    const persisted = await getAllLessonMetas(db)
-    expect(persisted.find(l => l.id === 'lesson_2')).toBeDefined()
+    expect(result.current.status).toBe('ready')
+    expect(result.current.error).toBeNull()
+    expect(result.current.lessons).toHaveLength(1)
   })
 
-  it('updateLesson updates existing lesson in state', async () => {
-    const db = (globalThis as any).__testDb
-    await saveLessonMeta(db, makeMeta({ title: 'Original' }))
+  it('editLesson PATCHes a server lesson and keeps the saved version in state', async () => {
+    api.seedLesson(makeMeta())
 
     const { result } = renderHook(() => useLessons(), { wrapper })
-
     await waitFor(() => expect(result.current.lessons).toHaveLength(1))
+
     await act(async () => {
-      await result.current.updateLesson({ ...result.current.lessons[0], title: 'Updated' })
+      await result.current.editLesson(result.current.lessons[0], prev => ({ ...prev, isDone: true }))
+    })
+
+    expect(result.current.lessons[0]).toMatchObject({ isDone: true, version: 2 })
+    expect(api.calls.at(-1)).toEqual({
+      method: 'PATCH',
+      path: '/api/lessons/lesson_1',
+      body: {
+        title: 'Test Lesson',
+        meta: { progressSegmentId: null, tags: [], isDone: true },
+        last_opened_at: '2026-09-01T00:00:00.000Z',
+      },
+    })
+  })
+
+  it('editLesson from a stale tab keeps the other device\'s rename', async () => {
+    api.seedLesson(makeMeta({ title: 'Original' }))
+    const { result } = renderHook(() => useLessons(), { wrapper })
+    await waitFor(() => expect(result.current.lessons).toHaveLength(1))
+    const [onPhone] = await getAllLessonMetas(fakeDataClient(api))
+    await updateLessonMeta(fakeDataClient(api), onPhone, prev => ({ ...prev, title: 'Renamed on phone' }))
+
+    await act(async () => {
+      await result.current.editLesson(result.current.lessons[0], prev => ({ ...prev, isDone: true }))
+    })
+
+    expect(result.current.lessons[0]).toMatchObject({ title: 'Renamed on phone', isDone: true, version: 3 })
+    expect(await getLessonMeta(db, 'lesson_1')).toMatchObject({ title: 'Renamed on phone', isDone: true })
+  })
+
+  it('renameLesson PATCHes the title of a server lesson and keeps it after a reload', async () => {
+    api.seedLesson(makeMeta({ title: 'Original' }))
+
+    const { result } = renderHook(() => useLessons(), { wrapper })
+    await waitFor(() => expect(result.current.lessons).toHaveLength(1))
+
+    await act(async () => {
+      await result.current.renameLesson(result.current.lessons[0], 'Updated')
     })
 
     expect(result.current.lessons[0].title).toBe('Updated')
+    expect(api.calls.at(-1)).toMatchObject({ method: 'PATCH', path: '/api/lessons/lesson_1', body: { title: 'Updated' } })
+
+    await act(async () => {
+      await result.current.reload()
+    })
+    expect(result.current.lessons[0].title).toBe('Updated')
   })
 
-  it('deleteLesson removes from state and IndexedDB', async () => {
-    const db = (globalThis as any).__testDb
-    await saveLessonMeta(db, makeMeta())
+  it('renameLesson keeps a placeholder rename in this browser', async () => {
+    const placeholder = makeMeta({ id: 'pending_1', status: 'processing', jobId: 'job_1' })
+    const { result } = renderHook(() => useLessons(), { wrapper })
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    act(() => result.current.savePendingLesson(placeholder))
+    const callsBefore = api.calls.length
+
+    await act(async () => {
+      await result.current.renameLesson(placeholder, 'Pending rename')
+    })
+
+    expect(result.current.lessons[0].title).toBe('Pending rename')
+    expect(api.calls).toHaveLength(callsBefore)
+  })
+
+  it('keeps a processing placeholder in this browser across a remount', async () => {
+    const placeholder = makeMeta({ id: 'pending_1', status: 'processing', jobId: 'job_1' })
+
+    const first = renderHook(() => useLessons(), { wrapper })
+    await waitFor(() => expect(first.result.current.status).toBe('ready'))
+    const callsBefore = api.calls.length
+
+    act(() => first.result.current.savePendingLesson(placeholder))
+
+    expect(first.result.current.lessons.map(l => l.id)).toEqual(['pending_1'])
+    expect(api.calls).toHaveLength(callsBefore)
+    first.unmount()
+
+    const second = renderHook(() => useLessons(), { wrapper })
+    await waitFor(() => expect(second.result.current.status).toBe('ready'))
+    expect(second.result.current.lessons).toEqual([placeholder])
+  })
+
+  it('deleteLesson DELETEs a server lesson and drops it from state', async () => {
+    api.seedLesson(makeMeta())
 
     const { result } = renderHook(() => useLessons(), { wrapper })
-
     await waitFor(() => expect(result.current.lessons).toHaveLength(1))
+
     await act(async () => {
       await result.current.deleteLesson('lesson_1')
     })
 
     expect(result.current.lessons).toHaveLength(0)
-    const persisted = await getAllLessonMetas(db)
-    expect(persisted).toHaveLength(0)
+    expect(api.calls).toContainEqual({ method: 'DELETE', path: '/api/lessons/lesson_1' })
+    expect(api.records.has('/api/lessons/lesson_1')).toBe(false)
   })
 })

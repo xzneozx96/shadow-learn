@@ -9,12 +9,13 @@
  */
 
 import { expect, test } from '@playwright/test'
-import { authBypass, mockConfig } from './helpers'
+import { signUpAndLogin } from '../support/api-helpers'
+import { mockConfig } from './helpers'
 
 const VALID_YOUTUBE_URL = 'https://www.youtube.com/watch?v=DG1wRgEpdO4'
 
 test('US01.US06-E2E-008 @p1 @regression @create-lesson — Backend unreachable on Generate shows user-friendly error and re-enables button', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
 
   // Simulate a network failure (backend unreachable) by aborting the connection
@@ -42,7 +43,7 @@ test('US01.US06-E2E-008 @p1 @regression @create-lesson — Backend unreachable o
 })
 
 test('US01.US06-E2E-020 @p1 @regression @create-lesson — Toast notification shown alongside inline error on non-2xx server response', async ({ page }) => {
-  await authBypass(page)
+  await signUpAndLogin(page)
   await mockConfig(page)
 
   // Return a 400 error with a detail message

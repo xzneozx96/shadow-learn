@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react'
 import { useEffect, useState } from 'react'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 interface ResolveResponse {
   status: 'video' | 'playlist'
@@ -18,7 +18,7 @@ function resolveTipPath(videoId: string): Promise<string | null> {
   if (cached)
     return cached
 
-  const promise = fetch(`${API_BASE}/api/collection/resolve/${videoId}`)
+  const promise = apiFetch(`/api/collection/resolve/${videoId}`)
     .then((res) => {
       if (res.status === 404)
         return null // definitively not curated -> keep external

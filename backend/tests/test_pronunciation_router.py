@@ -131,6 +131,7 @@ def test_run_assessment_raises_retryable_on_timeout():
     import sys
     with patch.dict(sys.modules, _sdk_modules(sdk)):
         import importlib
+
         import app.pronunciation.router as mod
         importlib.reload(mod)
 
@@ -147,9 +148,8 @@ def test_run_assessment_raises_retryable_on_timeout():
             tmp_ctx.__exit__ = MagicMock(return_value=False)
             mock_tmp.return_value = tmp_ctx
 
-            with patch("pathlib.Path.write_bytes", return_value=None):
-                with pytest.raises(RetryableError, match="timed out"):
-                    mod._run_assessment(b"audio", "你好", "zh-CN", "key", "eastus")
+            with patch("pathlib.Path.write_bytes", return_value=None), pytest.raises(RetryableError, match="timed out"):
+                mod._run_assessment(b"audio", "你好", "zh-CN", "key", "eastus")
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +171,7 @@ def test_run_assessment_non_timeout_cancellation_returns_error():
     import sys
     with patch.dict(sys.modules, _sdk_modules(sdk)):
         import importlib
+
         import app.pronunciation.router as mod
         importlib.reload(mod)
 
@@ -198,8 +199,9 @@ def test_run_assessment_non_timeout_cancellation_returns_error():
 # assess_pronunciation endpoint — retry on timeout succeeds second attempt
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
-async def test_assess_endpoint_retries_on_timeout_then_succeeds():
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.usefixtures("stored_user", "provider_env")
+async def test_assess_endpoint_retries_on_timeout_then_succeeds(capsys):
     """Endpoint retries once when _run_assessment raises RetryableError, succeeds on second call."""
     import sys
     sdk = _make_speechsdk_mock()
@@ -210,6 +212,7 @@ async def test_assess_endpoint_retries_on_timeout_then_succeeds():
     def fake_run_assessment(*args, **kwargs):
         nonlocal call_count
         call_count += 1
+        assert args[3:] == ("env-azure-key", "eastus")
         if call_count == 1:
             raise RetryableError("Azure scoring timed out: Scoring timed out")
         # Second call returns success dict directly
@@ -221,25 +224,25 @@ async def test_assess_endpoint_retries_on_timeout_then_succeeds():
     sys.modules["azure.cognitiveservices.speech"] = sdk
 
     import importlib
+
     import app.pronunciation.router as mod
     importlib.reload(mod)
 
     from httpx import AsyncClient
     from httpx._transports.asgi import ASGITransport
+
     from app.main import app
 
     with (
         patch.object(mod, "_run_assessment", side_effect=fake_run_assessment),
         patch("asyncio.sleep", new_callable=AsyncMock),
-        patch.object(mod, "_resolve_key", side_effect=lambda v, env, _: v or env or "key"),
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             wav_bytes = b"fake-audio"
             response = await client.post(
                 "/api/pronunciation/assess",
-                data={"reference_text": "你好", "language": "zh-CN",
-                      "azure_key": "key", "azure_region": "eastus"},
+                data={"reference_text": "你好", "language": "zh-CN"},
                 files={"audio": ("recording.webm", wav_bytes, "audio/webm")},
             )
 
@@ -247,3 +250,18 @@ async def test_assess_endpoint_retries_on_timeout_then_succeeds():
     assert call_count == 2
     body = response.json()
     assert body["overall"]["accuracy"] == 95.0
+    captured = capsys.readouterr()
+    assert "key=" not in captured.out + captured.err
+    assert "env-azure-key" not in captured.out + captured.err
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.usefixtures("stored_user", "provider_env")
+async def test_assess_endpoint_rejects_key_form_fields(client):
+    response = await client.post(
+        "/api/pronunciation/assess",
+        data={"reference_text": "你好", "azure_key": "leaked", "azure_region": "eastus"},
+        files={"audio": ("recording.webm", b"fake-audio", "audio/webm")},
+    )
+    assert response.status_code == 422
+    assert {error["loc"][-1] for error in response.json()["detail"]} == {"azure_key", "azure_region"}

@@ -28,7 +28,7 @@ const mockPlayer = {
 }
 
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: null, keys: null, trialMode: false }),
+  useAuth: () => ({ db: null }),
 }))
 
 vi.mock('@/app/providers/I18nContext', () => ({
@@ -65,8 +65,6 @@ function makeSegment(i: number, duration = 3): Segment {
 const DEFAULT_PROPS = {
   segments: [makeSegment(0), makeSegment(1)],
   mode: 'dictation' as const,
-  azureKey: '',
-  azureRegion: '',
   onExit: vi.fn(),
   lesson: {
     id: 'lesson_1',

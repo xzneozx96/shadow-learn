@@ -18,7 +18,7 @@ vi.mock('react-router-dom', () => ({
 }))
 
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: null, keys: null }),
+  useAuth: () => ({ db: null }),
 }))
 
 vi.mock('@/app/providers/I18nContext', async () => {

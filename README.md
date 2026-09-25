@@ -14,8 +14,9 @@ A Chinese language learning platform built around the **shadowing technique**. U
 - **AI companion** — in-lesson chat powered by OpenRouter for grammar questions and explanations
 - **Vocabulary workbook** — review and track words across all lessons
 - **Progress tracking** — skill mastery grid, accuracy trends, mistake history, review queue
-- **Offline-first** — all user data lives in IndexedDB; no account required
-- **Secure** — API keys are stored encrypted (PIN-protected AES-256) in the browser; never sent to the backend
+- **Accounts** — email and password sign-in; lessons, media, and progress live on the server and follow you across devices
+- **Server-held keys** — provider keys you add in Settings are stored encrypted on the server; without one, the operator's keys apply
+- **One-time import** — a browser that still holds data from the old offline version imports it into your account, verifies it, and only then deletes the local copy
 
 ---
 
@@ -24,8 +25,9 @@ A Chinese language learning platform built around the **shadowing technique**. U
 | Layer | Stack |
 |---|---|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui |
-| State | Context API + custom hooks, IndexedDB (idb) |
-| Backend | FastAPI, Python 3.12, uv |
+| State | Context API + custom hooks over the backend API |
+| Backend | FastAPI, Python 3.12, uv, SQLAlchemy + Alembic |
+| Storage | Postgres (records), MinIO / S3 (media) |
 | Transcription | Deepgram (default) or Azure Speech |
 | TTS | Azure Neural TTS (default) or Minimax |
 | Translation / LLM | OpenRouter (Qwen, etc.) |
@@ -149,12 +151,17 @@ cd shadow-learn
 ### 2. Backend
 
 ```bash
+docker compose up -d postgres minio   # Postgres on 127.0.0.1:5435, MinIO on 127.0.0.1:9005
 cd backend
 cp .env.example .env
-# Fill in SHADOWLEARN_TTS_PROVIDER and any optional overrides in .env
+# Set SHADOWLEARN_ENCRYPTION_KEY (a Fernet key), SHADOWLEARN_JWT_SECRET and
+# SHADOWLEARN_JWT_REFRESH_SECRET (32+ characters each), plus any provider keys
 uv sync
+uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```
+
+`GET /api/health/deps` returns `{"db":"ok","s3":"ok"}` when both stores are reachable.
 
 The backend runs at `http://localhost:8000`.
 
@@ -168,13 +175,13 @@ pnpm dev
 
 The frontend runs at `http://localhost:5173`.
 
-On first launch, the app will prompt you to set a PIN and enter your API keys. These are encrypted and stored locally — they are never sent to the ShadowLearn backend.
+On first launch, sign up with an email and password. Outside local dev, password reset needs the `SHADOWLEARN_SMTP_*` settings.
 
 ---
 
 ## API Keys
 
-ShadowLearn uses third-party APIs for speech and AI features. You enter them once in the app's setup screen:
+ShadowLearn uses third-party APIs for speech and AI features. The operator sets them as `SHADOWLEARN_*` env keys on the backend. Each user can also add their own in **Settings → Provider keys**; the backend stores them encrypted with `SHADOWLEARN_ENCRYPTION_KEY` and prefers them over the operator's keys.
 
 | Key | Where to get it | Required? |
 |---|---|---|
@@ -205,9 +212,9 @@ The app will be available at `http://localhost`.
 2. Set root directory to `frontend`, build command `pnpm build`, output directory `dist`
 3. Add env var `VITE_API_BASE=<your-backend-url>` in Vercel project settings
 
-**Backend → Hugging Face Spaces (Docker)**
+**Backend**
 
-HF Spaces Docker SDK gives 16 GB RAM / 2 vCPU free. Create a new Space with SDK: Docker, push the `backend/` directory, and add secret env vars (`AZURE_SPEECH_KEY`, `DEEPGRAM_API_KEY`, etc.) in the Space settings.
+The backend needs Postgres, MinIO (or another S3 store), and one uvicorn worker. See `docs/deploy-server-migration.md` for the env, nginx, and compose settings a deploy needs.
 
 ---
 
@@ -216,20 +223,16 @@ HF Spaces Docker SDK gives 16 GB RAM / 2 vCPU free. Create a new Space with SDK:
 ```
 shadow-learn/
 ├── backend/               # FastAPI application
-│   ├── app/
-│   │   ├── routers/       # HTTP handlers (lessons, chat, tts, quiz, …)
-│   │   ├── services/      # Business logic (audio, transcription, translation, …)
-│   │   ├── models.py      # Shared Pydantic models
-│   │   └── config.py      # pydantic-settings (SHADOWLEARN_ env prefix)
+│   ├── app/               # One package per feature: accounts, keys, userdata, lessons, media, importer, …
+│   │   └── settings.py    # pydantic-settings (SHADOWLEARN_ env prefix)
+│   ├── alembic/           # Postgres migrations
 │   └── tests/
 ├── frontend/              # React + Vite application
 │   ├── src/
-│   │   ├── components/    # UI — lesson, study, shadowing, progress, ui primitives
-│   │   ├── contexts/      # AuthContext, PlayerContext, LessonsContext, VocabularyContext
-│   │   ├── hooks/         # Feature hooks (TTS, pronunciation, quiz, tracking, …)
-│   │   ├── lib/           # Pure utilities (pinyin, shadowing logic, spaced repetition, …)
-│   │   ├── pages/         # Top-level route pages
-│   │   └── db/            # IndexedDB schema and typed accessors
+│   │   ├── app/           # Routes, layout, pages, and app-wide providers (auth, i18n, player)
+│   │   ├── features/      # lesson, study, shadowing, speak, agent, vocabulary, settings, migration, …
+│   │   ├── shared/        # UI primitives, pure utilities, shared hooks and types
+│   │   └── db/            # Typed accessors for the backend API; read-only legacy IndexedDB reader
 │   └── tests/
 └── docker-compose.yml
 ```

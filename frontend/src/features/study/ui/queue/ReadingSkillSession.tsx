@@ -2,9 +2,8 @@
 import type { VocabEntry } from '@/shared/types'
 import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import {
   getReadingDraft,
   getReadingPassage,
@@ -32,7 +31,6 @@ interface Props {
 }
 
 export function ReadingSkillSession({ entries, date, onComplete, onBack, embedded }: Props) {
-  const { keys } = useAuth()
   const { t } = useI18n()
   const [phase, setPhase] = useState<Phase>('loading')
   const [passage, setPassage] = useState('')
@@ -63,14 +61,11 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
       meaning: e.meaning,
     }))
 
-    if (!keys)
-      return
-
     const controller = new AbortController()
-    void fetch(`${API_BASE}/api/daily-review/passage`, {
+    void apiFetch(`/api/daily-review/passage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ words, openrouter_api_key: keys.openrouterApiKey, source_language: sourceLanguage }),
+      body: JSON.stringify({ words, source_language: sourceLanguage }),
       signal: controller.signal,
     })
       .then(async (resp) => {
@@ -90,7 +85,7 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
         setPhase('load-error')
       })
     return () => controller.abort()
-  }, [date, entries, keys, sourceLanguage, regenKey])
+  }, [date, entries, sourceLanguage, regenKey])
 
   function handleTranslationChange(value: string) {
     setTranslation(value)
@@ -100,13 +95,10 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
   async function handleSubmit() {
     setPhase('grading')
     try {
-      if (!keys)
-        return
-      const resp = await fetch(`${API_BASE}/api/daily-review/grade-passage`, {
+      const resp = await apiFetch(`/api/daily-review/grade-passage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          openrouter_api_key: keys.openrouterApiKey,
           passage,
           source_language: sourceLanguage,
           user_translation: translation,

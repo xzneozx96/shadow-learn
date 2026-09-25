@@ -1,11 +1,11 @@
-import type { ShadowLearnDB } from '@/db'
-import type { ConceptCard, StudioLocale } from '@/features/learning-materials/domain/tips'
+import type { DataClient } from '@/db'
+import type { ConceptCard, StudioLocale, TipCardStatesRecord } from '@/features/learning-materials/domain/tips'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cardsKey, getTipCards, putTipCards } from '@/db'
-import { API_BASE } from '@/shared/lib/config'
+import { cardsKey, getTipCardStates, updateTipCardStates } from '@/db'
+import { apiFetch } from '@/shared/lib/api'
 
 interface Args {
-  db: ShadowLearnDB | null
+  db: DataClient | null
   videoId: string
   transcript: string
   locale: StudioLocale
@@ -25,10 +25,7 @@ type StatusBody = StatusReady | StatusPending | StatusNone
 
 /**
  * Cards deck state. Mirrors :func:`useTipStudio` — the cards artifact rides
- * on the same studio job pipeline (``kind=cards``). The hook layers a small
- * SRS-style state machine on top: ``state`` (new / known / learning) lives
- * per-card in the IDB row and is preserved across regenerations when the
- * front-question matches an existing card.
+ * on the same studio job pipeline (``kind=cards``).
  */
 export function useTipCards(args: Args) {
   const { db, videoId, transcript, locale } = args
@@ -36,9 +33,6 @@ export function useTipCards(args: Args) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
-  // False until the first IDB read settles. Same intent as useTipStudio:
-  // lets callers render a skeleton during hydration so the tile doesn't
-  // flash an empty state before the cached deck arrives.
   const [hydrated, setHydrated] = useState(false)
   // probeNonce is bumped by refresh() so other hook instances observing the
   // same artifact key can force a re-probe after a sibling kicks off a job.
@@ -46,12 +40,10 @@ export function useTipCards(args: Args) {
   const [probeNonce, setProbeNonce] = useState(0)
   const cancelledRef = useRef(false)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const cardsRef = useRef<ConceptCard[]>([])
+  const statesRef = useRef<TipCardStatesRecord['states']>({})
 
   const key = cardsKey(videoId, locale)
   const disabled = transcript.trim().length === 0
-
-  useEffect(() => { cardsRef.current = cards }, [cards])
 
   const clearPoll = useCallback(() => {
     if (pollTimerRef.current !== null) {
@@ -60,18 +52,10 @@ export function useTipCards(args: Args) {
     }
   }, [])
 
-  const persistDeck = useCallback(async (raw: RawCard[], priorCards?: ConceptCard[]) => {
-    if (!db)
-      return [] as ConceptCard[]
-    // Preserve known/learning state on regen — match by front-question text.
-    // Caller can pass an explicit `priorCards` to dodge a race when this
-    // runs right after a setCards(...) that hasn't committed yet (mount
-    // effect probe is the typical case).
-    const source = priorCards ?? cardsRef.current
-    const existingByFront = new Map(source.map(c => [c.front, c]))
+  const applyStates = useCallback((raw: RawCard[]): ConceptCard[] => {
     const now = new Date().toISOString()
-    const merged: ConceptCard[] = raw.map((nc) => {
-      const prior = existingByFront.get(nc.front)
+    return raw.map((nc) => {
+      const prior = statesRef.current[nc.front]
       return {
         ...nc,
         trap: nc.trap ?? null,
@@ -79,9 +63,7 @@ export function useTipCards(args: Args) {
         updatedAt: prior?.updatedAt ?? now,
       }
     })
-    await putTipCards(db, { key, videoId, locale, cards: merged, generatedAt: now })
-    return merged
-  }, [db, key, videoId, locale])
+  }, [])
 
   const pollJob = useCallback((jobId: string) => {
     const tick = async () => {
@@ -89,7 +71,7 @@ export function useTipCards(args: Args) {
         return
       let res: Response
       try {
-        res = await fetch(`${API_BASE}/api/jobs/${encodeURIComponent(jobId)}`)
+        res = await apiFetch(`/api/jobs/${encodeURIComponent(jobId)}`)
       }
       catch {
         pollTimerRef.current = setTimeout(tick, POLL_INTERVAL_MS)
@@ -115,10 +97,7 @@ export function useTipCards(args: Args) {
         return
       }
       if (body.status === 'complete' && body.result?.data?.cards) {
-        const merged = await persistDeck(body.result.data.cards)
-        if (cancelledRef.current)
-          return
-        setCards(merged)
+        setCards(applyStates(body.result.data.cards))
         setIndex(0)
         setFlipped(false)
         setStatus('ready')
@@ -127,7 +106,7 @@ export function useTipCards(args: Args) {
       setStatus('error')
     }
     pollTimerRef.current = setTimeout(tick, 0)
-  }, [persistDeck])
+  }, [applyStates])
 
   // Reset state on key change (setState-during-render)
   const keySig = `${db ? '1' : '0'}|${key}|${probeNonce}`
@@ -148,42 +127,31 @@ export function useTipCards(args: Args) {
       return
 
     void (async () => {
-      const cached = await getTipCards(db, key)
-      if (cancelledRef.current)
-        return
-      setHydrated(true)
-      if (cached) {
-        // Paint IDB cache for instant feedback, then always probe
-        // backend so an in-flight regen surfaces even after a cold
-        // remount (tab switch unmounts the parent and resets probeNonce).
-        setCards(cached.cards)
-        setStatus('ready')
-      }
-      // Track the prior deck explicitly so a probe-driven persistDeck
-      // can preserve state without depending on cardsRef having committed.
-      const priorCards = cached?.cards
       void probeNonce
       let res: Response
       try {
-        res = await fetch(
-          `${API_BASE}/api/tips/studio/cards/${encodeURIComponent(videoId)}?locale=${encodeURIComponent(locale)}`,
-        )
+        const [saved, probe] = await Promise.all([
+          getTipCardStates(db, videoId, locale),
+          apiFetch(`/api/tips/studio/cards/${encodeURIComponent(videoId)}?locale=${encodeURIComponent(locale)}`),
+        ])
+        statesRef.current = saved?.states ?? {}
+        res = probe
       }
       catch {
+        if (!cancelledRef.current)
+          setHydrated(true)
         return
       }
       if (cancelledRef.current)
         return
+      setHydrated(true)
       if (res.status === 404)
         return
       const body = await res.json() as StatusBody
       if (cancelledRef.current)
         return
       if (body.status === 'ready') {
-        const merged = await persistDeck(body.data.cards, priorCards)
-        if (cancelledRef.current)
-          return
-        setCards(merged)
+        setCards(applyStates(body.data.cards))
         setStatus('ready')
         return
       }
@@ -197,8 +165,7 @@ export function useTipCards(args: Args) {
       cancelledRef.current = true
       clearPoll()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, key, probeNonce])
+  }, [db, videoId, locale, probeNonce, applyStates, pollJob, clearPoll])
 
   const refresh = useCallback(() => setProbeNonce(n => n + 1), [])
 
@@ -215,16 +182,20 @@ export function useTipCards(args: Args) {
   const updateCardState = useCallback(async (newState: 'known' | 'learning') => {
     if (!db || cards.length === 0)
       return
+    const updatedAt = new Date().toISOString()
     const updated = cards.map((c, i) =>
-      i === index ? { ...c, state: newState, updatedAt: new Date().toISOString() } : c,
+      i === index ? { ...c, state: newState, updatedAt } : c,
     )
     setCards(updated)
-    await putTipCards(db, { key, videoId, locale, cards: updated, generatedAt: new Date().toISOString() })
+    const mark = { [cards[index].front]: { state: newState, updatedAt } }
+    statesRef.current = { ...statesRef.current, ...mark }
+    const saved = await updateTipCardStates(db, videoId, locale, prev => ({ videoId, locale, states: { ...prev?.states, ...mark } }))
+    statesRef.current = saved.states
     if (index < cards.length - 1) {
       setIndex(i => i + 1)
       setFlipped(false)
     }
-  }, [db, cards, index, key, videoId, locale])
+  }, [db, cards, index, videoId, locale])
 
   const markKnown = useCallback(() => updateCardState('known'), [updateCardState])
   const markLearning = useCallback(() => updateCardState('learning'), [updateCardState])
@@ -238,7 +209,7 @@ export function useTipCards(args: Args) {
     clearPoll()
     let res: Response
     try {
-      res = await fetch(`${API_BASE}/api/tips/studio/cards`, {
+      res = await apiFetch(`/api/tips/studio/cards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ video_id: videoId, transcript, locale }),
@@ -259,10 +230,7 @@ export function useTipCards(args: Args) {
     if (cancelledRef.current)
       return
     if (body.status === 'ready') {
-      const merged = await persistDeck(body.data.cards)
-      if (cancelledRef.current)
-        return
-      setCards(merged)
+      setCards(applyStates(body.data.cards))
       setIndex(0)
       setFlipped(false)
       setStatus('ready')
@@ -273,7 +241,7 @@ export function useTipCards(args: Args) {
       return
     }
     setStatus('error')
-  }, [db, videoId, transcript, locale, disabled, status, persistDeck, pollJob, clearPoll])
+  }, [db, videoId, transcript, locale, disabled, status, applyStates, pollJob, clearPoll])
 
   return {
     cards,

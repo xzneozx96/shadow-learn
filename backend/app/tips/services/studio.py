@@ -8,7 +8,15 @@ from typing import Any, Literal
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from app.job_store import clear_keyed_job, get_job_for_key, jobs, kick_off_keyed_job
+from app.catalog import service as catalog
+from app.job_store import (
+    clear_keyed_job,
+    complete_job,
+    fail_job,
+    get_job,
+    get_job_for_key,
+    kick_off_keyed_job,
+)
 from app.settings import settings
 from app.shared._retry import RetryableError, http_retry
 from app.tips.schemas import (
@@ -204,17 +212,9 @@ def studio_job_key(kind: StudioKind, video_id: str, locale: StudioLocale) -> str
     return f"tip-studio:{kind}:{video_id}:{locale}"
 
 
-def kick_off_studio_job(
+async def kick_off_studio_job(
     *, kind: StudioKind, video_id: str, transcript: str, locale: StudioLocale,
 ) -> str:
-    """Spawn (or resume) a background studio-generation job, return its id.
-
-    Dedupe key = (kind, videoId, locale). If a live job already exists for
-    that key, the existing id is returned and no new OpenRouter call is made.
-    The runner validates the LLM payload against the per-kind Pydantic model
-    inside the retry boundary (``_call_openrouter`` already does this), then
-    writes ``{"data": <validated dict>}`` onto ``Job.result``.
-    """
     async def _run(job_id: str) -> None:
         try:
             data = await generate_studio_artifact(
@@ -227,16 +227,14 @@ def kick_off_studio_job(
             # job's terminal state consistent with the schema contract.
             model = _KIND_TO_MODEL[kind]
             validated = model.model_validate(data).model_dump()
-            jobs[job_id].result = {"data": validated}
-            jobs[job_id].status = "complete"
-            jobs[job_id].step = "complete"
-        except Exception as exc:  # noqa: BLE001 — surface every failure on the Job
+            await catalog.put_tip_studio(video_id, kind, locale, validated)
+            await complete_job(job_id, {"data": validated})
+        except Exception as exc:
             logger.exception(
                 "kick_off_studio_job._run: failed job_id=%s kind=%s video_id=%s",
                 job_id, kind, video_id,
             )
-            jobs[job_id].status = "error"
-            jobs[job_id].error = str(exc)
+            await fail_job(job_id, str(exc))
 
     # Regen semantics: a POST means "I want fresh content." If the existing
     # keyed entry points at a *complete* (cached) job, drop it so a new
@@ -244,8 +242,8 @@ def kick_off_studio_job(
     # stale result. We only fast-path joins to *processing* work — that's
     # the actual concurrency win.
     key = studio_job_key(kind, video_id, locale)
-    existing_id = get_job_for_key(key)
-    if existing_id is not None and jobs[existing_id].status == "complete":
-        clear_keyed_job(key)
+    existing_id = await get_job_for_key(key)
+    if existing_id is not None and (await get_job(existing_id)).status == "complete":
+        await clear_keyed_job(key)
 
-    return kick_off_keyed_job(key, _run, id_prefix="tip-studio")
+    return await kick_off_keyed_job(key, _run, id_prefix="tip-studio", user_id=None)

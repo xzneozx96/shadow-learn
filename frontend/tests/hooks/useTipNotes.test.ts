@@ -1,28 +1,23 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
+import type { TipNote } from '@/features/learning-materials/domain/tips'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { deleteDB } from 'idb'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { initDB } from '@/db'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { deleteTipNote, updateTipNote } from '@/db'
 import { useTipNotes } from '@/features/learning-materials/application/useTipNotes'
 import { _resetTipNoteBusForTest, saveTipNote } from '@/features/learning-materials/lib/tipNoteBus'
-import 'fake-indexeddb/auto'
-
-const DB_NAME = 'shadowlearn'
+import { FakeApiClient, fakeDataClient } from '../fake-api'
 
 describe('useTipNotes', () => {
-  let db: ShadowLearnDB
+  let api: FakeApiClient
+  let db: DataClient
 
-  beforeEach(async () => {
+  beforeEach(() => {
     _resetTipNoteBusForTest()
-    db = await initDB()
+    api = new FakeApiClient()
+    db = fakeDataClient(api)
   })
 
-  afterEach(async () => {
-    db.close()
-    await deleteDB(DB_NAME).catch(() => undefined)
-  })
-
-  it('starts empty, then hydrates from IDB', async () => {
+  it('starts empty, then hydrates from the server', async () => {
     const { result } = renderHook(() => useTipNotes({ db, videoId: 'vid-1' }))
     expect(result.current.notes).toEqual([])
     expect(result.current.hydrated).toBe(false)
@@ -40,6 +35,17 @@ describe('useTipNotes', () => {
     const note = result.current.notes[0]
     expect(note.id).toMatch(/[0-9a-f-]{36}/)
     expect(note.createdAt).toBe(note.updatedAt)
+    expect(api.storeRows('tip-notes')).toEqual([note])
+  })
+
+  it('hydrates only the notes for its video', async () => {
+    api.seedStore('tip-notes', [
+      { id: 'n1', videoId: 'vid-1', title: 'Mine', html: '', createdAt: '2026-01-01', updatedAt: '2026-01-01', source: 'freeform' },
+      { id: 'n2', videoId: 'vid-2', title: 'Other', html: '', createdAt: '2026-01-01', updatedAt: '2026-01-01', source: 'freeform' },
+    ])
+    const { result } = renderHook(() => useTipNotes({ db, videoId: 'vid-1' }))
+    await waitFor(() => expect(result.current.hydrated).toBe(true))
+    expect(result.current.notes.map(n => n.title)).toEqual(['Mine'])
   })
 
   it('update bumps updatedAt and keeps createdAt', async () => {
@@ -60,6 +66,41 @@ describe('useTipNotes', () => {
     expect(after.updatedAt > before.updatedAt).toBe(true)
   })
 
+  it('update merges its patch into the note another device just changed', async () => {
+    const { result } = renderHook(() => useTipNotes({ db, videoId: 'vid-1' }))
+    await waitFor(() => expect(result.current.hydrated).toBe(true))
+    let id = ''
+    await act(async () => {
+      id = await result.current.create({ videoId: 'vid-1', title: 'A', html: '<p>x</p>', source: 'freeform' })
+    })
+    const phone = fakeDataClient(api)
+    await updateTipNote(phone, 'vid-1', id, prev => ({ ...prev!, title: 'Renamed on phone' }))
+
+    await act(async () => {
+      await result.current.update(id, { html: '<p>laptop</p>' })
+    })
+
+    const [stored] = api.storeRows<TipNote>('tip-notes')
+    expect(stored).toMatchObject({ title: 'Renamed on phone', html: '<p>laptop</p>' })
+    expect(result.current.notes[0]).toEqual(stored)
+  })
+
+  it('update recreates a note that another device deleted mid-edit', async () => {
+    const { result } = renderHook(() => useTipNotes({ db, videoId: 'vid-1' }))
+    await waitFor(() => expect(result.current.hydrated).toBe(true))
+    let id = ''
+    await act(async () => {
+      id = await result.current.create({ videoId: 'vid-1', title: 'A', html: '<p>x</p>', source: 'freeform' })
+    })
+    await deleteTipNote(fakeDataClient(api), 'vid-1', id)
+
+    await act(async () => {
+      await result.current.update(id, { html: '<p>kept</p>' })
+    })
+
+    expect(api.storeRows<TipNote>('tip-notes')).toMatchObject([{ id, title: 'A', html: '<p>kept</p>' }])
+  })
+
   it('remove deletes the row', async () => {
     const { result } = renderHook(() => useTipNotes({ db, videoId: 'vid-1' }))
     await waitFor(() => expect(result.current.hydrated).toBe(true))
@@ -71,6 +112,7 @@ describe('useTipNotes', () => {
       await result.current.remove(id)
     })
     expect(result.current.notes).toEqual([])
+    expect(api.storeRows('tip-notes')).toEqual([])
   })
 
   it('notes are sorted by updatedAt desc', async () => {

@@ -1,9 +1,10 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { SessionQuestion } from '@/shared/lib/study-utils'
 import type { ExerciseMode, VocabEntry } from '@/shared/types'
 import { z } from 'zod'
+import { getVocabEntryById } from '@/db'
 import { buildTool } from '@/features/agent/lib/tools/types'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { buildSessionQuestions } from '@/shared/lib/study-utils'
 
 export const RenderStudySessionSchema = z.object({
@@ -25,15 +26,14 @@ export const RenderStudySessionSchema = z.object({
 
 export type RenderStudySessionArgs = z.infer<typeof RenderStudySessionSchema>
 
-async function fetchVocabEntries(db: ShadowLearnDB, itemIds: string[]): Promise<VocabEntry[]> {
-  const fetched = await Promise.all(itemIds.map(id => db.get('vocabulary', id)))
+async function fetchVocabEntries(db: DataClient, itemIds: string[]): Promise<VocabEntry[]> {
+  const fetched = await Promise.all(itemIds.map(id => getVocabEntryById(db, id)))
   return fetched.filter((e): e is VocabEntry => e !== undefined)
 }
 
 export async function executeRenderStudySession(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: RenderStudySessionArgs,
-  openrouterApiKey: string,
   uiLanguage: string = 'en',
 ): Promise<{ type: 'study_session', props: { questions: SessionQuestion[] } } | { error: string }> {
   const entries = await fetchVocabEntries(db, args.itemIds)
@@ -52,11 +52,10 @@ export async function executeRenderStudySession(
     if (type === 'translation') {
       const results = await Promise.all(
         entries.map(async (entry) => {
-          const resp = await fetch(`${API_BASE}/api/translation/generate`, {
+          const resp = await apiFetch(`/api/translation/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              openrouter_api_key: openrouterApiKey,
               word: entry.word,
               romanization: entry.romanization,
               meaning: entry.meaning,
@@ -77,11 +76,10 @@ export async function executeRenderStudySession(
     else if (type === 'pronunciation') {
       const results = await Promise.all(
         entries.map(async (entry) => {
-          const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
+          const resp = await apiFetch(`/api/quiz/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              openrouter_api_key: openrouterApiKey,
               words: [{ word: entry.word, romanization: entry.romanization, meaning: entry.meaning, usage: entry.usage ?? '' }],
               exercise_type: 'pronunciation_sentence',
               count: sentencesPerWord,
@@ -97,11 +95,10 @@ export async function executeRenderStudySession(
       results.forEach(exercises => exercises.forEach(ex => pronExercises.push(ex)))
     }
     else if (type === 'cloze') {
-      const resp = await fetch(`${API_BASE}/api/quiz/generate`, {
+      const resp = await apiFetch(`/api/quiz/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          openrouter_api_key: openrouterApiKey,
           words: entries.slice(0, 5).map(e => ({ word: e.word, romanization: e.romanization, meaning: e.meaning, usage: e.usage ?? '' })),
           exercise_type: 'cloze',
           story_count: args.storyCount ?? 1,
@@ -135,8 +132,7 @@ export async function executeRenderStudySession(
   return { type: 'study_session', props: { questions } }
 }
 
-// openrouterApiKey and uiLanguage are bound at construction time via factory pattern
-export function makeRenderStudySessionTool(openrouterApiKey: string, uiLanguage: string = 'en') {
+export function makeRenderStudySessionTool(uiLanguage: string = 'en') {
   return buildTool({
     name: 'render_study_session',
     description: 'Start an interactive study session with one or more exercise types applied to specified vocabulary items. Call this when the user wants to practice vocabulary — it handles all exercise types in sequence. itemIds must be id values from get_vocabulary results. For cloze exercises include storyCount (1–10, default 1); for translation or pronunciation exercises include sentencesPerWord (1–5, default 1). Examples: { itemIds: ["id1","id2"], exerciseTypes: ["writing"] } — basic writing drill; { itemIds: ["id1","id2"], exerciseTypes: ["cloze"], storyCount: 3 } — 3 fill-in-the-blank stories.',
@@ -147,6 +143,6 @@ export function makeRenderStudySessionTool(openrouterApiKey: string, uiLanguage:
     maxResultSizeChars: Number.MAX_SAFE_INTEGER,
     searchHint: 'study session exercises quiz vocabulary practice',
     execute: async (input, context) =>
-      executeRenderStudySession(context.idb, input as RenderStudySessionArgs, openrouterApiKey, uiLanguage),
+      executeRenderStudySession(context.idb, input as RenderStudySessionArgs, uiLanguage),
   })
 }

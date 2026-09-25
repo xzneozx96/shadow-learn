@@ -1,6 +1,6 @@
 import type { PlaylistDetail } from '@/features/learning-materials/domain/collection'
 import { useEffect, useState } from 'react'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 interface State {
   data: PlaylistDetail | null
@@ -20,7 +20,7 @@ export function usePlaylist(playlistId: string): State {
 
   useEffect(() => {
     let cancelled = false
-    fetch(`${API_BASE}/api/playlist/${encodeURIComponent(playlistId)}`)
+    apiFetch(`/api/playlist/${encodeURIComponent(playlistId)}`)
       .then(async (res) => {
         if (!res.ok)
           throw new Error(`Server error: ${res.status}`)

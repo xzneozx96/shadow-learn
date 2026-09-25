@@ -1,18 +1,18 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
-import { getVocabEntriesByLesson } from '@/db'
+import { getAllVocabEntries, getVocabEntriesByLesson } from '@/db'
 import { compactVocab } from '@/features/agent/lib/agent-utils'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
 export async function executeGetVocabulary(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: { lessonId?: string },
 ) {
   if (args.lessonId) {
     const entries = await getVocabEntriesByLesson(db, args.lessonId)
     return entries.map(compactVocab)
   }
-  const all = await db.getAll('vocabulary')
+  const all = await getAllVocabEntries(db)
   return all.slice(0, 50).map(compactVocab)
 }
 

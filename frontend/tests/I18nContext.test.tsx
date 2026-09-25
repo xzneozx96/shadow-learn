@@ -1,19 +1,16 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import * as React from 'react'
 import { use } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nContext, I18nProvider } from '@/app/providers/I18nContext'
-import { initDB, saveSettings } from '@/db'
-import 'fake-indexeddb/auto'
+import { fakeDataClient } from './fake-api'
 
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: () => ({ db: (globalThis as any).__testDb }),
 }))
 
 beforeEach(async () => {
-  globalThis.indexedDB = new IDBFactory()
-  ;(globalThis as any).__testDb = await initDB()
+  ;(globalThis as any).__testDb = fakeDataClient()
 })
 
 // Consumer component
@@ -47,8 +44,7 @@ describe('i18nProvider', () => {
   })
 
   it('hydrates locale from IDB when uiLanguage is saved as en', async () => {
-    const db = (globalThis as any).__testDb
-    await saveSettings(db, { translationLanguage: 'zh', uiLanguage: 'en' })
+    ;(globalThis as any).__testDb.api.seed('/api/store/settings/settings', { translationLanguage: 'zh', uiLanguage: 'en' })
 
     render(<LocaleConsumer />, { wrapper })
     await waitFor(() => {

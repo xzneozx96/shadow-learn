@@ -6,7 +6,9 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.quiz.router import WordInput, QuizRequest, _build_cloze_prompt
+from app.quiz.router import QuizRequest, WordInput, _build_cloze_prompt
+
+pytestmark = pytest.mark.usefixtures("stored_user", "provider_env")
 
 _WORDS = [{"word": "今天", "romanization": "jīntiān", "meaning": "today", "usage": "今天很好"}]
 _CLOZE_BODY = {"exercises": [{"story": "今天很好。", "blanks": ["今天"]}]}
@@ -26,7 +28,6 @@ def test_word_input_uses_romanization_field():
 def test_quiz_request_has_source_language():
     """QuizRequest must have source_language, defaulting to zh-CN."""
     req = QuizRequest(
-        openrouter_api_key="key",
         words=[WordInput(word="你好", romanization="nǐ hǎo", meaning="hello", usage="你好世界")],
         exercise_type="cloze",
     )
@@ -43,10 +44,11 @@ def test_build_cloze_prompt_english():
     assert "Chinese" not in prompt
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_quiz_uses_json_schema_for_cloze(respx_mock):
     """generate_quiz must send json_schema response_format for cloze."""
     import json
+
     import httpx as _httpx
     captured = {}
 
@@ -59,12 +61,12 @@ async def test_quiz_uses_json_schema_for_cloze(respx_mock):
 
     respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(side_effect=capture_post)
 
-    from httpx import AsyncClient, ASGITransport
+    from httpx import ASGITransport, AsyncClient
+
     from app.main import app
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.post("/api/quiz/generate", json={
-            "openrouter_api_key": "key",
             "words": [{"word": "今天", "romanization": "jīntiān", "meaning": "today", "usage": "今天很好"}],
             "exercise_type": "cloze",
         })
@@ -74,10 +76,11 @@ async def test_quiz_uses_json_schema_for_cloze(respx_mock):
     assert captured["payload"]["reasoning"] == {"effort": "none"}
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_quiz_uses_json_schema_for_pronunciation(respx_mock):
     """generate_quiz must send json_schema response_format for pronunciation_sentence."""
     import json
+
     import httpx as _httpx
     captured = {}
 
@@ -90,12 +93,12 @@ async def test_quiz_uses_json_schema_for_pronunciation(respx_mock):
 
     respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(side_effect=capture_post)
 
-    from httpx import AsyncClient, ASGITransport
+    from httpx import ASGITransport, AsyncClient
+
     from app.main import app
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.post("/api/quiz/generate", json={
-            "openrouter_api_key": "key",
             "words": [{"word": "今天", "romanization": "jīntiān", "meaning": "today", "usage": "今天很好"}],
             "exercise_type": "pronunciation_sentence",
         })
@@ -105,7 +108,7 @@ async def test_quiz_uses_json_schema_for_pronunciation(respx_mock):
     assert captured["payload"]["reasoning"] == {"effort": "none"}
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_quiz_retries_on_429(respx_mock):
     """generate_quiz retries and succeeds after an initial 429."""
     call_count = 0
@@ -123,7 +126,6 @@ async def test_generate_quiz_retries_on_429(respx_mock):
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         with patch("asyncio.sleep", new_callable=AsyncMock):
             resp = await client.post("/api/quiz/generate", json={
-                "openrouter_api_key": "key",
                 "words": _WORDS,
                 "exercise_type": "cloze",
             })
@@ -132,7 +134,7 @@ async def test_generate_quiz_retries_on_429(respx_mock):
     assert call_count == 2
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_generate_quiz_retries_on_truncated_response(respx_mock):
     """generate_quiz retries when finish_reason='length' then succeeds."""
     call_count = 0
@@ -150,7 +152,6 @@ async def test_generate_quiz_retries_on_truncated_response(respx_mock):
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         with patch("asyncio.sleep", new_callable=AsyncMock):
             resp = await client.post("/api/quiz/generate", json={
-                "openrouter_api_key": "key",
                 "words": _WORDS,
                 "exercise_type": "cloze",
             })

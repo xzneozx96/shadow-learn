@@ -14,7 +14,7 @@ interface WordCardProps {
 }
 
 export function WordCard({ entry, className, onPlay, isLoading }: WordCardProps) {
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const { t } = useI18n()
   const [breakdownOpen, setBreakdownOpen] = useState(false)
   const isChinese = entry.sourceLanguage?.startsWith('zh') ?? false
@@ -64,7 +64,6 @@ export function WordCard({ entry, className, onPlay, isLoading }: WordCardProps)
           meaning={entry.meaning}
           sourceLanguage={entry.sourceLanguage}
           db={db}
-          openrouterApiKey={keys?.openrouterApiKey ?? null}
         />
       )}
     </div>

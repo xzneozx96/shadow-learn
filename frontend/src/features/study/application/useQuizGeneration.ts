@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { getSegments } from '@/db'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch, responseError } from '@/shared/lib/api'
 import { isClozeExercise, isPronExercise } from '@/shared/lib/study-utils'
 
 interface ClozeExerciseData { story: string, blanks: string[] }
@@ -25,7 +25,7 @@ interface UseQuizGenerationReturn {
 }
 
 export function useQuizGeneration(): UseQuizGenerationReturn {
-  const { keys, db } = useAuth()
+  const { db } = useAuth()
   const { locale } = useI18n()
   const [loading, setLoading] = useState(false)
 
@@ -76,11 +76,10 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
 
       const [clozeResp, pronResp] = await Promise.all([
         clozeCount > 0
-          ? fetch(`${API_BASE}/api/quiz/generate`, {
+          ? apiFetch(`/api/quiz/generate`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                openrouter_api_key: keys?.openrouterApiKey,
                 words: wordMap(pool.slice(0, 5)),
                 exercise_type: 'cloze',
                 story_count: clozeCount,
@@ -89,16 +88,15 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
               signal,
             }).then(async (r) => {
               if (!r.ok)
-                throw new Error(`Quiz generation failed (${r.status})`)
+                throw await responseError(r, `Quiz generation failed (${r.status})`)
               return r.json()
             })
           : Promise.resolve({ exercises: [] }),
         pronCount > 0
-          ? fetch(`${API_BASE}/api/quiz/generate`, {
+          ? apiFetch(`/api/quiz/generate`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                openrouter_api_key: keys?.openrouterApiKey,
                 words: wordMap(pool),
                 exercise_type: 'pronunciation_sentence',
                 count: pronCount,
@@ -107,7 +105,7 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
               signal,
             }).then(async (r) => {
               if (!r.ok)
-                throw new Error(`Quiz generation failed (${r.status})`)
+                throw await responseError(r, `Quiz generation failed (${r.status})`)
               return r.json()
             })
           : Promise.resolve({ exercises: [] }),
@@ -122,7 +120,7 @@ export function useQuizGeneration(): UseQuizGenerationReturn {
     finally {
       setLoading(false)
     }
-  }, [keys, locale, db])
+  }, [locale, db])
 
   return { generateQuiz, loading }
 }

@@ -5,13 +5,14 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-from app.settings import settings
+from app.keys.models import Provider
+from app.keys.service import ProviderKeys
 from app.shared._retry import RetryableError, http_retry
-from app.shared.utils import _resolve_key
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ def _run_assessment(
         result = subprocess.run(
             ["ffmpeg", "-y", "-i", str(webm_path),
              "-ar", "16000", "-ac", "1", "-f", "wav", str(wav_path)],
+            check=False,
             capture_output=True, timeout=30,
         )
         print(f"[assess] ffmpeg: {time.perf_counter() - t0:.2f}s")
@@ -115,32 +117,31 @@ def _run_assessment(
         }
 
 
+class AssessForm(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    audio: UploadFile
+    reference_text: str
+    language: str = "zh-CN"
+
+
 @router.post("/assess", response_model=PronunciationResult)
-async def assess_pronunciation(
-    audio: UploadFile,
-    reference_text: str = Form(...),
-    language: str = Form("zh-CN"),
-    azure_key: str | None = Form(None),
-    azure_region: str | None = Form(None),
-):
+async def assess_pronunciation(form: Annotated[AssessForm, Form()], keys: ProviderKeys):
     try:
         import azure.cognitiveservices.speech  # noqa: F401
     except ImportError:
         raise HTTPException(503, "Azure Speech SDK not installed")
 
-    resolved_key = _resolve_key(azure_key, settings.azure_speech_key, "Azure Speech key")
-    resolved_region = _resolve_key(azure_region, settings.azure_speech_region, "Azure Speech region")
-    key_source = "request" if azure_key else "env"
-    print(f"[assess] key_source={key_source}, region={resolved_region}, key=...{resolved_key[-4:]}")
+    speech_key = await keys(Provider.azure_speech)
 
     t0 = time.perf_counter()
-    audio_bytes = await audio.read()
+    audio_bytes = await form.audio.read()
     print(f"[assess] upload read: {time.perf_counter() - t0:.2f}s ({len(audio_bytes)} bytes)")
 
     @http_retry(logger, max_attempts=2)
     async def _call() -> dict:
         return await asyncio.to_thread(
-            _run_assessment, audio_bytes, reference_text, language, resolved_key, resolved_region,
+            _run_assessment, audio_bytes, form.reference_text, form.language, speech_key.value, speech_key.region,
         )
 
     data = await _call()

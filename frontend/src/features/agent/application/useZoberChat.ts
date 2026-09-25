@@ -18,7 +18,6 @@ import { toast } from 'sonner'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import {
-  appendAgentLog,
   getExerciseAccuracy,
   getLatestSummary,
   getLearnerProfile,
@@ -46,7 +45,7 @@ import {
   getToolDefinitions,
   getToolPoolForSurface,
 } from '@/features/agent/lib/tools/index'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { getEffectiveDueItems } from '@/shared/lib/skillSessionProgress'
 
 // Raised from 5 to 20 to match agentic-rag's MAX_TOOL_ROUNDS_RAG: the new RAG
@@ -98,9 +97,8 @@ function narrowArgs(args: ZoberChatArgs): NarrowedArgs {
 }
 
 export function useZoberChat(args: ZoberChatArgs) {
-  const { keys, db } = useAuth()
+  const { db } = useAuth()
   const { locale } = useI18n()
-  const apiKey = keys?.openrouterApiKey ?? ''
   const abortControllerRef = useRef(new AbortController())
 
   const narrowed = useMemo(() => narrowArgs(args), [args])
@@ -119,13 +117,12 @@ export function useZoberChat(args: ZoberChatArgs) {
   const [allMessages, setAllMessages] = useState<UIMessage[]>([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(true)
   const allStoredRef = useRef<UIMessage[]>([])
+  const knownMessageIdsRef = useRef<Set<string>>(new Set())
   const loadedOffsetRef = useRef(0)
   const [hasMore, setHasMore] = useState(false)
 
   // Lesson-only refs (parity with legacy useAgentChat)
   const sessionStartRef = useRef(Date.now())
-  const toolCallCountRef = useRef(0)
-  const errorCountRef = useRef(0)
   const exercisesThisSessionRef = useRef(0)
   // Real token usage from the last completed turn (when the backend reports it),
   // used as the primary overflow signal for compaction; undefined → fall back to estimate.
@@ -175,7 +172,7 @@ export function useZoberChat(args: ZoberChatArgs) {
             vocabularyDueCount: due.length,
           },
           accuracy,
-          deferredToolNames: getDeferredToolNames(apiKey, locale),
+          deferredToolNames: getDeferredToolNames(locale),
           exhausted: false,
           mode: args.mode,
         },
@@ -220,19 +217,19 @@ export function useZoberChat(args: ZoberChatArgs) {
         summaryCoversThroughId: summary?.coversThroughMessageId,
       }
     }
-  }, [db, threadId, apiKey, locale])
+  }, [db, threadId, locale])
 
   useEffect(() => {
     void refreshContext()
   }, [refreshContext])
 
   const toolPool = useMemo(
-    () => getToolPoolForSurface(args.surface, apiKey, { uiLanguage: locale }),
-    [args.surface, apiKey, locale],
+    () => getToolPoolForSurface(args.surface, { uiLanguage: locale }),
+    [args.surface, locale],
   )
   const executor = useMemo(
-    () => new ToolExecutor(getAllBaseTools(apiKey, locale)),
-    [apiKey, locale],
+    () => new ToolExecutor(getAllBaseTools(locale)),
+    [locale],
   )
 
   const toolContext = useMemo(() => {
@@ -257,7 +254,8 @@ export function useZoberChat(args: ZoberChatArgs) {
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: `${API_BASE}/api/agent`,
+        api: '/api/agent',
+        fetch: (input, init) => apiFetch(String(input), init),
         prepareSendMessagesRequest: async ({ messages, trigger, messageId }) => {
           await refreshContext()
           const ctx = ctxRef.current
@@ -333,7 +331,6 @@ export function useZoberChat(args: ZoberChatArgs) {
             body: {
               messages: outgoing,
               system_prompt: builtPrompt,
-              openrouter_api_key: apiKey || null,
               tools: includeTools ? getToolDefinitions(toolPool) : [],
               // Pass trigger + lastMessage id so backend can echo the id on
               // auto-resubmits, enabling AI SDK v6 to stitch tool-loop rounds
@@ -345,7 +342,7 @@ export function useZoberChat(args: ZoberChatArgs) {
           }
         },
       }),
-    [apiKey, refreshContext, toolPool],
+    [refreshContext, toolPool],
   )
 
   const {
@@ -383,7 +380,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       return roundsSinceUser < maxRoundsForSurface
     },
     async onToolCall({ toolCall }) {
-      toolCallCountRef.current += 1
       if (!db || !toolContext)
         return
       const { output, isError } = await executor.execute(
@@ -393,7 +389,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       if (isError) {
         const errMsg = String((output as Record<string, unknown>).error ?? 'Unknown error')
         toast.error(`Tool [${toolCall.toolName}] failed: ${errMsg}`)
-        errorCountRef.current += 1
         addToolResult({
           tool: toolCall.toolName,
           toolCallId: toolCall.toolCallId,
@@ -410,7 +405,6 @@ export function useZoberChat(args: ZoberChatArgs) {
       }
     },
     onError(err) {
-      errorCountRef.current += 1
       console.error('Agent chat error:', err)
       toast.error(err.message || 'Unknown error')
     },
@@ -435,6 +429,7 @@ export function useZoberChat(args: ZoberChatArgs) {
       if (cancelled)
         return
       allStoredRef.current = stored
+      knownMessageIdsRef.current = new Set(stored.map(m => m.id))
       const startOffset = Math.max(0, stored.length - PAGE_SIZE)
       loadedOffsetRef.current = startOffset
       const visible = stored.slice(startOffset)
@@ -490,23 +485,14 @@ export function useZoberChat(args: ZoberChatArgs) {
     void (async () => {
       const summary = await getLatestSummary(db, threadId)
       const toStore = buildHistoryToStore(fullHistory, summary)
-      await saveThreadMessages(db, threadId, toStore, surface, ownerId, courseId, videoId)
-      if (narrowed.lesson) {
-        void appendAgentLog(db, {
-          lessonId: narrowed.lesson.lessonId,
-          timestamp: new Date().toISOString(),
-          durationMs: Date.now() - sessionStartRef.current,
-          messageCount: messages.length,
-          toolCallCount: toolCallCountRef.current,
-          errorCount: errorCountRef.current,
-          exercisesCompleted: exercisesThisSessionRef.current,
-        })
-      }
+      await saveThreadMessages(db, threadId, { messages: toStore, knownMessageIds: knownMessageIdsRef.current, surface, ownerId, courseId, videoId })
+      for (const m of toStore)
+        knownMessageIdsRef.current.add(m.id)
       // Post-response, idle: compact when the turn reached the usable budget.
       // Prefers real usage from this turn; falls back to the CJK estimate.
-      void maybeCompact(db, threadId, fullHistory, apiKey, API_BASE, locale, lastUsageTokensRef.current)
+      void maybeCompact(db, threadId, fullHistory, locale, lastUsageTokensRef.current)
     })()
-  }, [status, messages, db, narrowed, threadId, apiKey, locale])
+  }, [status, messages, db, narrowed, threadId, locale])
 
   const loadMore = useCallback(() => {
     const next = Math.max(0, loadedOffsetRef.current - PAGE_SIZE)

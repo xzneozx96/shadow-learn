@@ -1,19 +1,21 @@
-import type { ShadowLearnDB } from '@/db'
-import type { LessonMeta, Segment } from '@/shared/types'
+import type { DataClient } from '@/db'
+import type { LessonMedia, LessonMeta, Segment } from '@/shared/types'
 import { useCallback, useEffect, useState } from 'react'
-import { getLessonMeta, getSegments, saveLessonMeta } from '@/db'
+import { getLesson, updateLessonMeta } from '@/db'
 
 interface UseLessonResult {
   meta: LessonMeta | null
   segments: Segment[]
+  media: LessonMedia | null
   loading: boolean
   error: string | null
   updateMeta: (updates: Partial<LessonMeta>) => void
 }
 
-export function useLesson(db: ShadowLearnDB | null, lessonId: string | undefined): UseLessonResult {
+export function useLesson(db: DataClient | null, lessonId: string | undefined): UseLessonResult {
   const [meta, setMeta] = useState<LessonMeta | null>(null)
   const [segments, setSegments] = useState<Segment[]>([])
+  const [media, setMedia] = useState<LessonMedia | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,32 +23,36 @@ export function useLesson(db: ShadowLearnDB | null, lessonId: string | undefined
     if (!db || !lessonId)
       return
 
-    async function load() {
+    let cancelled = false
+    async function load(client: DataClient, id: string) {
       try {
         setLoading(true)
-        const [m, s] = await Promise.all([
-          getLessonMeta(db!, lessonId!),
-          getSegments(db!, lessonId!),
-        ])
-        if (!m) {
-          setError('Lesson not found')
+        const lesson = await getLesson(client, id)
+        if (cancelled)
           return
-        }
-        // Update lastOpenedAt
-        m.lastOpenedAt = new Date().toISOString()
-        await saveLessonMeta(db!, m)
-        setMeta(m)
-        setSegments(s || [])
+        if (!lesson)
+          return
+        const openedAt = new Date().toISOString()
+        setMeta({ ...lesson.meta, lastOpenedAt: openedAt })
+        setSegments(lesson.segments)
+        setMedia(lesson.media)
+        updateLessonMeta(client, lesson.meta, prev => ({ ...prev, lastOpenedAt: openedAt }))
+          .then(saved => setMeta(prev => prev && { ...prev, version: saved.version }), () => {})
       }
       catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load lesson')
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : 'Failed to load lesson')
       }
       finally {
-        setLoading(false)
+        if (!cancelled)
+          setLoading(false)
       }
     }
 
-    load()
+    load(db, lessonId)
+    return () => {
+      cancelled = true
+    }
   }, [db, lessonId])
 
   // Stable reference (empty deps) — safe to list as a dep in LessonView callbacks
@@ -54,5 +60,5 @@ export function useLesson(db: ShadowLearnDB | null, lessonId: string | undefined
     setMeta(prev => prev ? { ...prev, ...updates } : prev)
   }, [])
 
-  return { meta, segments, loading, error, updateMeta }
+  return { meta, segments, media, loading, error, updateMeta }
 }

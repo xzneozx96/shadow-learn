@@ -1,6 +1,6 @@
 import type { CharData } from '@/shared/lib/hanzi/types'
 
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 
 export interface BreakdownStoryRequest {
   word: string
@@ -8,7 +8,7 @@ export interface BreakdownStoryRequest {
   meaning: string
   sinoVietnamese: string
   characters: CharData[]
-  openrouterApiKey: string | null
+  force?: boolean
 }
 
 export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<string> {
@@ -35,12 +35,12 @@ export async function fetchBreakdownStory(req: BreakdownStoryRequest): Promise<s
         meaning: comp.meaning,
       })),
     })),
-    openrouter_api_key: req.openrouterApiKey,
+    force: req.force ?? false,
   }
 
   let resp: Response
   try {
-    resp = await fetch(`${API_BASE}/api/vocab/breakdown-story`, {
+    resp = await apiFetch(`/api/vocab/breakdown-story`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

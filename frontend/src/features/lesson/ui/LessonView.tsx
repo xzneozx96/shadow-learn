@@ -6,7 +6,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { usePlayer } from '@/app/providers/PlayerContext'
-import { getVideo, saveLessonMeta } from '@/db'
+import { updateLessonMeta } from '@/db'
 import { AgentActionsProvider, useAgentActions } from '@/features/agent/application/AgentActionsContext'
 import { CompanionPanel } from '@/features/agent/ui/CompanionPanel'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
@@ -26,15 +26,14 @@ import { VideoPanel } from './VideoPanel'
 function LessonViewContent() {
   const { id } = useParams<{ id: string }>()
   const { t } = useI18n()
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const { player } = usePlayer()
-  const { updateLesson } = useLessons()
-  const { meta, segments, loading, error, updateMeta } = useLesson(db, id)
+  const { renameLesson } = useLessons()
+  const { meta, segments, media, loading, error, updateMeta } = useLesson(db, id)
   const activeSegment = useActiveSegment(segments)
   const { bests, getBest, saveBest, getAudio } = useSpeakingBests(id ?? '')
   const { refresh: refreshQueue } = useStudyQueueContext()
 
-  const [videoBlob, setVideoBlob] = useState<Blob | undefined>()
   type ShadowingActiveMode = null | { mode: 'dictation' | 'speaking', segments: Segment[] }
   const [shadowingMode, setShadowingMode] = useState<ShadowingActiveMode>(null)
   const [pickerSegment, setPickerSegment] = useState<Segment | null>(null)
@@ -107,17 +106,6 @@ function LessonViewContent() {
     clearAction()
   }, [pendingAction, clearAction, segments, player])
 
-  // Load media blob (video for uploads, audio for YouTube lessons)
-  useEffect(() => {
-    if (!db || !id || !meta)
-      return
-    getVideo(db, id).then((blob) => {
-      if (blob)
-        setVideoBlob(blob)
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, id, meta?.id])
-
   const handleSegmentClick = useCallback((segment: { start: number }) => {
     if (!player)
       return
@@ -133,11 +121,12 @@ function LessonViewContent() {
       clearTimeout(progressDebounceRef.current)
     progressDebounceRef.current = setTimeout(() => {
       if (dbRef.current && metaRef.current) {
-        saveLessonMeta(dbRef.current, { ...metaRef.current, progressSegmentId: segmentId })
+        updateLessonMeta(dbRef.current, metaRef.current, prev => ({ ...prev, progressSegmentId: segmentId }))
+          .then(saved => updateMeta({ version: saved.version }))
       }
       pendingSegmentIdRef.current = null
     }, 500)
-  }, []) // stable — reads live values through refs
+  }, [updateMeta])
 
   // Flush pending progress write immediately on unmount.
   // Handles SPA navigation away from the lesson within the 500ms debounce window.
@@ -147,7 +136,8 @@ function LessonViewContent() {
     return () => {
       if (progressDebounceRef.current && pendingSegmentIdRef.current && dbRef.current && metaRef.current) {
         clearTimeout(progressDebounceRef.current)
-        void saveLessonMeta(dbRef.current, { ...metaRef.current, progressSegmentId: pendingSegmentIdRef.current })
+        const segmentId = pendingSegmentIdRef.current
+        void updateLessonMeta(dbRef.current, metaRef.current, prev => ({ ...prev, progressSegmentId: segmentId }))
       }
     }
   }, [])
@@ -155,9 +145,9 @@ function LessonViewContent() {
   const handleRename = useCallback(async (newTitle: string) => {
     if (!meta)
       return
-    await updateLesson({ ...meta, title: newTitle })
+    await renameLesson(meta, newTitle)
     updateMeta({ title: newTitle })
-  }, [meta, updateLesson, updateMeta])
+  }, [meta, renameLesson, updateMeta])
 
   const handleShadowingStart = useCallback(
     (mode: 'dictation' | 'speaking', count: number | 'all') => {
@@ -217,14 +207,14 @@ function LessonViewContent() {
     }
     const target = segments.find(s => s.id === meta.progressSegmentId)
     if (!target) {
-      // EC2: orphaned segment ID — clear it from IDB and start at beginning
-      saveLessonMeta(db, { ...meta, progressSegmentId: null })
+      updateLessonMeta(db, meta, prev => ({ ...prev, progressSegmentId: null }))
+        .then(saved => updateMeta({ version: saved.version }))
       hasRestoredRef.current = true
       return
     }
     player.seekTo(target.start)
     hasRestoredRef.current = true
-  }, [player, meta, segments, db, deepLinkSegmentId])
+  }, [player, meta, segments, db, deepLinkSegmentId, updateMeta])
 
   // Loading state
   if (loading) {
@@ -267,7 +257,7 @@ function LessonViewContent() {
             lesson={meta}
             segments={segments}
             activeSegment={activeSegment}
-            videoBlob={videoBlob}
+            media={media}
             onRename={handleRename}
           />
         </div>
@@ -279,8 +269,6 @@ function LessonViewContent() {
                 <ShadowingPanel
                   segments={shadowingMode.segments}
                   mode={shadowingMode.mode}
-                  azureKey={keys?.azureSpeechKey ?? ''}
-                  azureRegion={keys?.azureSpeechRegion ?? ''}
                   onExit={handleShadowingExit}
                   lesson={meta}
                   getBest={getBest}

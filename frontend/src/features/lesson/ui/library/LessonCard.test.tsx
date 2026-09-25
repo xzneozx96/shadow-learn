@@ -27,7 +27,7 @@ vi.mock('@/features/vocabulary/application/VocabularyContext', () => ({
 }))
 
 vi.mock('@/features/lesson/application/useUploadThumbnail', () => ({
-  useUploadThumbnail: () => null,
+  useUploadThumbnail: () => ({ ref: () => {}, dataUrl: null }),
 }))
 
 function makeMeta(overrides: Partial<LessonMeta> = {}): LessonMeta {

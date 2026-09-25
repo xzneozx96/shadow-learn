@@ -1,4 +1,4 @@
-import type { AgentMemory, ShadowLearnDB } from '@/db'
+import type { AgentMemory, DataClient } from '@/db'
 import { deleteAgentMemory, getAgentMemoriesByTag, getAllAgentMemories, saveAgentMemory } from '@/db'
 
 const SPLIT_REGEX = /\s+/u
@@ -7,7 +7,7 @@ const SPLIT_REGEX = /\s+/u
  * Save a new memory entry to the agent-memory store.
  */
 export async function saveMemory(
-  db: ShadowLearnDB,
+  db: DataClient,
   opts: { content: string, tags: string[], importance: 1 | 2 | 3, lessonId?: string },
 ): Promise<{ id: string }> {
   const id = crypto.randomUUID()
@@ -30,7 +30,7 @@ export async function saveMemory(
  * Returns matches sorted by importance (desc) then recency (desc).
  */
 export async function recallMemory(
-  db: ShadowLearnDB,
+  db: DataClient,
   query: string,
   tags?: string[],
 ): Promise<AgentMemory[]> {
@@ -67,7 +67,7 @@ export async function recallMemory(
  * Get the top N most important memories for system prompt injection.
  */
 export async function getMemorySummary(
-  db: ShadowLearnDB,
+  db: DataClient,
   limit = 3,
 ): Promise<AgentMemory[]> {
   const all = await getAllAgentMemories(db)
@@ -83,6 +83,6 @@ export async function getMemorySummary(
 /**
  * Delete a memory entry by ID.
  */
-export async function removeMemory(db: ShadowLearnDB, id: string): Promise<void> {
+export async function removeMemory(db: DataClient, id: string): Promise<void> {
   await deleteAgentMemory(db, id)
 }

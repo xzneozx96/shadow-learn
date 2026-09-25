@@ -1,45 +1,38 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { cardsKey } from '@/db'
 import { CardsTab } from '@/features/learning-materials/ui/tips/tabs/CardsTab'
-import 'fake-indexeddb/auto'
+import { FakeApiClient, fakeDataClient } from '../../../../../../tests/fake-api'
 
 vi.mock('@/app/providers/I18nContext', async () => {
   const { getTranslation } = await import('@/shared/lib/i18n')
   return { useI18n: () => ({ locale: 'en', setLocale: vi.fn(), t: getTranslation('en') }) }
 })
 
-// Use real DB so we can verify persistence
-const mockDb = { value: null as any }
+const mockDb = { value: null as any, api: null as unknown as FakeApiClient }
 vi.mock('@/app/providers/AuthContext', () => ({
-  useAuth: () => ({ db: mockDb.value, keys: null }),
+  useAuth: () => ({ db: mockDb.value }),
 }))
 
-beforeEach(async () => {
-  const { deleteDB } = await import('idb')
-  mockDb.value?.close?.()
-  mockDb.value = null
-  await deleteDB('shadowlearn')
-  const { initDB, putTipCards } = await import('@/db')
-  mockDb.value = await initDB()
-  await putTipCards(mockDb.value, {
-    key: cardsKey('v1', 'en'),
-    videoId: 'v1',
-    locale: 'en',
+const DECK = {
+  status: 'ready',
+  jobId: 'jc',
+  data: {
     cards: [
-      { id: 'a', front: 'Q1', rule: 'R1', example: 'E1', trap: null, state: 'new', updatedAt: '' },
-      { id: 'b', front: 'Q2', rule: 'R2', example: 'E2', trap: 'T2', state: 'new', updatedAt: '' },
+      { id: 'a', front: 'Q1', rule: 'R1', example: 'E1', trap: null },
+      { id: 'b', front: 'Q2', rule: 'R2', example: 'E2', trap: 'T2' },
     ],
-    generatedAt: '',
-  })
-  // Default to a benign 404 probe response so the hook lands on idle when
-  // no cache row exists. Specific tests override this when they care.
-  globalThis.fetch = vi.fn().mockResolvedValue({
-    ok: false,
-    status: 404,
-    json: async () => ({ status: 'none' }),
-  }) as any
+  },
+}
+
+function serve(body: unknown) {
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body }) as any
+}
+
+beforeEach(() => {
+  mockDb.api = new FakeApiClient()
+  mockDb.value = fakeDataClient(mockDb.api)
+  serve(DECK)
 })
 
 describe('cardsTab', () => {
@@ -60,16 +53,17 @@ describe('cardsTab', () => {
     expect(screen.getByText(/E1/)).toBeInTheDocument()
   })
 
-  it('marking Got it advances to next card', async () => {
+  it('marking Got it advances to next card and saves the mark', async () => {
     render(<CardsTab {...props} />)
     await waitFor(() => expect(screen.getByText('Q1')).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /got it/i }))
     await waitFor(() => expect(screen.getByText('Q2')).toBeInTheDocument())
+    const [stored] = mockDb.api.storeRows<{ states: Record<string, { state: string }> }>('tip-card-states')
+    expect(stored.states.Q1.state).toBe('known')
   })
 
-  it('shows generate CTA empty state when deck is empty', async () => {
-    // Wipe cards
-    await mockDb.value.delete('tip-cards', cardsKey('v1', 'en'))
+  it('shows generate CTA empty state when the server has no deck', async () => {
+    serve({ status: 'none' })
     render(<CardsTab videoId="v1" transcript="x" transcriptStatus="ready" />)
     await waitFor(() => expect(screen.getByRole('button', { name: /generate cards/i })).toBeInTheDocument())
   })

@@ -5,7 +5,7 @@ import { X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '@/app/providers/I18nContext'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import {
   computeAccuracyScore,
   computeCharDiff,
@@ -29,8 +29,6 @@ interface SpeakingRevealProps {
   mode: 'speaking'
   segment: Segment
   blob: Blob
-  azureKey: string
-  azureRegion: string
   language: string
   lessonId: string
   previousBest?: ShadowingBest
@@ -222,8 +220,6 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
         <SpeakingScores
           blob={props.blob}
           segment={segment}
-          azureKey={props.azureKey}
-          azureRegion={props.azureRegion}
           language={props.language}
           onLoading={setLoadingScore}
           onScore={(score) => { speakingScoreRef.current = score }}
@@ -265,8 +261,6 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
 interface SpeakingScoresProps {
   blob: Blob
   segment: Segment
-  azureKey: string
-  azureRegion: string
   language: string
   onScore: (score: number | null) => void
   onLoading?: (isLoading: boolean) => void
@@ -276,7 +270,7 @@ interface SpeakingScoresProps {
   t: (key: TranslationKey) => string
 }
 
-function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScore, onLoading, onResult, previousBest, getAudio, t }: SpeakingScoresProps) {
+function SpeakingScores({ blob, segment, language, onScore, onLoading, onResult, previousBest, getAudio, t }: SpeakingScoresProps) {
   const [result, setResult] = useState<AssessResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -348,11 +342,7 @@ function SpeakingScores({ blob, segment, azureKey, azureRegion, language, onScor
         form.append('audio', blob, 'recording.webm')
         form.append('reference_text', segment.text)
         form.append('language', language)
-        if (azureKey)
-          form.append('azure_key', azureKey)
-        if (azureRegion)
-          form.append('azure_region', azureRegion)
-        const resp = await fetch(`${API_BASE}/api/pronunciation/assess`, {
+        const resp = await apiFetch(`/api/pronunciation/assess`, {
           method: 'POST',
           body: form,
           signal: controller.signal,

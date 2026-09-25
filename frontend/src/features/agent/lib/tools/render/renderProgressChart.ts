@@ -1,10 +1,10 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
 import { getProgressStats } from '@/db'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
 export async function executeRenderProgressChart(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: { metric: 'accuracy' | 'mastery' },
 ) {
   const stats = await getProgressStats(db)

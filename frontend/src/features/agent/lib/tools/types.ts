@@ -1,7 +1,7 @@
 // frontend/src/lib/tools/types.ts
 import type { z } from 'zod'
 
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { AgentAction } from '@/features/agent/application/AgentActionsContext'
 
 export type AgentActionsDispatch = (action: AgentAction) => void
@@ -29,7 +29,7 @@ export interface AgentTool<TInput = unknown, TOutput = unknown> {
 
 // Context passed to every tool.execute() — all hook-level dependencies centralised here.
 export interface ToolContext {
-  idb: ShadowLearnDB
+  idb: DataClient
   lessonId: string | null
   agentActions: { dispatch: AgentActionsDispatch }
   toast: (msg: string) => void

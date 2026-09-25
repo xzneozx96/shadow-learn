@@ -1,0 +1,22 @@
+import pytest
+from alembic.autogenerate import compare_metadata
+from alembic.migration import MigrationContext
+
+import app.accounts.models
+import app.catalog.models
+import app.importer.models
+import app.jobs.models
+import app.keys.models
+import app.lessons.models
+import app.media.models
+import app.speak.models
+import app.userdata.models  # noqa: F401
+from app.db import Base, engine
+
+pytestmark = pytest.mark.asyncio(loop_scope="session")
+
+
+async def test_migrated_schema_matches_the_models(migrated_database):
+    async with engine.connect() as conn:
+        diff = await conn.run_sync(lambda sync: compare_metadata(MigrationContext.configure(sync), Base.metadata))
+    assert diff == []

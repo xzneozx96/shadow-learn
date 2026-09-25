@@ -28,8 +28,6 @@ type Phase = 'listen' | 'attempt' | 'reveal'
 interface ShadowingPanelProps {
   segments: Segment[]
   mode: 'dictation' | 'speaking'
-  azureKey: string
-  azureRegion: string
   onExit: () => void
   lesson: LessonMeta
   getBest: (segmentId: string) => ShadowingBest | undefined
@@ -37,7 +35,7 @@ interface ShadowingPanelProps {
   getAudio: (segmentId: string) => Promise<Blob | undefined>
 }
 
-export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, lesson, getBest, saveBest, getAudio }: ShadowingPanelProps) {
+export function ShadowingPanel({ segments, mode, onExit, lesson, getBest, saveBest, getAudio }: ShadowingPanelProps) {
   const { t } = useI18n()
   const { db } = useAuth()
   const resolvedCaps = getLanguageCaps(lesson.sourceLanguage)
@@ -130,7 +128,7 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
 
   function handleNext(score: number | null) {
     if (db && mode === 'speaking' && segment && score !== null) {
-      void upsertExerciseStat(db, `${segment.id}:pronunciation`, score >= 70)
+      void upsertExerciseStat(db, { vocabId: segment.id, exerciseType: 'pronunciation' }, score >= 70)
     }
     setResults(prev => [...prev, {
       segmentIndex,
@@ -229,8 +227,6 @@ export function ShadowingPanel({ segments, mode, azureKey, azureRegion, onExit, 
           mode="speaking"
           segment={segment}
           blob={speakingBlob}
-          azureKey={azureKey}
-          azureRegion={azureRegion}
           language={resolvedCaps.azurePronunciationLocale ?? lesson.sourceLanguage ?? 'zh-CN'}
           segmentLabel={segmentLabel}
           progress={progress}

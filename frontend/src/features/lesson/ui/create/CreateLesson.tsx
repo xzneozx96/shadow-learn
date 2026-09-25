@@ -6,9 +6,9 @@ import { toast } from 'sonner'
 import { Layout } from '@/app/Layout'
 import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
-import { getSettings, saveVideo } from '@/db'
+import { getSettings } from '@/db'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
-import { API_BASE, getAppConfig } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { LANGUAGES } from '@/shared/lib/constants'
 import { captureLessonCreated, captureLessonGenerationFailed } from '@/shared/lib/posthog-events'
 import { DEFAULT_VOICE_ID } from '@/shared/lib/voices'
@@ -24,10 +24,10 @@ const YOUTUBE_REGEX = /(?:v=|youtu\.be\/)([\w-]{11})/
 const FILE_EXTENSION_REGEX = /\.[^/.]+$/
 
 export function CreateLesson() {
-  const { db, keys, trialMode } = useAuth()
+  const { db } = useAuth()
   const { t } = useI18n()
   const navigate = useNavigate()
-  const { updateLesson } = useLessons()
+  const { savePendingLesson } = useLessons()
 
   const [tab, setTab] = useState('youtube')
   const [youtubeUrl, setYoutubeUrl] = useState('')
@@ -41,7 +41,6 @@ export function CreateLesson() {
   const [submitting, setSubmitting] = useState(false)
   const [queued, setQueued] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sttProvider, setSttProvider] = useState<string | null>(null)
 
   useEffect(() => {
     if (!db)
@@ -55,12 +54,8 @@ export function CreateLesson() {
     })
   }, [db])
 
-  useEffect(() => {
-    getAppConfig().then(cfg => setSttProvider(cfg.sttProvider))
-  }, [])
-
   const handleGenerate = useCallback(async () => {
-    if (!db || (!keys && !trialMode) || !sttProvider)
+    if (!db)
       return
     const isYoutube = tab === 'youtube'
     if (isYoutube && !youtubeUrl.trim())
@@ -78,10 +73,9 @@ export function CreateLesson() {
       let lessonSource: 'youtube' | 'upload' | 'blog'
       let lessonSourceUrl: string | null = null
       let lessonTitle: string
-      let capturedFile: File | null = null
 
       if (isYoutube) {
-        const res = await fetch(`${API_BASE}/api/lessons/generate`, {
+        const res = await apiFetch(`/api/lessons/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -89,10 +83,6 @@ export function CreateLesson() {
             youtube_url: youtubeUrl,
             translation_languages: [language],
             source_language: sourceLanguage,
-            openrouter_api_key: keys?.openrouterApiKey ?? '',
-            ...(sttProvider === 'azure'
-              ? { azure_speech_key: keys?.azureSpeechKey ?? '', azure_speech_region: keys?.azureSpeechRegion ?? '' }
-              : {}),
           }),
         })
         if (!res.ok) {
@@ -110,18 +100,12 @@ export function CreateLesson() {
         lessonSourceUrl = youtubeUrl
       }
       else if (tab === 'upload') {
-        capturedFile = file!
         const formData = new FormData()
         formData.append('file', file!)
         formData.append('translation_languages', language)
         formData.append('source_language', sourceLanguage)
-        formData.append('openrouter_api_key', keys?.openrouterApiKey ?? '')
-        if (sttProvider === 'azure') {
-          formData.append('azure_speech_key', keys?.azureSpeechKey ?? '')
-          formData.append('azure_speech_region', keys?.azureSpeechRegion ?? '')
-        }
 
-        const res = await fetch(`${API_BASE}/api/lessons/generate-upload`, { method: 'POST', body: formData })
+        const res = await apiFetch(`/api/lessons/generate-upload`, { method: 'POST', body: formData })
         if (!res.ok) {
           const detail = await res.json().catch(() => null)
           const msg = detail?.detail || `Server error: ${res.status}`
@@ -139,7 +123,6 @@ export function CreateLesson() {
           source: 'blog',
           translation_languages: [language],
           source_language: sourceLanguage,
-          openrouter_api_key: keys?.openrouterApiKey ?? '',
           minimax_voice_id: blogVoiceId,
         }
         if (isPaste) {
@@ -150,7 +133,7 @@ export function CreateLesson() {
         else {
           body.blog_url = blogUrl
         }
-        const res = await fetch(`${API_BASE}/api/lessons/generate`, {
+        const res = await apiFetch(`/api/lessons/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -185,12 +168,7 @@ export function CreateLesson() {
       const lessonId = crypto.randomUUID()
       const now = new Date().toISOString()
 
-      // For uploads: persist audio to IndexedDB before navigating (component will unmount)
-      if (lessonSource === 'upload' && capturedFile) {
-        await saveVideo(db, lessonId, capturedFile)
-      }
-
-      await updateLesson({
+      savePendingLesson({
         id: lessonId,
         title: lessonTitle,
         source: lessonSource,
@@ -221,14 +199,13 @@ export function CreateLesson() {
     finally {
       setSubmitting(false)
     }
-  }, [db, keys, tab, youtubeUrl, file, blogUrl, blogText, blogTitle, blogVoiceId, language, sourceLanguage, updateLesson, sttProvider, trialMode])
+  }, [db, tab, youtubeUrl, file, blogUrl, blogText, blogTitle, blogVoiceId, language, sourceLanguage, savePendingLesson])
 
-  const canGenerate = sttProvider !== null
-    && (tab === 'youtube'
-      ? !!youtubeUrl.trim()
-      : tab === 'blog'
-        ? (!!blogUrl.trim() || !!blogText.trim())
-        : !!file)
+  const canGenerate = tab === 'youtube'
+    ? !!youtubeUrl.trim()
+    : tab === 'blog'
+      ? (!!blogUrl.trim() || !!blogText.trim())
+      : !!file
 
   if (queued) {
     return (

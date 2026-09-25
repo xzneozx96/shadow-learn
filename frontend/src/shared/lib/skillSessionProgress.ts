@@ -1,5 +1,5 @@
-import type { ShadowLearnDB, SpacedRepetitionItem } from '@/db'
-import { getDueItems, getSpacedRepetitionItem, getVocabEntryById, saveSpacedRepetitionItem } from '@/db'
+import type { DataClient, SpacedRepetitionItem } from '@/db'
+import { getDueItems, getVocabEntryById, updateSpacedRepetitionItem } from '@/db'
 import { todayISO } from '@/shared/lib/date'
 import { createSpacedRepetitionItem, updateSpacedRepetition } from '@/shared/lib/spacedRepetition'
 
@@ -99,14 +99,14 @@ export function clearExpiredSessionKeys(today: string): void {
  * The seed query in `useStudyQueue.load()` should keep using raw `getDueItems`
  * so that newly-due items can populate the daily lock.
  */
-export async function getEffectiveDueItems(db: ShadowLearnDB, date?: string): Promise<SpacedRepetitionItem[]> {
+export async function getEffectiveDueItems(db: DataClient, date?: string): Promise<SpacedRepetitionItem[]> {
   const today = date ?? todayISO()
   const items = await getDueItems(db, today)
   const pending = getSM2Pending(today)
   return items.filter(i => !(i.itemId in pending))
 }
 
-export async function flushSM2Pending(db: ShadowLearnDB, date: string): Promise<void> {
+export async function flushSM2Pending(db: DataClient, date: string): Promise<void> {
   const pending = getSM2Pending(date)
   const vocabIds = Object.keys(pending)
   if (vocabIds.length === 0)
@@ -121,10 +121,8 @@ export async function flushSM2Pending(db: ShadowLearnDB, date: string): Promise<
       continue
 
     const score = pending[vocabId]
-    const existing = await getSpacedRepetitionItem(db, vocabId)
-    const item = existing ?? createSpacedRepetitionItem(vocabId)
-    const updated = updateSpacedRepetition(item, score, date)
-    await saveSpacedRepetitionItem(db, updated)
+    await updateSpacedRepetitionItem(db, vocabId, prev =>
+      updateSpacedRepetition(prev ?? createSpacedRepetitionItem(vocabId), score, date))
   }
 
   clearSM2Pending(date)

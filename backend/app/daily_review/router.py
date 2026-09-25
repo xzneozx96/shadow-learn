@@ -4,10 +4,11 @@ from typing import Literal
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
+from app.keys.models import Provider
+from app.keys.service import ProviderKeys
 from app.settings import settings
-from app.shared.utils import _resolve_key
 from app.shared._retry import RetryableError, http_retry
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,8 @@ class WordInput(BaseModel):
 
 
 class PassageRequest(BaseModel):
-    openrouter_api_key: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
     words: list[WordInput]
     source_language: str = "zh-CN"  # accepted for API consistency; endpoints are Chinese-only
 
@@ -32,7 +34,8 @@ class PassageResponse(BaseModel):
 
 
 class GradePassageRequest(BaseModel):
-    openrouter_api_key: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
     passage: str
     user_translation: str
     source_language: str = "zh-CN"  # accepted for API consistency; endpoints are Chinese-only
@@ -44,7 +47,8 @@ class GradePassageResponse(BaseModel):
 
 
 class GradeSentenceRequest(BaseModel):
-    openrouter_api_key: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
     hanzi: str
     meaning: str
     user_sentence: str
@@ -141,8 +145,8 @@ async def _call_openrouter(api_key: str, messages: list[dict], response_format: 
 
 
 @router.post("/passage", response_model=PassageResponse)
-async def generate_passage(req: PassageRequest):
-    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
+async def generate_passage(req: PassageRequest, keys: ProviderKeys):
+    api_key = (await keys(Provider.openrouter)).value
     word_list = ", ".join(f"{w.hanzi} ({w.meaning})" for w in req.words)
     messages = [
         {"role": "system", "content": "You are a Chinese teacher creating reading passages for Vietnamese learners."},
@@ -157,8 +161,8 @@ async def generate_passage(req: PassageRequest):
 
 
 @router.post("/grade-passage", response_model=GradePassageResponse)
-async def grade_passage(req: GradePassageRequest):
-    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
+async def grade_passage(req: GradePassageRequest, keys: ProviderKeys):
+    api_key = (await keys(Provider.openrouter)).value
     messages = [
         {"role": "system", "content": "You are a Chinese teacher grading a Vietnamese learner's translation."},
         {"role": "user", "content": (
@@ -173,8 +177,8 @@ async def grade_passage(req: GradePassageRequest):
 
 
 @router.post("/grade-sentence", response_model=GradeSentenceResponse)
-async def grade_sentence(req: GradeSentenceRequest):
-    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
+async def grade_sentence(req: GradeSentenceRequest, keys: ProviderKeys):
+    api_key = (await keys(Provider.openrouter)).value
     messages = [
         {"role": "system", "content": "You are a Chinese teacher grading a Vietnamese learner's sentence."},
         {"role": "user", "content": (

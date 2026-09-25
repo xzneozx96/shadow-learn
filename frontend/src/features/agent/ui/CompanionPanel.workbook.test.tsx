@@ -43,10 +43,7 @@ vi.mock('@/features/speak/application/SpeakModalContext', () => ({
 // Mock AuthContext
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: vi.fn(() => ({
-    isUnlocked: true,
     db: {},
-    keys: {},
-    unlock: vi.fn(),
   })),
 }))
 
@@ -88,6 +85,9 @@ const defaultProps = {
 function mockVocabContext(overrides: Partial<ReturnType<typeof useVocabulary>> = {}): ReturnType<typeof useVocabulary> {
   return {
     entries: [],
+    status: 'ready',
+    error: null,
+    reload: vi.fn(),
     entriesByLesson: {},
     save: vi.fn(),
     remove: vi.fn(),

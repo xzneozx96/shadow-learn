@@ -9,7 +9,7 @@ import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { getSettings } from '@/db'
 import { useLessons } from '@/features/lesson/application/LessonsContext'
-import { API_BASE, getAppConfig } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { captureLessonCreated, captureLessonGenerationFailed } from '@/shared/lib/posthog-events'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -75,14 +75,14 @@ function formatCount(n: number | null): string {
 }
 
 function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = true, wrapperClassName }: VideoCardProps) {
-  const { db, keys, trialMode } = useAuth()
+  const { db } = useAuth()
   const { t } = useI18n()
-  const { updateLesson } = useLessons()
+  const { savePendingLesson } = useLessons()
   const stagger = useCutoutContentStaggerVariants()
   const [submitting, setSubmitting] = useState(false)
   const [playing, setPlaying] = useState(false)
 
-  const canCreate = !!db && (!!keys || trialMode)
+  const canCreate = !!db
   const isTip = video.content_type === 'tip'
   const thumbnailUrl = `https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`
 
@@ -91,12 +91,11 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
       return
     setSubmitting(true)
     try {
-      const cfg = await getAppConfig()
       const settings = await getSettings(db)
       const translationLanguage = settings?.translationLanguage ?? 'en'
       const youtubeUrl = `https://www.youtube.com/watch?v=${video.video_id}`
 
-      const res = await fetch(`${API_BASE}/api/lessons/generate`, {
+      const res = await apiFetch(`/api/lessons/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -104,13 +103,6 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
           youtube_url: youtubeUrl,
           translation_languages: [translationLanguage],
           source_language: 'zh-CN',
-          openrouter_api_key: keys?.openrouterApiKey ?? '',
-          ...(cfg.sttProvider === 'azure'
-            ? {
-                azure_speech_key: keys?.azureSpeechKey ?? '',
-                azure_speech_region: keys?.azureSpeechRegion ?? '',
-              }
-            : {}),
         }),
       })
       if (!res.ok) {
@@ -121,7 +113,7 @@ function VideoCardImpl({ video, alreadyCreated, showCreateLesson, showTopic = tr
 
       const lessonId = crypto.randomUUID()
       const now = new Date().toISOString()
-      await updateLesson({
+      savePendingLesson({
         id: lessonId,
         title: video.title,
         source: 'youtube',

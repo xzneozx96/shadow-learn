@@ -14,30 +14,34 @@ Do NOT introduce: Redux, Zustand, React Query, Axios, or Prettier.
 
 **Context access** — use React 19's `use()` hook, not `useContext()`.
 
-**IndexedDB** — never call `openDB` directly. Get `db` from `AuthContext`, then call typed functions from `src/db/index.ts`. `db` is `null` while locked — always guard before use.
+**Server data** — get `db` from `useAuth()`, then call the typed accessors in `src/db/index.ts`. `db` is `null` before sign-in, so guard before use. For read-modify-write, use `updateRecord(db, store, id, mutate)` or `updateLessonMeta(db, meta, mutate)`, never a blind `put` of a copy you read earlier: on a 409 they rerun `mutate` on the record another device just wrote. Do not open IndexedDB. `src/db/legacy.ts` exists only for the one-time importer in `features/migration/` and must stay read-only.
 
-**Video time subscriptions** — use `useTimeEffect(cb, deps)` from `src/hooks/useTimeEffect.ts`. Do not call `PlayerContext.subscribeTime` manually in components.
+**Video time subscriptions** — use `useTimeEffect(cb, deps)` from `src/shared/hooks/useTimeEffect.ts`. Do not call `PlayerContext.subscribeTime` manually in components.
 
-**External API keys** — come from `AuthContext.keys`. Always guard `if (!keys)` before calling OpenRouter, Deepgram, Azure, or Minimax.
+**Provider keys** — live on the server. Settings can write a key but never reads one back, and no feature sends a key with its request: the backend resolves the account's key or the operator's fallback. Do not store a provider key in the browser.
 
 ## Testing and Quality Bar
 
-Tests live in `frontend/tests/`. Run one file: `npx vitest tests/my.test.ts`.
+Tests live in `frontend/tests/` and next to the code in `src/`. Run one file: `npx vitest tests/my.test.ts`.
 
 - Test behavior, not implementation — no snapshot tests
 - Hooks and `lib/` utilities should have tests; UI components don't require tests unless they contain logic
-- If IDB access is needed in tests, use `fake-indexeddb`
+- Fake the server with `FakeApiClient` from `tests/fake-api.ts`; two `fakeDataClient(api)` over one `FakeApiClient` act as two devices
+- `fake-indexeddb` is only for the legacy reader and importer tests in `tests/migration/`
 
 ## File and Component Placement
 
 | What | Where |
 |------|-------|
-| New page | `src/pages/` |
-| Feature component | `src/components/<feature>/` |
+| New page | `src/app/pages/` |
+| Feature component | `src/features/<feature>/ui/` |
+| Feature hook or context | `src/features/<feature>/application/` |
+| Feature types and pure logic | `src/features/<feature>/domain/` |
 | UI primitive | `src/shared/ui/` via shadcn CLI only |
-| Pure utility | `src/lib/` |
-| Data/feature hook | `src/hooks/` |
-| Context provider | `src/contexts/` |
+| Shared pure utility | `src/shared/lib/` |
+| Shared hook | `src/shared/hooks/` |
+| App-wide provider | `src/app/providers/` |
+| Server accessor | `src/db/index.ts` |
 
 Don't create a new file when editing an existing one would do. Don't create abstractions for single uses.
 
@@ -46,8 +50,9 @@ Don't create a new file when editing an existing one would do. Don't create abst
 Do not modify without careful review:
 
 - `src/shared/ui/` — shadcn-managed, use CLI to update
-- `src/db/index.ts` — schema changes require a `DB_VERSION` bump and new `upgrade()` migration branch
-- `src/contexts/AuthContext.tsx` — gates the entire app; mistakes break all data access
-- `src/lib/crypto.ts` — encryption bugs silently corrupt user data
+- `src/db/index.ts` — every screen reads and writes through it; keep writes on `updateRecord` or `updateLessonMeta`
+- `src/db/legacy.ts` — the importer reads v21 data through it; do not change the schema or add write helpers (`tests/migration/legacy-readonly.test.ts` fails on a `save`, `put`, `upsert`, `append`, or `delete` export)
+- `src/app/providers/AuthContext.tsx` — gates the entire app; mistakes break all data access
+- `src/features/migration/` — deletes the local legacy database only after a full manifest match; a bug here loses unimported data
 
 ---

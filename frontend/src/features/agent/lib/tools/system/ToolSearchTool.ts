@@ -213,7 +213,7 @@ export const toolSearchTool = buildTool({
     const { query, max_results = 5 } = input
 
     // Get all tools to search through
-    const allTools = getAllBaseTools('')
+    const allTools = getAllBaseTools()
 
     const results = await searchDeferredTools(query, allTools, max_results)
 

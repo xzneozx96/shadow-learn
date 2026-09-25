@@ -1,22 +1,20 @@
+import type { DataClient } from '@/db'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth } from '@/app/providers/AuthContext'
-import { initDB } from '@/db'
 import { useTipProgress } from '@/features/learning-materials/application/useTipProgress'
-import 'fake-indexeddb/auto'
+import { fakeDataClient } from '../fake-api'
 
 vi.mock('@/app/providers/AuthContext', () => ({
   useAuth: vi.fn(),
 }))
 
 describe('useTipProgress', () => {
-  let db: Awaited<ReturnType<typeof initDB>>
+  let db: DataClient
 
   beforeEach(async () => {
-    globalThis.indexedDB = new IDBFactory()
-    db = await initDB()
-    vi.mocked(useAuth).mockReturnValue({ db, keys: null, isUnlocked: true, isFirstSetup: false } as ReturnType<typeof useAuth>)
+    db = fakeDataClient()
+    vi.mocked(useAuth).mockReturnValue({ db } as ReturnType<typeof useAuth>)
   })
 
   it('starts with no progress and exposes current state', async () => {

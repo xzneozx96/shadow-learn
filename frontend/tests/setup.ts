@@ -24,15 +24,3 @@ globalThis.ResizeObserver = MockResizeObserver as any
 if (!Element.prototype.getAnimations) {
   Element.prototype.getAnimations = () => []
 }
-
-// jsdom's structuredClone does not properly handle Blob objects (loses .type and content).
-// Patch it to use Node's native implementation which correctly clones Blobs via structured clone.
-const nativeStructuredClone = globalThis.structuredClone
-globalThis.structuredClone = function patchedStructuredClone<T>(value: T, options?: StructuredSerializeOptions): T {
-  if (value instanceof Blob) {
-    // Blobs are immutable — pass through as-is. jsdom's structuredClone loses .type;
-    // fake-indexeddb clones stored values, so without this patch all Blobs read back with type=''.
-    return value as T
-  }
-  return nativeStructuredClone(value, options)
-}

@@ -1,7 +1,6 @@
-import type { ShadowLearnDB } from '@/db'
-import { IDBFactory } from 'fake-indexeddb'
+import type { DataClient } from '@/db'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getSpacedRepetitionItem, initDB, saveVocabEntry } from '@/db'
+import { getSpacedRepetitionItem, saveVocabEntry } from '@/db'
 import {
   bufferSM2Score,
   clearExpiredSessionKeys,
@@ -14,7 +13,7 @@ import {
   markReadingSubmitted,
   markWordComplete,
 } from '@/shared/lib/skillSessionProgress'
-import 'fake-indexeddb/auto'
+import { fakeDataClient } from './fake-api'
 
 beforeEach(() => {
   localStorage.clear()
@@ -146,11 +145,10 @@ function makeVocab(id: string) {
 }
 
 describe('flushSM2Pending', () => {
-  let db: ShadowLearnDB
+  let db: DataClient
 
   beforeEach(async () => {
-    globalThis.indexedDB = new IDBFactory()
-    db = await initDB()
+    db = fakeDataClient()
     localStorage.clear()
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-05-14T10:00:00.000Z'))
@@ -161,8 +159,6 @@ describe('flushSM2Pending', () => {
   afterEach(async () => {
     vi.useRealTimers()
     localStorage.clear()
-    db.close()
-    globalThis.indexedDB = new IDBFactory()
   })
 
   it('writes SM-2 item with buffered worst score', async () => {

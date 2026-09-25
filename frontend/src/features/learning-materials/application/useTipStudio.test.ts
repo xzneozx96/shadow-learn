@@ -1,12 +1,11 @@
-import type { ShadowLearnDB } from '@/db'
+import type { DataClient } from '@/db'
 import type { StudioMindMapData } from '@/features/learning-materials/domain/tips'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { initDB, putTipStudio, studioKey } from '@/db'
 import { useTipStudio } from '@/features/learning-materials/application/useTipStudio'
-import 'fake-indexeddb/auto'
+import { fakeDataClient } from '../../../../tests/fake-api'
 
-let db: ShadowLearnDB
+let db: DataClient
 
 function makeResponse(status: number, body: unknown): Response {
   return {
@@ -16,15 +15,12 @@ function makeResponse(status: number, body: unknown): Response {
   } as Response
 }
 
-beforeEach(async () => {
-  const { deleteDB } = await import('idb')
-  await deleteDB('shadowlearn')
-  db = await initDB()
+beforeEach(() => {
+  db = fakeDataClient()
   globalThis.fetch = vi.fn() as any
 })
 
 afterEach(() => {
-  db?.close()
   vi.restoreAllMocks()
 })
 
@@ -37,27 +33,32 @@ describe('useTipStudio', () => {
     expect(result.current.data).toBeNull()
   })
 
-  it('reads cached artifact on mount and still probes backend (stale-while-revalidate)', async () => {
-    await putTipStudio(db, {
-      key: studioKey('v1', 'summary', 'en'),
-      kind: 'summary',
-      videoId: 'v1',
-      locale: 'en',
-      data: { abstract: 'cached', takeaways: ['a', 'b', 'c'] },
-      generatedAt: '2026-05-17T00:00:00Z',
-    })
-    // Probe returns "no live job" → IDB cache wins.
-    ;(globalThis.fetch as any).mockResolvedValue(makeResponse(200, { status: 'none' }))
+  it('paints the catalog artifact the probe returns, and stays unhydrated until then', async () => {
+    const summary = { abstract: 'from catalog', takeaways: ['a', 'b', 'c'] }
+    ;(globalThis.fetch as any).mockResolvedValue(makeResponse(200, { status: 'ready', data: summary }))
 
     const { result } = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v1', transcript: 'x', locale: 'en' }))
+    expect(result.current.hydrated).toBe(false)
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(result.current.data).toEqual({ abstract: 'cached', takeaways: ['a', 'b', 'c'] })
-    // Backend was probed (the SWR revalidation path) — necessary so an
-    // in-flight regen surfaces after a cold remount.
-    expect(globalThis.fetch).toHaveBeenCalled()
+    expect(result.current.hydrated).toBe(true)
+    expect(result.current.data).toEqual(summary)
+    expect((globalThis.fetch as any).mock.calls[0][0]).toContain('/api/tips/studio/summary/v1?locale=en')
   })
 
-  it('generate() returning ready synchronously persists data', async () => {
+  it('probes the server on every mount instead of reading a local cache', async () => {
+    const summary = { abstract: 'from catalog', takeaways: ['a', 'b', 'c'] }
+    ;(globalThis.fetch as any).mockResolvedValue(makeResponse(200, { status: 'ready', data: summary }))
+
+    const first = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v1', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(first.result.current.status).toBe('ready'))
+    first.unmount()
+    const second = renderHook(() => useTipStudio({ db, kind: 'summary', videoId: 'v1', transcript: 'x', locale: 'en' }))
+    await waitFor(() => expect(second.result.current.status).toBe('ready'))
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('generate() returning ready synchronously shows the data', async () => {
     const fake = { abstract: 'fresh', takeaways: ['1', '2', '3'] }
     ;(globalThis.fetch as any).mockImplementation((url: string) => {
       // Probe on mount → none. POST → ready.
@@ -72,8 +73,6 @@ describe('useTipStudio', () => {
 
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.data).toEqual(fake)
-    const cached = await db.get('tip-studio', studioKey('v2', 'summary', 'en'))
-    expect(cached?.data).toEqual(fake)
   })
 
   it('generate() pending → polls /api/jobs and resolves when complete', async () => {
@@ -147,7 +146,7 @@ const sampleMM: StudioMindMapData = {
 }
 
 describe('useTipStudio mind_map', () => {
-  it('fetches and caches a mind map via ready response', async () => {
+  it('fetches a mind map via ready response', async () => {
     ;(globalThis.fetch as any).mockImplementation((url: string) => {
       if (url.includes('/api/tips/studio/mind_map/v1'))
         return Promise.resolve(makeResponse(404, { status: 'none' }))
@@ -166,30 +165,5 @@ describe('useTipStudio mind_map', () => {
     await act(async () => { await result.current.generate() })
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.data?.root.label).toBe('r')
-  })
-
-  it('reads cached mind map on second mount and revalidates against backend', async () => {
-    await putTipStudio(db, {
-      key: studioKey('v1', 'mind_map', 'en'),
-      kind: 'mind_map',
-      videoId: 'v1',
-      locale: 'en',
-      data: sampleMM,
-      generatedAt: '2026-05-18T00:00:00Z',
-    })
-    ;(globalThis.fetch as any).mockResolvedValue(makeResponse(200, { status: 'none' }))
-
-    const { result } = renderHook(() => useTipStudio({
-      db,
-      kind: 'mind_map',
-      videoId: 'v1',
-      transcript: 'hello',
-      locale: 'en',
-    }))
-    await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(result.current.data?.root.label).toBe('r')
-    // Stale-while-revalidate: cache paints instantly, probe runs in the
-    // background to surface any in-flight regen.
-    expect(globalThis.fetch).toHaveBeenCalled()
   })
 })

@@ -4,10 +4,11 @@ import logging
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
+from app.keys.models import Provider
+from app.keys.service import ProviderKeys
 from app.settings import settings
-from app.shared.utils import _resolve_key
 from app.shared._retry import RetryableError, http_retry
 from app.shared.language_config import get_language_config
 
@@ -23,7 +24,8 @@ class WordInput(BaseModel):
 
 
 class QuizRequest(BaseModel):
-    openrouter_api_key: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
     words: list[WordInput]
     exercise_type: str  # "cloze" | "pronunciation_sentence"
     story_count: int = 1
@@ -129,9 +131,9 @@ def _build_pronunciation_prompt(words: list[WordInput], count: int, lang_cfg: di
 
 
 @router.post("/generate", response_model=QuizResponse)
-async def generate_quiz(req: QuizRequest):
+async def generate_quiz(req: QuizRequest, keys: ProviderKeys):
     lang_cfg = get_language_config(req.source_language)
-    api_key = _resolve_key(req.openrouter_api_key, settings.openrouter_api_key, "OpenRouter API key")
+    api_key = (await keys(Provider.openrouter)).value
 
     if req.exercise_type == "cloze":
         prompt = _build_cloze_prompt(req.words, req.story_count, lang_cfg)

@@ -2,13 +2,12 @@ import type { VocabEntry } from '@/shared/types'
 import { ArrowLeft } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/app/providers/AuthContext'
 import { useI18n } from '@/app/providers/I18nContext'
 import { FlashcardExercise } from '@/features/study/ui/exercises/FlashcardExercise'
 import { RomanizationRecallExercise } from '@/features/study/ui/exercises/RomanizationRecallExercise'
 import { useTracking } from '@/shared/hooks/useTracking'
 import { useTTS } from '@/shared/hooks/useTTS'
-import { API_BASE } from '@/shared/lib/config'
+import { apiFetch } from '@/shared/lib/api'
 import { getLanguageCaps } from '@/shared/lib/language-caps'
 import { getSkillProgress, markWordComplete } from '@/shared/lib/skillSessionProgress'
 import { cn } from '@/shared/lib/utils'
@@ -31,11 +30,10 @@ interface Props {
 }
 
 export function VocabularySkillSession({ entries, date, onComplete, onProgress, onBack, embedded }: Props) {
-  const { db, keys } = useAuth()
   const { t } = useI18n()
   const { logExerciseResult } = useTracking()
   const sourceLanguage = entries[0]?.sourceLanguage ?? 'zh-CN'
-  const { playTTS } = useTTS(db, keys, sourceLanguage)
+  const { playTTS } = useTTS(sourceLanguage)
   const caps = getLanguageCaps(sourceLanguage)
 
   const entryIds = new Set(entries.map(e => e.id))
@@ -88,15 +86,12 @@ export function VocabularySkillSession({ entries, date, onComplete, onProgress, 
     setSentenceGrading(true)
     setSentenceError(false)
     try {
-      if (!keys)
-        return
-      const resp = await fetch(`${API_BASE}/api/daily-review/grade-sentence`, {
+      const resp = await apiFetch(`/api/daily-review/grade-sentence`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           hanzi: current.word,
           meaning: current.meaning,
-          openrouter_api_key: keys.openrouterApiKey,
           user_sentence: sentence,
         }),
       })

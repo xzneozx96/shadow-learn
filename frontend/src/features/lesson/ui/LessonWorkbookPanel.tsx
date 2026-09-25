@@ -24,7 +24,7 @@ interface LessonWorkbookPanelProps {
 export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
   const { entriesByLesson, remove } = useVocabulary()
   const { t } = useI18n()
-  const { db, keys } = useAuth()
+  const { db } = useAuth()
   const navigate = useNavigate()
   const rawEntries = entriesByLesson[lessonId] ?? []
   const entries = [...rawEntries].sort(
@@ -37,7 +37,7 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
       return
     getSettings(db).then(s => setVoiceId(s?.minimaxVoiceId))
   }, [db])
-  const { playTTS, loadingText } = useTTS(db, keys, entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
+  const { playTTS, loadingText } = useTTS(entries[0]?.sourceLanguage ?? 'zh-CN', voiceId)
   const count = entries.length
 
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -207,7 +207,6 @@ export function LessonWorkbookPanel({ lessonId }: LessonWorkbookPanelProps) {
           meaning={breakdownEntry.meaning}
           sourceLanguage={breakdownEntry.sourceLanguage}
           db={db}
-          openrouterApiKey={keys?.openrouterApiKey ?? null}
         />
       )}
     </div>

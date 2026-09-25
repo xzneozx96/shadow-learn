@@ -1,20 +1,17 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { IDBFactory } from 'fake-indexeddb'
 import * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext } from '@/app/providers/AuthContext'
-import { initDB } from '@/db'
 import { useUserMaterials } from '@/features/learning-materials/application/useUserMaterials'
-import 'fake-indexeddb/auto'
+import { fakeDataClient } from '../../../../tests/fake-api'
 
 function wrapper(db: any) {
   return ({ children }: { children: React.ReactNode }) => (
-    React.createElement(AuthContext.Provider, { value: { db, keys: {} as any, locked: false } as any }, children)
+    React.createElement(AuthContext.Provider, { value: { db } as any }, children)
   )
 }
 
 beforeEach(() => {
-  globalThis.indexedDB = new IDBFactory()
   globalThis.fetch = vi.fn(async (url: string) => {
     if (String(url).includes('/api/playlist/')) {
       return {
@@ -47,7 +44,7 @@ beforeEach(() => {
 
 describe('useUserMaterials', () => {
   it('starts empty, adds a playlist, groups by skill', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     const { result } = renderHook(() => useUserMaterials(), { wrapper: wrapper(db) })
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.groups).toHaveLength(0)
@@ -69,7 +66,7 @@ describe('useUserMaterials', () => {
   })
 
   it('rejects duplicate externalId', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     const { result } = renderHook(() => useUserMaterials(), { wrapper: wrapper(db) })
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {
@@ -95,7 +92,7 @@ describe('useUserMaterials', () => {
   })
 
   it('remove deletes the record', async () => {
-    const db = await initDB()
+    const db = fakeDataClient()
     const { result } = renderHook(() => useUserMaterials(), { wrapper: wrapper(db) })
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {

@@ -1,10 +1,14 @@
+import type { DataClient } from '@/db'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { executeGetStudyContext } from '@/features/agent/lib/tools/data/getStudyContext'
+import { executeGetVocabulary } from '@/features/agent/lib/tools/data/getVocabulary'
 import { executeGetCoreGuidelines } from '@/features/agent/lib/tools/guidance/getCoreGuidelines'
 import { executeGetSkillGuide } from '@/features/agent/lib/tools/guidance/getSkillGuide'
 import { executeGetUserManual } from '@/features/agent/lib/tools/guidance/getUserManual'
 import { getActiveToolPool, getToolDefinitions } from '@/features/agent/lib/tools/index'
 import { executeRenderStudySession, makeRenderStudySessionTool } from '@/features/agent/lib/tools/render/renderStudySession'
+import { executeRenderVocabCard } from '@/features/agent/lib/tools/render/renderVocabCard'
+import { FakeApiClient, fakeDataClient } from '../../../../tests/fake-api'
 
 vi.mock('@/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/db')>()
@@ -19,12 +23,23 @@ vi.mock('@/db', async (importOriginal) => {
 })
 
 describe('agent-tools executors', () => {
-  const mockDb = {
-    get: vi.fn(),
-  } as any
+  let api: FakeApiClient
+  let client: DataClient
 
   beforeEach(() => {
-    mockDb.get.mockReset()
+    api = new FakeApiClient()
+    client = fakeDataClient(api)
+  })
+
+  it('renderStudySession reads each item from the vocabulary store', async () => {
+    api.seedStore('vocabulary', [{ id: 'v1', word: '写', sourceLanguage: 'zh-CN' }])
+
+    await executeRenderStudySession(client, { itemIds: ['v1', 'missing'], exerciseTypes: ['writing'] })
+
+    expect(api.calls).toEqual([
+      { method: 'GET', path: '/api/store/vocabulary/v1' },
+      { method: 'GET', path: '/api/store/vocabulary/missing' },
+    ])
   })
 
   describe('executeRenderStudySession', () => {
@@ -40,14 +55,12 @@ describe('agent-tools executors', () => {
     })
 
     it('returns study_session with questions for writing type (no API calls)', async () => {
-      mockDb.get
-        .mockResolvedValueOnce(writingEntry1 as any)
-        .mockResolvedValueOnce(writingEntry2 as any)
+      api.seedStore('vocabulary', [writingEntry1, writingEntry2])
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-w1', 'vocab-w2'],
         exerciseTypes: ['writing'],
-      }, 'test-key') as any
+      }) as any
 
       expect(result.type).toBe('study_session')
       expect(result.props.questions).toHaveLength(2)
@@ -58,19 +71,17 @@ describe('agent-tools executors', () => {
     })
 
     it('calls translation API once per entry for translation type', async () => {
-      mockDb.get
-        .mockResolvedValueOnce(translationEntry1 as any)
-        .mockResolvedValueOnce(translationEntry2 as any)
+      api.seedStore('vocabulary', [translationEntry1, translationEntry2])
       const sentence1 = { text: '我们去旅游', romanization: 'wǒmen qù lǚyóu', translation: 'We go travelling' }
       const sentence2 = { text: '我们出发了', romanization: 'wǒmen chūfā le', translation: 'We departed' }
       globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [sentence1] }) } as any)
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [sentence2] }) } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-t1', 'vocab-t2'],
         exerciseTypes: ['translation'],
-      }, 'test-key') as any
+      }) as any
 
       expect(globalThis.fetch).toHaveBeenCalledTimes(2)
       expect(result.type).toBe('study_session')
@@ -82,19 +93,17 @@ describe('agent-tools executors', () => {
     })
 
     it('calls pronunciation API once per entry for pronunciation type', async () => {
-      mockDb.get
-        .mockResolvedValueOnce(pronEntry1 as any)
-        .mockResolvedValueOnce(pronEntry2 as any)
+      api.seedStore('vocabulary', [pronEntry1, pronEntry2])
       const ex1 = { sentence: '我每天去学校', translation: 'I go to school every day' }
       const ex2 = { sentence: '老师教我们', translation: 'The teacher teaches us' }
       globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: [ex1] }) } as any)
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: [ex2] }) } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-p1', 'vocab-p2'],
         exerciseTypes: ['pronunciation'],
-      }, 'test-key') as any
+      }) as any
 
       expect(globalThis.fetch).toHaveBeenCalledTimes(2)
       expect(result.type).toBe('study_session')
@@ -105,18 +114,17 @@ describe('agent-tools executors', () => {
     })
 
     it('passes sentencesPerWord to translation API and returns one question per sentence', async () => {
-      mockDb.get
-        .mockResolvedValueOnce(translationEntry1 as any)
+      api.seedStore('vocabulary', [translationEntry1])
       const s1 = { text: '我们去旅游', romanization: 'wǒmen qù lǚyóu', translation: 'We go travelling' }
       const s2 = { text: '旅游很好玩', romanization: 'lǚyóu hěn hǎowán', translation: 'Travelling is fun' }
       globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ sentences: [s1, s2] }) } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-t1'],
         exerciseTypes: ['translation'],
         sentencesPerWord: 2,
-      }, 'test-key') as any
+      }) as any
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
       expect(body.sentence_count).toBe(2)
@@ -126,18 +134,17 @@ describe('agent-tools executors', () => {
     })
 
     it('passes sentencesPerWord to pronunciation API and returns one question per sentence', async () => {
-      mockDb.get
-        .mockResolvedValueOnce(pronEntry1 as any)
+      api.seedStore('vocabulary', [pronEntry1])
       const ex1 = { sentence: '我每天去学校', translation: 'I go to school every day' }
       const ex2 = { sentence: '学校很大', translation: 'The school is big' }
       globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ exercises: [ex1, ex2] }) } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-p1'],
         exerciseTypes: ['pronunciation'],
         sentencesPerWord: 2,
-      }, 'test-key') as any
+      }) as any
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
       expect(body.count).toBe(2)
@@ -147,12 +154,10 @@ describe('agent-tools executors', () => {
     })
 
     it('returns error when no items found', async () => {
-      mockDb.get.mockResolvedValue(undefined)
-
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['missing-1'],
         exerciseTypes: ['writing'],
-      }, 'test-key')
+      })
 
       expect(result).toEqual({ error: 'No vocabulary items found.' })
     })
@@ -205,19 +210,17 @@ describe('agent-tools executors', () => {
     })
 
     it('defaults to 1 cloze question when storyCount is omitted', async () => {
-      mockDb.get
-        .mockResolvedValueOnce(clozeEntry1 as any)
-        .mockResolvedValueOnce(clozeEntry2 as any)
+      api.seedStore('vocabulary', [clozeEntry1, clozeEntry2])
       const story = { story: '我每天_练习_中文', blanks: ['练习'] }
       globalThis.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ exercises: [story] }),
       } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-c1', 'vocab-c2'],
         exerciseTypes: ['cloze'],
-      }, 'test-key') as any
+      }) as any
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
       expect(body.story_count).toBe(1)
@@ -225,9 +228,7 @@ describe('agent-tools executors', () => {
     })
 
     it('passes storyCount to API and returns one question per story', async () => {
-      mockDb.get
-        .mockResolvedValueOnce(clozeEntry1 as any)
-        .mockResolvedValueOnce(clozeEntry2 as any)
+      api.seedStore('vocabulary', [clozeEntry1, clozeEntry2])
       const story1 = { story: '我每天_练习_中文', blanks: ['练习'] }
       const story2 = { story: '他没有_时间_学习', blanks: ['时间'] }
       globalThis.fetch = vi.fn().mockResolvedValueOnce({
@@ -235,11 +236,11 @@ describe('agent-tools executors', () => {
         json: () => Promise.resolve({ exercises: [story1, story2] }),
       } as any)
 
-      const result = await executeRenderStudySession(mockDb, {
+      const result = await executeRenderStudySession(client, {
         itemIds: ['vocab-c1', 'vocab-c2'],
         exerciseTypes: ['cloze'],
         storyCount: 2,
-      }, 'test-key') as any
+      }) as any
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)
       expect(body.story_count).toBe(2)
@@ -251,7 +252,7 @@ describe('agent-tools executors', () => {
 })
 
 describe('tool input validation', () => {
-  const schema = makeRenderStudySessionTool('').inputSchema
+  const schema = makeRenderStudySessionTool().inputSchema
 
   it('render_study_session rejects invalid exerciseType', () => {
     const result = schema.safeParse({
@@ -342,7 +343,7 @@ describe('tool input validation', () => {
 
 describe('getActiveToolPool', () => {
   it('includes all expected non-deferred tools', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const names = pool.map(t => t.name)
 
     expect(names).toContain('recall_memory')
@@ -360,7 +361,7 @@ describe('getActiveToolPool', () => {
   })
 
   it('excludes deferred tools by default (render, data, guidance)', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const names = pool.map(t => t.name)
 
     expect(names).not.toContain('render_study_session')
@@ -374,7 +375,7 @@ describe('getActiveToolPool', () => {
   })
 
   it('includes deferred tools when includeDeferred=true', () => {
-    const pool = getActiveToolPool('test-key', { uiLanguage: 'en', includeDeferred: true })
+    const pool = getActiveToolPool({ uiLanguage: 'en', includeDeferred: true })
     const names = pool.map(t => t.name)
 
     expect(names).toContain('render_study_session')
@@ -388,7 +389,7 @@ describe('getActiveToolPool', () => {
   })
 
   it('returns 13 non-deferred tools by default (21 total - 1 disabled - 7 deferred)', () => {
-    expect(getActiveToolPool('test-key')).toHaveLength(13)
+    expect(getActiveToolPool()).toHaveLength(13)
   })
 })
 
@@ -428,22 +429,18 @@ describe('executeGetUserManual', () => {
 })
 
 describe('executeGetStudyContext', () => {
-  const mockDb = {
-    getAllKeys: vi.fn(),
-    get: vi.fn(),
-  } as any
+  let api: FakeApiClient
+  let client: DataClient
 
   beforeEach(() => {
-    mockDb.getAllKeys.mockResolvedValue([])
-    mockDb.get.mockResolvedValue(undefined)
     vi.clearAllMocks()
-    mockDb.getAllKeys.mockResolvedValue([])
-    mockDb.get.mockResolvedValue(undefined)
+    api = new FakeApiClient()
+    client = fakeDataClient(api)
   })
 
   it('works without lessonId and skips getVocabEntriesByLesson', async () => {
     const { getVocabEntriesByLesson } = await import('@/db')
-    const result = await executeGetStudyContext(mockDb, {}) as any
+    const result = await executeGetStudyContext(client, {}) as any
 
     expect(result).toHaveProperty('dueItems')
     expect(result).toHaveProperty('recentMistakes')
@@ -453,16 +450,54 @@ describe('executeGetStudyContext', () => {
 
   it('calls getVocabEntriesByLesson when lessonId is provided', async () => {
     const { getVocabEntriesByLesson } = await import('@/db')
-    await executeGetStudyContext(mockDb, { lessonId: 'lesson-123' })
+    await executeGetStudyContext(client, { lessonId: 'lesson-123' })
 
-    expect(getVocabEntriesByLesson).toHaveBeenCalledWith(mockDb, 'lesson-123')
+    expect(getVocabEntriesByLesson).toHaveBeenCalledWith(client, 'lesson-123')
+  })
+
+  it('ranks weak items from the exercise-stats store, weakest first', async () => {
+    api.seedStore('exercise-stats', [
+      { vocabId: 'v1', exerciseType: 'cloze', correct: 3, total: 4, lastAttempt: '2026-09-20' },
+      { vocabId: 'v2', exerciseType: 'dictation', correct: 1, total: 4, lastAttempt: '2026-09-20' },
+      { vocabId: 'v3', exerciseType: 'cloze', correct: 0, total: 2, lastAttempt: '2026-09-20' },
+    ])
+
+    const result = await executeGetStudyContext(client, {}) as any
+
+    expect(result.weakItems).toEqual([
+      { key: 'v2:dictation', accuracy: 0.25, total: 4 },
+      { key: 'v1:cloze', accuracy: 0.75, total: 4 },
+    ])
+    expect(api.calls).toContainEqual({ method: 'GET', path: '/api/store/exercise-stats' })
   })
 
   it('get_study_context tool definition does not require lessonId', () => {
-    const pool = getActiveToolPool('test-key')
+    const pool = getActiveToolPool()
     const tools = getToolDefinitions(pool)
     const def = tools.find((t: any) => t.function.name === 'get_study_context') as any
     expect(def).toBeDefined()
     expect(def.function.parameters.required).toBeUndefined()
+  })
+})
+
+describe('vocabulary tools', () => {
+  const entry = (id: string, word: string, sourceLessonId: string) => ({ id, word, sourceLessonId, createdAt: '2026-09-24T00:00:00Z', romanization: '', meaning: '' })
+
+  it('getVocabulary lists the whole workbook from the store', async () => {
+    const api = new FakeApiClient().seedStore('vocabulary', [entry('v1', '你好', 'L1'), entry('v2', '再见', 'L2')])
+
+    const result = await executeGetVocabulary(fakeDataClient(api), {})
+
+    expect(result.map(e => e.word).sort()).toEqual(['你好', '再见'])
+    expect(api.calls).toEqual([{ method: 'GET', path: '/api/store/vocabulary' }])
+  })
+
+  it('renderVocabCard finds a server-stored entry by word', async () => {
+    const api = new FakeApiClient().seedStore('vocabulary', [entry('v1', '你好', 'L1'), entry('v2', '再见', 'L2')])
+
+    const result = await executeRenderVocabCard(fakeDataClient(api), { word: '再见' }) as any
+
+    expect(result.entry.word).toBe('再见')
+    expect(await executeRenderVocabCard(fakeDataClient(api), { word: '没有' })).toHaveProperty('error')
   })
 })

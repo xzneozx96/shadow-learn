@@ -1,194 +1,86 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getTTSCache, saveTTSCache } from '@/db'
 import { useTTS } from '@/shared/hooks/useTTS'
-import { getAppConfig } from '@/shared/lib/config'
-
-vi.mock('@/db', () => ({
-  getTTSCache: vi.fn(),
-  saveTTSCache: vi.fn(),
-}))
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }))
 
-// Mock getAppConfig so the module-level promise cache doesn't leak between tests
 vi.mock('@/shared/lib/config', () => ({
-  getAppConfig: vi.fn(),
   API_BASE: '',
 }))
 
-const mockDb = {} as any
-const mockKeys = { openrouterApiKey: 'sk-test', azureSpeechKey: 'az-key', azureSpeechRegion: 'eastus' }
-
-function mockProvider(provider: string) {
-  vi.mocked(getAppConfig).mockResolvedValue({ ttsProvider: provider, sttProvider: 'deepgram', freeTrialAvailable: false })
+function audioResponse(): Response {
+  return { ok: true, blob: () => Promise.resolve(new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })) } as Response
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  globalThis.fetch = vi.fn()
+  globalThis.fetch = vi.fn(async () => audioResponse())
   globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
   globalThis.URL.revokeObjectURL = vi.fn()
-  // jsdom's HTMLMediaElement.play() returns undefined; stub it to return a resolved Promise
-  // so the hook's audio.play().catch(() => {}) doesn't throw a TypeError
 })
 
 describe('useTTS', () => {
   it('returns loadingText null initially', () => {
-    mockProvider('azure')
-    const { result } = renderHook(() => useTTS(mockDb, mockKeys))
+    const { result } = renderHook(() => useTTS())
     expect(result.current.loadingText).toBeNull()
   })
 
-  it('is a no-op while provider is still loading (null)', async () => {
-    // Never resolve getAppConfig so providerRef stays null
-    vi.mocked(getAppConfig).mockReturnValue(new Promise(() => {}))
-    const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-
+  it('posts to /api/tts on every play, with no local cache in between', async () => {
+    const { result } = renderHook(() => useTTS())
+    await act(async () => {
+      await result.current.playTTS('你好')
+    })
     await act(async () => {
       await result.current.playTTS('你好')
     })
 
-    expect(toast.error).not.toHaveBeenCalled()
-    expect(getTTSCache).not.toHaveBeenCalled()
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+    for (const [url, init] of vi.mocked(globalThis.fetch).mock.calls) {
+      expect(url).toBe('/api/tts')
+      expect(init).toEqual(expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ text: '你好', source_language: 'zh-CN' }),
+      }))
+    }
+    expect(globalThis.URL.createObjectURL).toHaveBeenCalledTimes(2)
   })
 
-  it('defaults to azure when provider fetch fails', async () => {
-    // getAppConfig falls back to azure internally on fetch failure — simulate that
-    mockProvider('azure')
-    const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-
-    await waitFor(() => expect(result.current.loadingText).toBeNull())
-
-    // No error toast for the provider fetch failure
-    expect(toast.error).not.toHaveBeenCalled()
-  })
-
-  it('still calls the API when azure key is missing (backend uses system default)', async () => {
-    mockProvider('azure')
-    const keysWithoutAzure = { openrouterApiKey: 'sk-test' }
-    vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
-    const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
-
-    const { result } = renderHook(() => useTTS(mockDb, keysWithoutAzure as any))
-    await waitFor(() => {}) // let provider settle
-
+  it('sends the language and minimax_voice_id when a voice is provided', async () => {
+    const { result } = renderHook(() => useTTS('ja', 'Chinese (Mandarin)_Crisp_Girl'))
     await act(async () => {
-      await result.current.playTTS('你好')
-    })
-
-    expect(globalThis.fetch).toHaveBeenCalled()
-    expect(toast.error).not.toHaveBeenCalled()
-  })
-
-  it('still calls the API when minimax key is missing (backend uses system default)', async () => {
-    mockProvider('minimax')
-    const keysWithoutMinimax = { openrouterApiKey: 'sk-test' }
-    vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
-    const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
-
-    const { result } = renderHook(() => useTTS(mockDb, keysWithoutMinimax as any))
-    await waitFor(() => {}) // let provider settle
-
-    await act(async () => {
-      await result.current.playTTS('你好')
-    })
-
-    expect(globalThis.fetch).toHaveBeenCalled()
-    expect(toast.error).not.toHaveBeenCalled()
-  })
-
-  it('plays from cache without calling fetch for audio (azure provider)', async () => {
-    mockProvider('azure')
-    const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
-    vi.mocked(getTTSCache).mockResolvedValueOnce(fakeBlob)
-
-    const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-    await waitFor(() => {}) // let provider settle
-
-    await act(async () => {
-      await result.current.playTTS('你好')
-    })
-
-    expect(getTTSCache).toHaveBeenCalledWith(mockDb, '你好', 'zh-CN')
-    expect(globalThis.fetch).not.toHaveBeenCalled()
-    expect(saveTTSCache).not.toHaveBeenCalled()
-  })
-
-  it('fetches from API with Azure keys on cache miss', async () => {
-    mockProvider('azure')
-    vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
-    const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
-
-    const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-    await waitFor(() => {}) // let provider settle
-
-    await act(async () => {
-      await result.current.playTTS('你好')
-    })
-
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/tts', expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({ text: '你好', source_language: 'zh-CN', azure_speech_key: 'az-key', azure_speech_region: 'eastus' }),
-    }))
-    expect(saveTTSCache).toHaveBeenCalledWith(mockDb, '你好', fakeBlob, 'zh-CN')
-  })
-
-  it('fetches from API without minimax key on cache miss (key is backend-only)', async () => {
-    mockProvider('minimax')
-    vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
-    const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
-
-    const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-    await waitFor(() => {}) // let provider settle
-
-    await act(async () => {
-      await result.current.playTTS('你好')
-    })
-
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/tts', expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({ text: '你好', source_language: 'zh-CN' }),
-    }))
-  })
-
-  it('sends minimax_voice_id in POST body when voiceId is provided', async () => {
-    mockProvider('minimax')
-    vi.mocked(getTTSCache).mockResolvedValueOnce(undefined)
-    const fakeBlob = new Blob([new Uint8Array([0xFF, 0xFB])], { type: 'audio/mpeg' })
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(fakeBlob) } as any)
-
-    const { result } = renderHook(() =>
-      useTTS(mockDb, mockKeys, 'zh-CN', 'Chinese (Mandarin)_Crisp_Girl'),
-    )
-    await waitFor(() => {}) // let provider settle
-
-    await act(async () => {
-      await result.current.playTTS('你好')
+      await result.current.playTTS('こんにちは')
     })
 
     const [, options] = vi.mocked(globalThis.fetch).mock.calls[0]
     const body = JSON.parse((options as RequestInit).body as string)
-    expect(body.minimax_voice_id).toBe('Chinese (Mandarin)_Crisp_Girl')
+    expect(body).toEqual({ text: 'こんにちは', source_language: 'ja', minimax_voice_id: 'Chinese (Mandarin)_Crisp_Girl' })
+  })
+
+  it('shows the server detail when the backend rejects the call', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response(
+      JSON.stringify({ detail: 'Too many requests. Try again in 12 seconds.' }),
+      { status: 429, headers: { 'Retry-After': '12' } },
+    ))
+
+    const { result } = renderHook(() => useTTS())
+
+    await act(async () => {
+      await result.current.playTTS('你好')
+    })
+
+    expect(toast.error).toHaveBeenCalledWith('Too many requests. Try again in 12 seconds.')
   })
 
   it('is a no-op for empty text', async () => {
-    mockProvider('azure')
-    const { result } = renderHook(() => useTTS(mockDb, mockKeys))
-    await waitFor(() => {})
-
+    const { result } = renderHook(() => useTTS())
     await act(async () => {
       await result.current.playTTS('')
     })
 
-    expect(getTTSCache).not.toHaveBeenCalled()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 })

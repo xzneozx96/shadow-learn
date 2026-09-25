@@ -1,22 +1,14 @@
-import type { ShadowLearnDB } from '@/db'
-import type { VocabEntry } from '@/shared/types'
+import type { DataClient } from '@/db'
 import { z } from 'zod'
+import { getAllVocabEntries } from '@/db'
 import { compactVocab } from '@/features/agent/lib/agent-utils'
 import { buildTool } from '@/features/agent/lib/tools/types'
 
 export async function executeRenderVocabCard(
-  db: ShadowLearnDB,
+  db: DataClient,
   args: { word: string },
 ) {
-  // No word index — use cursor to avoid loading entire store into memory
-  const tx = db.transaction('vocabulary', 'readonly')
-  let entry: VocabEntry | undefined
-  for await (const cursor of tx.store) {
-    if (cursor.value.word === args.word) {
-      entry = cursor.value
-      break
-    }
-  }
+  const entry = (await getAllVocabEntries(db)).find(e => e.word === args.word)
   if (!entry) {
     return { error: `Vocabulary entry for "${args.word}" not found.` }
   }
