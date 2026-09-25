@@ -46,13 +46,13 @@ export function ModePicker({ selected, onSelect, count, onCountChange, writingRe
       <p className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">{t('study.exerciseType')}</p>
 
       {/* 3-column grid for individual modes */}
-      <div className="grid grid-cols-3 gap-2 mb-8">
+      <div className="grid grid-cols-1 gap-2 mb-8 sm:grid-cols-2 lg:grid-cols-3">
         {MODES.map(m => (
           <button
             key={m.id}
             onClick={() => onSelect(m.id)}
             className={cn(
-              'py-10 px-3 rounded-md text-center border transition-all bg-card/50',
+              'rounded-md border bg-card/50 px-3 py-5 text-center transition-all sm:py-8 lg:py-10',
               selected === m.id
                 ? 'bg-secondary border-border/60 shadow-sm'
                 : 'border-border hover:bg-accent/60',

@@ -74,7 +74,7 @@ export function DailyQueuePopup({ queue, onClose }: Props) {
   ]
 
   return (
-    <div className="relative w-[340px] rounded-2xl overflow-hidden border border-white/10 flex flex-col bg-card shadow-xl">
+    <div className="relative w-[min(340px,calc(100vw-2rem))] rounded-2xl overflow-hidden border border-white/10 flex flex-col bg-card shadow-xl">
       {editingTaskId !== null && (
         <div
           className="absolute inset-0 z-10"

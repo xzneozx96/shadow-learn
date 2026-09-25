@@ -151,7 +151,7 @@ export function CollectionPage() {
   return (
     <Layout>
       <div className="h-full overflow-y-auto">
-        <div className="relative z-5 px-6 md:px-10 py-12">
+        <div className="relative z-5 px-4 py-7 sm:px-6 md:px-10 md:py-12">
           <header>
             <h1 className="text-2xl xl:text-3xl font-bold tracking-[-0.03em] leading-[0.95] text-foreground text-balance">
               {t('collection.title')}
@@ -164,7 +164,7 @@ export function CollectionPage() {
           </header>
 
           {/* Tab bar */}
-          <div className="mt-8 flex items-center gap-1 border-b">
+          <div className="mt-8 grid grid-cols-3 border-b sm:flex sm:items-center sm:gap-1">
             {(['materials', 'tips', 'mine'] as const).map((tab) => {
               const count = tab === 'materials'
                 ? materialsCount
@@ -182,16 +182,16 @@ export function CollectionPage() {
                   type="button"
                   onClick={() => handleTabSwitch(tab)}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors duration-150',
+                    'flex min-w-0 flex-col items-center justify-center gap-1 border-b-2 px-1 py-2 text-center text-xs font-medium leading-tight transition-colors duration-150 sm:-mb-px sm:flex-row sm:gap-2 sm:px-4 sm:py-2.5 sm:text-left sm:text-sm',
                     activeTab === tab
                       ? 'border-foreground text-foreground'
                       : 'border-transparent text-muted-foreground hover:text-foreground',
                   )}
                 >
-                  {label}
+                  <span className="flex min-h-8 items-center justify-center text-balance sm:min-h-0">{label}</span>
                   <span
                     className={cn(
-                      'inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium tabular-nums',
+                      'inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-xs font-medium tabular-nums',
                       activeTab === tab ? 'bg-foreground text-background' : 'bg-secondary text-muted-foreground',
                     )}
                   >

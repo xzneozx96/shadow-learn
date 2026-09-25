@@ -130,7 +130,7 @@ export function ReadingSkillSession({ entries, date, onComplete, onBack, embedde
   }
 
   const content = (
-    <div className="flex-1 overflow-y-auto p-10 flex flex-col gap-6">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 flex flex-col gap-6">
       {phase === 'loading' && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />

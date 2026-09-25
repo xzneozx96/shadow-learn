@@ -131,7 +131,7 @@ export function LessonCard({ lesson, onDelete, onRename, onRetry, onToggleDone }
   const navDisabled = isEditing || isProcessing
 
   return (
-    <div ref={thumbnailRef} className="w-[340px] shrink-0 flex flex-col h-full" data-testid={`lesson-card-${lesson.id}`} data-status={status}>
+    <div ref={thumbnailRef} className="flex h-full w-[min(340px,calc(100vw-2rem))] shrink-0 flex-col" data-testid={`lesson-card-${lesson.id}`} data-status={status}>
       <Link
         to={`/lesson/${lesson.id}`}
         aria-label={lesson.title}

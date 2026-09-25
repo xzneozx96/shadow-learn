@@ -88,13 +88,25 @@ export function Library() {
     if (!el)
       return
     const onChange = () => updateScrollState(el)
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX))
+        return
+      const maxScroll = el.scrollWidth - el.clientWidth
+      const next = Math.max(0, Math.min(maxScroll, el.scrollLeft + event.deltaY))
+      if (next === el.scrollLeft)
+        return
+      event.preventDefault()
+      el.scrollLeft = next
+    }
     const ro = new ResizeObserver(onChange)
     const mo = new MutationObserver(onChange)
     el.addEventListener('scroll', onChange, { passive: true })
+    el.addEventListener('wheel', onWheel, { passive: false })
     ro.observe(el)
     mo.observe(el, { childList: true })
     cleanupRef.current = () => {
       el.removeEventListener('scroll', onChange)
+      el.removeEventListener('wheel', onWheel)
       ro.disconnect()
       mo.disconnect()
     }
@@ -182,7 +194,7 @@ export function Library() {
   return (
     <Layout>
       <div className="h-full overflow-y-auto">
-        <div className="relative z-5 mx-auto w-full container px-6 md:px-10 py-12">
+        <div className="relative z-5 container mx-auto w-full px-4 py-7 sm:px-6 md:px-10 md:py-12">
           {/* ── Top: greeting ── */}
           <motion.header
             className="mb-4 flex items-baseline justify-between gap-4"
@@ -224,7 +236,7 @@ export function Library() {
                 </div>
                 {hasLessons && (
                   <div className="flex flex-col gap-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <BentoCard glow="tr"><ActivityHeatmap activityDates={activityDates} /></BentoCard>
                       <BentoCard glow="tl"><StreakCard activityDates={activityDates} /></BentoCard>
                     </div>
@@ -237,20 +249,20 @@ export function Library() {
 
               {/* ── Library section ── */}
               {hasLessons && (
-                <section className="mt-16">
+                <section className="mt-10 md:mt-16">
                   <div className="mb-8 flex flex-col gap-3">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                       <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                         {t('library.collection')}
                       </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="group relative">
+                      <div className="flex w-full items-center gap-2 sm:w-auto">
+                        <div className="group relative min-w-0 flex-1 sm:flex-none">
                           <Search className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
                           <Input
                             placeholder={t('nav.search')}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="transition-shadow duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.15)]"
+                            className="w-full transition-shadow duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.15)]"
                           />
                         </div>
                         <Button
@@ -297,15 +309,9 @@ export function Library() {
                   <div
                     ref={setScrollRef}
                     className="grid grid-flow-col auto-cols-max items-stretch gap-5 overflow-x-auto py-3 -my-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    onWheel={(e) => {
-                      if (e.deltaY === 0)
-                        return
-                      e.preventDefault()
-                      e.currentTarget.scrollLeft += e.deltaY
-                    }}
                   >
                     {/* Create / Explore card */}
-                    <div className="shrink-0 flex flex-col h-full" style={{ width: '340px' }}>
+                    <div className="hidden h-full w-[min(340px,calc(100vw-2rem))] shrink-0 flex-col md:flex">
                       <div
                         className="w-full h-full overflow-hidden rounded-xl flex flex-col gap-3"
                       >

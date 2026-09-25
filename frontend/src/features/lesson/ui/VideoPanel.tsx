@@ -271,9 +271,9 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
   }, [media, db, lesson.title])
 
   return (
-    <div className="flex h-full flex-col backdrop-blur-md">
+    <div className="flex h-auto min-w-0 flex-col backdrop-blur-md lg:h-full">
       {/* Header */}
-      <div className="h-[65px] flex items-center gap-2 border-b border-border px-3 py-2">
+      <div className="flex h-13 min-w-0 items-center gap-2 border-b border-border px-3 py-2 lg:h-[65px]">
         <Button variant="ghost" size="icon-sm" nativeButton={false} render={<Link to="/" />}>
           <Home className="size-4" />
         </Button>
@@ -322,7 +322,7 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
       </div>
 
       {/* Media area */}
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative h-[min(56.25vw,30dvh)] min-w-0 shrink-0 overflow-hidden lg:h-auto lg:flex-1">
         {isBlog
           ? (
               <>
@@ -440,10 +440,10 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
         />
 
         {/* Transport controls */}
-        <div className="flex items-center justify-between">
+        <div className="flex min-w-0 items-center justify-between gap-2">
           {/* Left: play/pause + speed */}
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={togglePlayPause}>
+          <div className="flex min-w-0 items-center gap-0.5 overflow-x-auto sm:gap-1">
+            <Button variant="ghost" size="icon" className="shrink-0" aria-label={isPlaying ? t('study.pause') : t('shadowing.playPrev')} onClick={togglePlayPause}>
               {isPlaying
                 ? <Pause className="size-5" />
                 : <Play className="size-5" />}
@@ -455,7 +455,7 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
                 size="xs"
                 onClick={() => setPlaybackRate(rate)}
                 className={cn(
-                  'min-w-8 text-sm',
+                  'min-w-8 shrink-0 px-1 text-xs sm:text-sm',
                   playbackRate === rate && 'text-primary',
                 )}
               >
@@ -466,8 +466,8 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
           </div>
 
           {/* Right: volume + timestamp */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-3">
+            <div className="hidden items-center gap-1.5 sm:flex">
               <Volume2 className="size-4 shrink-0 text-muted-foreground" />
               <input
                 type="range"
@@ -480,7 +480,7 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
                 className="h-1 w-20 cursor-pointer accent-primary"
               />
             </div>
-            <span ref={timestampRef} className="font-mono text-sm text-muted-foreground" />
+            <span ref={timestampRef} className="whitespace-nowrap font-mono text-xs text-muted-foreground sm:text-sm" />
           </div>
         </div>
       </div>

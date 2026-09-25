@@ -119,11 +119,11 @@ export function ChangelogPage() {
 
   return (
     <Layout>
-      <div className="relative z-5 flex h-full w-full text-foreground font-sans overflow-hidden">
+      <div className="relative z-5 flex h-full w-full flex-col overflow-hidden font-sans text-foreground lg:flex-row">
         {/* Left Sidebar */}
-        <aside className="w-80 shrink-0 border-r border-border flex flex-col h-full">
+        <aside className="flex max-h-40 w-full shrink-0 flex-col border-b border-border lg:h-full lg:max-h-none lg:w-80 lg:border-b-0 lg:border-r">
           {/* Sidebar header */}
-          <div className="px-5 py-5 border-b border-border">
+          <div className="border-b border-border px-4 py-3 lg:px-5 lg:py-5">
             <h2 className="text-sm font-semibold text-foreground">{t('changelog.title')}</h2>
           </div>
 
@@ -143,15 +143,15 @@ export function ChangelogPage() {
         </aside>
 
         {/* Main Content */}
-        <main ref={contentRef} className="flex-1 h-full overflow-y-auto">
+        <main ref={contentRef} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
           {selectedEntry && (
-            <div className="max-w-5xl mx-auto px-12 py-16 pb-32">
+            <div className="mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-8 lg:px-12 lg:py-16 lg:pb-32">
               {/* Entry header */}
               <div className="mb-10 pb-6 border-b border-border/20">
                 <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
                   {formatDate(selectedEntry.date, intlLocale, { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
-                <h1 className="text-4xl font-bold tracking-tight text-foreground mb-5 leading-tight">
+                <h1 className="mb-5 text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
                   {selectedEntry.title}
                 </h1>
                 <div className="flex flex-wrap gap-2">
