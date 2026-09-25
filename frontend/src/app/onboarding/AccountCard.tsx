@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { TranslationKey } from '@/shared/lib/i18n'
+import { BrandLogo } from '@/shared/ui/BrandLogo'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
 export const MIN_PASSWORD_LENGTH = 8
@@ -24,7 +25,7 @@ export function AccountCard({ title, subtitle, children }: { title: string, subt
         <Card className="w-full max-w-sm px-6 py-10">
           <CardHeader>
             <CardTitle className="flex items-center flex-col gap-3 text-xl">
-              <img src="/favicon.svg" className="size-8" alt="ShadowLearn Logo" />
+              <BrandLogo />
               {title}
             </CardTitle>
             {subtitle && <CardDescription className="text-center">{subtitle}</CardDescription>}
