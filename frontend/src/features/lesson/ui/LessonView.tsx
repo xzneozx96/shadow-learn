@@ -261,9 +261,9 @@ function LessonViewContent() {
   }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background animate-fade-in lg:flex-row">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background animate-fade-in 2xl:flex-row">
       {/* Video — half the width on desktop, full width on top for mobile */}
-      <div className="w-full shrink-0 overflow-hidden border-b border-border lg:h-full lg:w-1/2 lg:border-r lg:border-b-0">
+      <div className="w-full shrink-0 overflow-hidden border-b border-border 2xl:h-full 2xl:w-1/2 2xl:border-r 2xl:border-b-0">
         <VideoPanel
           lesson={meta}
           segments={segments}
@@ -274,7 +274,7 @@ function LessonViewContent() {
       </div>
 
       {/* Mobile-only tab bar: switches between transcript and companion below. Desktop shows both side by side. */}
-      <div className="flex shrink-0 border-b border-border lg:hidden" role="tablist" aria-label={`${t('lesson.transcript')} / ${t('lesson.companion')}`}>
+      <div className="flex shrink-0 border-b border-border 2xl:hidden" role="tablist" aria-label={`${t('lesson.transcript')} / ${t('lesson.companion')}`}>
         <button
           id="lesson-transcript-tab"
           type="button"
@@ -315,8 +315,8 @@ function LessonViewContent() {
         role="tabpanel"
         aria-labelledby="lesson-transcript-tab"
         className={cn(
-          'min-h-0 min-w-0 flex-1 overflow-hidden lg:h-full lg:w-1/4 lg:flex-none lg:border-r lg:border-border',
-          mobilePanel === 'companion' && 'hidden lg:block',
+          'min-h-0 min-w-0 flex-1 overflow-hidden 2xl:h-full 2xl:w-1/4 2xl:flex-none 2xl:border-r 2xl:border-border',
+          mobilePanel === 'companion' && 'hidden 2xl:block',
         )}
       >
         {shadowingMode
@@ -350,7 +350,7 @@ function LessonViewContent() {
         id="lesson-companion-panel"
         role="tabpanel"
         aria-labelledby="lesson-companion-tab"
-        className={cn('min-h-0 min-w-0 flex-1 overflow-hidden lg:h-full lg:w-1/4 lg:flex-none', mobilePanel === 'transcript' && 'hidden lg:block')}
+        className={cn('min-h-0 min-w-0 flex-1 overflow-hidden 2xl:h-full 2xl:w-1/4 2xl:flex-none', mobilePanel === 'transcript' && 'hidden 2xl:block')}
       >
         <CompanionPanel
           activeSegment={activeSegment}
