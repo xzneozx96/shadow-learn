@@ -146,7 +146,7 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
       </div>
 
       {/* Main Content / Results Canvas */}
-      <div className="h-1/3 flex flex-col items-center justify-center gap-8 py-4">
+      <div className="h-1/3 flex flex-col items-center justify-center gap-8 overflow-y-auto py-4">
         {/* Correct Text Panel */}
         <div className="bg-muted/40 p-4 rounded-2xl w-full max-w-md flex flex-col items-center gap-4 border border-border/40 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col items-center gap-1.5">
