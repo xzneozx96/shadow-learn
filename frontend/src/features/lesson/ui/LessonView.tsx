@@ -262,7 +262,6 @@ function LessonViewContent() {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background animate-fade-in 2xl:flex-row">
-      {/* Video — half the width on desktop, full width on top for mobile */}
       <div className="w-full shrink-0 overflow-hidden border-b border-border 2xl:h-full 2xl:w-1/2 2xl:border-r 2xl:border-b-0">
         <VideoPanel
           lesson={meta}
@@ -273,7 +272,6 @@ function LessonViewContent() {
         />
       </div>
 
-      {/* Mobile-only tab bar: switches between transcript and companion below. Desktop shows both side by side. */}
       <div className="flex shrink-0 border-b border-border 2xl:hidden" role="tablist" aria-label={`${t('lesson.transcript')} / ${t('lesson.companion')}`}>
         <button
           id="lesson-transcript-tab"
@@ -309,7 +307,6 @@ function LessonViewContent() {
         </button>
       </div>
 
-      {/* Transcript / Shadowing Panel — a quarter of the width on desktop */}
       <div
         id="lesson-transcript-panel"
         role="tabpanel"
@@ -345,7 +342,6 @@ function LessonViewContent() {
             )}
       </div>
 
-      {/* Companion Panel — a quarter of the width on desktop */}
       <div
         id="lesson-companion-panel"
         role="tabpanel"
