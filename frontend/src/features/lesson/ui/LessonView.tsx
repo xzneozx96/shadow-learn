@@ -371,7 +371,7 @@ function LessonViewContent() {
             setPickerSegment(null)
         }}
       >
-        <DialogContent className="max-w-sm p-5">
+        <DialogContent className="max-w-sm max-h-[90vh] min-w-0 overflow-y-auto p-5">
           {pickerSegment !== null && pickerStartIdx >= 0 && (
             <ShadowingModePicker
               startSegment={pickerSegment}
