@@ -1,5 +1,5 @@
 import type { LessonMedia, LessonMeta, Segment } from '@/shared/types'
-import { Download, ExternalLink, Home, Pause, Pencil, Play, Volume2 } from 'lucide-react'
+import { ChevronDown, Download, ExternalLink, Home, Pause, Pencil, Play, Volume2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/app/providers/AuthContext'
@@ -9,6 +9,8 @@ import { refreshMediaTicket } from '@/db'
 import { HTML5Player } from '@/shared/lib/player/HTML5Player'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5]
 
@@ -448,21 +450,33 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
                 ? <Pause className="size-5" />
                 : <Play className="size-5" />}
             </Button>
-            {PLAYBACK_RATES.map(rate => (
-              <Button
-                key={rate}
-                variant={playbackRate === rate ? 'secondary' : 'ghost'}
-                size="xs"
-                onClick={() => setPlaybackRate(rate)}
-                className={cn(
-                  'min-w-8 shrink-0 px-1 text-xs sm:text-sm',
-                  playbackRate === rate && 'text-primary',
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={(
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="shrink-0 gap-0.5 px-1.5 text-xs sm:text-sm"
+                  />
                 )}
               >
-                {rate}
+                {playbackRate}
                 x
-              </Button>
-            ))}
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {PLAYBACK_RATES.map(rate => (
+                  <DropdownMenuItem
+                    key={rate}
+                    onClick={() => setPlaybackRate(rate)}
+                    className={cn(playbackRate === rate && 'bg-accent text-primary')}
+                  >
+                    {rate}
+                    x
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Right: volume + timestamp */}
@@ -480,6 +494,27 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
                 className="h-1 w-20 cursor-pointer accent-primary"
               />
             </div>
+            <Popover>
+              <PopoverTrigger
+                type="button"
+                aria-label={t('lesson.volume')}
+                className="flex items-center text-muted-foreground sm:hidden"
+              >
+                <Volume2 className="size-4 shrink-0" />
+              </PopoverTrigger>
+              <PopoverContent side="top" align="end" className="w-40 p-3">
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  defaultValue={volume}
+                  onChange={handleVolumeChange}
+                  onPointerUp={handleVolumeCommit}
+                  className="h-1 w-full cursor-pointer accent-primary"
+                />
+              </PopoverContent>
+            </Popover>
             <span ref={timestampRef} className="whitespace-nowrap font-mono text-xs text-muted-foreground sm:text-sm" />
           </div>
         </div>

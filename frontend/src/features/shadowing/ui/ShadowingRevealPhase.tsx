@@ -146,73 +146,83 @@ export function ShadowingRevealPhase(props: ShadowingRevealPhaseProps) {
       </div>
 
       {/* Main Content / Results Canvas */}
-      <div className="h-1/3 flex flex-col items-center justify-center gap-8 py-4">
-        {/* Correct Text Panel */}
-        <div className="bg-muted/40 p-4 rounded-2xl w-full max-w-md flex flex-col items-center gap-4 border border-border/40 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-          <div className="flex flex-col items-center gap-1.5">
-            <div className="text-2xl font-bold tracking-wider text-foreground">
-              {segment.text}
-            </div>
-            {segment.romanization && (
-              <div className="text-sm text-muted-foreground/80 tracking-wide font-medium">
-                {segment.romanization}
-              </div>
-            )}
-            {segment.translations?.en && (
-              <div className="mt-1 text-sm text-muted-foreground/50 text-center max-w-xs px-2">
-                “
-                {segment.translations.en}
-                ”
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Dictation Diff / Attempt Panel */}
-        {props.mode === 'dictation' && dictationDiff && (
-          <div className="flex flex-col items-center gap-4 w-full animate-in fade-in animate-delay-200">
-            <span className="text-sm uppercase tracking-[0.2em] text-muted-foreground font-medium">
-              {t('shadowing.yourAttempt')}
-            </span>
-            <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 px-4">
-              {dictationDiff.map((tok, i) => (
-                <motion.div
-                  key={i}
-                  className="flex flex-col items-center gap-0.5"
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.18, delay: i < 30 ? i * 0.025 : 0, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  <span
-                    className={cn(
-                      'text-xl font-semibold px-2 rounded-md transition-colors duration-200',
-                      tok.correct
-                        ? 'text-emerald-500 bg-emerald-500/10 border-b-2 border-emerald-500/20'
-                        : 'text-destructive bg-destructive/10 border-b-2 border-destructive/20',
-                    )}
-                  >
-                    {tok.text || '□'}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-
-            {dictationScore !== null && (
-              <div className="mt-2 flex items-center gap-2 bg-muted/40 px-3 py-1 rounded-full border border-border text-sm font-semibold backdrop-blur-sm text-muted-foreground">
-                <span className={cn(
-                  'h-2 w-2 rounded-full shadow-sm',
-                  dictationScore >= 80 ? 'bg-emerald-400' : dictationScore >= 50 ? 'bg-amber-400' : 'bg-red-400',
-                )}
-                />
-                {t('shadowing.accuracy')}
-                :
-                {' '}
-                {dictationScore}
-                %
-              </div>
-            )}
-          </div>
+      <div
+        className={cn(
+          'flex flex-col items-center px-4 py-4',
+          props.mode === 'dictation' && 'min-h-0 flex-1 overflow-y-auto',
         )}
+      >
+        {/* Centers vertically when content fits; never clips the top when it
+            overflows — unlike `justify-center` on the scrollable parent,
+            which centers past the scroll boundary and hides the overflow. */}
+        <div className="flex w-full flex-col items-center gap-8 my-auto">
+          {/* Correct Text Panel */}
+          <div className="bg-muted/40 p-4 rounded-2xl w-full max-w-md flex flex-col items-center gap-4 border border-border/40 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="text-2xl font-bold tracking-wider text-foreground">
+                {segment.text}
+              </div>
+              {segment.romanization && (
+                <div className="text-sm text-muted-foreground/80 tracking-wide font-medium">
+                  {segment.romanization}
+                </div>
+              )}
+              {segment.translations?.en && (
+                <div className="mt-1 text-sm text-muted-foreground/50 text-center max-w-xs px-2">
+                  “
+                  {segment.translations.en}
+                  ”
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Dictation Diff / Attempt Panel */}
+          {props.mode === 'dictation' && dictationDiff && (
+            <div className="flex flex-col items-center gap-4 w-full animate-in fade-in animate-delay-200">
+              <span className="text-sm uppercase tracking-[0.2em] text-muted-foreground font-medium">
+                {t('shadowing.yourAttempt')}
+              </span>
+              <div className="flex flex-wrap justify-center gap-x-1 gap-y-2 px-4">
+                {dictationDiff.map((tok, i) => (
+                  <motion.div
+                    key={i}
+                    className="flex flex-col items-center gap-0.5"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.18, delay: i < 30 ? i * 0.025 : 0, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <span
+                      className={cn(
+                        'text-xl font-semibold px-2 rounded-md transition-colors duration-200',
+                        tok.correct
+                          ? 'text-emerald-500 bg-emerald-500/10 border-b-2 border-emerald-500/20'
+                          : 'text-destructive bg-destructive/10 border-b-2 border-destructive/20',
+                      )}
+                    >
+                      {tok.text || '□'}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {dictationScore !== null && (
+                <div className="mt-2 flex items-center gap-2 bg-muted/40 px-3 py-1 rounded-full border border-border text-sm font-semibold backdrop-blur-sm text-muted-foreground">
+                  <span className={cn(
+                    'h-2 w-2 rounded-full shadow-sm',
+                    dictationScore >= 80 ? 'bg-emerald-400' : dictationScore >= 50 ? 'bg-amber-400' : 'bg-red-400',
+                  )}
+                  />
+                  {t('shadowing.accuracy')}
+                  :
+                  {' '}
+                  {dictationScore}
+                  %
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Speaking scores */}

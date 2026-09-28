@@ -97,7 +97,7 @@ export function ShadowingModePicker({
       {/* Count chips */}
       <div className="flex flex-col gap-1.5">
         <span className="text-sm text-muted-foreground">{t('shadowing.segmentsToPractice')}</span>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {COUNT_OPTIONS.map(n => (
             <Button
               key={n}
