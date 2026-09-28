@@ -10,6 +10,7 @@ import { HTML5Player } from '@/shared/lib/player/HTML5Player'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5]
 
@@ -493,6 +494,27 @@ export function VideoPanel({ lesson, media, onRename }: VideoPanelProps) {
                 className="h-1 w-20 cursor-pointer accent-primary"
               />
             </div>
+            <Popover>
+              <PopoverTrigger
+                type="button"
+                aria-label={t('lesson.volume')}
+                className="flex items-center text-muted-foreground sm:hidden"
+              >
+                <Volume2 className="size-4 shrink-0" />
+              </PopoverTrigger>
+              <PopoverContent side="top" align="end" className="w-40 p-3">
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  defaultValue={volume}
+                  onChange={handleVolumeChange}
+                  onPointerUp={handleVolumeCommit}
+                  className="h-1 w-full cursor-pointer accent-primary"
+                />
+              </PopoverContent>
+            </Popover>
             <span ref={timestampRef} className="whitespace-nowrap font-mono text-xs text-muted-foreground sm:text-sm" />
           </div>
         </div>

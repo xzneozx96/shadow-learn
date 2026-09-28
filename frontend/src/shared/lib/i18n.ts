@@ -246,6 +246,7 @@ export const TRANSLATIONS = {
     // Lesson View
     'lesson.transcript': 'Transcript',
     'lesson.companion': 'Companion',
+    'lesson.volume': 'Volume',
     'lesson.shadowing': 'Shadowing',
     'lesson.study': 'Study',
     'lesson.chat': 'Chat',
@@ -1219,6 +1220,7 @@ export const TRANSLATIONS = {
     // Lesson View
     'lesson.transcript': 'Bản ghi chữ',
     'lesson.companion': 'Trợ lý AI',
+    'lesson.volume': 'Âm lượng',
     'lesson.shadowing': 'Luyện nói câu',
     'lesson.study': 'Ôn tập bài',
     'lesson.chat': 'Trò chuyện',
